@@ -304,7 +304,7 @@
     </message>
     <message>
         <source>%1; %2</source>
-        <translation>%1؛ %2</translation>
+        <translation>‏%1؛ %2</translation>
     </message>
     <message numerus="yes">
         <source>cleared %n stale mapping(s)</source>
@@ -921,7 +921,7 @@
     <name>App</name>
     <message>
         <source>Anki Miner Is Already Running</source>
-        <translation>Anki Miner قيد التشغيل بالفعل</translation>
+        <translation>‏Anki Miner قيد التشغيل بالفعل</translation>
     </message>
     <message>
         <source>Another copy of Anki Miner appears to be running. Running two copies at once can corrupt the known-words and statistics databases.
@@ -1001,7 +1001,7 @@ Continue anyway?</source>
     </message>
     <message>
         <source>%1 s</source>
-        <translation>%1 ث</translation>
+        <translation>‏%1 ث</translation>
     </message>
 </context><context>
     <name>AudioPackImportFlow</name>
@@ -1323,27 +1323,27 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
     </message>
     <message>
         <source>Google Translate (synthetic TTS)</source>
-        <translation>Google Translate (TTS اصطناعي)</translation>
+        <translation>‏Google Translate (TTS اصطناعي)</translation>
     </message>
     <message>
         <source>Microsoft Edge (synthetic TTS)</source>
-        <translation>Microsoft Edge (TTS اصطناعي)</translation>
+        <translation>‏Microsoft Edge (TTS اصطناعي)</translation>
     </message>
     <message>
         <source>Custom JSON</source>
-        <translation>JSON مخصّص</translation>
+        <translation>‏JSON مخصّص</translation>
     </message>
     <message>
         <source>Custom URL</source>
-        <translation>URL مخصّص</translation>
+        <translation>‏URL مخصّص</translation>
     </message>
     <message>
         <source>JapanesePod101 (online)</source>
-        <translation>JapanesePod101 (عبر الإنترنت)</translation>
+        <translation>‏JapanesePod101 (عبر الإنترنت)</translation>
     </message>
     <message>
         <source>%1 entries</source>
-        <translation>%1 مُدخل</translation>
+        <translation>‏%1 مُدخل</translation>
     </message>
     <message>
         <source>⚠ re-import required (app upgrade)</source>
@@ -3070,12 +3070,12 @@ No index files are deleted.</source>
     <message numerus="yes">
         <source>%n note(s)</source>
         <translation>
-            <numerusform>%n ملاحظة</numerusform>
+            <numerusform>‏%n ملاحظة</numerusform>
             <numerusform>ملاحظة واحدة (%n)</numerusform>
             <numerusform>ملاحظتان (%n)</numerusform>
-            <numerusform>%n ملاحظات</numerusform>
-            <numerusform>%n ملاحظةً</numerusform>
-            <numerusform>%n ملاحظة</numerusform>
+            <numerusform>‏%n ملاحظات</numerusform>
+            <numerusform>‏%n ملاحظةً</numerusform>
+            <numerusform>‏%n ملاحظة</numerusform>
         </translation>
     </message>
     <message numerus="yes">
@@ -3104,12 +3104,12 @@ No index files are deleted.</source>
     <message numerus="yes">
         <source>%n field value(s) already up to date.</source>
         <translation>
-            <numerusform>%n قيمة حقل محدّثة بالفعل.</numerusform>
+            <numerusform>‏%n قيمة حقل محدّثة بالفعل.</numerusform>
             <numerusform>قيمة حقل واحدة (%n) محدّثة بالفعل.</numerusform>
             <numerusform>قيمتا حقل (%n) محدّثتان بالفعل.</numerusform>
-            <numerusform>%n قيم حقول محدّثة بالفعل.</numerusform>
-            <numerusform>%n قيمةً محدّثة بالفعل.</numerusform>
-            <numerusform>%n قيمة حقل محدّثة بالفعل.</numerusform>
+            <numerusform>‏%n قيم حقول محدّثة بالفعل.</numerusform>
+            <numerusform>‏%n قيمةً محدّثة بالفعل.</numerusform>
+            <numerusform>‏%n قيمة حقل محدّثة بالفعل.</numerusform>
         </translation>
     </message>
     <message numerus="yes">
@@ -3174,12 +3174,12 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
     <message numerus="yes">
         <source>%n field(s)</source>
         <translation>
-            <numerusform>%n حقل</numerusform>
+            <numerusform>‏%n حقل</numerusform>
             <numerusform>حقل واحد (%n)</numerusform>
             <numerusform>حقلان (%n)</numerusform>
-            <numerusform>%n حقول</numerusform>
-            <numerusform>%n حقلًا</numerusform>
-            <numerusform>%n حقل</numerusform>
+            <numerusform>‏%n حقول</numerusform>
+            <numerusform>‏%n حقلًا</numerusform>
+            <numerusform>‏%n حقل</numerusform>
         </translation>
     </message>
     <message>
@@ -3700,7 +3700,7 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
     <name>CudaPackDownloadWorker</name>
     <message>
         <source>%1 (%2%)</source>
-        <translation>%1 (%2٪)</translation>
+        <translation>‏%1 (%2٪)</translation>
     </message>
     <message>
         <source>Downloading GPU libraries…</source>
@@ -3734,11 +3734,11 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
     </message>
     <message>
         <source>%1 (%2 of %3)</source>
-        <translation>%1 (%2 من %3)</translation>
+        <translation>‏%1 (%2 من %3)</translation>
     </message>
     <message>
         <source>%1 of %2 · %3 done</source>
-        <translation>%1 من %2 · تم %3</translation>
+        <translation>‏%1 من %2 · تم %3</translation>
     </message>
 </context><context>
     <name>DeckBuilderTab</name>
@@ -4100,12 +4100,12 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
     <message numerus="yes">
         <source>%n note(s) in the deck.</source>
         <translation>
-            <numerusform>%n ملاحظة في الرزمة.</numerusform>
+            <numerusform>‏%n ملاحظة في الرزمة.</numerusform>
             <numerusform>ملاحظة واحدة (%n) في الرزمة.</numerusform>
             <numerusform>ملاحظتان (%n) في الرزمة.</numerusform>
-            <numerusform>%n ملاحظات في الرزمة.</numerusform>
-            <numerusform>%n ملاحظةً في الرزمة.</numerusform>
-            <numerusform>%n ملاحظة في الرزمة.</numerusform>
+            <numerusform>‏%n ملاحظات في الرزمة.</numerusform>
+            <numerusform>‏%n ملاحظةً في الرزمة.</numerusform>
+            <numerusform>‏%n ملاحظة في الرزمة.</numerusform>
         </translation>
     </message>
     <message>
@@ -4610,7 +4610,7 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
     </message>
     <message>
         <source>%1 entries</source>
-        <translation>%1 مُدخل</translation>
+        <translation>‏%1 مُدخل</translation>
     </message>
     <message>
         <source>not installed</source>
@@ -4710,7 +4710,7 @@ No files on disk are deleted.</source>
     <name>DownloadTab</name>
     <message>
         <source>yt-dlp is not installed, so downloads cannot run.</source>
-        <translation>yt-dlp غير مثبّت، لذا لا يمكن تشغيل التنزيلات.</translation>
+        <translation>‏yt-dlp غير مثبّت، لذا لا يمكن تشغيل التنزيلات.</translation>
     </message>
     <message>
         <source>Download yt-dlp</source>
@@ -5008,7 +5008,7 @@ No files on disk are deleted.</source>
     <name>DownloadWorker</name>
     <message>
         <source>%1: %2%</source>
-        <translation>⁨%1⁩: %2٪</translation>
+        <translation>‏⁨%1⁩: %2٪</translation>
     </message>
     <message>
         <source>Done</source>
@@ -5171,12 +5171,12 @@ No files on disk are deleted.</source>
     <message numerus="yes">
         <source>%n new word(s) to mine</source>
         <translation>
-            <numerusform>%n كلمة جديدة للاستخراج</numerusform>
+            <numerusform>‏%n كلمة جديدة للاستخراج</numerusform>
             <numerusform>كلمة جديدة واحدة (%n) للاستخراج</numerusform>
             <numerusform>كلمتان جديدتان (%n) للاستخراج</numerusform>
-            <numerusform>%n كلمات جديدة للاستخراج</numerusform>
-            <numerusform>%n كلمةً جديدة للاستخراج</numerusform>
-            <numerusform>%n كلمة جديدة للاستخراج</numerusform>
+            <numerusform>‏%n كلمات جديدة للاستخراج</numerusform>
+            <numerusform>‏%n كلمةً جديدة للاستخراج</numerusform>
+            <numerusform>‏%n كلمة جديدة للاستخراج</numerusform>
         </translation>
     </message>
     <message>
@@ -6023,7 +6023,7 @@ No files on disk are deleted.</source>
     </message>
     <message>
         <source>%1 entries</source>
-        <translation>%1 مُدخل</translation>
+        <translation>‏%1 مُدخل</translation>
     </message>
     <message>
         <source>Enabled</source>
@@ -6638,11 +6638,11 @@ Words to add: %3. Continue?</source>
     </message>
     <message>
         <source>%1 of %2</source>
-        <translation>%1 من %2</translation>
+        <translation>‏%1 من %2</translation>
     </message>
     <message>
         <source>↓ %1 new — Jump to latest</source>
-        <translation>↓ %1 جديد — الانتقال إلى الأحدث</translation>
+        <translation>‏↓ %1 جديد — الانتقال إلى الأحدث</translation>
     </message>
     <message>
         <source>Save Run Log</source>
@@ -6712,7 +6712,7 @@ Words to add: %3. Continue?</source>
     </message>
     <message>
         <source>Manga OCR</source>
-        <translation>OCR المانغا</translation>
+        <translation>‏OCR المانغا</translation>
     </message>
     <message>
         <source>Audiobook Sync</source>
@@ -6728,7 +6728,7 @@ Words to add: %3. Continue?</source>
     </message>
     <message>
         <source>Video OCR</source>
-        <translation>OCR الفيديو</translation>
+        <translation>‏OCR الفيديو</translation>
     </message>
     <message>
         <source>Anki Miner updated</source>
@@ -7166,7 +7166,7 @@ Continue?</source>
     </message>
     <message>
         <source>MP3: universal compatibility. Opus: smaller files at equivalent quality (needs ffmpeg with libopus).</source>
-        <translation>MP3: توافق شامل. Opus: ملفات أصغر بالجودة نفسها (يتطلب ffmpeg مع libopus).</translation>
+        <translation>‏MP3: توافق شامل. Opus: ملفات أصغر بالجودة نفسها (يتطلب ffmpeg مع libopus).</translation>
     </message>
     <message>
         <source> kbps</source>
@@ -7226,7 +7226,7 @@ Continue?</source>
     </message>
     <message>
         <source>AVIF: smaller files; WebP: broader Anki client support</source>
-        <translation>AVIF: ملفات أصغر؛ WebP: دعم أوسع في تطبيقات Anki</translation>
+        <translation>‏AVIF: ملفات أصغر؛ WebP: دعم أوسع في تطبيقات Anki</translation>
     </message>
     <message>
         <source>Same as sentence audio</source>
@@ -7270,15 +7270,15 @@ Continue?</source>
     </message>
     <message>
         <source>Google, then Papago</source>
-        <translation>Google، ثم Papago</translation>
+        <translation>‏Google، ثم Papago</translation>
     </message>
     <message>
         <source>Google only</source>
-        <translation>Google فقط</translation>
+        <translation>‏Google فقط</translation>
     </message>
     <message>
         <source>Papago only</source>
-        <translation>Papago فقط</translation>
+        <translation>‏Papago فقط</translation>
     </message>
     <message>
         <source>Google</source>
@@ -7474,7 +7474,7 @@ Continue?</source>
     <name>MokuroInstallWorker</name>
     <message>
         <source>%1 (%2%)</source>
-        <translation>%1 (%2٪)</translation>
+        <translation>‏%1 (%2٪)</translation>
     </message>
     <message>
         <source>Downloading uv…</source>
@@ -7586,11 +7586,11 @@ Continue?</source>
     </message>
     <message>
         <source>Manga OCR</source>
-        <translation>OCR المانغا</translation>
+        <translation>‏OCR المانغا</translation>
     </message>
     <message>
         <source>mokuro is not installed. Install it in the Manga OCR setup section.</source>
-        <translation>mokuro غير مثبّت. ثبّته في قسم إعداد OCR المانغا.</translation>
+        <translation>‏mokuro غير مثبّت. ثبّته في قسم إعداد OCR المانغا.</translation>
     </message>
     <message>
         <source>Manga</source>
@@ -7598,7 +7598,7 @@ Continue?</source>
     </message>
     <message>
         <source>mokuro is not installed. Install it in the Manga OCR setup section below.</source>
-        <translation>mokuro غير مثبّت. ثبّته في قسم إعداد OCR المانغا أدناه.</translation>
+        <translation>‏mokuro غير مثبّت. ثبّته في قسم إعداد OCR المانغا أدناه.</translation>
     </message>
     <message>
         <source>Run mokuro's OCR on a folder of page images, or a series folder of volumes. Each volume gets a .mokuro file beside it for Reading → Manga.</source>
@@ -7618,7 +7618,7 @@ Continue?</source>
     </message>
     <message>
         <source>mokuro is installed</source>
-        <translation>mokuro مثبّت</translation>
+        <translation>‏mokuro مثبّت</translation>
     </message>
     <message>
         <source>Change…</source>
@@ -7843,7 +7843,7 @@ Continue?</source>
     <name>OnnxPackDownloadWorker</name>
     <message>
         <source>%1 (%2%)</source>
-        <translation>%1 (%2٪)</translation>
+        <translation>‏%1 (%2٪)</translation>
     </message>
     <message>
         <source>Downloading silence-removal library…</source>
@@ -8105,7 +8105,7 @@ Continue?</source>
     </message>
     <message>
         <source>%1 entries</source>
-        <translation>%1 مُدخل</translation>
+        <translation>‏%1 مُدخل</translation>
     </message>
     <message>
         <source>Enabled</source>
@@ -8486,7 +8486,7 @@ No index files are deleted.</source>
     <name>QueueControlsBar</name>
     <message>
         <source>%1 in queue · %2 ready · %3 failed · %4 complete</source>
-        <translation>%1 في قائمة الانتظار · %2 جاهز · %3 فشل · %4 مكتمل</translation>
+        <translation>‏%1 في قائمة الانتظار · %2 جاهز · %3 فشل · %4 مكتمل</translation>
     </message>
     <message>
         <source>Edit…</source>
@@ -8573,12 +8573,12 @@ No index files are deleted.</source>
     <message numerus="yes">
         <source>%n episode(s)</source>
         <translation>
-            <numerusform>%n حلقة</numerusform>
-            <numerusform>%n حلقة</numerusform>
-            <numerusform>%n حلقتان</numerusform>
-            <numerusform>%n حلقات</numerusform>
-            <numerusform>%n حلقة</numerusform>
-            <numerusform>%n حلقة</numerusform>
+            <numerusform>‏%n حلقة</numerusform>
+            <numerusform>‏%n حلقة</numerusform>
+            <numerusform>‏%n حلقتان</numerusform>
+            <numerusform>‏%n حلقات</numerusform>
+            <numerusform>‏%n حلقة</numerusform>
+            <numerusform>‏%n حلقة</numerusform>
         </translation>
     </message>
     <message>
@@ -8609,7 +8609,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>%1 (%2 of %3)</source>
-        <translation>%1 (%2 من %3)</translation>
+        <translation>‏%1 (%2 من %3)</translation>
     </message>
 </context><context>
     <name>QueuePanel</name>
@@ -8696,36 +8696,36 @@ No index files are deleted.</source>
     <message numerus="yes">
         <source>%n series</source>
         <translation>
-            <numerusform>%n مسلسل</numerusform>
-            <numerusform>%n مسلسل</numerusform>
-            <numerusform>%n مسلسلان</numerusform>
-            <numerusform>%n مسلسلات</numerusform>
-            <numerusform>%n مسلسلًا</numerusform>
-            <numerusform>%n مسلسل</numerusform>
+            <numerusform>‏%n مسلسل</numerusform>
+            <numerusform>‏%n مسلسل</numerusform>
+            <numerusform>‏%n مسلسلان</numerusform>
+            <numerusform>‏%n مسلسلات</numerusform>
+            <numerusform>‏%n مسلسلًا</numerusform>
+            <numerusform>‏%n مسلسل</numerusform>
         </translation>
     </message>
     <message numerus="yes">
         <source>%n episode(s)</source>
         <translation>
-            <numerusform>%n حلقة</numerusform>
-            <numerusform>%n حلقة</numerusform>
-            <numerusform>%n حلقتان</numerusform>
-            <numerusform>%n حلقات</numerusform>
-            <numerusform>%n حلقة</numerusform>
-            <numerusform>%n حلقة</numerusform>
+            <numerusform>‏%n حلقة</numerusform>
+            <numerusform>‏%n حلقة</numerusform>
+            <numerusform>‏%n حلقتان</numerusform>
+            <numerusform>‏%n حلقات</numerusform>
+            <numerusform>‏%n حلقة</numerusform>
+            <numerusform>‏%n حلقة</numerusform>
         </translation>
     </message>
     <message>
         <source>%1 ready</source>
-        <translation>%1 جاهز</translation>
+        <translation>‏%1 جاهز</translation>
     </message>
     <message>
         <source>%1 failed</source>
-        <translation>%1 فشل</translation>
+        <translation>‏%1 فشل</translation>
     </message>
     <message>
         <source>%1 complete</source>
-        <translation>%1 مكتمل</translation>
+        <translation>‏%1 مكتمل</translation>
     </message>
 </context><context>
     <name>QueueRow</name>
@@ -9046,12 +9046,12 @@ No index files are deleted.</source>
     <message numerus="yes">
         <source>%n note(s) in the deck.</source>
         <translation>
-            <numerusform>%n ملاحظة في الرزمة.</numerusform>
+            <numerusform>‏%n ملاحظة في الرزمة.</numerusform>
             <numerusform>ملاحظة واحدة (%n) في الرزمة.</numerusform>
             <numerusform>ملاحظتان (%n) في الرزمة.</numerusform>
-            <numerusform>%n ملاحظات في الرزمة.</numerusform>
-            <numerusform>%n ملاحظةً في الرزمة.</numerusform>
-            <numerusform>%n ملاحظة في الرزمة.</numerusform>
+            <numerusform>‏%n ملاحظات في الرزمة.</numerusform>
+            <numerusform>‏%n ملاحظةً في الرزمة.</numerusform>
+            <numerusform>‏%n ملاحظة في الرزمة.</numerusform>
         </translation>
     </message>
     <message>
@@ -9613,17 +9613,17 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>%1 — %2 already saved</source>
-        <translation>⁨%1⁩ — %2 محفوظ مسبقًا</translation>
+        <translation>‏⁨%1⁩ — %2 محفوظ مسبقًا</translation>
     </message>
     <message numerus="yes">
         <source>%n queued item(s) from your last session</source>
         <translation>
-            <numerusform>%n عنصر في قائمة الانتظار من جلستك الأخيرة</numerusform>
-            <numerusform>%n عنصر في قائمة الانتظار من جلستك الأخيرة</numerusform>
-            <numerusform>%n عنصران في قائمة الانتظار من جلستك الأخيرة</numerusform>
-            <numerusform>%n عناصر في قائمة الانتظار من جلستك الأخيرة</numerusform>
-            <numerusform>%n عنصرًا في قائمة الانتظار من جلستك الأخيرة</numerusform>
-            <numerusform>%n عنصر في قائمة الانتظار من جلستك الأخيرة</numerusform>
+            <numerusform>‏%n عنصر في قائمة الانتظار من جلستك الأخيرة</numerusform>
+            <numerusform>‏%n عنصر في قائمة الانتظار من جلستك الأخيرة</numerusform>
+            <numerusform>‏%n عنصران في قائمة الانتظار من جلستك الأخيرة</numerusform>
+            <numerusform>‏%n عناصر في قائمة الانتظار من جلستك الأخيرة</numerusform>
+            <numerusform>‏%n عنصرًا في قائمة الانتظار من جلستك الأخيرة</numerusform>
+            <numerusform>‏%n عنصر في قائمة الانتظار من جلستك الأخيرة</numerusform>
         </translation>
     </message>
 </context><context>
@@ -9700,7 +9700,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>%1 words</source>
-        <translation>%1 كلمة</translation>
+        <translation>‏%1 كلمة</translation>
     </message>
     <message>
         <source>Exporting resources…</source>
@@ -9907,7 +9907,7 @@ No index files are deleted.</source>
     <message>
         <source>✗ %1 — %2
    Download manually: %3</source>
-        <translation>✗ ⁨%1⁩ — %2
+        <translation>‏✗ ⁨%1⁩ — %2
    نزّله يدويًا: ⁨%3⁩</translation>
     </message>
     <message>
@@ -9996,7 +9996,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>%1 entries</source>
-        <translation>%1 مُدخل</translation>
+        <translation>‏%1 مُدخل</translation>
     </message>
 </context><context>
     <name>ResourcesPage</name>
@@ -10033,12 +10033,12 @@ No index files are deleted.</source>
     <message>
         <source>%1, %2</source>
         <extracomment>Joins list items before the last one: "JMdict, JPDB and Jiten". Use your language's list comma.</extracomment>
-        <translation>%1، %2</translation>
+        <translation>‏%1، %2</translation>
     </message>
     <message>
         <source>%1 and %2</source>
         <extracomment>Joins the last item to the rest of a list: "JMdict, JPDB and Jiten".</extracomment>
-        <translation>%1 و%2</translation>
+        <translation>‏%1 و%2</translation>
     </message>
     <message>
         <source>Checking for an offline dictionary...</source>
@@ -10050,7 +10050,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>%1 ready: %2</source>
-        <translation>%1 جاهز: ⁨%2⁩</translation>
+        <translation>‏%1 جاهز: ⁨%2⁩</translation>
     </message>
     <message>
         <source>Dictionary ready: %1</source>
@@ -10062,7 +10062,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>%1: not set up (optional)</source>
-        <translation>%1: غير مُعدّ (اختياري)</translation>
+        <translation>‏%1: غير مُعدّ (اختياري)</translation>
     </message>
     <message>
         <source>Starting…</source>
@@ -11235,12 +11235,12 @@ Your installed resources and your theme are kept.</source>
     <message numerus="yes">
         <source>%n card(s) this session</source>
         <translation>
-            <numerusform>%n بطاقة في هذه الجلسة</numerusform>
-            <numerusform>%n بطاقة في هذه الجلسة</numerusform>
-            <numerusform>%n بطاقتان في هذه الجلسة</numerusform>
-            <numerusform>%n بطاقات في هذه الجلسة</numerusform>
-            <numerusform>%n بطاقة في هذه الجلسة</numerusform>
-            <numerusform>%n بطاقة في هذه الجلسة</numerusform>
+            <numerusform>‏%n بطاقة في هذه الجلسة</numerusform>
+            <numerusform>‏%n بطاقة في هذه الجلسة</numerusform>
+            <numerusform>‏%n بطاقتان في هذه الجلسة</numerusform>
+            <numerusform>‏%n بطاقات في هذه الجلسة</numerusform>
+            <numerusform>‏%n بطاقة في هذه الجلسة</numerusform>
+            <numerusform>‏%n بطاقة في هذه الجلسة</numerusform>
         </translation>
     </message>
     <message>
@@ -11250,12 +11250,12 @@ Your installed resources and your theme are kept.</source>
     <message numerus="yes">
         <source>%n running</source>
         <translation>
-            <numerusform>%n قيد التشغيل</numerusform>
-            <numerusform>%n قيد التشغيل</numerusform>
-            <numerusform>%n قيد التشغيل</numerusform>
-            <numerusform>%n قيد التشغيل</numerusform>
-            <numerusform>%n قيد التشغيل</numerusform>
-            <numerusform>%n قيد التشغيل</numerusform>
+            <numerusform>‏%n قيد التشغيل</numerusform>
+            <numerusform>‏%n قيد التشغيل</numerusform>
+            <numerusform>‏%n قيد التشغيل</numerusform>
+            <numerusform>‏%n قيد التشغيل</numerusform>
+            <numerusform>‏%n قيد التشغيل</numerusform>
+            <numerusform>‏%n قيد التشغيل</numerusform>
         </translation>
     </message>
     <message>
@@ -11272,11 +11272,11 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>AnkiConnect is connected</source>
-        <translation>AnkiConnect متصل</translation>
+        <translation>‏AnkiConnect متصل</translation>
     </message>
     <message>
         <source>AnkiConnect is not connected</source>
-        <translation>AnkiConnect غير متصل</translation>
+        <translation>‏AnkiConnect غير متصل</translation>
     </message>
     <message>
         <source>Checking ffmpeg…</source>
@@ -11284,11 +11284,11 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>ffmpeg is available</source>
-        <translation>ffmpeg متاح</translation>
+        <translation>‏ffmpeg متاح</translation>
     </message>
     <message>
         <source>ffmpeg is not available</source>
-        <translation>ffmpeg غير متاح</translation>
+        <translation>‏ffmpeg غير متاح</translation>
     </message>
 </context><context>
     <name>SubtitleCreationTab</name>
@@ -11848,7 +11848,7 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>alass is not installed; skipping alass attempts.</source>
-        <translation>alass غير مثبّت؛ تُتخطى محاولات alass.</translation>
+        <translation>‏alass غير مثبّت؛ تُتخطى محاولات alass.</translation>
     </message>
     <message>
         <source>%1 result rejected: %2</source>
@@ -11904,7 +11904,7 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>Space plays and pauses · Left and Right nudge 100 ms · A compares the original · Ctrl+Enter applies</source>
-        <translation>Space يشغّل ويوقف مؤقتًا · Left وRight يزيحان 100 ملّي ثانية · A يقارن بالأصل · Ctrl+Enter يطبّق</translation>
+        <translation>‏Space يشغّل ويوقف مؤقتًا · Left وRight يزيحان 100 ملّي ثانية · A يقارن بالأصل · Ctrl+Enter يطبّق</translation>
     </message>
     <message>
         <source>Align automatically</source>
@@ -11982,7 +11982,7 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>large-v3 is the most accurate; small is much faster.</source>
-        <translation>large-v3 هو الأدق؛ وsmall أسرع بكثير.</translation>
+        <translation>‏large-v3 هو الأدق؛ وsmall أسرع بكثير.</translation>
     </message>
     <message>
         <source>Run transcription on</source>
@@ -12216,7 +12216,7 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>ffmpeg (video tools)</source>
-        <translation>ffmpeg (أدوات الفيديو)</translation>
+        <translation>‏ffmpeg (أدوات الفيديو)</translation>
     </message>
     <message>
         <source>Language engine</source>
@@ -12240,15 +12240,15 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>yt-dlp (YouTube mining)</source>
-        <translation>yt-dlp (استخراج YouTube)</translation>
+        <translation>‏yt-dlp (استخراج YouTube)</translation>
     </message>
     <message>
         <source>alass (subtitle retiming)</source>
-        <translation>alass (إعادة توقيت الترجمة)</translation>
+        <translation>‏alass (إعادة توقيت الترجمة)</translation>
     </message>
     <message>
         <source>mokuro (manga OCR)</source>
-        <translation>mokuro (OCR المانغا)</translation>
+        <translation>‏mokuro (OCR المانغا)</translation>
     </message>
     <message>
         <source>Anki Miner updates</source>
@@ -12322,7 +12322,7 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>%1: %2 is tagged %3 here, not %4 as in the listed video</source>
-        <translation>⁨%1⁩: %2 موسوم هنا بـ ⁨%3⁩، لا بـ ⁨%4⁩ كما في الفيديو المدرج</translation>
+        <translation>‏⁨%1⁩: %2 موسوم هنا بـ ⁨%3⁩، لا بـ ⁨%4⁩ كما في الفيديو المدرج</translation>
     </message>
     <message>
         <source>%1 would replace the video itself — skipped</source>
@@ -12641,7 +12641,7 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>%1%</source>
-        <translation>%1٪</translation>
+        <translation>‏%1٪</translation>
     </message>
     <message>
         <source>Zoom</source>
@@ -12673,7 +12673,7 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>Click a theme preview to apply it live; &lt;b&gt;Revert&lt;/b&gt; undoes it. Star themes to add them to the top-right selector.</source>
-        <translation>انقر على معاينة سمة لتطبيقها مباشرة؛ ويتراجع &lt;b&gt;تراجع&lt;/b&gt; عنها. ضع نجمة على السمات لإضافتها إلى المحدِّد في أعلى اليمين.</translation>
+        <translation>انقر على معاينة سمة لتطبيقها مباشرة؛ ويتراجع &lt;b&gt;تراجع&lt;/b&gt; عنها. ضع نجمة على السمات لإضافتها إلى المحدِّد في أعلى اليسار.</translation>
     </message>
     <message>
         <source>Open themes folder</source>
@@ -12731,7 +12731,7 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>Anki Miner v%1 is available</source>
-        <translation>Anki Miner ⁨v%1⁩ متاح</translation>
+        <translation>‏Anki Miner ⁨v%1⁩ متاح</translation>
     </message>
     <message>
         <source>Cancel</source>
@@ -12779,7 +12779,7 @@ Your installed resources and your theme are kept.</source>
     <name>VideoOcrInstallWorker</name>
     <message>
         <source>%1 (%2%)</source>
-        <translation>%1 (%2٪)</translation>
+        <translation>‏%1 (%2٪)</translation>
     </message>
     <message>
         <source>Downloading the OCR runtime…</source>
@@ -12865,7 +12865,7 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>Video OCR</source>
-        <translation>OCR الفيديو</translation>
+        <translation>‏OCR الفيديو</translation>
     </message>
     <message>
         <source>Reading subtitles in file %1 of %2</source>
@@ -12973,7 +12973,7 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>%1% from the left, %2% from the top, %3% wide, %4% tall</source>
-        <translation>%1٪ من اليسار، و%2٪ من الأعلى، بعرض %3٪، وارتفاع %4٪</translation>
+        <translation>‏%1٪ من اليسار، و%2٪ من الأعلى، بعرض %3٪، وارتفاع %4٪</translation>
     </message>
     <message>
         <source>Choose a folder of videos first, then set the region on one of them.</source>
@@ -13069,7 +13069,7 @@ Your installed resources and your theme are kept.</source>
     <name>VulkanModelDownloadWorker</name>
     <message>
         <source>%1 (%2%)</source>
-        <translation>%1 (%2٪)</translation>
+        <translation>‏%1 (%2٪)</translation>
     </message>
     <message>
         <source>Downloading Vulkan model…</source>
@@ -13305,7 +13305,7 @@ Sort by it to work through a long recording in order — then highlight the rows
         <source>%1
 
 (%2 example sentences to pick from — focus the row, then choose one under “Sentences”)</source>
-        <translation>%1
+        <translation>‏%1
 
 (%2 جملة مثال للاختيار منها — ركّز على الصف، ثم اختر واحدة تحت «الجمل»)</translation>
     </message>
@@ -13391,7 +13391,7 @@ Sort by it to work through a long recording in order — then highlight the rows
     </message>
     <message>
         <source>%1 included · %2 shown of %3</source>
-        <translation>%1 مضمّنة · %2 معروضة من %3</translation>
+        <translation>‏%1 مضمّنة · %2 معروضة من %3</translation>
     </message>
 </context><context>
     <name>WorkflowActionBar</name>
@@ -13401,7 +13401,7 @@ Sort by it to work through a long recording in order — then highlight the rows
     </message>
     <message>
         <source>%1 (%2 of %3)</source>
-        <translation>%1 (%2 من %3)</translation>
+        <translation>‏%1 (%2 من %3)</translation>
     </message>
     <message>
         <source>Activity</source>
@@ -13455,7 +13455,7 @@ Sort by it to work through a long recording in order — then highlight the rows
     </message>
     <message>
         <source>%1 · %2%</source>
-        <translation>⁨%1⁩ · %2٪</translation>
+        <translation>‏⁨%1⁩ · %2٪</translation>
     </message>
 </context><context>
     <name>YouTubeSettingsPanel</name>
@@ -13667,7 +13667,7 @@ Sort by it to work through a long recording in order — then highlight the rows
     </message>
     <message>
         <source>yt-dlp is not installed, so YouTube mining cannot run.</source>
-        <translation>yt-dlp غير مثبّت، لذا لا يمكن تشغيل استخراج YouTube.</translation>
+        <translation>‏yt-dlp غير مثبّت، لذا لا يمكن تشغيل استخراج YouTube.</translation>
     </message>
     <message>
         <source>Download yt-dlp</source>
@@ -13775,7 +13775,7 @@ Sort by it to work through a long recording in order — then highlight the rows
     <name>app</name>
     <message>
         <source>Anki Miner — Unexpected Error</source>
-        <translation>Anki Miner — خطأ غير متوقع</translation>
+        <translation>‏Anki Miner — خطأ غير متوقع</translation>
     </message>
     <message>
         <source>Anki Miner hit an unexpected error.</source>
@@ -13787,7 +13787,7 @@ Sort by it to work through a long recording in order — then highlight the rows
 Version: %3
 Platform: %4
 Log file: %5</source>
-        <translation>%1: %2
+        <translation>‏%1: %2
 
 الإصدار: ⁨%3⁩
 النظام الأساسي: ⁨%4⁩

@@ -51,7 +51,7 @@
     </message>
     <message>
         <source>alass installed.</source>
-        <translation>alass הותקן.</translation>
+        <translation>‏alass הותקן.</translation>
     </message>
 </context><context>
     <name>AnalyticsTab</name>
@@ -253,11 +253,11 @@
     </message>
     <message>
         <source>Starting Anki…</source>
-        <translation>Anki מופעל…</translation>
+        <translation>‏Anki מופעל…</translation>
     </message>
     <message>
         <source>Anki did not start. Open it yourself.</source>
-        <translation>Anki לא הופעל. יש לפתוח אותו ידנית.</translation>
+        <translation>‏Anki לא הופעל. יש לפתוח אותו ידנית.</translation>
     </message>
 </context><context>
     <name>AnkiPage</name>
@@ -993,7 +993,7 @@ Continue anyway?</source>
     </message>
     <message>
         <source>%1 s</source>
-        <translation>%1 שנ׳</translation>
+        <translation>‏%1 שנ׳</translation>
     </message>
 </context><context>
     <name>AudioPackImportFlow</name>
@@ -1315,27 +1315,27 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
     </message>
     <message>
         <source>Google Translate (synthetic TTS)</source>
-        <translation>Google Translate (TTS סינתטי)</translation>
+        <translation>‏Google Translate (TTS סינתטי)</translation>
     </message>
     <message>
         <source>Microsoft Edge (synthetic TTS)</source>
-        <translation>Microsoft Edge (TTS סינתטי)</translation>
+        <translation>‏Microsoft Edge (TTS סינתטי)</translation>
     </message>
     <message>
         <source>Custom JSON</source>
-        <translation>JSON מותאם אישית</translation>
+        <translation>‏JSON מותאם אישית</translation>
     </message>
     <message>
         <source>Custom URL</source>
-        <translation>URL מותאם אישית</translation>
+        <translation>‏URL מותאם אישית</translation>
     </message>
     <message>
         <source>JapanesePod101 (online)</source>
-        <translation>JapanesePod101 (מקוון)</translation>
+        <translation>‏JapanesePod101 (מקוון)</translation>
     </message>
     <message>
         <source>%1 entries</source>
-        <translation>%1 רשומות</translation>
+        <translation>‏%1 רשומות</translation>
     </message>
     <message>
         <source>⚠ re-import required (app upgrade)</source>
@@ -1721,7 +1721,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>%1 series were skipped: folders missing.</source>
-        <translation>%1 סדרות דולגו: תיקיות חסרות.</translation>
+        <translation>‏%1 סדרות דולגו: תיקיות חסרות.</translation>
     </message>
     <message>
         <source>series</source>
@@ -1775,7 +1775,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>%1 of %2 episodes failed, starting with %3.</source>
-        <translation>%1 מתוך %2 פרקים נכשלו, החל מ-⁨%3⁩.</translation>
+        <translation>‏%1 מתוך %2 פרקים נכשלו, החל מ-⁨%3⁩.</translation>
     </message>
     <message numerus="yes">
         <source>Collecting words from %n episode(s) for review...</source>
@@ -3048,14 +3048,14 @@ No index files are deleted.</source>
         <source>%n field(s) across %1 will be filled.</source>
         <translation>
             <numerusform>שדה %n ב-⁨%1⁩ יתמלא.</numerusform>
-            <numerusform>%n שדות ב-⁨%1⁩ יתמלאו.</numerusform>
+            <numerusform>‏%n שדות ב-⁨%1⁩ יתמלאו.</numerusform>
         </translation>
     </message>
     <message numerus="yes">
         <source>%n note(s)</source>
         <translation>
             <numerusform>פתק %n</numerusform>
-            <numerusform>%n פתקים</numerusform>
+            <numerusform>‏%n פתקים</numerusform>
         </translation>
     </message>
     <message numerus="yes">
@@ -3081,14 +3081,14 @@ No index files are deleted.</source>
         <source>%n field value(s) already up to date.</source>
         <translation>
             <numerusform>ערך שדה %n כבר מעודכן.</numerusform>
-            <numerusform>%n ערכי שדות כבר מעודכנים.</numerusform>
+            <numerusform>‏%n ערכי שדות כבר מעודכנים.</numerusform>
         </translation>
     </message>
     <message numerus="yes">
         <source>%n pitch field(s) kept — the reading was guessed, so the accent could be the wrong homograph's. Map an Expression Reading or Furigana field to overwrite them.</source>
         <translation>
             <numerusform>שדה הטעמה %n נשמר — ההגייה נוחשה, ולכן ההטעמה עשויה להיות של הומוגרף אחר. יש למפות שדה הגיית ביטוי או פוריגנה כדי לדרוס אותו.</numerusform>
-            <numerusform>%n שדות הטעמה נשמרו — ההגייה נוחשה, ולכן ההטעמה עשויה להיות של הומוגרף אחר. יש למפות שדה הגיית ביטוי או פוריגנה כדי לדרוס אותם.</numerusform>
+            <numerusform>‏%n שדות הטעמה נשמרו — ההגייה נוחשה, ולכן ההטעמה עשויה להיות של הומוגרף אחר. יש למפות שדה הגיית ביטוי או פוריגנה כדי לדרוס אותם.</numerusform>
         </translation>
     </message>
     <message>
@@ -3103,7 +3103,7 @@ No index files are deleted.</source>
         <source>%n note(s) skipped — empty Expression field.</source>
         <translation>
             <numerusform>פתק %n דולג — שדה הביטוי ריק.</numerusform>
-            <numerusform>%n פתקים דולגו — שדה הביטוי ריק.</numerusform>
+            <numerusform>‏%n פתקים דולגו — שדה הביטוי ריק.</numerusform>
         </translation>
     </message>
     <message>
@@ -3127,7 +3127,7 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
         <source>%n field(s)</source>
         <translation>
             <numerusform>שדה %n</numerusform>
-            <numerusform>%n שדות</numerusform>
+            <numerusform>‏%n שדות</numerusform>
         </translation>
     </message>
     <message>
@@ -3148,8 +3148,8 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
     <message numerus="yes">
         <source>%n skipped — changed or deleted since the scan.</source>
         <translation>
-            <numerusform>%n דולג — השתנה או נמחק מאז הסריקה.</numerusform>
-            <numerusform>%n דולגו — השתנו או נמחקו מאז הסריקה.</numerusform>
+            <numerusform>‏%n דולג — השתנה או נמחק מאז הסריקה.</numerusform>
+            <numerusform>‏%n דולגו — השתנו או נמחקו מאז הסריקה.</numerusform>
         </translation>
     </message>
     <message>
@@ -3160,7 +3160,7 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
         <source>%n note update(s) were not confirmed by Anki; scan again to retry.</source>
         <translation>
             <numerusform>עדכון פתק %n לא אושר על ידי Anki; יש לסרוק שוב כדי לנסות מחדש.</numerusform>
-            <numerusform>%n עדכוני פתקים לא אושרו על ידי Anki; יש לסרוק שוב כדי לנסות מחדש.</numerusform>
+            <numerusform>‏%n עדכוני פתקים לא אושרו על ידי Anki; יש לסרוק שוב כדי לנסות מחדש.</numerusform>
         </translation>
     </message>
     <message numerus="yes">
@@ -3304,7 +3304,7 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
     </message>
     <message>
         <source>ffmpeg not found; install it and put it on PATH to enable condensing.</source>
-        <translation>ffmpeg לא נמצא; יש להתקין אותו ולהוסיף אותו ל-PATH כדי לאפשר דחיסה.</translation>
+        <translation>‏ffmpeg לא נמצא; יש להתקין אותו ולהוסיף אותו ל-PATH כדי לאפשר דחיסה.</translation>
     </message>
     <message>
         <source>Condense a video or audio file down to just its spoken dialogue.</source>
@@ -3666,11 +3666,11 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
     </message>
     <message>
         <source>%1 (%2 of %3)</source>
-        <translation>⁨%1⁩ (%2 מתוך %3)</translation>
+        <translation>‏⁨%1⁩ (%2 מתוך %3)</translation>
     </message>
     <message>
         <source>%1 of %2 · %3 done</source>
-        <translation>%1 מתוך %2 · %3 הושלמו</translation>
+        <translation>‏%1 מתוך %2 · %3 הושלמו</translation>
     </message>
 </context><context>
     <name>DeckBuilderTab</name>
@@ -3764,7 +3764,7 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
     </message>
     <message>
         <source>Top N words</source>
-        <translation>N המילים המובילות</translation>
+        <translation>‏N המילים המובילות</translation>
     </message>
     <message>
         <source>Target coverage %</source>
@@ -4106,8 +4106,8 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
     <message numerus="yes">
         <source>%n kept by whitelist.</source>
         <translation>
-            <numerusform>%n נשמר בזכות הרשימה הלבנה.</numerusform>
-            <numerusform>%n נשמרו בזכות הרשימה הלבנה.</numerusform>
+            <numerusform>‏%n נשמר בזכות הרשימה הלבנה.</numerusform>
+            <numerusform>‏%n נשמרו בזכות הרשימה הלבנה.</numerusform>
         </translation>
     </message>
     <message numerus="yes">
@@ -4143,7 +4143,7 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
         <source>%n note(s) were not accepted by Anki (see log).</source>
         <translation>
             <numerusform>פתק %n לא התקבל על ידי Anki (פרטים ביומן).</numerusform>
-            <numerusform>%n פתקים לא התקבלו על ידי Anki (פרטים ביומן).</numerusform>
+            <numerusform>‏%n פתקים לא התקבלו על ידי Anki (פרטים ביומן).</numerusform>
         </translation>
     </message>
 </context><context>
@@ -4510,7 +4510,7 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
     </message>
     <message>
         <source>%1 entries</source>
-        <translation>%1 רשומות</translation>
+        <translation>‏%1 רשומות</translation>
     </message>
     <message>
         <source>not installed</source>
@@ -4610,7 +4610,7 @@ No files on disk are deleted.</source>
     <name>DownloadTab</name>
     <message>
         <source>yt-dlp is not installed, so downloads cannot run.</source>
-        <translation>yt-dlp אינו מותקן, ולכן אי אפשר להוריד.</translation>
+        <translation>‏yt-dlp אינו מותקן, ולכן אי אפשר להוריד.</translation>
     </message>
     <message>
         <source>Download yt-dlp</source>
@@ -4702,7 +4702,7 @@ No files on disk are deleted.</source>
     </message>
     <message>
         <source>One URL per line</source>
-        <translation>URL אחד בכל שורה</translation>
+        <translation>‏URL אחד בכל שורה</translation>
     </message>
     <message>
         <source>Expand Playlist…</source>
@@ -5064,7 +5064,7 @@ No files on disk are deleted.</source>
         <source>%n new word(s) to mine</source>
         <translation>
             <numerusform>מילה חדשה %n לכרייה</numerusform>
-            <numerusform>%n מילים חדשות לכרייה</numerusform>
+            <numerusform>‏%n מילים חדשות לכרייה</numerusform>
         </translation>
     </message>
     <message>
@@ -5879,7 +5879,7 @@ No files on disk are deleted.</source>
     </message>
     <message>
         <source>%1 entries</source>
-        <translation>%1 רשומות</translation>
+        <translation>‏%1 רשומות</translation>
     </message>
     <message>
         <source>Enabled</source>
@@ -6384,7 +6384,7 @@ Words to add: %3. Continue?</source>
     </message>
     <message>
         <source>Anki Miner skips words you already have in Anki. Tick the decks that are &lt;i&gt;not&lt;/i&gt; %1, so their words don't stop %1 cards from being made.</source>
-        <translation>Anki Miner מדלג על מילים שכבר קיימות ב-Anki. יש לסמן את החפיסות ש&lt;i&gt;אינן&lt;/i&gt; בשפה ⁨%1⁩, כדי שהמילים שבהן לא ימנעו יצירת כרטיסים בשפה ⁨%1⁩.</translation>
+        <translation>‏Anki Miner מדלג על מילים שכבר קיימות ב-Anki. יש לסמן את החפיסות ש&lt;i&gt;אינן&lt;/i&gt; בשפה ⁨%1⁩, כדי שהמילים שבהן לא ימנעו יצירת כרטיסים בשפה ⁨%1⁩.</translation>
     </message>
     <message>
         <source>Exclude ticked decks</source>
@@ -6490,11 +6490,11 @@ Words to add: %3. Continue?</source>
     </message>
     <message>
         <source>%1 of %2</source>
-        <translation>%1 מתוך %2</translation>
+        <translation>‏%1 מתוך %2</translation>
     </message>
     <message>
         <source>↓ %1 new — Jump to latest</source>
-        <translation>↓ %1 חדשות — מעבר לאחרונה</translation>
+        <translation>‏↓ %1 חדשות — מעבר לאחרונה</translation>
     </message>
     <message>
         <source>Save Run Log</source>
@@ -6564,7 +6564,7 @@ Words to add: %3. Continue?</source>
     </message>
     <message>
         <source>Manga OCR</source>
-        <translation>OCR למנגה</translation>
+        <translation>‏OCR למנגה</translation>
     </message>
     <message>
         <source>Audiobook Sync</source>
@@ -6580,11 +6580,11 @@ Words to add: %3. Continue?</source>
     </message>
     <message>
         <source>Video OCR</source>
-        <translation>OCR לווידאו</translation>
+        <translation>‏OCR לווידאו</translation>
     </message>
     <message>
         <source>Anki Miner updated</source>
-        <translation>Anki Miner עודכן</translation>
+        <translation>‏Anki Miner עודכן</translation>
     </message>
     <message>
         <source>Updated to v%1.&lt;br&gt;&lt;br&gt;See what's new: &lt;a href="https://github.com/0xzerolight/anki_miner/releases/latest"&gt;release notes&lt;/a&gt;</source>
@@ -6812,7 +6812,7 @@ Continue?</source>
     </message>
     <message>
         <source>%1 note update(s) were not confirmed; run Restyle again.</source>
-        <translation>%1 עדכוני פתקים לא אושרו; יש להריץ שוב את העיצוב מחדש.</translation>
+        <translation>‏%1 עדכוני פתקים לא אושרו; יש להריץ שוב את העיצוב מחדש.</translation>
     </message>
     <message>
         <source>Restyled %1 of %2 notes; %3 already up to date.</source>
@@ -6896,7 +6896,7 @@ Continue?</source>
     </message>
     <message>
         <source>JMdict ready (%1 entries)</source>
-        <translation>JMdict מוכן (%1 רשומות)</translation>
+        <translation>‏JMdict מוכן (%1 רשומות)</translation>
     </message>
     <message>
         <source>Version %1 is available.</source>
@@ -6956,7 +6956,7 @@ Continue?</source>
     </message>
     <message>
         <source>Windows did not report a Desktop folder.</source>
-        <translation>Windows לא דיווחה על תיקיית שולחן עבודה.</translation>
+        <translation>‏Windows לא דיווחה על תיקיית שולחן עבודה.</translation>
     </message>
     <message>
         <source>Desktop shortcut created.</source>
@@ -6964,7 +6964,7 @@ Continue?</source>
     </message>
     <message>
         <source>PowerShell returned no shortcut path.</source>
-        <translation>PowerShell לא החזיר נתיב לקיצור הדרך.</translation>
+        <translation>‏PowerShell לא החזיר נתיב לקיצור הדרך.</translation>
     </message>
 </context><context>
     <name>MediaDownloader</name>
@@ -7018,7 +7018,7 @@ Continue?</source>
     </message>
     <message>
         <source>MP3: universal compatibility. Opus: smaller files at equivalent quality (needs ffmpeg with libopus).</source>
-        <translation>MP3: תאימות אוניברסלית. Opus: קבצים קטנים יותר באיכות שקולה (דורש ffmpeg עם libopus).</translation>
+        <translation>‏MP3: תאימות אוניברסלית. Opus: קבצים קטנים יותר באיכות שקולה (דורש ffmpeg עם libopus).</translation>
     </message>
     <message>
         <source> kbps</source>
@@ -7078,7 +7078,7 @@ Continue?</source>
     </message>
     <message>
         <source>AVIF: smaller files; WebP: broader Anki client support</source>
-        <translation>AVIF: קבצים קטנים יותר; WebP: תמיכה רחבה יותר בלקוחות Anki</translation>
+        <translation>‏AVIF: קבצים קטנים יותר; WebP: תמיכה רחבה יותר בלקוחות Anki</translation>
     </message>
     <message>
         <source>Same as sentence audio</source>
@@ -7122,15 +7122,15 @@ Continue?</source>
     </message>
     <message>
         <source>Google, then Papago</source>
-        <translation>Google, ואז Papago</translation>
+        <translation>‏Google, ואז Papago</translation>
     </message>
     <message>
         <source>Google only</source>
-        <translation>Google בלבד</translation>
+        <translation>‏Google בלבד</translation>
     </message>
     <message>
         <source>Papago only</source>
-        <translation>Papago בלבד</translation>
+        <translation>‏Papago בלבד</translation>
     </message>
     <message>
         <source>Google</source>
@@ -7298,7 +7298,7 @@ Continue?</source>
     </message>
     <message>
         <source>Anki Miner couldn't open these cards in Anki.</source>
-        <translation>Anki Miner לא הצליח לפתוח את הכרטיסים האלה ב-Anki.</translation>
+        <translation>‏Anki Miner לא הצליח לפתוח את הכרטיסים האלה ב-Anki.</translation>
     </message>
     <message>
         <source>Show review</source>
@@ -7358,7 +7358,7 @@ Continue?</source>
     </message>
     <message>
         <source>mokuro installed.</source>
-        <translation>mokuro הותקן.</translation>
+        <translation>‏mokuro הותקן.</translation>
     </message>
 </context><context>
     <name>MokuroRunner</name>
@@ -7438,11 +7438,11 @@ Continue?</source>
     </message>
     <message>
         <source>Manga OCR</source>
-        <translation>OCR למנגה</translation>
+        <translation>‏OCR למנגה</translation>
     </message>
     <message>
         <source>mokuro is not installed. Install it in the Manga OCR setup section.</source>
-        <translation>mokuro אינו מותקן. יש להתקין אותו בקטע הגדרת OCR למנגה.</translation>
+        <translation>‏mokuro אינו מותקן. יש להתקין אותו בקטע הגדרת OCR למנגה.</translation>
     </message>
     <message>
         <source>Manga</source>
@@ -7450,7 +7450,7 @@ Continue?</source>
     </message>
     <message>
         <source>mokuro is not installed. Install it in the Manga OCR setup section below.</source>
-        <translation>mokuro אינו מותקן. יש להתקין אותו בקטע הגדרת OCR למנגה שלמטה.</translation>
+        <translation>‏mokuro אינו מותקן. יש להתקין אותו בקטע הגדרת OCR למנגה שלמטה.</translation>
     </message>
     <message>
         <source>Run mokuro's OCR on a folder of page images, or a series folder of volumes. Each volume gets a .mokuro file beside it for Reading → Manga.</source>
@@ -7470,7 +7470,7 @@ Continue?</source>
     </message>
     <message>
         <source>mokuro is installed</source>
-        <translation>mokuro מותקן</translation>
+        <translation>‏mokuro מותקן</translation>
     </message>
     <message>
         <source>Change…</source>
@@ -7579,7 +7579,7 @@ Continue?</source>
     </message>
     <message>
         <source>mokuro writes its .mokuro files beside the volumes; check permissions for %1.</source>
-        <translation>mokuro כותב את קובצי ה-.mokuro שלו לצד הכרכים; יש לבדוק את ההרשאות של ⁨%1⁩.</translation>
+        <translation>‏mokuro כותב את קובצי ה-.mokuro שלו לצד הכרכים; יש לבדוק את ההרשאות של ⁨%1⁩.</translation>
     </message>
     <message>
         <source>No manga volumes found in that folder.</source>
@@ -7957,7 +7957,7 @@ Continue?</source>
     </message>
     <message>
         <source>%1 entries</source>
-        <translation>%1 רשומות</translation>
+        <translation>‏%1 רשומות</translation>
     </message>
     <message>
         <source>Enabled</source>
@@ -8334,7 +8334,7 @@ No index files are deleted.</source>
     <name>QueueControlsBar</name>
     <message>
         <source>%1 in queue · %2 ready · %3 failed · %4 complete</source>
-        <translation>%1 בתור · %2 מוכנים · %3 נכשלו · %4 הושלמו</translation>
+        <translation>‏%1 בתור · %2 מוכנים · %3 נכשלו · %4 הושלמו</translation>
     </message>
     <message>
         <source>Edit…</source>
@@ -8422,7 +8422,7 @@ No index files are deleted.</source>
         <source>%n episode(s)</source>
         <translation>
             <numerusform>פרק %n</numerusform>
-            <numerusform>%n פרקים</numerusform>
+            <numerusform>‏%n פרקים</numerusform>
         </translation>
     </message>
     <message>
@@ -8453,7 +8453,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>%1 (%2 of %3)</source>
-        <translation>⁨%1⁩ (%2 מתוך %3)</translation>
+        <translation>‏⁨%1⁩ (%2 מתוך %3)</translation>
     </message>
 </context><context>
     <name>QueuePanel</name>
@@ -8541,27 +8541,27 @@ No index files are deleted.</source>
         <source>%n series</source>
         <translation>
             <numerusform>סדרה %n</numerusform>
-            <numerusform>%n סדרות</numerusform>
+            <numerusform>‏%n סדרות</numerusform>
         </translation>
     </message>
     <message numerus="yes">
         <source>%n episode(s)</source>
         <translation>
             <numerusform>פרק %n</numerusform>
-            <numerusform>%n פרקים</numerusform>
+            <numerusform>‏%n פרקים</numerusform>
         </translation>
     </message>
     <message>
         <source>%1 ready</source>
-        <translation>%1 מוכנים</translation>
+        <translation>‏%1 מוכנים</translation>
     </message>
     <message>
         <source>%1 failed</source>
-        <translation>%1 נכשלו</translation>
+        <translation>‏%1 נכשלו</translation>
     </message>
     <message>
         <source>%1 complete</source>
-        <translation>%1 הושלמו</translation>
+        <translation>‏%1 הושלמו</translation>
     </message>
 </context><context>
     <name>QueueRow</name>
@@ -9288,11 +9288,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Anki Miner can't mine this folder.</source>
-        <translation>Anki Miner לא יכול לכרות את התיקייה הזו.</translation>
+        <translation>‏Anki Miner לא יכול לכרות את התיקייה הזו.</translation>
     </message>
     <message>
         <source>Anki Miner can't mine this file.</source>
-        <translation>Anki Miner לא יכול לכרות את הקובץ הזה.</translation>
+        <translation>‏Anki Miner לא יכול לכרות את הקובץ הזה.</translation>
     </message>
     <message>
         <source>Cancelled</source>
@@ -9445,13 +9445,13 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>%1 — %2 already saved</source>
-        <translation>⁨%1⁩ — %2 כבר נשמרו</translation>
+        <translation>‏⁨%1⁩ — %2 כבר נשמרו</translation>
     </message>
     <message numerus="yes">
         <source>%n queued item(s) from your last session</source>
         <translation>
             <numerusform>פריט %n בתור מההפעלה הקודמת</numerusform>
-            <numerusform>%n פריטים בתור מההפעלה הקודמת</numerusform>
+            <numerusform>‏%n פריטים בתור מההפעלה הקודמת</numerusform>
         </translation>
     </message>
 </context><context>
@@ -9528,7 +9528,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>%1 words</source>
-        <translation>%1 מילים</translation>
+        <translation>‏%1 מילים</translation>
     </message>
     <message>
         <source>Exporting resources…</source>
@@ -9735,7 +9735,7 @@ No index files are deleted.</source>
     <message>
         <source>✗ %1 — %2
    Download manually: %3</source>
-        <translation>✗ ⁨%1⁩ — %2
+        <translation>‏✗ ⁨%1⁩ — %2
    להורדה ידנית: ⁨%3⁩</translation>
     </message>
     <message>
@@ -9824,7 +9824,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>%1 entries</source>
-        <translation>%1 רשומות</translation>
+        <translation>‏%1 רשומות</translation>
     </message>
 </context><context>
     <name>ResourcesPage</name>
@@ -9866,7 +9866,7 @@ No index files are deleted.</source>
     <message>
         <source>%1 and %2</source>
         <extracomment>Joins the last item to the rest of a list: "JMdict, JPDB and Jiten".</extracomment>
-        <translation>%1 ו-%2</translation>
+        <translation>‏%1 ו-%2</translation>
     </message>
     <message>
         <source>Checking for an offline dictionary...</source>
@@ -9878,7 +9878,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>%1 ready: %2</source>
-        <translation>%1 מוכן: ⁨%2⁩</translation>
+        <translation>‏%1 מוכן: ⁨%2⁩</translation>
     </message>
     <message>
         <source>Dictionary ready: %1</source>
@@ -9890,7 +9890,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>%1: not set up (optional)</source>
-        <translation>%1: לא הוגדר (אופציונלי)</translation>
+        <translation>‏%1: לא הוגדר (אופציונלי)</translation>
     </message>
     <message>
         <source>Starting…</source>
@@ -9922,7 +9922,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>%1 installed, %2 failed.</source>
-        <translation>%1 הותקנו, %2 נכשלו.</translation>
+        <translation>‏%1 הותקנו, %2 נכשלו.</translation>
     </message>
     <message>
         <source>No resources were installed.</source>
@@ -10012,19 +10012,19 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>%1 — %2 of %3 %4 completed; %5 card added in %6</source>
-        <translation>%1 — הושלמו %2 מתוך %3 %4; נוסף %5 כרטיס תוך %6</translation>
+        <translation>‏%1 — הושלמו %2 מתוך %3 %4; נוסף %5 כרטיס תוך %6</translation>
     </message>
     <message>
         <source>%1 — %2 of %3 %4 completed; %5 cards added in %6</source>
-        <translation>%1 — הושלמו %2 מתוך %3 %4; נוספו %5 כרטיסים תוך %6</translation>
+        <translation>‏%1 — הושלמו %2 מתוך %3 %4; נוספו %5 כרטיסים תוך %6</translation>
     </message>
     <message>
         <source>%1 — %2 card added in %3</source>
-        <translation>%1 — נוסף %2 כרטיס תוך %3</translation>
+        <translation>‏%1 — נוסף %2 כרטיס תוך %3</translation>
     </message>
     <message>
         <source>%1 — %2 cards added in %3</source>
-        <translation>%1 — נוספו %2 כרטיסים תוך %3</translation>
+        <translation>‏%1 — נוספו %2 כרטיסים תוך %3</translation>
     </message>
     <message>
         <source>(asleep time excluded)</source>
@@ -10128,7 +10128,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Anki did not confirm the card</source>
-        <translation>Anki לא אישר את הכרטיס</translation>
+        <translation>‏Anki לא אישר את הכרטיס</translation>
     </message>
     <message>
         <source>%1 (%2): %3</source>
@@ -11056,7 +11056,7 @@ Your installed resources and your theme are kept.</source>
         <source>%n card(s) this session</source>
         <translation>
             <numerusform>כרטיס %n בהפעלה הזו</numerusform>
-            <numerusform>%n כרטיסים בהפעלה הזו</numerusform>
+            <numerusform>‏%n כרטיסים בהפעלה הזו</numerusform>
         </translation>
     </message>
     <message>
@@ -11066,8 +11066,8 @@ Your installed resources and your theme are kept.</source>
     <message numerus="yes">
         <source>%n running</source>
         <translation>
-            <numerusform>%n פועלת</numerusform>
-            <numerusform>%n פועלות</numerusform>
+            <numerusform>‏%n פועלת</numerusform>
+            <numerusform>‏%n פועלות</numerusform>
         </translation>
     </message>
     <message>
@@ -11084,11 +11084,11 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>AnkiConnect is connected</source>
-        <translation>AnkiConnect מחובר</translation>
+        <translation>‏AnkiConnect מחובר</translation>
     </message>
     <message>
         <source>AnkiConnect is not connected</source>
-        <translation>AnkiConnect אינו מחובר</translation>
+        <translation>‏AnkiConnect אינו מחובר</translation>
     </message>
     <message>
         <source>Checking ffmpeg…</source>
@@ -11096,11 +11096,11 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>ffmpeg is available</source>
-        <translation>ffmpeg זמין</translation>
+        <translation>‏ffmpeg זמין</translation>
     </message>
     <message>
         <source>ffmpeg is not available</source>
-        <translation>ffmpeg אינו זמין</translation>
+        <translation>‏ffmpeg אינו זמין</translation>
     </message>
 </context><context>
     <name>SubtitleCreationTab</name>
@@ -11660,7 +11660,7 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>alass is not installed; skipping alass attempts.</source>
-        <translation>alass אינו מותקן; מדלג על ניסיונות alass.</translation>
+        <translation>‏alass אינו מותקן; מדלג על ניסיונות alass.</translation>
     </message>
     <message>
         <source>%1 result rejected: %2</source>
@@ -11794,7 +11794,7 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>large-v3 is the most accurate; small is much faster.</source>
-        <translation>large-v3 הוא המדויק ביותר; small מהיר בהרבה.</translation>
+        <translation>‏large-v3 הוא המדויק ביותר; small מהיר בהרבה.</translation>
     </message>
     <message>
         <source>Run transcription on</source>
@@ -12028,7 +12028,7 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>ffmpeg (video tools)</source>
-        <translation>ffmpeg (כלי וידאו)</translation>
+        <translation>‏ffmpeg (כלי וידאו)</translation>
     </message>
     <message>
         <source>Language engine</source>
@@ -12052,15 +12052,15 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>yt-dlp (YouTube mining)</source>
-        <translation>yt-dlp (כרייה מ-YouTube)</translation>
+        <translation>‏yt-dlp (כרייה מ-YouTube)</translation>
     </message>
     <message>
         <source>alass (subtitle retiming)</source>
-        <translation>alass (תזמון כתוביות מחדש)</translation>
+        <translation>‏alass (תזמון כתוביות מחדש)</translation>
     </message>
     <message>
         <source>mokuro (manga OCR)</source>
-        <translation>mokuro (OCR למנגה)</translation>
+        <translation>‏mokuro (OCR למנגה)</translation>
     </message>
     <message>
         <source>Anki Miner updates</source>
@@ -12228,7 +12228,7 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>ffmpeg and ffprobe were not found. Install ffmpeg and add it to PATH to use this tool.</source>
-        <translation>ffmpeg ו-ffprobe לא נמצאו. כדי להשתמש בכלי הזה יש להתקין את ffmpeg ולהוסיף אותו ל-PATH.</translation>
+        <translation>‏ffmpeg ו-ffprobe לא נמצאו. כדי להשתמש בכלי הזה יש להתקין את ffmpeg ולהוסיף אותו ל-PATH.</translation>
     </message>
     <message>
         <source>Save the subtitle and audio tracks inside a video as their own files. Tracks are copied as they are; the video is never changed.</source>
@@ -12531,7 +12531,7 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>Anki Miner v%1 is downloaded. Restart to finish updating.</source>
-        <translation>Anki Miner ⁨v%1⁩ הורד. יש להפעיל מחדש כדי להשלים את העדכון.</translation>
+        <translation>‏Anki Miner ⁨v%1⁩ הורד. יש להפעיל מחדש כדי להשלים את העדכון.</translation>
     </message>
     <message>
         <source>Anki Miner v%1 could not be installed automatically.</source>
@@ -12539,7 +12539,7 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>Anki Miner v%1 is available</source>
-        <translation>Anki Miner ⁨v%1⁩ זמין</translation>
+        <translation>‏Anki Miner ⁨v%1⁩ זמין</translation>
     </message>
     <message>
         <source>Cancel</source>
@@ -12673,7 +12673,7 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>Video OCR</source>
-        <translation>OCR לווידאו</translation>
+        <translation>‏OCR לווידאו</translation>
     </message>
     <message>
         <source>Reading subtitles in file %1 of %2</source>
@@ -12781,7 +12781,7 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>%1% from the left, %2% from the top, %3% wide, %4% tall</source>
-        <translation>%1% משמאל, %2% מלמעלה, רוחב %3%, גובה %4%</translation>
+        <translation>‏%1% משמאל, %2% מלמעלה, רוחב %3%, גובה %4%</translation>
     </message>
     <message>
         <source>Choose a folder of videos first, then set the region on one of them.</source>
@@ -13113,7 +13113,7 @@ Sort by it to work through a long recording in order — then highlight the rows
         <source>%1
 
 (%2 example sentences to pick from — focus the row, then choose one under “Sentences”)</source>
-        <translation>%1
+        <translation>‏%1
 
 (%2 משפטי דוגמה לבחירה — יש להתמקד בשורה, ואז לבחור אחד תחת "משפטים")</translation>
     </message>
@@ -13199,7 +13199,7 @@ Sort by it to work through a long recording in order — then highlight the rows
     </message>
     <message>
         <source>%1 included · %2 shown of %3</source>
-        <translation>%1 הוכללו · %2 מוצגות מתוך %3</translation>
+        <translation>‏%1 הוכללו · %2 מוצגות מתוך %3</translation>
     </message>
 </context><context>
     <name>WorkflowActionBar</name>
@@ -13209,7 +13209,7 @@ Sort by it to work through a long recording in order — then highlight the rows
     </message>
     <message>
         <source>%1 (%2 of %3)</source>
-        <translation>⁨%1⁩ (%2 מתוך %3)</translation>
+        <translation>‏⁨%1⁩ (%2 מתוך %3)</translation>
     </message>
     <message>
         <source>Activity</source>
@@ -13475,7 +13475,7 @@ Sort by it to work through a long recording in order — then highlight the rows
     </message>
     <message>
         <source>yt-dlp is not installed, so YouTube mining cannot run.</source>
-        <translation>yt-dlp אינו מותקן, ולכן כריית YouTube לא יכולה לפעול.</translation>
+        <translation>‏yt-dlp אינו מותקן, ולכן כריית YouTube לא יכולה לפעול.</translation>
     </message>
     <message>
         <source>Download yt-dlp</source>
@@ -13583,7 +13583,7 @@ Sort by it to work through a long recording in order — then highlight the rows
     <name>app</name>
     <message>
         <source>Anki Miner — Unexpected Error</source>
-        <translation>Anki Miner — שגיאה בלתי צפויה</translation>
+        <translation>‏Anki Miner — שגיאה בלתי צפויה</translation>
     </message>
     <message>
         <source>Anki Miner hit an unexpected error.</source>

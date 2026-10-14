@@ -51,7 +51,7 @@
     </message>
     <message>
         <source>alass installed.</source>
-        <translation>alass نصب شد.</translation>
+        <translation>‏alass نصب شد.</translation>
     </message>
 </context><context>
     <name>AnalyticsTab</name>
@@ -177,15 +177,15 @@
     </message>
     <message>
         <source>%1 mining sessions completed</source>
-        <translation>%1 نشست استخراج کامل شد</translation>
+        <translation>‏%1 نشست استخراج کامل شد</translation>
     </message>
     <message>
         <source>%1 series mined</source>
-        <translation>%1 مجموعه استخراج شد</translation>
+        <translation>‏%1 مجموعه استخراج شد</translation>
     </message>
     <message>
         <source>%1 cards created</source>
-        <translation>%1 کارت ساخته شد</translation>
+        <translation>‏%1 کارت ساخته شد</translation>
     </message>
     <message>
         <source>Reached</source>
@@ -195,7 +195,7 @@
     <name>AnkiConnectHelp</name>
     <message>
         <source>Open Anki.</source>
-        <translation>Anki را باز کنید.</translation>
+        <translation>‏Anki را باز کنید.</translation>
     </message>
     <message>
         <source>In Anki choose Tools → Add-ons → Get Add-ons…, paste the code %1, and click OK.</source>
@@ -203,7 +203,7 @@
     </message>
     <message>
         <source>Restart Anki.</source>
-        <translation>Anki را دوباره راه‌اندازی کنید.</translation>
+        <translation>‏Anki را دوباره راه‌اندازی کنید.</translation>
     </message>
 </context><context>
     <name>AnkiConnectPage</name>
@@ -225,7 +225,7 @@
     </message>
     <message>
         <source>AnkiConnect URL:</source>
-        <translation>URL مربوط به AnkiConnect:</translation>
+        <translation>‏URL مربوط به AnkiConnect:</translation>
     </message>
     <message>
         <source>Enter an AnkiConnect URL.</source>
@@ -241,7 +241,7 @@
     </message>
     <message>
         <source>Anki Miner can't reach Anki yet. Do this once:</source>
-        <translation>Anki Miner هنوز به Anki دسترسی ندارد. این کار را یک بار انجام دهید:</translation>
+        <translation>‏Anki Miner هنوز به Anki دسترسی ندارد. این کار را یک بار انجام دهید:</translation>
     </message>
     <message>
         <source>Copied</source>
@@ -257,7 +257,7 @@
     </message>
     <message>
         <source>Anki did not start. Open it yourself.</source>
-        <translation>Anki اجرا نشد. خودتان آن را باز کنید.</translation>
+        <translation>‏Anki اجرا نشد. خودتان آن را باز کنید.</translation>
     </message>
 </context><context>
     <name>AnkiPage</name>
@@ -267,7 +267,7 @@
     </message>
     <message>
         <source>Anki Miner talks to Anki through the AnkiConnect add-on.</source>
-        <translation>Anki Miner از طریق افزونه AnkiConnect با Anki ارتباط برقرار می‌کند.</translation>
+        <translation>‏Anki Miner از طریق افزونه AnkiConnect با Anki ارتباط برقرار می‌کند.</translation>
     </message>
 </context><context>
     <name>AnkiProbeController</name>
@@ -294,17 +294,17 @@
     <message numerus="yes">
         <source>Fetched %n field(s) and auto-mapped them</source>
         <translation>
-            <numerusform>%n فیلد واکشی و به‌طور خودکار نگاشت شد</numerusform>
+            <numerusform>‏%n فیلد واکشی و به‌طور خودکار نگاشت شد</numerusform>
         </translation>
     </message>
     <message>
         <source>%1; %2</source>
-        <translation>%1؛ %2</translation>
+        <translation>‏%1؛ %2</translation>
     </message>
     <message numerus="yes">
         <source>cleared %n stale mapping(s)</source>
         <translation>
-            <numerusform>%n نگاشت منسوخ پاک شد</numerusform>
+            <numerusform>‏%n نگاشت منسوخ پاک شد</numerusform>
         </translation>
     </message>
     <message>
@@ -601,11 +601,11 @@
     </message>
     <message>
         <source>Anki Miner can't find Anki where its installer puts it, so it can't open it.</source>
-        <translation>Anki Miner نمی‌تواند Anki را در محلی که نصب‌کننده‌اش آن را قرار می‌دهد پیدا کند، پس نمی‌تواند آن را باز کند.</translation>
+        <translation>‏Anki Miner نمی‌تواند Anki را در محلی که نصب‌کننده‌اش آن را قرار می‌دهد پیدا کند، پس نمی‌تواند آن را باز کند.</translation>
     </message>
     <message>
         <source>AnkiConnect URL</source>
-        <translation>URL مربوط به AnkiConnect</translation>
+        <translation>‏URL مربوط به AnkiConnect</translation>
     </message>
     <message>
         <source>Default http://127.0.0.1:8765. Change if AnkiConnect uses a different port.</source>
@@ -897,7 +897,7 @@
     </message>
     <message>
         <source>Anki isn't reachable. Start Anki (with AnkiConnect) and press Refresh.</source>
-        <translation>Anki در دسترس نیست. Anki را (همراه با AnkiConnect) اجرا کنید و «تازه‌سازی» را بزنید.</translation>
+        <translation>‏Anki در دسترس نیست. Anki را (همراه با AnkiConnect) اجرا کنید و «تازه‌سازی» را بزنید.</translation>
     </message>
     <message>
         <source>Deck not found</source>
@@ -911,7 +911,7 @@
     <name>App</name>
     <message>
         <source>Anki Miner Is Already Running</source>
-        <translation>Anki Miner از قبل در حال اجراست</translation>
+        <translation>‏Anki Miner از قبل در حال اجراست</translation>
     </message>
     <message>
         <source>Another copy of Anki Miner appears to be running. Running two copies at once can corrupt the known-words and statistics databases.
@@ -991,7 +991,7 @@ Continue anyway?</source>
     </message>
     <message>
         <source>%1 s</source>
-        <translation>%1 ث</translation>
+        <translation>‏%1 ث</translation>
     </message>
 </context><context>
     <name>AudioPackImportFlow</name>
@@ -1033,7 +1033,7 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
     </message>
     <message>
         <source>Imported %1 audio pack(s):</source>
-        <translation>%1 بسته صوتی وارد شد:</translation>
+        <translation>‏%1 بسته صوتی وارد شد:</translation>
     </message>
     <message>
         <source>Failed:</source>
@@ -1163,7 +1163,7 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
     </message>
     <message>
         <source>Re-imported %1 audio pack(s):</source>
-        <translation>%1 بسته صوتی دوباره وارد شد:</translation>
+        <translation>‏%1 بسته صوتی دوباره وارد شد:</translation>
     </message>
     <message>
         <source>Skipped (source folder or database not found; use per-row Re-import…):</source>
@@ -1313,27 +1313,27 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
     </message>
     <message>
         <source>Google Translate (synthetic TTS)</source>
-        <translation>Google Translate (TTS مصنوعی)</translation>
+        <translation>‏Google Translate (TTS مصنوعی)</translation>
     </message>
     <message>
         <source>Microsoft Edge (synthetic TTS)</source>
-        <translation>Microsoft Edge (TTS مصنوعی)</translation>
+        <translation>‏Microsoft Edge (TTS مصنوعی)</translation>
     </message>
     <message>
         <source>Custom JSON</source>
-        <translation>JSON سفارشی</translation>
+        <translation>‏JSON سفارشی</translation>
     </message>
     <message>
         <source>Custom URL</source>
-        <translation>URL سفارشی</translation>
+        <translation>‏URL سفارشی</translation>
     </message>
     <message>
         <source>JapanesePod101 (online)</source>
-        <translation>JapanesePod101 (آنلاین)</translation>
+        <translation>‏JapanesePod101 (آنلاین)</translation>
     </message>
     <message>
         <source>%1 entries</source>
-        <translation>%1 مدخل</translation>
+        <translation>‏%1 مدخل</translation>
     </message>
     <message>
         <source>⚠ re-import required (app upgrade)</source>
@@ -1719,7 +1719,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>%1 series were skipped: folders missing.</source>
-        <translation>%1 مجموعه رد شد: پوشه‌ها موجود نیستند.</translation>
+        <translation>‏%1 مجموعه رد شد: پوشه‌ها موجود نیستند.</translation>
     </message>
     <message>
         <source>series</source>
@@ -1773,7 +1773,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>%1 of %2 episodes failed, starting with %3.</source>
-        <translation>%1 قسمت از %2 ناموفق بود، از ⁨%3⁩ به بعد.</translation>
+        <translation>‏%1 قسمت از %2 ناموفق بود، از ⁨%3⁩ به بعد.</translation>
     </message>
     <message numerus="yes">
         <source>Collecting words from %n episode(s) for review...</source>
@@ -2019,7 +2019,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>%1 sentences timed, %2 in between had no audio</source>
-        <translation>%1 جمله زمان‌بندی شد، %2 جمله در میان صوت نداشت</translation>
+        <translation>‏%1 جمله زمان‌بندی شد، %2 جمله در میان صوت نداشت</translation>
     </message>
     <message>
         <source>No speech detected</source>
@@ -2497,7 +2497,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Download alass, the subtitle re-timing tool, in-app on Linux and Windows; on macOS install it with Homebrew and point Anki Miner at it.</source>
-        <translation>alass، ابزار زمان‌بندی دوباره زیرنویس، را در Linux و Windows از داخل برنامه دانلود کنید؛ در macOS آن را با Homebrew نصب کنید و Anki Miner را به آن ارجاع دهید.</translation>
+        <translation>‏alass، ابزار زمان‌بندی دوباره زیرنویس، را در Linux و Windows از داخل برنامه دانلود کنید؛ در macOS آن را با Homebrew نصب کنید و Anki Miner را به آن ارجاع دهید.</translation>
     </message>
     <message>
         <source>Word pronunciation audio</source>
@@ -2713,7 +2713,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Run mokuro's OCR on a volume folder or a whole series so Reading → Manga can mine it. Install mokuro from its setup card on Utilities → Manga OCR.</source>
-        <translation>OCR مربوط به mokuro را روی پوشه یک جلد یا کل یک مجموعه اجرا کنید تا خواندن ← مانگا بتواند آن را استخراج کند. mokuro را از کارت راه‌اندازی آن در امکانات ← OCR مانگا نصب کنید.</translation>
+        <translation>‏OCR مربوط به mokuro را روی پوشه یک جلد یا کل یک مجموعه اجرا کنید تا خواندن ← مانگا بتواند آن را استخراج کند. mokuro را از کارت راه‌اندازی آن در امکانات ← OCR مانگا نصب کنید.</translation>
     </message>
     <message>
         <source>Read burned-in subtitles from a video into an .srt</source>
@@ -3044,13 +3044,13 @@ No index files are deleted.</source>
     <message numerus="yes">
         <source>%n field(s) across %1 will be filled.</source>
         <translation>
-            <numerusform>%n فیلد در ⁨%1⁩ پر خواهد شد.</numerusform>
+            <numerusform>‏%n فیلد در ⁨%1⁩ پر خواهد شد.</numerusform>
         </translation>
     </message>
     <message numerus="yes">
         <source>%n note(s)</source>
         <translation>
-            <numerusform>%n یادداشت</numerusform>
+            <numerusform>‏%n یادداشت</numerusform>
         </translation>
     </message>
     <message numerus="yes">
@@ -3074,13 +3074,13 @@ No index files are deleted.</source>
     <message numerus="yes">
         <source>%n field value(s) already up to date.</source>
         <translation>
-            <numerusform>%n مقدار فیلد از قبل به‌روز است.</numerusform>
+            <numerusform>‏%n مقدار فیلد از قبل به‌روز است.</numerusform>
         </translation>
     </message>
     <message numerus="yes">
         <source>%n pitch field(s) kept — the reading was guessed, so the accent could be the wrong homograph's. Map an Expression Reading or Furigana field to overwrite them.</source>
         <translation>
-            <numerusform>%n فیلد زیروبمی حفظ شد — خوانش حدسی بود، پس تکیه ممکن است مربوط به هم‌نگاره اشتباه باشد. برای بازنویسی آن‌ها یک فیلد خوانش عبارت یا فوریگانا نگاشت کنید.</numerusform>
+            <numerusform>‏%n فیلد زیروبمی حفظ شد — خوانش حدسی بود، پس تکیه ممکن است مربوط به هم‌نگاره اشتباه باشد. برای بازنویسی آن‌ها یک فیلد خوانش عبارت یا فوریگانا نگاشت کنید.</numerusform>
         </translation>
     </message>
     <message>
@@ -3094,7 +3094,7 @@ No index files are deleted.</source>
     <message numerus="yes">
         <source>%n note(s) skipped — empty Expression field.</source>
         <translation>
-            <numerusform>%n یادداشت رد شد — فیلد عبارت خالی است.</numerusform>
+            <numerusform>‏%n یادداشت رد شد — فیلد عبارت خالی است.</numerusform>
         </translation>
     </message>
     <message>
@@ -3114,7 +3114,7 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
     <message numerus="yes">
         <source>%n field(s)</source>
         <translation>
-            <numerusform>%n فیلد</numerusform>
+            <numerusform>‏%n فیلد</numerusform>
         </translation>
     </message>
     <message>
@@ -3124,7 +3124,7 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
     <message numerus="yes">
         <source>Filled %n field(s) on %1.</source>
         <translation>
-            <numerusform>%n فیلد در ⁨%1⁩ پر شد.</numerusform>
+            <numerusform>‏%n فیلد در ⁨%1⁩ پر شد.</numerusform>
         </translation>
     </message>
     <message>
@@ -3134,7 +3134,7 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
     <message numerus="yes">
         <source>%n skipped — changed or deleted since the scan.</source>
         <translation>
-            <numerusform>%n مورد رد شد — پس از پویش تغییر کرده یا حذف شده است.</numerusform>
+            <numerusform>‏%n مورد رد شد — پس از پویش تغییر کرده یا حذف شده است.</numerusform>
         </translation>
     </message>
     <message>
@@ -3150,7 +3150,7 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
     <message numerus="yes">
         <source>%n audio file(s) could not be added to Anki; scan again to retry.</source>
         <translation>
-            <numerusform>%n فایل صوتی به Anki افزوده نشد؛ برای تلاش دوباره، دوباره پویش کنید.</numerusform>
+            <numerusform>‏%n فایل صوتی به Anki افزوده نشد؛ برای تلاش دوباره، دوباره پویش کنید.</numerusform>
         </translation>
     </message>
 </context><context>
@@ -3287,7 +3287,7 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
     </message>
     <message>
         <source>ffmpeg not found; install it and put it on PATH to enable condensing.</source>
-        <translation>ffmpeg پیدا نشد؛ برای فعال شدن فشرده‌سازی، آن را نصب و به PATH اضافه کنید.</translation>
+        <translation>‏ffmpeg پیدا نشد؛ برای فعال شدن فشرده‌سازی، آن را نصب و به PATH اضافه کنید.</translation>
     </message>
     <message>
         <source>Condense a video or audio file down to just its spoken dialogue.</source>
@@ -3531,7 +3531,7 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
     </message>
     <message>
         <source>Matched %1 of %2 media files.</source>
-        <translation>%1 از %2 فایل رسانه تطبیق داده شد.</translation>
+        <translation>‏%1 از %2 فایل رسانه تطبیق داده شد.</translation>
     </message>
     <message>
         <source>Unmatched media files: %1.</source>
@@ -3615,7 +3615,7 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
     <name>CudaPackDownloadWorker</name>
     <message>
         <source>%1 (%2%)</source>
-        <translation>%1 (%2٪)</translation>
+        <translation>‏%1 (%2٪)</translation>
     </message>
     <message>
         <source>Downloading GPU libraries…</source>
@@ -3649,11 +3649,11 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
     </message>
     <message>
         <source>%1 (%2 of %3)</source>
-        <translation>%1 (%2 از %3)</translation>
+        <translation>‏%1 (%2 از %3)</translation>
     </message>
     <message>
         <source>%1 of %2 · %3 done</source>
-        <translation>%1 از %2 · %3 انجام شد</translation>
+        <translation>‏%1 از %2 · %3 انجام شد</translation>
     </message>
 </context><context>
     <name>DeckBuilderTab</name>
@@ -3747,7 +3747,7 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
     </message>
     <message>
         <source>Top N words</source>
-        <translation>N واژه برتر</translation>
+        <translation>‏N واژه برتر</translation>
     </message>
     <message>
         <source>Target coverage %</source>
@@ -3831,7 +3831,7 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
     </message>
     <message>
         <source>%1 of %2 episodes mined</source>
-        <translation>%1 از %2 قسمت استخراج شد</translation>
+        <translation>‏%1 از %2 قسمت استخراج شد</translation>
     </message>
     <message>
         <source>Some episodes could not be mined.</source>
@@ -3843,11 +3843,11 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
     </message>
     <message>
         <source>Created %1 cards in deck '%3'; the candidate words cover ~%2% of tokens.</source>
-        <translation>%1 کارت در دسته «⁨%3⁩» ساخته شد؛ واژه‌های نامزد حدود %2٪ از توکن‌ها را پوشش می‌دهند.</translation>
+        <translation>‏%1 کارت در دسته «⁨%3⁩» ساخته شد؛ واژه‌های نامزد حدود %2٪ از توکن‌ها را پوشش می‌دهند.</translation>
     </message>
     <message>
         <source>Created %1 cards in deck '%2'.</source>
-        <translation>%1 کارت در دسته «⁨%2⁩» ساخته شد.</translation>
+        <translation>‏%1 کارت در دسته «⁨%2⁩» ساخته شد.</translation>
     </message>
     <message>
         <source>Folder not found: %1</source>
@@ -4010,7 +4010,7 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
     <message numerus="yes">
         <source>%n note(s) in the deck.</source>
         <translation>
-            <numerusform>%n یادداشت در دسته.</numerusform>
+            <numerusform>‏%n یادداشت در دسته.</numerusform>
         </translation>
     </message>
     <message>
@@ -4076,7 +4076,7 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
     <message numerus="yes">
         <source>%1 of %n note(s) will be copied.</source>
         <translation>
-            <numerusform>%1 از %n یادداشت کپی خواهد شد.</numerusform>
+            <numerusform>‏%1 از %n یادداشت کپی خواهد شد.</numerusform>
         </translation>
     </message>
     <message>
@@ -4086,7 +4086,7 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
     <message numerus="yes">
         <source>%n kept by whitelist.</source>
         <translation>
-            <numerusform>%n مورد با فهرست سفید نگه داشته شد.</numerusform>
+            <numerusform>‏%n مورد با فهرست سفید نگه داشته شد.</numerusform>
         </translation>
     </message>
     <message numerus="yes">
@@ -4112,13 +4112,13 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
     <message numerus="yes">
         <source>Copied %n note(s) into "%1".</source>
         <translation>
-            <numerusform>%n یادداشت در «⁨%1⁩» کپی شد.</numerusform>
+            <numerusform>‏%n یادداشت در «⁨%1⁩» کپی شد.</numerusform>
         </translation>
     </message>
     <message numerus="yes">
         <source>%n note(s) were not accepted by Anki (see log).</source>
         <translation>
-            <numerusform>%n یادداشت توسط Anki پذیرفته نشد (گزارش را ببینید).</numerusform>
+            <numerusform>‏%n یادداشت توسط Anki پذیرفته نشد (گزارش را ببینید).</numerusform>
         </translation>
     </message>
 </context><context>
@@ -4145,7 +4145,7 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
     </message>
     <message>
         <source>Anki doesn't have a deck called “%1” yet. In Anki, click Create Deck at the bottom of the main window and name it %1, or pick one of your decks above. This page updates when you come back.</source>
-        <translation>Anki هنوز دسته‌ای به نام «⁨%1⁩» ندارد. در Anki روی «ایجاد دسته» در پایین پنجره اصلی کلیک کنید و نام آن را ⁨%1⁩ بگذارید، یا یکی از دسته‌های خود را در بالا انتخاب کنید. این صفحه هنگام بازگشت شما به‌روز می‌شود.</translation>
+        <translation>‏Anki هنوز دسته‌ای به نام «⁨%1⁩» ندارد. در Anki روی «ایجاد دسته» در پایین پنجره اصلی کلیک کنید و نام آن را ⁨%1⁩ بگذارید، یا یکی از دسته‌های خود را در بالا انتخاب کنید. این صفحه هنگام بازگشت شما به‌روز می‌شود.</translation>
     </message>
 </context><context>
     <name>DefinitionService</name>
@@ -4177,11 +4177,11 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
     <name>DictionaryImportFlow</name>
     <message>
         <source>Skipped %1 malformed entries.</source>
-        <translation>%1 مدخل ناقص رد شد.</translation>
+        <translation>‏%1 مدخل ناقص رد شد.</translation>
     </message>
     <message>
         <source>%1 media file(s) could not be imported.</source>
-        <translation>%1 فایل رسانه وارد نشد.</translation>
+        <translation>‏%1 فایل رسانه وارد نشد.</translation>
     </message>
     <message>
         <source>This dictionary says its language is %1, not the language you are mining.</source>
@@ -4193,7 +4193,7 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
     </message>
     <message>
         <source>Yomitan zip (*.zip)</source>
-        <translation>zip مربوط به Yomitan (*.zip)</translation>
+        <translation>‏zip مربوط به Yomitan (*.zip)</translation>
     </message>
     <message>
         <source>Dictionary %1 of %2: %3</source>
@@ -4213,7 +4213,7 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
     </message>
     <message>
         <source>Imported %1 dictionaries:</source>
-        <translation>%1 واژه‌نامه وارد شد:</translation>
+        <translation>‏%1 واژه‌نامه وارد شد:</translation>
     </message>
     <message>
         <source>Failed:</source>
@@ -4485,7 +4485,7 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
     </message>
     <message>
         <source>%1 entries</source>
-        <translation>%1 مدخل</translation>
+        <translation>‏%1 مدخل</translation>
     </message>
     <message>
         <source>not installed</source>
@@ -4563,15 +4563,15 @@ No files on disk are deleted.</source>
     </message>
     <message>
         <source>Anki isn't reachable. Open Anki.</source>
-        <translation>Anki در دسترس نیست. Anki را باز کنید.</translation>
+        <translation>‏Anki در دسترس نیست. Anki را باز کنید.</translation>
     </message>
     <message>
         <source>Anki has no deck called “%1”. Go back to the Anki step and pick one.</source>
-        <translation>Anki دسته‌ای به نام «⁨%1⁩» ندارد. به مرحله Anki برگردید و یکی را انتخاب کنید.</translation>
+        <translation>‏Anki دسته‌ای به نام «⁨%1⁩» ندارد. به مرحله Anki برگردید و یکی را انتخاب کنید.</translation>
     </message>
     <message>
         <source>Anki has no note type called “%1”. Go back to the Anki step and pick one.</source>
-        <translation>Anki نوع یادداشتی به نام «⁨%1⁩» ندارد. به مرحله Anki برگردید و یکی را انتخاب کنید.</translation>
+        <translation>‏Anki نوع یادداشتی به نام «⁨%1⁩» ندارد. به مرحله Anki برگردید و یکی را انتخاب کنید.</translation>
     </message>
     <message>
         <source>The card fields don't match the note type. Go back to the Anki step and pick it again.</source>
@@ -4585,7 +4585,7 @@ No files on disk are deleted.</source>
     <name>DownloadTab</name>
     <message>
         <source>yt-dlp is not installed, so downloads cannot run.</source>
-        <translation>yt-dlp نصب نیست، بنابراین دانلودها اجرا نمی‌شوند.</translation>
+        <translation>‏yt-dlp نصب نیست، بنابراین دانلودها اجرا نمی‌شوند.</translation>
     </message>
     <message>
         <source>Download yt-dlp</source>
@@ -4669,7 +4669,7 @@ No files on disk are deleted.</source>
     </message>
     <message>
         <source>URLs</source>
-        <translation>URLها</translation>
+        <translation>‏URLها</translation>
     </message>
     <message>
         <source>Download videos or audio from any site yt-dlp supports, without mining.</source>
@@ -4825,7 +4825,7 @@ No files on disk are deleted.</source>
     </message>
     <message>
         <source>The URL that was checked is no longer in the list; its tracks were ignored.</source>
-        <translation>URL بررسی‌شده دیگر در فهرست نیست؛ ترک‌های آن نادیده گرفته شدند.</translation>
+        <translation>‏URL بررسی‌شده دیگر در فهرست نیست؛ ترک‌های آن نادیده گرفته شدند.</translation>
     </message>
     <message>
         <source>  · on this URL</source>
@@ -4861,15 +4861,15 @@ No files on disk are deleted.</source>
     </message>
     <message>
         <source>Added %1 videos from '%2'.</source>
-        <translation>%1 ویدیو از «⁨%2⁩» افزوده شد.</translation>
+        <translation>‏%1 ویدیو از «⁨%2⁩» افزوده شد.</translation>
     </message>
     <message>
         <source>Skipped %1 already in the list.</source>
-        <translation>%1 مورد که از قبل در فهرست بود رد شد.</translation>
+        <translation>‏%1 مورد که از قبل در فهرست بود رد شد.</translation>
     </message>
     <message>
         <source>Paste the playlist URL again and expand it for videos %1 onward.</source>
-        <translation>URL فهرست پخش را دوباره بچسبانید و آن را برای ویدیوهای %1 به بعد گسترش دهید.</translation>
+        <translation>‏URL فهرست پخش را دوباره بچسبانید و آن را برای ویدیوهای %1 به بعد گسترش دهید.</translation>
     </message>
     <message>
         <source>Could not expand that playlist.</source>
@@ -4883,7 +4883,7 @@ No files on disk are deleted.</source>
     <name>DownloadWorker</name>
     <message>
         <source>%1: %2%</source>
-        <translation>%1: %2٪</translation>
+        <translation>‏%1: %2٪</translation>
     </message>
     <message>
         <source>Done</source>
@@ -4931,11 +4931,11 @@ No files on disk are deleted.</source>
     </message>
     <message>
         <source>Sentence-audio TTS returned repeated server errors — sentence audio skipped this run, will retry next run</source>
-        <translation>TTS صوت جمله خطاهای پیاپی سرور برگرداند — صوت جمله در این اجرا رد شد، در اجرای بعدی دوباره امتحان می‌شود</translation>
+        <translation>‏TTS صوت جمله خطاهای پیاپی سرور برگرداند — صوت جمله در این اجرا رد شد، در اجرای بعدی دوباره امتحان می‌شود</translation>
     </message>
     <message>
         <source>Sentence-audio TTS returned non-audio responses (likely rate-limited) — sentence audio skipped this run, will retry next run</source>
-        <translation>TTS صوت جمله پاسخ‌های غیرصوتی برگرداند (احتمالاً محدودیت نرخ) — صوت جمله در این اجرا رد شد، در اجرای بعدی دوباره امتحان می‌شود</translation>
+        <translation>‏TTS صوت جمله پاسخ‌های غیرصوتی برگرداند (احتمالاً محدودیت نرخ) — صوت جمله در این اجرا رد شد، در اجرای بعدی دوباره امتحان می‌شود</translation>
     </message>
     <message>
         <source>Fetching expression audio</source>
@@ -5009,7 +5009,7 @@ No files on disk are deleted.</source>
     </message>
     <message>
         <source>%1 word(s) have more than one reading — the parsed reading was kept.</source>
-        <translation>%1 واژه بیش از یک خوانش دارند — خوانش تجزیه‌شده حفظ شد.</translation>
+        <translation>‏%1 واژه بیش از یک خوانش دارند — خوانش تجزیه‌شده حفظ شد.</translation>
     </message>
     <message>
         <source>Parsing subtitles</source>
@@ -5022,7 +5022,7 @@ No files on disk are deleted.</source>
     <message numerus="yes">
         <source>Found %n unique word(s)</source>
         <translation>
-            <numerusform>%n واژه یکتا پیدا شد</numerusform>
+            <numerusform>‏%n واژه یکتا پیدا شد</numerusform>
         </translation>
     </message>
     <message>
@@ -5036,7 +5036,7 @@ No files on disk are deleted.</source>
     <message numerus="yes">
         <source>%n new word(s) to mine</source>
         <translation>
-            <numerusform>%n واژه جدید برای استخراج</numerusform>
+            <numerusform>‏%n واژه جدید برای استخراج</numerusform>
         </translation>
     </message>
     <message>
@@ -5065,7 +5065,7 @@ No files on disk are deleted.</source>
     </message>
     <message>
         <source>Skipped %1 words missing from your offline dictionaries: %2%3</source>
-        <translation>%1 واژه که در واژه‌نامه‌های آفلاین شما نبودند رد شدند: %2%3</translation>
+        <translation>‏%1 واژه که در واژه‌نامه‌های آفلاین شما نبودند رد شدند: %2%3</translation>
     </message>
     <message>
         <source>Frequency cutoff ignored — no ranked frequency source is loaded (Settings → Frequency).</source>
@@ -5097,7 +5097,7 @@ No files on disk are deleted.</source>
     </message>
     <message>
         <source>Collapsed %1 duplicate-expression word(s)</source>
-        <translation>%1 واژه با عبارت تکراری ادغام شد</translation>
+        <translation>‏%1 واژه با عبارت تکراری ادغام شد</translation>
     </message>
     <message>
         <source>Frequency filter: removed %1 words outside ranks %2-%3</source>
@@ -5130,7 +5130,7 @@ No files on disk are deleted.</source>
     <message numerus="yes">
         <source>Found %n definition(s)</source>
         <translation>
-            <numerusform>%n تعریف پیدا شد</numerusform>
+            <numerusform>‏%n تعریف پیدا شد</numerusform>
         </translation>
     </message>
     <message>
@@ -5143,24 +5143,24 @@ No files on disk are deleted.</source>
     </message>
     <message>
         <source>Skipped %1 words with no definition found: %2%3</source>
-        <translation>%1 واژه بدون تعریف یافت‌شده رد شدند: %2%3</translation>
+        <translation>‏%1 واژه بدون تعریف یافت‌شده رد شدند: %2%3</translation>
     </message>
     <message numerus="yes">
         <source>Created %n card(s)</source>
         <translation>
-            <numerusform>%n کارت ساخته شد</numerusform>
+            <numerusform>‏%n کارت ساخته شد</numerusform>
         </translation>
     </message>
     <message numerus="yes">
         <source>%n media file(s) could not be stored in Anki — those cards have no audio or screenshot</source>
         <translation>
-            <numerusform>%n فایل رسانه در Anki ذخیره نشد — آن کارت‌ها صوت یا تصویر صفحه ندارند</numerusform>
+            <numerusform>‏%n فایل رسانه در Anki ذخیره نشد — آن کارت‌ها صوت یا تصویر صفحه ندارند</numerusform>
         </translation>
     </message>
     <message numerus="yes">
         <source>Skipped %n word(s) Anki flagged as duplicates (same Expression)</source>
         <translation>
-            <numerusform>%n واژه که Anki آن‌ها را تکراری (عبارت یکسان) علامت زد رد شدند</numerusform>
+            <numerusform>‏%n واژه که Anki آن‌ها را تکراری (عبارت یکسان) علامت زد رد شدند</numerusform>
         </translation>
     </message>
     <message>
@@ -5351,7 +5351,7 @@ No files on disk are deleted.</source>
     </message>
     <message>
         <source>Drop %1 here</source>
-        <translation>%1 را اینجا رها کنید</translation>
+        <translation>‏%1 را اینجا رها کنید</translation>
     </message>
     <message>
         <source>Drop the file here</source>
@@ -5635,7 +5635,7 @@ No files on disk are deleted.</source>
     </message>
     <message>
         <source>Imported %1 entries from '%2'.</source>
-        <translation>%1 مدخل از «⁨%2⁩» وارد شد.</translation>
+        <translation>‏%1 مدخل از «⁨%2⁩» وارد شد.</translation>
     </message>
     <message>
         <source>Choose frequency sources</source>
@@ -5647,7 +5647,7 @@ No files on disk are deleted.</source>
     </message>
     <message>
         <source>Imported %1 frequency sources:</source>
-        <translation>%1 منبع بسامد وارد شد:</translation>
+        <translation>‏%1 منبع بسامد وارد شد:</translation>
     </message>
     <message>
         <source>Nothing was imported.</source>
@@ -5683,7 +5683,7 @@ No files on disk are deleted.</source>
     </message>
     <message>
         <source>Reimported %1 frequency source(s):</source>
-        <translation>%1 منبع بسامد دوباره وارد شد:</translation>
+        <translation>‏%1 منبع بسامد دوباره وارد شد:</translation>
     </message>
     <message>
         <source>Skipped (no saved copy to rebuild from; use per-row Re-import…):</source>
@@ -5717,7 +5717,7 @@ No files on disk are deleted.</source>
     </message>
     <message>
         <source> (skipped %1 malformed entries)</source>
-        <translation> (%1 مدخل نادرست رد شد)</translation>
+        <translation> ‏(%1 مدخل نادرست رد شد)</translation>
     </message>
     <message>
         <source> This is an occurrence-based source; its counts were converted to ranks.</source>
@@ -5843,7 +5843,7 @@ No files on disk are deleted.</source>
     </message>
     <message>
         <source>%1 entries</source>
-        <translation>%1 مدخل</translation>
+        <translation>‏%1 مدخل</translation>
     </message>
     <message>
         <source>Enabled</source>
@@ -6232,7 +6232,7 @@ Words to add: %3. Continue?</source>
     <message>
         <source>Exported %1 words to:
 %2</source>
-        <translation>%1 واژه صادر شد به:
+        <translation>‏%1 واژه صادر شد به:
 ⁨%2⁩</translation>
     </message>
     <message>
@@ -6347,7 +6347,7 @@ Words to add: %3. Continue?</source>
     </message>
     <message>
         <source>Anki Miner skips words you already have in Anki. Tick the decks that are &lt;i&gt;not&lt;/i&gt; %1, so their words don't stop %1 cards from being made.</source>
-        <translation>Anki Miner واژه‌هایی را که از قبل در Anki دارید رد می‌کند. دسته‌هایی را که &lt;i&gt;⁨%1⁩ نیستند&lt;/i&gt; علامت بزنید تا واژه‌هایشان مانع ساخت کارت‌های ⁨%1⁩ نشوند.</translation>
+        <translation>‏Anki Miner واژه‌هایی را که از قبل در Anki دارید رد می‌کند. دسته‌هایی را که &lt;i&gt;⁨%1⁩ نیستند&lt;/i&gt; علامت بزنید تا واژه‌هایشان مانع ساخت کارت‌های ⁨%1⁩ نشوند.</translation>
     </message>
     <message>
         <source>Exclude ticked decks</source>
@@ -6453,11 +6453,11 @@ Words to add: %3. Continue?</source>
     </message>
     <message>
         <source>%1 of %2</source>
-        <translation>%1 از %2</translation>
+        <translation>‏%1 از %2</translation>
     </message>
     <message>
         <source>↓ %1 new — Jump to latest</source>
-        <translation>↓ %1 مورد جدید — رفتن به آخرین</translation>
+        <translation>‏↓ %1 مورد جدید — رفتن به آخرین</translation>
     </message>
     <message>
         <source>Save Run Log</source>
@@ -6527,7 +6527,7 @@ Words to add: %3. Continue?</source>
     </message>
     <message>
         <source>Manga OCR</source>
-        <translation>OCR مانگا</translation>
+        <translation>‏OCR مانگا</translation>
     </message>
     <message>
         <source>Audiobook Sync</source>
@@ -6543,11 +6543,11 @@ Words to add: %3. Continue?</source>
     </message>
     <message>
         <source>Video OCR</source>
-        <translation>OCR ویدیو</translation>
+        <translation>‏OCR ویدیو</translation>
     </message>
     <message>
         <source>Anki Miner updated</source>
-        <translation>Anki Miner به‌روز شد</translation>
+        <translation>‏Anki Miner به‌روز شد</translation>
     </message>
     <message>
         <source>Updated to v%1.&lt;br&gt;&lt;br&gt;See what's new: &lt;a href="https://github.com/0xzerolight/anki_miner/releases/latest"&gt;release notes&lt;/a&gt;</source>
@@ -6859,7 +6859,7 @@ Continue?</source>
     </message>
     <message>
         <source>JMdict ready (%1 entries)</source>
-        <translation>JMdict آماده است (%1 مدخل)</translation>
+        <translation>‏JMdict آماده است (%1 مدخل)</translation>
     </message>
     <message>
         <source>Version %1 is available.</source>
@@ -6919,7 +6919,7 @@ Continue?</source>
     </message>
     <message>
         <source>Windows did not report a Desktop folder.</source>
-        <translation>Windows هیچ پوشه میز کاری گزارش نکرد.</translation>
+        <translation>‏Windows هیچ پوشه میز کاری گزارش نکرد.</translation>
     </message>
     <message>
         <source>Desktop shortcut created.</source>
@@ -6927,7 +6927,7 @@ Continue?</source>
     </message>
     <message>
         <source>PowerShell returned no shortcut path.</source>
-        <translation>PowerShell هیچ مسیر میان‌بری برنگرداند.</translation>
+        <translation>‏PowerShell هیچ مسیر میان‌بری برنگرداند.</translation>
     </message>
 </context><context>
     <name>MediaDownloader</name>
@@ -6981,7 +6981,7 @@ Continue?</source>
     </message>
     <message>
         <source>MP3: universal compatibility. Opus: smaller files at equivalent quality (needs ffmpeg with libopus).</source>
-        <translation>MP3: سازگاری همگانی. Opus: فایل‌های کوچک‌تر با کیفیت برابر (به ffmpeg همراه با libopus نیاز دارد).</translation>
+        <translation>‏MP3: سازگاری همگانی. Opus: فایل‌های کوچک‌تر با کیفیت برابر (به ffmpeg همراه با libopus نیاز دارد).</translation>
     </message>
     <message>
         <source> kbps</source>
@@ -7041,7 +7041,7 @@ Continue?</source>
     </message>
     <message>
         <source>AVIF: smaller files; WebP: broader Anki client support</source>
-        <translation>AVIF: فایل‌های کوچک‌تر؛ WebP: پشتیبانی گسترده‌تر در کلاینت‌های Anki</translation>
+        <translation>‏AVIF: فایل‌های کوچک‌تر؛ WebP: پشتیبانی گسترده‌تر در کلاینت‌های Anki</translation>
     </message>
     <message>
         <source>Same as sentence audio</source>
@@ -7085,7 +7085,7 @@ Continue?</source>
     </message>
     <message>
         <source>Google, then Papago</source>
-        <translation>Google، سپس Papago</translation>
+        <translation>‏Google، سپس Papago</translation>
     </message>
     <message>
         <source>Google only</source>
@@ -7261,7 +7261,7 @@ Continue?</source>
     </message>
     <message>
         <source>Anki Miner couldn't open these cards in Anki.</source>
-        <translation>Anki Miner نتوانست این کارت‌ها را در Anki باز کند.</translation>
+        <translation>‏Anki Miner نتوانست این کارت‌ها را در Anki باز کند.</translation>
     </message>
     <message>
         <source>Show review</source>
@@ -7289,7 +7289,7 @@ Continue?</source>
     <name>MokuroInstallWorker</name>
     <message>
         <source>%1 (%2%)</source>
-        <translation>%1 (%2٪)</translation>
+        <translation>‏%1 (%2٪)</translation>
     </message>
     <message>
         <source>Downloading uv…</source>
@@ -7321,7 +7321,7 @@ Continue?</source>
     </message>
     <message>
         <source>mokuro installed.</source>
-        <translation>mokuro نصب شد.</translation>
+        <translation>‏mokuro نصب شد.</translation>
     </message>
 </context><context>
     <name>MokuroRunner</name>
@@ -7401,11 +7401,11 @@ Continue?</source>
     </message>
     <message>
         <source>Manga OCR</source>
-        <translation>OCR مانگا</translation>
+        <translation>‏OCR مانگا</translation>
     </message>
     <message>
         <source>mokuro is not installed. Install it in the Manga OCR setup section.</source>
-        <translation>mokuro نصب نیست. آن را در بخش راه‌اندازی OCR مانگا نصب کنید.</translation>
+        <translation>‏mokuro نصب نیست. آن را در بخش راه‌اندازی OCR مانگا نصب کنید.</translation>
     </message>
     <message>
         <source>Manga</source>
@@ -7413,11 +7413,11 @@ Continue?</source>
     </message>
     <message>
         <source>mokuro is not installed. Install it in the Manga OCR setup section below.</source>
-        <translation>mokuro نصب نیست. آن را در بخش راه‌اندازی OCR مانگا در پایین نصب کنید.</translation>
+        <translation>‏mokuro نصب نیست. آن را در بخش راه‌اندازی OCR مانگا در پایین نصب کنید.</translation>
     </message>
     <message>
         <source>Run mokuro's OCR on a folder of page images, or a series folder of volumes. Each volume gets a .mokuro file beside it for Reading → Manga.</source>
-        <translation>OCR مربوط به mokuro را روی پوشه‌ای از تصاویر صفحه یا پوشه مجموعه‌ای از جلدها اجرا کنید. هر جلد یک فایل .mokuro در کنار خود برای خواندن ← مانگا می‌گیرد.</translation>
+        <translation>‏OCR مربوط به mokuro را روی پوشه‌ای از تصاویر صفحه یا پوشه مجموعه‌ای از جلدها اجرا کنید. هر جلد یک فایل .mokuro در کنار خود برای خواندن ← مانگا می‌گیرد.</translation>
     </message>
     <message>
         <source>Folder:</source>
@@ -7433,7 +7433,7 @@ Continue?</source>
     </message>
     <message>
         <source>mokuro is installed</source>
-        <translation>mokuro نصب است</translation>
+        <translation>‏mokuro نصب است</translation>
     </message>
     <message>
         <source>Change…</source>
@@ -7450,7 +7450,7 @@ Continue?</source>
     <message>
         <source>Downloads mokuro and its OCR engine into Anki Miner's folder — about 1 GB, up to 4 GB with NVIDIA GPU support.</source>
         <extracomment>Install/Reinstall's tooltip; "Download OCR model" swaps in its own.</extracomment>
-        <translation>mokuro و موتور OCR آن را در پوشه Anki Miner دانلود می‌کند — حدود 1 GB، و با پشتیبانی GPU از NVIDIA تا 4 GB.</translation>
+        <translation>‏mokuro و موتور OCR آن را در پوشه Anki Miner دانلود می‌کند — حدود 1 GB، و با پشتیبانی GPU از NVIDIA تا 4 GB.</translation>
     </message>
     <message>
         <source>Not available on this platform</source>
@@ -7474,7 +7474,7 @@ Continue?</source>
     </message>
     <message>
         <source>Runs OCR again from scratch, ignoring mokuro's cached page results. Off each launch.</source>
-        <translation>OCR را از نو اجرا می‌کند و نتایج ذخیره‌شده صفحه‌ها در mokuro را نادیده می‌گیرد. در هر اجرای برنامه خاموش است.</translation>
+        <translation>‏OCR را از نو اجرا می‌کند و نتایج ذخیره‌شده صفحه‌ها در mokuro را نادیده می‌گیرد. در هر اجرای برنامه خاموش است.</translation>
     </message>
     <message>
         <source>Run OCR</source>
@@ -7542,7 +7542,7 @@ Continue?</source>
     </message>
     <message>
         <source>mokuro writes its .mokuro files beside the volumes; check permissions for %1.</source>
-        <translation>mokuro فایل‌های .mokuro خود را کنار جلدها می‌نویسد؛ مجوزهای ⁨%1⁩ را بررسی کنید.</translation>
+        <translation>‏mokuro فایل‌های .mokuro خود را کنار جلدها می‌نویسد؛ مجوزهای ⁨%1⁩ را بررسی کنید.</translation>
     </message>
     <message>
         <source>No manga volumes found in that folder.</source>
@@ -7658,7 +7658,7 @@ Continue?</source>
     <name>OnnxPackDownloadWorker</name>
     <message>
         <source>%1 (%2%)</source>
-        <translation>%1 (%2٪)</translation>
+        <translation>‏%1 (%2٪)</translation>
     </message>
     <message>
         <source>Downloading silence-removal library…</source>
@@ -7724,7 +7724,7 @@ Continue?</source>
     </message>
     <message>
         <source>Imported %1 entries from '%2'.</source>
-        <translation>%1 مدخل از «⁨%2⁩» وارد شد.</translation>
+        <translation>‏%1 مدخل از «⁨%2⁩» وارد شد.</translation>
     </message>
     <message>
         <source>Choose pitch accent sources</source>
@@ -7736,7 +7736,7 @@ Continue?</source>
     </message>
     <message>
         <source>Imported %1 pitch sources:</source>
-        <translation>%1 منبع تکیه زیروبمی وارد شد:</translation>
+        <translation>‏%1 منبع تکیه زیروبمی وارد شد:</translation>
     </message>
     <message>
         <source>Nothing was imported.</source>
@@ -7772,7 +7772,7 @@ Continue?</source>
     </message>
     <message>
         <source>Reimported %1 pitch source(s):</source>
-        <translation>%1 منبع تکیه زیروبمی دوباره وارد شد:</translation>
+        <translation>‏%1 منبع تکیه زیروبمی دوباره وارد شد:</translation>
     </message>
     <message>
         <source>Skipped (no saved copy to rebuild from; use per-row Re-import…):</source>
@@ -7806,7 +7806,7 @@ Continue?</source>
     </message>
     <message>
         <source> (skipped %1 malformed entries)</source>
-        <translation> (%1 مدخل نادرست رد شد)</translation>
+        <translation> ‏(%1 مدخل نادرست رد شد)</translation>
     </message>
 </context><context>
     <name>PitchSettingsPanel</name>
@@ -7920,7 +7920,7 @@ Continue?</source>
     </message>
     <message>
         <source>%1 entries</source>
-        <translation>%1 مدخل</translation>
+        <translation>‏%1 مدخل</translation>
     </message>
     <message>
         <source>Enabled</source>
@@ -7978,7 +7978,7 @@ No index files are deleted.</source>
     <name>PlaylistAddController</name>
     <message>
         <source>Skipped %1 already in the queue.</source>
-        <translation>%1 مورد که از قبل در صف بود رد شد.</translation>
+        <translation>‏%1 مورد که از قبل در صف بود رد شد.</translation>
     </message>
     <message>
         <source>Resolving playlist…</source>
@@ -8030,11 +8030,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Added %1 video from playlist '%2'.</source>
-        <translation>%1 ویدیو از فهرست پخش «⁨%2⁩» افزوده شد.</translation>
+        <translation>‏%1 ویدیو از فهرست پخش «⁨%2⁩» افزوده شد.</translation>
     </message>
     <message>
         <source>Added %1 videos from playlist '%2'.</source>
-        <translation>%1 ویدیو از فهرست پخش «⁨%2⁩» افزوده شد.</translation>
+        <translation>‏%1 ویدیو از فهرست پخش «⁨%2⁩» افزوده شد.</translation>
     </message>
 </context><context>
     <name>PlaylistPickerDialog</name>
@@ -8264,7 +8264,7 @@ No index files are deleted.</source>
     <name>ProgressTelemetry</name>
     <message>
         <source>%1 downloaded</source>
-        <translation>%1 دانلود شد</translation>
+        <translation>‏%1 دانلود شد</translation>
     </message>
     <message>
         <source>Elapsed %1</source>
@@ -8280,7 +8280,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>No update for %1 s</source>
-        <translation>%1 ثانیه بدون به‌روزرسانی</translation>
+        <translation>‏%1 ثانیه بدون به‌روزرسانی</translation>
     </message>
 </context><context>
     <name>ProgressWidget</name>
@@ -8296,7 +8296,7 @@ No index files are deleted.</source>
     <name>QueueControlsBar</name>
     <message>
         <source>%1 in queue · %2 ready · %3 failed · %4 complete</source>
-        <translation>%1 در صف · %2 آماده · %3 ناموفق · %4 کامل</translation>
+        <translation>‏%1 در صف · %2 آماده · %3 ناموفق · %4 کامل</translation>
     </message>
     <message>
         <source>Edit…</source>
@@ -8383,7 +8383,7 @@ No index files are deleted.</source>
     <message numerus="yes">
         <source>%n episode(s)</source>
         <translation>
-            <numerusform>%n قسمت</numerusform>
+            <numerusform>‏%n قسمت</numerusform>
         </translation>
     </message>
     <message>
@@ -8414,7 +8414,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>%1 (%2 of %3)</source>
-        <translation>%1 (%2 از %3)</translation>
+        <translation>‏%1 (%2 از %3)</translation>
     </message>
 </context><context>
     <name>QueuePanel</name>
@@ -8501,26 +8501,26 @@ No index files are deleted.</source>
     <message numerus="yes">
         <source>%n series</source>
         <translation>
-            <numerusform>%n مجموعه</numerusform>
+            <numerusform>‏%n مجموعه</numerusform>
         </translation>
     </message>
     <message numerus="yes">
         <source>%n episode(s)</source>
         <translation>
-            <numerusform>%n قسمت</numerusform>
+            <numerusform>‏%n قسمت</numerusform>
         </translation>
     </message>
     <message>
         <source>%1 ready</source>
-        <translation>%1 آماده</translation>
+        <translation>‏%1 آماده</translation>
     </message>
     <message>
         <source>%1 failed</source>
-        <translation>%1 ناموفق</translation>
+        <translation>‏%1 ناموفق</translation>
     </message>
     <message>
         <source>%1 complete</source>
-        <translation>%1 کامل</translation>
+        <translation>‏%1 کامل</translation>
     </message>
 </context><context>
     <name>QueueRow</name>
@@ -8704,7 +8704,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Anki isn't reachable. Start Anki (with AnkiConnect) and check again.</source>
-        <translation>Anki در دسترس نیست. Anki را (همراه با AnkiConnect) اجرا کنید و دوباره بررسی کنید.</translation>
+        <translation>‏Anki در دسترس نیست. Anki را (همراه با AnkiConnect) اجرا کنید و دوباره بررسی کنید.</translation>
     </message>
     <message>
         <source>Choose a file or a folder first.</source>
@@ -8841,7 +8841,7 @@ No index files are deleted.</source>
     <message numerus="yes">
         <source>%n note(s) in the deck.</source>
         <translation>
-            <numerusform>%n یادداشت در دسته.</numerusform>
+            <numerusform>‏%n یادداشت در دسته.</numerusform>
         </translation>
     </message>
     <message>
@@ -8870,7 +8870,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Mined %1 cards.</source>
-        <translation>%1 کارت استخراج شد.</translation>
+        <translation>‏%1 کارت استخراج شد.</translation>
     </message>
     <message>
         <source>Cancelled.</source>
@@ -9246,11 +9246,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Anki Miner can't mine this folder.</source>
-        <translation>Anki Miner نمی‌تواند این پوشه را استخراج کند.</translation>
+        <translation>‏Anki Miner نمی‌تواند این پوشه را استخراج کند.</translation>
     </message>
     <message>
         <source>Anki Miner can't mine this file.</source>
-        <translation>Anki Miner نمی‌تواند این فایل را استخراج کند.</translation>
+        <translation>‏Anki Miner نمی‌تواند این فایل را استخراج کند.</translation>
     </message>
     <message>
         <source>Cancelled</source>
@@ -9373,7 +9373,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Mined %1 cards.</source>
-        <translation>%1 کارت استخراج شد.</translation>
+        <translation>‏%1 کارت استخراج شد.</translation>
     </message>
     <message>
         <source>Cancelled.</source>
@@ -9403,12 +9403,12 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>%1 — %2 already saved</source>
-        <translation>%1 — %2 از قبل ذخیره شده</translation>
+        <translation>‏%1 — %2 از قبل ذخیره شده</translation>
     </message>
     <message numerus="yes">
         <source>%n queued item(s) from your last session</source>
         <translation>
-            <numerusform>%n مورد در صف از نشست قبلی شما</numerusform>
+            <numerusform>‏%n مورد در صف از نشست قبلی شما</numerusform>
         </translation>
     </message>
 </context><context>
@@ -9485,7 +9485,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>%1 words</source>
-        <translation>%1 واژه</translation>
+        <translation>‏%1 واژه</translation>
     </message>
     <message>
         <source>Exporting resources…</source>
@@ -9643,7 +9643,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>%1 downloaded · Verifying and installing…</source>
-        <translation>%1 دانلود شد · در حال تأیید و نصب…</translation>
+        <translation>‏%1 دانلود شد · در حال تأیید و نصب…</translation>
     </message>
     <message>
         <source>Building index · %1 entries</source>
@@ -9692,7 +9692,7 @@ No index files are deleted.</source>
     <message>
         <source>✗ %1 — %2
    Download manually: %3</source>
-        <translation>✗ ⁨%1⁩ — %2
+        <translation>‏✗ ⁨%1⁩ — %2
    دانلود دستی: ⁨%3⁩</translation>
     </message>
     <message>
@@ -9781,7 +9781,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>%1 entries</source>
-        <translation>%1 مدخل</translation>
+        <translation>‏%1 مدخل</translation>
     </message>
 </context><context>
     <name>ResourcesPage</name>
@@ -9818,12 +9818,12 @@ No index files are deleted.</source>
     <message>
         <source>%1, %2</source>
         <extracomment>Joins list items before the last one: "JMdict, JPDB and Jiten". Use your language's list comma.</extracomment>
-        <translation>%1، %2</translation>
+        <translation>‏%1، %2</translation>
     </message>
     <message>
         <source>%1 and %2</source>
         <extracomment>Joins the last item to the rest of a list: "JMdict, JPDB and Jiten".</extracomment>
-        <translation>%1 و %2</translation>
+        <translation>‏%1 و %2</translation>
     </message>
     <message>
         <source>Checking for an offline dictionary...</source>
@@ -9835,7 +9835,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>%1 ready: %2</source>
-        <translation>%1 آماده است: ⁨%2⁩</translation>
+        <translation>‏%1 آماده است: ⁨%2⁩</translation>
     </message>
     <message>
         <source>Dictionary ready: %1</source>
@@ -9847,7 +9847,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>%1: not set up (optional)</source>
-        <translation>%1: راه‌اندازی نشده (اختیاری)</translation>
+        <translation>‏%1: راه‌اندازی نشده (اختیاری)</translation>
     </message>
     <message>
         <source>Starting…</source>
@@ -9879,7 +9879,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>%1 installed, %2 failed.</source>
-        <translation>%1 نصب شد، %2 ناموفق بود.</translation>
+        <translation>‏%1 نصب شد، %2 ناموفق بود.</translation>
     </message>
     <message>
         <source>No resources were installed.</source>
@@ -9917,19 +9917,19 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Created %1 card in '%2'</source>
-        <translation>%1 کارت در «⁨%2⁩» ساخته شد</translation>
+        <translation>‏%1 کارت در «⁨%2⁩» ساخته شد</translation>
     </message>
     <message>
         <source>Created %1 cards in '%2'</source>
-        <translation>%1 کارت در «⁨%2⁩» ساخته شد</translation>
+        <translation>‏%1 کارت در «⁨%2⁩» ساخته شد</translation>
     </message>
     <message>
         <source>Created %1 card</source>
-        <translation>%1 کارت ساخته شد</translation>
+        <translation>‏%1 کارت ساخته شد</translation>
     </message>
     <message>
         <source>Created %1 cards</source>
-        <translation>%1 کارت ساخته شد</translation>
+        <translation>‏%1 کارت ساخته شد</translation>
     </message>
     <message>
         <source>No cards created. Every word is already known.</source>
@@ -9969,19 +9969,19 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>%1 — %2 of %3 %4 completed; %5 card added in %6</source>
-        <translation>%1 — %2 از %3 %4 کامل شد؛ %5 کارت در %6 افزوده شد</translation>
+        <translation>‏%1 — %2 از %3 %4 کامل شد؛ %5 کارت در %6 افزوده شد</translation>
     </message>
     <message>
         <source>%1 — %2 of %3 %4 completed; %5 cards added in %6</source>
-        <translation>%1 — %2 از %3 %4 کامل شد؛ %5 کارت در %6 افزوده شد</translation>
+        <translation>‏%1 — %2 از %3 %4 کامل شد؛ %5 کارت در %6 افزوده شد</translation>
     </message>
     <message>
         <source>%1 — %2 card added in %3</source>
-        <translation>%1 — %2 کارت در %3 افزوده شد</translation>
+        <translation>‏%1 — %2 کارت در %3 افزوده شد</translation>
     </message>
     <message>
         <source>%1 — %2 cards added in %3</source>
-        <translation>%1 — %2 کارت در %3 افزوده شد</translation>
+        <translation>‏%1 — %2 کارت در %3 افزوده شد</translation>
     </message>
     <message>
         <source>(asleep time excluded)</source>
@@ -10081,11 +10081,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Anki already has a card for it</source>
-        <translation>Anki از قبل کارتی برای آن دارد</translation>
+        <translation>‏Anki از قبل کارتی برای آن دارد</translation>
     </message>
     <message>
         <source>Anki did not confirm the card</source>
-        <translation>Anki کارت را تأیید نکرد</translation>
+        <translation>‏Anki کارت را تأیید نکرد</translation>
     </message>
     <message>
         <source>%1 (%2): %3</source>
@@ -10153,11 +10153,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Delete %1 card from Anki? This cannot be undone; the word becomes mineable again.</source>
-        <translation>%1 کارت از Anki حذف شود؟ این کار برگشت‌پذیر نیست؛ واژه دوباره قابل استخراج می‌شود.</translation>
+        <translation>‏%1 کارت از Anki حذف شود؟ این کار برگشت‌پذیر نیست؛ واژه دوباره قابل استخراج می‌شود.</translation>
     </message>
     <message>
         <source>Delete %1 cards from Anki? This cannot be undone; those words become mineable again.</source>
-        <translation>%1 کارت از Anki حذف شوند؟ این کار برگشت‌پذیر نیست؛ آن واژه‌ها دوباره قابل استخراج می‌شوند.</translation>
+        <translation>‏%1 کارت از Anki حذف شوند؟ این کار برگشت‌پذیر نیست؛ آن واژه‌ها دوباره قابل استخراج می‌شوند.</translation>
     </message>
     <message>
         <source>Undoing…</source>
@@ -10659,7 +10659,7 @@ A source that stopped working after an app upgrade is repaired by Reimport All, 
     </message>
     <message>
         <source>yt-dlp could not be updated. Check your connection and try again.</source>
-        <translation>yt-dlp به‌روز نشد. اتصال خود را بررسی کنید و دوباره تلاش کنید.</translation>
+        <translation>‏yt-dlp به‌روز نشد. اتصال خود را بررسی کنید و دوباره تلاش کنید.</translation>
     </message>
     <message>
         <source>dictionary folder (Dictionaries)</source>
@@ -11010,7 +11010,7 @@ Your installed resources and your theme are kept.</source>
     <message numerus="yes">
         <source>%n card(s) this session</source>
         <translation>
-            <numerusform>%n کارت در این نشست</numerusform>
+            <numerusform>‏%n کارت در این نشست</numerusform>
         </translation>
     </message>
     <message>
@@ -11020,7 +11020,7 @@ Your installed resources and your theme are kept.</source>
     <message numerus="yes">
         <source>%n running</source>
         <translation>
-            <numerusform>%n در حال اجرا</numerusform>
+            <numerusform>‏%n در حال اجرا</numerusform>
         </translation>
     </message>
     <message>
@@ -11037,11 +11037,11 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>AnkiConnect is connected</source>
-        <translation>AnkiConnect متصل است</translation>
+        <translation>‏AnkiConnect متصل است</translation>
     </message>
     <message>
         <source>AnkiConnect is not connected</source>
-        <translation>AnkiConnect متصل نیست</translation>
+        <translation>‏AnkiConnect متصل نیست</translation>
     </message>
     <message>
         <source>Checking ffmpeg…</source>
@@ -11049,11 +11049,11 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>ffmpeg is available</source>
-        <translation>ffmpeg در دسترس است</translation>
+        <translation>‏ffmpeg در دسترس است</translation>
     </message>
     <message>
         <source>ffmpeg is not available</source>
-        <translation>ffmpeg در دسترس نیست</translation>
+        <translation>‏ffmpeg در دسترس نیست</translation>
     </message>
 </context><context>
     <name>SubtitleCreationTab</name>
@@ -11565,7 +11565,7 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>Matched %1 of %2 video files.</source>
-        <translation>%1 از %2 فایل ویدیو جفت شدند.</translation>
+        <translation>‏%1 از %2 فایل ویدیو جفت شدند.</translation>
     </message>
     <message>
         <source>Unmatched video files: %1.</source>
@@ -11609,11 +11609,11 @@ Your installed resources and your theme are kept.</source>
     <name>SubtitleRetimer</name>
     <message>
         <source>Ignoring %1 non-dialogue lines during alignment.</source>
-        <translation>%1 سطر غیرگفت‌وگو در هم‌ترازی نادیده گرفته می‌شود.</translation>
+        <translation>‏%1 سطر غیرگفت‌وگو در هم‌ترازی نادیده گرفته می‌شود.</translation>
     </message>
     <message>
         <source>alass is not installed; skipping alass attempts.</source>
-        <translation>alass نصب نیست؛ تلاش‌های alass رد می‌شوند.</translation>
+        <translation>‏alass نصب نیست؛ تلاش‌های alass رد می‌شوند.</translation>
     </message>
     <message>
         <source>%1 result rejected: %2</source>
@@ -11669,7 +11669,7 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>Space plays and pauses · Left and Right nudge 100 ms · A compares the original · Ctrl+Enter applies</source>
-        <translation>Space پخش و مکث · Left و Right جابه‌جایی 100 میلی‌ثانیه · A مقایسه با نسخه اصلی · Ctrl+Enter اعمال</translation>
+        <translation>‏Space پخش و مکث · Left و Right جابه‌جایی 100 میلی‌ثانیه · A مقایسه با نسخه اصلی · Ctrl+Enter اعمال</translation>
     </message>
     <message>
         <source>Align automatically</source>
@@ -11747,7 +11747,7 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>large-v3 is the most accurate; small is much faster.</source>
-        <translation>large-v3 دقیق‌ترین است؛ small بسیار سریع‌تر است.</translation>
+        <translation>‏large-v3 دقیق‌ترین است؛ small بسیار سریع‌تر است.</translation>
     </message>
     <message>
         <source>Run transcription on</source>
@@ -11981,7 +11981,7 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>ffmpeg (video tools)</source>
-        <translation>ffmpeg (ابزارهای ویدیو)</translation>
+        <translation>‏ffmpeg (ابزارهای ویدیو)</translation>
     </message>
     <message>
         <source>Language engine</source>
@@ -12005,15 +12005,15 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>yt-dlp (YouTube mining)</source>
-        <translation>yt-dlp (استخراج از YouTube)</translation>
+        <translation>‏yt-dlp (استخراج از YouTube)</translation>
     </message>
     <message>
         <source>alass (subtitle retiming)</source>
-        <translation>alass (زمان‌بندی دوباره زیرنویس)</translation>
+        <translation>‏alass (زمان‌بندی دوباره زیرنویس)</translation>
     </message>
     <message>
         <source>mokuro (manga OCR)</source>
-        <translation>mokuro (OCR مانگا)</translation>
+        <translation>‏mokuro (OCR مانگا)</translation>
     </message>
     <message>
         <source>Anki Miner updates</source>
@@ -12071,7 +12071,7 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>%1: %2 could not be saved: %3</source>
-        <translation>⁨%1⁩: %2 ذخیره نشد: %3</translation>
+        <translation>‏⁨%1⁩: %2 ذخیره نشد: %3</translation>
     </message>
     <message>
         <source>Saved %1, but ffmpeg reported: %2</source>
@@ -12087,7 +12087,7 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>%1: %2 is tagged %3 here, not %4 as in the listed video</source>
-        <translation>⁨%1⁩: %2 در اینجا با برچسب ⁨%3⁩ است، نه ⁨%4⁩ مانند ویدیوی فهرست‌شده</translation>
+        <translation>‏⁨%1⁩: %2 در اینجا با برچسب ⁨%3⁩ است، نه ⁨%4⁩ مانند ویدیوی فهرست‌شده</translation>
     </message>
     <message>
         <source>%1 would replace the video itself — skipped</source>
@@ -12181,7 +12181,7 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>ffmpeg and ffprobe were not found. Install ffmpeg and add it to PATH to use this tool.</source>
-        <translation>ffmpeg و ffprobe یافت نشدند. برای استفاده از این ابزار، ffmpeg را نصب کنید و آن را به PATH بیفزایید.</translation>
+        <translation>‏ffmpeg و ffprobe یافت نشدند. برای استفاده از این ابزار، ffmpeg را نصب کنید و آن را به PATH بیفزایید.</translation>
     </message>
     <message>
         <source>Save the subtitle and audio tracks inside a video as their own files. Tracks are copied as they are; the video is never changed.</source>
@@ -12285,7 +12285,7 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>ffmpeg could not be started. Install it and add it to PATH, then try again.</source>
-        <translation>ffmpeg اجرا نشد. آن را نصب کنید و به PATH بیفزایید، سپس دوباره تلاش کنید.</translation>
+        <translation>‏ffmpeg اجرا نشد. آن را نصب کنید و به PATH بیفزایید، سپس دوباره تلاش کنید.</translation>
     </message>
     <message>
         <source>Reading tracks…</source>
@@ -12401,7 +12401,7 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>%1%</source>
-        <translation>%1٪</translation>
+        <translation>‏%1٪</translation>
     </message>
     <message>
         <source>Zoom</source>
@@ -12433,7 +12433,7 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>Click a theme preview to apply it live; &lt;b&gt;Revert&lt;/b&gt; undoes it. Star themes to add them to the top-right selector.</source>
-        <translation>روی پیش‌نمایش یک پوسته کلیک کنید تا بی‌درنگ اعمال شود؛ &lt;b&gt;بازگرداندن&lt;/b&gt; آن را لغو می‌کند. به پوسته‌ها ستاره بدهید تا به انتخابگر بالا سمت راست افزوده شوند.</translation>
+        <translation>روی پیش‌نمایش یک پوسته کلیک کنید تا بی‌درنگ اعمال شود؛ &lt;b&gt;بازگرداندن&lt;/b&gt; آن را لغو می‌کند. به پوسته‌ها ستاره بدهید تا به انتخابگر بالا سمت چپ افزوده شوند.</translation>
     </message>
     <message>
         <source>Open themes folder</source>
@@ -12483,15 +12483,15 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>Anki Miner v%1 is downloaded. Restart to finish updating.</source>
-        <translation>Anki Miner v%1 دانلود شد. برای پایان به‌روزرسانی، برنامه را دوباره راه‌اندازی کنید.</translation>
+        <translation>‏Anki Miner v%1 دانلود شد. برای پایان به‌روزرسانی، برنامه را دوباره راه‌اندازی کنید.</translation>
     </message>
     <message>
         <source>Anki Miner v%1 could not be installed automatically.</source>
-        <translation>Anki Miner v%1 به‌طور خودکار نصب نشد.</translation>
+        <translation>‏Anki Miner v%1 به‌طور خودکار نصب نشد.</translation>
     </message>
     <message>
         <source>Anki Miner v%1 is available</source>
-        <translation>Anki Miner v%1 در دسترس است</translation>
+        <translation>‏Anki Miner v%1 در دسترس است</translation>
     </message>
     <message>
         <source>Cancel</source>
@@ -12539,7 +12539,7 @@ Your installed resources and your theme are kept.</source>
     <name>VideoOcrInstallWorker</name>
     <message>
         <source>%1 (%2%)</source>
-        <translation>%1 (%2٪)</translation>
+        <translation>‏%1 (%2٪)</translation>
     </message>
     <message>
         <source>Downloading the OCR runtime…</source>
@@ -12625,7 +12625,7 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>Video OCR</source>
-        <translation>OCR ویدیو</translation>
+        <translation>‏OCR ویدیو</translation>
     </message>
     <message>
         <source>Reading subtitles in file %1 of %2</source>
@@ -12733,7 +12733,7 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>%1% from the left, %2% from the top, %3% wide, %4% tall</source>
-        <translation>%1٪ از چپ، %2٪ از بالا، پهنای %3٪، ارتفاع %4٪</translation>
+        <translation>‏%1٪ از چپ، %2٪ از بالا، پهنای %3٪، ارتفاع %4٪</translation>
     </message>
     <message>
         <source>Choose a folder of videos first, then set the region on one of them.</source>
@@ -12829,7 +12829,7 @@ Your installed resources and your theme are kept.</source>
     <name>VulkanModelDownloadWorker</name>
     <message>
         <source>%1 (%2%)</source>
-        <translation>%1 (%2٪)</translation>
+        <translation>‏%1 (%2٪)</translation>
     </message>
     <message>
         <source>Downloading Vulkan model…</source>
@@ -13065,7 +13065,7 @@ Sort by it to work through a long recording in order — then highlight the rows
         <source>%1
 
 (%2 example sentences to pick from — focus the row, then choose one under “Sentences”)</source>
-        <translation>%1
+        <translation>‏%1
 
 (%2 جمله نمونه برای انتخاب — روی ردیف تمرکز کنید، سپس یکی را زیر «جمله‌ها» انتخاب کنید)</translation>
     </message>
@@ -13151,7 +13151,7 @@ Sort by it to work through a long recording in order — then highlight the rows
     </message>
     <message>
         <source>%1 included · %2 shown of %3</source>
-        <translation>%1 گنجانده‌شده · %2 نمایش‌داده‌شده از %3</translation>
+        <translation>‏%1 گنجانده‌شده · %2 نمایش‌داده‌شده از %3</translation>
     </message>
 </context><context>
     <name>WorkflowActionBar</name>
@@ -13161,7 +13161,7 @@ Sort by it to work through a long recording in order — then highlight the rows
     </message>
     <message>
         <source>%1 (%2 of %3)</source>
-        <translation>%1 (%2 از %3)</translation>
+        <translation>‏%1 (%2 از %3)</translation>
     </message>
     <message>
         <source>Activity</source>
@@ -13215,7 +13215,7 @@ Sort by it to work through a long recording in order — then highlight the rows
     </message>
     <message>
         <source>%1 · %2%</source>
-        <translation>⁨%1⁩ · %2٪</translation>
+        <translation>‏⁨%1⁩ · %2٪</translation>
     </message>
 </context><context>
     <name>YouTubeSettingsPanel</name>
@@ -13427,7 +13427,7 @@ Sort by it to work through a long recording in order — then highlight the rows
     </message>
     <message>
         <source>yt-dlp is not installed, so YouTube mining cannot run.</source>
-        <translation>yt-dlp نصب نیست، بنابراین استخراج از YouTube اجرا نمی‌شود.</translation>
+        <translation>‏yt-dlp نصب نیست، بنابراین استخراج از YouTube اجرا نمی‌شود.</translation>
     </message>
     <message>
         <source>Download yt-dlp</source>
@@ -13535,11 +13535,11 @@ Sort by it to work through a long recording in order — then highlight the rows
     <name>app</name>
     <message>
         <source>Anki Miner — Unexpected Error</source>
-        <translation>Anki Miner — خطای غیرمنتظره</translation>
+        <translation>‏Anki Miner — خطای غیرمنتظره</translation>
     </message>
     <message>
         <source>Anki Miner hit an unexpected error.</source>
-        <translation>Anki Miner با خطای غیرمنتظره‌ای روبه‌رو شد.</translation>
+        <translation>‏Anki Miner با خطای غیرمنتظره‌ای روبه‌رو شد.</translation>
     </message>
     <message>
         <source>%1: %2
@@ -13547,7 +13547,7 @@ Sort by it to work through a long recording in order — then highlight the rows
 Version: %3
 Platform: %4
 Log file: %5</source>
-        <translation>%1: %2
+        <translation>‏%1: %2
 
 نسخه: ⁨%3⁩
 سکو: ⁨%4⁩
