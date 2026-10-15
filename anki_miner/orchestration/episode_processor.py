@@ -50,6 +50,7 @@ from anki_miner.services.cue_merge import auto_line_expansion, merge_budget_seco
 from anki_miner.services.dictionary.card_style_block import attach_card_style_block
 from anki_miner.services.frequency.multi_frequency_service import harmonic_rank, min_rank
 from anki_miner.services.frequency.render import render_frequency_html
+from anki_miner.services.known_word_db import collect_knowledge_forms
 from anki_miner.services.pitch_accent.render import (
     render_pitch_graph_field,
     render_pitch_text_field,
@@ -1246,10 +1247,15 @@ class EpisodeProcessor:
         # filters (frequency, word-list, script-type, wordset) shrink it.
         # The i+1 check must see ALL words the learner doesn't know, not
         # just the mineable ones.
-        all_unknown_lemmas = {w.lemma for w in unknown_words}
+        # F-01: with Word Filters → "Count a word as known only after its card
+        # has been reviewed" on, a word whose card is still new counts as
+        # unknown here (i+1, the curator's unknowns column) while the exclusion
+        # above still keeps it from being mined again.
+        scoring_words = self._phase2_scoring_unknown(all_words, unknown_words)
+        all_unknown_lemmas = {w.lemma for w in scoring_words}
         # Parsed lines are counted by card front (P4): known-ness was decided
         # per front, so a known 取る must not count as unknown beside 撮る.
-        all_unknown_fronts = {w.mined_form for w in unknown_words}
+        all_unknown_fronts = {w.mined_form for w in scoring_words}
         # The curator's "Unknowns in line" column counts against this same
         # basis, so the column and the i+1 filter can never disagree.
         ctx.unknown_lemmas = all_unknown_lemmas
@@ -1410,6 +1416,30 @@ class EpisodeProcessor:
                 if isinstance(known, set):
                     drops.update(dict.fromkeys(known, NotMinedReason.KNOWN))
         return unknown_words
+
+    def _phase2_scoring_unknown(
+        self, all_words: list[TokenizedWord], unknown_words: list[TokenizedWord]
+    ) -> list[TokenizedWord]:
+        """The words that count as unknown when scoring lines (F-01, owner ruling R3).
+
+        ``unknown_words`` (phase 2's exclusion: every card in Anki) unless the
+        reviewed-only box is on. Then the same subtraction runs again from
+        ``all_words`` against the knowledge set — reviewed cards, the user list
+        and the cache rows flagged reviewed — and this run flags the reviewed
+        forms in the cache. A failed review query falls back to every card
+        with one warning (``collect_knowledge_forms``). The "include known
+        words" harness mode subtracts nothing either way.
+        """
+        if not self.config.known_from_reviewed_cards or self.config.include_known_words:
+            return unknown_words
+        knowledge = collect_knowledge_forms(
+            self.known_word_db,
+            self.config,
+            self.anki_service.get_existing_vocabulary(),
+            self.anki_service.get_reviewed_vocabulary,
+            record_reviews=True,
+        )
+        return self._drop_known_card_fronts(self.word_filter.filter_unknown(all_words, knowledge), knowledge)
 
     def _drop_known_card_fronts(self, words: list[TokenizedWord], known: set[str]) -> list[TokenizedWord]:
         """``words`` minus those a render hook cards under a front already known (audit L1-004).
