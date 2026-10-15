@@ -9,10 +9,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Added
 
 ### Changed
+- **Cards now look the way your note type intends.** Definitions and glossaries are written in the same HTML Yomitan writes, so Lapis, Senren, Kiku and Anki Miner Note style them as designed, and Anki Miner no longer embeds its own stylesheet. Each dictionary's own styling still travels with the card. On a plain note type (Basic) the glossary uses default list styling.
+- **Restyle cards… converts older cards to the new format (Utilities → Card Backfill).** It removes the old built-in styling and keeps each dictionary's own styling. Cards it cannot convert without losing text are left as they are.
 
 ### Fixed
 
 ### Removed
+- **The built-in glossary stylesheet.** Tag pills, note boxes and the other Anki Miner styling are gone; your note type styles the card.
 
 ## [3.9.0] - 2026-10-15
 
