@@ -10,7 +10,12 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.languages.registry import bound_mined_form, get_profile
 from anki_miner.languages.switching import switch_language
 from anki_miner.models import LineLemmas, TokenizedWord
-from anki_miner.services.word_filter import WordFilterService, sentence_length, within_sentence_caps
+from anki_miner.services.word_filter import (
+    WordFilterService,
+    best_sentence_key,
+    sentence_length,
+    within_sentence_caps,
+)
 
 
 def _ja(front: str, sentence: str, start: float) -> TokenizedWord:
@@ -347,3 +352,48 @@ def test_zh_ranks_by_characters_not_words():
 
     assert by_characters.sentence == full.line_text
     assert by_words is dog
+
+
+# --- C6: F-07's key for a word already on a line (the season pool) ------------
+
+
+def _counted(word: TokenizedWord, unknown: int) -> TokenizedWord:
+    """``word`` as the season pre-pass leaves it: ``line_unknown_count`` stamped."""
+    return replace(word, line_unknown_count=unknown)
+
+
+def test_the_season_key_ranks_unknowns_then_band_then_length():
+    key = best_sentence_key(spaced=False)
+    many = _counted(_ja("犬", "犬と猫と鳥がいる部屋だよ", 1.0), 3)  # 12 characters
+    short = _counted(_ja("犬", "犬だ", 5.0), 1)  # 2 characters, below the band
+    few = _counted(_ja("犬", "犬がいる静かな部屋だよ", 9.0), 1)  # 11 characters
+    assert [word.sentence for word in sorted([many, short, few], key=key)] == [
+        "犬がいる静かな部屋だよ",
+        "犬だ",
+        "犬と猫と鳥がいる部屋だよ",
+    ]
+
+
+def test_an_uncounted_line_sorts_after_every_counted_one():
+    key = best_sentence_key(spaced=False)
+    uncounted = _counted(_ja("犬", "犬がいる静かな部屋だよ", 1.0), 0)
+    crowded = _counted(_ja("犬", "犬がいる静かな部屋だよ", 5.0), 5)
+    assert key(crowded) < key(uncounted)
+
+
+def test_a_line_over_the_caps_sorts_last_and_all_such_lines_tie():
+    key = best_sentence_key(spaced=False, max_chars=8)
+    inside = _counted(_ja("犬", "犬と猫と鳥だ", 1.0), 3)  # 6 characters
+    over = _counted(_ja("犬", "犬がいる静かな部屋だよ", 5.0), 1)  # 11 characters
+    also_over = _counted(_ja("犬", "犬と猫と鳥がいる部屋だよ", 9.0), 1)  # 12 characters
+    assert key(inside) < key(over)
+    assert key(over) == key(also_over)
+    duration_key = best_sentence_key(spaced=False, max_duration=3.0)
+    assert duration_key(replace(inside, duration=4.0)) > duration_key(over)
+
+
+def test_es_season_key_counts_words_where_the_script_spaces_them():
+    terse = _counted(_other("perro", "Mi perro come", 1.0), 1)  # 3 words, 11 characters
+    full = _counted(_other("perro", "El perro duerme en la casa grande", 5.0), 1)  # 7 words
+    assert min([terse, full], key=best_sentence_key(spaced=True)) is full
+    assert min([terse, full], key=best_sentence_key(spaced=False)) is terse

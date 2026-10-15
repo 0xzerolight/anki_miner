@@ -5,6 +5,7 @@ from pathlib import Path
 from anki_miner.models.stats import MiningSession
 from anki_miner.models.word import TokenizedWord
 from anki_miner.services.stats_service import StatsService
+from anki_miner.services.word_filter import best_sentence_key
 from anki_miner.services.word_pool import (
     CaptureCurationCallback,
     MinePassStats,
@@ -175,3 +176,78 @@ class TestMinePassStats:
         assert inner.get_series_difficulty() == []
         proxy.record_session(MiningSession(series_name="Show", cards_created=2))
         assert inner.get_overall_stats().total_sessions == 1
+
+
+# --- C6: F-07's best-sentence pick across episodes ----------------------------
+
+_CLEAR = "猫がいる静かな部屋だよ"  # 11 characters
+_CROWDED = "猫と犬と鳥と魚がいる部屋"  # 12 characters
+_LONG_CLEAR = "猫がいる静かで明るい部屋だよ"  # 14 characters
+_KEY = best_sentence_key(spaced=False)
+
+
+def _placed(sentence: str, unknown: int, video: Path, *, start: float = 1.0) -> TokenizedWord:
+    """A pre-pass word on ``sentence`` with its ``line_unknown_count`` stamped."""
+    word = _word("猫", sentence=sentence, start=start, video=video)
+    word.line_unknown_count = unknown
+    return word
+
+
+class TestMergePoolsBestSentence:
+    def test_a_clearer_line_in_a_later_episode_becomes_the_primary(self):
+        first = _placed(_CROWDED, 4, EP1)
+        later = _placed(_CLEAR, 1, EP2, start=30.0)
+        merged = merge_pools([[first], [later]], best_sentence=_KEY)
+        assert len(merged) == 1
+        primary = merged[0]
+        assert (primary.sentence, primary.start_time, primary.video_file) == (_CLEAR, 30.0, EP2)
+        assert primary.occurrence_count == 2
+        # The curator still lists both lines, and the pick is one of them.
+        assert [(c.sentence, c.video_file) for c in primary.sentence_candidates] == [
+            (_CROWDED, EP1),
+            (_CLEAR, EP2),
+        ]
+        assert all(not c.sentence_candidates for c in primary.sentence_candidates)
+        # The mine pass mines it from episode 2.
+        assert list(split_selection(merged)) == [EP2]
+
+    def test_without_the_key_the_first_episode_stays_primary(self):
+        first = _placed(_CROWDED, 4, EP1)
+        merged = merge_pools([[first], [_placed(_CLEAR, 1, EP2)]])
+        assert merged[0] is first
+        assert merged[0].video_file == EP1
+
+    def test_a_tie_keeps_the_first_episode_s_word(self):
+        first = _placed(_CLEAR, 1, EP1)
+        merged = merge_pools([[first], [_placed(_CLEAR, 1, EP2, start=30.0)]], best_sentence=_KEY)
+        assert merged[0] is first
+
+    def test_the_pick_reads_every_candidate_of_every_episode(self):
+        ep1 = _placed(_CROWDED, 4, EP1)
+        ep2 = _placed(_CROWDED, 4, EP2, start=5.0)
+        ep2.sentence_candidates = [_placed(_CROWDED, 4, EP2, start=5.0), _placed(_CLEAR, 1, EP2, start=40.0)]
+        merged = merge_pools([[ep1], [ep2]], best_sentence=_KEY)
+        assert (merged[0].sentence, merged[0].start_time, merged[0].video_file) == (_CLEAR, 40.0, EP2)
+        assert len(merged[0].sentence_candidates) == 3
+
+    def test_a_line_over_the_caps_never_wins(self):
+        first = _placed(_CROWDED, 4, EP1)
+        merged = merge_pools(
+            [[first], [_placed(_LONG_CLEAR, 1, EP2)]],
+            best_sentence=best_sentence_key(spaced=False, max_chars=12),
+        )
+        assert merged[0] is first
+
+    def test_a_word_stamped_by_the_cue_merge_keeps_its_line(self):
+        first = _placed(_CROWDED, 4, EP1)
+        first.line_expansion = (0, 1)
+        merged = merge_pools([[first], [_placed(_CLEAR, 1, EP2)]], best_sentence=_KEY)
+        assert merged[0] is first
+
+    def test_other_words_keep_their_order(self):
+        dog = _word("犬", video=EP1)
+        cat = _placed(_CROWDED, 4, EP1)
+        bird = _word("鳥", video=EP2)
+        merged = merge_pools([[dog, cat], [bird, _placed(_CLEAR, 1, EP2)]], best_sentence=_KEY)
+        assert [w.mined_form for w in merged] == ["犬", "猫", "鳥"]
+        assert merged[1].video_file == EP2

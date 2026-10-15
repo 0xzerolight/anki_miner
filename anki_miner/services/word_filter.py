@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import dataclasses
 import logging
+import sys
 import unicodedata
 from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 from typing import TYPE_CHECKING, Any, NamedTuple, TypedDict
@@ -204,6 +205,40 @@ def best_sentence_rank(unknown: int, text: str, *, spaced: bool) -> tuple[int, b
     low, high = BEST_SENTENCE_BAND_WORDS if spaced else BEST_SENTENCE_BAND_CHARS
     length = sentence_length(text, spaced=spaced)
     return (unknown, not low <= length <= high, length)
+
+
+def best_sentence_key(
+    *, spaced: bool, max_duration: float = 0.0, max_chars: int = 0
+) -> Callable[[TokenizedWord], tuple[bool, int, bool, int]]:
+    """F-07's key for a word already on a line, lowest first (the season pool's pick, C6).
+
+    The order :func:`best_sentence_rank` defines, read from the word because the
+    season pool (``word_pool.merge_pools``) has no line index: the unknown count is
+    ``line_unknown_count``, which ``EpisodeProcessor._run_curation`` stamps on every
+    word and sentence variant of the season pre-pass from the bases
+    :meth:`WordFilterService.pick_best_sentences` counts against. ``0`` there means
+    "not computed" and sorts after every counted line, as the curator's column
+    sorts it.
+
+    A line over the Sentences caps sorts after every line inside them, and all
+    such lines tie (L3a ruling 4: a word moves only to a line inside the caps), so
+    the caller's tie rule keeps the word where it is.
+
+    Args:
+        spaced: Whether the mining language's script separates words with spaces
+            (``SentenceRules.space_aware``).
+        max_duration: The Sentences duration cap (``0.0`` = none).
+        max_chars: The Sentences character cap (``0`` = none).
+    """
+
+    def key(word: TokenizedWord) -> tuple[bool, int, bool, int]:
+        if not within_sentence_caps(word.duration, word.sentence, max_duration, max_chars):
+            return (True, 0, False, 0)
+        unknown = word.line_unknown_count if word.line_unknown_count > 0 else sys.maxsize
+        count, outside, length = best_sentence_rank(unknown, word.sentence, spaced=spaced)
+        return (False, count, outside, length)
+
+    return key
 
 
 def _is_on_line(word: TokenizedWord, line: LineLemmas) -> bool:
