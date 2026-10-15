@@ -80,3 +80,83 @@ def test_an_unstyled_srt_reads_as_before(test_config, tmp_path):
 
 def test_the_switch_is_a_parse_relevant_field():
     assert "skip_opening_ending" in PARSE_RELEVANT_CONFIG_FIELDS
+
+
+# Media time = file time + offset. The OP chapter is 0-60 s of the video.
+_TIMELINE = [
+    (10_000, 12_000, "歌の一行目", "Default"),
+    (40_000, 42_000, "歌の二行目", "Default"),
+    (100_000, 102_000, "猫が好きだ", "Default"),
+    (200_000, 202_000, "また明日", "Default"),
+]
+
+
+def _chapter_parser(test_config) -> SubtitleParserService:
+    return SubtitleParserService(replace(test_config, skip_opening_ending=True))
+
+
+def test_cues_inside_a_registered_chapter_are_left_out(test_config, tmp_path):
+    sub = _write_ass(tmp_path / "ep01.ass", _TIMELINE)
+    parser = _chapter_parser(test_config)
+
+    parser.set_skip_ranges(sub, ((0.0, 60.0),), offset=0.0)
+
+    assert _texts(parser, sub) == ["猫が好きだ", "また明日"]
+    assert {word.sentence for word in parser.parse_subtitle_file(sub, 0.0)} <= {"猫が好きだ", "また明日"}
+
+
+def test_the_run_offset_moves_the_chapter_onto_the_file(test_config, tmp_path):
+    sub = _write_ass(tmp_path / "ep01.ass", _TIMELINE)
+    parser = _chapter_parser(test_config)
+
+    # With a +30 s offset, file 11 s is media 41 s (inside 0-60) and file 41 s is media 71 s (outside).
+    parser.set_skip_ranges(sub, ((0.0, 60.0),), offset=30.0)
+
+    assert _texts(parser, sub) == ["歌の二行目", "猫が好きだ", "また明日"]
+
+
+def test_every_call_offset_reads_the_same_lines(test_config, tmp_path):
+    sub = _write_ass(tmp_path / "ep01.ass", _TIMELINE)
+    parser = _chapter_parser(test_config)
+    parser.set_skip_ranges(sub, ((0.0, 60.0),), offset=30.0)
+
+    at_zero = parser.parse_raw_entries(sub, 0.0)
+    at_run = parser.parse_raw_entries(sub, 30.0)
+
+    assert [entry[2] for entry in at_zero] == [entry[2] for entry in at_run] == ["歌の二行目", "猫が好きだ", "また明日"]
+    assert at_run[0][:2] == (70.0, 72.0)
+
+
+def test_the_cache_replay_applies_ranges_registered_later(test_config, tmp_path):
+    sub = _write_ass(tmp_path / "ep01.ass", _TIMELINE)
+    parser = _chapter_parser(test_config)
+    first = {word.sentence for word in parser.parse_subtitle_file(sub, 0.0)}
+    assert "歌の一行目" in first
+
+    parser.set_skip_ranges(sub, ((0.0, 60.0),), offset=0.0)
+    second = {word.sentence for word in parser.parse_subtitle_file(sub, 0.0)}
+
+    assert "歌の一行目" not in second
+    assert "歌の二行目" not in second
+
+
+def test_empty_ranges_forget_the_file(test_config, tmp_path):
+    sub = _write_ass(tmp_path / "ep01.ass", _TIMELINE)
+    parser = _chapter_parser(test_config)
+    parser.set_skip_ranges(sub, ((0.0, 60.0),), offset=0.0)
+
+    parser.set_skip_ranges(sub, (), offset=0.0)
+
+    assert len(_texts(parser, sub)) == 4
+
+
+def test_the_line_index_and_the_raw_entries_agree(test_config, tmp_path):
+    sub = _write_ass(tmp_path / "ep01.ass", _TIMELINE)
+    parser = _chapter_parser(test_config)
+    parser.set_skip_ranges(sub, ((0.0, 60.0),), offset=0.0)
+
+    _words, index = parser.parse_subtitle_file_with_index(sub, 0.0)
+    raw = parser.parse_raw_entries(sub, 0.0)
+
+    assert {(line.start_time, line.end_time, line.line_text) for line in index} <= set(raw)
+    assert all(line.line_text not in {"歌の一行目", "歌の二行目"} for line in index)

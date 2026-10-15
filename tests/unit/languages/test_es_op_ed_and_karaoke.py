@@ -63,3 +63,16 @@ def test_spanish_karaoke_burst_is_one_line(tmp_path):
     entries = _spanish_parser(skip=False).parse_raw_entries(sub, 0.0)
 
     assert entries == [(0.0, 2.0, "El perro come pan."), (3.0, 3.48, "Cantamos juntos")]
+
+
+def test_spanish_chapter_ranges_drop_lines_on_the_file_timeline(tmp_path):
+    sub = _write_ass(
+        tmp_path / "ep01.ass",
+        [(5_000, 7_000, "Cantamos bajo el sol", "Default"), (100_000, 102_000, "El perro come pan.", "Default")],
+    )
+    parser = _spanish_parser(skip=True)
+
+    parser.set_skip_ranges(sub, ((0.0, 90.0),), offset=2.0)
+
+    assert [entry[2] for entry in parser.parse_raw_entries(sub, 2.0)] == ["El perro come pan."]
+    assert {word.sentence for word in parser.parse_subtitle_file(sub, 2.0)} == {"El perro come pan."}

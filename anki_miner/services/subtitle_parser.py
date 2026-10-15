@@ -57,7 +57,7 @@ from anki_miner.services.morphology import (
     resolve_attested_reading,
     resolve_reading_override,
 )
-from anki_miner.services.subtitle_cleaner import mining_events
+from anki_miner.services.subtitle_cleaner import midpoint_in_ranges, mining_events
 from anki_miner.services.tagger import get_shared_tagger
 from anki_miner.utils import (
     clean_subtitle_text,
@@ -816,6 +816,10 @@ class SubtitleParserService:
         # rejected in one line (すみません) and recovered in another (すみます). Same
         # clear-on-cap bounding as the caches above.
         self._kana_window_cache: dict[str, bool] = {}
+        # F-08 step 2: per-file cue spans to leave out, on the file's own
+        # timeline (set_skip_ranges). Like _line_cache it survives parse_* calls;
+        # unlike it, it is applied at yield, so the cached line states stay whole.
+        self._skip_ranges: dict[Path, tuple[tuple[float, float], ...]] = {}
 
     # ------------------------------------------------------------------
     # Per-parse memoization helpers
@@ -1202,6 +1206,24 @@ class SubtitleParserService:
             )
             raise SubtitleParseError(f"Failed to parse subtitle file {subtitle_file}: {type(e).__name__}: {e}") from e
 
+    def set_skip_ranges(self, subtitle_file: Path, ranges: Sequence[tuple[float, float]], *, offset: float) -> None:
+        """Leave out *subtitle_file*'s cues whose midpoint falls in *ranges* (F-08 chapters).
+
+        *ranges* are seconds on the media's timeline (the video's opening and
+        ending chapters) and *offset* is the run's subtitle offset, which puts a
+        cue on that timeline. They are stored on the file's own timeline, so
+        every later parse of the file leaves out the same cues whatever offset
+        that call passes: ``parse_raw_entries`` at 0.0 and at the run's offset
+        stay line for line, as line expansion and the ``--api`` run need. The
+        tokenization cache keeps every line; the ranges apply at yield. An empty
+        *ranges* forgets the file.
+        """
+        key = subtitle_file.resolve()
+        if ranges:
+            self._skip_ranges[key] = tuple((low - offset, high - offset) for low, high in ranges)
+        else:
+            self._skip_ranges.pop(key, None)
+
     def _resolve_offset(self, subtitle_offset: float | None) -> float:
         """Per-call offset, falling back to the config value when None."""
         return self.config.subtitle_offset if subtitle_offset is None else subtitle_offset
@@ -1257,6 +1279,7 @@ class SubtitleParserService:
         """
         offset = self._resolve_offset(subtitle_offset)
         key = subtitle_file.resolve()
+        skip = self._skip_ranges.get(key, ())
         try:
             stat_result = subtitle_file.stat()
             fingerprint = (
@@ -1275,6 +1298,8 @@ class SubtitleParserService:
                 self._line_cache.pop(key)
                 self._line_cache[key] = cached
                 for line_state in cached[1]:
+                    if skip and midpoint_in_ranges(line_state[3], line_state[4], skip):
+                        continue
                     yield self._shifted_line_state(line_state, offset)
                 return
             if cached is not None:
@@ -1305,6 +1330,10 @@ class SubtitleParserService:
             # later parse at a different offset can replay it.
             line_state = self._build_line_state(text, line.start / 1000.0, line.end / 1000.0)
             line_states.append(line_state)
+            # The cache keeps every line; registered chapter spans (F-08) apply
+            # here, on the file's own timeline, as in the replay above.
+            if skip and midpoint_in_ranges(line_state[3], line_state[4], skip):
+                continue
             yield self._shifted_line_state(line_state, offset)
 
         # fingerprint is None only when stat() failed, in which case _load_subs
@@ -2009,6 +2038,7 @@ class SubtitleParserService:
         """
         offset = self._resolve_offset(subtitle_offset)
         subs = self._load_subs(subtitle_file, encodings=encodings)
+        skip = self._skip_ranges.get(subtitle_file.resolve(), ())
 
         entries = []
         for line in subs:
@@ -2017,6 +2047,9 @@ class SubtitleParserService:
                 continue
             text = self._clean_line_text(line.text)
             if not text:
+                continue
+            # The same rule, on the same file timeline, as _iter_parsed_lines.
+            if skip and midpoint_in_ranges(line.start / 1000.0, line.end / 1000.0, skip):
                 continue
 
             start_time = max(0.0, (line.start / 1000.0) + offset)
