@@ -16,6 +16,7 @@ from dataclasses import dataclass
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.languages.profile import CARD_FRONT_KEY
 from anki_miner.models import CardPayload
+from anki_miner.services.dictionary.anki_export import to_yomitan_export
 from anki_miner.utils.text_utils import strip_format_chars
 
 logger = logging.getLogger(__name__)
@@ -287,6 +288,11 @@ def build_note(
     definition = item.definition
     extra_fields = item.extra_fields
 
+    # Yomitan's Anki-export glossary shape (anki_export): last, after the media
+    # store rewrote dict image srcs by class and the render hooks parsed the
+    # internal markup. A no-op on anything that is not internal markup.
+    definition = to_yomitan_export(definition or "", direction=content_direction)
+
     # A render hook's front override, popped from a copy before every other
     # pass: it is no field of its own, and item.extra_fields stays as built.
     card_front = ""
@@ -303,6 +309,7 @@ def build_note(
         extra_fields = {k: v for k, v in extra_fields.items() if k != "glossary"}
         if not extra_fields:
             extra_fields = None
+    glossary_html = to_yomitan_export(glossary_html, direction=content_direction)
 
     # Pull the raw-HTML optional fields out of extra_fields BEFORE the OPTIONAL
     # pass for the same reason as glossary: they carry pre-rendered markup — a
