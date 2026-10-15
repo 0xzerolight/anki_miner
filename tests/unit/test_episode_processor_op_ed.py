@@ -52,9 +52,12 @@ def test_switch_off_registers_nothing_and_never_probes(test_config, mock_service
     _record_order(mock_services)
     processor = build_processor(config, **mock_services)
 
-    with patch(_PROBE, side_effect=AssertionError("probed with the switch off")):
+    # A probe that answers, not one that raises: process_episode turns an
+    # exception into a failed result, which would hide a probe made anyway.
+    with patch(_PROBE, return_value=((0.0, 90.0),)) as probe:
         processor.process_episode(tmp_path / "ep01.mkv", tmp_path / "ep01.srt")
 
+    probe.assert_not_called()
     mock_services["subtitle_parser"].set_skip_ranges.assert_not_called()
 
 
