@@ -98,6 +98,7 @@ def _non_default_save_config(tmp_path: Path) -> AnkiMinerConfig:
         max_frequency_rank=5000,
         frequency_keep_unranked=True,
         use_known_words_db=True,
+        known_from_reviewed_cards=True,  # F-01; default is False
         known_words_match_kana_variants=False,  # default is True
         excluded_decks=("Deck A", "Deck B"),
         excluded_wordsets=("surnames", "given-names"),
@@ -167,6 +168,7 @@ _SAVE_PATH_FIELDS = frozenset(
         "max_frequency_rank",
         "frequency_keep_unranked",
         "use_known_words_db",
+        "known_from_reviewed_cards",
         "known_words_match_kana_variants",
         "excluded_decks",
         "excluded_wordsets",

@@ -228,6 +228,20 @@ class FilteringSettingsPanel(FormPanel):
         # Known Words Database section
         self.add_section(self.tr("Known Words Database"))
 
+        # F-01 (owner ruling R3): scoring only. Readability and the i+1 rule
+        # count a word as known once its card was reviewed; mining still skips
+        # every word that already has a card, reviewed or not.
+        self.known_from_reviewed_cards_checkbox = QCheckBox(
+            self.tr("Count a word as known only after its card has been reviewed")
+        )
+        self.known_from_reviewed_cards_checkbox.setToolTip(
+            self.tr(
+                "Readability and the i+1 sentence rule count a word as known only when its Anki card has been "
+                "reviewed at least once. Mining still skips every word that already has a card."
+            )
+        )
+        self.add_field("", self.known_from_reviewed_cards_checkbox)
+
         self.use_known_words_db_checkbox = QCheckBox(self.tr("Keep words known after their cards are deleted"))
         self.use_known_words_db_checkbox.setToolTip(
             self.tr(
@@ -800,6 +814,7 @@ class FilteringSettingsPanel(FormPanel):
                 min_frequency_rank=config.min_frequency_rank,
                 max_frequency_rank=config.max_frequency_rank,
             )
+        self.known_from_reviewed_cards_checkbox.setChecked(config.known_from_reviewed_cards)
         self.set_use_known_words_db(config.use_known_words_db)
         self.set_match_kana_variants(config.known_words_match_kana_variants)
         self.set_excluded_decks(config.excluded_decks)
@@ -829,6 +844,7 @@ class FilteringSettingsPanel(FormPanel):
             min_frequency_rank=self.get_min_frequency_rank(),
             max_frequency_rank=self.get_max_frequency_rank(),
             frequency_keep_unranked=self.get_frequency_keep_unranked(),
+            known_from_reviewed_cards=self.known_from_reviewed_cards_checkbox.isChecked(),
             use_known_words_db=self.get_use_known_words_db(),
             known_words_match_kana_variants=self.get_match_kana_variants(),
             excluded_decks=self.get_excluded_decks(),
