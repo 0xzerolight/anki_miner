@@ -242,3 +242,36 @@ def test_sync_one_shares_the_transcript_cache_and_the_mining_languages_sentence_
     assert seen["use_cache"] is True
     assert seen["sentence_rules"] is get_profile("es").sentence_rules
     assert reused == ["hit"]
+
+
+def test_sync_one_writes_out_of_order_cues_in_audio_order_and_counts_by_index(tmp_path, monkeypatch):
+    """MS-24: the aligner returns a detour's cues where the audio has them; the SRT keeps that order."""
+    _patch_transcribe(monkeypatch)
+    import anki_miner.services.book_sync.pipeline as pl
+
+    monkeypatch.setattr(
+        pl, "align_to_book", lambda segs, book, cursor, **kw: [SentenceTiming(2, 0.0, 2.0), SentenceTiming(0, 4.0, 7.0)]
+    )
+    out = tmp_path / "a.srt"
+
+    result = sync_one(_make_config(tmp_path), object(), tmp_path / "a.mp3", _book(), BookCursor(), out)
+
+    assert result.cues == 2 and result.unmatched_sentences == 1
+    text = out.read_text(encoding="utf-8")
+    assert text.index(_SENTENCES[2]) < text.index(_SENTENCES[0])
+
+
+def test_sync_one_does_not_count_a_sentence_an_earlier_file_timed_as_unheard(tmp_path, monkeypatch):
+    """MS-24: this file's span covers sentence 1, which an earlier file of the book already timed."""
+    _patch_transcribe(monkeypatch)
+    import anki_miner.services.book_sync.pipeline as pl
+
+    monkeypatch.setattr(
+        pl, "align_to_book", lambda segs, book, cursor, **kw: [SentenceTiming(0, 0.0, 2.0), SentenceTiming(2, 4.0, 7.0)]
+    )
+
+    result = sync_one(
+        _make_config(tmp_path), object(), tmp_path / "a.mp3", _book(), BookCursor(timed={1}), tmp_path / "a.srt"
+    )
+
+    assert result.cues == 2 and result.unmatched_sentences == 0

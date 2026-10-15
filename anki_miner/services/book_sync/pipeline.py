@@ -150,6 +150,9 @@ def sync_one(
 
     if on_align_start is not None:
         on_align_start()
+    # What earlier files of this book timed (MS-24): a detour spans text they
+    # already synced, and that text is not "unheard" here.
+    already = set(cursor.timed)
     timings = align_to_book(
         [TimedText(start, end, text) for start, end, text in transcript.segments],
         book,
@@ -164,16 +167,19 @@ def sync_one(
         return BookSyncResult(BookSyncStatus.NO_MATCH)
 
     out_srt.parent.mkdir(parents=True, exist_ok=True)
+    # Timings are in audio order (a detour's cues sit where the audio has them, MS-24).
     srt_writer.segments_to_srt([(t.start, t.end, book.sentences[t.index]) for t in timings], out_srt)
-    span = timings[-1].index - timings[0].index + 1
-    unmatched = span - len(timings)
+    first = min(t.index for t in timings)
+    last = max(t.index for t in timings)
+    timed_here = {t.index for t in timings}
+    unmatched = sum(1 for i in range(first, last + 1) if i not in timed_here and i not in already)
     log_summary(
         logger,
         "Book sync done",
         file=audio_path,
         cues=len(timings),
         unmatched=unmatched,
-        first=timings[0].index,
-        last=timings[-1].index,
+        first=first,
+        last=last,
     )
     return BookSyncResult(BookSyncStatus.SUCCESS, out_srt=out_srt, cues=len(timings), unmatched_sentences=unmatched)
