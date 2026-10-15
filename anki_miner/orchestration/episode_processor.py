@@ -45,6 +45,7 @@ from anki_miner.services import (
     SubtitleParserService,
     WordFilterService,
 )
+from anki_miner.services.anki_note_builder import CARD_TAGS_KEY, has_tag_tokens, render_card_tags
 from anki_miner.services.anki_service import is_transient_anki_transport_error
 from anki_miner.services.cue_merge import auto_line_expansion, merge_budget_seconds
 from anki_miner.services.dictionary.card_style_block import attach_card_style_block
@@ -260,6 +261,33 @@ def _source_label(series: str, episode: str) -> str:
     return " — ".join(part for part in parts if part)
 
 
+def _episode_tag_values(series: str, episode: str) -> dict[str, str]:
+    """Tag-token values for a video, audiobook or subtitle source (F-03).
+
+    Each part is cleaned like the Source label (:func:`_source_label`): release
+    metadata stripped, and a part that cleans to nothing kept as written.
+    """
+    return {
+        "series": sanitize_source_label(series) or series.strip(),
+        "episode": sanitize_source_label(episode) or episode.strip(),
+        "volume": "",
+    }
+
+
+def _document_tag_values(document: ReadingDocument) -> dict[str, str]:
+    """Tag-token values for a reading source (F-03).
+
+    A manga's mokuro volume is ``{volume}``. A book's, pasted text's or Anki
+    deck's ``series`` is a constant ("Books", "Text") or repeats the title, so
+    its title is ``{series}``. A subtitle file reads like a video.
+    """
+    if document.kind == "manga":
+        return {"series": document.series.strip(), "episode": "", "volume": document.episode.strip()}
+    if document.kind == "subtitle":
+        return _episode_tag_values(document.series, document.episode)
+    return {"series": document.episode.strip(), "episode": "", "volume": ""}
+
+
 def _online_run_identity(site: str, video_id: str) -> tuple[str, str]:
     """(series, episode) a fetched video is recorded under in stats and receipts.
 
@@ -359,6 +387,11 @@ class _EpisodeContext:
     # None on the video path (process_episode, where phase5 keeps the HH:MM:SS
     # timestamp format); set by process_reading for manga/novels/subtitles.
     unit_labels: dict[int, str] | None = None
+
+    #: F-03: ``series`` / ``episode`` / ``volume`` for the tag tokens, taken
+    #: from this item's source at construction. Empty on a context built by
+    #: hand (tests), which renders every token empty.
+    tag_values: dict[str, str] = field(default_factory=dict)
 
     #: Which entry point started this run ("episode" / "reading" / "youtube").
     #: Rendered on both halves of the run's ``Pipeline start``/``Pipeline end``
@@ -2273,6 +2306,14 @@ class EpisodeProcessor:
         # S21: an rtl language's blocks carry the example-sentence rule; the
         # profile says which (card_style_block.RTL_GLOSSARY_CSS).
         style_direction = self.profile.content_style.direction
+        # F-03: {series} / {episode} / {volume} in the tag string render once
+        # per item from its source. A tag string without tokens stamps nothing,
+        # so those notes stay byte-identical (Review Focus 1).
+        card_tags = (
+            " ".join(render_card_tags(self.config.anki_tags, ctx.tag_values))
+            if has_tag_tokens(self.config.anki_tags)
+            else None
+        )
         for (word, media), definition, glossary, (pitch_position, pitch_category) in zip(
             media_results, definitions, glossaries, pitch_data, strict=True
         ):
@@ -2345,6 +2386,8 @@ class EpisodeProcessor:
             # never a KeyError. ctx.unit_labels is None on the video path.
             # Same formula the curator's Position column shows, by construction.
             extra_fields["source"] = f"{ctx.source_label} @ {_position_label(word.start_time, ctx.unit_labels)}"
+            if card_tags is not None:
+                extra_fields[CARD_TAGS_KEY] = card_tags
 
             # Per-field self-containment: the definition field carries its OWN
             # trailing block whenever it's mapped — regardless of the glossary
@@ -3181,6 +3224,7 @@ class EpisodeProcessor:
             series_name=series_name,
             source_label=source_label_override or _source_label(series_name, episode_name),
             kind=_outer_kind or "episode",
+            tag_values=_episode_tag_values(series_name, episode_name),
             receipt=(
                 None
                 if _outer_kind is not None
@@ -3751,6 +3795,7 @@ class EpisodeProcessor:
             source_label=source_label,
             unit_labels={unit.index: unit.location_label for unit in document.units},
             kind="reading",
+            tag_values=_document_tag_values(document),
             receipt={
                 # A reading run has neither file, so both slots render "-"; the
                 # document identity rides the two trailing fields instead.
