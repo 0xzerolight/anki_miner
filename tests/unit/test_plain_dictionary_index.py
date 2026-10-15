@@ -131,3 +131,17 @@ def test_saved_source_finds_each_kept_form(tmp_path: Path):
     assert saved_plain_source(tmp_path / "b") == ("csv", csv_slot / "my words.tsv")
     assert saved_plain_source(tmp_path / "c") == ("stardict", ifo)
     assert saved_plain_source(tmp_path / "missing") is None
+
+
+# --- Format detection (L8.F17.T6) -----------------------------------------------
+
+from anki_miner.services.dictionary.importers.plain_index import plain_dict_kind  # noqa: E402
+from tests.fixtures.dictionary.build_stardict_fixture import build_stardict_files, build_stardict_tar  # noqa: E402
+from tests.fixtures.dictionary.build_yomitan_fixture import build_yomitan_zip  # noqa: E402
+
+
+def test_plain_dict_kind_tells_formats_apart(tmp_path: Path):
+    assert plain_dict_kind(tmp_path / "words.TSV") == "csv"
+    assert plain_dict_kind(build_stardict_files(tmp_path / "loose")) == "stardict"
+    assert plain_dict_kind(build_stardict_tar(tmp_path / "book.tar.xz")) == "stardict"
+    assert plain_dict_kind(build_yomitan_zip(tmp_path / "yomitan.zip")) is None

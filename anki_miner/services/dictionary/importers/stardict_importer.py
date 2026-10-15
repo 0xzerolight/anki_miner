@@ -31,6 +31,8 @@ from pathlib import Path, PurePosixPath
 from typing import Any, Protocol
 
 from anki_miner.exceptions import SetupError, raise_if_cancelled
+from anki_miner.services._sqlite_index import read_slot_language
+from anki_miner.services._staging import repair_managed_slot
 from anki_miner.services.dictionary.importers.glossary_markup import glossary_row, markup_nodes, text_nodes
 from anki_miner.services.dictionary.importers.plain_index import (
     STARDICT_TAR,
@@ -378,3 +380,31 @@ def import_stardict(
         log_summary(logger, "StarDict rows skipped", level=logging.WARNING, dict_id=slot, count=skipped)
     log_summary(logger, "StarDict import done", dict_id=slot, entries=count, skipped=skipped)
     return StarDictImportResult(dict_id=slot, source_name=title, entry_count=count, skipped_malformed=skipped)
+
+
+def repair_stardict(
+    source: Path,
+    dest_root: Path,
+    *,
+    dict_id: str,
+    progress: ProgressFn | None = None,
+    cancel_check: Callable[[], bool] | None = None,
+) -> StarDictImportResult:
+    """Rebuild one slot from its kept source, quarantining an invalid prior slot."""
+    # Read before the rebuild: a quarantined slot would otherwise come back "ja".
+    language = read_slot_language(dest_root / dict_id)
+    return repair_managed_slot(
+        source,
+        dest_root,
+        dict_id,
+        "dictionary",
+        lambda path, overwrite: import_stardict(
+            path,
+            dest_root,
+            progress=progress,
+            cancel_check=cancel_check,
+            overwrite=overwrite,
+            dict_id=dict_id,
+            language=language,
+        ),
+    )

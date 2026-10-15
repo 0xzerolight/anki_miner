@@ -247,3 +247,22 @@ def test_is_stardict_source(tmp_path: Path):
     text = tmp_path / "words.csv"
     text.write_text("casa,house\n", encoding="utf-8")
     assert not is_stardict_source(text)
+
+
+# --- Repair from the kept source (L8.F17.T6) ------------------------------------
+
+from anki_miner.services.dictionary.importers.stardict_importer import repair_stardict  # noqa: E402
+
+
+def test_repair_rebuilds_from_the_kept_tarball_keeping_the_language(tmp_path: Path):
+    archive = build_stardict_tar(tmp_path / "freedict.tar.xz")
+    dest_root = tmp_path / "dicts"
+    import_stardict(archive, dest_root, language="lt", dict_id="freedict-lit-eng")
+    archive.unlink()
+    saved = saved_plain_source(dest_root / "freedict-lit-eng")
+    assert saved is not None and saved[0] == "stardict"
+
+    result = repair_stardict(saved[1], dest_root, dict_id="freedict-lit-eng")
+
+    assert result.entry_count == 2
+    assert read_meta(dest_root / "freedict-lit-eng" / "index.sqlite")["language"] == "lt"

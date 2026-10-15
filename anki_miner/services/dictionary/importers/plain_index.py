@@ -126,6 +126,17 @@ def write_plain_index(
     return count
 
 
+def plain_dict_kind(path: Path) -> str | None:
+    """``"csv"`` for a ``.csv``/``.tsv`` file, ``"stardict"`` for a StarDict book, None otherwise (a Yomitan zip)."""
+    # Function-local: both importers import this module.
+    from anki_miner.services.dictionary.importers.csv_importer import CSV_SUFFIXES
+    from anki_miner.services.dictionary.importers.stardict_importer import is_stardict_source
+
+    if path.suffix.lower() in CSV_SUFFIXES:
+        return "csv"
+    return "stardict" if is_stardict_source(path) else None
+
+
 def saved_plain_source(slot_dir: Path) -> tuple[str, Path] | None:
     """``("stardict" | "csv", path)`` for a slot's kept plain-format source, or None.
 
