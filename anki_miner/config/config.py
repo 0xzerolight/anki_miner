@@ -161,6 +161,7 @@ class AudioSourceEntry:
         "custom",
         "custom_json",
         "edgetts",
+        "wikimedia",
     ]
     pack_id: str | None = None
     url: str | None = None
