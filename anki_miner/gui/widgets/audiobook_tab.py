@@ -86,7 +86,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 # Subtitle extensions probed (in order) for the same-stem auto-fill.
-_SUBTITLE_EXTS = (".srt", ".vtt", ".ass", ".ssa")
+_SUBTITLE_EXTS = (".srt", ".vtt", ".ass", ".ssa", ".lrc")
 # Audio extensions this tab mines. One list per kind: the Browse filter and the
 # drag-and-drop validator (D50) are both derived from it, so a format can never
 # be pickable and undroppable at the same time.

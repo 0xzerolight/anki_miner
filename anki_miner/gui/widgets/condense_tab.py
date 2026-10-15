@@ -94,7 +94,7 @@ CONDENSE_AUDIO_EXTENSIONS: frozenset[str] = frozenset(
     {".mp3", ".m4a", ".m4b", ".aac", ".flac", ".opus", ".ogg", ".wav"}
 )
 CONDENSE_MEDIA_EXTENSIONS: frozenset[str] = CONDENSE_VIDEO_EXTENSIONS | CONDENSE_AUDIO_EXTENSIONS
-CONDENSE_SUBTITLE_EXTENSIONS: tuple[str, ...] = (".ass", ".ssa", ".srt", ".vtt")
+CONDENSE_SUBTITLE_EXTENSIONS: tuple[str, ...] = (".ass", ".ssa", ".srt", ".vtt", ".lrc")
 
 
 def _build_filter(label: str, extensions: Collection[str]) -> str:

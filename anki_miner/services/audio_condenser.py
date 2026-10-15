@@ -47,7 +47,9 @@ import pysubs2
 from anki_miner.languages.registry import config_language, get_profile, subtitle_language
 from anki_miner.services.asr.srt_writer import segments_to_srt
 from anki_miner.services.audio_tagger import TaggingError, TrackMetadata, tag_audio_file
+from anki_miner.services.lrc_format import register_lrc_format
 from anki_miner.services.media_extractor import MediaExtractorService
+from anki_miner.services.subtitle_cleaner import midpoint_in_ranges, mining_events, op_ed_skip_ranges
 from anki_miner.utils.atomic_io import atomic_write_path
 from anki_miner.utils.audio_track_detector import (
     get_media_duration_seconds,
@@ -66,6 +68,9 @@ if TYPE_CHECKING:
     from anki_miner.utils.audio_track_detector import SubtitleStream
 
 logger = logging.getLogger(__name__)
+
+# A song's .lrc condenses like any subtitle (MS-08). Idempotent.
+register_lrc_format()
 
 # ``(start_ms, end_ms, text)`` cue and ``(start_ms, end_ms)`` keep-period.
 Event = tuple[int, int, str]
@@ -91,6 +96,7 @@ def load_subtitle_events(
     *,
     encodings: tuple[str, ...] | None = None,
     script_check: Callable[[str], bool] | None = None,
+    skip_non_dialogue: bool = False,
 ) -> list[Event]:
     """Load *path* into ``(start_ms, end_ms, text)`` tuples.
 
@@ -98,10 +104,14 @@ def load_subtitle_events(
     UTF-16/32 BOM when one is present, otherwise walks the *encodings* ladder
     (``cp932`` first — the dominant non-BOM non-UTF-8 input) and then, only if
     every leg fails to decode, a charset-normalizer-detected encoding, finally
-    re-raising the original UTF-8 error (D10). ``Comment`` events are skipped.
-    Times come straight from ``event.start`` / ``event.end`` (millisecond
-    ints); text is the raw cue text — markup stripping happens later in
-    :func:`filter_lines`.
+    re-raising the original UTF-8 error (D10). Times come straight from
+    ``event.start`` / ``event.end`` (millisecond ints); text is the raw cue
+    text — markup stripping happens later in :func:`filter_lines`.
+
+    The cues are the mining parser's (:func:`~anki_miner.services.subtitle_cleaner.mining_events`):
+    ``Comment`` events skipped, karaoke and animated-sign frame bursts collapsed
+    into one cue (MS-12), and with *skip_non_dialogue* (the F-08 switch) song,
+    sign and drawing cues dropped.
 
     *encodings* is the mining language's ladder (``None`` = the built-in
     Japanese one); a config-bearing caller passes
@@ -121,7 +131,8 @@ def load_subtitle_events(
         # Empty (or contentless) file — no cues to condense.
         return []
 
-    return [(event.start, event.end, event.text) for event in subs if not event.is_comment]
+    events = mining_events(subs.events, skip_non_dialogue=skip_non_dialogue)
+    return [(event.start, event.end, event.text) for event in events]
 
 
 # ---------------------------------------------------------------------------
@@ -190,14 +201,34 @@ def _is_whole_line_bracketed(text: str) -> bool:
     return False
 
 
-def build_periods(events: list[Event], padding_ms: int) -> list[Period]:
+#: Kept stretches closer than this join into one (MS-10, ruling R22), so the
+#: short pause between two lines stays in the condensed audio instead of being
+#: cut out. Measured between padded stretches: with the default 500 ms padding,
+#: lines up to 2 s apart join (subs2cia's threshold/2 + padding rule).
+CONDENSE_JOIN_GAP_MS = 1000
+
+
+def drop_events_in_ranges(events: list[Event], ranges: Sequence[tuple[float, float]]) -> list[Event]:
+    """Drop the cues whose midpoint falls in *ranges* (seconds, F-08 chapters).
+
+    *events* must already be shifted (:func:`shift_events`), so they are on the
+    media's timeline, the one its chapters are on. No ranges, no change.
+    """
+    if not ranges:
+        return events
+    return [event for event in events if not midpoint_in_ranges(event[0] / 1000, event[1] / 1000, ranges)]
+
+
+def build_periods(events: list[Event], padding_ms: int, *, join_gap_ms: int = CONDENSE_JOIN_GAP_MS) -> list[Period]:
     """Build padded, merged keep-periods from *already-shifted* events.
 
     Each cue is padded by ``padding_ms`` on both sides, the period start is
-    floored at 0 **after** padding, then periods are sorted and overlapping or
-    adjacent ones merged. A cue shifted fully before t=0 (its padded end is
-    ``<= 0``) is dropped rather than emitted as an inverted period. The trailing
-    pad on the last period is kept (D3).
+    floored at 0 **after** padding, then periods are sorted and merged when they
+    overlap, touch, or are less than *join_gap_ms* apart (MS-10: the pause
+    between two close lines stays in the audio). ``join_gap_ms=0`` merges only
+    overlapping or touching periods. A cue shifted fully before t=0 (its padded
+    end is ``<= 0``) is dropped rather than emitted as an inverted period. The
+    trailing pad on the last period is kept (D3).
     """
     intervals: list[Period] = []
     for start, end, _text in events:
@@ -213,7 +244,7 @@ def build_periods(events: list[Event], padding_ms: int) -> list[Period]:
 
     merged: list[Period] = []
     for start, end in intervals:
-        if merged and start <= merged[-1][1]:
+        if merged and (start <= merged[-1][1] or start - merged[-1][1] < join_gap_ms):
             prev_start, prev_end = merged[-1]
             merged[-1] = (prev_start, max(prev_end, end))
         else:
@@ -936,7 +967,7 @@ def _emit_progress(
 
 # Subtitle-source priority for the condenser (D9). Unlike the mining default it
 # includes ``.vtt`` — the condenser accepts WebVTT sidecars (D12).
-_CONDENSER_SUBTITLE_PRIORITY: tuple[str, ...] = (".ass", ".ssa", ".srt", ".vtt")
+_CONDENSER_SUBTITLE_PRIORITY: tuple[str, ...] = (".ass", ".ssa", ".srt", ".vtt", ".lrc")
 
 
 class CondenseStatus(Enum):
@@ -1050,13 +1081,22 @@ def condense_one(
         assert sub_path is not None  # failure is None ⇒ a source was resolved
 
         profile = get_profile(config_language(config))
+        # The F-08 switch is shared with mining. Strict ``is True``: the tests
+        # drive this with a MagicMock config, whose auto-attribute must not
+        # switch it on.
+        skip_op_ed = config.skip_opening_ending is True
         events = load_subtitle_events(
             sub_path,
             encodings=profile.import_encodings,
+            skip_non_dialogue=skip_op_ed,
             **script_check_kwarg(profile.import_encodings, profile.script),
         )
         shifted = shift_events(events, offset_ms)
         filtered = filter_lines(shifted, filtered_chars)
+        if skip_op_ed:
+            # On the media's timeline now (shifted once, above), where its
+            # chapters are; an external subtitle uses its media's chapters.
+            filtered = drop_events_in_ranges(filtered, op_ed_skip_ranges(media, resolve_ffprobe(config)))
         periods = build_periods(filtered, padding_ms)
         if not periods:
             return CondenseResult(CondenseStatus.NO_DIALOGUE)

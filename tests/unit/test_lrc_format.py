@@ -1,0 +1,191 @@
+"""LRC lyrics read as subtitles (MS-08)."""
+
+from __future__ import annotations
+
+import os
+import subprocess
+import sys
+from pathlib import Path
+from unittest.mock import MagicMock
+
+import pysubs2
+import pytest
+
+from anki_miner.services import audio_condenser
+from anki_miner.services.audio_condenser import load_subtitle_events, write_condensed_lrc
+from anki_miner.services.lrc_format import LAST_LINE_MS, MAX_LINE_MS, parse_lrc, register_lrc_format
+from anki_miner.services.subtitle_parser import SubtitleParserService
+
+
+class TestParseLrc:
+    def test_a_line_ends_where_the_next_starts_and_the_last_lasts_five_seconds(self):
+        text = "[ti:Canción]\n[ar:Artista]\n[00:01.00]Hola\n[00:04.50]Adiós\n"
+
+        assert parse_lrc(text) == [(1000, 4500, "Hola"), (4500, 9500, "Adiós")]
+        assert LAST_LINE_MS == 5000
+
+    def test_a_line_with_several_stamps_repeats(self):
+        assert parse_lrc("[00:01.00][00:10.00]Coro\n[00:05.00]Verso\n") == [
+            (1000, 5000, "Coro"),
+            (5000, 10_000, "Verso"),
+            (10_000, 15_000, "Coro"),
+        ]
+
+    def test_a_blank_stamp_only_ends_the_line_before_it(self):
+        assert parse_lrc("[00:01.00]Uno\n[00:03.00]\n[00:20.00]Dos\n") == [(1000, 3000, "Uno"), (20_000, 25_000, "Dos")]
+
+    def test_no_line_lasts_longer_than_ten_seconds(self):
+        assert parse_lrc("[00:01.00]Uno\n[00:30.00]Dos\n") == [(1000, 11_000, "Uno"), (30_000, 35_000, "Dos")]
+        assert MAX_LINE_MS == 10_000
+
+    def test_word_stamps_are_removed(self):
+        assert parse_lrc("[00:01.00]<00:01.00>Hola <00:01.50>amigo\n") == [(1000, 6000, "Hola amigo")]
+
+    def test_lines_at_one_time_join_line_by_line(self):
+        assert parse_lrc("[00:01.00]猫が好き\n[00:01.00]I like cats\n[00:03.00]次\n") == [
+            (1000, 3000, "猫が好き\\NI like cats"),
+            (3000, 8000, "次"),
+        ]
+
+    @pytest.mark.parametrize(
+        ("stamp", "start_ms"),
+        [
+            ("[01:02]", 62_000),
+            ("[01:02.5]", 62_500),
+            ("[01:02.25]", 62_250),
+            ("[01:02.125]", 62_125),
+            ("[01:02:50]", 62_500),
+            ("[75:00.00]", 4_500_000),
+        ],
+    )
+    def test_stamp_shapes(self, stamp, start_ms):
+        assert parse_lrc(f"{stamp}x\n")[0][0] == start_ms
+
+    def test_metadata_and_free_text_are_ignored(self):
+        assert parse_lrc("[offset:+500]\n[length: 03:20]\nNot a lyric\n[00:02.00]Sí\n") == [(2000, 7000, "Sí")]
+
+    def test_a_byte_order_mark_is_ignored(self):
+        assert parse_lrc("\ufeff[00:01.00]Hola\r\n") == [(1000, 6000, "Hola")]
+
+
+class TestPysubs2Registration:
+    def test_pysubs2_loads_an_lrc_file(self, tmp_path):
+        register_lrc_format()
+        path = tmp_path / "song.lrc"
+        path.write_text("\ufeff[ar:Artista]\n[00:01.00]Hola\n[00:04.00]Adiós\n", encoding="utf-8")
+
+        subs = pysubs2.load(str(path))
+
+        assert subs.format == "lrc"
+        assert [(event.start, event.end, event.text) for event in subs] == [(1000, 4000, "Hola"), (4000, 9000, "Adiós")]
+
+    def test_the_extension_names_the_format(self):
+        register_lrc_format()
+
+        assert pysubs2.formats.get_format_identifier(".lrc") == "lrc"
+
+    def test_registering_twice_is_harmless(self):
+        register_lrc_format()
+        register_lrc_format()
+
+        assert pysubs2.formats.get_format_class("lrc").__name__ == "LrcFormat"
+
+    @pytest.mark.parametrize(
+        ("content", "expected"),
+        [
+            ("1\n00:00:01,000 --> 00:00:02,000\n[00:12] hi\n\n", "srt"),
+            ("[10][20]hi\n", "mpl2"),
+            ("[00:00.000 -> 00:05.000]  hi\n", "whisper_jax"),
+        ],
+        ids=["srt-with-a-stamp-like-line", "mpl2", "whisper-jax"],
+    )
+    def test_other_formats_still_detect_as_themselves(self, content, expected):
+        register_lrc_format()
+
+        assert pysubs2.formats.autodetect_format(content) == expected
+
+    def test_pysubs2_cannot_write_lrc(self, tmp_path):
+        """Why .lrc stays out of Retime, which writes its output in the input's format."""
+        register_lrc_format()
+        subs = pysubs2.SSAFile()
+        subs.append(pysubs2.SSAEvent(start=0, end=1000, text="x"))
+
+        with pytest.raises(NotImplementedError):
+            subs.save(str(tmp_path / "out.lrc"))
+
+
+_ROOT = Path(__file__).resolve().parents[2]
+
+
+def test_importing_the_readers_registers_lrc(tmp_path):
+    """A fresh interpreter: no test in this file has registered the format there."""
+    code = (
+        "import pysubs2, anki_miner.services.subtitle_parser, anki_miner.services.audio_condenser; "
+        "print(pysubs2.formats.get_format_identifier('.lrc'))"
+    )
+    env = {**os.environ, "ANKI_MINER_HOME": str(tmp_path / "home"), "QT_QPA_PLATFORM": "offscreen"}
+
+    done = subprocess.run([sys.executable, "-c", code], cwd=_ROOT, env=env, capture_output=True, text=True, timeout=120)
+
+    assert done.returncode == 0, done.stderr
+    assert done.stdout.strip() == "lrc"
+
+
+class TestReaders:
+    def test_the_mining_parser_reads_a_cp932_lrc(self, test_config, tmp_path):
+        path = tmp_path / "song.lrc"
+        path.write_bytes("[00:01.00]猫が好き\n[00:04.00]犬も好き\n".encode("cp932"))
+
+        entries = SubtitleParserService(test_config).parse_raw_entries(path, 0.0)
+
+        assert entries == [(1.0, 4.0, "猫が好き"), (4.0, 9.0, "犬も好き")]
+
+    def test_condense_reads_an_lrc(self, tmp_path):
+        path = tmp_path / "song.lrc"
+        path.write_text("[00:01.00]Hola\n[00:04.00]Adiós\n", encoding="utf-8")
+
+        assert load_subtitle_events(path) == [(1000, 4000, "Hola"), (4000, 9000, "Adiós")]
+
+    def test_condenses_own_lrc_reads_back(self, tmp_path):
+        path = tmp_path / "condensed.lrc"
+        write_condensed_lrc([(1000, 2000, "Hello"), (90_500, 91_000, "World")], path)
+
+        assert load_subtitle_events(path) == [(1000, 2000, "Hello"), (90_500, 91_000, "World")]
+
+
+class TestWhereLrcIsAccepted:
+    def test_condense_offers_lrc(self):
+        from anki_miner.gui.widgets.condense_tab import CONDENSE_SUBTITLE_EXTENSIONS, CONDENSE_SUBTITLE_FILE_FILTER
+
+        assert CONDENSE_SUBTITLE_EXTENSIONS[-1] == ".lrc"
+        assert "*.lrc" in CONDENSE_SUBTITLE_FILE_FILTER
+
+    def test_audiobooks_offers_lrc(self):
+        from anki_miner.gui.widgets import audiobook_tab
+
+        assert audiobook_tab._SUBTITLE_EXTS[-1] == ".lrc"
+        assert "*.lrc" in audiobook_tab._SUBTITLE_FILTER
+
+    def test_condense_finds_a_songs_lyrics_beside_it(self, tmp_path):
+        song = tmp_path / "song.mp3"
+        song.write_bytes(b"")
+        lyrics = tmp_path / "song.lrc"
+        lyrics.write_text("[00:01.00]Hola\n", encoding="utf-8")
+
+        config = MagicMock()
+        config.ffprobe_location = None
+
+        found = audio_condenser._resolve_subtitle_source(MagicMock(), config, song, None, None, None)
+
+        assert found == (lyrics, None, None)
+
+    def test_audiobooks_auto_fills_a_songs_lyrics(self, tmp_path):
+        from anki_miner.gui.widgets import audiobook_tab
+        from anki_miner.utils.file_pairing import find_sibling_subtitle
+
+        song = tmp_path / "song.mp3"
+        song.write_bytes(b"")
+        lyrics = tmp_path / "song.lrc"
+        lyrics.write_text("[00:01.00]Hola\n", encoding="utf-8")
+
+        assert find_sibling_subtitle(song, priority=audiobook_tab._SUBTITLE_EXTS) == lyrics
