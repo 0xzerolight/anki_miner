@@ -2586,14 +2586,6 @@ No index files are deleted.</source>
         <translation>Wybierz talię Anki i typ notatki, w których tworzone są nowe karty.</translation>
     </message>
     <message>
-        <source>Card styling / CSS</source>
-        <translation>Styl kart / CSS</translation>
-    </message>
-    <message>
-        <source>Apply a built-in card style or your own CSS.</source>
-        <translation>Zastosuj wbudowany styl kart lub własny CSS.</translation>
-    </message>
-    <message>
         <source>Furigana / readings</source>
         <translation>Furigana / odczyty</translation>
     </message>
@@ -2758,8 +2750,8 @@ No index files are deleted.</source>
         <translation>Odświeżanie stylu zebranych kart</translation>
     </message>
     <message>
-        <source>Re-apply the latest Anki Miner styling to cards you mined earlier -- Utilities → Card Backfill.</source>
-        <translation>Zastosuj najnowszy styl Anki Miner do kart zebranych wcześniej -- Przybornik → Uzupełnij karty.</translation>
+        <source>Convert cards you mined earlier to the current card format, so your note type styles them -- Utilities → Card Backfill.</source>
+        <translation>Przekonwertuj karty zebrane wcześniej do bieżącego formatu kart, aby za ich styl odpowiadał Twój typ notatki -- Przybornik → Uzupełnij karty.</translation>
     </message>
     <message>
         <source>System health check</source>
@@ -2960,10 +2952,6 @@ No index files are deleted.</source>
         <translation>Nadpisuj istniejące wartości</translation>
     </message>
     <message>
-        <source>Overwritten cards may need to use Restyle cards… to refresh their styling.</source>
-        <translation>Nadpisane karty mogą wymagać użycia Odśwież styl kart…, aby zaktualizować ich wygląd.</translation>
-    </message>
-    <message>
         <source>Scan Anki (read-only)</source>
         <translation>Skanuj Anki (tylko odczyt)</translation>
     </message>
@@ -2972,8 +2960,8 @@ No index files are deleted.</source>
         <translation>Odśwież styl kart…</translation>
     </message>
     <message>
-        <source>Refresh the dictionary styling on every card of your note type</source>
-        <translation>Odśwież styl słownikowy na każdej karcie Twojego typu notatki</translation>
+        <source>Convert every card of your note type to the current card format</source>
+        <translation>Przekonwertuj każdą kartę Twojego typu notatki do bieżącego formatu kart</translation>
     </message>
     <message>
         <source>Cancel</source>
@@ -6816,12 +6804,12 @@ Słowa do dodania: %3. Kontynuować?</translation>
         <translation>Odśwież styl zebranych kart</translation>
     </message>
     <message>
-        <source>Re-applies the current built-in styling to your mined cards.
+        <source>Converts your mined cards to the current card format, so your note type styles them.
 
 Close Anki's card browser and note editor first — an open note can lose unsaved edits.
 
 Continue?</source>
-        <translation>Ponownie stosuje bieżący wbudowany styl do zebranych kart.
+        <translation>Konwertuje zebrane karty do bieżącego formatu kart, aby za ich styl odpowiadał Twój typ notatki.
 
 Najpierw zamknij przeglądarkę kart i edytor notatek w Anki — otwarta notatka może stracić niezapisane zmiany.
 

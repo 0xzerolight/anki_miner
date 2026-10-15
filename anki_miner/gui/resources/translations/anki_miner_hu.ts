@@ -2580,14 +2580,6 @@ Indexfájl nem törlődik.</translation>
         <translation>Annak kiválasztása, melyik Anki-pakliban és jegyzettípussal jöjjenek létre az új kártyák.</translation>
     </message>
     <message>
-        <source>Card styling / CSS</source>
-        <translation>Kártyastílus / CSS</translation>
-    </message>
-    <message>
-        <source>Apply a built-in card style or your own CSS.</source>
-        <translation>Beépített kártyastílus vagy saját CSS alkalmazása.</translation>
-    </message>
-    <message>
         <source>Furigana / readings</source>
         <translation>Furigana / olvasatok</translation>
     </message>
@@ -2752,8 +2744,8 @@ Indexfájl nem törlődik.</translation>
         <translation>Gyűjtött kártyák stílusfrissítése</translation>
     </message>
     <message>
-        <source>Re-apply the latest Anki Miner styling to cards you mined earlier -- Utilities → Card Backfill.</source>
-        <translation>A legújabb Anki Miner-stílus újbóli alkalmazása a korábban gyűjtött kártyákra -- Segédeszközök → Kártyapótlás.</translation>
+        <source>Convert cards you mined earlier to the current card format, so your note type styles them -- Utilities → Card Backfill.</source>
+        <translation>A korábban gyűjtött kártyák átalakítása a jelenlegi kártyaformátumra, hogy a jegyzettípus formázza őket -- Segédeszközök → Kártyapótlás.</translation>
     </message>
     <message>
         <source>System health check</source>
@@ -2954,10 +2946,6 @@ Indexfájl nem törlődik.</translation>
         <translation>Meglévő értékek felülírása</translation>
     </message>
     <message>
-        <source>Overwritten cards may need to use Restyle cards… to refresh their styling.</source>
-        <translation>A felülírt kártyák stílusának frissítéséhez szükség lehet a Kártyastílus frissítése… használatára.</translation>
-    </message>
-    <message>
         <source>Scan Anki (read-only)</source>
         <translation>Anki átvizsgálása (csak olvasás)</translation>
     </message>
@@ -2966,8 +2954,8 @@ Indexfájl nem törlődik.</translation>
         <translation>Kártyastílus frissítése…</translation>
     </message>
     <message>
-        <source>Refresh the dictionary styling on every card of your note type</source>
-        <translation>A szótári stílus frissítése a jegyzettípus minden kártyáján</translation>
+        <source>Convert every card of your note type to the current card format</source>
+        <translation>A jegyzettípus minden kártyájának átalakítása a jelenlegi kártyaformátumra</translation>
     </message>
     <message>
         <source>Cancel</source>
@@ -6742,12 +6730,12 @@ Hozzáadandó szavak: %3. Folytatja?</translation>
         <translation>Gyűjtött kártyák stílusfrissítése</translation>
     </message>
     <message>
-        <source>Re-applies the current built-in styling to your mined cards.
+        <source>Converts your mined cards to the current card format, so your note type styles them.
 
 Close Anki's card browser and note editor first — an open note can lose unsaved edits.
 
 Continue?</source>
-        <translation>A jelenlegi beépített stílust alkalmazza újra a gyűjtött kártyákon.
+        <translation>Átalakítja a gyűjtött kártyákat a jelenlegi kártyaformátumra, hogy a jegyzettípus formázza őket.
 
 Előbb zárja be az Anki kártyaböngészőjét és jegyzetszerkesztőjét — egy megnyitott jegyzet elveszítheti a nem mentett módosításokat.
 

@@ -2595,14 +2595,6 @@ No index files are deleted.</source>
         <translation>اختر رزمة Anki ونوع الملاحظة اللذين تُنشأ فيهما البطاقات الجديدة.</translation>
     </message>
     <message>
-        <source>Card styling / CSS</source>
-        <translation>تنسيق البطاقات / CSS</translation>
-    </message>
-    <message>
-        <source>Apply a built-in card style or your own CSS.</source>
-        <translation>طبّق نمط بطاقة مدمجًا أو CSS خاصًا بك.</translation>
-    </message>
-    <message>
         <source>Furigana / readings</source>
         <translation>الفوريغانا / القراءات</translation>
     </message>
@@ -2767,8 +2759,8 @@ No index files are deleted.</source>
         <translation>إعادة تنسيق البطاقات المستخرجة</translation>
     </message>
     <message>
-        <source>Re-apply the latest Anki Miner styling to cards you mined earlier -- Utilities → Card Backfill.</source>
-        <translation>أعد تطبيق أحدث تنسيق لـ Anki Miner على البطاقات التي استخرجتها سابقًا — مرافق ← إكمال البطاقات.</translation>
+        <source>Convert cards you mined earlier to the current card format, so your note type styles them -- Utilities → Card Backfill.</source>
+        <translation>حوّل البطاقات التي استخرجتها سابقًا إلى تنسيق البطاقات الحالي، ليتحكم نوع ملاحظتك في مظهرها — مرافق ← إكمال البطاقات.</translation>
     </message>
     <message>
         <source>System health check</source>
@@ -2969,10 +2961,6 @@ No index files are deleted.</source>
         <translation>الكتابة فوق القيم الموجودة</translation>
     </message>
     <message>
-        <source>Overwritten cards may need to use Restyle cards… to refresh their styling.</source>
-        <translation>قد تحتاج البطاقات المكتوب فوقها إلى إعادة تنسيق البطاقات… لتحديث تنسيقها.</translation>
-    </message>
-    <message>
         <source>Scan Anki (read-only)</source>
         <translation>فحص Anki (للقراءة فقط)</translation>
     </message>
@@ -2981,8 +2969,8 @@ No index files are deleted.</source>
         <translation>إعادة تنسيق البطاقات…</translation>
     </message>
     <message>
-        <source>Refresh the dictionary styling on every card of your note type</source>
-        <translation>تحديث تنسيق القاموس في كل بطاقة من نوع ملاحظتك</translation>
+        <source>Convert every card of your note type to the current card format</source>
+        <translation>تحويل كل بطاقة من نوع ملاحظتك إلى تنسيق البطاقات الحالي</translation>
     </message>
     <message>
         <source>Cancel</source>
@@ -6927,12 +6915,12 @@ Words to add: %3. Continue?</source>
         <translation>إعادة تنسيق البطاقات المستخرجة</translation>
     </message>
     <message>
-        <source>Re-applies the current built-in styling to your mined cards.
+        <source>Converts your mined cards to the current card format, so your note type styles them.
 
 Close Anki's card browser and note editor first — an open note can lose unsaved edits.
 
 Continue?</source>
-        <translation>يُعيد تطبيق التنسيق المدمج الحالي على بطاقاتك المستخرجة.
+        <translation>يحوّل بطاقاتك المستخرجة إلى تنسيق البطاقات الحالي، ليتحكم نوع ملاحظتك في مظهرها.
 
 أغلق متصفح البطاقات ومحرر الملاحظات في Anki أولًا — فقد تفقد الملاحظة المفتوحة تعديلات غير محفوظة.
 

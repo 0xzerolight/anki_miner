@@ -2580,14 +2580,6 @@ Hiçbir dizin dosyası silinmez.</translation>
         <translation>Yeni kartların hangi Anki destesinde ve not türünde oluşturulacağını seçin.</translation>
     </message>
     <message>
-        <source>Card styling / CSS</source>
-        <translation>Kart biçimlendirme / CSS</translation>
-    </message>
-    <message>
-        <source>Apply a built-in card style or your own CSS.</source>
-        <translation>Yerleşik bir kart stili veya kendi CSS'inizi uygulayın.</translation>
-    </message>
-    <message>
         <source>Furigana / readings</source>
         <translation>Furigana / okunuşlar</translation>
     </message>
@@ -2752,8 +2744,8 @@ Hiçbir dizin dosyası silinmez.</translation>
         <translation>Toplanan kartları yeniden biçimlendir</translation>
     </message>
     <message>
-        <source>Re-apply the latest Anki Miner styling to cards you mined earlier -- Utilities → Card Backfill.</source>
-        <translation>Daha önce topladığınız kartlara en son Anki Miner biçimlendirmesini yeniden uygulayın — Yardımcılar → Kart Tamamla.</translation>
+        <source>Convert cards you mined earlier to the current card format, so your note type styles them -- Utilities → Card Backfill.</source>
+        <translation>Daha önce topladığınız kartları geçerli kart biçimine dönüştürün, böylece not türünüz onları biçimlendirir — Yardımcılar → Kart Tamamla.</translation>
     </message>
     <message>
         <source>System health check</source>
@@ -2954,10 +2946,6 @@ Hiçbir dizin dosyası silinmez.</translation>
         <translation>Var olan değerlerin üzerine yaz</translation>
     </message>
     <message>
-        <source>Overwritten cards may need to use Restyle cards… to refresh their styling.</source>
-        <translation>Üzerine yazılan kartların biçimlendirmesini yenilemek için Kartları yeniden biçimlendir… kullanılması gerekebilir.</translation>
-    </message>
-    <message>
         <source>Scan Anki (read-only)</source>
         <translation>Anki'yi tara (salt okunur)</translation>
     </message>
@@ -2966,8 +2954,8 @@ Hiçbir dizin dosyası silinmez.</translation>
         <translation>Kartları yeniden biçimlendir…</translation>
     </message>
     <message>
-        <source>Refresh the dictionary styling on every card of your note type</source>
-        <translation>Not türünüzün tüm kartlarındaki sözlük biçimlendirmesini yenile</translation>
+        <source>Convert every card of your note type to the current card format</source>
+        <translation>Not türünüzün tüm kartlarını geçerli kart biçimine dönüştür</translation>
     </message>
     <message>
         <source>Cancel</source>
@@ -6742,12 +6730,12 @@ Eklenecek kelimeler: %3. Devam edilsin mi?</translation>
         <translation>Toplanan kartları yeniden biçimlendir</translation>
     </message>
     <message>
-        <source>Re-applies the current built-in styling to your mined cards.
+        <source>Converts your mined cards to the current card format, so your note type styles them.
 
 Close Anki's card browser and note editor first — an open note can lose unsaved edits.
 
 Continue?</source>
-        <translation>Geçerli yerleşik biçimlendirmeyi toplanan kartlarınıza yeniden uygular.
+        <translation>Toplanan kartlarınızı geçerli kart biçimine dönüştürür, böylece not türünüz onları biçimlendirir.
 
 Önce Anki'nin kart tarayıcısını ve not düzenleyicisini kapatın — açık bir not kaydedilmemiş düzenlemelerini kaybedebilir.
 

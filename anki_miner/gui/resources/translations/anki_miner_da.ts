@@ -2583,14 +2583,6 @@ Ingen indeksfiler slettes.</translation>
         <translation>Vælg, i hvilket Anki-kortsæt og med hvilken notetype nye kort oprettes.</translation>
     </message>
     <message>
-        <source>Card styling / CSS</source>
-        <translation>Kortstil / CSS</translation>
-    </message>
-    <message>
-        <source>Apply a built-in card style or your own CSS.</source>
-        <translation>Anvend en indbygget kortstil eller din egen CSS.</translation>
-    </message>
-    <message>
         <source>Furigana / readings</source>
         <translation>Furigana / læsninger</translation>
     </message>
@@ -2755,8 +2747,8 @@ Ingen indeksfiler slettes.</translation>
         <translation>Opdater stil på udvundne kort</translation>
     </message>
     <message>
-        <source>Re-apply the latest Anki Miner styling to cards you mined earlier -- Utilities → Card Backfill.</source>
-        <translation>Anvend den nyeste Anki Miner-stil på kort, du har udvundet tidligere -- Værktøjer → Udfyld kort.</translation>
+        <source>Convert cards you mined earlier to the current card format, so your note type styles them -- Utilities → Card Backfill.</source>
+        <translation>Konverter kort, du har udvundet tidligere, til det aktuelle kortformat, så din notetype styrer deres stil -- Værktøjer → Udfyld kort.</translation>
     </message>
     <message>
         <source>System health check</source>
@@ -2957,10 +2949,6 @@ Ingen indeksfiler slettes.</translation>
         <translation>Overskriv eksisterende værdier</translation>
     </message>
     <message>
-        <source>Overwritten cards may need to use Restyle cards… to refresh their styling.</source>
-        <translation>Overskrevne kort skal muligvis bruge Opdater kortstil… for at få deres stil opdateret.</translation>
-    </message>
-    <message>
         <source>Scan Anki (read-only)</source>
         <translation>Scan Anki (skrivebeskyttet)</translation>
     </message>
@@ -2969,8 +2957,8 @@ Ingen indeksfiler slettes.</translation>
         <translation>Opdater kortstil…</translation>
     </message>
     <message>
-        <source>Refresh the dictionary styling on every card of your note type</source>
-        <translation>Opdater ordbogsstilen på alle kort med din notetype</translation>
+        <source>Convert every card of your note type to the current card format</source>
+        <translation>Konverter alle kort med din notetype til det aktuelle kortformat</translation>
     </message>
     <message>
         <source>Cancel</source>
@@ -6779,12 +6767,12 @@ Ord, der tilføjes: %3. Vil du fortsætte?</translation>
         <translation>Opdater stil på udvundne kort</translation>
     </message>
     <message>
-        <source>Re-applies the current built-in styling to your mined cards.
+        <source>Converts your mined cards to the current card format, so your note type styles them.
 
 Close Anki's card browser and note editor first — an open note can lose unsaved edits.
 
 Continue?</source>
-        <translation>Anvender den aktuelle indbyggede stil på dine udvundne kort igen.
+        <translation>Konverterer dine udvundne kort til det aktuelle kortformat, så din notetype styrer deres stil.
 
 Luk først Ankis kortbrowser og noteeditor — en åben note kan miste ugemte ændringer.
 

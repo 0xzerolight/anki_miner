@@ -2574,14 +2574,6 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Card styling / CSS</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Apply a built-in card style or your own CSS.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Furigana / readings</source>
         <translation type="unfinished" />
     </message>
@@ -2746,7 +2738,7 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Re-apply the latest Anki Miner styling to cards you mined earlier -- Utilities → Card Backfill.</source>
+        <source>Convert cards you mined earlier to the current card format, so your note type styles them -- Utilities → Card Backfill.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -2948,10 +2940,6 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Overwritten cards may need to use Restyle cards… to refresh their styling.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Scan Anki (read-only)</source>
         <translation type="unfinished" />
     </message>
@@ -2960,7 +2948,7 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Refresh the dictionary styling on every card of your note type</source>
+        <source>Convert every card of your note type to the current card format</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -6753,7 +6741,7 @@ Words to add: %3. Continue?</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Re-applies the current built-in styling to your mined cards.
+        <source>Converts your mined cards to the current card format, so your note type styles them.
 
 Close Anki's card browser and note editor first — an open note can lose unsaved edits.
 

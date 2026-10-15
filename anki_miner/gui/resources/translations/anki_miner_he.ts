@@ -2583,14 +2583,6 @@ No index files are deleted.</source>
         <translation>בחירת חפיסת Anki וסוג הפתק שבהם ייווצרו הכרטיסים החדשים.</translation>
     </message>
     <message>
-        <source>Card styling / CSS</source>
-        <translation>עיצוב כרטיסים / CSS</translation>
-    </message>
-    <message>
-        <source>Apply a built-in card style or your own CSS.</source>
-        <translation>החלת סגנון כרטיס מובנה או CSS משלך.</translation>
-    </message>
-    <message>
         <source>Furigana / readings</source>
         <translation>פוריגנה / הגיות</translation>
     </message>
@@ -2755,8 +2747,8 @@ No index files are deleted.</source>
         <translation>עיצוב מחדש של כרטיסים שנכרו</translation>
     </message>
     <message>
-        <source>Re-apply the latest Anki Miner styling to cards you mined earlier -- Utilities → Card Backfill.</source>
-        <translation>החלה מחדש של העיצוב העדכני של Anki Miner על כרטיסים שנכרו בעבר -- עזרים ← השלמת כרטיסים.</translation>
+        <source>Convert cards you mined earlier to the current card format, so your note type styles them -- Utilities → Card Backfill.</source>
+        <translation>המרת כרטיסים שנכרו בעבר לפורמט הכרטיסים הנוכחי, כך שסוג הפתק שלך יעצב אותם -- עזרים ← השלמת כרטיסים.</translation>
     </message>
     <message>
         <source>System health check</source>
@@ -2957,10 +2949,6 @@ No index files are deleted.</source>
         <translation>לדרוס ערכים קיימים</translation>
     </message>
     <message>
-        <source>Overwritten cards may need to use Restyle cards… to refresh their styling.</source>
-        <translation>ייתכן שכרטיסים שנדרסו יצטרכו את "לעצב כרטיסים מחדש…" כדי לרענן את העיצוב שלהם.</translation>
-    </message>
-    <message>
         <source>Scan Anki (read-only)</source>
         <translation>לסרוק את Anki (קריאה בלבד)</translation>
     </message>
@@ -2969,8 +2957,8 @@ No index files are deleted.</source>
         <translation>לעצב כרטיסים מחדש…</translation>
     </message>
     <message>
-        <source>Refresh the dictionary styling on every card of your note type</source>
-        <translation>רענון עיצוב המילון בכל כרטיס מסוג הפתק שלך</translation>
+        <source>Convert every card of your note type to the current card format</source>
+        <translation>המרת כל כרטיס מסוג הפתק שלך לפורמט הכרטיסים הנוכחי</translation>
     </message>
     <message>
         <source>Cancel</source>
@@ -6779,12 +6767,12 @@ Words to add: %3. Continue?</source>
         <translation>עיצוב מחדש של כרטיסים שנכרו</translation>
     </message>
     <message>
-        <source>Re-applies the current built-in styling to your mined cards.
+        <source>Converts your mined cards to the current card format, so your note type styles them.
 
 Close Anki's card browser and note editor first — an open note can lose unsaved edits.
 
 Continue?</source>
-        <translation>הפעולה מחילה מחדש את העיצוב המובנה הנוכחי על הכרטיסים שנכרו.
+        <translation>הפעולה ממירה את הכרטיסים שנכרו לפורמט הכרטיסים הנוכחי, כך שסוג הפתק שלך יעצב אותם.
 
 יש לסגור קודם את דפדפן הכרטיסים ואת עורך הפתקים של Anki — פתק פתוח עלול לאבד עריכות שלא נשמרו.
 

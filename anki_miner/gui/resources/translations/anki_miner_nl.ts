@@ -2583,14 +2583,6 @@ Er worden geen indexbestanden gewist.</translation>
         <translation>Kiezen in welke Anki-stapel en met welk notitietype nieuwe kaarten worden gemaakt.</translation>
     </message>
     <message>
-        <source>Card styling / CSS</source>
-        <translation>Kaartopmaak / CSS</translation>
-    </message>
-    <message>
-        <source>Apply a built-in card style or your own CSS.</source>
-        <translation>Een ingebouwde kaartstijl of je eigen CSS toepassen.</translation>
-    </message>
-    <message>
         <source>Furigana / readings</source>
         <translation>Furigana / lezingen</translation>
     </message>
@@ -2755,8 +2747,8 @@ Er worden geen indexbestanden gewist.</translation>
         <translation>Geminede kaarten opnieuw opmaken</translation>
     </message>
     <message>
-        <source>Re-apply the latest Anki Miner styling to cards you mined earlier -- Utilities → Card Backfill.</source>
-        <translation>De nieuwste opmaak van Anki Miner opnieuw toepassen op kaarten die je eerder hebt gemined -- Hulpmiddelen → Aanvullen.</translation>
+        <source>Convert cards you mined earlier to the current card format, so your note type styles them -- Utilities → Card Backfill.</source>
+        <translation>Kaarten die je eerder hebt gemined omzetten naar het huidige kaartformaat, zodat je notitietype ze opmaakt -- Hulpmiddelen → Aanvullen.</translation>
     </message>
     <message>
         <source>System health check</source>
@@ -2957,10 +2949,6 @@ Er worden geen indexbestanden gewist.</translation>
         <translation>Bestaande waarden overschrijven</translation>
     </message>
     <message>
-        <source>Overwritten cards may need to use Restyle cards… to refresh their styling.</source>
-        <translation>Bij overschreven kaarten moet je mogelijk Kaarten opnieuw opmaken… gebruiken om hun opmaak te vernieuwen.</translation>
-    </message>
-    <message>
         <source>Scan Anki (read-only)</source>
         <translation>Anki scannen (alleen lezen)</translation>
     </message>
@@ -2969,8 +2957,8 @@ Er worden geen indexbestanden gewist.</translation>
         <translation>Kaarten opnieuw opmaken…</translation>
     </message>
     <message>
-        <source>Refresh the dictionary styling on every card of your note type</source>
-        <translation>De woordenboekopmaak vernieuwen op elke kaart van je notitietype</translation>
+        <source>Convert every card of your note type to the current card format</source>
+        <translation>Elke kaart van je notitietype omzetten naar het huidige kaartformaat</translation>
     </message>
     <message>
         <source>Cancel</source>
@@ -6779,12 +6767,12 @@ Woorden om toe te voegen: %3. Doorgaan?</translation>
         <translation>Geminede kaarten opnieuw opmaken</translation>
     </message>
     <message>
-        <source>Re-applies the current built-in styling to your mined cards.
+        <source>Converts your mined cards to the current card format, so your note type styles them.
 
 Close Anki's card browser and note editor first — an open note can lose unsaved edits.
 
 Continue?</source>
-        <translation>Past de huidige ingebouwde opmaak opnieuw toe op je geminede kaarten.
+        <translation>Zet je geminede kaarten om naar het huidige kaartformaat, zodat je notitietype ze opmaakt.
 
 Sluit eerst de kaartbrowser en de notitie-editor van Anki — een geopende notitie kan niet-opgeslagen wijzigingen verliezen.
 

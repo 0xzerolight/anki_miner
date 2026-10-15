@@ -2586,14 +2586,6 @@ No index files are deleted.</source>
         <translation>Виберіть колоду Anki й тип нотатки для нових карток.</translation>
     </message>
     <message>
-        <source>Card styling / CSS</source>
-        <translation>Стиль карток / CSS</translation>
-    </message>
-    <message>
-        <source>Apply a built-in card style or your own CSS.</source>
-        <translation>Застосуйте вбудований стиль картки або власний CSS.</translation>
-    </message>
-    <message>
         <source>Furigana / readings</source>
         <translation>Фурігана / читання</translation>
     </message>
@@ -2758,8 +2750,8 @@ No index files are deleted.</source>
         <translation>Оновлення стилю видобутих карток</translation>
     </message>
     <message>
-        <source>Re-apply the latest Anki Miner styling to cards you mined earlier -- Utilities → Card Backfill.</source>
-        <translation>Повторно застосуйте найновіший стиль Anki Miner до раніше видобутих карток -- Утиліти → Доповнення.</translation>
+        <source>Convert cards you mined earlier to the current card format, so your note type styles them -- Utilities → Card Backfill.</source>
+        <translation>Перетворіть раніше видобуті картки на поточний формат карток, щоб їхній стиль визначав ваш тип нотатки -- Утиліти → Доповнення.</translation>
     </message>
     <message>
         <source>System health check</source>
@@ -2960,10 +2952,6 @@ No index files are deleted.</source>
         <translation>Перезаписувати наявні значення</translation>
     </message>
     <message>
-        <source>Overwritten cards may need to use Restyle cards… to refresh their styling.</source>
-        <translation>Для перезаписаних карток може знадобитися «Оновити стиль карток…», щоб оновити їхній стиль.</translation>
-    </message>
-    <message>
         <source>Scan Anki (read-only)</source>
         <translation>Сканувати Anki (лише читання)</translation>
     </message>
@@ -2972,8 +2960,8 @@ No index files are deleted.</source>
         <translation>Оновити стиль карток…</translation>
     </message>
     <message>
-        <source>Refresh the dictionary styling on every card of your note type</source>
-        <translation>Оновити стиль словника на кожній картці вашого типу нотатки</translation>
+        <source>Convert every card of your note type to the current card format</source>
+        <translation>Перетворити кожну картку вашого типу нотатки на поточний формат карток</translation>
     </message>
     <message>
         <source>Cancel</source>
@@ -6816,12 +6804,12 @@ Words to add: %3. Continue?</source>
         <translation>Оновити стиль видобутих карток</translation>
     </message>
     <message>
-        <source>Re-applies the current built-in styling to your mined cards.
+        <source>Converts your mined cards to the current card format, so your note type styles them.
 
 Close Anki's card browser and note editor first — an open note can lose unsaved edits.
 
 Continue?</source>
-        <translation>Повторно застосовує поточний вбудований стиль до ваших видобутих карток.
+        <translation>Перетворює ваші видобуті картки на поточний формат карток, щоб їхній стиль визначав ваш тип нотатки.
 
 Спочатку закрийте браузер карток і редактор нотаток в Anki — у відкритій нотатці можуть загубитися незбережені зміни.
 

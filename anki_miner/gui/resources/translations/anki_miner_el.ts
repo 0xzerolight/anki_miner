@@ -2583,14 +2583,6 @@ No index files are deleted.</source>
         <translation>Επιλέξτε σε ποια τράπουλα Anki και με ποιον τύπο σημείωσης δημιουργούνται οι νέες κάρτες.</translation>
     </message>
     <message>
-        <source>Card styling / CSS</source>
-        <translation>Μορφοποίηση καρτών / CSS</translation>
-    </message>
-    <message>
-        <source>Apply a built-in card style or your own CSS.</source>
-        <translation>Εφαρμογή ενσωματωμένου στιλ κάρτας ή δικού σας CSS.</translation>
-    </message>
-    <message>
         <source>Furigana / readings</source>
         <translation>Furigana / αναγνώσεις</translation>
     </message>
@@ -2755,8 +2747,8 @@ No index files are deleted.</source>
         <translation>Νέα μορφοποίηση καρτών εξόρυξης</translation>
     </message>
     <message>
-        <source>Re-apply the latest Anki Miner styling to cards you mined earlier -- Utilities → Card Backfill.</source>
-        <translation>Εφαρμόστε ξανά την τελευταία μορφοποίηση του Anki Miner σε κάρτες που εξορύξατε παλαιότερα -- Βοηθήματα → Συμπλήρωση.</translation>
+        <source>Convert cards you mined earlier to the current card format, so your note type styles them -- Utilities → Card Backfill.</source>
+        <translation>Μετατρέψτε κάρτες που εξορύξατε παλαιότερα στην τρέχουσα μορφή καρτών, ώστε να τις μορφοποιεί ο τύπος σημείωσής σας -- Βοηθήματα → Συμπλήρωση.</translation>
     </message>
     <message>
         <source>System health check</source>
@@ -2957,10 +2949,6 @@ No index files are deleted.</source>
         <translation>Αντικατάσταση υπαρχουσών τιμών</translation>
     </message>
     <message>
-        <source>Overwritten cards may need to use Restyle cards… to refresh their styling.</source>
-        <translation>Οι κάρτες που αντικαταστάθηκαν ίσως χρειαστούν τη Νέα μορφοποίηση καρτών… για ανανέωση της μορφοποίησής τους.</translation>
-    </message>
-    <message>
         <source>Scan Anki (read-only)</source>
         <translation>Σάρωση Anki (μόνο ανάγνωση)</translation>
     </message>
@@ -2969,8 +2957,8 @@ No index files are deleted.</source>
         <translation>Νέα μορφοποίηση καρτών…</translation>
     </message>
     <message>
-        <source>Refresh the dictionary styling on every card of your note type</source>
-        <translation>Ανανέωση της μορφοποίησης λεξικού σε κάθε κάρτα του τύπου σημείωσής σας</translation>
+        <source>Convert every card of your note type to the current card format</source>
+        <translation>Μετατροπή κάθε κάρτας του τύπου σημείωσής σας στην τρέχουσα μορφή καρτών</translation>
     </message>
     <message>
         <source>Cancel</source>
@@ -6779,12 +6767,12 @@ Words to add: %3. Continue?</source>
         <translation>Νέα μορφοποίηση καρτών εξόρυξης</translation>
     </message>
     <message>
-        <source>Re-applies the current built-in styling to your mined cards.
+        <source>Converts your mined cards to the current card format, so your note type styles them.
 
 Close Anki's card browser and note editor first — an open note can lose unsaved edits.
 
 Continue?</source>
-        <translation>Εφαρμόζει ξανά την τρέχουσα ενσωματωμένη μορφοποίηση στις κάρτες εξόρυξης.
+        <translation>Μετατρέπει τις κάρτες εξόρυξης στην τρέχουσα μορφή καρτών, ώστε να τις μορφοποιεί ο τύπος σημείωσής σας.
 
 Κλείστε πρώτα το πρόγραμμα περιήγησης καρτών και τον επεξεργαστή σημειώσεων του Anki — μια ανοιχτή σημείωση μπορεί να χάσει μη αποθηκευμένες αλλαγές.
 

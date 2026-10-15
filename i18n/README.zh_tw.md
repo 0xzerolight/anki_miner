@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:ecd0ab0242935ee3 -->
+<!-- i18n-source: README.md sha256:59bb362dc4da97e4 -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -163,7 +163,7 @@ anki_miner_gui
 - 內嵌的 libmpv 影片預覽 - 整理單字時播放該單字的場景，或在即時播放中微調字幕時間。
 - 動態螢幕截圖（見上方的卡片範例）。
 - 設定檔 - 儲存具名設定組合，並從標題列切換。
-- 重新設定採集卡片樣式 - 把你目前的卡片樣式重新套用到已製作的卡片上（實用工具 → 卡片欄位回填）。
+- 重新設定採集卡片樣式 - 把已製作的卡片轉換為目前的卡片格式（實用工具 → 卡片欄位回填）。
 
 <details>
 <summary><strong>內建主題（29 種）</strong></summary>

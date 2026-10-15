@@ -161,7 +161,7 @@ For full development setup, see [CONTRIBUTING.md](CONTRIBUTING.md).
 - Embedded libmpv video preview - play a word's scene while curating, or nudge subtitle timing with live playback.
 - Animated screenshots (see example cards above).
 - Settings profiles - save named configurations and switch between them from the header.
-- Restyle Mined Cards - re-apply your current card styling to cards you already made (Utilities → Card Backfill).
+- Restyle Mined Cards - convert cards you already made to the current card format (Utilities → Card Backfill).
 
 <details>
 <summary><strong>Built-in themes (29)</strong></summary>

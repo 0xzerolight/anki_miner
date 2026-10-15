@@ -2580,14 +2580,6 @@ No index files are deleted.</source>
         <translation>新しいカードを作成する Anki デッキとノートタイプを選択します。</translation>
     </message>
     <message>
-        <source>Card styling / CSS</source>
-        <translation>カードのスタイル／CSS</translation>
-    </message>
-    <message>
-        <source>Apply a built-in card style or your own CSS.</source>
-        <translation>組み込みのカードスタイル、または独自の CSS を適用します。</translation>
-    </message>
-    <message>
         <source>Furigana / readings</source>
         <translation>ふりがな／読み</translation>
     </message>
@@ -2752,8 +2744,8 @@ No index files are deleted.</source>
         <translation>マイニングしたカードのスタイルを再適用</translation>
     </message>
     <message>
-        <source>Re-apply the latest Anki Miner styling to cards you mined earlier -- Utilities → Card Backfill.</source>
-        <translation>以前マイニングしたカードに、最新の Anki Miner スタイルを再適用します — ユーティリティ → カードの一括補完。</translation>
+        <source>Convert cards you mined earlier to the current card format, so your note type styles them -- Utilities → Card Backfill.</source>
+        <translation>以前マイニングしたカードを現在のカード形式に変換し、ノートタイプのスタイルが適用されるようにします — ユーティリティ → カードの一括補完。</translation>
     </message>
     <message>
         <source>System health check</source>
@@ -2954,10 +2946,6 @@ No index files are deleted.</source>
         <translation>既存の値を上書き</translation>
     </message>
     <message>
-        <source>Overwritten cards may need to use Restyle cards… to refresh their styling.</source>
-        <translation>上書きしたカードのスタイルを更新するには、「カードのスタイルを再適用…」を使う必要がある場合があります。</translation>
-    </message>
-    <message>
         <source>Scan Anki (read-only)</source>
         <translation>Anki をスキャン（読み取り専用）</translation>
     </message>
@@ -2966,8 +2954,8 @@ No index files are deleted.</source>
         <translation>カードのスタイルを再適用…</translation>
     </message>
     <message>
-        <source>Refresh the dictionary styling on every card of your note type</source>
-        <translation>ノートタイプのすべてのカードで辞書のスタイルを更新します</translation>
+        <source>Convert every card of your note type to the current card format</source>
+        <translation>ノートタイプのすべてのカードを現在のカード形式に変換します</translation>
     </message>
     <message>
         <source>Cancel</source>
@@ -6742,12 +6730,12 @@ Words to add: %3. Continue?</source>
         <translation>マイニングしたカードのスタイルを再適用</translation>
     </message>
     <message>
-        <source>Re-applies the current built-in styling to your mined cards.
+        <source>Converts your mined cards to the current card format, so your note type styles them.
 
 Close Anki's card browser and note editor first — an open note can lose unsaved edits.
 
 Continue?</source>
-        <translation>マイニングしたカードに現在の組み込みスタイルを再適用します。
+        <translation>マイニングしたカードを現在のカード形式に変換し、ノートタイプのスタイルが適用されるようにします。
 
 先に Anki のカードブラウザとノートエディタを閉じてください — ノートを開いたままだと未保存の編集が失われる可能性があります。
 
