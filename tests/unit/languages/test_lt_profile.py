@@ -122,7 +122,7 @@ def test_the_parser_is_the_spaced_factory_with_the_form_of_repair():
 
 def test_the_catalogue_ships_wiktionary_and_a_lemmatised_frequency_list():
     by_id = {spec.id: spec for spec in LT_CATALOG}
-    assert set(by_id) == {"wty-lt-en", "opensubtitles-lt"}
+    assert set(by_id) == {"freedict-lit-eng", "wty-lt-en", "opensubtitles-lt"}
     dictionary, frequency = by_id["wty-lt-en"], by_id["opensubtitles-lt"]
     assert dictionary.kind == "dict" and dictionary.url == (
         "https://huggingface.co/datasets/daxida/wty-release/resolve/main/latest/dict/lt/en/wty-lt-en.zip"
@@ -131,7 +131,7 @@ def test_the_catalogue_ships_wiktionary_and_a_lemmatised_frequency_list():
     assert (
         frequency.url == "https://raw.githubusercontent.com/hermitdave/FrequencyWords/master/content/2018/lt/lt_50k.txt"
     )
-    assert all("CC BY-SA 4.0" in spec.license_note for spec in LT_CATALOG)
+    assert all("CC BY-SA 4.0" in spec.license_note for spec in LT_CATALOG if spec.id != "freedict-lit-eng")
     doc = lt_catalog.__doc__ or ""
     assert "CC BY-SA 4.0" in doc and "Leipzig" in doc and "wty-lt-lt" in doc
     assert get_profile("lt").catalog == LT_CATALOG

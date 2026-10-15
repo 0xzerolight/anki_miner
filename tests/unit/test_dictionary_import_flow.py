@@ -241,7 +241,7 @@ def test_add_dict_persist_failure_reports_partial_success_after_chain_commit(wir
                 f"{MOD}.file_dialogs.pick_open_files",
                 side_effect=lambda *a, on_done, **k: on_done([str(tmp_path / "picked.zip")]),
             ),
-            patch(f"{MOD}.ImportWorker.for_yomitan", return_value=worker),
+            patch(f"{MOD}.ImportWorker.for_dictionary_file", return_value=worker),
             patch("anki_miner.gui.controllers.import_flow_common.QProgressDialog", return_value=dialog),
             patch("anki_miner.gui.controllers.import_flow_common.QTimer", return_value=MagicMock()),
             patch(f"{MOD}.QMessageBox.information") as info,
@@ -410,3 +410,76 @@ class TestSavedSourceBuiltTheSlot:
         _seed_slot(dicts_root, "my-dict-v1", "My Dict", "v1")
         other = build_yomitan_zip(tmp_path / "src" / "m.zip", title="My Dict", revision="v2")
         assert flow._saved_yomitan_source_matches("my-dict-v1", other) is False
+
+
+# --- F-17: StarDict and CSV/TSV ------------------------------------------------
+
+
+def test_add_dict_picker_offers_every_supported_format(tmp_path: Path):
+    flow = _make_flow(tmp_path / "dicts")
+
+    with patch(f"{MOD}.file_dialogs.pick_open_files", side_effect=lambda *a, on_done, **k: on_done([])) as picker:
+        flow.add_dict()
+
+    name_filter = picker.call_args.args[3]
+    for pattern in ("*.zip", "*.ifo", "*.tar.gz", "*.tgz", "*.tar.bz2", "*.tar.xz", "*.csv", "*.tsv"):
+        assert pattern in name_filter
+
+
+def test_add_dict_builds_the_format_detecting_worker(tmp_path: Path):
+    flow = _make_flow(tmp_path / "dicts")
+    flow._run_chained_imports = MagicMock()
+    picked = tmp_path / "words.csv"
+
+    with patch(f"{MOD}.file_dialogs.pick_open_files", side_effect=lambda *a, on_done, **k: on_done([str(picked)])):
+        flow.add_dict()
+
+    make_worker = flow._run_chained_imports.call_args.kwargs["make_worker"]
+    with patch(f"{MOD}.ImportWorker.for_dictionary_file", return_value="worker") as factory:
+        assert make_worker(picked) == "worker"
+    factory.assert_called_once_with(picked, tmp_path / "dicts")
+
+
+def _plain_slot(dicts_root: Path) -> Path:
+    from anki_miner.services.dictionary.importers.stardict_importer import import_stardict
+    from tests.fixtures.dictionary.build_stardict_fixture import build_stardict_tar
+
+    import_stardict(build_stardict_tar(dicts_root.parent / "book.tar.xz"), dicts_root, dict_id="freedict-x")
+    return dicts_root / "freedict-x" / "source" / "stardict.tar"
+
+
+def test_reimport_of_a_stardict_slot_repairs_from_its_kept_tarball(tmp_path: Path):
+    dicts_root = tmp_path / "dicts"
+    kept = _plain_slot(dicts_root)
+    flow = _make_flow(dicts_root)
+    flow._panel.request_resource_release.return_value = True
+    flow._run_modal_import = MagicMock()
+
+    with (
+        patch(f"{MOD}.ImportWorker.for_plain_dict_repair", return_value="worker") as plain,
+        patch(f"{MOD}.ImportWorker.for_yomitan_repair") as yomitan,
+        patch(f"{MOD}.ImportWorker.for_jmdict_repair") as jmdict,
+    ):
+        flow.reimport_dict("freedict-x")
+
+    plain.assert_called_once_with(kept, dicts_root, kind="stardict", dict_id="freedict-x")
+    yomitan.assert_not_called()
+    jmdict.assert_not_called()
+    assert flow._run_modal_import.call_args.kwargs["worker"] == "worker"
+
+
+def test_reimport_all_rebuilds_a_stardict_slot_in_place(tmp_path: Path, monkeypatch):
+    dicts_root = tmp_path / "dicts"
+    kept = _plain_slot(dicts_root)
+    flow = _make_flow(dicts_root)
+    flow._panel.get_chain.return_value = (ChainEntry(kind="indexed", dict_id="freedict-x", enabled=True),)
+    flow._panel.request_resource_release.return_value = True
+    flow._run_chained_imports = MagicMock()
+
+    flow.reimport_all()
+
+    kwargs = flow._run_chained_imports.call_args.kwargs
+    assert kwargs["jobs"] == [("stardict", "freedict-x", "Test StarDict", kept)]
+    with patch(f"{MOD}.ImportWorker.for_plain_dict", return_value="worker") as plain:
+        assert kwargs["make_worker"](kwargs["jobs"][0]) == "worker"
+    plain.assert_called_once_with(kept, dicts_root, kind="stardict", overwrite=True, dict_id="freedict-x")

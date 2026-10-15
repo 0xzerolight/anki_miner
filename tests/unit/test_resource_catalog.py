@@ -115,6 +115,7 @@ class TestResourceSpec:
             "variant",
             "pin_slot",
             "sweep_superseded",
+            "sha256",
         }
 
 

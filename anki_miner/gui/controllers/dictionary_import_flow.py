@@ -39,6 +39,7 @@ from anki_miner.services._sqlite_index import (
     resolve_managed_slot,
     slot_language_kwarg,
 )
+from anki_miner.services.dictionary.importers.plain_index import saved_plain_source
 from anki_miner.services.dictionary.importers.yomitan_importer import (
     derive_dict_id_from_zip,
     read_yomitan_title,
@@ -143,16 +144,19 @@ class DictionaryImportFlow(PanelImportFlowBase):
         return tuple([ChainEntry(kind="indexed", dict_id=dict_id, enabled=True) for dict_id in unique_ids] + chain)
 
     def add_dict(self) -> None:
-        """Prompt for one or more Yomitan zips and import them sequentially."""
+        """Prompt for dictionary files (Yomitan zip, StarDict, CSV/TSV) and import them sequentially."""
         if not self._begin_mutation("add"):
             return
         trace_id = _begin_import_trace("dictionary add")
         picker_started = _log_import_picker_enter(trace_id, "dictionary zip")
         file_dialogs.pick_open_files(
             self._parent,
-            QCoreApplication.translate("DictionaryImportFlow", "Choose Yomitan dictionary zips"),
+            QCoreApplication.translate("DictionaryImportFlow", "Choose dictionary files"),
             resolve_start_dir(None, file_mode=True, default_dir=self._get_config().dicts_root),
-            QCoreApplication.translate("DictionaryImportFlow", "Yomitan zip (*.zip)"),
+            QCoreApplication.translate(
+                "DictionaryImportFlow",
+                "Dictionaries (*.zip *.ifo *.tar.gz *.tgz *.tar.bz2 *.tar.xz *.csv *.tsv)",
+            ),
             on_done=lambda chosen: self._add_dict_picked(trace_id, picker_started, chosen),
         )
 
@@ -170,7 +174,8 @@ class DictionaryImportFlow(PanelImportFlowBase):
             # A freshly added dictionary is stamped — and folded — for the
             # language it is being added for. Reimport All (below) replays the
             # slot's own stamp instead, so an existing index is never relabelled.
-            return ImportWorker.for_yomitan(
+            # The worker tells a StarDict or CSV/TSV file from a Yomitan zip.
+            return ImportWorker.for_dictionary_file(
                 zip_path,
                 config.dicts_root,
                 **language_kwarg(config_language(config)),
@@ -386,6 +391,9 @@ class DictionaryImportFlow(PanelImportFlowBase):
                 source_zip = slot / "source.zip"
                 if source_zip.is_file() and self._saved_yomitan_source_matches(slot_id, source_zip):
                     return source_zip, "yomitan", True, display
+                plain = saved_plain_source(slot)
+                if plain is not None:
+                    return plain[1], plain[0], True, display
                 if slot_id == "jmdict-english" and config.jmdict_path.is_file():
                     return config.jmdict_path, "jmdict", True, display
                 return source_zip, "", False, display
@@ -433,6 +441,13 @@ class DictionaryImportFlow(PanelImportFlowBase):
                 worker = ImportWorker.for_yomitan_repair(
                     source_path,
                     self._get_config().dicts_root,
+                    dict_id=slot_id,
+                )
+            elif source_kind in ("stardict", "csv"):
+                worker = ImportWorker.for_plain_dict_repair(
+                    source_path,
+                    self._get_config().dicts_root,
+                    kind=source_kind,
                     dict_id=slot_id,
                 )
             else:
@@ -550,6 +565,10 @@ class DictionaryImportFlow(PanelImportFlowBase):
                     if owned and source_zip.is_file() and self._saved_yomitan_source_matches(entry.dict_id, source_zip):
                         jobs.append(("yomitan", entry.dict_id, display_name, source_zip))
                         continue
+                    plain = saved_plain_source(slot) if owned else None
+                    if plain is not None:
+                        jobs.append((plain[0], entry.dict_id, display_name, plain[1]))
+                        continue
                     if (
                         meta is not None
                         and entry.dict_id == "jmdict-english"
@@ -619,6 +638,15 @@ class DictionaryImportFlow(PanelImportFlowBase):
             dicts_root = self._get_config().dicts_root
             if kind == "jmdict":
                 return ImportWorker.for_jmdict(source_path, dicts_root)
+            if kind in ("stardict", "csv"):
+                return ImportWorker.for_plain_dict(
+                    source_path,
+                    dicts_root,
+                    kind=kind,
+                    overwrite=True,
+                    dict_id=dict_id,
+                    **slot_language_kwarg(dicts_root / dict_id),
+                )
             # Pin the existing slot id so a saved source whose title embeds a
             # changing release date (e.g. Jitendex) rebuilds the index in the
             # SAME folder instead of forking a new date-named dir — which would

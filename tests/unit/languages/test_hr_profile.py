@@ -140,7 +140,7 @@ def test_normalisation_keeps_the_dje_letter_end_to_end():
 
 def test_the_catalogue_ships_the_serbo_croatian_dictionary_and_a_lemmatised_list():
     by_id = {spec.id: spec for spec in HR_CATALOG}
-    assert set(by_id) == {"wty-sh-en", "opensubtitles-hr"}
+    assert set(by_id) == {"freedict-hrv-eng", "wty-sh-en", "opensubtitles-hr"}
     dictionary, frequency = by_id["wty-sh-en"], by_id["opensubtitles-hr"]
     assert dictionary.kind == "dict" and dictionary.url == (
         "https://huggingface.co/datasets/daxida/wty-release/resolve/main/latest/dict/sh/en/wty-sh-en.zip"
@@ -149,7 +149,7 @@ def test_the_catalogue_ships_the_serbo_croatian_dictionary_and_a_lemmatised_list
     assert frequency.url == (
         "https://raw.githubusercontent.com/hermitdave/FrequencyWords/master/content/2018/hr/hr_50k.txt"
     )
-    assert all("CC BY-SA 4.0" in spec.license_note for spec in HR_CATALOG)
+    assert all("CC BY-SA 4.0" in spec.license_note for spec in HR_CATALOG if spec.id != "freedict-hrv-eng")
     assert get_profile("hr").catalog == HR_CATALOG
 
 

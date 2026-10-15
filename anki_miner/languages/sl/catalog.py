@@ -27,6 +27,15 @@ Not listed: Sloleks 3.0 and the other CLARIN.SI lemma lists (R30/D16 defer treeb
 CLARIN-derived lists to the resource stage) and Leipzig's Slovenian corpora, whose licence could not
 be verified while the setup wizard ticks every catalogue row (the ca precedent). ``wty-sl-en-ipa``
 waits for the pronunciation stage.
+
+**Dictionary — FreeDict slv-eng** (FreeDict 0.1, ``freedict-slv-eng-0.1.stardict.tar.xz``, 119,496 B, 5,555
+headwords; the FreeDict project, GPL-3.0-or-later): a StarDict book, imported by ``import_stardict``. Hand-made, not
+Wiktionary-derived: it defines everyday words the thin wty-sl-en lacks (``prebrati``, ``koristiti``,
+``skrivališče``), 1,189 more of the OpenSubtitles top 20,000 (L8 research, 2026-10-15). The URL names one release
+and the row is sha256-pinned.
+
+ORDER: the download flow PREPENDS each dictionary it imports (``gui/utils/resource_setup.py``), so this row is
+listed before ``wty-sl-en`` and ends below it in the chain: Wiktionary answers first and FreeDict fills its misses.
 """
 
 from __future__ import annotations
@@ -34,6 +43,14 @@ from __future__ import annotations
 from anki_miner.services.resource_catalog import ResourceSpec
 
 SL_CATALOG: tuple[ResourceSpec, ...] = (
+    ResourceSpec(
+        id="freedict-slv-eng",
+        kind="dict",
+        display_name="FreeDict (Slovenian-English)",
+        url="https://download.freedict.org/dictionaries/slv-eng/0.1/freedict-slv-eng-0.1.stardict.tar.xz",
+        license_note="FreeDict slv-eng 0.1, GPL-3.0-or-later; StarDict build downloaded from upstream source.",
+        sha256="386451538eb7345244f83bb1f94b7b4b4766aa49dfaa89430449648aca49bc4f",
+    ),
     ResourceSpec(
         id="wty-sl-en",
         kind="dict",

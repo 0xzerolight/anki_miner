@@ -120,8 +120,9 @@ class _FrontRepair:
         """The repair, or None when the parser has no post-pass or no dictionary is stamped for *language*.
 
         The chain is every schema-current slot under *dicts_root* stamped for
-        *language*, in id order: the list is imported before the settings chain
-        it will join exists, so the installed slots stand in for it.
+        *language*, in id order with StarDict/CSV slots last: the list is
+        imported before the settings chain it will join exists, so the
+        installed slots stand in for it.
         """
         from dataclasses import replace
 
@@ -138,11 +139,11 @@ class _FrontRepair:
         registry = DictionaryRegistry(dicts_root)
         registry.load()
         # unlisted() of an empty chain is every schema-current slot on disk.
-        chain = tuple(
-            ChainEntry(kind="indexed", dict_id=meta.dict_id)
-            for meta in registry.unlisted(config)
-            if meta.language == language
-        )
+        slots = [meta for meta in registry.unlisted(config) if meta.language == language]
+        # A StarDict/CSV slot has no part-of-speech or form-of tags, and the
+        # form rows are first-provider-wins: it goes last and fills misses only.
+        slots.sort(key=lambda meta: meta.format in ("stardict", "csv"))
+        chain = tuple(ChainEntry(kind="indexed", dict_id=meta.dict_id) for meta in slots)
         if not chain:
             return None
         return cls(post_pass, replace(config, dictionary_chain=chain), registry, profile.dict_keys.fold_term)

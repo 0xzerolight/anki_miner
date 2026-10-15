@@ -1,1 +1,1 @@
-"""Dictionary importers: JMdict XML and Yomitan zip."""
+"""Dictionary importers: Yomitan zip, JMdict XML, StarDict and CSV/TSV."""

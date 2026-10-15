@@ -13,12 +13,15 @@ Dictionaries, frequency lists, pitch accent data and word audio for each mining 
 | Type | Resource | Download | Add via | Setup Wizard |
 |------|----------|----------|---------|--------------|
 | Dictionary | [Wiktionary (Arabic-English)](https://github.com/yomidevs/wiktionary-to-yomitan) | [Yomitan zip](https://huggingface.co/datasets/daxida/wty-release/resolve/main/latest/dict/ar/en/wty-ar-en.zip) | Dictionaries -> Add dictionary… | Yes |
+| Dictionary | [FreeDict (Arabic-English)](https://freedict.org/) | [StarDict](https://download.freedict.org/dictionaries/ara-eng/0.6.3/freedict-ara-eng-0.6.3.stardict.tar.xz) | Dictionaries -> Add dictionary… | Yes |
 | Frequency | [OpenSubtitles 2018 frequency (Arabic)](https://github.com/hermitdave/FrequencyWords) | [TXT](https://raw.githubusercontent.com/hermitdave/FrequencyWords/master/content/2018/ar/ar_50k.txt) | Frequency -> Add frequency source… | Yes |
 | Dictionary | [Wiktionary (Arabic-English, with IPA)](https://github.com/yomidevs/wiktionary-to-yomitan) | [Yomitan zip](https://huggingface.co/datasets/daxida/wty-release/resolve/main/latest/dict/ar/en/wty-ar-en-ipa.zip) | Dictionaries -> Add dictionary… | No |
 | Dictionary | [Wiktionary (Egyptian Arabic-English)](https://github.com/yomidevs/wiktionary-to-yomitan) | [Yomitan zip](https://huggingface.co/datasets/daxida/wty-release/resolve/main/latest/dict/arz/en/wty-arz-en.zip) | Dictionaries -> Add dictionary… | No |
 | Dictionary | [Wiktionary (Levantine Arabic-English)](https://github.com/yomidevs/wiktionary-to-yomitan) | [Yomitan zip](https://huggingface.co/datasets/daxida/wty-release/resolve/main/latest/dict/apc/en/wty-apc-en.zip) | Dictionaries -> Add dictionary… | No |
 | Dictionary | [Wiktionary (South Levantine Arabic-English)](https://github.com/yomidevs/wiktionary-to-yomitan) | [Yomitan zip](https://huggingface.co/datasets/daxida/wty-release/resolve/main/latest/dict/ajp/en/wty-ajp-en.zip) | Dictionaries -> Add dictionary… | No |
 | Dictionary | [Wiktionary (Gulf Arabic-English)](https://github.com/yomidevs/wiktionary-to-yomitan) | [Yomitan zip](https://huggingface.co/datasets/daxida/wty-release/resolve/main/latest/dict/afb/en/wty-afb-en.zip) | Dictionaries -> Add dictionary… | No |
+
+FreeDict is a StarDict file, not a Yomitan zip. Export Resources does not carry it yet; download it again on the new machine.
 
 The dialect dictionaries import with a note that their language is not Arabic; they still work.
 
@@ -52,7 +55,10 @@ The dialect dictionaries import with a note that their language is not Arabic; t
 | Type | Resource | Download | Add via | Setup Wizard |
 |------|----------|----------|---------|--------------|
 | Dictionary | [Wiktionary (Serbo-Croatian-English)](https://github.com/yomidevs/wiktionary-to-yomitan) | [Yomitan zip](https://huggingface.co/datasets/daxida/wty-release/resolve/main/latest/dict/sh/en/wty-sh-en.zip) | Dictionaries -> Add dictionary… | Yes |
+| Dictionary | [FreeDict (Croatian-English)](https://freedict.org/) | [StarDict](https://download.freedict.org/dictionaries/hrv-eng/0.1.2/freedict-hrv-eng-0.1.2.stardict.tar.xz) | Dictionaries -> Add dictionary… | Yes |
 | Frequency | [OpenSubtitles 2018 frequency (Croatian)](https://github.com/hermitdave/FrequencyWords) | [TXT](https://raw.githubusercontent.com/hermitdave/FrequencyWords/master/content/2018/hr/hr_50k.txt) | Frequency -> Add frequency source… | Yes |
+
+FreeDict is a StarDict file, not a Yomitan zip. Export Resources does not carry it yet; download it again on the new machine.
 
 ## Danish
 
@@ -127,8 +133,11 @@ The dialect dictionaries import with a note that their language is not Arabic; t
 | Type | Resource | Download | Add via | Setup Wizard |
 |------|----------|----------|---------|--------------|
 | Dictionary | [Wiktionary (Hungarian)](https://github.com/yomidevs/wiktionary-to-yomitan) | [Yomitan zip](https://huggingface.co/datasets/daxida/wty-release/resolve/main/latest/dict/hu/en/wty-hu-en.zip) | Dictionaries -> Add dictionary… | Yes |
+| Dictionary | [FreeDict (Hungarian-English)](https://freedict.org/) | [StarDict](https://download.freedict.org/dictionaries/hun-eng/0.4.1/freedict-hun-eng-0.4.1.stardict.tar.xz) | Dictionaries -> Add dictionary… | Yes |
 | Frequency | [OpenSubtitles 2018 frequency (Hungarian)](https://github.com/hermitdave/FrequencyWords) | [TXT](https://raw.githubusercontent.com/hermitdave/FrequencyWords/master/content/2018/hu/hu_50k.txt) | Frequency -> Add frequency source… | Yes |
 | Frequency | [Leipzig Corpora (Hungarian, mixed)](https://github.com/StefanVukovic99/leipzig-to-yomitan) | [Yomitan zip](https://github.com/StefanVukovic99/leipzig-to-yomitan/releases/download/v2024-08-31-18-57-16-00-00/Leipzig.Hungarian.Mixed.Rank.zip) | Frequency -> Add frequency source… | No |
+
+FreeDict is a StarDict file, not a Yomitan zip. Export Resources does not carry it yet; download it again on the new machine.
 
 ## Indonesian
 
@@ -173,7 +182,10 @@ The dialect dictionaries import with a note that their language is not Arabic; t
 | Type | Resource | Download | Add via | Setup Wizard |
 |------|----------|----------|---------|--------------|
 | Dictionary | [Wiktionary (Lithuanian-English)](https://github.com/yomidevs/wiktionary-to-yomitan) | [Yomitan zip](https://huggingface.co/datasets/daxida/wty-release/resolve/main/latest/dict/lt/en/wty-lt-en.zip) | Dictionaries -> Add dictionary… | Yes |
+| Dictionary | [FreeDict (Lithuanian-English)](https://freedict.org/) | [StarDict](https://download.freedict.org/dictionaries/lit-eng/0.7.2/freedict-lit-eng-0.7.2.stardict.tar.xz) | Dictionaries -> Add dictionary… | Yes |
 | Frequency | [OpenSubtitles 2018 frequency (Lithuanian)](https://github.com/hermitdave/FrequencyWords) | [TXT](https://raw.githubusercontent.com/hermitdave/FrequencyWords/master/content/2018/lt/lt_50k.txt) | Frequency -> Add frequency source… | Yes |
+
+FreeDict is a StarDict file, not a Yomitan zip. Export Resources does not carry it yet; download it again on the new machine.
 
 ## Norwegian
 
@@ -230,7 +242,10 @@ The Setup Wizard downloads only the frequency list for the variety set in Settin
 | Type | Resource | Download | Add via | Setup Wizard |
 |------|----------|----------|---------|--------------|
 | Dictionary | [Wiktionary (Slovene-English, small)](https://github.com/yomidevs/wiktionary-to-yomitan) | [Yomitan zip](https://huggingface.co/datasets/daxida/wty-release/resolve/main/latest/dict/sl/en/wty-sl-en.zip) | Dictionaries -> Add dictionary… | Yes |
+| Dictionary | [FreeDict (Slovenian-English)](https://freedict.org/) | [StarDict](https://download.freedict.org/dictionaries/slv-eng/0.1/freedict-slv-eng-0.1.stardict.tar.xz) | Dictionaries -> Add dictionary… | Yes |
 | Frequency | [OpenSubtitles 2018 frequency (Slovenian)](https://github.com/hermitdave/FrequencyWords) | [TXT](https://raw.githubusercontent.com/hermitdave/FrequencyWords/master/content/2018/sl/sl_50k.txt) | Frequency -> Add frequency source… | Yes |
+
+FreeDict is a StarDict file, not a Yomitan zip. Export Resources does not carry it yet; download it again on the new machine.
 
 ## Spanish
 

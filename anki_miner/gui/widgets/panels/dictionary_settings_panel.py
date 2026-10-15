@@ -40,6 +40,8 @@ def _robust_rmtree(target: Path) -> RmtreeOutcome:
 _FORMAT_LABELS: dict[str, str] = {
     "yomitan": "Yomitan",
     "jmdict": "JMdict",
+    "stardict": "StarDict",
+    "csv": "CSV",
 }
 
 

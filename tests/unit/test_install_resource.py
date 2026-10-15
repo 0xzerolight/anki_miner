@@ -142,3 +142,58 @@ def test_only_a_catalog_spec_sweeps_dated_siblings(tmp_path, staged, monkeypatch
     assert result is not None and result.ok
     assert len(calls) == expected_calls
     assert result.removed_dicts == ([("jmdict-examples", "JMdict [2026-01-01]")] if sweep else [])
+
+
+# --- DEF-05: FreeDict rows are sha256-pinned StarDict tarballs -------------------
+
+
+def _stardict_spec(sha256: str) -> ResourceSpec:
+    return ResourceSpec(
+        id="freedict-test",
+        kind="dict",
+        display_name="FreeDict (Test)",
+        url="https://download.freedict.org/dictionaries/tst-eng/0.1/freedict-tst-eng-0.1.stardict.tar.xz",
+        license_note="",
+        sha256=sha256,
+    )
+
+
+def _install_spec(spec: ResourceSpec, tmp_path, staged, language: str = "lt"):
+    return worker_mod.install_resource(
+        spec,
+        dicts_root=tmp_path / "dicts",
+        freqs_root=tmp_path / "freqs",
+        pitch_root=tmp_path / "pitch",
+        download_dir=staged.parent,
+        language=language,
+        reporter=worker_mod.phase_reporter(spec, [].append),
+        cancelled=lambda: False,
+    )
+
+
+def test_a_stardict_download_imports_through_the_stardict_importer(tmp_path, staged, monkeypatch) -> None:
+    import hashlib
+
+    from tests.fixtures.dictionary.build_stardict_fixture import build_stardict_tar
+
+    build_stardict_tar(tmp_path / "book.tar.xz")
+    staged.write_bytes((tmp_path / "book.tar.xz").read_bytes())
+    digest = hashlib.sha256(staged.read_bytes()).hexdigest()
+    monkeypatch.setattr(worker_mod, "import_yomitan_zip", lambda *a, **k: pytest.fail("not a Yomitan zip"))
+
+    result = _install_spec(_stardict_spec(digest), tmp_path, staged)
+
+    assert result is not None and result.ok, result
+    assert result.dict_id == "freedict-test" and result.detail == "2 entries"
+    meta = (tmp_path / "dicts" / "freedict-test" / "meta.json").read_text(encoding="utf-8")
+    assert '"stardict"' in meta and '"lt"' in meta
+
+
+def test_a_download_that_misses_its_pinned_sha256_is_not_imported(tmp_path, staged, monkeypatch) -> None:
+    monkeypatch.setattr(worker_mod, "import_stardict", lambda *a, **k: pytest.fail("must not import"))
+
+    result = _install_spec(_stardict_spec("0" * 64), tmp_path, staged)
+
+    assert result is not None and result.ok is False
+    assert "checksum mismatch" in result.detail
+    assert not staged.exists()

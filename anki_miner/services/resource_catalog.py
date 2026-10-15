@@ -42,6 +42,10 @@ class ResourceSpec:
             user can keep two dated copies on purpose (JMdict and JMdict
             with examples share one title), and an update must never
             remove one.
+        sha256: Hex digest the downloaded file must match before it is
+            imported ("" = unchecked). Set it on a row whose URL names one
+            fixed release (FreeDict's versioned files); a moving
+            ``latest`` URL cannot carry one.
     """
 
     id: str
@@ -53,6 +57,7 @@ class ResourceSpec:
     variant: str = ""
     pin_slot: bool = False
     sweep_superseded: bool = True
+    sha256: str = ""
 
 
 # For dict resources, ``id`` is the PINNED on-disk slot the importer writes to
