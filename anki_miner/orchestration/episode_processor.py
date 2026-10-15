@@ -47,6 +47,7 @@ from anki_miner.services import (
 )
 from anki_miner.services.anki_service import is_transient_anki_transport_error
 from anki_miner.services.cue_merge import auto_line_expansion, merge_budget_seconds
+from anki_miner.services.definition_service import preferred_dictionaries
 from anki_miner.services.dictionary.card_style_block import attach_card_style_block
 from anki_miner.services.frequency.multi_frequency_service import harmonic_rank, min_rank
 from anki_miner.services.frequency.render import render_frequency_html
@@ -2073,12 +2074,20 @@ class EpisodeProcessor:
         lookup_batch = (
             self.definition_service.get_glossaries_batch if stacked else self.definition_service.get_definitions_batch
         )
+        # F-10: a word the Word Curator pinned to a dictionary takes that
+        # dictionary's entry. Passed only when a pick exists, so an untouched
+        # run calls the lookup exactly as before; a stacking profile already
+        # holds every dictionary in its Definition and ignores the pick.
+        definition_kwargs: dict[str, dict[str, str]] = dict(token_kwargs)
+        picks = preferred_dictionaries(words_with_media)
+        if picks and not stacked:
+            definition_kwargs["preferred_dictionaries"] = picks
         definitions = lookup_batch(
             lookup_pairs,
             progress_callback,
             fallback_context,
             is_cancelled=lambda: self.cancelled,
-            **token_kwargs,
+            **definition_kwargs,
         )
         self.presenter.show_success(
             QCoreApplication.translate(
