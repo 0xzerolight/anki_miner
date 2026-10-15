@@ -139,3 +139,35 @@ def test_the_legacy_rule_is_named_in_the_migration_receipt(tmp_config: Path, cap
     receipt = "\n".join(r.getMessage() for r in caplog.records if "Config migrated" in r.getMessage())
     for name in FRESH_INSTALL_ON:
         assert f"legacy_off_{name}" in receipt
+
+
+@pytest.mark.parametrize("current_value", [True, False])
+@pytest.mark.parametrize("wrap", ["flat", "envelope"])
+def test_importing_settings_without_the_new_keys_keeps_current_values(tmp_path: Path, current_value, wrap):
+    """Review Focus 2: the import contract is "absent keys keep current values", so the
+    load-path legacy rule must not run on import (a raw gui_config.json or an export envelope)."""
+    settings = _saved_before_the_batch()
+    settings["anki_deck_name"] = "Imported"
+    if wrap == "envelope":
+        schema = settings.pop("config_schema_version")
+        payload = {"anki_miner_settings": 1, "config_schema_version": schema, "settings": settings}
+    else:
+        payload = settings
+    path = tmp_path / "import.json"
+    path.write_text(json.dumps(payload), encoding="utf-8")
+    current = replace(create_default_config(), **dict.fromkeys(ALL_SIX, current_value))
+
+    imported = GUIConfigManager.import_config(path, current).config
+
+    assert imported.anki_deck_name == "Imported"
+    assert {name: getattr(imported, name) for name in ALL_SIX} == dict.fromkeys(ALL_SIX, current_value)
+
+
+def test_an_import_that_carries_the_keys_applies_them(tmp_path: Path):
+    source = replace(create_default_config(), **{name: not getattr(create_default_config(), name) for name in ALL_SIX})
+    export_path = tmp_path / "anki_miner_settings.json"
+    GUIConfigManager.export_config(source, export_path)
+
+    imported = GUIConfigManager.import_config(export_path, create_default_config()).config
+
+    assert {name: getattr(imported, name) for name in ALL_SIX} == {name: getattr(source, name) for name in ALL_SIX}
