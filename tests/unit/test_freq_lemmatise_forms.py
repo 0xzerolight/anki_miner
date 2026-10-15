@@ -104,6 +104,24 @@ def test_a_dictionary_installed_after_the_lemmatiser_was_built_is_read(tmp_path,
     assert lemmatize(["welt"]) == ["Welt"]
 
 
+def test_a_plain_dictionary_whose_id_sorts_first_does_not_hide_the_form_rows(tmp_path, de_tagger):
+    """A StarDict/CSV slot carries no part-of-speech or form-of tags; it fills misses only.
+
+    The FreeDict catalogue rows (``freedict-*``) sort before ``wty-*`` and are downloaded
+    before the frequency list, so in id order their untagged rows would answer first.
+    """
+    from anki_miner.services.dictionary.importers.csv_importer import import_csv_dictionary
+
+    install_dictionary(tmp_path / "dicts", "de", DE_ROWS)
+    plain = tmp_path / "plain.csv"
+    plain.write_text("Häuser,houses\nWelt,world\n", encoding="utf-8")
+    import_csv_dictionary(plain, tmp_path / "dicts", dict_id="freedict-deu-eng", language="de")
+
+    lemmatize = build_frequency_lemmatizer("de", tmp_path / "dicts")
+
+    assert lemmatize(["welt", "häuser", "haus"]) == ["Welt", "Haus", "Haus"]
+
+
 FR_TAGS = {
     "gare": ("VERB", "gare"),
     "porte": ("VERB", "porte"),
