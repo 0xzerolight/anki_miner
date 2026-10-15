@@ -967,7 +967,7 @@ def _emit_progress(
 
 # Subtitle-source priority for the condenser (D9). Unlike the mining default it
 # includes ``.vtt`` — the condenser accepts WebVTT sidecars (D12).
-_CONDENSER_SUBTITLE_PRIORITY: tuple[str, ...] = (".ass", ".ssa", ".srt", ".vtt")
+_CONDENSER_SUBTITLE_PRIORITY: tuple[str, ...] = (".ass", ".ssa", ".srt", ".vtt", ".lrc")
 
 
 class CondenseStatus(Enum):

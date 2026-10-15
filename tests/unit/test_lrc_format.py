@@ -6,10 +6,12 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import pysubs2
 import pytest
 
+from anki_miner.services import audio_condenser
 from anki_miner.services.audio_condenser import load_subtitle_events, write_condensed_lrc
 from anki_miner.services.lrc_format import LAST_LINE_MS, MAX_LINE_MS, parse_lrc, register_lrc_format
 from anki_miner.services.subtitle_parser import SubtitleParserService
@@ -149,3 +151,41 @@ class TestReaders:
         write_condensed_lrc([(1000, 2000, "Hello"), (90_500, 91_000, "World")], path)
 
         assert load_subtitle_events(path) == [(1000, 2000, "Hello"), (90_500, 91_000, "World")]
+
+
+class TestWhereLrcIsAccepted:
+    def test_condense_offers_lrc(self):
+        from anki_miner.gui.widgets.condense_tab import CONDENSE_SUBTITLE_EXTENSIONS, CONDENSE_SUBTITLE_FILE_FILTER
+
+        assert CONDENSE_SUBTITLE_EXTENSIONS[-1] == ".lrc"
+        assert "*.lrc" in CONDENSE_SUBTITLE_FILE_FILTER
+
+    def test_audiobooks_offers_lrc(self):
+        from anki_miner.gui.widgets import audiobook_tab
+
+        assert audiobook_tab._SUBTITLE_EXTS[-1] == ".lrc"
+        assert "*.lrc" in audiobook_tab._SUBTITLE_FILTER
+
+    def test_condense_finds_a_songs_lyrics_beside_it(self, tmp_path):
+        song = tmp_path / "song.mp3"
+        song.write_bytes(b"")
+        lyrics = tmp_path / "song.lrc"
+        lyrics.write_text("[00:01.00]Hola\n", encoding="utf-8")
+
+        config = MagicMock()
+        config.ffprobe_location = None
+
+        found = audio_condenser._resolve_subtitle_source(MagicMock(), config, song, None, None, None)
+
+        assert found == (lyrics, None, None)
+
+    def test_audiobooks_auto_fills_a_songs_lyrics(self, tmp_path):
+        from anki_miner.gui.widgets import audiobook_tab
+        from anki_miner.utils.file_pairing import find_sibling_subtitle
+
+        song = tmp_path / "song.mp3"
+        song.write_bytes(b"")
+        lyrics = tmp_path / "song.lrc"
+        lyrics.write_text("[00:01.00]Hola\n", encoding="utf-8")
+
+        assert find_sibling_subtitle(song, priority=audiobook_tab._SUBTITLE_EXTS) == lyrics
