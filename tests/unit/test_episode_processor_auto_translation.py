@@ -133,3 +133,13 @@ def test_a_spanish_processor_picks_with_its_own_config(test_config, mock_service
     assert entries == [(0.5, 2.5, "Ich esse.")]
     assert pick.call_args.args[1].language == "es"
     assert pick.call_args.args[2] is proc.subtitle_parser
+
+
+def test_the_youtube_inner_run_does_not_auto_pick(test_config, mock_services, tmp_path):
+    # process_youtube_url's inner call has no translation input of its own (ruling F04-4).
+    config = replace(test_config, secondary_subtitle_enabled=True)
+    _wire(mock_services, [make_word("食べる", start_time=1.0)])
+    proc = build_processor(config, **mock_services)
+    with patch(_PICK) as pick:
+        proc.process_episode(tmp_path / "clip.mp4", tmp_path / "clip.ja.srt", _outer_kind="youtube")
+    pick.assert_not_called()

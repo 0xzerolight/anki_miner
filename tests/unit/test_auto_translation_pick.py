@@ -155,3 +155,13 @@ def test_spanish_mining_with_a_german_interface_picks_the_german_track(test_conf
     ):
         picked = load_auto_translation(video, config, _parser(), tmp_path / "tmp")
     assert picked is not None and picked.candidate.stream is streams[2]
+
+
+def test_the_mining_track_is_never_its_own_translation(test_config, tmp_path):
+    # English mining with an English interface: the English text track is the mining track, not a translation.
+    config = replace(test_config, language="en", ui_language="en")
+    video = tmp_path / "ep01.mkv"
+    video.write_bytes(b"")
+    with patch(_LIST, return_value=[_stream(0, "eng", "Full")]), patch(_EXTRACT, autospec=True) as extract:
+        assert load_auto_translation(video, config, _parser(), tmp_path / "tmp") is None
+    extract.assert_not_called()
