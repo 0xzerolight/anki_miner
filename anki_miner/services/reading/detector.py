@@ -4,12 +4,12 @@ The GUI hands dropped paths to :func:`detect`, which classifies each into one or
 more :class:`ReadingSourceRef` items (one manga volume, novel file, or subtitle
 file each). The queue worker later calls :func:`load` per ref, which lazily
 dispatches to the matching source loader (``mokuro_source`` / ``epub_source`` /
-``aozora_source`` / ``subtitle_source``).
+``aozora_source`` / ``pdf_source`` / ``subtitle_source``).
 
 For ``kind="mokuro"`` refs, ``detect`` is the *sole* metadata reader: it validates
 the ``.mokuro`` JSON sidecar and fully populates ``title`` (series), ``volume``
 (episode) and ``image_root`` (archive Path / directory Path / None for text-only),
-so the loaders can trust the ref. For ``epub``/``txt`` refs it classifies purely by
+so the loaders can trust the ref. For ``epub``/``txt``/``pdf`` refs it classifies purely by
 extension without opening the file, leaving the loader authoritative for the final
 document metadata.
 """
@@ -63,7 +63,9 @@ _ARCHIVE_EXTS: tuple[str, ...] = (".cbz", ".zip")
 _SUBTITLE_EXTS: tuple[str, ...] = (".srt", ".ass", ".ssa", ".vtt", ".smi")
 
 # Book-file extensions (Reading → Novels sub-tab); matched case-insensitively.
-_BOOK_EXTS: tuple[str, ...] = (".epub", ".txt")
+# ``.pdf`` (TS-05) reads the embedded text layer only.
+_BOOK_EXTS: tuple[str, ...] = (".epub", ".txt", ".pdf")
+_BOOK_KIND_BY_EXT: dict[str, Literal["epub", "txt", "pdf"]] = {".epub": "epub", ".txt": "txt", ".pdf": "pdf"}
 
 
 def detect(
@@ -81,7 +83,7 @@ def detect(
     3. directory → its ``*.mokuro`` children and embedded-``.mokuro``
        archives (title dir), else the sibling ``<name>.mokuro`` (user
        dropped the image dir itself), else error.
-    4. ``.epub``/``.txt`` → one book (metadata deferred to the loader).
+    4. ``.epub``/``.txt``/``.pdf`` → one book (metadata deferred to the loader).
     5. ``.srt``/``.ass``/``.ssa``/``.vtt``/``.smi`` → one subtitle document (metadata
        deferred to the loader).
 
@@ -134,6 +136,10 @@ def detect(
             refs = [_book_ref(path, "txt")]
             _log_detected(path, refs, format_="txt", reason="extension", marker=suffix)
             return refs
+        if suffix == ".pdf":
+            refs = [_book_ref(path, "pdf")]
+            _log_detected(path, refs, format_="pdf", reason="extension", marker=suffix)
+            return refs
         if suffix in _SUBTITLE_EXTS:
             refs = [_subtitle_ref(path)]
             _log_detected(path, refs, format_="subtitle", reason="extension", marker=suffix)
@@ -141,7 +147,7 @@ def detect(
 
         raise SetupError(
             f"'{path.name}' is not a recognized reading source. Supported: .mokuro, "
-            ".cbz/.zip (with a matching .mokuro beside or inside it), .epub, .txt, "
+            ".cbz/.zip (with a matching .mokuro beside or inside it), .epub, .txt, .pdf, "
             "subtitle files (.srt/.ass/.ssa/.vtt/.smi), or a folder of .mokuro volumes."
         )
     except SetupError:
@@ -186,10 +192,11 @@ def load(
     ``encodings`` is the mining language's decode ladder, and reaches only the
     two loaders that guess an encoding — the novel and subtitle ones. mokuro
     reads a UTF-8 JSON sidecar, EPUB takes its encoding from the archive's own
-    XML declaration, and a ``text`` ref is already a decoded string, so none of
-    the other three accepts the keyword at all.
+    XML declaration, a PDF's text layer is Unicode already, and a ``text`` ref
+    is already a decoded string, so none of the other four accepts the keyword
+    at all.
 
-    ``rules`` is that language's sentence-splitting policy, and reaches the four
+    ``rules`` is that language's sentence-splitting policy, and reaches the five
     loaders that call ``split_sentences``. ``subtitle`` is the odd one out the
     other way round: it splits nothing, so it takes the ladder but not the
     rules.
@@ -229,6 +236,10 @@ def load(
         from . import aozora_source
 
         return aozora_source.load(ref, **common, **sniffing, **splitting)
+    if ref.kind == "pdf":
+        from . import pdf_source
+
+        return pdf_source.load(ref, **common, **splitting)
     if ref.kind == "subtitle":
         from . import subtitle_source
 
@@ -254,7 +265,7 @@ def load(
 
 
 def detect_book_folder(directory: Path) -> list[ReadingSourceRef]:
-    """Enumerate the top-level ``.epub``/``.txt`` books in a directory.
+    """Enumerate the top-level ``.epub``/``.txt``/``.pdf`` books in a directory.
 
     The Novels sub-tab's folder-mining path: one ref per book, natural-sorted
     by filename. Deliberately non-recursive — a folder pick must not sweep a
@@ -299,8 +310,8 @@ def detect_book_folder(directory: Path) -> list[ReadingSourceRef]:
             input=directory,
             found=found_extensions,
         )
-        raise SetupError(f"No .epub or .txt books found in '{directory.name}'.")
-    refs = [_book_ref(child, "epub" if child.suffix.lower() == ".epub" else "txt") for child in books]
+        raise SetupError(f"No .epub, .txt or .pdf books found in '{directory.name}'.")
+    refs = [_book_ref(child, _BOOK_KIND_BY_EXT[child.suffix.lower()]) for child in books]
     _log_detected(
         directory,
         refs,
@@ -363,7 +374,7 @@ def _mokuro_ref(mokuro_path: Path) -> ReadingSourceRef:
     )
 
 
-def _book_ref(path: Path, kind: Literal["epub", "txt"]) -> ReadingSourceRef:
+def _book_ref(path: Path, kind: Literal["epub", "txt", "pdf"]) -> ReadingSourceRef:
     """Build a provisional book ref by extension alone (no file open)."""
     return ReadingSourceRef(
         kind=kind,

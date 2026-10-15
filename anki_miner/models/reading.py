@@ -81,7 +81,7 @@ class ReadingSourceRef:
       ``.mokuro`` file on disk; for a self-contained archive (Issue #103) the
       ``.mokuro`` JSON lives *inside* the archive — then ``path`` and
       ``image_root`` are both the archive and ``ocr_entry`` names the member.
-    * kind in {"epub","txt","subtitle"}: the detector sets ``title`` =
+    * kind in {"epub","txt","pdf","subtitle"}: the detector sets ``title`` =
       ``path.stem`` (a provisional label for queue rows only), ``volume`` =
       None and ``image_root`` = None; the loader is authoritative for the
       final ``ReadingDocument`` metadata.
@@ -107,7 +107,7 @@ class ReadingSourceRef:
     in ``[start, end)``. None for every other ref.
     """
 
-    kind: Literal["mokuro", "epub", "txt", "subtitle", "text", "deck"]
+    kind: Literal["mokuro", "epub", "txt", "pdf", "subtitle", "text", "deck"]
     path: Path | None = None
     image_root: Path | None = None
     title: str = ""
