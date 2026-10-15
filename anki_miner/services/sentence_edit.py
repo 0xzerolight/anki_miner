@@ -96,4 +96,7 @@ def resolve_sentence_edit(word: TokenizedWord, parse_line: ParseLine) -> Tokeniz
         sentence_translation=word.sentence_translation,
         sentence_candidates=[],
         sentence_edit=None,
+        # F-10: the curator stamps a dictionary pick only when it was made for
+        # the edited word's card front, which is this token's.
+        dictionary_pick=word.dictionary_pick,
     )

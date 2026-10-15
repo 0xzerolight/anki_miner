@@ -141,6 +141,12 @@ class TestResolveSentenceEdit:
         assert rebuilt.screenshot_override == 6.2
         assert rebuilt.line_expansion == (0, 0)
 
+    def test_the_curator_dictionary_pick_carries_to_the_rebuilt_word(self):
+        # F-10: the curator stamps a pick made for the edited word's card front on
+        # the word it rebuilds from, so phase 4 must still see it after the rebuild.
+        rebuilt = resolve_sentence_edit(self._intent(dictionary_pick="JMdict"), lambda text: PARSED)
+        assert rebuilt.dictionary_pick == "JMdict"
+
     def test_intent_is_absorbed_and_stale_derived_fields_dropped(self):
         rebuilt = resolve_sentence_edit(self._intent(), lambda text: PARSED)
         assert rebuilt.sentence_edit is None
