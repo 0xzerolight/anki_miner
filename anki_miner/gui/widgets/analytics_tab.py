@@ -3,7 +3,8 @@
 import contextlib
 import logging
 import time
-from dataclasses import dataclass
+from collections.abc import Callable
+from dataclasses import dataclass, replace
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont
@@ -20,6 +21,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
 from anki_miner.gui.utils.content_text import content_cell_font
 from anki_miner.gui.utils.qt_helpers import (
@@ -33,6 +35,7 @@ from anki_miner.gui.utils.qt_helpers import (
     make_table_item,
 )
 from anki_miner.gui.utils.run_off_thread import run_off_thread
+from anki_miner.gui.utils.service_factory import resolve_known_words_db_path
 from anki_miner.gui.widgets.base import (
     PageWidth,
     ScreenIssue,
@@ -50,6 +53,9 @@ from anki_miner.models.stats import (
     MiningSession,
     OverallStats,
 )
+from anki_miner.services.anki_service import AnkiService
+from anki_miner.services.known_word_db import KnownWordDB
+from anki_miner.services.run_history import RunNotesCheck, check_run_notes, delete_run
 from anki_miner.services.stats_service import StatsService
 from anki_miner.utils.i18n import tr_format
 from anki_miner.utils.logging_ext import log_summary
@@ -69,6 +75,10 @@ _DIFFICULTY_FIT_COLUMNS = _DIFFICULTY_COUNT_COLUMNS
 #: The cells carrying MINED content, which is what the language face is for.
 _SESSION_NAME_COLUMNS = (1, 2)
 _DIFFICULTY_NAME_COLUMNS = (1,)
+
+#: Column 0 of each history row carries its stats.db session id (AI-16).
+#: UserRole is free: make_table_item keeps sort and copy values on +1 and +2.
+_SESSION_ID_ROLE = Qt.ItemDataRole.UserRole
 
 
 def _count(value: int) -> SortableTableWidgetItem:
@@ -131,7 +141,14 @@ class AnalyticsTab(ScreenIssueHost, QWidget):
     # within this window so rapid tab clicking stays snappy.
     _REFRESH_TTL_SECONDS = 5.0
 
-    def __init__(self, stats_service: StatsService, parent=None, *, content_style: ContentTextStyle | None = None):
+    def __init__(
+        self,
+        stats_service: StatsService,
+        parent=None,
+        *,
+        content_style: ContentTextStyle | None = None,
+        config_provider: Callable[[], AnkiMinerConfig] | None = None,
+    ):
         super().__init__(parent)
         self.stats_service = stats_service
         # Series and episode names are mined content: the face comes from the
@@ -158,6 +175,14 @@ class AnalyticsTab(ScreenIssueHost, QWidget):
         # BackgroundTaskController.shutdown calls this like every other
         # top-level tab that exposes the hook.
         self._teardown_generation = 0
+        # AI-16: the live config (AnkiConnect URL, mining language, known-words
+        # path), read at the moment of each action. None (tests, tools that
+        # embed the tab without a window) leaves the run actions off.
+        self._config_provider = config_provider
+        # The rows on screen, by session id, for the run actions.
+        self._sessions_by_id: dict[int, MiningSession] = {}
+        # One run action at a time: a second click would race the first delete.
+        self._run_action_in_flight = False
         self._setup_ui()
         self._setup_accessibility()
 
@@ -335,6 +360,29 @@ class AnalyticsTab(ScreenIssueHost, QWidget):
         self.sessions_table.hide()
 
         layout.addWidget(self.sessions_table)
+
+        # AI-16: act on the one selected run. Both actions run off the GUI
+        # thread; a failure lands in the screen banner (D24).
+        self.run_actions_row = QWidget()
+        actions = QHBoxLayout(self.run_actions_row)
+        actions.setContentsMargins(0, 0, 0, 0)
+        actions.setSpacing(SPACING.sm)
+        self.show_in_anki_button = ModernButton(self.tr("Show in Anki"), variant="secondary")
+        self.show_in_anki_button.clicked.connect(self._on_show_in_anki_clicked)
+        actions.addWidget(self.show_in_anki_button)
+        self.delete_run_button = ModernButton(self.tr("Delete this run's cards…"), variant="critical")
+        self.delete_run_button.clicked.connect(self._on_delete_run_clicked)
+        actions.addWidget(self.delete_run_button)
+        self.run_action_note = QLabel()
+        self.run_action_note.setObjectName("helper-text")
+        self.run_action_note.setWordWrap(True)
+        self.run_action_note.hide()
+        actions.addWidget(self.run_action_note, 1)
+        self.run_actions_row.hide()
+        layout.addWidget(self.run_actions_row)
+        self.sessions_table.itemSelectionChanged.connect(self._sync_run_actions)
+        self._sync_run_actions()
+
         group.setLayout(layout)
         return group
 
@@ -590,6 +638,8 @@ class AnalyticsTab(ScreenIssueHost, QWidget):
         has_sessions = len(sessions) > 0
         self.sessions_table.setVisible(has_sessions)
         self.sessions_empty_label.setVisible(not has_sessions)
+        self._sessions_by_id = {session.id: session for session in sessions if session.id is not None}
+        self.run_actions_row.setVisible(has_sessions and self._config_provider is not None)
 
         self.sessions_table.setUpdatesEnabled(False)
         was_sorting = self.sessions_table.isSortingEnabled()
@@ -608,14 +658,206 @@ class AnalyticsTab(ScreenIssueHost, QWidget):
                     _japanese(make_table_item(session.episode_name), self._content_style),
                     _count(session.total_words),
                     _count(session.unknown_words),
-                    _count(session.cards_created),
+                    # Ruling C5: a run deleted here keeps its count and says so.
+                    self._cards_cell(session),
                 ]
+                items[0].setData(_SESSION_ID_ROLE, session.id)
                 for col_idx, item in enumerate(items):
                     self.sessions_table.setItem(row_idx, col_idx, item)
         finally:
             self.sessions_table.setSortingEnabled(was_sorting)
             self.sessions_table.setUpdatesEnabled(True)
         hold_numeric_columns(self.sessions_table, _SESSION_COUNT_COLUMNS)
+        self._sync_run_actions()
+
+    # === AI-16: act on one past run ===
+
+    def _selected_session(self) -> MiningSession | None:
+        """The run whose row is selected, or ``None`` unless exactly one row is."""
+        rows = {index.row() for index in self.sessions_table.selectedIndexes()}
+        if len(rows) != 1:
+            return None
+        item = self.sessions_table.item(rows.pop(), 0)
+        if item is None:
+            return None
+        session_id = item.data(_SESSION_ID_ROLE)
+        return self._sessions_by_id.get(session_id) if isinstance(session_id, int) else None
+
+    def _cards_cell(self, session: MiningSession) -> SortableTableWidgetItem:
+        """The Cards cell. A run whose cards were deleted here is marked (ruling C5).
+
+        The number stays what the run created: history totals are not
+        rewritten. The mark adds how many of its cards are gone from Anki, and
+        the column still sorts on the created count.
+        """
+        if session.deleted_count <= 0:
+            return _count(session.cards_created)
+        return make_table_item(
+            tr_format(
+                self.tr("%1 (cards deleted: %2)"),
+                f"{session.cards_created:,}",
+                f"{session.deleted_count:,}",
+            ),
+            CellRole.NUMBER,
+            sort_value=session.cards_created,
+        )
+
+    def _sync_run_actions(self) -> None:
+        """Arm Show in Anki and Delete only for a selected run that kept its card list."""
+        session = self._selected_session()
+        usable = (
+            self._config_provider is not None
+            and session is not None
+            and session.note_count > 0
+            and not self._run_action_in_flight
+        )
+        if session is None:
+            tip = self.tr("Select one run in the table.")
+        elif session.deleted_count > 0:
+            tip = tr_format(self.tr("This run's cards were deleted: %1."), f"{session.deleted_count:,}")
+        elif session.note_count == 0:
+            tip = self.tr(
+                "Anki Miner has no card list for this run: it was mined before this version, or it made no cards."
+            )
+        else:
+            tip = ""
+        for button in (self.show_in_anki_button, self.delete_run_button):
+            button.setEnabled(usable)
+            button.setToolTip(tip)
+
+    def _on_show_in_anki_clicked(self) -> None:
+        """Open Anki's browser on the selected run's notes (AI-16), off the GUI thread."""
+        session = self._selected_session()
+        if session is None or session.id is None or self._config_provider is None:
+            return
+        config = self._config_provider()
+        service = self.stats_service
+        session_id = session.id
+
+        def _browse() -> int:
+            # Worker thread: stats.db and AnkiConnect only, never a widget.
+            receipt = service.get_run_receipt(session_id)
+            note_ids = list(receipt.note_ids) if receipt is not None else []
+            AnkiService(config).gui_browse_notes(note_ids)
+            return len(note_ids)
+
+        # Success is Anki's own window; this tab has nothing to change.
+        run_off_thread(self, _browse, lambda _count: None, self._on_show_in_anki_error)
+
+    def _on_show_in_anki_error(self, msg: str) -> None:
+        """GUI thread: say on screen that Anki's browser could not be opened (D24)."""
+        logging.getLogger(__name__).warning("Analytics: Show in Anki failed: %s", msg)
+        if self._teardown_generation:
+            return
+        with contextlib.suppress(RuntimeError):
+            self.show_screen_issue(
+                ScreenIssue(summary=self.tr("Anki Miner couldn't open this run's cards in Anki."), details=msg)
+            )
+
+    def _on_delete_run_clicked(self) -> None:
+        """Ask Anki what is left of the selected run, then confirm (AI-16)."""
+        session = self._selected_session()
+        if session is None or session.id is None or self._config_provider is None or self._run_action_in_flight:
+            return
+        config = self._config_provider()
+        service = self.stats_service
+        session_id = session.id
+        self._set_run_action_in_flight(True)
+        self.run_action_note.hide()
+
+        def _check() -> RunNotesCheck:
+            # Worker thread: which recorded notes still exist, and how many were reviewed.
+            receipt = service.get_run_receipt(session_id)
+            return check_run_notes(AnkiService(config), receipt.note_ids if receipt is not None else ())
+
+        run_off_thread(
+            self,
+            _check,
+            lambda check: self._confirm_delete_run(session_id, config, check),
+            self._on_delete_run_error,
+        )
+
+    def _confirm_delete_run(self, session_id: int, config: AnkiMinerConfig, check: object) -> None:
+        """GUI thread: the last moment to say no, naming what would be lost."""
+        self._set_run_action_in_flight(False)
+        if self._teardown_generation or not isinstance(check, RunNotesCheck):
+            return
+        service = self.stats_service
+        if not check.present:
+            # Review Focus 4: Anki already lost every note (an Undo, or a delete
+            # in Anki). Nothing to confirm; drop the list so the row disarms.
+            self._show_run_note(self.tr("None of this run's cards are in Anki any more."))
+            run_off_thread(
+                self,
+                lambda: service.forget_run_notes(session_id),
+                lambda _result: self.refresh_data(force=True),
+                self._on_delete_run_error,
+            )
+            return
+        answer = QMessageBox.question(
+            self,
+            self.tr("Delete This Run's Cards"),
+            tr_format(
+                self.tr(
+                    "Cards this run added that are still in Anki: %1. Reviewed at least once: %2.\n\n"
+                    "Delete them from Anki? Their review history is deleted with them. This cannot be undone."
+                ),
+                f"{len(check.present):,}",
+                f"{check.reviewed:,}",
+            ),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        log_summary(
+            logging.getLogger(__name__),
+            "Confirm",
+            action="delete_run_cards",
+            answer="yes" if answer == QMessageBox.StandardButton.Yes else "no",
+            cards=len(check.present),
+            reviewed=check.reviewed,
+        )
+        if answer != QMessageBox.StandardButton.Yes:
+            return
+        self._set_run_action_in_flight(True)
+
+        def _known_words_db_for(code: str) -> KnownWordDB:
+            # The run's own language: its mined rows live in that DB (Review Focus 5).
+            return KnownWordDB(resolve_known_words_db_path(replace(config, language=code)), language=code)
+
+        run_off_thread(
+            self,
+            lambda: delete_run(AnkiService(config), service, session_id, known_words_db_for=_known_words_db_for),
+            self._on_delete_run_done,
+            self._on_delete_run_error,
+        )
+
+    def _on_delete_run_done(self, deleted: object) -> None:
+        """GUI thread: say what went, then re-read the page so the row disarms."""
+        self._set_run_action_in_flight(False)
+        if self._teardown_generation:
+            return
+        count = deleted if isinstance(deleted, int) else 0
+        with contextlib.suppress(RuntimeError):
+            self._show_run_note(tr_format(self.tr("Cards deleted from Anki: %1."), f"{count:,}"))
+            self.refresh_data(force=True)
+
+    def _on_delete_run_error(self, msg: str) -> None:
+        """GUI thread: re-arm the row and report on screen (D24)."""
+        self._set_run_action_in_flight(False)
+        logging.getLogger(__name__).warning("Analytics: deleting a run's cards failed: %s", msg)
+        if self._teardown_generation:
+            return
+        with contextlib.suppress(RuntimeError):
+            self.show_screen_issue(ScreenIssue(summary=self.tr("This run's cards could not be deleted."), details=msg))
+
+    def _set_run_action_in_flight(self, in_flight: bool) -> None:
+        self._run_action_in_flight = in_flight
+        with contextlib.suppress(RuntimeError):
+            self._sync_run_actions()
+
+    def _show_run_note(self, text: str) -> None:
+        self.run_action_note.setText(text)
+        self.run_action_note.show()
 
     def _update_difficulty_ranking(self, difficulties: list[DifficultyEntry]) -> None:
         has_difficulties = len(difficulties) > 0

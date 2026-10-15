@@ -64,6 +64,8 @@ LEDGER: dict[str, str] = {
     "gui/main_window.py::MainWindow.restyle_mined_cards": "confirm",
     "gui/main_window.py::MainWindow._on_stale_resources_scanned": "choice",
     "gui/widgets/analytics_tab.py::AnalyticsTab._on_reset_clicked": "confirm",
+    # AI-16: deleting a past run's cards also deletes their review history.
+    "gui/widgets/analytics_tab.py::AnalyticsTab._confirm_delete_run": "confirm",
     "gui/widgets/backfill_tab.py::CardBackfillTab._start_apply": "confirm",
     "gui/widgets/deck_filter_tab.py::DeckFilterTab._start_apply": "confirm",
     "gui/widgets/dialogs/known_words_dialog.py::KnownWordsManagerDialog._on_import_parsed": "confirm",
@@ -76,6 +78,8 @@ LEDGER: dict[str, str] = {
     "gui/widgets/panels/dictionary_settings_panel.py::DictionarySettingsPanel._confirm_remove": "confirm",
     "gui/widgets/panels/frequency_settings_panel.py::FrequencySettingsPanel._confirm_remove": "confirm",
     "gui/widgets/panels/pitch_settings_panel.py::PitchSettingsPanel._confirm_remove": "confirm",
+    # WP-13: a restore replaces the known words, statistics and settings.
+    "gui/widgets/panels/ui_settings_panel.py::UISettingsPanel._on_restore_backup_clicked": "confirm",
     "gui/widgets/settings_tab.py::SettingsTab._apply_settings_import": "confirm",
     "gui/widgets/settings_tab.py::SettingsTab._on_rebuild_known_words": "confirm",
     "gui/widgets/settings_tab.py::SettingsTab._on_reset_to_defaults_clicked": "confirm",

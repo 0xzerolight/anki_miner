@@ -4089,6 +4089,10 @@ class EpisodeProcessor:
                     unknown_words=result.new_words_found,
                     cards_created=result.cards_created,
                     elapsed_time=result.elapsed_time,
+                    # AI-16: Analytics can show or delete this run's cards later.
+                    # card_ids holds note ids (see _phase5_create's caller).
+                    note_ids=list(result.card_ids),
+                    mined_forms=list(result.mined_forms),
                 )
             )
         except (sqlite3.Error, OSError) as e:

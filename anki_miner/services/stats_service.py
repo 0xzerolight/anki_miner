@@ -4,15 +4,17 @@ import logging
 import sqlite3
 import threading
 from contextlib import contextmanager
-from datetime import datetime
+from datetime import date, datetime
 from pathlib import Path
 
 from anki_miner.models.stats import (
     DifficultyEntry,
+    KnownSizePoint,
     Milestone,
     MilestoneKind,
     MiningSession,
     OverallStats,
+    RunReceipt,
 )
 
 logger = logging.getLogger(__name__)
@@ -142,6 +144,45 @@ class StatsService:
             CREATE INDEX IF NOT EXISTS idx_difficulty_series
             ON series_difficulty(series_name)
         """)
+        # AI-16: what each run put into Anki, so Analytics can show or delete
+        # any past run's cards. CREATE IF NOT EXISTS is the whole migration: an
+        # older stats.db gains empty tables here and its old runs simply have
+        # no rows. No FOREIGN KEY: SQLite enforces none without PRAGMA
+        # foreign_keys, so reset() deletes these rows itself.
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS session_notes (
+                session_id INTEGER NOT NULL,
+                note_id INTEGER NOT NULL,
+                PRIMARY KEY (session_id, note_id)
+            )
+        """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS session_forms (
+                session_id INTEGER NOT NULL,
+                form TEXT NOT NULL,
+                PRIMARY KEY (session_id, form)
+            )
+        """)
+        # AI-16, ruling C5: a run whose cards were deleted from Analytics keeps
+        # its row and totals, and this mark says so across restarts. ``cards``
+        # is how many of the run's recorded notes were gone from Anki once the
+        # delete finished (this delete's plus any deleted in Anki before).
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS session_deleted (
+                session_id INTEGER PRIMARY KEY,
+                cards INTEGER NOT NULL
+            )
+        """)
+        # ST-05: one known-words count per day and mining language. Not
+        # derivable from known_words.added_at, which a rebuild resets.
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS known_size (
+                day TEXT NOT NULL,
+                language TEXT NOT NULL,
+                word_count INTEGER NOT NULL,
+                PRIMARY KEY (day, language)
+            )
+        """)
         self._migrate_language_column(conn)
 
     @staticmethod
@@ -206,7 +247,19 @@ class StatsService:
                     self._language,
                 ),
             )
-            return cursor.lastrowid or -1
+            session_id = cursor.lastrowid or -1
+            if session_id > 0:
+                # Same transaction as the row: a run is recorded with its
+                # receipt or not at all.
+                conn.executemany(
+                    "INSERT OR IGNORE INTO session_notes (session_id, note_id) VALUES (?, ?)",
+                    [(session_id, int(note_id)) for note_id in session.note_ids],
+                )
+                conn.executemany(
+                    "INSERT OR IGNORE INTO session_forms (session_id, form) VALUES (?, ?)",
+                    [(session_id, form) for form in session.mined_forms if form],
+                )
+            return session_id
 
     def get_overall_stats(self) -> OverallStats:
         """Get aggregated statistics across all sessions."""
@@ -235,17 +288,107 @@ class StatsService:
                 series_count=row["series_count"],
             )
 
-    def get_recent_sessions(self, limit: int = 20) -> list[MiningSession]:
-        """Get the most recent mining sessions, most recent first."""
+    def get_recent_sessions(self, limit: int | None = 20) -> list[MiningSession]:
+        """Get the most recent mining sessions, most recent first.
+
+        Args:
+            limit: Rows to return; ``None`` returns the whole history (ST-02).
+                Each row carries ``note_count``, how many note ids it kept,
+                and ``deleted_count``, its "cards deleted" mark (AI-16).
+        """
         if not self._initialized:
             return []
         with self._connect() as conn:
             rows = conn.execute(
-                """SELECT * FROM mining_sessions WHERE language = ?
-                   ORDER BY mined_at DESC LIMIT ?""",
-                (self._language, limit),
+                """SELECT s.*,
+                          (SELECT COUNT(*) FROM session_notes n WHERE n.session_id = s.id) AS note_count,
+                          COALESCE((SELECT d.cards FROM session_deleted d WHERE d.session_id = s.id), 0)
+                              AS deleted_count
+                   FROM mining_sessions s WHERE s.language = ?
+                   ORDER BY s.mined_at DESC LIMIT ?""",
+                # SQLite reads a negative LIMIT as "no limit".
+                (self._language, -1 if limit is None else limit),
             ).fetchall()
             return [self._row_to_session(row) for row in rows]
+
+    # === AI-16: past-run receipts ===
+
+    def get_run_receipt(self, session_id: int) -> RunReceipt | None:
+        """What run ``session_id`` created, or ``None`` when there is no such run.
+
+        Read by id across every language, not filtered by the active one: the
+        receipt names the run's own language so its known-words rows are
+        reverted in the right database (Review Focus 5).
+        """
+        if not self._ensure_loaded():
+            return None
+        with self._connect() as conn:
+            row = conn.execute("SELECT language FROM mining_sessions WHERE id = ?", (session_id,)).fetchone()
+            if row is None:
+                return None
+            note_ids = tuple(
+                int(found[0])
+                for found in conn.execute(
+                    "SELECT note_id FROM session_notes WHERE session_id = ? ORDER BY note_id", (session_id,)
+                )
+            )
+            forms = tuple(
+                str(found[0])
+                for found in conn.execute(
+                    "SELECT form FROM session_forms WHERE session_id = ? ORDER BY form", (session_id,)
+                )
+            )
+        return RunReceipt(session_id=session_id, language=str(row["language"]), note_ids=note_ids, mined_forms=forms)
+
+    def forget_run_notes(self, session_id: int) -> None:
+        """Drop run ``session_id``'s note ids and mined forms, and mark it deleted.
+
+        Called once its cards are gone from Anki, so the history row stops
+        offering actions it can no longer perform. The run's row and its
+        ``cards_created`` stay; ``session_deleted`` records how many recorded
+        notes went, so the row reads "cards deleted" after a restart too
+        (ruling C5). A run with no note ids gets no mark. One transaction.
+        """
+        if not self._ensure_loaded():
+            return
+        with self._connect() as conn:
+            cards = int(
+                conn.execute("SELECT COUNT(*) FROM session_notes WHERE session_id = ?", (session_id,)).fetchone()[0]
+            )
+            conn.execute("DELETE FROM session_notes WHERE session_id = ?", (session_id,))
+            conn.execute("DELETE FROM session_forms WHERE session_id = ?", (session_id,))
+            if cards:
+                conn.execute(
+                    "INSERT OR REPLACE INTO session_deleted (session_id, cards) VALUES (?, ?)", (session_id, cards)
+                )
+
+    # === ST-05: known-vocabulary size over time ===
+
+    def record_known_size(self, word_count: int, *, day: date | None = None) -> None:
+        """Store today's (or ``day``'s) known-words count for the active language.
+
+        One row per day: a later count the same day replaces the earlier one.
+        """
+        if not self._ensure_loaded():
+            return
+        stamp = (day or date.today()).isoformat()
+        with self._connect() as conn:
+            conn.execute(
+                """INSERT INTO known_size (day, language, word_count) VALUES (?, ?, ?)
+                   ON CONFLICT(day, language) DO UPDATE SET word_count = excluded.word_count""",
+                (stamp, self._language, int(word_count)),
+            )
+
+    def get_known_size_history(self) -> list[KnownSizePoint]:
+        """Every recorded count of the active language, oldest first."""
+        if not self._initialized:
+            return []
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT day, word_count FROM known_size WHERE language = ? ORDER BY day",
+                (self._language,),
+            ).fetchall()
+        return [KnownSizePoint(day=date.fromisoformat(row["day"]), word_count=int(row["word_count"])) for row in rows]
 
     # === Feature 2: Difficulty Ranking ===
 
@@ -376,6 +519,13 @@ class StatsService:
         with self._connect() as conn:
             removed = conn.execute("SELECT COUNT(*) FROM mining_sessions WHERE language = ?", language).fetchone()[0]
             removed += conn.execute("SELECT COUNT(*) FROM series_difficulty WHERE language = ?", language).fetchone()[0]
+            # AI-16 lists and marks hang off the sessions being deleted; drop
+            # them first, while the language's session ids can still be selected.
+            for table in ("session_notes", "session_forms", "session_deleted"):
+                conn.execute(
+                    f"DELETE FROM {table} WHERE session_id IN (SELECT id FROM mining_sessions WHERE language = ?)",
+                    language,
+                )
             conn.execute("DELETE FROM mining_sessions WHERE language = ?", language)
             conn.execute("DELETE FROM series_difficulty WHERE language = ?", language)
         logger.info("Reset stats database for language %s, removed %d row(s)", self._language, removed)
@@ -383,6 +533,8 @@ class StatsService:
 
     @staticmethod
     def _row_to_session(row: sqlite3.Row) -> MiningSession:
+        # ``in row`` would test the values of a sqlite3.Row, not its columns.
+        columns = row.keys()
         return MiningSession(
             id=row["id"],
             series_name=row["series_name"],
@@ -392,4 +544,6 @@ class StatsService:
             cards_created=row["cards_created"],
             elapsed_time=row["elapsed_time"],
             mined_at=datetime.fromisoformat(row["mined_at"]),
+            note_count=int(row["note_count"]) if "note_count" in columns else 0,
+            deleted_count=int(row["deleted_count"]) if "deleted_count" in columns else 0,
         )

@@ -67,6 +67,7 @@ from anki_miner.gui.resources.styles.theme import Theme, _clamp_font_scale
 from anki_miner.gui.utils.config_manager import GUIConfigManager
 from anki_miner.gui.utils.focus_ring import install_keyboard_focus_ring
 from anki_miner.gui.utils.fonts import initialize_application_fonts
+from anki_miner.gui.utils.profile_store import ProfileStore
 from anki_miner.gui.utils.run_off_thread import join_all_off_thread_workers, run_off_thread, still_running
 from anki_miner.gui.utils.service_factory import create_youtube_fetcher
 from anki_miner.gui.utils.stall_watchdog import (
@@ -85,6 +86,13 @@ from anki_miner.gui.widgets.video_tab import VideoTab
 from anki_miner.languages import AVAILABLE_LANGUAGES
 from anki_miner.languages.registry import config_language, get_profile
 from anki_miner.services.asr.asr_pack_installer import asr_pack_root, ensure_asr_pack_on_syspath
+from anki_miner.services.db_backup import (
+    PENDING_RESTORE_NAME,
+    apply_pending_restore,
+    backup_sources,
+    backups_root,
+    run_daily_backup,
+)
 from anki_miner.services.language_pack_installer import ensure_language_packs_on_syspath, language_pack_root
 from anki_miner.services.startup_store_recovery import run_startup_store_recovery
 from anki_miner.services.stats_service import StatsService
@@ -1133,7 +1141,8 @@ def _run_store_recovery_if_locked(
     """Run destructive startup repair only while this process owns the lock.
 
     It also holds the run lock through the repair, and skips when a
-    command-line or API run holds it.
+    command-line or API run holds it. It also takes the day's backup (WP-13)
+    under the same locks.
     """
     if instance_lock is None:
         logger.warning("Skipping startup store recovery because the instance lock is not held")
@@ -1148,14 +1157,63 @@ def _run_store_recovery_if_locked(
         logger.warning("Skipping startup store recovery because a command-line or API run is working")
         return
     try:
-        run_startup_store_recovery(
-            config,
-            allow_collection=allow_collection,
-        )
-    except Exception:  # noqa: BLE001 — bucket A: recovery is skipped and startup continues.
-        logger.exception("Startup store recovery failed; continuing startup")
+        try:
+            run_startup_store_recovery(
+                config,
+                allow_collection=allow_collection,
+            )
+        except Exception:  # noqa: BLE001 — bucket A: recovery is skipped and startup continues.
+            logger.exception("Startup store recovery failed; continuing startup")
+        # WP-13: once a day, under the same two locks, so no run writes a
+        # database while it is being copied.
+        try:
+            run_daily_backup(
+                backup_sources(
+                    config,
+                    config_file=GUIConfigManager.CONFIG_FILE,
+                    profiles_dir=ProfileStore.profiles_dir(),
+                ),
+                backups_root(GUIConfigManager.CONFIG_FILE),
+            )
+        except Exception:  # noqa: BLE001 — bucket A: no backup today; startup continues.
+            logger.exception("Daily backup failed; continuing startup")
     finally:
         run_lock.unlock()
+
+
+def _apply_pending_backup_restore(home: Path) -> None:
+    """Put back the backup the user scheduled in Settings → General (WP-13).
+
+    Runs before the config load, because the restore replaces gui_config.json
+    and the databases. It needs the store repair's exclusivity: another window
+    or a command-line run would hold these files open, so it takes
+    instance.lock and the run lock without waiting and postpones (the request
+    stays on disk) when either is held. Both locks are released before boot
+    takes instance.lock for real.
+    """
+    root = backups_root(GUIConfigManager.CONFIG_FILE)
+    if not (root / PENDING_RESTORE_NAME).exists():
+        return
+    from anki_miner.cli.entry import RUN_LOCK_NAME  # function-local: cli.entry reaches back into this module
+
+    instance = QLockFile(str(home / "instance.lock"))
+    if not instance.tryLock(0):
+        logger.warning("Backup restore postponed: another Anki Miner window is running")
+        return
+    try:
+        if _live_window_marker(home):
+            logger.warning("Backup restore postponed: another Anki Miner window is running")
+            return
+        run_lock = QLockFile(str(home / RUN_LOCK_NAME))
+        if not run_lock.tryLock(0):
+            logger.warning("Backup restore postponed: a command-line or API run is working")
+            return
+        try:
+            apply_pending_restore(root)
+        finally:
+            run_lock.unlock()
+    finally:
+        instance.unlock()
 
 
 @runtime_checkable
@@ -1940,7 +1998,11 @@ def compose_main_window(
 
     # Analytics tab (non-mining: no presenter, no update_config wiring)
     analytics_tab = AnalyticsTab(
-        stats_service, content_style=get_profile(config_language(window.get_config())).content_style
+        stats_service,
+        content_style=get_profile(config_language(window.get_config())).content_style,
+        # AI-16 and the Known Words card read the live config: the AnkiConnect
+        # URL, mining language and known-words path change without a restart.
+        config_provider=window.get_config,
     )
     window.tabs.addTab(analytics_tab, QCoreApplication.translate("MainWindow", "Analytics"))
 
@@ -2341,10 +2403,11 @@ def main():
     boot state machine of their own, and the sequence below is the composition
     of all of them. ``tests/unit/test_boot_order.py`` pins it.
 
-    1. Pre-Qt: scrub the bootloader env, attach the log sink, decode the config,
-       and seed the three settings Qt only reads once — dialog mode, default
-       ``dicts_root``, and ``QT_SCALE_FACTOR`` (whole-UI zoom is therefore
-       restart-to-apply by nature).
+    1. Pre-Qt: scrub the bootloader env, attach the log sink, apply a scheduled
+       backup restore (WP-13), decode the config, and seed the three settings
+       Qt only reads once — dialog mode, default ``dicts_root``, and
+       ``QT_SCALE_FACTOR`` (whole-UI zoom is therefore restart-to-apply by
+       nature).
     2. ``QApplication``, then the crash net, then ``initialize_application_fonts``
        — before the first widget, so every widget is measured against the face it
        will be drawn with (D44-B).
@@ -2450,6 +2513,12 @@ def main():
     except Exception:  # noqa: BLE001 — bucket A: boot continues with stderr logging.
         logger.exception("Failed to configure startup log; continuing with stderr logging")
     _enable_faulthandler(ANKI_MINER_HOME / CRASH_LOG_NAME)
+    # WP-13: a restore the user scheduled goes back before the config or any
+    # database is read; it replaces gui_config.json too.
+    try:
+        _apply_pending_backup_restore(ANKI_MINER_HOME)
+    except Exception:  # noqa: BLE001 — bucket A: boot continues on the current data.
+        logger.exception("Could not apply the scheduled backup restore; continuing startup")
     try:
         _fresh_install = _is_fresh_install(GUIConfigManager.CONFIG_FILE)
         _early_config, _allow_store_collection = GUIConfigManager.load_config_with_provenance()

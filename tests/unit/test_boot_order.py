@@ -41,6 +41,11 @@ import pytest
 # Ordered steps of the application entry point. Each is a source fragment that
 # occurs exactly once in ``app.main``; the test compares their positions.
 MAIN_BOOT_STEPS = (
+    # WP-13: a scheduled backup restore replaces gui_config.json and the
+    # databases, so it runs before anything reads them.
+    "_apply_pending_backup_restore(",
+    "_is_fresh_install(",
+    "GUIConfigManager.load_config_with_provenance()",
     "install_process_log_hooks()",
     "install_qt_message_handler()",
     "install_number_locale()",
