@@ -6,6 +6,7 @@ import sqlite3
 import unicodedata
 from collections.abc import Callable
 from contextlib import closing
+from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar
 
@@ -44,6 +45,17 @@ def normalize_lemma(word: str) -> str:
 def _normalize_all(words: set[str]) -> set[str]:
     """Normalize a lemma set, collapsing canonical duplicates."""
     return {normalize_lemma(word) for word in words}
+
+
+@dataclass(frozen=True)
+class KnownWordRow:
+    """One known-words row as Manage Known Words lists it (WP-06)."""
+
+    lemma: str
+    #: "user" (added by you), "mined" (Anki Miner made the card), "anki" (synced from Anki).
+    source: str
+    #: Stored UTC text, ``YYYY-MM-DD HH:MM:SS``; "" for a row written without one.
+    added_at: str
 
 
 class KnownWordDB:
@@ -355,6 +367,21 @@ class KnownWordDB:
         log_summary(logger, "Known words reviewed load done", rows=len(words), db=self._db_path)
         self._reviewed_cache = words
         return words
+
+    def list_rows(self) -> list[KnownWordRow]:
+        """Every row with its source and date added, ordered by word (WP-06's browser).
+
+        A missing file lists nothing and is not created: the browser reads,
+        it never initializes a language the user never mined.
+        """
+        if not self._db_path.exists():
+            return []
+        with closing(self._connect()) as conn:
+            cursor = conn.execute("SELECT lemma, source, added_at FROM known_words ORDER BY lemma")
+            return [
+                KnownWordRow(str(lemma), str(source or ""), str(added_at or ""))
+                for lemma, source, added_at in cursor.fetchall()
+            ]
 
     def add_words(self, words: set[str], source: str = "anki") -> int:
         """Bulk insert words into the database, ignoring duplicates.
