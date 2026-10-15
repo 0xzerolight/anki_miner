@@ -22,7 +22,10 @@ from PyQt6.QtCore import pyqtSignal
 from anki_miner.gui.workers.base_worker import CancellableWorker
 from anki_miner.services._sqlite_index import language_kwarg
 from anki_miner.services.audio_packs.importer import import_android_audio_db, import_audio_pack, repair_audio_pack
+from anki_miner.services.dictionary.importers.csv_importer import import_csv_dictionary, repair_csv_dictionary
 from anki_miner.services.dictionary.importers.jmdict_importer import import_jmdict_xml, repair_jmdict_xml
+from anki_miner.services.dictionary.importers.plain_index import plain_dict_kind
+from anki_miner.services.dictionary.importers.stardict_importer import import_stardict, repair_stardict
 from anki_miner.services.dictionary.importers.yomitan_importer import import_yomitan_zip, repair_yomitan_zip
 from anki_miner.services.frequency.lemmatize import Lemmatizer, lemmatize_kwarg
 from anki_miner.services.frequency.source_importer import import_frequency_source, repair_frequency_source
@@ -39,6 +42,63 @@ logger = logging.getLogger(__name__)
 ProgressFn = Callable[[int, int, str], None]
 CancelFn = Callable[[], bool]
 Runner = Callable[[ProgressFn, CancelFn], "tuple[str, dict[str, Any]]"]
+
+
+def _yomitan_runner(zip_path: Path, dest_root: Path, overwrite: bool, dict_id: str | None, language: str) -> Runner:
+    """The runner behind ``ImportWorker.for_yomitan``."""
+
+    def runner(progress_fn: ProgressFn, cancel_fn: CancelFn) -> tuple[str, dict[str, Any]]:
+        result = import_yomitan_zip(
+            zip_path,
+            dest_root,
+            progress=progress_fn,
+            cancel_check=cancel_fn,
+            overwrite=overwrite,
+            dict_id=dict_id,
+            **language_kwarg(language),
+        )
+        meta: dict[str, Any] = {
+            "entry_count": getattr(result, "entry_count", 0),
+            "source_name": getattr(result, "source_name", getattr(result, "dict_id", "")),
+            "skipped_malformed": getattr(result, "skipped_malformed", 0),
+            "media_warnings": list(getattr(result, "media_warnings", ())),
+            "source_language": getattr(result, "source_language", ""),
+            "source_language_mismatch": getattr(result, "source_language_mismatch", False),
+        }
+        return result.dict_id, meta
+
+    return runner
+
+
+def _plain_meta(source_name: str, entry_count: int, skipped: int) -> dict[str, Any]:
+    """The success-dialog keys a StarDict or CSV/TSV import reports (no media, no language claim)."""
+    return {
+        "entry_count": entry_count,
+        "source_name": source_name,
+        "skipped_malformed": skipped,
+        "media_warnings": [],
+    }
+
+
+def _plain_runner(
+    kind: str, source: Path, dest_root: Path, overwrite: bool, dict_id: str | None, language: str
+) -> Runner:
+    """The runner that imports one StarDict (``"stardict"``) or CSV/TSV (``"csv"``) dictionary."""
+    importer = import_stardict if kind == "stardict" else import_csv_dictionary
+
+    def runner(progress_fn: ProgressFn, cancel_fn: CancelFn) -> tuple[str, dict[str, Any]]:
+        result = importer(
+            source,
+            dest_root,
+            progress=progress_fn,
+            cancel_check=cancel_fn,
+            overwrite=overwrite,
+            dict_id=dict_id,
+            language=language,
+        )
+        return result.dict_id, _plain_meta(result.source_name, result.entry_count, result.skipped_malformed)
+
+    return runner
 
 
 class ImportWorker(CancellableWorker):
@@ -116,28 +176,50 @@ class ImportWorker(CancellableWorker):
         stamp the rebuilt index carries — a slot-pinned rebuild replays the
         slot's own stamp (``slot_language_kwarg``) so it is not reset to "ja".
         """
+        return cls(_yomitan_runner(zip_path, dest_root, overwrite, dict_id, language), source_path=zip_path)
+
+    @classmethod
+    def for_dictionary_file(cls, path: Path, dest_root: Path, *, language: str = "ja") -> ImportWorker:
+        """Build a worker that imports whatever dictionary file the user picked.
+
+        The format is told from the file itself on the worker thread: a StarDict
+        book (``.ifo``, a tar archive, or a zip holding a ``.ifo``) or a
+        ``.csv``/``.tsv`` goes to its plain-format importer, anything else is a
+        Yomitan zip.
+        """
 
         def runner(progress_fn: ProgressFn, cancel_fn: CancelFn) -> tuple[str, dict[str, Any]]:
-            result = import_yomitan_zip(
-                zip_path,
-                dest_root,
-                progress=progress_fn,
-                cancel_check=cancel_fn,
-                overwrite=overwrite,
-                dict_id=dict_id,
-                **language_kwarg(language),
-            )
-            meta: dict[str, Any] = {
-                "entry_count": getattr(result, "entry_count", 0),
-                "source_name": getattr(result, "source_name", getattr(result, "dict_id", "")),
-                "skipped_malformed": getattr(result, "skipped_malformed", 0),
-                "media_warnings": list(getattr(result, "media_warnings", ())),
-                "source_language": getattr(result, "source_language", ""),
-                "source_language_mismatch": getattr(result, "source_language_mismatch", False),
-            }
-            return result.dict_id, meta
+            kind = plain_dict_kind(path)
+            if kind is None:
+                return _yomitan_runner(path, dest_root, False, None, language)(progress_fn, cancel_fn)
+            return _plain_runner(kind, path, dest_root, False, None, language)(progress_fn, cancel_fn)
 
-        return cls(runner, source_path=zip_path)
+        return cls(runner, source_path=path)
+
+    @classmethod
+    def for_plain_dict(
+        cls,
+        source: Path,
+        dest_root: Path,
+        *,
+        kind: str,
+        overwrite: bool = False,
+        dict_id: str | None = None,
+        language: str = "ja",
+    ) -> ImportWorker:
+        """Build a worker that imports a StarDict (``kind="stardict"``) or CSV/TSV (``kind="csv"``) dictionary."""
+        return cls(_plain_runner(kind, source, dest_root, overwrite, dict_id, language), source_path=source)
+
+    @classmethod
+    def for_plain_dict_repair(cls, source: Path, dest_root: Path, *, kind: str, dict_id: str) -> ImportWorker:
+        """Build a worker for explicit repair of one StarDict or CSV/TSV slot from its kept source."""
+        repair = repair_stardict if kind == "stardict" else repair_csv_dictionary
+
+        def runner(progress_fn: ProgressFn, cancel_fn: CancelFn) -> tuple[str, dict[str, Any]]:
+            result = repair(source, dest_root, dict_id=dict_id, progress=progress_fn, cancel_check=cancel_fn)
+            return result.dict_id, _plain_meta(result.source_name, result.entry_count, result.skipped_malformed)
+
+        return cls(runner, source_path=source)
 
     @classmethod
     def for_yomitan_repair(
