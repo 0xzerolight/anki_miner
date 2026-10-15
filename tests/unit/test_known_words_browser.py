@@ -156,3 +156,73 @@ def test_copy_lifts_the_full_timestamp(qtbot, tmp_path):
     proxy = dlg.word_table.model()
 
     assert len(proxy.index(0, 2).data(COPY_ROLE)) == 19
+
+
+import anki_miner.gui.widgets.dialogs.known_words_dialog as known_words_dialog_mod  # noqa: E402
+
+
+def test_the_button_says_export_words(qtbot, tmp_path):
+    dlg = _dialog(qtbot, tmp_path)
+
+    assert dlg.export_button.text() == "Export words…"
+
+
+def test_csv_export_writes_every_visible_row(qtbot, tmp_path):
+    dlg = _dialog(qtbot, tmp_path)
+    _show(dlg, "")
+    out = tmp_path / "words.csv"
+
+    assert dlg.export_to(out) == 5
+
+    lines = out.read_text(encoding="utf-8-sig").splitlines()
+    assert lines[0] == "word,source,added_at_utc"
+    assert sorted(line.split(",")[0] for line in lines[1:]) == sorted(["食べる", "飲む", "走る", "カレー", "ラーメン"])
+    assert {line.split(",")[1] for line in lines[1:]} == {"anki", "mined", "user"}
+
+
+def test_txt_export_follows_the_source_filter(qtbot, tmp_path):
+    dlg = _dialog(qtbot, tmp_path)
+    _show(dlg, "anki")
+    out = tmp_path / "words.txt"
+
+    dlg.export_to(out)
+
+    assert sorted(out.read_text(encoding="utf-8").splitlines()) == ["食べる", "飲む"]
+
+
+def test_the_worker_writes_the_rows_that_were_on_screen_when_asked(qtbot, tmp_path, monkeypatch):
+    dlg = _dialog(qtbot, tmp_path)
+    out = tmp_path / "words.csv"
+    captured: dict[str, object] = {}
+
+    def fake_run_off_thread(parent, work, on_done, on_error=None, **kwargs):
+        captured["work"] = work
+
+    monkeypatch.setattr(known_words_dialog_mod, "run_off_thread", fake_run_off_thread)
+    monkeypatch.setattr(
+        known_words_dialog_mod.file_dialogs, "pick_save_file", lambda *args, on_done, **kwargs: on_done(str(out))
+    )
+
+    dlg._on_export()  # the browser shows "Added by you"
+    _show(dlg, "anki")  # changed before the worker runs
+    captured["work"]()
+
+    words = [line.split(",")[0] for line in out.read_text(encoding="utf-8-sig").splitlines()[1:]]
+    assert sorted(words) == ["カレー", "ラーメン"]
+
+
+def test_the_save_picker_suggests_a_csv(qtbot, tmp_path, monkeypatch):
+    dlg = _dialog(qtbot, tmp_path)
+    seen: dict[str, str] = {}
+
+    def pick(parent, title, initial, file_filter, *args, on_done, **kwargs):
+        seen["initial"] = initial
+        seen["filter"] = file_filter
+        on_done("")
+
+    monkeypatch.setattr(known_words_dialog_mod.file_dialogs, "pick_save_file", pick)
+    dlg._on_export()
+
+    assert seen["initial"].endswith("known_words.csv")
+    assert "*.csv" in seen["filter"]
+    assert "*.txt" in seen["filter"]

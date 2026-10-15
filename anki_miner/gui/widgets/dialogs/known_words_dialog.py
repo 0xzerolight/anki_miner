@@ -49,6 +49,7 @@ from anki_miner.services.known_words_import import (
     KnownWordsImportResult,
     parse_known_words_file,
 )
+from anki_miner.services.word_export import write_known_words_csv, write_word_list
 from anki_miner.utils.i18n import tr_format
 from anki_miner.utils.logging_ext import log_summary
 from anki_miner.utils.subtitle_encoding import script_check_kwarg
@@ -308,7 +309,7 @@ class KnownWordsManagerDialog(ScreenIssueHost, EnhancedDialog):
         )
         self.import_button = ModernButton(self.tr("Import…"), variant="secondary")
         self.import_button.clicked.connect(self._on_import)
-        self.export_button = ModernButton(self.tr("Export…"), variant="secondary")
+        self.export_button = ModernButton(self.tr("Export words…"), variant="secondary")
         self.export_button.clicked.connect(self._on_export)
         self.reset_button = ModernButton(self.tr("Reset User List"), variant="critical")
         self.reset_button.clicked.connect(self._on_reset)
@@ -577,11 +578,20 @@ class KnownWordsManagerDialog(ScreenIssueHost, EnhancedDialog):
         # a step the code never reached.
         self.show_screen_issue(ScreenIssue(summary=self.tr("That file could not be imported."), details=message))
 
-    def export_to(self, path: Path) -> int:
-        """Write the user words to ``path``, one per line (UTF-8). Returns the count."""
-        words = sorted(self._db.get_words_by_source("user"))
-        path.write_text("\n".join(words) + ("\n" if words else ""), encoding="utf-8")
-        return len(words)
+    def export_to(self, path: Path, rows: list[KnownWordRow] | None = None) -> int:
+        """Write the rows on screen to ``path``; return how many were written (WP-34).
+
+        A ``.txt`` name writes one word per line, the plain list other tools
+        read back (jiten.moe); any other name writes the fixed CSV columns
+        word, source, added_at_utc. ``rows`` is the snapshot ``_on_export``
+        took on the GUI thread; ``None`` reads the table now, so only a
+        GUI-thread caller may omit it.
+        """
+        if rows is None:
+            rows = self.visible_rows()
+        if path.suffix.lower() == ".txt":
+            return write_word_list(path, [row.lemma for row in rows])
+        return write_known_words_csv(path, rows)
 
     def _on_export(self) -> None:
 
@@ -590,9 +600,11 @@ class KnownWordsManagerDialog(ScreenIssueHost, EnhancedDialog):
                 return
             self.export_button.setEnabled(False)
             generation = self._dialog_generation
+            # The table is GUI-thread state: snapshot what is on screen now.
+            rows = self.visible_rows()
             run_off_thread(
                 self,
-                lambda: self.export_to(Path(path_str)),
+                lambda: self.export_to(Path(path_str), rows),
                 lambda count: self._on_export_succeeded(
                     generation,
                     lambda: QMessageBox.information(
@@ -608,8 +620,8 @@ class KnownWordsManagerDialog(ScreenIssueHost, EnhancedDialog):
         file_dialogs.pick_save_file(
             self,
             self.tr("Export Known Words"),
-            str(Path(resolve_start_dir(None, file_mode=True)) / "known_words.txt"),
-            "Text Files (*.txt);;All Files (*)",
+            str(Path(resolve_start_dir(None, file_mode=True)) / "known_words.csv"),
+            self.tr("CSV files (*.csv);;Text files, one word per line (*.txt)"),
             on_done=_on_picked,
         )
 

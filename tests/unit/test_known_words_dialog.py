@@ -148,7 +148,7 @@ class TestExportDialogStartDir:
         initial = captured.get("initial", "")
         assert initial.startswith(home), f"Expected initial path under home={home!r}; got {initial!r}"
         assert initial != "", "initial path must not be empty"
-        assert "known_words.txt" in initial, f"suggested filename must be preserved; got {initial!r}"
+        assert "known_words.csv" in initial, f"suggested filename must be preserved; got {initial!r}"
 
     def test_write_failure_shows_nonmodal_retry(self, qtbot, tmp_path, monkeypatch, capture_off_thread, message_boxes):
         db = _db_with_user_words(tmp_path, user=("ラーメン",))
@@ -191,13 +191,13 @@ class TestExportDialogStartDir:
         release = threading.Event()
         real_export_to = dlg.export_to
 
-        def delayed_export(path):
+        def delayed_export(path, rows=None):
             entered.set()
             if not release.wait(3):
                 raise TimeoutError("test did not release export")
             if export_error:
                 raise OSError("disk full")
-            return real_export_to(path)
+            return real_export_to(path, rows)
 
         monkeypatch.setattr(dlg, "export_to", delayed_export)
         monkeypatch.setattr(
