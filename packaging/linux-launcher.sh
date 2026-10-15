@@ -105,4 +105,8 @@ if [ "${ANKI_MINER_NO_CXX_SHIM:-}" != "1" ]; then
     _prefer_host_cxx_runtime
 fi
 
+# Tells the app this script ran. Started without it, the app re-execs itself
+# through this script (anki_miner/gui/launch.py, _reexec_via_launcher).
+export ANKI_MINER_LAUNCHER=1
+
 exec "$_bundle_dir/AnkiMiner" "$@"

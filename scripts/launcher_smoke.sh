@@ -64,6 +64,7 @@ make_appdir() {
     cat >"$dir/usr/bin/AnkiMiner" <<'STUB'
 #!/usr/bin/env bash
 echo "LD_PRELOAD=${LD_PRELOAD:-}"
+echo "ANKI_MINER_LAUNCHER=${ANKI_MINER_LAUNCHER:-}"
 echo "ARGS=$*"
 STUB
     chmod +x "$dir/usr/bin/AnkiMiner"
@@ -91,6 +92,8 @@ check_contains "AppRun symlink reaches the app" "$out" "ARGS="
 check_equals "arguments pass through" "$(field "$out" ARGS)" "--one two words"
 check_contains "host libstdc++ is preloaded" "$(field "$out" LD_PRELOAD)" "libstdc++.so.6"
 check_contains "host libgcc_s travels with it" "$(field "$out" LD_PRELOAD)" "libgcc_s.so.1"
+# Without the marker the app re-execs itself through this script (gui/launch.py).
+check_equals "the app is told the launcher ran" "$(field "$out" ANKI_MINER_LAUNCHER)" "1"
 
 # 2. Debian leaves sbin off a non-root PATH. The shim must still find ldconfig —
 #    otherwise it silently no-ops for the entire .deb audience.
@@ -111,6 +114,7 @@ check_equals "no bundled runtime means no preload" "$(field "$out" LD_PRELOAD)" 
 # 5. The documented escape hatch.
 out=$(ANKI_MINER_NO_CXX_SHIM=1 "$TMP/old/AppRun" 2>&1)
 check_equals "ANKI_MINER_NO_CXX_SHIM=1 changes nothing" "$(field "$out" LD_PRELOAD)" ""
+check_equals "the escape hatch still marks the launch" "$(field "$out" ANKI_MINER_LAUNCHER)" "1"
 
 # 6. An existing LD_PRELOAD is prepended to, never replaced.
 out=$(LD_PRELOAD=/tmp/someone-elses.so "$TMP/old/AppRun" 2>&1)
