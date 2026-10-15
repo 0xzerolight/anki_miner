@@ -441,3 +441,13 @@ class LanguageProfile:
     #: manga-ocr, meikiocr), which reads Japanese only. Offering a tool stays the
     #: ``manga_ocr`` / ``video_ocr`` capability's job.
     ocr_recognizer: str = ""
+
+    @property
+    def takes_author_ruby(self) -> bool:
+        """Whether a book's own furigana (EPUB ``<rt>``) may set a card's reading (SK-31).
+
+        True for a profile that renders kanji furigana (the ``furigana``
+        capability; Japanese today): an author's kana reading over a word then
+        replaces the tokenizer's guess. Every other profile ignores ruby.
+        """
+        return "furigana" in self.capabilities
