@@ -324,6 +324,9 @@ def load(
             body, is_cover = _parse_content(raw)
             if body is None or is_cover:
                 continue
+            if in_zone and _is_matter_typed(body):
+                matter_skipped += 1
+                continue
             paragraphs, gaiji = _walk_body(body, cancel_check=cancel_check, line_join=_line_join(rules))
             gaiji_total += gaiji
             label = chapter_map.get(entry, f"ch.{content_i}")
@@ -731,6 +734,35 @@ def _in_matter_zone(position: int, total: int) -> bool:
         return False
     edge = max(1, math.ceil(total * _MATTER_ZONE))
     return position < edge or position >= total - edge
+
+
+# A nav document's companions to its ``toc`` nav: they never mark a file on
+# their own, but they do not make a nav document the work either.
+_NAV_COMPANION_TYPES = frozenset({"landmarks", "page-list"})
+
+
+def _is_matter_typed(body) -> bool:
+    """True when the body, or every section it holds, is typed as front/back matter.
+
+    A file that opens with a typed title page and goes on with an untyped
+    chapter section is the work, so only a body made entirely of typed
+    ``section``/``div``/``nav`` children, at least one of them matter, counts.
+    """
+    if _epub_type_tokens(body) & _MATTER_TYPES:
+        return True
+    children = [child for child in body if _local(child)]
+    if not children:
+        return False
+    found = False
+    for child in children:
+        if _local(child) not in ("section", "div", "nav"):
+            return False
+        tokens = _epub_type_tokens(child)
+        if tokens & _MATTER_TYPES:
+            found = True
+        elif not tokens & _NAV_COMPANION_TYPES:
+            return False
+    return found
 
 
 def _find_body(root):

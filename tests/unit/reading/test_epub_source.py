@@ -968,3 +968,80 @@ def test_a_matter_href_with_a_fragment_does_not_skip_its_whole_file(tmp_path: Pa
     doc = load(_ref(_build_epub(tmp_path, files)), rules=_ES_RULES)
 
     assert _texts(doc) == ["Capítulo 1.", "El gato duerme."]
+
+
+def test_a_body_typed_index_at_the_back_is_skipped(tmp_path: Path) -> None:
+    files = _matter_book(
+        6,
+        spine_extra=[(6, "idx")],
+        extra={
+            "OEBPS/nav.xhtml": _nav([(f"c{n}.xhtml", f"Capítulo {n}") for n in range(1, 7)]),
+            "OEBPS/idx.xhtml": _xhtml("<p>Gato, 12. Perro, 40.</p>", epub_type="backmatter index"),
+        },
+    )
+
+    doc = load(_ref(_build_epub(tmp_path, files)), rules=_ES_RULES)
+
+    assert "Perro, 40." not in _texts(doc)
+
+
+def test_a_section_typed_copyright_page_is_skipped(tmp_path: Path) -> None:
+    files = _matter_book(
+        6,
+        spine_extra=[(0, "legal")],
+        extra={
+            "OEBPS/nav.xhtml": _nav([(f"c{n}.xhtml", f"Capítulo {n}") for n in range(1, 7)]),
+            "OEBPS/legal.xhtml": _xhtml(
+                '<section epub:type="copyright-page"><p>ISBN 978-0-00-000000-0. Impreso en España.</p></section>'
+            ),
+        },
+    )
+
+    doc = load(_ref(_build_epub(tmp_path, files)), rules=_ES_RULES)
+
+    assert not any("ISBN" in text for text in _texts(doc))
+
+
+def test_the_nav_document_in_the_spine_is_skipped_through_its_toc_type(tmp_path: Path) -> None:
+    files = _matter_book(
+        6,
+        spine_extra=[(0, "nav")],
+        extra={"OEBPS/nav.xhtml": _nav([(f"c{n}.xhtml", f"Capítulo {n}") for n in range(1, 7)])},
+    )
+
+    doc = load(_ref(_build_epub(tmp_path, files)), rules=_ES_RULES)
+
+    assert _texts(doc)[0] == "Capítulo 1."
+    assert len(doc.units) == 12
+
+
+def test_a_spine_nav_document_with_landmarks_is_skipped(tmp_path: Path) -> None:
+    """A real nav document holds a landmarks nav beside its toc; it is still matter."""
+    files = _matter_book(
+        6,
+        spine_extra=[(0, "nav")],
+        extra={"OEBPS/nav.xhtml": _landmarks_nav(6, [("bodymatter", "c1.xhtml")])},
+    )
+
+    doc = load(_ref(_build_epub(tmp_path, files)), rules=_ES_RULES)
+
+    assert _texts(doc)[0] == "Capítulo 1."
+    assert len(doc.units) == 12
+
+
+def test_a_file_that_opens_with_a_title_page_section_keeps_its_chapter(tmp_path: Path) -> None:
+    """Only a file made entirely of typed matter sections is skipped."""
+    files = _matter_book(
+        6,
+        spine_extra=[(6, "last")],
+        extra={
+            "OEBPS/nav.xhtml": _nav([(f"c{n}.xhtml", f"Capítulo {n}") for n in range(1, 7)]),
+            "OEBPS/last.xhtml": _xhtml(
+                '<section epub:type="titlepage"><p>Epílogo.</p></section>' "<section><p>El perro ladra.</p></section>"
+            ),
+        },
+    )
+
+    doc = load(_ref(_build_epub(tmp_path, files)), rules=_ES_RULES)
+
+    assert _texts(doc)[-1] == "El perro ladra."
