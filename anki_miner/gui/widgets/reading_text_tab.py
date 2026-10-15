@@ -27,11 +27,12 @@ overrides ``_build_curation_context``).
 from __future__ import annotations
 
 import contextlib
+import functools
 from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
-from PyQt6.QtCore import QT_TRANSLATE_NOOP, QEvent, QObject
+from PyQt6.QtCore import QT_TRANSLATE_NOOP, QEvent, QObject, Qt
 from PyQt6.QtGui import QDropEvent, QTextBlockFormat, QTextCursor, QTextDocument
 from PyQt6.QtWidgets import (
     QCheckBox,
@@ -51,8 +52,9 @@ from anki_miner.gui.utils import file_dialogs, session_state
 from anki_miner.gui.utils.content_text import apply_content_font
 from anki_miner.gui.utils.dialog_paths import resolve_start_dir
 from anki_miner.gui.utils.fonts import JAPANESE_BODY, apply_japanese_block_format
+from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.gui.widgets._reading_mining_base import _ReadingMiningTabBase
-from anki_miner.gui.widgets.base import PageWidth, configure_card_layout
+from anki_miner.gui.widgets.base import PageWidth, ScreenIssue, configure_card_layout
 from anki_miner.gui.widgets.enhanced import ModernButton
 from anki_miner.gui.widgets.log_widget import LogWidget
 from anki_miner.gui.widgets.progress_widget import ProgressWidget
@@ -62,6 +64,7 @@ from anki_miner.models.mining_queue import ReadyItemStatus
 from anki_miner.models.reading import ReadingSourceRef
 from anki_miner.models.reading_queue import ReadingQueueItem
 from anki_miner.services.reading.images import validate_card_image
+from anki_miner.services.reading.web_article import ArticleFetchError, WebArticle, fetch_articles, parse_url_lines
 from anki_miner.utils.i18n import tr_format
 
 #: Suffixes the picker offers and accepts on a drop. ``prepare_card_image``
@@ -71,6 +74,11 @@ _IMAGE_FILTER_GLOB = " ".join(f"*{ext}" for ext in _IMAGE_EXTS)
 
 #: Where the picture picker reopens (D7); the same key the old picker used.
 _HISTORY_KEY = "reading.text.inputs"
+
+#: F-14: the most addresses one Fetch takes. Fetch is an input step, not a
+#: registry task with a Cancel, so this keeps the wait it can cause short.
+#: The refusal string in ``_on_fetch_clicked`` names the same number.
+_MAX_FETCH_ADDRESSES = 10
 
 if TYPE_CHECKING:
     from anki_miner.config import AnkiMinerConfig
@@ -208,6 +216,11 @@ class ReadingTextTab(_ReadingMiningTabBase):
                 processor rebuilds so reading mining sessions land in analytics.
         """
         super().__init__(config, processor, presenter, parent, stats_service)
+        # F-14: the articles the last Fetch put in the box, and the box text it
+        # wrote, so Mine can give each article its own Source (R17).
+        self._fetching = False
+        self._fetched: list[WebArticle] = []
+        self._fetched_text = ""
         self._setup_ui()
         self._recompute_buttons()
 
@@ -267,6 +280,25 @@ class ReadingTextTab(_ReadingMiningTabBase):
         card.setObjectName("card")
         card_layout = QVBoxLayout()
         configure_card_layout(card_layout)
+
+        # F-14 (R17): web addresses above the paste box. Fetch puts each page's
+        # article text into the box for review; Mine then mines it with the
+        # page's title and site as the card Source.
+        self.url_edit = QPlainTextEdit()
+        self.url_edit.setPlaceholderText(self.tr("Web addresses to fetch, one per line (https://…)"))
+        self.url_edit.setAccessibleName(self.tr("Web addresses"))
+        self.url_edit.setTabChangesFocus(True)
+        self.url_edit.setMaximumHeight(72)
+        self.fetch_button = ModernButton(self.tr("Fetch"), variant="secondary")
+        self.fetch_button.setToolTip(
+            self.tr("Put the article text of each web address in the box below, to check before mining.")
+        )
+        self.fetch_button.clicked.connect(self._on_fetch_clicked)
+        url_row = QHBoxLayout()
+        url_row.setSpacing(SPACING.xs)
+        url_row.addWidget(self.url_edit, 1)
+        url_row.addWidget(self.fetch_button, 0, Qt.AlignmentFlag.AlignTop)
+        card_layout.addLayout(url_row)
 
         self.text_edit = QPlainTextEdit()
         self.text_edit.setPlaceholderText(
@@ -365,6 +397,93 @@ class ReadingTextTab(_ReadingMiningTabBase):
         self.picture_name_label.setToolTip(str(path) if path is not None else "")
         self.picture_row.setVisible(path is not None)
         self.picture_button.setVisible(path is None)
+
+    # ------------------------------------------------------------------
+    # Web articles (F-14)
+    # ------------------------------------------------------------------
+
+    def _on_fetch_clicked(self) -> None:
+        """Fetch every address in the URL box off the GUI thread (R17)."""
+        if self._fetching:
+            return
+        self.clear_screen_issue()
+        urls, rejected = parse_url_lines(self.url_edit.toPlainText())
+        if rejected:
+            self._report_refusal(
+                self.tr("Each line must be a web address that starts with http:// or https://."),
+                details="\n".join(rejected),
+            )
+            return
+        if not urls:
+            self._report_refusal(self.tr("Enter a web address first."))
+            return
+        if len(urls) > _MAX_FETCH_ADDRESSES:
+            self._report_refusal(self.tr("Fetch takes up to 10 web addresses at a time."))
+            return
+        rules = get_profile(config_language(self.config)).sentence_rules
+        self._fetching = True
+        self.fetch_button.setEnabled(False)
+        self.fetch_button.setText(self.tr("Fetching…"))
+        run_off_thread(
+            self,
+            functools.partial(fetch_articles, urls, rules=rules),
+            self._on_fetch_done,
+            self._on_fetch_failed,
+            on_finished=self._on_fetch_finished,
+        )
+
+    def _on_fetch_done(self, results: object) -> None:
+        """Put the fetched articles in the box; log each page that failed."""
+        articles: list[WebArticle] = []
+        failures: list[ArticleFetchError] = []
+        for result in results if isinstance(results, list) else []:
+            if isinstance(result, WebArticle):
+                articles.append(result)
+            elif isinstance(result, ArticleFetchError):
+                failures.append(result)
+        for failure in failures:
+            self.log_widget.append_warning(
+                tr_format(self.tr("Could not fetch %1: %2"), failure.url, self._fetch_failure_text(failure))
+            )
+        if not articles:
+            if len(failures) == 1:
+                summary = self._fetch_failure_text(failures[0])
+            else:
+                summary = self.tr("None of the pages could be fetched.")
+            self.show_screen_issue(ScreenIssue(summary=summary, details="\n".join(str(f) for f in failures)))
+            return
+        for article in articles:
+            self.log_widget.append_success(tr_format(self.tr("Fetched %1."), article.source_label))
+        # Replace through the cursor, not setPlainText, so Undo brings back
+        # what the box held before.
+        self.text_edit.selectAll()
+        self.text_edit.insertPlainText("\n\n".join(article.text for article in articles))
+        self._fetched = articles
+        self._fetched_text = self.text_edit.toPlainText()
+
+    def _on_fetch_failed(self, message: str) -> None:
+        """An unexpected failure (not a page-level one) ends the fetch in the banner."""
+        self._report_refusal(self.tr("The pages could not be fetched."), details=message)
+
+    def _on_fetch_finished(self) -> None:
+        """Every fetch outcome ends here: the button is usable again."""
+        self._fetching = False
+        self.fetch_button.setEnabled(True)
+        self.fetch_button.setText(self.tr("Fetch"))
+
+    def _fetch_failure_text(self, error: ArticleFetchError) -> str:
+        """One translated sentence for a page that could not be fetched."""
+        if error.reason == "network":
+            return self.tr("The page could not be reached. Check the address and your connection.")
+        if error.reason == "http_status":
+            return self.tr("The site did not send the page.")
+        if error.reason == "not_html":
+            return self.tr("This address is not a web page.")
+        if error.reason == "too_large":
+            return self.tr("This page is too large to read.")
+        if error.reason == "invalid_url":
+            return self.tr("This is not a web address.")
+        return self.tr("No article text found on this page. Pages that draw their text with JavaScript cannot be read.")
 
     # ------------------------------------------------------------------
     # Run lifecycle
