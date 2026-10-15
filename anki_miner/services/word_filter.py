@@ -652,7 +652,9 @@ class WordFilterService:
         if max_duration <= 0.0 and max_chars <= 0:
             return words
 
-        read = measure if measure is not None else (lambda word: (word.duration, word.sentence))
+        read: Callable[[TokenizedWord], tuple[float, str]] = (
+            measure if measure is not None else (lambda word: (word.duration, word.sentence))
+        )
         return [word for word in words if within_sentence_caps(*read(word), max_duration, max_chars)]
 
     def filter_i_plus_one(
