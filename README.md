@@ -12,7 +12,10 @@
 </p>
 
 <!-- i18n-nav:start -->
-<p align="center">
+<div align="center">
+<details>
+<summary>🌐 English</summary>
+<p>
 <b>English</b> ·
 <a href="i18n/README.ja.md">日本語</a> ·
 <a href="i18n/README.ru.md">Русский</a> ·
@@ -48,6 +51,8 @@
 <a href="i18n/README.ro.md">Română</a> ·
 <a href="i18n/README.tr.md">Türkçe</a>
 </p>
+</details>
+</div>
 <!-- i18n-nav:end -->
 
 <p align="center">

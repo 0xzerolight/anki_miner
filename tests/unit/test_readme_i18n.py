@@ -48,6 +48,19 @@ def test_render_nav_marks_current_language_and_links_the_rest() -> None:
     assert "i18n/" not in japanese
 
 
+def test_render_nav_is_a_collapsed_dropdown_labelled_with_the_current_language() -> None:
+    from anki_miner.gui.i18n import available_languages
+
+    for code, name in available_languages().items():
+        nav = ri.render_nav(code)
+        assert nav.startswith('<div align="center">\n<details>\n')
+        assert f"<summary>🌐 {name}</summary>" in nav
+        assert nav.endswith("</details>\n</div>")
+        # PyPI drops `open`; a blank line would end GFM's raw HTML block.
+        assert "open" not in nav.split("<summary>")[0]
+        assert "\n\n" not in nav
+
+
 def test_replace_nav_swaps_only_the_marked_region() -> None:
     text = f"head\n{ri.NAV_START}\nOLD\n{ri.NAV_END}\ntail\n"
     out = ri.replace_nav(text, "ja")

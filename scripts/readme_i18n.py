@@ -75,14 +75,25 @@ def _nav_href(code: str, current: str) -> str:
 
 
 def render_nav(current: str) -> str:
-    """The nav block body as seen from ``current`` ("en" or a locale code)."""
+    """The nav block body as seen from ``current`` ("en" or a locale code).
+
+    A collapsed ``<details>`` keeps the selector one line tall however many
+    languages ship: GitHub and PyPI both strip ``<select>``. PyPI also drops
+    ``open`` and ``align`` on ``details``/``summary``, so the wrapping ``div``
+    carries the centring. No blank lines: GFM ends a raw HTML block at one.
+    """
+    languages = available_languages()
     cells: list[str] = []
-    for code, name in available_languages().items():
+    for code, name in languages.items():
         if code == current:
             cells.append(f"<b>{name}</b>")
             continue
         cells.append(f'<a href="{_nav_href(code, current)}">{name}</a>')
-    return '<p align="center">\n' + " ·\n".join(cells) + "\n</p>"
+    return (
+        '<div align="center">\n<details>\n'
+        f"<summary>🌐 {languages[current]}</summary>\n"
+        "<p>\n" + " ·\n".join(cells) + "\n</p>\n</details>\n</div>"
+    )
 
 
 def nav_body(text: str) -> str:
