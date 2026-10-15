@@ -124,7 +124,7 @@ def test_the_parser_joins_preverbs_then_repairs_potential_verb_fronts():
 
 def test_the_catalogue_ships_wiktionary_and_a_lemmatised_frequency_list():
     by_id = {spec.id: spec for spec in HU_CATALOG}
-    assert set(by_id) == {"wty-hu-en", "opensubtitles-hu"}
+    assert set(by_id) == {"freedict-hun-eng", "wty-hu-en", "opensubtitles-hu"}
     dictionary, frequency = by_id["wty-hu-en"], by_id["opensubtitles-hu"]
     assert dictionary.kind == "dict" and dictionary.url == (
         "https://huggingface.co/datasets/daxida/wty-release/resolve/main/latest/dict/hu/en/wty-hu-en.zip"
@@ -133,5 +133,5 @@ def test_the_catalogue_ships_wiktionary_and_a_lemmatised_frequency_list():
     assert frequency.url == (
         "https://raw.githubusercontent.com/hermitdave/FrequencyWords/master/content/2018/hu/hu_50k.txt"
     )
-    assert all("CC BY-SA 4.0" in spec.license_note for spec in HU_CATALOG)
+    assert all("CC BY-SA 4.0" in spec.license_note for spec in HU_CATALOG if spec.id != "freedict-hun-eng")
     assert get_profile("hu").catalog == HU_CATALOG

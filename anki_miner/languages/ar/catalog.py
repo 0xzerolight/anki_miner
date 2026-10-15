@@ -13,6 +13,14 @@ Arabic tagger (``lemmatise=True``, R21 — no self-hosted converter asset).
 
 **Engine data — calima-msa-r13** (the language pack, ``languages/ar/pack.py``): GPL-2.0, notice in
 ``licenses/calima-msa-r13/``.
+
+**Dictionary — FreeDict ara-eng** (FreeDict 0.6.3, ``freedict-ara-eng-0.6.3.stardict.tar.xz``, 951,860 B, 52,996
+headwords; the Arabeyes Wordlist project, GPL-2.0-or-later): a StarDict book, imported by ``import_stardict``. Hand-
+made, not Wiktionary-derived: it defines 895 more of the OpenSubtitles top 20,000; its glosses are short English
+word lists in title case (L8 research, 2026-10-15). The URL names one release and the row is sha256-pinned.
+
+ORDER: the download flow PREPENDS each dictionary it imports (``gui/utils/resource_setup.py``), so this row is
+listed before ``wty-ar-en`` and ends below it in the chain: Wiktionary answers first and FreeDict fills its misses.
 """
 
 from __future__ import annotations
@@ -20,6 +28,14 @@ from __future__ import annotations
 from anki_miner.services.resource_catalog import ResourceSpec
 
 AR_CATALOG: tuple[ResourceSpec, ...] = (
+    ResourceSpec(
+        id="freedict-ara-eng",
+        kind="dict",
+        display_name="FreeDict (Arabic-English)",
+        url="https://download.freedict.org/dictionaries/ara-eng/0.6.3/freedict-ara-eng-0.6.3.stardict.tar.xz",
+        license_note="FreeDict ara-eng 0.6.3, GPL-2.0-or-later; StarDict build downloaded from upstream source.",
+        sha256="c5f58d37041f55435f04ca17f92d74a9a4e81ec64e20bb51a38d0519acb7408d",
+    ),
     ResourceSpec(
         id="wty-ar-en",
         kind="dict",

@@ -20,6 +20,15 @@ unaggregated import ranks each inflected surface separately; the aggregation is 
 Not listed: hrLex 1.3 (a lemma-frequency list, deferred with the other treebank-derived lists) and Leipzig's
 Croatian corpora, whose licence could not be verified while the setup wizard ticks every catalogue row (the
 ca precedent). ``wty-sh-en-ipa`` waits for the pronunciation stage.
+
+**Dictionary — FreeDict hrv-eng** (FreeDict 0.1.2, ``freedict-hrv-eng-0.1.2.stardict.tar.xz``, 1,515,524 B, 79,808
+headwords; Goran Igaly's English-Croatian database, GPL-2.0-or-later): a StarDict book, imported by
+``import_stardict``. Hand-made, not Wiktionary-derived: it defines 619 more of the OpenSubtitles top 20,000; its
+senses are listed alphabetically and lean technical (L8 research, 2026-10-15). The URL names one release and the row
+is sha256-pinned.
+
+ORDER: the download flow PREPENDS each dictionary it imports (``gui/utils/resource_setup.py``), so this row is
+listed before ``wty-sh-en`` and ends below it in the chain: Wiktionary answers first and FreeDict fills its misses.
 """
 
 from __future__ import annotations
@@ -27,6 +36,14 @@ from __future__ import annotations
 from anki_miner.services.resource_catalog import ResourceSpec
 
 HR_CATALOG: tuple[ResourceSpec, ...] = (
+    ResourceSpec(
+        id="freedict-hrv-eng",
+        kind="dict",
+        display_name="FreeDict (Croatian-English)",
+        url="https://download.freedict.org/dictionaries/hrv-eng/0.1.2/freedict-hrv-eng-0.1.2.stardict.tar.xz",
+        license_note="FreeDict hrv-eng 0.1.2, GPL-2.0-or-later; StarDict build downloaded from upstream source.",
+        sha256="de88f328238f3d8a081246b8688032eddaf8a5a7e30ee5b5bb799a64fabfc73a",
+    ),
     ResourceSpec(
         id="wty-sh-en",
         kind="dict",

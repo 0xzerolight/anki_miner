@@ -4,7 +4,7 @@
 ``daxida/wty-release``, 2,230,834 B). Wiktionary content extracted through kaikki.org, CC BY-SA 4.0. 188,425 of
 its 197,640 rows are form-of rows (``knygos`` -> ``knyga``), which is what carries the weakest model in the
 batch: an inflected front ``lt_core_news_sm`` failed to lemmatise still gets a definition naming its lemma.
-No second dictionary to offer as a manual import: wiktionary-to-yomitan builds no monolingual ``wty-lt-lt`` and
+No second Wiktionary edition to offer: wiktionary-to-yomitan builds no monolingual ``wty-lt-lt`` and
 no gloss-only ``wty-lt-en-gloss`` (``latest/dict/lt/en/`` holds only ``wty-lt-en`` and its ``-ipa`` twin,
 checked 2026-09-23).
 
@@ -19,6 +19,14 @@ second ticked frequency source for no lemma coverage (the ca/nl precedent).
 on UD Lithuanian ALKSNIS v2.8 (CC BY-SA 4.0) and, for its NER component only, the TokenMill NER Corpus, which
 Explosion licenses commercially; ``www.tokenmill.lt`` from the model's ``meta.json`` no longer resolves. No
 corpus data is redistributed, only weights. ``licenses/lt_core_news_sm/`` ships the notice with the app.
+
+**Dictionary — FreeDict lit-eng** (FreeDict 0.7.2, ``freedict-lit-eng-0.7.2.stardict.tar.xz``, 221,424 B, 7,031
+headwords; Atviras Kodas Lietuvai, GPL-2.0-or-later): a StarDict book, imported by ``import_stardict``. Hand-made,
+not Wiktionary-derived: it defines common lemmas wty-lt-en lacks (``sužinoti``, ``vamzdis``, ``našta``), 722 more of
+the OpenSubtitles top 20,000 (L8 research, 2026-10-15). The URL names one release and the row is sha256-pinned.
+
+ORDER: the download flow PREPENDS each dictionary it imports (``gui/utils/resource_setup.py``), so this row is
+listed before ``wty-lt-en`` and ends below it in the chain: Wiktionary answers first and FreeDict fills its misses.
 """
 
 from __future__ import annotations
@@ -26,6 +34,14 @@ from __future__ import annotations
 from anki_miner.services.resource_catalog import ResourceSpec
 
 LT_CATALOG: tuple[ResourceSpec, ...] = (
+    ResourceSpec(
+        id="freedict-lit-eng",
+        kind="dict",
+        display_name="FreeDict (Lithuanian-English)",
+        url="https://download.freedict.org/dictionaries/lit-eng/0.7.2/freedict-lit-eng-0.7.2.stardict.tar.xz",
+        license_note="FreeDict lit-eng 0.7.2, GPL-2.0-or-later; StarDict build downloaded from upstream source.",
+        sha256="4254ab620eec2bb78d4793b66f0eb6de1614a0ff145b008197773d494dd55e5e",
+    ),
     ResourceSpec(
         id="wty-lt-en",
         kind="dict",
