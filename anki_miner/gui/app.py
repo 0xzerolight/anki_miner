@@ -745,6 +745,8 @@ def _log_effective_config(config: Any) -> None:
     install look identically configured.
     """
     with suppressed(logger, "effective config record"):
+        from anki_miner.services._ankiconnect import redact_ankiconnect_url
+
         fields = capped(sorted(key for key, name in dict(config.anki_fields).items() if name))
         log_summary(
             logger,
@@ -759,7 +761,7 @@ def _log_effective_config(config: Any) -> None:
             pitch=_chain_counts(config.pitch_chain),
             audio=_chain_counts(config.expression_audio_chain),
             dicts_root=config.dicts_root,
-            ankiconnect=config.ankiconnect_url,
+            ankiconnect=redact_ankiconnect_url(config.ankiconnect_url),
             theme=config.theme,
             zoom=config.ui_zoom,
             asr=f"{config.asr_model}/{config.asr_device}",

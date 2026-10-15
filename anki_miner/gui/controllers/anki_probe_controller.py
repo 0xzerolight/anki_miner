@@ -25,6 +25,7 @@ from anki_miner.gui.widgets.base import ScreenIssue, report_screen_issue
 from anki_miner.gui.widgets.panels import AnkiSettingsPanel, FilteringSettingsPanel, SentencesSettingsPanel
 from anki_miner.gui.workers.base_worker import SingleCallWorker
 from anki_miner.gui.workers.fetch_workers import FetchDecksWorker, FetchFieldsWorker, FetchNotetypesWorker
+from anki_miner.services._ankiconnect import redact_ankiconnect_url
 from anki_miner.services.anki_service import AnkiService
 from anki_miner.utils.i18n import tr_format
 from anki_miner.utils.logging_ext import log_summary
@@ -190,7 +191,7 @@ class AnkiProbeController:
                 "AnkiService config rejected",
                 level=logging.WARNING,
                 probe="fetch_fields",
-                url=ankiconnect_url,
+                url=redact_ankiconnect_url(ankiconnect_url),
                 note_type=note_type,
                 error=f"{type(e).__name__}: {e}",
             )
@@ -433,7 +434,7 @@ class AnkiProbeController:
                 "AnkiService config rejected",
                 level=logging.WARNING,
                 probe="fetch_names",
-                url=ankiconnect_url,
+                url=redact_ankiconnect_url(ankiconnect_url),
                 note_type=probe_config.anki_note_type,
                 error=f"{type(e).__name__}: {e}",
             )

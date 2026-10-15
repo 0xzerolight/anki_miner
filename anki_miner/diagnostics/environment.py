@@ -126,6 +126,13 @@ def _safe_string(probe: Callable[[], object]) -> str:
         return _unavailable(exc)
 
 
+def _loggable_ankiconnect_url(config: Any) -> str:
+    """The AnkiConnect URL with its API key masked (AI-02): the bundle is attached to bug reports."""
+    from anki_miner.services._ankiconnect import redact_ankiconnect_url
+
+    return redact_ankiconnect_url(str(config.ankiconnect_url))
+
+
 def _qt_versions() -> str:
     try:
         from PyQt6.QtCore import PYQT_VERSION_STR, QT_VERSION_STR  # noqa: PLC0415
@@ -391,7 +398,7 @@ def collect_environment(config, *, platform_name: str = "") -> EnvironmentSnapsh
         frequency_chain=_safe_chain(lambda: _frequency_chain(config)),
         pitch_chain=_safe_chain(lambda: _pitch_chain(config)),
         audio_chain=_safe_chain(lambda: _audio_chain(config)),
-        ankiconnect_url=_safe_string(lambda: config.ankiconnect_url),
+        ankiconnect_url=_safe_string(lambda: _loggable_ankiconnect_url(config)),
         deck=_safe_string(lambda: config.anki_deck_name),
         note_type=_safe_string(lambda: config.anki_note_type),
         # Passed in, never probed: QGuiApplication.platformName() is GUI-thread

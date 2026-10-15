@@ -14,7 +14,7 @@ import requests
 from anki_miner.config import AnkiMinerConfig, paths
 from anki_miner.exceptions import AnkiConnectionError
 from anki_miner.models import ValidationIssue, ValidationResult
-from anki_miner.services._ankiconnect import post_action
+from anki_miner.services._ankiconnect import post_action, redact_ankiconnect_url
 from anki_miner.services.anki_note_builder import (
     configured_target_field_names,
     field_mapping_error,
@@ -471,6 +471,8 @@ class ValidationService:
             Tuple of (success, message)
         """
         url = self.config.ankiconnect_url
+        # AI-02: the request takes the URL with its key; the receipt never shows it.
+        log_url = redact_ankiconnect_url(url)
         try:
             version = post_action(
                 url,
@@ -485,17 +487,17 @@ class ValidationService:
                 message = "Connection to AnkiConnect timed out"
             else:
                 message = f"AnkiConnect error: {e}"
-            return _record("ankiconnect", False, message, url=url, error=type(e).__name__, cause=str(e))
+            return _record("ankiconnect", False, message, url=log_url, error=type(e).__name__, cause=str(e))
         except Exception as e:
             logger.exception("Unexpected error checking AnkiConnect")
             return _record(
-                "ankiconnect", False, f"Unexpected error: {e}", url=url, error=type(e).__name__, cause=str(e)
+                "ankiconnect", False, f"Unexpected error: {e}", url=log_url, error=type(e).__name__, cause=str(e)
             )
         return _record(
             "ankiconnect",
             True,
             f"AnkiConnect v{version if version is not None else 'unknown'} is running",
-            url=url,
+            url=log_url,
             version=version,
         )
 

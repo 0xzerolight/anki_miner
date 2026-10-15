@@ -261,12 +261,13 @@ def collect_state_members() -> tuple[list[tuple[str, bytes]], list[str]]:
 
 
 def _redact_config_json(content: bytes) -> bytes | None:
-    """*content* with every custom-audio URL redacted the way settings.json is (AQ5-003).
+    """*content* with every custom-audio URL and the AnkiConnect key redacted the way settings.json is (AQ5-003, AI-02).
 
     gui_config.json, its recovery copies and the profile sidecars hold the same
     ``expression_audio_chain`` entries (also parked per language inside
     ``language_stash``), so every dict carrying a custom ``kind`` and a ``url``
-    is redacted wherever it sits. Unchanged bytes are returned when there is
+    is redacted wherever it sits. A top-level (or stashed) ``ankiconnect_url`` loses
+    its ``key`` parameter the same way. Unchanged bytes are returned when there is
     nothing to redact; None when the file is not JSON, since a raw copy could
     carry the credential.
     """
@@ -284,6 +285,12 @@ def _redact_config_json(content: bytes) -> bytes | None:
             if out.get("kind") in ("custom", "custom_json") and isinstance(url, str) and url:
                 out["url"] = _redact_custom_audio_url(url)
                 changed = True
+            anki_url = out.get("ankiconnect_url")
+            if isinstance(anki_url, str):
+                masked = _redact_ankiconnect_url(anki_url)
+                if masked != anki_url:
+                    out["ankiconnect_url"] = masked
+                    changed = True
             return out
         if isinstance(value, list):
             return [walk(item) for item in value]
@@ -445,6 +452,14 @@ def _redact_custom_audio_url(url: str) -> str:
     return urlunsplit((parts.scheme, netloc, parts.path, "REDACTED", ""))
 
 
+def _redact_ankiconnect_url(url: str) -> str:
+    """The AnkiConnect URL with its API key masked as ``key=***`` (AI-02)."""
+    # Function-local, as in environment.py: keeps requests out of this module's import.
+    from anki_miner.services._ankiconnect import redact_ankiconnect_url
+
+    return redact_ankiconnect_url(url)
+
+
 def _to_serializable(value: Any) -> Any:
     if isinstance(value, Path):
         return str(value)
@@ -466,6 +481,10 @@ def _text_bytes(lines: list[str]) -> bytes:
 
 def _settings_bytes(config: Any) -> bytes:
     serialized = _to_serializable(config)
+    anki_url = serialized.get("ankiconnect_url") if isinstance(serialized, dict) else None
+    if isinstance(anki_url, str):
+        # AI-02: the URL may carry AnkiConnect's API key.
+        serialized["ankiconnect_url"] = _redact_ankiconnect_url(anki_url)
     return (json.dumps(serialized, ensure_ascii=False, indent=2, sort_keys=True) + "\n").encode("utf-8")
 
 
