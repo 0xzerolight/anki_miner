@@ -269,6 +269,10 @@ class AnkiService:
         # re-querying AnkiConnect. Call invalidate_existing_vocabulary_cache()
         # to force a refresh (e.g. after card creation or a manual sync).
         self._existing_vocab_cache: set[str] | None = None
+        # F-01: the same scan narrowed to reviewed cards, cached the same way.
+        # It only scores text (Readability, i+1); the set above stays the
+        # mining exclusion and the Deck Filter duplicate gate.
+        self._reviewed_vocab_cache: set[str] | None = None
 
         # Validate required field keys upfront
         missing = self.REQUIRED_FIELD_KEYS - set(config.anki_fields.keys())
@@ -506,6 +510,34 @@ class AnkiService:
         logger.debug("Anki vocab query: query=%s", query)
         return query
 
+    def _build_reviewed_query(self) -> str:
+        """The vocab query narrowed to notes with a card reviewed at least once (F-01).
+
+        ``findNotes`` maps card matches to their notes, so a note qualifies when
+        at least one of its cards is not new. No ``-is:suspended`` clause: a
+        card reviewed and later suspended still counts as known (owner ruling
+        C1; many users suspend cards they already know).
+        """
+        return self._build_vocab_query() + " -is:new"
+
+    def get_reviewed_vocabulary(self) -> set[str]:
+        """Card fronts whose note has a card reviewed at least once (F-01).
+
+        The knowledge set for scoring text when Settings → Word Filters →
+        "Count a word as known only after its card has been reviewed" is on.
+        Never the mining exclusion: :meth:`get_existing_vocabulary` keeps every
+        card, so an unreviewed word is still never mined twice. Cached for the
+        session like that set and cleared with it.
+
+        Raises:
+            AnkiConnectionError: on any failure. The caller falls back to the
+                every-card set (``known_word_db.collect_knowledge_forms``); an
+                empty set here would read as "nothing is known".
+        """
+        if self._reviewed_vocab_cache is None:
+            self._reviewed_vocab_cache = self._collect_first_field_forms(self._build_reviewed_query(), warn_empty=False)
+        return self._reviewed_vocab_cache
+
     def find_notes(self, query: str) -> list[int]:
         """Return note IDs matching an Anki search ``query`` (AnkiConnect ``findNotes``)."""
         logger.debug("Anki find notes: query=%s", query)
@@ -706,7 +738,7 @@ class AnkiService:
         key = _strip_for_dedup(value)
         return self._dedup_fold(key) if key and self._dedup_fold is not None else key
 
-    def _collect_first_field_forms(self, query: str) -> set[str]:
+    def _collect_first_field_forms(self, query: str, *, warn_empty: bool = True) -> set[str]:
         """Run ``query`` and return the dedup-normalized in-script expressions.
 
         The findNotes → notesInfo → per-note expression scan shared by
@@ -715,7 +747,9 @@ class AnkiService:
         is decided per note type from the notes themselves
         (``services/expression_field.py``): the first field unless it does not
         hold words. Raises ``AnkiConnectionError`` on transport failure;
-        degradation policy belongs to the callers.
+        degradation policy belongs to the callers. ``warn_empty=False`` skips
+        the empty-collection warning: a collection with no reviewed card is not
+        an empty one.
         """
         note_ids = _expect_list(
             post_action(
@@ -730,10 +764,11 @@ class AnkiService:
         )
 
         if not note_ids:
-            logger.warning(
-                "No notes found in Anki collection. "
-                "If you have cards in Anki, check that AnkiConnect can access them.",
-            )
+            if warn_empty:
+                logger.warning(
+                    "No notes found in Anki collection. "
+                    "If you have cards in Anki, check that AnkiConnect can access them.",
+                )
             return set()
 
         # Get note info in batches to avoid timeouts on large collections.
@@ -819,6 +854,7 @@ class AnkiService:
         the filter reflects the updated collection.
         """
         self._existing_vocab_cache = None
+        self._reviewed_vocab_cache = None
 
     @property
     def _dict_media_uploaded(self) -> set[str]:
