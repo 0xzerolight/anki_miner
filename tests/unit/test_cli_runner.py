@@ -15,7 +15,7 @@ from anki_miner.cli.events import EventSink
 from anki_miner.exceptions import AnkiConnectionError, SetupError
 from anki_miner.exceptions.youtube import BotDetectionError, YouTubeFetchError
 from anki_miner.models import CANCELLED_ERROR, AnkiWriteState, ProcessingResult
-from anki_miner.services.reading.web_article import WebArticle
+from anki_miner.services.reading.web_article import ArticleFetchError, WebArticle
 
 VIDEO_URL = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
 
@@ -452,3 +452,19 @@ def test_article_job_fetches_then_mines_as_titled_text(services, test_config) ->
     assert services.process_reading.call_args.args == ("DOC",)
     messages = [e["text"] for e in _events(lines) if e["event"] == "message"]
     assert "Fetched 猫の話 — example.com." in messages
+
+
+@pytest.mark.parametrize(("reason", "transient"), [("network", True), ("no_text", False)])
+def test_a_failed_fetch_fails_only_its_item(services, test_config, reason: str, transient: bool) -> None:
+    services.process_reading.return_value = _ok()
+    error = ArticleFetchError(ARTICLE_URL, reason, f"{reason} at {ARTICLE_URL}", transient=transient)
+    with (
+        patch.object(runner, "fetch_article", side_effect=[error, _article()]),
+        patch.object(runner, "load_reading_source", return_value="DOC"),
+    ):
+        first, second = runner.MiningRun(test_config, _sink()[0], threading.Event()).run(
+            [runner.ArticleJob(ARTICLE_URL), runner.ArticleJob(ARTICLE_URL)]
+        )
+
+    assert (first.status, first.errors, first.retryable) == ("failed", [f"{reason} at {ARTICLE_URL}"], transient)
+    assert second.status == "success"

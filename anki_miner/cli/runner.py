@@ -46,7 +46,7 @@ from anki_miner.services.anki_service import AnkiService
 from anki_miner.services.asr.model_availability import usable_model_installed
 from anki_miner.services.definition_service import DefinitionService
 from anki_miner.services.reading import detector
-from anki_miner.services.reading.web_article import fetch_article, is_web_url
+from anki_miner.services.reading.web_article import ArticleFetchError, fetch_article, is_web_url
 from anki_miner.services.resource_staleness import stale_resource_reimport_error
 from anki_miner.services.stats_service import StatsService
 from anki_miner.services.youtube_fetcher import classify_probe_result
@@ -312,6 +312,11 @@ class MiningRun:
             report = self._failed(idx, job, str(exc))
         except OperationCancelled:
             report = ItemReport(item=idx, kind=job.kind, input=job.describe(), status="cancelled")
+        except ArticleFetchError as exc:
+            # Nothing was written to Anki yet, so a transient failure (network,
+            # HTTP 429/5xx) is safe to run again.
+            logger.warning("CLI item %d article fetch failed: %s", idx, exc.reason)
+            report = self._failed(idx, job, str(exc), exc.transient)
         except YouTubeFetchError as exc:
             if self._cancel.is_set():
                 report = ItemReport(item=idx, kind=job.kind, input=job.describe(), status="cancelled")
