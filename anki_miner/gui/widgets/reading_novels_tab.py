@@ -1,6 +1,6 @@
 """Novels sub-tab of the Reading tab: one path field, one Mine (D7-B).
 
-The field takes a single ``.epub``/``.txt`` book or a folder; Mine classifies
+The field takes a single ``.epub``/``.txt``/``.pdf`` book or a folder; Mine classifies
 it. A folder is enumerated by ``detector.detect_book_folder`` (top-level books,
 non-recursive) and every book is mined in turn — one ephemeral
 :class:`ReadingQueueItem` per book through the shared
@@ -16,7 +16,7 @@ the progress bar and log the outcome, never write status/cards/error.
 Drag-drop routes through the tab, not the file selector. The FileSelector's own
 ``dropEvent`` sets any dropped path unconditionally and its inner ``QLineEdit``
 accepts URL drops by default, so the selector has ``setAcceptDrops(False)``
-applied and every drop is delivered to this tab: the first ``.epub``/``.txt``
+applied and every drop is delivered to this tab: the first ``.epub``/``.txt``/``.pdf``
 or directory fills the field (no disk I/O at drop time — a bookless folder
 errors at Mine time); a manga- or subtitle-file drop earns the cross-tab hint
 immediately.
@@ -66,12 +66,12 @@ if TYPE_CHECKING:
 
 # File-selector filter glob for the book-or-folder field. The human label ("Books")
 # is tr()'d at call time; only the literal extension glob lives here.
-_BOOK_FILTER_GLOB = "*.epub *.txt"
+_BOOK_FILTER_GLOB = "*.epub *.txt *.pdf"
 
 # Extensions this tab mines. A manga-kind (dirs always) or subtitle-kind drop
 # earns a cross-tab hint instead of being mined here; the subtitle set is the
 # Subtitles tab's own, imported so the hint covers every format it mines.
-_NOVEL_EXTS = (".epub", ".txt")
+_NOVEL_EXTS = (".epub", ".txt", ".pdf")
 _MANGA_EXTS = (".mokuro", ".cbz", ".zip")
 
 
@@ -195,7 +195,7 @@ class ReadingNovelsTab(_ReadingMiningTabBase):
             history_key="reading.novels.inputs",
         )
         self.book_selector.setToolTip(
-            self.tr("An .epub or .txt book, or a folder of books; each book is mined separately.")
+            self.tr("An .epub, .txt or .pdf book, or a folder of books; each book is mined separately.")
         )
         card_layout.addWidget(self.book_selector)
 
@@ -312,7 +312,7 @@ class ReadingNovelsTab(_ReadingMiningTabBase):
                 return
             items = self._items_for(refs[:1])
         else:
-            self._report_refusal(self.tr("Choose an .epub or .txt book, or a folder of books."), details=raw)
+            self._report_refusal(self.tr("Choose an .epub, .txt or .pdf book, or a folder of books."), details=raw)
             return
         if self._launch_run(items):
             self._begin_run()

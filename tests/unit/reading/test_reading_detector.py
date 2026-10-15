@@ -20,6 +20,7 @@ _LOADER_MODULES = {
     "mokuro": "anki_miner.services.reading.mokuro_source",
     "epub": "anki_miner.services.reading.epub_source",
     "txt": "anki_miner.services.reading.aozora_source",
+    "pdf": "anki_miner.services.reading.pdf_source",
     "subtitle": "anki_miner.services.reading.subtitle_source",
     "text": "anki_miner.services.reading.text_source",
 }
@@ -711,7 +712,7 @@ def test_mokuro_missing_file_errors(tmp_path):
 # --------------------------------------------------------------------------- #
 
 
-@pytest.mark.parametrize("kind", ["mokuro", "epub", "txt", "subtitle", "text"])
+@pytest.mark.parametrize("kind", ["mokuro", "epub", "txt", "pdf", "subtitle", "text"])
 def test_load_dispatches_to_source_module(kind: str, monkeypatch: pytest.MonkeyPatch) -> None:
     # ``detector.load`` does ``from . import <loader>`` then ``<loader>.load(ref)``.
     # The loaders really exist post-integration, so patch the real seam: monkeypatch
@@ -740,7 +741,7 @@ def test_load_dispatches_to_source_module(kind: str, monkeypatch: pytest.MonkeyP
     fake_load.assert_called_once_with(ref)
 
 
-@pytest.mark.parametrize("kind", ["mokuro", "epub", "txt", "subtitle", "text"])
+@pytest.mark.parametrize("kind", ["mokuro", "epub", "txt", "pdf", "subtitle", "text"])
 def test_load_forwards_cancel_check_to_source_module(kind: str, monkeypatch: pytest.MonkeyPatch) -> None:
     if kind == "text":
         ref = ReadingSourceRef(kind="text", title="Text", text="x")
@@ -940,7 +941,7 @@ def test_book_folder_empty_errors_with_name(tmp_path):
     with pytest.raises(SetupError) as excinfo:
         detector.detect_book_folder(empty)
 
-    assert str(excinfo.value) == "No .epub or .txt books found in 'Comics'."
+    assert str(excinfo.value) == "No .epub, .txt or .pdf books found in 'Comics'."
 
 
 def test_book_folder_mokuro_only_does_not_guess_manga(tmp_path):
@@ -975,3 +976,41 @@ def test_mokuro_meta_over_cap_raises_setup_error(tmp_path, monkeypatch):
 
     with pytest.raises(SetupError, match="too large to mine"):
         detector.detect(mok)
+
+
+# --------------------------------------------------------------------------- #
+# PDF books (TS-05)
+# --------------------------------------------------------------------------- #
+
+
+def test_pdf_ref_provisional_fill(tmp_path):
+    pdf = tmp_path / "Graded Reader.PDF"
+    pdf.write_bytes(b"%PDF-1.7")
+
+    [ref] = detector.detect(pdf)
+
+    assert (ref.kind, ref.path, ref.title, ref.volume, ref.image_root) == ("pdf", pdf, "Graded Reader", None, None)
+
+
+def test_book_folder_takes_pdf_books(tmp_path):
+    (tmp_path / "b.pdf").write_bytes(b"%PDF-1.7")
+    (tmp_path / "a.epub").write_bytes(b"PK")
+    (tmp_path / "c.txt").write_text("本文", encoding="utf-8")
+
+    refs = detector.detect_book_folder(tmp_path)
+
+    assert [(r.title, r.kind) for r in refs] == [("a", "epub"), ("b", "pdf"), ("c", "txt")]
+
+
+def test_load_hands_a_pdf_the_rules_but_not_the_ladder(monkeypatch: pytest.MonkeyPatch) -> None:
+    from anki_miner.languages.registry import get_profile
+    from anki_miner.services.reading import pdf_source
+
+    fake = MagicMock(return_value=object())
+    monkeypatch.setattr(pdf_source, "load", fake)
+    ref = ReadingSourceRef(kind="pdf", path=Path("book.pdf"), title="book")
+    rules = get_profile("es").sentence_rules
+
+    detector.load(ref, encodings=("utf-8",), rules=rules)
+
+    fake.assert_called_once_with(ref, rules=rules)

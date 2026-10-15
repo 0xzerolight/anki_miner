@@ -196,12 +196,12 @@ def test_detector_logs_format_and_reason(tmp_path: Path, caplog: pytest.LogCaptu
 
 
 def test_detector_failure_logs_warning(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
-    path = tmp_path / "unknown.pdf"
+    path = tmp_path / "unknown.docx"
 
     with caplog.at_level(logging.WARNING, logger="anki_miner.services.reading"), pytest.raises(SetupError):
         detector.detect(path)
 
     record = next(record for record in caplog.records if record.getMessage().startswith("Reading detect failed:"))
-    assert "found=extension:.pdf" in record.getMessage()
+    assert "found=extension:.docx" in record.getMessage()
     assert record.levelno == logging.WARNING
     assert record.name == detector.__name__

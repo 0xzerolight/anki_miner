@@ -139,6 +139,11 @@ dependencies = [
     # (Utilities → Audiobook Sync). C++ extension, no deps, wheels for every
     # release target; imported at module level so the PyInstaller graph sees it.
     "rapidfuzz>=3.14",
+    # Runtime: services/reading/pdf_source.py reads a PDF book's text layer for
+    # Reading → Novels and `mine reading` (TS-05). BSD-3-Clause, pure Python, no
+    # required dependencies (an AES-encrypted PDF would need `cryptography`,
+    # which is not added: such a book is refused as password-protected).
+    "pypdf>=6.0",
 ]
 
 [project.optional-dependencies]

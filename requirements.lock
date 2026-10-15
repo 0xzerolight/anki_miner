@@ -81,6 +81,7 @@ Pillow==12.3.0
 protobuf==7.35.1
 psutil==7.2.2
 Pygments==2.20.0
+pypdf==6.20.1
 PyQt6-Qt6==6.11.1
 PyQt6==6.11.0
 PyQt6_sip==13.11.1

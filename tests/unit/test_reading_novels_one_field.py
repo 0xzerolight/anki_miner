@@ -78,7 +78,7 @@ def test_a_wrong_kind_of_file_is_refused_in_the_banner(tab, tmp_path):
 
     tab._on_mine_clicked()
 
-    assert tab.issue_banner().current_issue().summary == "Choose an .epub or .txt book, or a folder of books."
+    assert tab.issue_banner().current_issue().summary == "Choose an .epub, .txt or .pdf book, or a folder of books."
 
 
 def test_a_dropped_subtitle_names_the_right_tab(tab, tmp_path):
@@ -88,3 +88,26 @@ def test_a_dropped_subtitle_names_the_right_tab(tab, tmp_path):
     with patch(_URLS, return_value=[_url(subtitle)]):
         tab.dropEvent(event)
     assert "Subtitle files are mined in Reading → Subtitle Files." in tab.log_widget.text_edit.toPlainText()
+
+
+def test_a_pdf_book_is_mined(tab, tmp_path):
+    """TS-05 (R18): Novels takes a .pdf like an .epub or .txt."""
+    book = tmp_path / "reader.pdf"
+    book.write_bytes(b"%PDF-1.7")
+    tab.book_selector.set_path(str(book))
+
+    tab._on_mine_clicked()
+
+    assert [(item.title, item.kind) for item in tab._run_items] == [("reader", "pdf")]
+
+
+def test_a_dropped_pdf_fills_the_field(tab, tmp_path):
+    book = tmp_path / "reader.pdf"
+    book.touch()
+    event = MagicMock()
+    with patch(_URLS, return_value=[_url(book)]):
+        tab.dragEnterEvent(event)
+        tab.dropEvent(event)
+
+    event.acceptProposedAction.assert_called()
+    assert tab.book_selector.path_or_none() == str(book)

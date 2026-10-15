@@ -57,6 +57,7 @@ from anki_miner.services.morphology import (
     resolve_attested_reading,
     resolve_reading_override,
 )
+from anki_miner.services.reading.ruby_hints import apply_author_ruby
 from anki_miner.services.tagger import get_shared_tagger
 from anki_miner.utils import (
     clean_subtitle_text,
@@ -2174,6 +2175,12 @@ class SubtitleParserService:
         seen_mined_forms: set[str] = set()
         counts: collections.Counter[str] = collections.Counter()
         rejects: dict[str, NotMinedReason] = {}
+        # SK-31: a book's own furigana (ReadingUnit.ruby, EPUB only) replaces the
+        # tokenizer's reading, for a profile that takes author ruby. Function-local
+        # import for the reason __init__ gives: the registry import is circular here.
+        from anki_miner.languages.registry import get_profile
+
+        author_ruby = get_profile(self._tagger_language).takes_author_ruby
 
         for unit in units:
             # Reading/OCR text needs the same pre-tokenization JP normalization
@@ -2223,6 +2230,11 @@ class SubtitleParserService:
             line_words, line_lemmas_entry = self._emit_line_words_and_index(
                 line_state, seen_mined_forms, collect_index=want_line_index, rejects=rejects
             )
+            unit_ruby = getattr(unit, "ruby", ())
+            if author_ruby and unit_ruby:
+                # The author's reading settles a reading the dictionary left ambiguous.
+                for front in apply_author_ruby(line_words, unit_ruby):
+                    self._ambiguous_readings.discard(front)
             all_words.extend(line_words)
             if line_lemmas_entry is not None:
                 line_index.append(line_lemmas_entry)

@@ -113,3 +113,16 @@ def test_cancel_check_raises_reading_load_cancelled():
             ReadingSourceRef(kind="text", title="Text", text="一文目。"),
             cancel_check=lambda: True,
         )
+
+
+def test_a_titled_ref_names_the_document_for_the_card_source():
+    """F-14: a fetched article's "title — site" is the Source; the series stays "Text"."""
+    doc = text_source.load(ReadingSourceRef(kind="text", title="猫の話 — example.com", text="本文。"))
+
+    assert (doc.title, doc.series, doc.episode) == ("猫の話 — example.com", "Text", "猫の話 — example.com")
+
+
+def test_an_untitled_ref_keeps_the_constant_identity():
+    doc = text_source.load(ReadingSourceRef(kind="text", text="本文。"))
+
+    assert (doc.title, doc.series, doc.episode) == ("Text", "Text", "Text")

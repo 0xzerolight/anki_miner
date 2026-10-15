@@ -46,6 +46,7 @@ from anki_miner.services.anki_service import AnkiService
 from anki_miner.services.asr.model_availability import usable_model_installed
 from anki_miner.services.definition_service import DefinitionService
 from anki_miner.services.reading import detector
+from anki_miner.services.reading.web_article import ArticleFetchError, fetch_article, is_web_url
 from anki_miner.services.resource_staleness import stale_resource_reimport_error
 from anki_miner.services.stats_service import StatsService
 from anki_miner.services.youtube_fetcher import classify_probe_result
@@ -94,6 +95,21 @@ class ReadingJob:
 
 
 @dataclass(frozen=True)
+class ArticleJob:
+    """One web article address (F-14): fetched, then mined like pasted text.
+
+    Reported as a ``reading`` item, the kind ``mine reading`` already emits;
+    ``input`` names the address instead of a path.
+    """
+
+    url: str
+    kind: ClassVar[str] = "reading"
+
+    def describe(self) -> dict[str, str]:
+        return {"url": self.url}
+
+
+@dataclass(frozen=True)
 class YouTubeJob:
     """One YouTube video URL, fetched with yt-dlp and then mined."""
 
@@ -104,7 +120,7 @@ class YouTubeJob:
         return {"url": self.url}
 
 
-Job = EpisodeJob | ReadingJob | YouTubeJob
+Job = EpisodeJob | ReadingJob | ArticleJob | YouTubeJob
 
 
 @dataclass
@@ -167,11 +183,18 @@ def batch_jobs(video_dir: Path, subtitle_dir: Path) -> list[EpisodeJob]:
     return [EpisodeJob(video=pair.video, subtitle=pair.subtitle) for pair in pairs]
 
 
-def reading_jobs(paths: Sequence[Path]) -> list[ReadingJob]:
-    """Classify each path with the Reading tab's detector (one path may hold several volumes)."""
-    jobs: list[ReadingJob] = []
+def reading_jobs(paths: Sequence[str | Path]) -> list[ReadingJob | ArticleJob]:
+    """Classify each input: a web address is one article (F-14); a path goes through the Reading detector.
+
+    One path may hold several volumes. An address is not fetched here: a dead
+    link fails its own item at mine time instead of the whole command.
+    """
+    jobs: list[ReadingJob | ArticleJob] = []
     for raw in paths:
-        path = raw.expanduser().resolve()
+        if isinstance(raw, str) and is_web_url(raw):
+            jobs.append(ArticleJob(url=raw.strip()))
+            continue
+        path = Path(raw).expanduser().resolve()
         if not path.exists():
             raise InputError(f"File not found: {raw}")
         try:
@@ -289,6 +312,11 @@ class MiningRun:
             report = self._failed(idx, job, str(exc))
         except OperationCancelled:
             report = ItemReport(item=idx, kind=job.kind, input=job.describe(), status="cancelled")
+        except ArticleFetchError as exc:
+            # Nothing was written to Anki yet, so a transient failure (network,
+            # HTTP 429/5xx) is safe to run again.
+            logger.warning("CLI item %d article fetch failed: %s", idx, exc.reason)
+            report = self._failed(idx, job, str(exc), exc.transient)
         except YouTubeFetchError as exc:
             if self._cancel.is_set():
                 report = ItemReport(item=idx, kind=job.kind, input=job.describe(), status="cancelled")
@@ -311,7 +339,18 @@ class MiningRun:
         if isinstance(job, ReadingJob):
             document = load_reading_source(processor, self._config, job.source, cancel_check=self._cancel.is_set)
             return processor.process_reading(document, progress_callback=self._progress, cancel_event=self._cancel)
+        if isinstance(job, ArticleJob):
+            return self._mine_article(job, processor)
         return self._mine_youtube(job, processor)
+
+    def _mine_article(self, job: ArticleJob, processor: EpisodeProcessor) -> ProcessingResult:
+        """Fetch the article, then mine its text as Reading → Text does, titled "page title — site"."""
+        rules = get_profile(config_language(self._config)).sentence_rules
+        article = fetch_article(job.url, rules=rules)
+        self._presenter.show_info(f"Fetched {article.source_label}.")
+        source = ReadingSourceRef(kind="text", title=article.source_label, text=article.text)
+        document = load_reading_source(processor, self._config, source, cancel_check=self._cancel.is_set)
+        return processor.process_reading(document, progress_callback=self._progress, cancel_event=self._cancel)
 
     def _mine_youtube(self, job: YouTubeJob, processor: EpisodeProcessor) -> ProcessingResult:
         try:
