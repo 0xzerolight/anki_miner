@@ -14,9 +14,11 @@ from typing import Protocol
 import numpy as np
 
 from anki_miner.exceptions import OperationCancelled
+from anki_miner.languages.registry import config_language, get_profile
 from anki_miner.services.video_ocr import runtime
 from anki_miner.services.video_ocr.frame_source import FrameSourceError, Region, iter_samples
 from anki_miner.services.video_ocr.segmenter import SAMPLE_FPS, segment
+from anki_miner.services.video_ocr.text_cleanup import keep_script_rows
 from anki_miner.utils.audio_track_detector import get_media_duration_seconds
 from anki_miner.utils.ffmpeg_resolver import resolve_ffprobe
 from anki_miner.utils.logging_ext import log_summary
@@ -51,9 +53,23 @@ def _reader(config, reader: TextReader | None) -> TextReader:
     return reader if reader is not None else runtime.get_reader(config)
 
 
+def _script_filtered(config, reader: TextReader) -> Callable[[np.ndarray], str]:
+    """``reader`` keeping only rows with a character of the mining language's script (TS-10, R22).
+
+    The script comes from the profile (``LanguageProfile.script``), never from a
+    language-code branch, so every Video OCR language filters by its own letters.
+    """
+    has_script = get_profile(config_language(config)).script.contains_target_script
+
+    def read(bgr: np.ndarray) -> str:
+        return keep_script_rows(reader.read_text(bgr), has_script)
+
+    return read
+
+
 def read_region_text(config, crop: np.ndarray) -> str:
-    """The text the scan would read from ``crop`` ("Test this frame")."""
-    return _reader(config, None).read_text(crop)
+    """The text the scan would read from ``crop`` ("Test this frame"), filtered the same way."""
+    return _script_filtered(config, _reader(config, None))(crop)
 
 
 def scan_video(
@@ -73,7 +89,7 @@ def scan_video(
     """
     started = time.monotonic()
     duration = get_media_duration_seconds(video, resolve_ffprobe(config))
-    text_reader = _reader(config, reader)
+    read = _script_filtered(config, _reader(config, reader))
 
     def _on_sample(t: float) -> None:
         if progress_cb is not None:
@@ -81,7 +97,7 @@ def scan_video(
 
     try:
         samples = iter_samples(config, video, region, fps=SAMPLE_FPS, cancel_event=cancel_event)
-        cues = segment(samples, text_reader.read_text, on_progress=_on_sample)
+        cues = segment(samples, read, on_progress=_on_sample)
     except OperationCancelled:
         return VideoOcrResult(VideoOcrStatus.CANCELLED)
     except FrameSourceError as exc:

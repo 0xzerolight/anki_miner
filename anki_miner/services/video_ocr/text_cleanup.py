@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import re
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 
 from anki_miner.services.video_ocr.meiki_engine import OcrBox
 
@@ -112,3 +112,14 @@ def clean(boxes: Sequence[OcrBox]) -> str:
     if not rows:
         return ""
     return _STRAY_DOT.sub("", "\n".join(_strip_speaker(rows))).translate(_FULL_WIDTH)
+
+
+def keep_script_rows(text: str, has_script: Callable[[str], bool]) -> str:
+    """``text`` without the rows that hold no character of the mining language's script (TS-10).
+
+    ``has_script`` is the profile's ``script.contains_target_script``. A HUD
+    counter, a clock or a stray label reads as a row of its own; dropping it
+    keeps it out of the .srt (R22). A frame left with no row reads as no
+    text, so the segmenter closes the cue as it does for a blank frame.
+    """
+    return "\n".join(row for row in text.split("\n") if has_script(row))
