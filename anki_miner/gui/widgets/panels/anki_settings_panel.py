@@ -436,6 +436,14 @@ class AnkiSettingsPanel(FormPanel):
             self.ankiconnect_url_input,
             helper=self.tr("Default http://127.0.0.1:8765. Change if AnkiConnect uses a different port."),
         )
+        # AI-02 (owner ruling R7): an API key rides in the URL, so there is no
+        # second field to keep out of exports; AnkiConnect gets it in the body.
+        self.ankiconnect_key_helper = QLabel(
+            self.tr("If AnkiConnect asks for an API key, add it to the address: http://127.0.0.1:8765/?key=YOUR_KEY")
+        )
+        self.ankiconnect_key_helper.setObjectName("helper-text")
+        self.ankiconnect_key_helper.setWordWrap(True)
+        self.add_widget(self.ankiconnect_key_helper)
         # Every problem on either line described the previous address.
         self.ankiconnect_url_input.textChanged.connect(lambda _text: self._clear_status_parts())
         self.ankiconnect_url_input.textChanged.connect(lambda _text: self.set_fill_status(None, ""))
