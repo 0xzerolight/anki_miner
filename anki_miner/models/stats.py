@@ -1,7 +1,7 @@
 """Data models for mining analytics and statistics."""
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import date, datetime
 from enum import Enum
 
 
@@ -100,3 +100,16 @@ class Milestone:
     threshold: int = 0
     current_value: int = 0
     achieved: bool = False
+
+
+@dataclass(frozen=True)
+class KnownSizePoint:
+    """How many words Anki Miner treated as known on one day (ST-05).
+
+    Recorded per mining language. ``known_words.added_at`` cannot replace it:
+    Rebuild Known Words DB deletes and re-adds every synced row, resetting
+    their dates.
+    """
+
+    day: date
+    word_count: int

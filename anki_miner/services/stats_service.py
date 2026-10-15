@@ -4,11 +4,12 @@ import logging
 import sqlite3
 import threading
 from contextlib import contextmanager
-from datetime import datetime
+from datetime import date, datetime
 from pathlib import Path
 
 from anki_miner.models.stats import (
     DifficultyEntry,
+    KnownSizePoint,
     Milestone,
     MilestoneKind,
     MiningSession,
@@ -170,6 +171,16 @@ class StatsService:
             CREATE TABLE IF NOT EXISTS session_deleted (
                 session_id INTEGER PRIMARY KEY,
                 cards INTEGER NOT NULL
+            )
+        """)
+        # ST-05: one known-words count per day and mining language. Not
+        # derivable from known_words.added_at, which a rebuild resets.
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS known_size (
+                day TEXT NOT NULL,
+                language TEXT NOT NULL,
+                word_count INTEGER NOT NULL,
+                PRIMARY KEY (day, language)
             )
         """)
         self._migrate_language_column(conn)
@@ -350,6 +361,34 @@ class StatsService:
                 conn.execute(
                     "INSERT OR REPLACE INTO session_deleted (session_id, cards) VALUES (?, ?)", (session_id, cards)
                 )
+
+    # === ST-05: known-vocabulary size over time ===
+
+    def record_known_size(self, word_count: int, *, day: date | None = None) -> None:
+        """Store today's (or ``day``'s) known-words count for the active language.
+
+        One row per day: a later count the same day replaces the earlier one.
+        """
+        if not self._ensure_loaded():
+            return
+        stamp = (day or date.today()).isoformat()
+        with self._connect() as conn:
+            conn.execute(
+                """INSERT INTO known_size (day, language, word_count) VALUES (?, ?, ?)
+                   ON CONFLICT(day, language) DO UPDATE SET word_count = excluded.word_count""",
+                (stamp, self._language, int(word_count)),
+            )
+
+    def get_known_size_history(self) -> list[KnownSizePoint]:
+        """Every recorded count of the active language, oldest first."""
+        if not self._initialized:
+            return []
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT day, word_count FROM known_size WHERE language = ? ORDER BY day",
+                (self._language,),
+            ).fetchall()
+        return [KnownSizePoint(day=date.fromisoformat(row["day"]), word_count=int(row["word_count"])) for row in rows]
 
     # === Feature 2: Difficulty Ranking ===
 
