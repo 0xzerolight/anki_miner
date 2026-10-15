@@ -369,3 +369,56 @@ def test_sentence_rule_contributes(qtbot, index, expected):
     panel.sentence_rule_combo.setCurrentIndex(index)
     out = panel.contribute(create_default_config())
     assert (out.deduplicate_sentences, out.use_i_plus_one_filter) == expected
+
+
+def test_one_card_per_sentence_tooltip_says_a_losing_word_moves(qtbot):
+    """F-06: the word whose sentence is taken moves to another of its lines first."""
+    panel = SentencesSettingsPanel()
+    qtbot.addWidget(panel)
+    index = panel.sentence_rule_combo.findData("dedup")
+    tip = panel.sentence_rule_combo.itemData(index, Qt.ItemDataRole.ToolTipRole)
+    assert "moves to another line" in tip
+    assert "first one found" not in tip
+    assert "Whitelisted words are still mined." in tip
+
+
+# --- F-07: best-sentence pick ---------------------------------------------------
+
+
+def test_pick_best_sentence_round_trips(qtbot):
+    panel = SentencesSettingsPanel()
+    qtbot.addWidget(panel)
+
+    panel.load_from_config(replace(AnkiMinerConfig(), pick_best_sentence=False))
+    assert panel.pick_best_sentence_checkbox.isChecked() is False
+    assert panel.contribute(AnkiMinerConfig()).pick_best_sentence is False
+
+    panel.load_from_config(replace(AnkiMinerConfig(), pick_best_sentence=True))
+    assert panel.contribute(replace(AnkiMinerConfig(), pick_best_sentence=False)).pick_best_sentence is True
+
+
+def test_pick_best_sentence_is_on_for_a_fresh_install(qtbot):
+    panel = SentencesSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.load_from_config(create_default_config())
+    assert panel.pick_best_sentence_checkbox.isChecked()
+
+
+def test_pick_best_sentence_helper_names_the_rule_the_curator_and_card_order(qtbot):
+    panel = SentencesSettingsPanel()
+    qtbot.addWidget(panel)
+    tip = panel.pick_best_sentence_checkbox.toolTip()
+    assert "fewest unknown" in tip
+    assert "Word Curator still lists every line" in tip
+    assert "card order does not change" in tip
+
+
+def test_pick_best_sentence_follows_the_sentence_rule_and_is_searchable(qtbot):
+    panel = SentencesSettingsPanel()
+    qtbot.addWidget(panel)
+    anchors = {anchor.stable_id: anchor for anchor in panel.setting_anchors()}
+    anchor = anchors["sentences.pick_best_sentence_checkbox"]
+    assert "best sentence" in anchor.search_text()
+    assert "Pick the clearest sentence for each word" in anchor.search_text()
+    ids = list(anchors)
+    assert ids.index("sentences.pick_best_sentence_checkbox") == ids.index("sentences.sentence_rule_combo") + 1

@@ -39,18 +39,54 @@ def _leaf_copy(word: TokenizedWord) -> TokenizedWord:
     return dataclasses.replace(word, sentence_candidates=[])
 
 
+#: The season pool's best-sentence key (``word_filter.best_sentence_key``), lowest first.
+SentenceKey = Callable[[TokenizedWord], tuple[bool, int, bool, int]]
+
+
+def _clearest_primary(
+    primary: TokenizedWord,
+    contributions: list[TokenizedWord],
+    best_sentence: SentenceKey,
+) -> TokenizedWord:
+    """``primary`` moved to the clearest line any episode offered (F-07 across episodes, C6).
+
+    ``contributions`` are every episode's leaf variants in episode order, then
+    subtitle order. Only a strictly lower key moves the word, and ``min`` returns
+    the first of equals, so a tie keeps the earlier episode's line: the per-episode
+    pick's "earlier line wins". A primary stamped by the automatic cue merge keeps
+    its line, as the merge's own re-dedup keeps a merged word's (L3a ruling 6): the
+    stamp was counted against that cue, and a variant carries none.
+
+    The new primary is a copy of the winning leaf, the object the curator returns
+    when the user picks that line, so ``split_selection`` mines it from that
+    leaf's episode and the curator's picker opens on it. Only the season total
+    ``occurrence_count`` is carried over.
+    """
+    if primary.line_expansion != (0, 0):
+        return primary
+    best = min(contributions, key=best_sentence)
+    if best_sentence(best) >= best_sentence(primary):
+        return primary
+    return dataclasses.replace(best, occurrence_count=primary.occurrence_count)
+
+
 def merge_pools(
     pools: list[list[TokenizedWord]],
     *,
     max_candidates: int | None = None,
     dedup_fold: Callable[[str], str] | None = None,
+    best_sentence: SentenceKey | None = None,
 ) -> list[TokenizedWord]:
     """Fold per-episode word lists into one deduped season pool.
 
     One row per ``mined_form`` under ``dedup_fold`` (the mining language's
     comparison fold, the identity known words and the within-run collapse
     use: de Essen/essen is one row); the first-seen episode's word is the
-    primary. Sentence candidates are the ordered concatenation of each
+    primary, unless ``best_sentence`` is given (F-07 across episodes,
+    OWNER-RULINGS C6): then the primary is the clearest of every episode's
+    lines under that key (see ``_clearest_primary``), still listed among the
+    candidates, and a tie keeps the first-seen word. Sentence candidates are
+    the ordered concatenation of each
     episode's candidate set (a bare word contributes a leaf copy of
     itself); ``occurrence_count`` becomes the season total. A word seen
     once on a single line keeps its empty candidate list, so the
@@ -79,7 +115,11 @@ def merge_pools(
                 primary = merged[key]
                 primary.occurrence_count += word.occurrence_count
                 candidates[key].extend(contribution)
-    for key, primary in merged.items():
+    for key in list(merged):
+        primary = merged[key]
+        if best_sentence is not None:
+            # Over the full list, before any max_candidates cut.
+            primary = merged[key] = _clearest_primary(primary, candidates[key], best_sentence)
         cands = candidates[key] if max_candidates is None else candidates[key][:max_candidates]
         # Single-episode, single-line word: leave the picker off.
         primary.sentence_candidates = cands if len(cands) > 1 else []

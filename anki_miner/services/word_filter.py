@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import dataclasses
 import logging
+import sys
 import unicodedata
 from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 from typing import TYPE_CHECKING, Any, NamedTuple, TypedDict
@@ -162,6 +163,87 @@ def _normalize_sentence(text: str) -> str:
     collapse. The original sentence on each word is left untouched.
     """
     return " ".join(unicodedata.normalize("NFKC", text).split())
+
+
+def within_sentence_caps(duration: float, text: str, max_duration: float, max_chars: int) -> bool:
+    """Whether a sentence passes the Sentences page caps.
+
+    ``0`` (or ``0.0``) disables a cap; both caps are inclusive. The one copy of
+    the rule :meth:`WordFilterService.filter_by_sentence_length` applies, so a
+    sentence picker that moves a word to another of its lines (F-06, F-07)
+    never moves it onto a line the length filter would then drop.
+    """
+    if max_duration > 0.0 and duration > max_duration:
+        return False
+    return not (max_chars > 0 and len(text) > max_chars)
+
+
+#: F-07's comfortable example-sentence length, ``(shortest, longest)``, inclusive.
+#: Characters for a script written without spaces between words
+#: (``SentenceRules.space_aware`` False: ja, zh, yue, th), whitespace-separated
+#: words for the rest. A line outside the band loses to a line inside it before
+#: length is compared. 10-50 characters are immersion-kit's search defaults;
+#: 4-20 words is the same span for spaced scripts (L3a ruling 3).
+BEST_SENTENCE_BAND_CHARS: tuple[int, int] = (10, 50)
+BEST_SENTENCE_BAND_WORDS: tuple[int, int] = (4, 20)
+
+
+def sentence_length(text: str, *, spaced: bool) -> int:
+    """F-07's length of ``text``: words where the script spaces them, else non-space characters."""
+    if spaced:
+        return len(text.split())
+    return sum(1 for char in text if not char.isspace())
+
+
+def best_sentence_rank(unknown: int, text: str, *, spaced: bool) -> tuple[int, bool, int]:
+    """F-07's order for one line, lowest first: unknown words, outside the band, length.
+
+    The one definition both picks use: the phase-2 pick over index lines
+    (:meth:`WordFilterService.pick_best_sentences`, which appends the line's
+    position) and the season pool's pick across episodes (:func:`best_sentence_key`).
+    """
+    low, high = BEST_SENTENCE_BAND_WORDS if spaced else BEST_SENTENCE_BAND_CHARS
+    length = sentence_length(text, spaced=spaced)
+    return (unknown, not low <= length <= high, length)
+
+
+def best_sentence_key(
+    *, spaced: bool, max_duration: float = 0.0, max_chars: int = 0
+) -> Callable[[TokenizedWord], tuple[bool, int, bool, int]]:
+    """F-07's key for a word already on a line, lowest first (the season pool's pick, C6).
+
+    The order :func:`best_sentence_rank` defines, read from the word because the
+    season pool (``word_pool.merge_pools``) has no line index: the unknown count is
+    ``line_unknown_count``, which ``EpisodeProcessor._run_curation`` stamps on every
+    word and sentence variant of the season pre-pass from the bases
+    :meth:`WordFilterService.pick_best_sentences` counts against. ``0`` there means
+    "not computed" and sorts after every counted line, as the curator's column
+    sorts it.
+
+    A line over the Sentences caps sorts after every line inside them, and all
+    such lines tie (L3a ruling 4: a word moves only to a line inside the caps), so
+    the caller's tie rule keeps the word where it is.
+
+    Args:
+        spaced: Whether the mining language's script separates words with spaces
+            (``SentenceRules.space_aware``).
+        max_duration: The Sentences duration cap (``0.0`` = none).
+        max_chars: The Sentences character cap (``0`` = none).
+    """
+
+    def key(word: TokenizedWord) -> tuple[bool, int, bool, int]:
+        if not within_sentence_caps(word.duration, word.sentence, max_duration, max_chars):
+            return (True, 0, False, 0)
+        unknown = word.line_unknown_count if word.line_unknown_count > 0 else sys.maxsize
+        count, outside, length = best_sentence_rank(unknown, word.sentence, spaced=spaced)
+        return (False, count, outside, length)
+
+    return key
+
+
+def _is_on_line(word: TokenizedWord, line: LineLemmas) -> bool:
+    """Whether ``word`` already carries ``line``: same text, same start within a millisecond."""
+    return word.sentence == line.line_text and abs(word.start_time - line.start_time) <= 1e-3
 
 
 def whitelisted_keys(front: str, lemma: str, word_list_service: WordListService) -> tuple[str, ...]:
@@ -543,12 +625,26 @@ class WordFilterService:
         self,
         words: list[TokenizedWord],
         text_of: Callable[[TokenizedWord], str] | None = None,
+        *,
+        line_index: list[LineLemmas] | None = None,
+        max_duration: float = 0.0,
+        max_chars: int = 0,
     ) -> list[TokenizedWord]:
-        """Remove words that share a sentence with an already-selected word.
+        """Keep one word per example sentence, moving a losing word when it can (F-06).
 
-        For each unique sentence text, only the first word is kept. The dedup
-        key is NFKC-normalized with whitespace collapsed so that punctuation
-        and spacing variants do not slip through.
+        First pass, unchanged since before F-06: for each unique sentence text
+        the first word keeps it. The key is NFKC-normalized with whitespace
+        collapsed, so punctuation and spacing variants do not slip through.
+
+        Second pass, only with a ``line_index`` and no ``text_of``: each word
+        that lost its sentence, in input order, moves to the first other line
+        it appears on (:meth:`_compatible_lines`, subtitle order) whose text no
+        word holds yet and that passes the Sentences caps
+        (:func:`within_sentence_caps`). The move is :meth:`_swap_word_to_line`,
+        the i+1 filter's. A word with no such line is dropped, as before.
+        Because the keepers are settled first, every word the first pass keeps
+        stays kept on its own line, and a loser never takes a line another word
+        first appears on.
 
         Args:
             words: List of words to deduplicate.
@@ -557,19 +653,121 @@ class WordFilterService:
                 the merged text a word is about to acquire, so two words on
                 adjacent cues that converge on one sentence dedup against each
                 other before the card exists — the same "one card per sentence"
-                rule, applied to what the card will actually say.
+                rule, applied to what the card will actually say. That call
+                never reassigns: the word carries a merge stamp for its line.
+            line_index: The run's per-line index; enables the second pass.
+            max_duration: The Sentences duration cap a moved-to line must pass
+                (``0.0`` = no cap).
+            max_chars: The Sentences character cap a moved-to line must pass
+                (``0`` = no cap).
 
         Returns:
-            Deduplicated list of words.
+            The kept words, in input order (a moved word in its original slot).
         """
         read = text_of if text_of is not None else (lambda word: word.sentence)
         seen_sentences: set[str] = set()
-        result = []
+        kept: list[TokenizedWord | None] = []
+        losers: list[int] = []
         for word in words:
             key = _normalize_sentence(read(word))
-            if key not in seen_sentences:
+            if key in seen_sentences:
+                losers.append(len(kept))
+                kept.append(None)
+            else:
                 seen_sentences.add(key)
+                kept.append(word)
+        if losers and line_index and text_of is None:
+            lines_by_front, lines_by_lemma = self._index_lines(line_index)
+            for slot in losers:
+                word = words[slot]
+                for _position, line in self._compatible_lines(word, lines_by_front, lines_by_lemma):
+                    key = _normalize_sentence(line.line_text)
+                    if key in seen_sentences:
+                        continue
+                    if not within_sentence_caps(line.duration, line.line_text, max_duration, max_chars):
+                        continue
+                    seen_sentences.add(key)
+                    kept[slot] = self._swap_word_to_line(word, line)
+                    break
+        return [item for item in kept if item is not None]
+
+    def pick_best_sentences(
+        self,
+        words: list[TokenizedWord],
+        line_index: list[LineLemmas],
+        unknown_lemmas: set[str],
+        unknown_fronts: set[str],
+        *,
+        spaced: bool,
+        max_duration: float = 0.0,
+        max_chars: int = 0,
+        max_unknown: int = 0,
+    ) -> list[TokenizedWord]:
+        """Move each word to its clearest line (F-07, ruling R5).
+
+        Among the lines a word can move to (:meth:`_compatible_lines`) that pass
+        the Sentences caps, the lowest of this key wins, compared in order
+        (D-017: an order, never a weighted score):
+
+        1. unknown words on the line: card fronts on a parsed line, lemmas on a
+           hand-built one, against ``unknown_fronts``/``unknown_lemmas`` with
+           the words' own fronts and lemmas unioned in, exactly the count
+           :meth:`filter_i_plus_one` and :meth:`attach_line_unknown_counts` use;
+        2. whether the line's :func:`sentence_length` falls outside the band
+           (:data:`BEST_SENTENCE_BAND_WORDS` when ``spaced``, else
+           :data:`BEST_SENTENCE_BAND_CHARS`);
+        3. that length;
+        4. position in ``line_index`` (the earlier line).
+
+        A word already on its best line, or with no line inside the caps, comes
+        back as the same object; a moved word comes back from
+        :meth:`_swap_word_to_line`, the i+1 filter's swap. The curator still
+        offers every line (:meth:`attach_sentence_candidates` runs at
+        curation, from the same index).
+
+        Args:
+            words: The words phase 2 kept so far, in order.
+            line_index: The run's per-line index.
+            unknown_lemmas: Phase 2's pre-filter unknown snapshot, as lemmas.
+            unknown_fronts: The same snapshot as card fronts.
+            spaced: Whether the mining language's script separates words with
+                spaces (``SentenceRules.space_aware``).
+            max_duration: The Sentences duration cap (``0.0`` = none).
+            max_chars: The Sentences character cap (``0`` = none).
+            max_unknown: The most unknown words a moved-to line may hold
+                (``0`` = no limit). The i+1 filter passes ``1`` so the pick
+                stays among i+1 lines: a word whose only i+1 line breaks a cap
+                must not move onto a line with more unknowns.
+
+        Returns:
+            The words in input order, each on its chosen line.
+        """
+        if not words or not line_index:
+            return words
+        lemmas = unknown_lemmas | {word.lemma for word in words}
+        fronts = unknown_fronts | {word.mined_form for word in words}
+        lines_by_front, lines_by_lemma = self._index_lines(line_index)
+
+        def rank(entry: tuple[int, LineLemmas]) -> tuple[int, bool, int, int]:
+            position, line = entry
+            unknown = len(line.fronts & fronts) if line.front_spans else len(line.lemmas & lemmas)
+            count, outside, length = best_sentence_rank(unknown, line.line_text, spaced=spaced)
+            return (count, outside, length, position)
+
+        result: list[TokenizedWord] = []
+        for word in words:
+            usable = [
+                (rank(entry), entry[1])
+                for entry in self._compatible_lines(word, lines_by_front, lines_by_lemma)
+                if within_sentence_caps(entry[1].duration, entry[1].line_text, max_duration, max_chars)
+            ]
+            if max_unknown > 0:
+                usable = [item for item in usable if item[0][0] <= max_unknown]
+            if not usable:
                 result.append(word)
+                continue
+            _rank, best = min(usable, key=lambda item: item[0])
+            result.append(word if _is_on_line(word, best) else self._swap_word_to_line(word, best))
         return result
 
     def filter_by_sentence_length(
@@ -602,16 +800,10 @@ class WordFilterService:
         if max_duration <= 0.0 and max_chars <= 0:
             return words
 
-        read = measure if measure is not None else (lambda word: (word.duration, word.sentence))
-        result = []
-        for word in words:
-            duration, sentence = read(word)
-            if max_duration > 0.0 and duration > max_duration:
-                continue
-            if max_chars > 0 and len(sentence) > max_chars:
-                continue
-            result.append(word)
-        return result
+        read: Callable[[TokenizedWord], tuple[float, str]] = (
+            measure if measure is not None else (lambda word: (word.duration, word.sentence))
+        )
+        return [word for word in words if within_sentence_caps(*read(word), max_duration, max_chars)]
 
     def filter_i_plus_one(
         self,
@@ -974,6 +1166,50 @@ class WordFilterService:
             line_expansion=(0, 0),
         )
 
+    @staticmethod
+    def _index_lines(
+        line_index: list[LineLemmas],
+    ) -> tuple[dict[str, list[tuple[int, LineLemmas]]], dict[str, list[tuple[int, LineLemmas]]]]:
+        """``(lines_by_front, lines_by_lemma)``: each line under every key it carries.
+
+        A parsed line (``front_spans`` set) is keyed by its card fronts; a
+        hand-built line without fronts by its lemmas. Each list holds
+        ``(position, line)`` in ``line_index`` order.
+        """
+        lines_by_front: dict[str, list[tuple[int, LineLemmas]]] = {}
+        lines_by_lemma: dict[str, list[tuple[int, LineLemmas]]] = {}
+        for position, line in enumerate(line_index):
+            if line.front_spans:
+                for front in line.fronts:
+                    lines_by_front.setdefault(front, []).append((position, line))
+            else:
+                for lemma in line.lemmas:
+                    lines_by_lemma.setdefault(lemma, []).append((position, line))
+        return lines_by_front, lines_by_lemma
+
+    def _compatible_lines(
+        self,
+        word: TokenizedWord,
+        lines_by_front: Mapping[str, list[tuple[int, LineLemmas]]],
+        lines_by_lemma: Mapping[str, list[tuple[int, LineLemmas]]],
+    ) -> list[tuple[int, LineLemmas]]:
+        """Every ``(position, line)`` that can carry ``word``'s card, in subtitle order.
+
+        A line holding the word's card front; on a hand-built line without
+        fronts, its lemma with a surface that keeps the card front
+        (:meth:`_line_preserves_mined_form`). A line holding only a UniDic
+        lemma-sibling (取る for 撮る) is never one. Shared by the curator's
+        sentence picker (:meth:`attach_sentence_candidates`), one card per
+        sentence (F-06) and the best-sentence pick (F-07), so all three agree
+        on where a word can go.
+        """
+        compatible = list(lines_by_front.get(word.mined_form, ())) + [
+            (position, line)
+            for position, line in lines_by_lemma.get(word.lemma, ())
+            if self._line_preserves_mined_form(word, line)
+        ]
+        return sorted(compatible, key=lambda entry: entry[0])
+
     def attach_sentence_candidates(
         self,
         words: list[TokenizedWord],
@@ -1003,23 +1239,9 @@ class WordFilterService:
         """
         if not line_index:
             return
-        lines_by_front: dict[str, list[tuple[int, LineLemmas]]] = {}
-        lines_by_lemma: dict[str, list[tuple[int, LineLemmas]]] = {}
-        for position, line in enumerate(line_index):
-            if line.front_spans:
-                for front in line.fronts:
-                    lines_by_front.setdefault(front, []).append((position, line))
-            else:
-                for lemma in line.lemmas:
-                    lines_by_lemma.setdefault(lemma, []).append((position, line))
-
+        lines_by_front, lines_by_lemma = self._index_lines(line_index)
         for word in words:
-            compatible = lines_by_front.get(word.mined_form, []) + [
-                (position, line)
-                for position, line in lines_by_lemma.get(word.lemma, ())
-                if self._line_preserves_mined_form(word, line)
-            ]
-            lines = [line for _, line in sorted(compatible, key=lambda entry: entry[0])]
+            lines = [line for _, line in self._compatible_lines(word, lines_by_front, lines_by_lemma)]
             if len(lines) < 2:
                 continue
             if max_candidates is not None:

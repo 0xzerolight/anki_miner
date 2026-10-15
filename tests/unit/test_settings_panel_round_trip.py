@@ -122,6 +122,7 @@ def _non_default_save_config(tmp_path: Path) -> AnkiMinerConfig:
         secondary_subtitle_enabled=True,
         merge_incomplete_cues=True,
         bold_target_in_sentence=False,  # default is True
+        pick_best_sentence=False,  # default is True (F-07)
         # --- YouTubeSettingsPanel ---
         # C10: a file and a browser are one choice; the file wins, so a config carrying both is not round-trip-stable.
         youtube_cookies_from_browser=None,
@@ -188,6 +189,7 @@ _SAVE_PATH_FIELDS = frozenset(
         "use_i_plus_one_filter",
         "max_sentence_duration_seconds",
         "max_sentence_chars",
+        "pick_best_sentence",
         # YouTubeSettingsPanel
         "youtube_cookies_from_browser",
         "youtube_cookies_file",
@@ -415,6 +417,7 @@ class TestSavePathRoundTrip:
             "use_i_plus_one_filter",
             "max_sentence_duration_seconds",
             "max_sentence_chars",
+            "pick_best_sentence",
         ):
             assert getattr(result, field_name) == getattr(original, field_name), field_name
 

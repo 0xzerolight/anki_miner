@@ -311,6 +311,21 @@ def _note_dropped(
             drops.setdefault(word.mined_form, reason if isinstance(reason, NotMinedReason) else reason(word))
 
 
+def _log_sentence_moves(event: str, before: list[TokenizedWord], after: list[TokenizedWord]) -> None:
+    """One receipt for the words a sentence picker moved to another of their lines (F-06, F-07).
+
+    A moved word comes back re-made (``WordFilterService._swap_word_to_line``);
+    a word left where it was comes back as the same object. A stand-in filter
+    (a test double) that returns no list logs nothing.
+    """
+    if not isinstance(after, list):
+        return
+    unchanged = {id(word) for word in before}
+    moved = sum(1 for word in after if id(word) not in unchanged)
+    if moved:
+        log_summary(logger, event, moved=moved, words=len(after))
+
+
 #: ``last_word_drops`` / ``AnkiService.last_not_created`` states as not-mined reasons.
 _WORD_DROP_REASONS = {"media_failed": NotMinedReason.MEDIA_FAILED, "no_definition": NotMinedReason.NO_DEFINITION}
 _NOT_CREATED_REASONS = {
@@ -318,6 +333,16 @@ _NOT_CREATED_REASONS = {
     "refused": NotMinedReason.ANKI_FAILED,
     "uncertain": NotMinedReason.ANKI_FAILED,
 }
+
+#: MS-28 (ruling R21): the language check samples a run's first content words
+#: (phase 1's first-appearance order), stays silent below a minimum sample, and
+#: warns when fewer than this share of them have a dictionary entry. A correct
+#: Japanese run sits near 98 % (the owner's 2026-09 logs: 1-15 no-definition
+#: rejects per 255-1095 unique words); a file in another language falls far
+#: below half.
+_LANGUAGE_CHECK_SAMPLE = 200
+_LANGUAGE_CHECK_MIN_WORDS = 30
+_LANGUAGE_CHECK_FLOOR = 0.5
 
 
 def _build_pos_context(words: list[TokenizedWord]) -> dict[str, str]:
@@ -999,6 +1024,18 @@ class EpisodeProcessor:
             )
         )
 
+    def _wants_line_index(self) -> bool:
+        """Whether phase 2 reads the per-line index even with no curator in the run.
+
+        i+1 picks each word's line from it, one card per sentence moves a word
+        whose line is taken to another of its lines (F-06), and the
+        best-sentence pick ranks a word's lines (F-07). Without the index each
+        falls back silently (i+1 would drop every word). A curator asks for the
+        index on its own (``want_line_index``).
+        """
+        config = self.config
+        return bool(config.use_i_plus_one_filter or config.deduplicate_sentences or config.pick_best_sentence)
+
     def _phase1_parse(
         self,
         ctx: _EpisodeContext,
@@ -1010,9 +1047,9 @@ class EpisodeProcessor:
         """Phase 1: parse subtitles into tokenized words (and optionally a line index).
 
         Returns the raw parse output; mutates ``ctx.total_words_found``. The
-        line index is built when the i+1 filter needs it OR when a caller asks
-        via ``want_line_index`` (interactive curation uses it to offer
-        alternative example sentences per word).
+        line index is built when phase 2 reads it (:meth:`_wants_line_index`)
+        OR when a caller asks via ``want_line_index`` (interactive curation
+        uses it to offer alternative example sentences per word).
 
         ``subtitle_offset`` is this run's offset; ``None`` leaves the parser on
         its own ``config.subtitle_offset``.
@@ -1026,7 +1063,7 @@ class EpisodeProcessor:
             tr_format(QCoreApplication.translate("EpisodeProcessor", "Subtitles: %1"), subtitle_file.name)
         )
         line_index: list[LineLemmas] | None = None
-        if self.config.use_i_plus_one_filter or want_line_index:
+        if self._wants_line_index() or want_line_index:
             all_words, line_index = self.subtitle_parser.parse_subtitle_file_with_index(subtitle_file, subtitle_offset)
         else:
             all_words = self.subtitle_parser.parse_subtitle_file(subtitle_file, subtitle_offset)
@@ -1562,6 +1599,45 @@ class EpisodeProcessor:
         ]
         return viable
 
+    def _warn_if_wrong_language(self, all_words: list[TokenizedWord]) -> None:
+        """MS-28 (ruling R21): warn when few of the run's first words have a dictionary entry.
+
+        A subtitle or text in another language than the one being mined parses
+        into words the mining language's dictionaries mostly lack. The check
+        probes the first :data:`_LANGUAGE_CHECK_SAMPLE` phase-1 words (known
+        ones included) with phase 2's own probe, :meth:`definition_viable`, so
+        "has an entry" means what the no-definition gate means, and warns in the
+        Activity Log below :data:`_LANGUAGE_CHECK_FLOOR`. A warning only: the
+        run goes on.
+
+        Silent when fewer than :data:`_LANGUAGE_CHECK_MIN_WORDS` words were
+        parsed (too few to judge), when no usable offline dictionary is loaded
+        (nothing to measure against), and on a bypass run that skips the
+        dictionary gates (the golden contract), like the no-definition gate.
+        """
+        if self.config.bypass_optional_filters and self.bypass_skips_dictionary_gates:
+            return
+        sample = all_words[:_LANGUAGE_CHECK_SAMPLE]
+        if len(sample) < _LANGUAGE_CHECK_MIN_WORDS:
+            return
+        if not self.definition_service.has_usable_offline_provider():
+            return
+        hits = sum(self.definition_viable(sample))
+        log_summary(logger, "Language check", sampled=len(sample), hits=hits, floor=_LANGUAGE_CHECK_FLOOR)
+        if hits >= _LANGUAGE_CHECK_FLOOR * len(sample):
+            return
+        self.presenter.show_warning(
+            tr_format(
+                QCoreApplication.translate(
+                    "EpisodeProcessor",
+                    "Only %1% of the first %2 words have an entry in your dictionaries. "
+                    "Is this file in the language you are mining?",
+                ),
+                round(hits * 100 / len(sample)),
+                len(sample),
+            )
+        )
+
     def _phase2_coverage_filters(
         self,
         unknown_words: list[TokenizedWord],
@@ -1577,7 +1653,10 @@ class EpisodeProcessor:
         """Phase 2: run the coverage filters in order; return the words they keep.
 
         Frequency band, word lists, script type, name wordsets, the reading
-        occurrence floor, sentence dedup, i+1, then sentence length. Whitelist
+        occurrence floor, i+1, the best-sentence pick (F-07), sentence dedup,
+        then sentence length. Dedup and i+1 never both run, so their order is
+        free; the best-sentence pick sits after i+1 (it refines i+1's line) and
+        before dedup (which then sees the chosen lines). Whitelist
         force-included words never reach here. Fills each filter's reject
         counter.
         """
@@ -1723,29 +1802,6 @@ class EpisodeProcessor:
             _note_dropped(drops, NotMinedReason.OCCURRENCE, previous, unknown_words)
             counts.episode_rejects += before - len(unknown_words)
 
-        # Sentence deduplication. i+1 filter does its own sentence picking;
-        # dedup would be a no-op (post-i+1 sentences are unique by construction).
-        if (
-            self.config.deduplicate_sentences
-            and not self.config.use_i_plus_one_filter
-            and not self.config.bypass_optional_filters
-        ):
-            before = len(unknown_words)
-            previous = unknown_words
-            unknown_words = self.word_filter.deduplicate_by_sentence(unknown_words)
-            _note_dropped(drops, NotMinedReason.ONE_PER_SENTENCE, previous, unknown_words)
-            deduped = before - len(unknown_words)
-            counts.duplicate_sentence_rejects = deduped
-            if deduped > 0:
-                self.presenter.show_info(
-                    tr_format(
-                        QCoreApplication.translate(
-                            "EpisodeProcessor", "Sentence deduplication: removed %1 duplicate-sentence words"
-                        ),
-                        deduped,
-                    )
-                )
-
         # i+1 sentence filtering. Restricts mining to words with an i+1 example
         # sentence (exactly one unknown overall — checked against the pre-filter
         # snapshot, Issue #74 — and that unknown must be mineable). Rescans
@@ -1772,6 +1828,65 @@ class EpisodeProcessor:
                     f"{pct:.0f}",
                 )
             )
+
+        # Best sentence (F-07, ruling R5). A word that appears on several lines
+        # moves to its clearest one: fewest unknown words, then a length inside
+        # the band, then the shorter, then the earlier line. After i+1, whose
+        # pick it refines among i+1 lines (every line holds the word itself, so
+        # the fewest unknowns there is 1); before dedup, which then sees the
+        # chosen lines. Lines over the length caps are never picked. Whether
+        # length counts words or characters is the profile's
+        # SentenceRules.space_aware.
+        if self.config.pick_best_sentence and line_index and not self.config.bypass_optional_filters:
+            previous = unknown_words
+            unknown_words = self.word_filter.pick_best_sentences(
+                unknown_words,
+                line_index,
+                all_unknown_lemmas,
+                all_unknown_fronts,
+                spaced=self.profile.sentence_rules.space_aware,
+                max_duration=self.config.max_sentence_duration_seconds,
+                max_chars=self.config.max_sentence_chars,
+                # With i+1 the pick stays among i+1 lines (one unknown, the word).
+                max_unknown=1 if self.config.use_i_plus_one_filter else 0,
+            )
+            _log_sentence_moves("Best sentence", previous, unknown_words)
+
+        # Sentence deduplication (one card per sentence). i+1 filter does its own
+        # sentence picking; dedup would be a no-op (post-i+1 sentences are unique
+        # by construction). With a line index, a word whose line an earlier word
+        # kept moves to another of its lines that no word holds and that passes
+        # the length caps (F-06); only a word with no such line is dropped. The
+        # one-argument call without an index is the pre-F-06 first-wins rule.
+        if (
+            self.config.deduplicate_sentences
+            and not self.config.use_i_plus_one_filter
+            and not self.config.bypass_optional_filters
+        ):
+            before = len(unknown_words)
+            previous = unknown_words
+            if line_index:
+                unknown_words = self.word_filter.deduplicate_by_sentence(
+                    unknown_words,
+                    line_index=line_index,
+                    max_duration=self.config.max_sentence_duration_seconds,
+                    max_chars=self.config.max_sentence_chars,
+                )
+            else:
+                unknown_words = self.word_filter.deduplicate_by_sentence(unknown_words)
+            _note_dropped(drops, NotMinedReason.ONE_PER_SENTENCE, previous, unknown_words)
+            _log_sentence_moves("Sentence dedup", previous, unknown_words)
+            deduped = before - len(unknown_words)
+            counts.duplicate_sentence_rejects = deduped
+            if deduped > 0:
+                self.presenter.show_info(
+                    tr_format(
+                        QCoreApplication.translate(
+                            "EpisodeProcessor", "Sentence deduplication: removed %1 duplicate-sentence words"
+                        ),
+                        deduped,
+                    )
+                )
 
         # Sentence length filter (Issue #33). Drops words whose FINAL example
         # sentence exceeds the configured audio-duration and/or character caps.
@@ -3203,6 +3318,10 @@ class EpisodeProcessor:
                     return ctx.build_result()
                 unknown_words: list[TokenizedWord] = []
             else:
+                # MS-28: before phase 2, so the warning leads the filter lines.
+                # Not on the season mine pass: its pre-pass already checked this file.
+                if getattr(curation_callback, "fixed_subset", None) is None:
+                    self._warn_if_wrong_language(all_words)
                 with timed_phase("filter", logger):
                     unknown_words = self._phase2_filter(ctx, all_words, line_index, progress_callback, collapse=False)
                 if self.cancelled:
@@ -3757,12 +3876,13 @@ class EpisodeProcessor:
             )
 
         def _body(run_temp_folder: Path) -> ProcessingResult:
-            # D4: fuse the two triggers for building the line index. The episode
-            # path splits this across caller (curation) and callee (i+1); here we
-            # call parse_text_units directly, so an i+1-enabled Mine run must set
-            # want_line_index itself — otherwise the filter gets an empty index
-            # and silently drops every word.
-            want_line_index = self.config.use_i_plus_one_filter or curation_callback is not None
+            # D4: fuse the triggers for building the line index. The episode
+            # path splits this across caller (curation) and callee
+            # (_wants_line_index); here we call parse_text_units directly, so a
+            # Mine run whose phase 2 reads the index (i+1, one card per
+            # sentence, best sentence) must set want_line_index itself —
+            # otherwise i+1 gets an empty index and silently drops every word.
+            want_line_index = self._wants_line_index() or curation_callback is not None
             self._announce_stage(
                 progress_callback,
                 1,
@@ -3802,6 +3922,8 @@ class EpisodeProcessor:
                 )
                 return ctx.build_result()
 
+            # MS-28: before phase 2, so the warning leads the filter lines.
+            self._warn_if_wrong_language(all_words)
             with timed_phase("filter", logger):
                 unknown_words = self._phase2_filter(
                     ctx,

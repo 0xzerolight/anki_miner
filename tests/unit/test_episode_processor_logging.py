@@ -161,8 +161,10 @@ def test_typed_phase_failure_logs_one_run_failed_receipt(test_config, tmp_path, 
 
 
 def test_log_record_count_does_not_scale_with_word_count(test_config, tmp_path, caplog):
+    # 30 words, not fewer: from 30 on, the run's one MS-28 language-check
+    # receipt is logged, so both runs carry it.
     with caplog.at_level(logging.INFO, logger=_LOGGER):
-        small, _ = _processor_for_words(test_config, [_word(index) for index in range(5)])
+        small, _ = _processor_for_words(test_config, [_word(index) for index in range(30)])
         _run_episode(small, tmp_path)
         small_count = sum(record.name == _LOGGER for record in caplog.records)
 

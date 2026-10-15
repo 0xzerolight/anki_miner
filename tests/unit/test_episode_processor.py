@@ -4462,8 +4462,12 @@ class TestIPlusOneFilter:
         mock_services["subtitle_parser"].parse_subtitle_file.assert_not_called()
 
     def test_calls_legacy_parse_when_flag_off(self, test_config, mock_services, tmp_path):
-        """Flag off preserves the legacy parse_subtitle_file call."""
-        config = self._config_with_flag(test_config, flag=False)
+        """Flag off, with no other sentence picker on, preserves the legacy parse_subtitle_file call.
+
+        One card per sentence reads the line index too since F-06, so it is off
+        here (``_config_with_flag`` turns it on by default).
+        """
+        config = self._config_with_flag(test_config, flag=False, dedup=False)
         word = _make_word("食べる")
 
         mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
@@ -4555,6 +4559,11 @@ class TestIPlusOneFilter:
         word = _make_word("食べる")
 
         mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
+        # One card per sentence builds the line index since F-06; this file has none.
+        mock_services["subtitle_parser"].parse_subtitle_file_with_index.side_effect = lambda f, offset=None: (
+            [word],
+            [],
+        )
         self._wire_happy_pipeline(mock_services, word, _make_media())
 
         processor = build_processor(
