@@ -27,7 +27,9 @@ from PyQt6.QtWidgets import (
     QCheckBox,
     QComboBox,
     QHBoxLayout,
+    QInputDialog,
     QLabel,
+    QMessageBox,
     QWidget,
 )
 
@@ -36,9 +38,11 @@ from anki_miner.gui import restart
 from anki_miner.gui.i18n import available_languages
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.resources.styles.theme import Theme
+from anki_miner.gui.utils.config_manager import GUIConfigManager
 from anki_miner.gui.widgets.base import FormPanel, ScreenIssue, ScreenIssueHost
 from anki_miner.gui.widgets.enhanced import ModernButton, ThemeGalleryWidget
 from anki_miner.gui.widgets.enhanced.theme_preview import clear_thumbnail_cache
+from anki_miner.services.db_backup import backups_root, list_backups, schedule_restore
 from anki_miner.utils.i18n import tr_format
 
 logger = logging.getLogger(__name__)
@@ -196,6 +200,35 @@ class UISettingsPanel(ScreenIssueHost, FormPanel):
             helper=self.tr("When enabled, Anki Miner queries GitHub for new releases on launch."),
             anchor="check_for_updates",
         )
+        # WP-13: backups are automatic (once a day at startup, 7 kept); only
+        # putting one back is a user action, and it waits for the next launch
+        # so nothing is replaced under a running app.
+        self.restore_backup_btn = ModernButton(self.tr("Restore a backup…"), variant="secondary")
+        self.restore_backup_btn.clicked.connect(self._on_restore_backup_clicked)
+        self.add_field(
+            self.tr("Backups"),
+            self.restore_backup_btn,
+            helper=self.tr(
+                "Anki Miner saves your known words, statistics, settings and profiles once a day "
+                "when it starts, and keeps the last 7 days."
+            ),
+            anchor="restore_backup",
+        )
+        restore_row_widget = QWidget()
+        restore_row = QHBoxLayout(restore_row_widget)
+        restore_row.setContentsMargins(0, 0, 0, 0)
+        restore_row.setSpacing(SPACING.sm)
+        self.restore_note = QLabel()
+        self.restore_note.setWordWrap(True)
+        self.restore_note.setVisible(False)
+        restore_row.addWidget(self.restore_note)
+        # The same restart the Zoom note offers (D39b): the restore runs at launch.
+        self.restore_restart_btn = ModernButton(self.tr("Restart now"), variant="secondary")
+        self.restore_restart_btn.clicked.connect(self._on_restart_now)
+        self.restore_restart_btn.setVisible(False)
+        restore_row.addWidget(self.restore_restart_btn)
+        restore_row.addStretch(1)
+        self.add_widget(restore_row_widget)
         # "Max Parallel Workers" left the GUI (D15 item 5): max_parallel_workers
         # is config-only, and SettingsTab no longer writes it.
 
@@ -477,6 +510,59 @@ class UISettingsPanel(ScreenIssueHost, FormPanel):
         window = self.window()
         if window is not None and not window.close() and not _window_is_shutting_down(window):
             restart.clear_restart_request()
+
+    # ---- Backups (WP-13) ---------------------------------------------------
+
+    def _on_restore_backup_clicked(self) -> None:
+        """Pick a day, confirm, and schedule its restore for the next launch.
+
+        Listing reads at most a few small manifests, so it stays on the GUI
+        thread. Nothing is replaced now: ``gui.app`` applies the request at the
+        next start, before any database opens.
+        """
+        root = backups_root(GUIConfigManager.CONFIG_FILE)
+        days = list_backups(root)
+        if not days:
+            self.show_screen_issue(
+                ScreenIssue(summary=self.tr("There is no backup yet. Anki Miner makes one each day when it starts."))
+            )
+            return
+        labels = [backup.day.isoformat() for backup in days]
+        label, ok = QInputDialog.getItem(
+            self, self.tr("Restore a Backup"), self.tr("Restore the backup from:"), labels, 0, False
+        )
+        if not ok or label not in labels:
+            return
+        chosen = days[labels.index(label)]
+        answer = QMessageBox.question(
+            self,
+            self.tr("Restore a Backup"),
+            tr_format(
+                self.tr(
+                    "Replace your known words, statistics, settings and profiles with the copies from %1? "
+                    "The restore runs the next time Anki Miner starts. Changes made after that backup are lost."
+                ),
+                label,
+            ),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if answer != QMessageBox.StandardButton.Yes:
+            return
+        try:
+            schedule_restore(root, chosen.day)
+        except (OSError, ValueError) as exc:
+            logger.warning("Could not schedule the backup restore: %s", exc)
+            self.show_screen_issue(
+                ScreenIssue(summary=self.tr("The restore could not be scheduled."), details=str(exc))
+            )
+            return
+        self.clear_screen_issue()
+        self.restore_note.setText(
+            tr_format(self.tr("The backup from %1 will be restored when Anki Miner next starts."), label)
+        )
+        self.restore_note.setVisible(True)
+        self.restore_restart_btn.setVisible(True)
 
     # ---- Language --------------------------------------------------------
 

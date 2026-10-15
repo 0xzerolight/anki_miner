@@ -78,6 +78,8 @@ LEDGER: dict[str, str] = {
     "gui/widgets/panels/dictionary_settings_panel.py::DictionarySettingsPanel._confirm_remove": "confirm",
     "gui/widgets/panels/frequency_settings_panel.py::FrequencySettingsPanel._confirm_remove": "confirm",
     "gui/widgets/panels/pitch_settings_panel.py::PitchSettingsPanel._confirm_remove": "confirm",
+    # WP-13: a restore replaces the known words, statistics and settings.
+    "gui/widgets/panels/ui_settings_panel.py::UISettingsPanel._on_restore_backup_clicked": "confirm",
     "gui/widgets/settings_tab.py::SettingsTab._apply_settings_import": "confirm",
     "gui/widgets/settings_tab.py::SettingsTab._on_rebuild_known_words": "confirm",
     "gui/widgets/settings_tab.py::SettingsTab._on_reset_to_defaults_clicked": "confirm",
