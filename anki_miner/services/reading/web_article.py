@@ -171,7 +171,7 @@ def _title(doc) -> str:
     return _clean(headings[0].text_content()) if headings else ""
 
 
-def _is_junk(el) -> bool:
+def _is_junk(el, *, by_marker: bool) -> bool:
     if not isinstance(el.tag, str):
         return False
     if el.tag.lower() in _DROP_TAGS:
@@ -180,15 +180,17 @@ def _is_junk(el) -> bool:
         return True
     if el.get("aria-hidden") == "true" or el.get("hidden") is not None:
         return True
+    if not by_marker:
+        return False
     marker = f"{el.get('class') or ''} {el.get('id') or ''}"
     return _JUNK_WORD.search(marker) is not None
 
 
-def _drop_junk(body) -> None:
+def _drop_junk(body, *, by_marker: bool) -> None:
     for el in list(body.iter()):
         if el is body or el.getparent() is None:
             continue
-        if _is_junk(el):
+        if _is_junk(el, by_marker=by_marker):
             el.drop_tree()
 
 
@@ -240,23 +242,39 @@ def extract_article(page: str, url: str, *, rules: SentenceRules | None = None) 
     :data:`MIN_ARTICLE_CHARS` characters of article text.
     """
     try:
-        doc = html.document_fromstring(_XML_DECLARATION.sub("", page, count=1))
+        doc = _parse(page)
     except (etree.ParserError, etree.XMLSyntaxError, ValueError) as exc:
         raise ArticleFetchError(url, "no_text", f"No article text found at {url}.") from exc
     title = _title(doc)
-    body = doc.find("body")
-    if body is None:
-        body = doc
-    _drop_junk(body)
-    container = _best_container(body)
-    paragraphs: list[str] = []
-    if container is not None:
-        walked, _images = _walk_body(container, line_join=_line_join(rules))
-        paragraphs = [cleaned for cleaned in (_clean(p) for p in walked) if cleaned]
-    text = "\n\n".join(paragraphs)
+    text = _article_text(doc, rules, by_marker=True)
+    if len(text) < MIN_ARTICLE_CHARS:
+        # A class or id word can sit on a wrapper around the whole article
+        # ("container has-sidebar", "page menu-closed"), and dropping it loses
+        # the article. Readability retries without that rule the same way.
+        text = _article_text(_parse(page), rules, by_marker=False)
     if len(text) < MIN_ARTICLE_CHARS:
         raise ArticleFetchError(url, "no_text", f"No article text found at {url}.")
     return WebArticle(url=url, title=title, site=_site(url), text=text)
+
+
+def _parse(page: str):
+    return html.document_fromstring(_XML_DECLARATION.sub("", page, count=1))
+
+
+def _article_text(doc, rules: SentenceRules | None, *, by_marker: bool) -> str:
+    """The best container's paragraphs, one blank line apart (mutates ``doc``).
+
+    ``by_marker`` also drops blocks whose class or id names page chrome.
+    """
+    body = doc.find("body")
+    if body is None:
+        body = doc
+    _drop_junk(body, by_marker=by_marker)
+    container = _best_container(body)
+    if container is None:
+        return ""
+    walked, _images = _walk_body(container, line_join=_line_join(rules))
+    return "\n\n".join(cleaned for cleaned in (_clean(p) for p in walked) if cleaned)
 
 
 # --------------------------------------------------------------------------- #

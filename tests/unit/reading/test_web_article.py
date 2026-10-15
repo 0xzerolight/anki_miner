@@ -129,6 +129,16 @@ def test_a_prefixed_tag_inside_the_article_keeps_its_text() -> None:
     assert "El segundo párrafo, también largo, sigue contando la historia." in article.text
 
 
+@pytest.mark.parametrize("wrapper", ["container has-sidebar", "page menu-closed", "layout ad-free"])
+def test_a_junk_word_on_the_articles_wrapper_does_not_lose_the_article(wrapper: str) -> None:
+    """A class word like ``sidebar`` on a wrapper around the whole article drops it; a second pass keeps it."""
+    page = _NEWS_JA.replace('<div id="main">', f'<div id="main" class="{wrapper}">')
+
+    article = extract_article(page, "https://www.example.com/neko")
+
+    assert "吾輩は猫である。名前はまだ無い。" in article.text
+
+
 def test_source_label_with_only_a_site() -> None:
     assert WebArticle(url="u", title="", site="example.com", text="x").source_label == "example.com"
 
