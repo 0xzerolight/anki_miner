@@ -1940,7 +1940,11 @@ def compose_main_window(
 
     # Analytics tab (non-mining: no presenter, no update_config wiring)
     analytics_tab = AnalyticsTab(
-        stats_service, content_style=get_profile(config_language(window.get_config())).content_style
+        stats_service,
+        content_style=get_profile(config_language(window.get_config())).content_style,
+        # AI-16 and the Known Words card read the live config: the AnkiConnect
+        # URL, mining language and known-words path change without a restart.
+        config_provider=window.get_config,
     )
     window.tabs.addTab(analytics_tab, QCoreApplication.translate("MainWindow", "Analytics"))
 
