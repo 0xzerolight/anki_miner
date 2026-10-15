@@ -16,6 +16,8 @@ walking the container/OPF ourselves). The flow mirrors the reader spec:
    recorded warning.
 5. Chapters → the EPUB3 nav document or the EPUB2 NCX; boilerplate labels
    (表紙/目次/…) dropped; fewer than two usable entries falls back to spine index.
+   Front/back matter (TS-08) → EPUB3 landmarks, the EPUB2 ``<guide>`` and a
+   spine document's own ``epub:type``; skipped only near either end of the book.
 6. Each spine XHTML → base text (ruby readings and ``<img>`` gaiji dropped),
    paragraph-split on block close / ``<br>`` → ``sentence_splitter`` → units.
 
@@ -28,6 +30,7 @@ from __future__ import annotations
 
 import logging
 import lzma
+import math
 import posixpath
 import re
 import zipfile
@@ -110,6 +113,16 @@ _BOILERPLATE_LABELS = frozenset({"表紙", "目次", "奥付", "扉", "中扉"})
 _BOILERPLATE_TOKENS = frozenset({"cover", "toc", "colophon", "caution"})
 # Split a stem into whole tokens on ``-``, ``_`` and ``.`` boundaries.
 _STEM_DELIMITERS = re.compile(r"[-_.]+")
+# TS-08: landmark / guide / epub:type values that mark front or back matter,
+# never the work: copyright, contents, index, colophon, title page, lists of
+# illustrations and tables, bibliography. EPUB3 spells the title page
+# "titlepage", the EPUB2 <guide> "title-page".
+_MATTER_TYPES = frozenset(
+    {"copyright-page", "toc", "index", "colophon", "titlepage", "title-page", "loi", "lot", "bibliography"}
+)
+# Matter is skipped only within this share of the spine at either end, so a
+# mis-typed chapter in the middle of a book is never dropped (storyteller's zone).
+_MATTER_ZONE = 0.15
 
 _CONTENT_MEDIA_TYPES = frozenset({"application/xhtml+xml", "text/html"})
 _CONTENT_EXTS = (".xhtml", ".html", ".htm")
@@ -233,6 +246,7 @@ def load(
             cancel_check=cancel_check,
         )
         _check_encryption(zf, names, epub_path, manifest, opf_dir, account_member, cancel_check)
+        matter = _guide_matter(opf_root, opf_dir, cancel_check)
 
         doc_title = title or ref.title
         doc = ReadingDocument(title=doc_title, kind="book", series="Books", episode=doc_title)
@@ -249,7 +263,7 @@ def load(
         if cover_warning:
             doc.warnings.append(cover_warning)
 
-        chapter_map = _load_chapters(
+        chapter_map, landmark_matter = _load_chapters(
             zf,
             names,
             manifest,
@@ -259,10 +273,13 @@ def load(
             account_member,
             cancel_check,
         )
+        matter |= landmark_matter
+        spine_positions = _content_positions(spine_idrefs, manifest, opf_dir)
 
         index = 0
         content_i = 0
         gaiji_total = 0
+        matter_skipped = 0
         for idref in spine_idrefs:
             raise_if_cancelled(cancel_check, READING_CANCELLED)
             item = manifest.get(idref)
@@ -273,6 +290,10 @@ def load(
                 continue
             entry = _resolve(opf_dir, href)
             if entry not in names or _is_boilerplate_name(entry):
+                continue
+            in_zone = _in_matter_zone(spine_positions.get(entry, -1), len(spine_positions))
+            if in_zone and entry in matter:
+                matter_skipped += 1
                 continue
             try:
                 raw = _read_member_cancellable(zf, entry, epub_path, cancel_check)
@@ -332,6 +353,7 @@ def load(
         chars=sum(len(unit.text) for unit in doc.units),
         skipped=len(spine_idrefs) - content_i,
         gaiji=gaiji_total,
+        matter=matter_skipped,
     )
     return doc
 
@@ -661,6 +683,56 @@ def _is_boilerplate_name(entry: str) -> bool:
     return bool(tokens & _BOILERPLATE_TOKENS)
 
 
+def _guide_matter(root, opf_dir: str, cancel_check: _CancelCheck | None) -> set[str]:
+    """Spine entries the EPUB2 ``<guide>`` types as front/back matter (TS-08)."""
+    found: set[str] = set()
+    for el in root.iter():
+        raise_if_cancelled(cancel_check, READING_CANCELLED)
+        if _local(el) != "reference":
+            continue
+        href = el.get("href")
+        if href and _names_whole_document(href) and (el.get("type") or "").strip().lower() in _MATTER_TYPES:
+            found.add(_resolve(opf_dir, href))
+    return found
+
+
+def _names_whole_document(href: str) -> bool:
+    """True when ``href`` has no ``#fragment``, so it types the whole file.
+
+    ``main.xhtml#toc`` names a block inside a file (EPUB2 conversions point the
+    guide's ``toc`` at an inline contents list in the first chapter's file);
+    ``_resolve`` drops the fragment, so letting it through would skip the
+    whole chapter.
+    """
+    return not href.partition("#")[2]
+
+
+def _content_positions(
+    spine_idrefs: list[str],
+    manifest: dict[str, tuple[str, str | None, list[str]]],
+    opf_dir: str,
+) -> dict[str, int]:
+    """Each content document's first position among the spine's content documents."""
+    positions: dict[str, int] = {}
+    for idref in spine_idrefs:
+        item = manifest.get(idref)
+        if item is None or not _is_content_doc(item[1], item[0]):
+            continue
+        positions.setdefault(_resolve(opf_dir, item[0]), len(positions))
+    return positions
+
+
+def _in_matter_zone(position: int, total: int) -> bool:
+    """Whether a spine position lies in the first or last :data:`_MATTER_ZONE` of the book.
+
+    A book of one content document has no zone: its only document is the work.
+    """
+    if total < 2 or position < 0:
+        return False
+    edge = max(1, math.ceil(total * _MATTER_ZONE))
+    return position < edge or position >= total - edge
+
+
 def _find_body(root):
     if root is None:
         return None
@@ -770,8 +842,10 @@ def _load_chapters(
     warnings: list[str],
     account_member: _AccountMember,
     cancel_check: _CancelCheck | None,
-) -> dict[str, str]:
+) -> tuple[dict[str, str], set[str]]:
+    """Chapter labels by spine entry, and the EPUB3 landmarks' matter entries (TS-08)."""
     entries: list[tuple[str, str]] = []
+    landmarks: set[str] = set()
     nav_href = None
     for href, _mt, props in manifest.values():
         raise_if_cancelled(cancel_check, READING_CANCELLED)
@@ -779,7 +853,7 @@ def _load_chapters(
             nav_href = href
             break
     if nav_href:
-        entries = _parse_nav(zf, names, opf_dir, nav_href, warnings, account_member, cancel_check)
+        entries, landmarks = _parse_nav(zf, names, opf_dir, nav_href, warnings, account_member, cancel_check)
     if not entries and spine_toc:
         item = manifest.get(spine_toc)
         if item is not None:
@@ -795,11 +869,11 @@ def _load_chapters(
 
     usable = [(t, lbl) for (t, lbl) in entries if lbl and lbl not in _BOILERPLATE_LABELS]
     if len(usable) < 2:
-        return {}
+        return {}, landmarks
     chapter_map: dict[str, str] = {}
     for target, label in usable:
         chapter_map.setdefault(target, label)
-    return chapter_map
+    return chapter_map, landmarks
 
 
 def _parse_nav(
@@ -810,10 +884,11 @@ def _parse_nav(
     warnings: list[str],
     account_member: _AccountMember,
     cancel_check: _CancelCheck | None,
-) -> list[tuple[str, str]]:
+) -> tuple[list[tuple[str, str]], set[str]]:
+    """The toc nav's ``(target, label)`` entries, and the landmarks nav's matter targets (TS-08)."""
     nav_entry = _resolve(opf_dir, nav_href)
     if nav_entry not in names:
-        return []
+        return [], set()
     try:
         raw = _read_member_cancellable(zf, nav_entry, Path(nav_entry), cancel_check)
     except OperationCancelled:
@@ -826,20 +901,29 @@ def _parse_nav(
             exc,
         )
         _warn_once(warnings, f"Skipped damaged navigation document '{nav_entry}'.")
-        return []  # oversized nav → chapter labels fall back to spine index
+        return [], set()  # oversized nav → chapter labels fall back to spine index
     account_member(raw)
     root = _parse_xml(raw)
     if root is None:
-        return []
+        return [], set()
     nav_dir = posixpath.dirname(nav_entry)
     navs = [el for el in root.iter() if _local(el) == "nav"]
+    landmarks: set[str] = set()
+    for nav in navs:
+        if "landmarks" not in _epub_type_tokens(nav):
+            continue
+        for a in nav.iter():
+            raise_if_cancelled(cancel_check, READING_CANCELLED)
+            href = a.get("href") if _local(a) == "a" else None
+            if href and _names_whole_document(href) and _epub_type_tokens(a) & _MATTER_TYPES:
+                landmarks.add(_resolve(nav_dir, href))
     chosen = next((nv for nv in navs if "toc" in _epub_type_tokens(nv)), None)
     if chosen is None:
         chosen = next((nv for nv in navs if nv.get("id") == "toc"), None)
     if chosen is None and navs:
         chosen = navs[0]
     if chosen is None:
-        return []
+        return [], landmarks
     out: list[tuple[str, str]] = []
     for a in chosen.iter():
         raise_if_cancelled(cancel_check, READING_CANCELLED)
@@ -850,7 +934,7 @@ def _parse_nav(
             continue
         label = "".join(a.itertext()).strip()
         out.append((_resolve(nav_dir, href), label))
-    return out
+    return out, landmarks
 
 
 def _parse_ncx(

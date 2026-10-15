@@ -14,6 +14,7 @@ from pathlib import Path
 import pytest
 
 from anki_miner.exceptions import SetupError
+from anki_miner.languages.registry import get_profile
 from anki_miner.models.reading import ImageRef, ReadingSourceRef
 from anki_miner.services.reading.epub_source import load
 
@@ -840,3 +841,130 @@ def test_read_member_bounded_read_on_underdeclared_size(monkeypatch: pytest.Monk
 
     with pytest.raises(SetupError):
         epub_source._read_member(_LyingZip(), "chapter.xhtml", Path("book.epub"))
+
+
+# --------------------------------------------------------------------------- #
+# Front/back matter skip (TS-08, R22)
+# --------------------------------------------------------------------------- #
+
+_ES_RULES = get_profile("es").sentence_rules
+
+
+def _matter_book(chapters: int, *, extra: dict[str, str], spine_extra: list[tuple[int, str]]) -> dict[str, str]:
+    """``chapters`` Spanish chapters ``c1..cN``; ``spine_extra`` inserts (position, id) matter documents."""
+    manifest = [("nav", "nav.xhtml", "application/xhtml+xml", "nav")]
+    spine: list[tuple[str, str | None]] = [(f"c{n}", None) for n in range(1, chapters + 1)]
+    files: dict[str, str] = {}
+    for n in range(1, chapters + 1):
+        manifest.append((f"c{n}", f"c{n}.xhtml", "application/xhtml+xml", ""))
+        files[f"OEBPS/c{n}.xhtml"] = _xhtml(f"<p>Capítulo {n}. El gato duerme.</p>")
+    for position, item_id in spine_extra:
+        if item_id != "nav":  # the nav document is already in the manifest
+            manifest.append((item_id, f"{item_id}.xhtml", "application/xhtml+xml", ""))
+        spine.insert(position, (item_id, None))
+    files["OEBPS/content.opf"] = _opf(manifest, spine, title="Libro")
+    files.update(extra)
+    return files
+
+
+def _landmarks_nav(chapters: int, landmarks: list[tuple[str, str]]) -> str:
+    toc = "".join(f'<li><a href="c{n}.xhtml">Capítulo {n}</a></li>' for n in range(1, chapters + 1))
+    marks = "".join(f'<li><a epub:type="{kind}" href="{href}">{kind}</a></li>' for kind, href in landmarks)
+    return (
+        '<?xml version="1.0" encoding="utf-8"?>\n'
+        '<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops">\n'
+        "<head><title>nav</title></head>\n<body>\n"
+        f'<nav epub:type="toc"><ol>{toc}</ol></nav>\n'
+        f'<nav epub:type="landmarks"><ol>{marks}</ol></nav>\n'
+        "</body>\n</html>\n"
+    )
+
+
+def _texts(doc) -> list[str]:
+    return [u.text for u in doc.units]
+
+
+def test_a_landmark_copyright_page_at_the_back_is_skipped(tmp_path: Path) -> None:
+    files = _matter_book(
+        6,
+        spine_extra=[(6, "legal")],
+        extra={
+            "OEBPS/nav.xhtml": _landmarks_nav(6, [("copyright-page", "legal.xhtml")]),
+            "OEBPS/legal.xhtml": _xhtml("<p>Editorial Ejemplo. Todos los derechos reservados.</p>"),
+        },
+    )
+
+    doc = load(_ref(_build_epub(tmp_path, files)), rules=_ES_RULES)
+
+    assert "Todos los derechos reservados." not in _texts(doc)
+    assert _texts(doc)[-1] == "El gato duerme."
+    assert len(doc.units) == 12
+
+
+def test_an_epub2_guide_toc_at_the_front_is_skipped(tmp_path: Path) -> None:
+    files = _matter_book(
+        6,
+        spine_extra=[(0, "contents")],
+        extra={
+            "OEBPS/nav.xhtml": _nav([(f"c{n}.xhtml", f"Capítulo {n}") for n in range(1, 7)]),
+            "OEBPS/contents.xhtml": _xhtml("<p>Índice general del libro entero.</p>"),
+        },
+    )
+    files["OEBPS/content.opf"] = files["OEBPS/content.opf"].replace(
+        "</package>", '<guide><reference type="toc" title="Índice" href="contents.xhtml"/></guide>\n</package>'
+    )
+
+    doc = load(_ref(_build_epub(tmp_path, files)), rules=_ES_RULES)
+
+    assert _texts(doc)[0] == "Capítulo 1."
+    assert "Índice general del libro entero." not in _texts(doc)
+
+
+def test_a_matter_typed_document_in_the_middle_is_kept(tmp_path: Path) -> None:
+    """The zone guard: a mis-typed chapter at position 5 of 10 is the work."""
+    files = _matter_book(
+        9,
+        spine_extra=[(5, "odd")],
+        extra={
+            "OEBPS/nav.xhtml": _landmarks_nav(9, [("copyright-page", "odd.xhtml")]),
+            "OEBPS/odd.xhtml": _xhtml("<p>Un capítulo mal etiquetado.</p>", epub_type="index"),
+        },
+    )
+
+    doc = load(_ref(_build_epub(tmp_path, files)), rules=_ES_RULES)
+
+    assert "Un capítulo mal etiquetado." in _texts(doc)
+
+
+def test_a_one_document_book_is_never_skipped(tmp_path: Path) -> None:
+    files = {
+        "OEBPS/content.opf": _opf([("c1", "c1.xhtml", "application/xhtml+xml", "")], [("c1", None)]),
+        "OEBPS/c1.xhtml": _xhtml("<p>Todo el libro en una página.</p>", epub_type="titlepage"),
+    }
+
+    doc = load(_ref(_build_epub(tmp_path, files)), rules=_ES_RULES)
+
+    assert _texts(doc) == ["Todo el libro en una página."]
+
+
+def test_a_matter_href_with_a_fragment_does_not_skip_its_whole_file(tmp_path: Path) -> None:
+    """Cover + one main file: guide and landmark ``toc`` point into the main file, which is still mined.
+
+    With two content documents both positions lie in the zone, so a fragment
+    href that marked its whole file would leave the book with no units.
+    """
+    files = _matter_book(
+        1,
+        spine_extra=[(0, "front")],
+        extra={
+            "OEBPS/nav.xhtml": _landmarks_nav(1, [("toc", "c1.xhtml#toc")]),
+            "OEBPS/front.xhtml": _xhtml("<p>Portada.</p>", epub_type="cover"),
+        },
+    )
+    files["OEBPS/content.opf"] = files["OEBPS/content.opf"].replace(
+        "</package>", '<guide><reference type="toc" title="Índice" href="c1.xhtml#toc"/></guide>\n</package>'
+    )
+
+    doc = load(_ref(_build_epub(tmp_path, files)), rules=_ES_RULES)
+
+    assert _texts(doc) == ["Capítulo 1.", "El gato duerme."]
