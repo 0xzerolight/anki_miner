@@ -1,30 +1,46 @@
 """StarDict dictionary -> SQLite index importer.
 
 Reads a StarDict book (``.ifo`` + ``.idx``/``.idx.gz`` + ``.dict``/``.dict.dz``,
-optional ``.syn``) from a loose ``.ifo`` file. Format reference: StarDict's
-``doc/StarDictFileFormat`` (GPL-2.0 project; read for the layout only, no code
-copied).
+optional ``.syn``) from a loose ``.ifo`` file, a tar archive (``.tar.gz``,
+``.tar.bz2``, ``.tar.xz``: FreeDict's release form) or a zip. Format reference:
+StarDict's ``doc/StarDictFileFormat`` (GPL-2.0 project; read for the layout
+only, no code copied).
 
-Every byte inflated from the gzip-compressed ``.idx.gz``/``.dict.dz``/``.syn.dz``
-counts against one budget, ``zip_safety.MAX_UNCOMPRESSED_BYTES``.
+Archives are untrusted: no member is ever extracted under its own name. Only
+the book's regular files are streamed out, to fixed names in a temporary
+folder, and every byte decompressed (archive members and the gzip-compressed
+``.idx.gz``/``.dict.dz``/``.syn.dz``) counts against one budget,
+``zip_safety.MAX_UNCOMPRESSED_BYTES``. A tar member's declared size is checked
+before the archive reader skips over it, so a bomb is refused before it is
+inflated.
 """
 
 from __future__ import annotations
 
 import gzip
 import logging
+import lzma
 import struct
+import tarfile
 import tempfile
+import zipfile
+import zlib
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any, Protocol
 
 from anki_miner.exceptions import SetupError, raise_if_cancelled
 from anki_miner.services.dictionary.importers.glossary_markup import glossary_row, markup_nodes, text_nodes
-from anki_miner.services.dictionary.importers.plain_index import ProgressFn, plain_dict_id, write_plain_index
+from anki_miner.services.dictionary.importers.plain_index import (
+    STARDICT_TAR,
+    STARDICT_ZIP,
+    ProgressFn,
+    plain_dict_id,
+    write_plain_index,
+)
 from anki_miner.services.dictionary.storage import DictRow
-from anki_miner.services.dictionary.zip_safety import MAX_UNCOMPRESSED_BYTES
+from anki_miner.services.dictionary.zip_safety import MAX_UNCOMPRESSED_BYTES, validate_zip_safe
 from anki_miner.utils.logging_ext import log_summary
 
 logger = logging.getLogger(__name__)
@@ -34,6 +50,8 @@ _IFO_MAGIC = "StarDict's dict ifo file"
 # types (binary: sound, picture, resource lists) are skipped.
 _MARKUP_TYPES = frozenset("hgx")
 _TEXT_TYPES = frozenset("mlty")
+# More archive members than any StarDict release has; bounds header spam.
+_MAX_ARCHIVE_MEMBERS = 10_000
 _CHUNK = 1024 * 1024
 # The book's parts, in the order a member name is matched against them.
 _PARTS = (".idx.gz", ".idx", ".dict.dz", ".dict", ".syn.dz", ".syn")
@@ -72,8 +90,19 @@ def _copy_capped(src: _Readable, dest: Path, budget: _Budget, cancel_check: Call
 
 
 def is_stardict_source(path: Path) -> bool:
-    """True for a StarDict ``.ifo`` file."""
-    return path.suffix.lower() == ".ifo"
+    """True for a ``.ifo`` file, a tar archive, or a zip holding a ``.ifo`` and no ``index.json``."""
+    if path.suffix.lower() == ".ifo":
+        return True
+    try:
+        if tarfile.is_tarfile(path):
+            return True
+        if zipfile.is_zipfile(path):
+            with zipfile.ZipFile(path) as zf:
+                names = [PurePosixPath(n).name for n in zf.namelist()]
+            return any(n.lower().endswith(".ifo") for n in names) and "index.json" not in names
+    except OSError:
+        return False
+    return False
 
 
 def _book_members(names: list[str]) -> dict[str, str]:
@@ -113,7 +142,39 @@ def _unpack(
             parts[suffix] = path
             keep[name] = path
         return parts, keep
-    raise SetupError(f"Not a StarDict dictionary (no .ifo file, tar or zip): {source.name}")
+    if tarfile.is_tarfile(source):
+        with tarfile.open(source, "r:*") as tf:
+            files: dict[str, tarfile.TarInfo] = {}
+            declared = 0
+            for count, member in enumerate(tf, 1):
+                if count > _MAX_ARCHIVE_MEMBERS:
+                    raise SetupError("The archive has too many members")
+                declared += member.size
+                if declared > MAX_UNCOMPRESSED_BYTES:
+                    raise SetupError(
+                        f"Archive uncompressed size exceeds limit ({declared:,} > {MAX_UNCOMPRESSED_BYTES:,} bytes)"
+                    )
+                if member.isfile():
+                    files[member.name] = member
+            for suffix, name in _book_members(list(files)).items():
+                extracted = tf.extractfile(files[name])
+                if extracted is None:
+                    continue
+                with extracted:
+                    _copy_capped(extracted, work / f"book{suffix}", budget, cancel_check)
+                parts[suffix] = work / f"book{suffix}"
+        return parts, {STARDICT_TAR: source}
+    try:
+        with zipfile.ZipFile(source) as zf:
+            validate_zip_safe(zf, work)
+            names = [info.filename for info in zf.infolist() if not info.is_dir()]
+            for suffix, name in _book_members(names).items():
+                with zf.open(name) as stream:
+                    _copy_capped(stream, work / f"book{suffix}", budget, cancel_check)
+                parts[suffix] = work / f"book{suffix}"
+    except zipfile.BadZipFile as exc:
+        raise SetupError(f"Not a StarDict dictionary (no .ifo file, tar or zip): {source.name}") from exc
+    return parts, {STARDICT_ZIP: source}
 
 
 def _read_part(
@@ -254,7 +315,10 @@ def import_stardict(
     with tempfile.TemporaryDirectory(prefix="anki_miner_stardict_") as tmp:
         work = Path(tmp)
         budget = _Budget()
-        parts, keep = _unpack(source, work, budget, cancel_check)
+        try:
+            parts, keep = _unpack(source, work, budget, cancel_check)
+        except (tarfile.TarError, EOFError, OSError, lzma.LZMAError, zlib.error) as exc:
+            raise SetupError(f"Corrupt StarDict archive {source.name}: {exc}") from exc
         info = _parse_ifo(parts[".ifo"])
         idx_path = _read_part(parts, ".idx", ".idx.gz", work, budget, cancel_check)
         dict_path = _read_part(parts, ".dict", ".dict.dz", work, budget, cancel_check)

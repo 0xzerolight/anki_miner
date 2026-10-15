@@ -143,3 +143,107 @@ def test_cancel_leaves_no_slot(tmp_path: Path):
 
 def test_the_budget_is_the_shared_zip_cap():
     assert stardict_importer.MAX_UNCOMPRESSED_BYTES == zip_safety.MAX_UNCOMPRESSED_BYTES
+
+
+# --- Archives: FreeDict tarballs and zips (L8.F17.T5) ---------------------------
+
+import io  # noqa: E402
+import tarfile  # noqa: E402
+import zipfile  # noqa: E402
+
+from anki_miner.services.dictionary.importers.plain_index import saved_plain_source  # noqa: E402
+from anki_miner.services.dictionary.importers.stardict_importer import is_stardict_source  # noqa: E402
+from tests.fixtures.dictionary.build_stardict_fixture import build_stardict_tar, build_stardict_zip  # noqa: E402
+from tests.fixtures.dictionary.build_yomitan_fixture import build_yomitan_zip  # noqa: E402
+
+
+@pytest.mark.parametrize("mode", ["w:xz", "w:gz", "w:bz2"])
+def test_freedict_style_tarball_imports(tmp_path: Path, mode: str):
+    archive = build_stardict_tar(tmp_path / "freedict.tar", mode=mode, compressed=mode != "w:gz")
+
+    result = import_stardict(archive, tmp_path / "dicts", language="es", dict_id="freedict-spa-eng")
+
+    assert result.dict_id == "freedict-spa-eng"
+    assert result.entry_count == 2
+    assert saved_plain_source(tmp_path / "dicts" / "freedict-spa-eng") == (
+        "stardict",
+        tmp_path / "dicts" / "freedict-spa-eng" / SOURCE_DIR / "stardict.tar",
+    )
+    assert "dog" in (_lookup(tmp_path / "dicts", "freedict-spa-eng", "es", "perro") or "")
+
+
+def test_zip_holding_a_book_imports(tmp_path: Path):
+    archive = build_stardict_zip(tmp_path / "book.zip")
+
+    result = import_stardict(archive, tmp_path / "dicts", language="es")
+
+    assert result.entry_count == 2
+    assert (tmp_path / "dicts" / result.dict_id / SOURCE_DIR / "stardict.zip").is_file()
+
+
+def test_two_books_in_one_archive_are_refused(tmp_path: Path):
+    archive = tmp_path / "two.tar.gz"
+    one = build_stardict_files(tmp_path / "one", name="one")
+    two = build_stardict_files(tmp_path / "two", name="two")
+    with tarfile.open(archive, "w:gz") as tf:
+        for path in [*one.parent.iterdir(), *two.parent.iterdir()]:
+            tf.add(path, arcname=path.name)
+
+    with pytest.raises(SetupError, match="2 StarDict dictionaries"):
+        import_stardict(archive, tmp_path / "dicts", language="es")
+
+
+def test_tar_members_are_never_extracted_under_their_own_names(tmp_path: Path):
+    archive = tmp_path / "evil.tar"
+    book = build_stardict_files(tmp_path / "book")
+    with tarfile.open(archive, "w") as tf:
+        for path in book.parent.iterdir():
+            tf.add(path, arcname=f"../../{path.name}")
+        payload = b"owned"
+        info = tarfile.TarInfo("../../escaped.txt")
+        info.size = len(payload)
+        tf.addfile(info, io.BytesIO(payload))
+
+    result = import_stardict(archive, tmp_path / "dicts" / "inner", language="es")
+
+    assert result.entry_count == 2
+    assert not (tmp_path / "escaped.txt").exists()
+
+
+def test_a_tar_declaring_more_than_the_budget_is_refused_before_inflating(tmp_path: Path, monkeypatch):
+    monkeypatch.setattr(stardict_importer, "MAX_UNCOMPRESSED_BYTES", 1000)
+    archive = build_stardict_tar(tmp_path / "big.tar.xz", entries=[("casa", b"x" * 5000)], compressed=False)
+
+    with pytest.raises(SetupError, match="exceeds"):
+        import_stardict(archive, tmp_path / "dicts", language="es")
+    assert not (tmp_path / "dicts").exists() or not any((tmp_path / "dicts").iterdir())
+
+
+def test_a_truncated_tarball_is_a_setup_error(tmp_path: Path):
+    archive = build_stardict_tar(tmp_path / "cut.tar.xz", entries=[("casa", b"house " * 3000)])
+    data = archive.read_bytes()
+    archive.write_bytes(data[: len(data) // 2])
+
+    with pytest.raises(SetupError, match="Corrupt StarDict archive"):
+        import_stardict(archive, tmp_path / "dicts", language="es")
+
+
+def test_zip_path_traversal_is_refused(tmp_path: Path):
+    archive = tmp_path / "evil.zip"
+    book = build_stardict_files(tmp_path / "book")
+    with zipfile.ZipFile(archive, "w") as zf:
+        for path in book.parent.iterdir():
+            zf.write(path, arcname=f"../{path.name}")
+
+    with pytest.raises(SetupError, match="unsafe path"):
+        import_stardict(archive, tmp_path / "dicts", language="es")
+
+
+def test_is_stardict_source(tmp_path: Path):
+    assert is_stardict_source(build_stardict_files(tmp_path / "loose"))
+    assert is_stardict_source(build_stardict_tar(tmp_path / "a.tar.bz2", mode="w:bz2"))
+    assert is_stardict_source(build_stardict_zip(tmp_path / "b.zip"))
+    assert not is_stardict_source(build_yomitan_zip(tmp_path / "y.zip"))
+    text = tmp_path / "words.csv"
+    text.write_text("casa,house\n", encoding="utf-8")
+    assert not is_stardict_source(text)
