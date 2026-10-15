@@ -246,6 +246,32 @@ class IndexedFreqProvider:
             results.append(None if row is None else (int(row[1]), row[2]))
         return results
 
+    def terms_by_rank(self, max_rank: int) -> list[tuple[str, int]]:
+        """Every term ranked 1..``max_rank``, best rank first: ``[(term, rank)]`` (ST-07).
+
+        A homograph counts once, at its best rank. One ``GROUP BY`` scan; a
+        list holds at most a few hundred thousand rows and this runs off the
+        GUI thread. A categorical (word-level) source has no numeric ranks
+        and returns ``[]``, like a DatabaseError (logged).
+        """
+        if self._conn is None or self.is_categorical:
+            return []
+        try:
+            rows = self._conn.execute(
+                "SELECT term, MIN(rank) AS best FROM entries WHERE rank BETWEEN 1 AND ? "
+                "GROUP BY term ORDER BY best, term",
+                (max_rank,),
+            ).fetchall()
+        except sqlite3.DatabaseError as e:
+            logger.warning(
+                "Frequency source '%s' (%s) raised DatabaseError listing terms by rank: %s",
+                self.source_id,
+                self._db_path,
+                e,
+            )
+            return []
+        return [(str(term), int(best)) for term, best in rows]
+
     def _term_rows(self, term: str) -> list[tuple] | None:
         """``[(reading, rank, display_value)]`` for one folded term; None on a DatabaseError."""
         if self._conn is None:
