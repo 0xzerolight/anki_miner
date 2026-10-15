@@ -1,0 +1,140 @@
+"""Tests for the web article extractor and fetcher (F-14).
+
+Every page is a local string: nothing here touches the network (the socket
+tripwire in ``tests/_network_tripwire.py`` would fail it).
+"""
+
+from __future__ import annotations
+
+import pytest
+
+from anki_miner.languages.registry import get_profile
+from anki_miner.services.reading.web_article import (
+    ArticleFetchError,
+    WebArticle,
+    extract_article,
+    is_web_url,
+    parse_url_lines,
+)
+
+_NEWS_JA = """<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html>
+<html><head><title>猫の話 | 例のニュース</title>
+<meta property="og:title" content="猫の話">
+<script>var tracking = "吾輩はスクリプトである。";</script></head>
+<body>
+<header class="site-header"><nav><a href="/">ホーム</a> <a href="/news">ニュース一覧</a></nav></header>
+<div id="main"><article><h1>猫の話</h1>
+<p>吾輩は猫である。名前はまだ無い。どこで生れたかとんと見当がつかぬ。</p>
+<p>何でも薄暗いじめじめした所でニャーニャー泣いていた事だけは記憶している。</p>
+<p>吾輩はここで始めて人間というものを見た。しかもあとで聞くとそれは書生という人間中で一番獰悪な種族であったそうだ。</p>
+<div class="share-buttons"><a href="#">シェアする</a> <a href="#">ツイートする</a></div>
+</article>
+<aside><p>関連記事：犬の話、鳥の話、魚の話、そのほかいろいろな話がここに並んでいます。</p></aside>
+<div class="comments"><p>コメント：とても面白かったです。続きが読みたいです。次回も楽しみにしています。</p></div>
+</div>
+<footer><p>Copyright 2026 Example News. All rights reserved. Contact us for more information.</p></footer>
+</body></html>
+"""
+
+_ARTICLE_JA = (
+    "猫の話\n\n"
+    "吾輩は猫である。名前はまだ無い。どこで生れたかとんと見当がつかぬ。\n\n"
+    "何でも薄暗いじめじめした所でニャーニャー泣いていた事だけは記憶している。\n\n"
+    "吾輩はここで始めて人間というものを見た。しかもあとで聞くとそれは書生という人間中で一番獰悪な種族であったそうだ。"
+)
+
+_BLOG_ES = """<html><head><title>Un paseo por Madrid - Mi blog</title></head><body>
+<div class="menu"><a href="/">Inicio</a> <a href="/sobre-mi">Sobre mí</a></div>
+<div class="post-body">El primer párrafo del artículo está partido
+en dos líneas del código fuente, y sigue lo bastante para contar.<br>
+La segunda línea después de un salto, también larga para contar como bloque.<br>
+<p>Un párrafo de verdad con muchas palabras, comas, y un punto al final de la frase.</p>
+</div></body></html>"""
+
+_JS_ONLY = (
+    '<html><head><title>App</title></head><body><div id="root"></div>'
+    '<script src="app.js"></script>'
+    "<noscript>Please enable JavaScript to view this page. This site needs JavaScript to run at all.</noscript>"
+    "</body></html>"
+)
+
+
+def test_keeps_the_article_and_drops_page_chrome() -> None:
+    article = extract_article(_NEWS_JA, "https://www.example.com/neko")
+
+    assert article.text == _ARTICLE_JA
+    for chrome in ("ホーム", "シェア", "関連記事", "コメント", "Copyright", "スクリプト"):
+        assert chrome not in article.text
+
+
+def test_title_prefers_og_title_and_site_drops_www() -> None:
+    article = extract_article(_NEWS_JA, "https://www.example.com/neko")
+
+    assert (article.title, article.site) == ("猫の話", "example.com")
+    assert article.source_label == "猫の話 — example.com"
+
+
+def test_title_falls_back_to_the_title_tag() -> None:
+    article = extract_article(_BLOG_ES, "http://blog.example.org/madrid", rules=get_profile("es").sentence_rules)
+
+    assert article.title == "Un paseo por Madrid - Mi blog"
+    assert article.site == "blog.example.org"
+
+
+def test_a_space_delimited_language_joins_a_wrapped_line_with_a_space() -> None:
+    """Review Focus 3: a non-Japanese profile's rules decide the line join."""
+    article = extract_article(_BLOG_ES, "http://blog.example.org/madrid", rules=get_profile("es").sentence_rules)
+
+    assert article.text.split("\n\n") == [
+        "El primer párrafo del artículo está partido en dos líneas del código fuente, y sigue lo bastante para contar.",
+        "La segunda línea después de un salto, también larga para contar como bloque.",
+        "Un párrafo de verdad con muchas palabras, comas, y un punto al final de la frase.",
+    ]
+    assert "Inicio" not in article.text
+
+
+def test_japanese_joins_a_wrapped_line_without_a_space() -> None:
+    page = _NEWS_JA.replace("名前はまだ無い。", "名前は\nまだ無い。")
+
+    article = extract_article(page, "https://www.example.com/neko", rules=get_profile("ja").sentence_rules)
+
+    assert "名前はまだ無い。" in article.text
+
+
+def test_a_javascript_only_page_reports_no_article_text() -> None:
+    with pytest.raises(ArticleFetchError) as excinfo:
+        extract_article(_JS_ONLY, "https://spa.example.com/")
+
+    assert excinfo.value.reason == "no_text"
+    assert excinfo.value.transient is False
+    assert str(excinfo.value) == "No article text found at https://spa.example.com/."
+
+
+def test_source_label_with_only_a_site() -> None:
+    assert WebArticle(url="u", title="", site="example.com", text="x").source_label == "example.com"
+
+
+@pytest.mark.parametrize(
+    ("text", "ok"),
+    [
+        ("https://example.com/a", True),
+        ("http://example.com", True),
+        ("  https://example.com/a  ", True),
+        ("example.com/a", False),
+        ("ftp://example.com/a", False),
+        ("https://", False),
+        ("https://[::1", False),
+    ],
+)
+def test_is_web_url(text: str, ok: bool) -> None:
+    assert is_web_url(text) is ok
+
+
+def test_parse_url_lines_keeps_order_drops_blanks_and_repeats() -> None:
+    box = "https://a.example/x\n\n  example.com\nhttps://a.example/x\nftp://f.example/y\nhttp://b.example\n"
+
+    assert parse_url_lines(box) == (
+        ["https://a.example/x", "http://b.example"],
+        ["example.com", "ftp://f.example/y"],
+    )
