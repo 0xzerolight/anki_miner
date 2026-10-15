@@ -46,7 +46,11 @@ from anki_miner.gui.widgets.base import (
     make_label_fit_text,
 )
 from anki_miner.gui.widgets.dialogs import AudioTracksDialog
-from anki_miner.gui.widgets.dialogs.word_curation_dialog import CurationMediaContext
+from anki_miner.gui.widgets.dialogs.word_curation_dialog import (
+    CurationMediaContext,
+    auto_translation_of,
+    with_auto_translation,
+)
 from anki_miner.gui.widgets.log_widget import LogWidget
 from anki_miner.gui.widgets.progress_widget import ProgressWidget
 from anki_miner.gui.workers.episode_worker import EpisodeWorkerThread
@@ -842,6 +846,7 @@ class SingleEpisodeTab(MiningTabBase):
         The only tab that passes a real ``audio_track_override`` — the per-run
         "Audio track…" pick must carry into the curation player.
         """
+        proc = self.worker_thread.curation_processor if self.worker_thread is not None else None
         media_context = self._make_curation_media_context(
             self.config,
             self._curation_video,
@@ -851,7 +856,10 @@ class SingleEpisodeTab(MiningTabBase):
             secondary_subtitle=self._curation_secondary,
             secondary_offset=self._curation_secondary_offset,
         )
-        proc = self.worker_thread.curation_processor if self.worker_thread is not None else None
+        # F-04: no file chosen, so show the track the run picked itself.
+        media_context = with_auto_translation(
+            media_context, auto_translation_of(proc, self._curation_video), self._curation_secondary
+        )
         return media_context, self._lookup_fn_from_processor(proc)
 
     def _cancel_published_task(self) -> None:

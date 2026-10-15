@@ -283,6 +283,36 @@ class CurationMediaContext:
     page_units_are_cards: bool = False
 
 
+def auto_translation_of(processor: object | None, video: Path | None) -> list[tuple[float, float, str]]:
+    """The translation cues the run picked itself for ``video`` (F-04), or [].
+
+    ``processor`` is a worker's ``curation_processor``. Anything that is not a
+    real pick (no processor, a stand-in without the method, a mock's return
+    value) reads as no pick, so a test double never paints a Translation column.
+    """
+    lookup = getattr(processor, "auto_translation_entries", None)
+    if video is None or not callable(lookup):
+        return []
+    entries = lookup(video)
+    return entries if isinstance(entries, list) else []
+
+
+def with_auto_translation(
+    context: CurationMediaContext | None,
+    entries: list[tuple[float, float, str]],
+    chosen: Path | None,
+) -> CurationMediaContext | None:
+    """``context`` carrying the run's auto-picked translation when the user chose no file (F-04).
+
+    A chosen file (``chosen``) always wins. The picked track sits on the
+    video's own timeline, so it carries offset 0.0, as the processor attaches
+    it; the column and the cards then agree by construction.
+    """
+    if context is None or chosen is not None or not entries:
+        return context
+    return dataclasses.replace(context, secondary_entries=list(entries), secondary_offset=0.0)
+
+
 class WordCurationDialog(ScreenIssueHost, QDialog):
     """Dialog for selecting which words to include in card creation.
 
