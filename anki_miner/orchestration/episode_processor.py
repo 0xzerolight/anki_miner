@@ -311,6 +311,21 @@ def _note_dropped(
             drops.setdefault(word.mined_form, reason if isinstance(reason, NotMinedReason) else reason(word))
 
 
+def _log_sentence_moves(event: str, before: list[TokenizedWord], after: list[TokenizedWord]) -> None:
+    """One receipt for the words a sentence picker moved to another of their lines (F-06, F-07).
+
+    A moved word comes back re-made (``WordFilterService._swap_word_to_line``);
+    a word left where it was comes back as the same object. A stand-in filter
+    (a test double) that returns no list logs nothing.
+    """
+    if not isinstance(after, list):
+        return
+    unchanged = {id(word) for word in before}
+    moved = sum(1 for word in after if id(word) not in unchanged)
+    if moved:
+        log_summary(logger, event, moved=moved, words=len(after))
+
+
 #: ``last_word_drops`` / ``AnkiService.last_not_created`` states as not-mined reasons.
 _WORD_DROP_REASONS = {"media_failed": NotMinedReason.MEDIA_FAILED, "no_definition": NotMinedReason.NO_DEFINITION}
 _NOT_CREATED_REASONS = {
@@ -999,6 +1014,17 @@ class EpisodeProcessor:
             )
         )
 
+    def _wants_line_index(self) -> bool:
+        """Whether phase 2 reads the per-line index even with no curator in the run.
+
+        i+1 picks each word's line from it, and one card per sentence moves a
+        word whose line is taken to another of its lines (F-06). Without the
+        index each falls back silently (i+1 would drop every word). A curator
+        asks for the index on its own (``want_line_index``).
+        """
+        config = self.config
+        return bool(config.use_i_plus_one_filter or config.deduplicate_sentences)
+
     def _phase1_parse(
         self,
         ctx: _EpisodeContext,
@@ -1010,9 +1036,9 @@ class EpisodeProcessor:
         """Phase 1: parse subtitles into tokenized words (and optionally a line index).
 
         Returns the raw parse output; mutates ``ctx.total_words_found``. The
-        line index is built when the i+1 filter needs it OR when a caller asks
-        via ``want_line_index`` (interactive curation uses it to offer
-        alternative example sentences per word).
+        line index is built when phase 2 reads it (:meth:`_wants_line_index`)
+        OR when a caller asks via ``want_line_index`` (interactive curation
+        uses it to offer alternative example sentences per word).
 
         ``subtitle_offset`` is this run's offset; ``None`` leaves the parser on
         its own ``config.subtitle_offset``.
@@ -1026,7 +1052,7 @@ class EpisodeProcessor:
             tr_format(QCoreApplication.translate("EpisodeProcessor", "Subtitles: %1"), subtitle_file.name)
         )
         line_index: list[LineLemmas] | None = None
-        if self.config.use_i_plus_one_filter or want_line_index:
+        if self._wants_line_index() or want_line_index:
             all_words, line_index = self.subtitle_parser.parse_subtitle_file_with_index(subtitle_file, subtitle_offset)
         else:
             all_words = self.subtitle_parser.parse_subtitle_file(subtitle_file, subtitle_offset)
@@ -1723,8 +1749,12 @@ class EpisodeProcessor:
             _note_dropped(drops, NotMinedReason.OCCURRENCE, previous, unknown_words)
             counts.episode_rejects += before - len(unknown_words)
 
-        # Sentence deduplication. i+1 filter does its own sentence picking;
-        # dedup would be a no-op (post-i+1 sentences are unique by construction).
+        # Sentence deduplication (one card per sentence). i+1 filter does its own
+        # sentence picking; dedup would be a no-op (post-i+1 sentences are unique
+        # by construction). With a line index, a word whose line an earlier word
+        # kept moves to another of its lines that no word holds and that passes
+        # the length caps (F-06); only a word with no such line is dropped. The
+        # one-argument call without an index is the pre-F-06 first-wins rule.
         if (
             self.config.deduplicate_sentences
             and not self.config.use_i_plus_one_filter
@@ -1732,8 +1762,17 @@ class EpisodeProcessor:
         ):
             before = len(unknown_words)
             previous = unknown_words
-            unknown_words = self.word_filter.deduplicate_by_sentence(unknown_words)
+            if line_index:
+                unknown_words = self.word_filter.deduplicate_by_sentence(
+                    unknown_words,
+                    line_index=line_index,
+                    max_duration=self.config.max_sentence_duration_seconds,
+                    max_chars=self.config.max_sentence_chars,
+                )
+            else:
+                unknown_words = self.word_filter.deduplicate_by_sentence(unknown_words)
             _note_dropped(drops, NotMinedReason.ONE_PER_SENTENCE, previous, unknown_words)
+            _log_sentence_moves("Sentence dedup", previous, unknown_words)
             deduped = before - len(unknown_words)
             counts.duplicate_sentence_rejects = deduped
             if deduped > 0:
@@ -3757,12 +3796,13 @@ class EpisodeProcessor:
             )
 
         def _body(run_temp_folder: Path) -> ProcessingResult:
-            # D4: fuse the two triggers for building the line index. The episode
-            # path splits this across caller (curation) and callee (i+1); here we
-            # call parse_text_units directly, so an i+1-enabled Mine run must set
-            # want_line_index itself — otherwise the filter gets an empty index
-            # and silently drops every word.
-            want_line_index = self.config.use_i_plus_one_filter or curation_callback is not None
+            # D4: fuse the triggers for building the line index. The episode
+            # path splits this across caller (curation) and callee
+            # (_wants_line_index); here we call parse_text_units directly, so a
+            # Mine run whose phase 2 reads the index (i+1, one card per
+            # sentence) must set want_line_index itself — otherwise i+1 gets an
+            # empty index and silently drops every word.
+            want_line_index = self._wants_line_index() or curation_callback is not None
             self._announce_stage(
                 progress_callback,
                 1,
