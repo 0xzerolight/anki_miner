@@ -371,11 +371,16 @@ def load(
 
 
 def _local(el) -> str:
-    """Namespace-stripped, lowercased tag name; ``""`` for comments/PIs."""
+    """Namespace-stripped, lowercased tag name; ``""`` for comments/PIs.
+
+    A string split, not ``etree.QName``: the web article extractor walks
+    ``lxml.html`` trees with this, where a prefixed tag (``<o:p>`` from a word
+    processor, ``<fb:like>``) keeps its colon and QName raises on it.
+    """
     tag = el.tag
     if not isinstance(tag, str):
         return ""
-    return str(etree.QName(tag).localname).lower()
+    return tag.rpartition("}")[2].lower()
 
 
 def _parse_xml(data: bytes):

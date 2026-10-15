@@ -115,6 +115,20 @@ def test_a_javascript_only_page_reports_no_article_text() -> None:
     assert str(excinfo.value) == "No article text found at https://spa.example.com/."
 
 
+def test_a_prefixed_tag_inside_the_article_keeps_its_text() -> None:
+    """HTML from a word processor carries ``<o:p>`` (and widgets ``<fb:like>``); lxml keeps the prefix."""
+    page = (
+        "<html><body><article>"
+        "<p>El primer párrafo del artículo, con comas, y un punto al final.<o:p></o:p></p>"
+        "<p>El segundo párrafo, también largo, sigue contando la historia.<fb:like>Me gusta</fb:like></p>"
+        "</article></body></html>"
+    )
+
+    article = extract_article(page, "https://example.com/a", rules=get_profile("es").sentence_rules)
+
+    assert "El segundo párrafo, también largo, sigue contando la historia." in article.text
+
+
 def test_source_label_with_only_a_site() -> None:
     assert WebArticle(url="u", title="", site="example.com", text="x").source_label == "example.com"
 
