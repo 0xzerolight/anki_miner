@@ -423,6 +423,11 @@ class _EpisodeContext:
     # The same snapshot as card fronts: the key i+1 and the curator's unknowns
     # column count on (UniDic folds 撮る onto 取る's lemma; known-ness is per front).
     unknown_fronts: set[str] = field(default_factory=set)
+    #: The fronts phase 2's exclusion left (every card in Anki). Equal to
+    #: ``unknown_fronts`` unless F-01's reviewed-only box widens that scoring
+    #: basis; the season mine pass re-checks its subset against this one, so
+    #: a word with an unreviewed card is never mined twice.
+    mineable_fronts: set[str] = field(default_factory=set)
     # Which whitelist entries this item reached (Settings -> Word Filters): phase
     # 2 stamps the entries and the already-known ones; None when no whitelist
     # is in effect. The mined ones are added at the result funnel
@@ -994,12 +999,14 @@ class EpisodeProcessor:
     def _season_subset_still_unknown(self, ctx: _EpisodeContext, subset: list[TokenizedWord]) -> list[TokenizedWord]:
         """The season curator's subset minus what this mine pass now knows (T3).
 
-        ``ctx.unknown_fronts`` is this pass's post-known snapshot over the same
+        ``ctx.mineable_fronts`` is this pass's post-known snapshot over the same
         file, so a curated word an earlier episode's mine pass just carded (or
         its kana spelling, under the kana-variant rule) drops out exactly as it
-        would in per-pair Batch. Nothing else re-judges the subset.
+        would in per-pair Batch. Nothing else re-judges the subset. It is the
+        exclusion snapshot, not the i+1 basis: with F-01's reviewed-only box on,
+        a just-carded word is still unreviewed and must not be mined again.
         """
-        kept = [word for word in subset if word.mined_form in ctx.unknown_fronts]
+        kept = [word for word in subset if word.mined_form in ctx.mineable_fronts]
         ctx.new_words_found = len(kept)
         if len(kept) < len(subset):
             logger.info("season mine pass: %d curated word(s) known since the season curator", len(subset) - len(kept))
@@ -1293,6 +1300,7 @@ class EpisodeProcessor:
         # basis, so the column and the i+1 filter can never disagree.
         ctx.unknown_lemmas = all_unknown_lemmas
         ctx.unknown_fronts = all_unknown_fronts
+        ctx.mineable_fronts = {w.mined_form for w in unknown_words}
 
         viable = self._phase2_definition_viability(unknown_words, counts)
         _note_dropped(ctx.not_mined, NotMinedReason.NO_DEFINITION, unknown_words, viable)

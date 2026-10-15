@@ -90,3 +90,14 @@ def test_include_everything_mode_ignores_the_setting(test_config):
     assert kept == {"猫", "犬", "鳥"}
     assert ctx.unknown_lemmas == {"猫", "犬", "鳥"}
     anki.get_reviewed_vocabulary.assert_not_called()
+
+
+def test_on_the_season_mine_pass_never_keeps_a_word_with_an_unreviewed_card(test_config):
+    """The season mine pass re-checks its curated subset against the mining exclusion, not the i+1 basis."""
+    config = replace(test_config, known_from_reviewed_cards=True)
+    _kept, ctx, _ = _run(config, every={"猫", "犬"}, reviewed={"猫"})
+    processor = build_processor(replace(config, bypass_optional_filters=True))
+
+    still = processor._season_subset_still_unknown(ctx, [_noun("犬", 2.0), _noun("鳥", 4.0)])
+
+    assert [word.mined_form for word in still] == ["鳥"]
