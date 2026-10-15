@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import json
+import logging
 from unittest.mock import MagicMock, patch
 
 import pytest
 
+from anki_miner.services.subtitle_cleaner import OP_ED_CHAPTER_RE, midpoint_in_ranges, op_ed_ranges, op_ed_skip_ranges
 from anki_miner.utils.audio_track_detector import Chapter, list_chapters
 
+_CLEANER = "anki_miner.services.subtitle_cleaner"
 _DETECTOR = "anki_miner.utils.audio_track_detector"
 
 
@@ -78,3 +81,101 @@ class TestListChapters:
 
         with patch(f"{_DETECTOR}.subprocess.run", return_value=_proc(stdout)):
             assert list_chapters(tmp_path / "ep01.mkv") == [Chapter(1.0, 2.0, "ED")]
+
+
+class TestChapterTitles:
+    @pytest.mark.parametrize(
+        "title",
+        [
+            "OP",
+            "Opening",
+            "OP1",
+            "op 2",
+            "ED",
+            "ED2",
+            "Ending Credits",
+            "Part B (ED)",
+            "Outro",
+            "Preview",
+            "Next Episode Preview",
+            "PV",
+            "Credits",
+            "Credit Roll",
+            "オープニング",
+            "エンディング",
+            "次回予告",
+        ],
+    )
+    def test_names_an_opening_ending_or_preview(self, title):
+        assert OP_ED_CHAPTER_RE.search(title)
+
+    @pytest.mark.parametrize(
+        "title",
+        [
+            "Part A",
+            "Part B",
+            "Episode",
+            "Avant",
+            "Prologue",
+            "Chapter 1",
+            "Opener",
+            "Edit",
+            "Intro",
+            "Introduction",
+            "Bending",
+        ],
+    )
+    def test_other_titles_do_not_match(self, title):
+        assert OP_ED_CHAPTER_RE.search(title) is None
+
+    def test_op_ed_ranges_keep_only_matching_chapters_with_a_length(self):
+        chapters = [
+            Chapter(0.0, 90.0, "Opening"),
+            Chapter(90.0, 600.0, "Part A"),
+            Chapter(600.0, 690.0, "Ending"),
+            Chapter(690.0, 720.0, "Preview"),
+            Chapter(720.0, 720.0, "OP"),
+            Chapter(0.0, 1.0, None),
+        ]
+
+        assert op_ed_ranges(chapters) == ((0.0, 90.0), (600.0, 690.0), (690.0, 720.0))
+
+
+class TestOpEdSkipRanges:
+    def test_a_missing_file_is_never_probed(self, tmp_path):
+        with patch(f"{_CLEANER}.list_chapters", side_effect=AssertionError("probed")):
+            assert op_ed_skip_ranges(tmp_path / "missing.mkv", "ffprobe") == ()
+
+    def test_an_existing_file_is_probed_once(self, tmp_path, caplog):
+        video = tmp_path / "ep01.mkv"
+        video.write_bytes(b"")
+        chapters = [Chapter(0.0, 90.0, "OP"), Chapter(90.0, 500.0, "Part A")]
+
+        with (
+            patch(f"{_CLEANER}.list_chapters", return_value=chapters) as probe,
+            caplog.at_level(logging.INFO, logger=_CLEANER),
+        ):
+            assert op_ed_skip_ranges(video, "ffprobe-x") == ((0.0, 90.0),)
+
+        probe.assert_called_once_with(video, "ffprobe-x")
+        assert "OP" in caplog.text
+
+    def test_no_matching_chapter_skips_nothing(self, tmp_path):
+        video = tmp_path / "ep01.mkv"
+        video.write_bytes(b"")
+
+        with patch(f"{_CLEANER}.list_chapters", return_value=[Chapter(0.0, 500.0, "Part A")]):
+            assert op_ed_skip_ranges(video, "ffprobe") == ()
+
+
+class TestMidpointInRanges:
+    def test_the_midpoint_decides_and_the_end_is_open(self):
+        ranges = ((10.0, 20.0),)
+
+        assert midpoint_in_ranges(9.0, 12.0, ranges)  # middle 10.5
+        assert not midpoint_in_ranges(5.0, 14.0, ranges)  # middle 9.5
+        assert midpoint_in_ranges(18.0, 21.0, ranges)  # middle 19.5
+        assert not midpoint_in_ranges(19.0, 21.0, ranges)  # middle 20.0
+
+    def test_no_ranges_keeps_everything(self):
+        assert not midpoint_in_ranges(0.0, 1.0, ())

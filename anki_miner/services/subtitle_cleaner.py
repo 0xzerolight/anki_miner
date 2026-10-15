@@ -34,18 +34,24 @@ from pathlib import Path
 
 import pysubs2
 
+from anki_miner.utils.audio_track_detector import Chapter, list_chapters
 from anki_miner.utils.subtitle_encoding import load_with_fallback_encoding
 
 logger = logging.getLogger(__name__)
 
 __all__ = [
+    "OP_ED_CHAPTER_RE",
     "CleanedForAlignment",
+    "SkipRanges",
     "clean_for_alignment",
     "clean_reference",
     "collapse_frame_bursts",
     "drop_non_dialogue_events",
     "map_deltas_back",
+    "midpoint_in_ranges",
     "mining_events",
+    "op_ed_ranges",
+    "op_ed_skip_ranges",
     "transcode_for_alignment",
 ]
 
@@ -498,3 +504,51 @@ def mining_events(events: Sequence[pysubs2.SSAEvent], *, skip_non_dialogue: bool
     spoken = [event for event in events if getattr(event, "is_comment", None) is not True]
     collapsed = collapse_frame_bursts(spoken)
     return drop_non_dialogue_events(collapsed) if skip_non_dialogue else collapsed
+
+
+#: Chapter titles that mark an opening, ending, preview or credits (F-08,
+#: rulings R2 and C8). Latin names are whole words, case-insensitive, and may
+#: carry a number (OP1, ED 2); "Episode", "Opener" and "Part A" do not match.
+#: "Intro" is left out on purpose: cold opens carry dialogue (C8). The
+#: Japanese names match anywhere in the title (次回予告).
+OP_ED_CHAPTER_RE = re.compile(
+    r"(?:^|[\W_])(?:op|ed|opening|ending|outro|preview|pv|credits?)(?=$|[\W_\d])" r"|オープニング|エンディング|予告",
+    re.IGNORECASE,
+)
+
+#: Spans in seconds whose cues are left out, ``((start, end), ...)``.
+SkipRanges = tuple[tuple[float, float], ...]
+
+
+def op_ed_ranges(chapters: Sequence[Chapter]) -> SkipRanges:
+    """The spans of *chapters* whose title names an opening, ending, preview or credits."""
+    return tuple(
+        (chapter.start, chapter.end)
+        for chapter in chapters
+        if chapter.end > chapter.start and chapter.title and OP_ED_CHAPTER_RE.search(chapter.title)
+    )
+
+
+def op_ed_skip_ranges(media: Path, ffprobe_cmd: str) -> SkipRanges:
+    """Probe *media*'s chapters once and return its opening/ending spans (F-08 step 2).
+
+    A path that is not an existing file is not probed: there is nothing to
+    read, and the pipeline reports the missing file itself. A file without such
+    chapters returns ``()``, which leaves every cue in place. An external
+    subtitle file paired with a video is judged by the video's chapters: the
+    caller passes the video here.
+    """
+    if not media.is_file():
+        return ()
+    chapters = list_chapters(media, ffprobe_cmd)
+    ranges = op_ed_ranges(chapters)
+    if ranges:
+        titles = [chapter.title for chapter in chapters if (chapter.start, chapter.end) in ranges]
+        logger.info("Skipping opening/ending chapters: file=%s chapters=%s", media.name, titles)
+    return ranges
+
+
+def midpoint_in_ranges(start: float, end: float, ranges: Sequence[tuple[float, float]]) -> bool:
+    """Whether the cue ``[start, end]``'s midpoint lies in one of *ranges* (start in, end out)."""
+    middle = (start + end) / 2
+    return any(low <= middle < high for low, high in ranges)
