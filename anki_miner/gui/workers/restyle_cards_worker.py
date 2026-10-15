@@ -1,4 +1,4 @@
-"""Worker thread for the Restyle Mined Cards tool (re-apply latest styling)."""
+"""Worker thread for the Restyle Mined Cards tool (convert old cards to the current card format)."""
 
 import logging
 

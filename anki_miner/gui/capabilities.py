@@ -1096,14 +1096,6 @@ CAPABILITIES: tuple[Capability, ...] = (
         keywords=("deck", "note type", "model", "target deck", "destination"),
     ),
     Capability(
-        id="card-styling",
-        title=QT_TRANSLATE_NOOP("Capabilities", "Card styling / CSS"),
-        description=QT_TRANSLATE_NOOP("Capabilities", "Apply a built-in card style or your own CSS."),
-        category=_CAT_CARDS,
-        target=CapabilityTarget("settings", "anki"),
-        keywords=("css", "style", "card design", "template", "minimal", "appearance"),
-    ),
-    Capability(
         id="furigana",
         title=QT_TRANSLATE_NOOP("Capabilities", "Furigana / readings"),
         description=QT_TRANSLATE_NOOP("Capabilities", "Include the reading (furigana) for the word on your cards."),
@@ -1383,11 +1375,12 @@ CAPABILITIES: tuple[Capability, ...] = (
         title=QT_TRANSLATE_NOOP("Capabilities", "Restyle mined cards"),
         description=QT_TRANSLATE_NOOP(
             "Capabilities",
-            "Re-apply the latest Anki Miner styling to cards you mined earlier -- Utilities → Card Backfill.",
+            "Convert cards you mined earlier to the current card format, so your note type styles them"
+            " -- Utilities → Card Backfill.",
         ),
         category=_CAT_TOOLS,
         target=CapabilityTarget("subtitles", "backfill"),
-        keywords=("restyle", "existing cards", "old cards", "card styling", "css", "update styles"),
+        keywords=("restyle", "existing cards", "old cards", "card styling", "css", "update styles", "yomitan"),
     ),
     Capability(
         id="system-health",
