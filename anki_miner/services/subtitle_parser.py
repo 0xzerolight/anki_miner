@@ -31,6 +31,7 @@ from anki_miner.services.deinflection import (
     resolve_dictionary_form,
 )
 from anki_miner.services.lexical_joiner import LexicalJoiner
+from anki_miner.services.lrc_format import register_lrc_format
 from anki_miner.services.masu_stem_nominalizer import MasuStemNominalizer
 from anki_miner.services.morphology import (
     REJECT_KANA_ONLY,
@@ -88,6 +89,9 @@ if TYPE_CHECKING:
     from anki_miner.languages.profile import MinedFormPolicy, ReadingSupport
 
 logger = logging.getLogger(__name__)
+
+# .lrc lyrics load through pysubs2 like any subtitle (MS-08). Idempotent.
+register_lrc_format()
 
 #: pysubs2 formats whose content sniffer only checks the file's first characters
 #: ('<SAMI>' / 'WEBVTT', case-sensitive, with a UTF-8 BOM left in place).

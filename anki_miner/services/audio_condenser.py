@@ -47,6 +47,7 @@ import pysubs2
 from anki_miner.languages.registry import config_language, get_profile, subtitle_language
 from anki_miner.services.asr.srt_writer import segments_to_srt
 from anki_miner.services.audio_tagger import TaggingError, TrackMetadata, tag_audio_file
+from anki_miner.services.lrc_format import register_lrc_format
 from anki_miner.services.media_extractor import MediaExtractorService
 from anki_miner.services.subtitle_cleaner import midpoint_in_ranges, mining_events, op_ed_skip_ranges
 from anki_miner.utils.atomic_io import atomic_write_path
@@ -67,6 +68,9 @@ if TYPE_CHECKING:
     from anki_miner.utils.audio_track_detector import SubtitleStream
 
 logger = logging.getLogger(__name__)
+
+# A song's .lrc condenses like any subtitle (MS-08). Idempotent.
+register_lrc_format()
 
 # ``(start_ms, end_ms, text)`` cue and ``(start_ms, end_ms)`` keep-period.
 Event = tuple[int, int, str]

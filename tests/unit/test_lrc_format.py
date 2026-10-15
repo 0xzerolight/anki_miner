@@ -2,10 +2,17 @@
 
 from __future__ import annotations
 
+import os
+import subprocess
+import sys
+from pathlib import Path
+
 import pysubs2
 import pytest
 
+from anki_miner.services.audio_condenser import load_subtitle_events, write_condensed_lrc
 from anki_miner.services.lrc_format import LAST_LINE_MS, MAX_LINE_MS, parse_lrc, register_lrc_format
+from anki_miner.services.subtitle_parser import SubtitleParserService
 
 
 class TestParseLrc:
@@ -103,3 +110,42 @@ class TestPysubs2Registration:
 
         with pytest.raises(NotImplementedError):
             subs.save(str(tmp_path / "out.lrc"))
+
+
+_ROOT = Path(__file__).resolve().parents[2]
+
+
+def test_importing_the_readers_registers_lrc(tmp_path):
+    """A fresh interpreter: no test in this file has registered the format there."""
+    code = (
+        "import pysubs2, anki_miner.services.subtitle_parser, anki_miner.services.audio_condenser; "
+        "print(pysubs2.formats.get_format_identifier('.lrc'))"
+    )
+    env = {**os.environ, "ANKI_MINER_HOME": str(tmp_path / "home"), "QT_QPA_PLATFORM": "offscreen"}
+
+    done = subprocess.run([sys.executable, "-c", code], cwd=_ROOT, env=env, capture_output=True, text=True, timeout=120)
+
+    assert done.returncode == 0, done.stderr
+    assert done.stdout.strip() == "lrc"
+
+
+class TestReaders:
+    def test_the_mining_parser_reads_a_cp932_lrc(self, test_config, tmp_path):
+        path = tmp_path / "song.lrc"
+        path.write_bytes("[00:01.00]猫が好き\n[00:04.00]犬も好き\n".encode("cp932"))
+
+        entries = SubtitleParserService(test_config).parse_raw_entries(path, 0.0)
+
+        assert entries == [(1.0, 4.0, "猫が好き"), (4.0, 9.0, "犬も好き")]
+
+    def test_condense_reads_an_lrc(self, tmp_path):
+        path = tmp_path / "song.lrc"
+        path.write_text("[00:01.00]Hola\n[00:04.00]Adiós\n", encoding="utf-8")
+
+        assert load_subtitle_events(path) == [(1000, 4000, "Hola"), (4000, 9000, "Adiós")]
+
+    def test_condenses_own_lrc_reads_back(self, tmp_path):
+        path = tmp_path / "condensed.lrc"
+        write_condensed_lrc([(1000, 2000, "Hello"), (90_500, 91_000, "World")], path)
+
+        assert load_subtitle_events(path) == [(1000, 2000, "Hello"), (90_500, 91_000, "World")]
