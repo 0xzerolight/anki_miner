@@ -10,7 +10,7 @@ import html
 import logging
 import re
 import unicodedata
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 
 from anki_miner.config import AnkiMinerConfig
@@ -239,6 +239,61 @@ def _lang_wrap(value: str, lang: str) -> str:
     return f'<span lang="{html.escape(lang, quote=True)}">{value}</span>'
 
 
+#: Reserved ``extra_fields`` key: the tag string phase 5 rendered for this
+#: card's source (F-03). Popped by :func:`build_note` like ``CARD_FRONT_KEY``;
+#: it is never an Anki field.
+CARD_TAGS_KEY = "card_tags"
+
+#: The tokens a tag string may carry (owner answer F-03). Anything else in
+#: braces is the user's own text and stays verbatim.
+_TAG_TOKEN_RE = re.compile(r"\{(series|episode|volume)\}")
+
+#: What Anki refuses inside a tag besides whitespace: double quotes and
+#: control characters. Whitespace becomes "_" separately.
+_TAG_ILLEGAL_RE = re.compile(r'["\x00-\x1f\x7f]')
+
+
+def has_tag_tokens(template: str) -> bool:
+    """Whether ``template`` uses ``{series}``, ``{episode}`` or ``{volume}``."""
+    return _TAG_TOKEN_RE.search(template) is not None
+
+
+def _tag_value(value: str) -> str:
+    """One token's value as tag text: whitespace runs as "_", Anki-illegal characters removed.
+
+    Split on whitespace first: a tab is both whitespace and a control character,
+    and removing it first would glue two words together.
+    """
+    parts = (_TAG_ILLEGAL_RE.sub("", part) for part in value.split())
+    return "_".join(part for part in parts if part)
+
+
+def render_card_tags(template: str, values: Mapping[str, str]) -> list[str]:
+    """Split the tag string like Anki does and fill the source tokens (F-03).
+
+    A tag without a token passes through verbatim, so a tag string without
+    tokens gives exactly ``template.split()``. In a tag with tokens, each token
+    takes its value (``_tag_value``); an empty value removes its ``::``
+    component, and a tag left with no component is dropped. Unknown tokens
+    such as ``{season}`` are kept as written.
+
+    Args:
+        template: ``config.anki_tags``.
+        values: ``series`` / ``episode`` / ``volume`` for this card's source;
+            a missing key counts as empty.
+    """
+    tags: list[str] = []
+    for raw in template.split():
+        if not has_tag_tokens(raw):
+            tags.append(raw)
+            continue
+        rendered = _TAG_TOKEN_RE.sub(lambda match: _tag_value(values.get(match.group(1), "")), raw)
+        parts = [part for part in rendered.split("::") if part]
+        if parts:
+            tags.append("::".join(parts))
+    return tags
+
+
 def build_note(
     item: CardPayload,
     config: AnkiMinerConfig,
@@ -293,6 +348,13 @@ def build_note(
     if extra_fields and CARD_FRONT_KEY in extra_fields:
         card_front = extra_fields[CARD_FRONT_KEY] or ""
         extra_fields = {k: v for k, v in extra_fields.items() if k != CARD_FRONT_KEY} or None
+
+    # F-03: phase 5 stamps the tag string it rendered for this card's source.
+    # Popped the same way: it is no field of its own.
+    card_tags: str | None = None
+    if extra_fields and CARD_TAGS_KEY in extra_fields:
+        card_tags = extra_fields[CARD_TAGS_KEY] or ""
+        extra_fields = {k: v for k, v in extra_fields.items() if k != CARD_TAGS_KEY} or None
 
     # Pull glossary out of extra_fields BEFORE the OPTIONAL pass —
     # OPTIONAL_FIELD_KEYS html.escape()s its values, but glossary
@@ -440,7 +502,10 @@ def build_note(
         "deckName": config.anki_deck_name,
         "modelName": config.anki_note_type,
         "fields": fields,
-        "tags": config.anki_tags.split(),
+        # A payload without rendered tags (Deck Builder probes, goldens, any
+        # caller that never knew the source) drops unfilled tokens; a tag string
+        # without tokens splits exactly as before.
+        "tags": card_tags.split() if card_tags is not None else render_card_tags(config.anki_tags, {}),
     }
     # allow_duplicate_cards: re-card words that already exist elsewhere in the
     # collection. duplicateScope="deck" keeps cross-episode curation's
