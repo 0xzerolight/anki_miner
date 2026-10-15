@@ -59,6 +59,7 @@ from anki_miner.services.reading.images import ReadingImageArchiveError, Reading
 from anki_miner.services.resource_staleness import stale_resource_reimport_error
 from anki_miner.services.secondary_subtitles import attach_translations
 from anki_miner.services.sentence_edit import resolve_sentence_edit
+from anki_miner.services.subtitle_cleaner import op_ed_skip_ranges
 from anki_miner.services.subtitle_parser import _differs_by_okurigana_only
 from anki_miner.services.word_filter import (
     MergedLineWindow,
@@ -72,6 +73,7 @@ from anki_miner.services.word_filter import (
 from anki_miner.services.word_list_service import active_whitelist
 from anki_miner.services.youtube_postfetch import StepReport, align_fetched, transcribe_fetched
 from anki_miner.utils import ensure_directory, katakana_to_hiragana
+from anki_miner.utils.ffmpeg_resolver import resolve_ffprobe
 from anki_miner.utils.i18n import tr_format
 from anki_miner.utils.logging_ext import capped, log_summary, suppressed
 from anki_miner.utils.timing import timed_phase
@@ -1046,6 +1048,30 @@ class EpisodeProcessor:
             unique=len(all_words),
         )
         return all_words, line_index
+
+    def _register_op_ed_chapters(self, video_file: Path, subtitle_file: Path, subtitle_offset: float | None) -> None:
+        """Tell the parser which of the video's chapters to leave out (F-08 step 2).
+
+        Runs before phase 1 so the parse, the line index and line expansion
+        read the same lines. The Word Curator builds its own parser for its
+        context and registers the same ranges there (X, L3b README Post-merge
+        item 6). Off with the switch (strict ``is True``, as for a test's
+        MagicMock config). The video's chapters
+        apply to an external subtitle file too: they are media time, and the
+        run's offset puts the file's cues on that timeline. Audiobooks passes
+        the audio file, whose "Chapter 1" titles never match.
+        """
+        if self.config.skip_opening_ending is not True:
+            return
+        ranges = op_ed_skip_ranges(video_file, resolve_ffprobe(self.config))
+        offset = self.config.subtitle_offset if subtitle_offset is None else subtitle_offset
+        self.subtitle_parser.set_skip_ranges(subtitle_file, ranges, offset=offset)
+        if ranges:
+            self.presenter.show_info(
+                QCoreApplication.translate(
+                    "EpisodeProcessor", "Skipping lines in %n opening, ending or preview chapter(s)", "", len(ranges)
+                )
+            )
 
     def _active_whitelist(self) -> WordListService | None:
         """The whitelist service when force-include is in effect for this run.
@@ -3174,6 +3200,8 @@ class EpisodeProcessor:
             # repopulate on the first probe and protect against double-probes
             # (the 2e0cc13 perf win). Video-only — omitted on the reading path.
             self.media_extractor.invalidate_audio_stream_cache(video_file)
+            # F-08 step 2: the video's opening/ending chapters, before anything parses.
+            self._register_op_ed_chapters(video_file, subtitle_file, subtitle_offset)
 
             # Interactive curation offers a per-word sentence picker, which needs
             # the line index (all lines each lemma appears on). Build it for that
