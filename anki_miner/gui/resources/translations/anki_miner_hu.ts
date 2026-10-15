@@ -2729,7 +2729,7 @@ Indexfájl nem törlődik.</translation>
     </message>
     <message>
         <source>Transcribe an audiobook and time the book's own sentences to it, writing an .srt the Audiobook tab, Reading → Subtitle Files or a reader can use.</source>
-        <translation>Hangoskönyv átírása és a könyv saját mondatainak hozzáidőzítése; az elkészült .srt fájlt a Hangoskönyvek lap, az Olvasás → Feliratfájlok vagy egy olvasóprogram használhatja.</translation>
+        <translation>Hangoskönyv átírása és a könyv saját mondatainak hozzáidőzítése; az elkészült .srt fájlt a Hangoskönyv lap, az Olvasás → Feliratfájlok vagy egy olvasóprogram használhatja.</translation>
     </message>
     <message>
         <source>Check how much of a show, book or manga you can read</source>
@@ -4559,7 +4559,7 @@ A lemezről nem törlődik fájl.</translation>
     </message>
     <message>
         <source>You're ready. Pick a video and its subtitle file, then press Mine Episode. Books, manga and subtitles are under Reading, audiobooks under Audiobooks, tools under Utilities. Press F1 any time for the Usage Guide.</source>
-        <translation>Minden kész. Válasszon egy videót és a feliratfájlját, majd nyomja meg az Epizód gyűjtése gombot. A könyvek, mangák és feliratok az Olvasás, a hangoskönyvek a Hangoskönyvek, az eszközök a Segédeszközök alatt találhatók. A Használati útmutatóhoz bármikor nyomja meg az F1 billentyűt.</translation>
+        <translation>Minden kész. Válasszon egy videót és a feliratfájlját, majd nyomja meg az Epizód gyűjtése gombot. A könyvek, mangák és feliratok az Olvasás, a hangoskönyvek a Hangoskönyv, az eszközök a Segédeszközök alatt találhatók. A Használati útmutatóhoz bármikor nyomja meg az F1 billentyűt.</translation>
     </message>
     <message>
         <source>Anki isn't reachable. Open Anki.</source>
@@ -6023,7 +6023,7 @@ Indexfájl nem törlődik.</translation>
     </message>
     <message>
         <source>Go to Audiobooks</source>
-        <translation>Ugrás: Hangoskönyvek</translation>
+        <translation>Ugrás: Hangoskönyv</translation>
     </message>
     <message>
         <source>Go to Reading</source>
@@ -6483,7 +6483,7 @@ Hozzáadandó szavak: %3. Folytatja?</translation>
     </message>
     <message>
         <source>Audiobooks</source>
-        <translation>Hangoskönyvek</translation>
+        <translation>Hangoskönyv</translation>
     </message>
     <message>
         <source>Reading</source>
@@ -6567,7 +6567,7 @@ Hozzáadandó szavak: %3. Folytatja?</translation>
     </message>
     <message>
         <source>Navigate between Video, Audiobooks, Reading, Analytics, Utilities, and Settings</source>
-        <translation>Váltás a Videó, Hangoskönyvek, Olvasás, Statisztika, Segédeszközök és Beállítások lapok között</translation>
+        <translation>Váltás a Videó, Hangoskönyv, Olvasás, Statisztika, Segédeszközök és Beállítások lapok között</translation>
     </message>
     <message>
         <source>Application Header</source>
@@ -13487,7 +13487,7 @@ Ez alapján rendezve sorban haladhat végig egy hosszú felvételen — majd jel
     </message>
     <message>
         <source>Drop a video link here. Mine local files from the Video or Audiobooks tab.</source>
-        <translation>Húzzon ide egy videóhivatkozást. Helyi fájlokat a Videó vagy a Hangoskönyvek lapon gyűjthet.</translation>
+        <translation>Húzzon ide egy videóhivatkozást. Helyi fájlokat a Videó vagy a Hangoskönyv lapon gyűjthet.</translation>
     </message>
     <message>
         <source>This run needs local transcription, but the model %1 is not installed.</source>
