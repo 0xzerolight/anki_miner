@@ -29,12 +29,27 @@ def _db_with_user_words(tmp_path, user=("ラーメン", "カレー"), anki=("食
     return db
 
 
+def _shown(dlg) -> list[str]:
+    """The words the browser shows, top to bottom."""
+    return [row.lemma for row in dlg.visible_rows()]
+
+
+def _select(dlg, word: str) -> None:
+    """Select the browser row showing ``word``, and only it."""
+    proxy = dlg.word_table.model()
+    for row in range(proxy.rowCount()):
+        if proxy.index(row, 0).data() == word:
+            dlg.word_table.selectRow(row)
+            return
+    raise AssertionError(f"{word!r} is not shown")
+
+
 class TestPopulation:
     def test_lists_only_user_words_sorted(self, qtbot, tmp_path):
         db = _db_with_user_words(tmp_path)
         dlg = KnownWordsManagerDialog(db)
         qtbot.addWidget(dlg)
-        shown = [dlg.word_list.item(r).text() for r in range(dlg.word_list.count())]
+        shown = _shown(dlg)
         assert shown == sorted({"ラーメン", "カレー"})
 
     def test_count_label_splits_user_and_cached(self, qtbot, tmp_path):
@@ -78,13 +93,10 @@ class TestRemove:
         db = _db_with_user_words(tmp_path, user=("ラーメン", "カレー", "寿司"))
         dlg = KnownWordsManagerDialog(db)
         qtbot.addWidget(dlg)
-        # Select the row showing カレー.
-        for r in range(dlg.word_list.count()):
-            if dlg.word_list.item(r).text() == "カレー":
-                dlg.word_list.item(r).setSelected(True)
+        _select(dlg, "カレー")
         dlg._on_remove()
         assert db.get_words_by_source("user") == {"ラーメン", "寿司"}
-        shown = [dlg.word_list.item(r).text() for r in range(dlg.word_list.count())]
+        shown = _shown(dlg)
         assert "カレー" not in shown
 
     def test_remove_no_selection_is_noop(self, qtbot, tmp_path):
@@ -104,7 +116,7 @@ class TestReset:
         dlg._refresh()
         assert db.get_words_by_source("user") == set()
         assert db.get_known_words() == {"食べる"}
-        assert dlg.word_list.count() == 0
+        assert dlg.word_table.model().rowCount() == 0
 
 
 class TestSearch:
@@ -113,9 +125,7 @@ class TestSearch:
         dlg = KnownWordsManagerDialog(db)
         qtbot.addWidget(dlg)
         dlg.search_input.setText("カレー")
-        hidden = {dlg.word_list.item(r).text(): dlg.word_list.item(r).isHidden() for r in range(dlg.word_list.count())}
-        assert hidden["カレー"] is False
-        assert hidden["ラーメン"] is True
+        assert _shown(dlg) == ["カレー"]
 
 
 class TestExportDialogStartDir:
@@ -138,7 +148,7 @@ class TestExportDialogStartDir:
         initial = captured.get("initial", "")
         assert initial.startswith(home), f"Expected initial path under home={home!r}; got {initial!r}"
         assert initial != "", "initial path must not be empty"
-        assert "known_words.txt" in initial, f"suggested filename must be preserved; got {initial!r}"
+        assert "known_words.csv" in initial, f"suggested filename must be preserved; got {initial!r}"
 
     def test_write_failure_shows_nonmodal_retry(self, qtbot, tmp_path, monkeypatch, capture_off_thread, message_boxes):
         db = _db_with_user_words(tmp_path, user=("ラーメン",))
@@ -181,13 +191,13 @@ class TestExportDialogStartDir:
         release = threading.Event()
         real_export_to = dlg.export_to
 
-        def delayed_export(path):
+        def delayed_export(path, rows=None):
             entered.set()
             if not release.wait(3):
                 raise TimeoutError("test did not release export")
             if export_error:
                 raise OSError("disk full")
-            return real_export_to(path)
+            return real_export_to(path, rows)
 
         monkeypatch.setattr(dlg, "export_to", delayed_export)
         monkeypatch.setattr(
@@ -344,7 +354,7 @@ class TestImportSlot:
 
         assert message_boxes["questions"], "confirm dialog must be shown"
         assert db.get_words_by_source("user") == {"寿司", "天ぷら"}
-        shown = [dlg.word_list.item(r).text() for r in range(dlg.word_list.count())]
+        shown = _shown(dlg)
         assert sorted(shown) == sorted({"寿司", "天ぷら"})
         assert message_boxes["infos"], "success info must be shown"
         assert dlg.import_button.isEnabled() is True
@@ -480,21 +490,28 @@ class TestJapaneseTypeface:
     """
 
     def test_entries_use_the_japanese_face(self, qtbot, tmp_path):
+        from PyQt6.QtCore import Qt
+
         from anki_miner.gui.utils.fonts import resolved_families
 
         db = _db_with_user_words(tmp_path)
         dlg = KnownWordsManagerDialog(db)
         qtbot.addWidget(dlg)
-        assert dlg.word_list.count()
-        for row in range(dlg.word_list.count()):
-            assert dlg.word_list.item(row).font().family() == resolved_families().japanese
+        proxy = dlg.word_table.model()
+        assert proxy.rowCount()
+        for row in range(proxy.rowCount()):
+            font = proxy.index(row, 0).data(Qt.ItemDataRole.FontRole)
+            assert font.family() == resolved_families().japanese
 
     def test_entries_pin_no_size_into_the_row(self, qtbot, tmp_path):
+        from PyQt6.QtCore import Qt
+
         db = _db_with_user_words(tmp_path)
         dlg = KnownWordsManagerDialog(db)
         qtbot.addWidget(dlg)
-        for row in range(dlg.word_list.count()):
-            assert dlg.word_list.item(row).font().pixelSize() == -1
+        proxy = dlg.word_table.model()
+        for row in range(proxy.rowCount()):
+            assert proxy.index(row, 0).data(Qt.ItemDataRole.FontRole).pixelSize() == -1
 
 
 class TestContentStyleFollowsLanguage:
@@ -631,3 +648,68 @@ class TestFrame:
             assert button.width() >= button.sizeHint().width(), button.text()
         right_edge = dlg.reset_button.mapTo(dlg, dlg.reset_button.rect().topRight()).x()
         assert right_edge < dlg.width()
+
+
+class TestKindleAndLuteImport:
+    """SK-09: the dialog names the two new formats and parses for the mining language."""
+
+    def test_the_new_formats_have_their_own_names(self, qtbot, tmp_path):
+        dlg = KnownWordsManagerDialog(_db_with_user_words(tmp_path))
+        qtbot.addWidget(dlg)
+
+        assert dlg._format_display_name("kindle_vocab") == "Kindle Vocabulary Builder"
+        assert dlg._format_display_name("lute_csv") == "Lute or LWT term export"
+
+    def test_the_picker_offers_kindle_databases(self, qtbot, tmp_path, monkeypatch):
+        dlg = KnownWordsManagerDialog(_db_with_user_words(tmp_path))
+        qtbot.addWidget(dlg)
+        seen: dict[str, str] = {}
+
+        def pick(*args, on_done, **kwargs):
+            seen["filter"] = args[3]
+            on_done("")
+
+        monkeypatch.setattr(known_words_dialog_mod.file_dialogs, "pick_open_file", pick)
+        dlg._on_import()
+
+        assert "*.db" in seen["filter"]
+
+    def test_the_parse_is_for_the_mining_language(self, qtbot, tmp_path, monkeypatch, capture_off_thread):
+        dlg = KnownWordsManagerDialog(_db_with_user_words(tmp_path), language="es")
+        qtbot.addWidget(dlg)
+        seen: dict[str, object] = {}
+
+        def parse(path, **kwargs):
+            seen.update(kwargs)
+            return _import_result({"gato"})
+
+        monkeypatch.setattr(known_words_dialog_mod, "parse_known_words_file", parse)
+        _start_import(dlg, monkeypatch)
+        capture_off_thread["work"]()
+
+        assert seen["language"] == "es"
+
+    def test_the_not_recognized_message_names_the_new_formats(self, qtbot, tmp_path):
+        dlg = KnownWordsManagerDialog(_db_with_user_words(tmp_path))
+        qtbot.addWidget(dlg)
+
+        dlg._show_import_error(KnownWordsImportError("unrecognized"))
+
+        summary = dlg.issue_banner().current_issue().summary
+        assert "Kindle" in summary
+        assert "Lute" in summary
+
+    def test_a_file_in_other_languages_names_them(self, qtbot, tmp_path):
+        """Ruling C3: a Lute file with no row in the mining language says what it holds."""
+        from anki_miner.languages.registry import language_display_name
+
+        dlg = KnownWordsManagerDialog(_db_with_user_words(tmp_path), language="de")
+        qtbot.addWidget(dlg)
+
+        dlg._show_import_error(
+            KnownWordsImportError("other_language", format_key="lute_csv", languages=("Japanese", "Spanish"))
+        )
+
+        summary = dlg.issue_banner().current_issue().summary
+        assert language_display_name("de") in summary
+        assert "Japanese, Spanish" in summary

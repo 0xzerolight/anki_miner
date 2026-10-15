@@ -78,6 +78,7 @@ def _non_default_save_config(tmp_path: Path) -> AnkiMinerConfig:
         },
         strict_card_order=False,  # T10: moved here from FilteringSettingsPanel; default is True
         auto_open_anki=False,  # default is True
+        sync_anki_after_run=True,  # AI-03; default is False
         # --- MediaSettingsPanel ---
         audio_format="opus",
         audio_bitrate=128,  # default is 96
@@ -98,6 +99,7 @@ def _non_default_save_config(tmp_path: Path) -> AnkiMinerConfig:
         max_frequency_rank=5000,
         frequency_keep_unranked=True,
         use_known_words_db=True,
+        known_from_reviewed_cards=True,  # F-01; default is False
         known_words_match_kana_variants=False,  # default is True
         excluded_decks=("Deck A", "Deck B"),
         excluded_wordsets=("surnames", "given-names"),
@@ -148,6 +150,7 @@ _SAVE_PATH_FIELDS = frozenset(
         "card_type_marker_fields",
         "strict_card_order",  # T10: moved here from FilteringSettingsPanel
         "auto_open_anki",
+        "sync_anki_after_run",
         # MediaSettingsPanel
         "audio_format",
         "audio_bitrate",
@@ -168,6 +171,7 @@ _SAVE_PATH_FIELDS = frozenset(
         "max_frequency_rank",
         "frequency_keep_unranked",
         "use_known_words_db",
+        "known_from_reviewed_cards",
         "known_words_match_kana_variants",
         "excluded_decks",
         "excluded_wordsets",
@@ -291,6 +295,7 @@ class TestSavePathRoundTrip:
             "card_type_marker_fields",
             "strict_card_order",
             "auto_open_anki",
+            "sync_anki_after_run",
         ):
             assert getattr(result, field_name) == getattr(original, field_name), field_name
 

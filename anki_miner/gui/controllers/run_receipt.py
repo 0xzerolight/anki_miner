@@ -104,6 +104,8 @@ class RunReceipt:
             # A run mines one language; the first item that wrote rows names it.
             mined_forms_language=next((r.mined_forms_language for r in self.results if r.mined_forms), ""),
             terminal_outcome=self.outcome,
+            # WP-34: the results window exports the run's words from this.
+            not_mined=self.not_mined,
         )
 
 

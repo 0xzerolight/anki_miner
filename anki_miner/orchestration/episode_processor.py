@@ -45,12 +45,14 @@ from anki_miner.services import (
     SubtitleParserService,
     WordFilterService,
 )
+from anki_miner.services.anki_note_builder import CARD_TAGS_KEY, has_tag_tokens, render_card_tags
 from anki_miner.services.anki_service import is_transient_anki_transport_error
 from anki_miner.services.cue_merge import auto_line_expansion, merge_budget_seconds
 from anki_miner.services.definition_service import preferred_dictionaries
 from anki_miner.services.dictionary.card_style_block import attach_card_style_block
 from anki_miner.services.frequency.multi_frequency_service import harmonic_rank, min_rank
 from anki_miner.services.frequency.render import render_frequency_html
+from anki_miner.services.known_word_db import collect_knowledge_forms
 from anki_miner.services.pitch_accent.render import (
     render_pitch_graph_field,
     render_pitch_text_field,
@@ -262,6 +264,33 @@ def _source_label(series: str, episode: str) -> str:
     return " — ".join(part for part in parts if part)
 
 
+def _episode_tag_values(series: str, episode: str) -> dict[str, str]:
+    """Tag-token values for a video, audiobook or subtitle source (F-03).
+
+    Each part is cleaned like the Source label (:func:`_source_label`): release
+    metadata stripped, and a part that cleans to nothing kept as written.
+    """
+    return {
+        "series": sanitize_source_label(series) or series.strip(),
+        "episode": sanitize_source_label(episode) or episode.strip(),
+        "volume": "",
+    }
+
+
+def _document_tag_values(document: ReadingDocument) -> dict[str, str]:
+    """Tag-token values for a reading source (F-03).
+
+    A manga's mokuro volume is ``{volume}``. A book's, pasted text's or Anki
+    deck's ``series`` is a constant ("Books", "Text") or repeats the title, so
+    its title is ``{series}``. A subtitle file reads like a video.
+    """
+    if document.kind == "manga":
+        return {"series": document.series.strip(), "episode": "", "volume": document.episode.strip()}
+    if document.kind == "subtitle":
+        return _episode_tag_values(document.series, document.episode)
+    return {"series": document.episode.strip(), "episode": "", "volume": ""}
+
+
 def _online_run_identity(site: str, video_id: str) -> tuple[str, str]:
     """(series, episode) a fetched video is recorded under in stats and receipts.
 
@@ -387,6 +416,11 @@ class _EpisodeContext:
     # timestamp format); set by process_reading for manga/novels/subtitles.
     unit_labels: dict[int, str] | None = None
 
+    #: F-03: ``series`` / ``episode`` / ``volume`` for the tag tokens, taken
+    #: from this item's source at construction. Empty on a context built by
+    #: hand (tests), which renders every token empty.
+    tag_values: dict[str, str] = field(default_factory=dict)
+
     #: Which entry point started this run ("episode" / "reading" / "youtube").
     #: Rendered on both halves of the run's ``Pipeline start``/``Pipeline end``
     #: receipt so a phase count can be tied back to the run that produced it.
@@ -417,6 +451,11 @@ class _EpisodeContext:
     # The same snapshot as card fronts: the key i+1 and the curator's unknowns
     # column count on (UniDic folds 撮る onto 取る's lemma; known-ness is per front).
     unknown_fronts: set[str] = field(default_factory=set)
+    #: The fronts phase 2's exclusion left (every card in Anki). Equal to
+    #: ``unknown_fronts`` unless F-01's reviewed-only box widens that scoring
+    #: basis; the season mine pass re-checks its subset against this one, so
+    #: a word with an unreviewed card is never mined twice.
+    mineable_fronts: set[str] = field(default_factory=set)
     # Which whitelist entries this item reached (Settings -> Word Filters): phase
     # 2 stamps the entries and the already-known ones; None when no whitelist
     # is in effect. The mined ones are added at the result funnel
@@ -993,12 +1032,14 @@ class EpisodeProcessor:
     def _season_subset_still_unknown(self, ctx: _EpisodeContext, subset: list[TokenizedWord]) -> list[TokenizedWord]:
         """The season curator's subset minus what this mine pass now knows (T3).
 
-        ``ctx.unknown_fronts`` is this pass's post-known snapshot over the same
+        ``ctx.mineable_fronts`` is this pass's post-known snapshot over the same
         file, so a curated word an earlier episode's mine pass just carded (or
         its kana spelling, under the kana-variant rule) drops out exactly as it
-        would in per-pair Batch. Nothing else re-judges the subset.
+        would in per-pair Batch. Nothing else re-judges the subset. It is the
+        exclusion snapshot, not the i+1 basis: with F-01's reviewed-only box on,
+        a just-carded word is still unreviewed and must not be mined again.
         """
-        kept = [word for word in subset if word.mined_form in ctx.unknown_fronts]
+        kept = [word for word in subset if word.mined_form in ctx.mineable_fronts]
         ctx.new_words_found = len(kept)
         if len(kept) < len(subset):
             logger.info("season mine pass: %d curated word(s) known since the season curator", len(subset) - len(kept))
@@ -1315,14 +1356,20 @@ class EpisodeProcessor:
         # filters (frequency, word-list, script-type, wordset) shrink it.
         # The i+1 check must see ALL words the learner doesn't know, not
         # just the mineable ones.
-        all_unknown_lemmas = {w.lemma for w in unknown_words}
+        # F-01: with Word Filters → "Count a word as known only after its card
+        # has been reviewed" on, a word whose card is still new counts as
+        # unknown here (i+1, the curator's unknowns column) while the exclusion
+        # above still keeps it from being mined again.
+        scoring_words = self._phase2_scoring_unknown(all_words, unknown_words)
+        all_unknown_lemmas = {w.lemma for w in scoring_words}
         # Parsed lines are counted by card front (P4): known-ness was decided
         # per front, so a known 取る must not count as unknown beside 撮る.
-        all_unknown_fronts = {w.mined_form for w in unknown_words}
+        all_unknown_fronts = {w.mined_form for w in scoring_words}
         # The curator's "Unknowns in line" column counts against this same
         # basis, so the column and the i+1 filter can never disagree.
         ctx.unknown_lemmas = all_unknown_lemmas
         ctx.unknown_fronts = all_unknown_fronts
+        ctx.mineable_fronts = {w.mined_form for w in unknown_words}
 
         viable = self._phase2_definition_viability(unknown_words, counts)
         _note_dropped(ctx.not_mined, NotMinedReason.NO_DEFINITION, unknown_words, viable)
@@ -1479,6 +1526,30 @@ class EpisodeProcessor:
                 if isinstance(known, set):
                     drops.update(dict.fromkeys(known, NotMinedReason.KNOWN))
         return unknown_words
+
+    def _phase2_scoring_unknown(
+        self, all_words: list[TokenizedWord], unknown_words: list[TokenizedWord]
+    ) -> list[TokenizedWord]:
+        """The words that count as unknown when scoring lines (F-01, owner ruling R3).
+
+        ``unknown_words`` (phase 2's exclusion: every card in Anki) unless the
+        reviewed-only box is on. Then the same subtraction runs again from
+        ``all_words`` against the knowledge set — reviewed cards, the user list
+        and the cache rows flagged reviewed — and this run flags the reviewed
+        forms in the cache. A failed review query falls back to every card
+        with one warning (``collect_knowledge_forms``). The "include known
+        words" harness mode subtracts nothing either way.
+        """
+        if not self.config.known_from_reviewed_cards or self.config.include_known_words:
+            return unknown_words
+        knowledge = collect_knowledge_forms(
+            self.known_word_db,
+            self.config,
+            self.anki_service.get_existing_vocabulary(),
+            self.anki_service.get_reviewed_vocabulary,
+            record_reviews=True,
+        )
+        return self._drop_known_card_fronts(self.word_filter.filter_unknown(all_words, knowledge), knowledge)
 
     def _drop_known_card_fronts(self, words: list[TokenizedWord], known: set[str]) -> list[TokenizedWord]:
         """``words`` minus those a render hook cards under a front already known (audit L1-004).
@@ -2398,6 +2469,14 @@ class EpisodeProcessor:
         # S21: an rtl language's blocks carry the example-sentence rule; the
         # profile says which (card_style_block.RTL_GLOSSARY_CSS).
         style_direction = self.profile.content_style.direction
+        # F-03: {series} / {episode} / {volume} in the tag string render once
+        # per item from its source. A tag string without tokens stamps nothing,
+        # so those notes stay byte-identical (Review Focus 1).
+        card_tags = (
+            " ".join(render_card_tags(self.config.anki_tags, ctx.tag_values))
+            if has_tag_tokens(self.config.anki_tags)
+            else None
+        )
         for (word, media), definition, glossary, (pitch_position, pitch_category) in zip(
             media_results, definitions, glossaries, pitch_data, strict=True
         ):
@@ -2470,6 +2549,8 @@ class EpisodeProcessor:
             # never a KeyError. ctx.unit_labels is None on the video path.
             # Same formula the curator's Position column shows, by construction.
             extra_fields["source"] = f"{ctx.source_label} @ {_position_label(word.start_time, ctx.unit_labels)}"
+            if card_tags is not None:
+                extra_fields[CARD_TAGS_KEY] = card_tags
 
             # Per-field self-containment: the definition field carries its OWN
             # trailing block whenever it's mapped — regardless of the glossary
@@ -3344,6 +3425,7 @@ class EpisodeProcessor:
             series_name=series_name,
             source_label=source_label_override or _source_label(series_name, episode_name),
             kind=_outer_kind or "episode",
+            tag_values=_episode_tag_values(series_name, episode_name),
             receipt=(
                 None
                 if _outer_kind is not None
@@ -3936,6 +4018,7 @@ class EpisodeProcessor:
             source_label=source_label,
             unit_labels={unit.index: unit.location_label for unit in document.units},
             kind="reading",
+            tag_values=_document_tag_values(document),
             receipt={
                 # A reading run has neither file, so both slots render "-"; the
                 # document identity rides the two trailing fields instead.

@@ -1,9 +1,10 @@
-"""Dialog for managing the local user-curated known/ignore word list (Issue #42).
+"""Manage Known Words: browse, search, import, export and edit one language's known words.
 
-Shows the words the user added from the Word Curator (``source='user'``), lets
-them remove entries, export the list to a plain-text file (one word per line, for
-round-tripping back into jiten.moe), and reset it. The Anki-synced cache rows are
-not editable here — only counted for context.
+Lists every row of the active language's known-words DB — words you added
+(``source='user'``), words Anki Miner mined, and words cached from Anki — with
+their source and date added (WP-06). Only your own words can be removed here:
+Anki rows come back on the next sync, and mined rows leave with Undo. Import
+reads other tools' exports; Export writes the rows on screen.
 """
 
 from __future__ import annotations
@@ -12,22 +13,27 @@ import logging
 from collections.abc import Callable
 from pathlib import Path
 
+from PyQt6.QtCore import QAbstractTableModel, QCoreApplication, QModelIndex, QObject, QSortFilterProxyModel, Qt
 from PyQt6.QtWidgets import (
+    QAbstractItemView,
+    QComboBox,
     QHBoxLayout,
+    QHeaderView,
     QLabel,
     QLineEdit,
-    QListWidget,
     QMessageBox,
+    QTableView,
     QVBoxLayout,
     QWidget,
 )
 
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils import file_dialogs
-from anki_miner.gui.utils.content_text import apply_content_direction, content_cell_font
+from anki_miner.gui.utils.content_text import ContentCellDelegate, content_cell_font
 from anki_miner.gui.utils.dialog_paths import resolve_start_dir
 from anki_miner.gui.utils.keyboard_shortcuts import disown_default_buttons
 from anki_miner.gui.utils.qt_helpers import (
+    COPY_ROLE,
     configure_data_view,
     install_copy_rows,
 )
@@ -36,18 +42,122 @@ from anki_miner.gui.widgets.base import ScreenIssue, ScreenIssueHost
 from anki_miner.gui.widgets.base.enhanced_dialog import EnhancedDialog
 from anki_miner.gui.widgets.enhanced import ModernButton
 from anki_miner.languages.profile import ContentTextStyle
-from anki_miner.languages.registry import get_profile
-from anki_miner.services.known_word_db import KnownWordDB
+from anki_miner.languages.registry import get_profile, language_display_name
+from anki_miner.services.known_word_db import KnownWordDB, KnownWordRow
 from anki_miner.services.known_words_import import (
     KnownWordsImportError,
     KnownWordsImportResult,
     parse_known_words_file,
 )
+from anki_miner.services.word_export import write_known_words_csv, write_word_list
 from anki_miner.utils.i18n import tr_format
 from anki_miner.utils.logging_ext import log_summary
 from anki_miner.utils.subtitle_encoding import script_check_kwarg
 
 logger = logging.getLogger(__name__)
+
+
+#: An invalid index, the "no parent" of a flat table (a call in a default
+#: argument would be evaluated once at import anyway; named for B008).
+_NO_PARENT = QModelIndex()
+
+
+class KnownWordsTableModel(QAbstractTableModel):
+    """One language's known-words rows: word, source, date added (WP-06).
+
+    A model over a plain list, not one QTableWidgetItem per cell: a large
+    collection caches about 100k words, and three items each would make the
+    dialog take seconds to open.
+    """
+
+    WORD, SOURCE, ADDED = range(3)
+
+    def __init__(
+        self,
+        parent: QObject,
+        *,
+        style: Callable[[], ContentTextStyle],
+        source_label: Callable[[str], str],
+    ) -> None:
+        super().__init__(parent)
+        self._rows: list[KnownWordRow] = []
+        self._style = style
+        self._source_label = source_label
+        self._word_font = content_cell_font(style())
+
+    def set_rows(self, rows: list[KnownWordRow]) -> None:
+        """Replace every row (the dialog's refresh)."""
+        self.beginResetModel()
+        self._rows = list(rows)
+        self._word_font = content_cell_font(self._style())
+        self.endResetModel()
+
+    def row_at(self, row: int) -> KnownWordRow:
+        """The source row behind a model row number."""
+        return self._rows[row]
+
+    def rowCount(self, parent: QModelIndex = _NO_PARENT) -> int:
+        return 0 if parent.isValid() else len(self._rows)
+
+    def columnCount(self, parent: QModelIndex = _NO_PARENT) -> int:
+        return 0 if parent.isValid() else 3
+
+    def data(self, index: QModelIndex, role: int = Qt.ItemDataRole.DisplayRole) -> object:
+        if not index.isValid() or not 0 <= index.row() < len(self._rows):
+            return None
+        entry = self._rows[index.row()]
+        column = index.column()
+        if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.ToolTipRole, COPY_ROLE):
+            if column == self.WORD:
+                return entry.lemma
+            if column == self.SOURCE:
+                return self._source_label(entry.source)
+            # The date reads as a date; hover and copy carry the stored UTC time.
+            return entry.added_at[:10] if role == Qt.ItemDataRole.DisplayRole else entry.added_at
+        if role == Qt.ItemDataRole.FontRole and column == self.WORD:
+            return self._word_font
+        return None
+
+    def headerData(self, section: int, orientation: Qt.Orientation, role: int = Qt.ItemDataRole.DisplayRole) -> object:
+        if orientation != Qt.Orientation.Horizontal or role != Qt.ItemDataRole.DisplayRole:
+            return None
+        # The model is not a class the catalog knows, so the headers name the
+        # dialog's context, as a literal: pylupdate6 drops a context passed by name.
+        if section == self.WORD:
+            return QCoreApplication.translate("KnownWordsManagerDialog", "Word")
+        if section == self.SOURCE:
+            return QCoreApplication.translate("KnownWordsManagerDialog", "Source")
+        if section == self.ADDED:
+            return QCoreApplication.translate("KnownWordsManagerDialog", "Added")
+        return None
+
+
+class KnownWordsFilter(QSortFilterProxyModel):
+    """The browser's search text and source filter over :class:`KnownWordsTableModel`."""
+
+    def __init__(self, parent: QObject) -> None:
+        super().__init__(parent)
+        self._needle = ""
+        self._source = ""
+
+    def set_needle(self, text: str) -> None:
+        """Show only words containing ``text`` (case-insensitive); "" shows all."""
+        self._needle = text.casefold()
+        self.invalidateFilter()
+
+    def set_source(self, source: str) -> None:
+        """Show only rows from ``source`` ("user", "mined", "anki"); "" shows every source."""
+        self._source = source
+        self.invalidateFilter()
+
+    def filterAcceptsRow(self, source_row: int, source_parent: QModelIndex) -> bool:
+        model = self.sourceModel()
+        if not isinstance(model, KnownWordsTableModel):
+            return True
+        entry = model.row_at(source_row)
+        if self._source and entry.source != self._source:
+            return False
+        return not self._needle or self._needle in entry.lemma.casefold()
 
 
 class KnownWordsManagerDialog(ScreenIssueHost, EnhancedDialog):
@@ -91,7 +201,10 @@ class KnownWordsManagerDialog(ScreenIssueHost, EnhancedDialog):
         self.set_header(
             "",
             self.tr("Local Known Words"),
-            self.tr("Words you added from the Word Curator. Ignored on every run and kept across cache rebuilds."),
+            self.tr(
+                "Every word this language counts as known, and where it came from. Words you added from "
+                "the Word Curator stay known on every run and across cache rebuilds."
+            ),
         )
         content = QWidget()
         layout = QVBoxLayout(content)
@@ -114,19 +227,57 @@ class KnownWordsManagerDialog(ScreenIssueHost, EnhancedDialog):
         self.exclusions_label.setWordWrap(True)
         layout.addWidget(self.exclusions_label)
 
+        # Built once: the model asks for a source name on every paint and sort.
+        self._source_labels = {
+            "user": self.tr("Added by you"),
+            "mined": self.tr("Mined by Anki Miner"),
+            "anki": self.tr("From Anki"),
+        }
         self.search_input = QLineEdit()
         self.search_input.setPlaceholderText(self.tr("Filter…"))
         self.search_input.textChanged.connect(self._on_search_changed)
-        layout.addWidget(self.search_input)
+        # WP-06: which source to show. It opens on the words you added, the list
+        # this dialog always showed, so the plain-list export round trip holds.
+        self.source_filter = QComboBox()
+        self.source_filter.addItem(self.tr("All sources"), "")
+        self.source_filter.addItem(self._source_labels["user"], "user")
+        self.source_filter.addItem(self._source_labels["mined"], "mined")
+        self.source_filter.addItem(self._source_labels["anki"], "anki")
+        self.source_filter.setCurrentIndex(1)
+        self.source_filter.currentIndexChanged.connect(self._on_source_changed)
+        filter_row = QHBoxLayout()
+        filter_row.setSpacing(SPACING.sm)
+        filter_row.addWidget(self.search_input, 1)
+        filter_row.addWidget(self.source_filter)
+        layout.addLayout(filter_row)
 
-        self.word_list = QListWidget()
-        self.word_list.setSelectionMode(QListWidget.SelectionMode.ExtendedSelection)
-        configure_data_view(self.word_list)
-        install_copy_rows(self.word_list)
-        # Every row is a mined word: the list flips whole for an rtl language,
-        # like the subtitle viewer's line list (S21).
-        apply_content_direction(self.word_list, self._content_style)
-        layout.addWidget(self.word_list)
+        self._model = KnownWordsTableModel(self, style=lambda: self._content_style, source_label=self._source_label)
+        self._proxy = KnownWordsFilter(self)
+        self._proxy.setSourceModel(self._model)
+        self._proxy.set_source("user")
+        self.word_table = QTableView()
+        self.word_table.setModel(self._proxy)
+        self.word_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        self.word_table.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
+        self.word_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        configure_data_view(self.word_table)
+        install_copy_rows(self.word_table)
+        # Every word is mined content: its cells lay out in the mining
+        # language's direction (S21), the chrome columns stay as they are.
+        self.word_table.setItemDelegateForColumn(
+            KnownWordsTableModel.WORD, ContentCellDelegate(self.word_table, lambda: self._content_style)
+        )
+        header = self.word_table.horizontalHeader()
+        if header is not None:
+            header.setSectionResizeMode(KnownWordsTableModel.WORD, QHeaderView.ResizeMode.Stretch)
+            header.setSectionResizeMode(KnownWordsTableModel.SOURCE, QHeaderView.ResizeMode.ResizeToContents)
+            header.setSectionResizeMode(KnownWordsTableModel.ADDED, QHeaderView.ResizeMode.ResizeToContents)
+        self.word_table.setSortingEnabled(True)
+        self.word_table.sortByColumn(KnownWordsTableModel.WORD, Qt.SortOrder.AscendingOrder)
+        selection = self.word_table.selectionModel()
+        if selection is not None:
+            selection.selectionChanged.connect(self._sync_remove_button)
+        layout.addWidget(self.word_table)
 
         # The count, and Rebuild beside the "cached from Anki" number it clears
         # (C13; moved here from Word Filters). The label stays: D20 item 3 kept it.
@@ -151,9 +302,14 @@ class KnownWordsManagerDialog(ScreenIssueHost, EnhancedDialog):
         buttons = QHBoxLayout()
         self.remove_button = ModernButton(self.tr("Remove Selected"), variant="secondary")
         self.remove_button.clicked.connect(self._on_remove)
+        self.remove_button.setToolTip(
+            self.tr(
+                "Removes words you added. Words from Anki come back on the next run, and mined words leave with Undo."
+            )
+        )
         self.import_button = ModernButton(self.tr("Import…"), variant="secondary")
         self.import_button.clicked.connect(self._on_import)
-        self.export_button = ModernButton(self.tr("Export…"), variant="secondary")
+        self.export_button = ModernButton(self.tr("Export words…"), variant="secondary")
         self.export_button.clicked.connect(self._on_export)
         self.reset_button = ModernButton(self.tr("Reset User List"), variant="critical")
         self.reset_button.clicked.connect(self._on_reset)
@@ -177,22 +333,14 @@ class KnownWordsManagerDialog(ScreenIssueHost, EnhancedDialog):
     # ------------------------------------------------------------------
 
     def _refresh(self) -> None:
-        """Reload the user words from the DB and update the list + count label."""
-        user_words = sorted(self._db.get_words_by_source("user"))
-        self.word_list.clear()
-        self.word_list.addItems(user_words)
-        # Every entry is a mined word: the content face, and only the face —
-        # a cell font carrying no size leaves the shared row height alone
-        # (decision D45-B).
-        cell_font = content_cell_font(self._content_style)
-        for row in range(self.word_list.count()):
-            item = self.word_list.item(row)
-            if item is not None:
-                item.setFont(cell_font)
-        self._on_search_changed(self.search_input.text())
-
-        cached = max(0, self._db.word_count() - len(user_words))
-        self.count_label.setText(tr_format(self.tr("User words: %1 · cached from Anki: %2"), len(user_words), cached))
+        """Reload every row from the DB and update the table and the count label."""
+        rows = self._db.list_rows()
+        self._model.set_rows(rows)
+        user_count = sum(1 for row in rows if row.source == "user")
+        self.count_label.setText(
+            tr_format(self.tr("User words: %1 · cached from Anki: %2"), user_count, len(rows) - user_count)
+        )
+        self._sync_remove_button()
 
     def _sync_rebuild_button(self) -> None:
         """Enabled only while the cache is on and no rebuild runs (the old guard, C13)."""
@@ -216,14 +364,39 @@ class KnownWordsManagerDialog(ScreenIssueHost, EnhancedDialog):
         self._on_rebuild(done)
 
     def _on_search_changed(self, text: str) -> None:
-        needle = text.lower()
-        for row in range(self.word_list.count()):
-            item = self.word_list.item(row)
-            if item is not None:
-                item.setHidden(bool(needle) and needle not in item.text().lower())
+        self._proxy.set_needle(text)
+        self._sync_remove_button()
 
-    def _selected_words(self) -> set[str]:
-        return {item.text() for item in self.word_list.selectedItems()}
+    def _source_label(self, source: str) -> str:
+        """The translated name of a row's source; an unknown source shows as stored."""
+        return self._source_labels.get(source, source)
+
+    def _on_source_changed(self, _index: int) -> None:
+        self._proxy.set_source(str(self.source_filter.currentData() or ""))
+        self._sync_remove_button()
+
+    def visible_rows(self) -> list[KnownWordRow]:
+        """The rows on screen now (search and source filter applied), top to bottom."""
+        return [
+            self._model.row_at(self._proxy.mapToSource(self._proxy.index(row, 0)).row())
+            for row in range(self._proxy.rowCount())
+        ]
+
+    def _selected_rows(self) -> list[KnownWordRow]:
+        selection = self.word_table.selectionModel()
+        if selection is None:
+            return []
+        return [
+            self._model.row_at(self._proxy.mapToSource(index).row())
+            for index in selection.selectedRows(KnownWordsTableModel.WORD)
+        ]
+
+    def _selected_user_words(self) -> set[str]:
+        """Selected words you added: the only rows Remove may touch (R10)."""
+        return {row.lemma for row in self._selected_rows() if row.source == "user"}
+
+    def _sync_remove_button(self, *_args: object) -> None:
+        self.remove_button.setEnabled(bool(self._selected_user_words()))
 
     def done(self, result: int) -> None:
         """Close the dialog and invalidate unfinished async UI callbacks."""
@@ -235,10 +408,12 @@ class KnownWordsManagerDialog(ScreenIssueHost, EnhancedDialog):
     # ------------------------------------------------------------------
 
     def _on_remove(self) -> None:
-        words = self._selected_words()
+        words = self._selected_user_words()
         if not words:
             return
-        self._db.remove_words(words)
+        # source="user": an Anki row would come back on the next sync, and a
+        # mined row belongs to its run's Undo.
+        self._db.remove_words(words, source="user")
         self._refresh()
 
     def _format_display_name(self, format_key: str) -> str:
@@ -249,6 +424,8 @@ class KnownWordsManagerDialog(ScreenIssueHost, EnhancedDialog):
             "migaku_legacy": self.tr("Migaku legacy add-on backup"),
             "ankimorphs": self.tr("AnkiMorphs known morphs"),
             "migaku_csv": self.tr("Migaku word export (CSV)"),
+            "kindle_vocab": self.tr("Kindle Vocabulary Builder"),
+            "lute_csv": self.tr("Lute or LWT term export"),
             "generic": self.tr("plain word list"),
         }
         return labels.get(format_key, format_key)
@@ -292,6 +469,7 @@ class KnownWordsManagerDialog(ScreenIssueHost, EnhancedDialog):
                     return parse_known_words_file(
                         path,
                         encodings=profile.import_encodings,
+                        language=self._language,
                         **script_check_kwarg(profile.import_encodings, profile.script),
                     )
                 except KnownWordsImportError as exc:
@@ -308,7 +486,7 @@ class KnownWordsManagerDialog(ScreenIssueHost, EnhancedDialog):
             self,
             self.tr("Import Known Words"),
             resolve_start_dir(None, file_mode=True),
-            self.tr("Known word lists (*.csv *.txt *.json);;All Files (*)"),
+            self.tr("Known word lists (*.csv *.tsv *.txt *.json *.db);;All Files (*)"),
             on_done=_on_picked,
         )
 
@@ -367,6 +545,14 @@ class KnownWordsManagerDialog(ScreenIssueHost, EnhancedDialog):
                 self.tr("Detected: %1 — but no entries in this file qualify as known."),
                 self._format_display_name(error.format_key or "generic"),
             )
+        elif error.reason == "other_language":
+            # Ruling C3: a Lute/LWT file that holds only other languages says
+            # which, so a Spanish learner with a Japanese export knows why.
+            message = tr_format(
+                self.tr("This file has no words for %1. It contains: %2."),
+                language_display_name(self._language),
+                ", ".join(error.languages),
+            )
         elif error.reason == "too_large":
             message = self.tr("That file is too large to import.")
         elif error.reason == "unreadable":
@@ -377,6 +563,7 @@ class KnownWordsManagerDialog(ScreenIssueHost, EnhancedDialog):
             message = self.tr(
                 "File format not recognized. Supported: jpdb review export (JSON), "
                 "Migaku word export (JSON/CSV), AnkiMorphs known morphs (CSV), "
+                "Kindle Vocabulary Builder (vocab.db), Lute or LWT term export (CSV/TSV), "
                 "plain word lists (one word per line)."
             )
         self.show_screen_issue(ScreenIssue(summary=message))
@@ -391,11 +578,20 @@ class KnownWordsManagerDialog(ScreenIssueHost, EnhancedDialog):
         # a step the code never reached.
         self.show_screen_issue(ScreenIssue(summary=self.tr("That file could not be imported."), details=message))
 
-    def export_to(self, path: Path) -> int:
-        """Write the user words to ``path``, one per line (UTF-8). Returns the count."""
-        words = sorted(self._db.get_words_by_source("user"))
-        path.write_text("\n".join(words) + ("\n" if words else ""), encoding="utf-8")
-        return len(words)
+    def export_to(self, path: Path, rows: list[KnownWordRow] | None = None) -> int:
+        """Write the rows on screen to ``path``; return how many were written (WP-34).
+
+        A ``.txt`` name writes one word per line, the plain list other tools
+        read back (jiten.moe); any other name writes the fixed CSV columns
+        word, source, added_at_utc. ``rows`` is the snapshot ``_on_export``
+        took on the GUI thread; ``None`` reads the table now, so only a
+        GUI-thread caller may omit it.
+        """
+        if rows is None:
+            rows = self.visible_rows()
+        if path.suffix.lower() == ".txt":
+            return write_word_list(path, [row.lemma for row in rows])
+        return write_known_words_csv(path, rows)
 
     def _on_export(self) -> None:
 
@@ -404,9 +600,11 @@ class KnownWordsManagerDialog(ScreenIssueHost, EnhancedDialog):
                 return
             self.export_button.setEnabled(False)
             generation = self._dialog_generation
+            # The table is GUI-thread state: snapshot what is on screen now.
+            rows = self.visible_rows()
             run_off_thread(
                 self,
-                lambda: self.export_to(Path(path_str)),
+                lambda: self.export_to(Path(path_str), rows),
                 lambda count: self._on_export_succeeded(
                     generation,
                     lambda: QMessageBox.information(
@@ -422,8 +620,8 @@ class KnownWordsManagerDialog(ScreenIssueHost, EnhancedDialog):
         file_dialogs.pick_save_file(
             self,
             self.tr("Export Known Words"),
-            str(Path(resolve_start_dir(None, file_mode=True)) / "known_words.txt"),
-            "Text Files (*.txt);;All Files (*)",
+            str(Path(resolve_start_dir(None, file_mode=True)) / "known_words.csv"),
+            self.tr("CSV files (*.csv);;Text files, one word per line (*.txt)"),
             on_done=_on_picked,
         )
 
@@ -452,7 +650,8 @@ class KnownWordsManagerDialog(ScreenIssueHost, EnhancedDialog):
         self.export_button.setEnabled(True)
 
     def _on_reset(self) -> None:
-        if self.word_list.count() == 0:
+        user_count = len(self._db.get_words_by_source("user"))
+        if user_count == 0:
             return
         reply = QMessageBox.question(
             self,
@@ -469,7 +668,7 @@ class KnownWordsManagerDialog(ScreenIssueHost, EnhancedDialog):
             "Confirm",
             action="reset_user_known_words",
             answer="yes" if reply == QMessageBox.StandardButton.Yes else "no",
-            scope=f"{self.word_list.count()} words",
+            scope=f"{user_count} words",
         )
         if reply == QMessageBox.StandardButton.Yes:
             self._db.clear_user()

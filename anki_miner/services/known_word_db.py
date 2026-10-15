@@ -6,9 +6,11 @@ import sqlite3
 import unicodedata
 from collections.abc import Callable
 from contextlib import closing
+from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar
 
+from anki_miner.exceptions import AnkiConnectionError
 from anki_miner.utils.logging_ext import log_summary
 
 if TYPE_CHECKING:
@@ -43,6 +45,17 @@ def normalize_lemma(word: str) -> str:
 def _normalize_all(words: set[str]) -> set[str]:
     """Normalize a lemma set, collapsing canonical duplicates."""
     return {normalize_lemma(word) for word in words}
+
+
+@dataclass(frozen=True)
+class KnownWordRow:
+    """One known-words row as Manage Known Words lists it (WP-06)."""
+
+    lemma: str
+    #: "user" (added by you), "mined" (Anki Miner made the card), "anki" (synced from Anki).
+    source: str
+    #: Stored UTC text, ``YYYY-MM-DD HH:MM:SS``; "" for a row written without one.
+    added_at: str
 
 
 class KnownWordDB:
@@ -84,6 +97,8 @@ class KnownWordDB:
         # services tolerate.
         self._known_cache: set[str] | None = None
         self._source_cache: dict[str, set[str]] = {}
+        # F-01 memo for get_reviewed_words(), dropped with the other two.
+        self._reviewed_cache: set[str] | None = None
         self._cache_generation = KnownWordDB._write_generation
         # Anki-vocabulary normalization memo for sync_with_anki: AnkiService
         # caches get_existing_vocabulary() for the run too, so the same set
@@ -100,12 +115,14 @@ class KnownWordDB:
         self._cache_generation = KnownWordDB._write_generation
         self._known_cache = None
         self._source_cache = {}
+        self._reviewed_cache = None
 
     def _drop_cache_if_stale(self) -> None:
         """Forget the memo when any instance in this process wrote since it was filled."""
         if self._cache_generation != KnownWordDB._write_generation:
             self._known_cache = None
             self._source_cache = {}
+            self._reviewed_cache = None
             self._cache_generation = KnownWordDB._write_generation
 
     def _resolved_fold(self) -> Callable[[str], str] | None:
@@ -155,11 +172,33 @@ class KnownWordDB:
                 "CREATE TABLE IF NOT EXISTS known_words ("
                 "lemma TEXT PRIMARY KEY, "
                 "source TEXT DEFAULT 'anki', "
-                "added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"
+                "added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, "
+                "reviewed INTEGER NOT NULL DEFAULT 0"
                 ")"
             )
             conn.commit()
             self._migrate_to_nfc(conn)
+            self._ensure_reviewed_column(conn)
+
+    def _ensure_reviewed_column(self, conn: sqlite3.Connection) -> None:
+        """Add F-01's ``reviewed`` flag to a database written before it existed.
+
+        ``reviewed = 1`` marks a cached word whose Anki card had been reviewed
+        at least once (not new) when a mining run last looked, with Settings →
+        Word Filters → "Count a word as known only after its card has been
+        reviewed" on. Additive like the cache itself: a flag is never cleared,
+        only dropped with its row by Rebuild. ``ALTER TABLE ... ADD COLUMN``
+        keeps every row, and an old row reads as unreviewed until a run marks
+        it. No schema-version bump: the NFC migration must not rerun for this.
+        """
+        if not self._has_reviewed_column(conn):
+            conn.execute("ALTER TABLE known_words ADD COLUMN reviewed INTEGER NOT NULL DEFAULT 0")
+            conn.commit()
+
+    @staticmethod
+    def _has_reviewed_column(conn: sqlite3.Connection) -> bool:
+        """Whether this file already has the ``reviewed`` column (a file nobody initialized may not)."""
+        return any(row[1] == "reviewed" for row in conn.execute("PRAGMA table_info(known_words)"))
 
     def _migrate_to_nfc(self, conn: sqlite3.Connection) -> None:
         """Rewrite pre-normalization rows to their key, once per database.
@@ -278,6 +317,71 @@ class KnownWordDB:
         )
         self._source_cache[source] = words
         return words
+
+    def mark_reviewed(self, words: set[str]) -> int:
+        """Flag the cached rows for ``words`` as reviewed (F-01); return how many changed.
+
+        Only rows that already exist are touched: the mining path syncs the
+        every-card set into this cache first, so every reviewed form has its
+        row by now. A file without the column (never initialized by this
+        build) is left alone.
+
+        Args:
+            words: Card fronts whose Anki card was reviewed at least once.
+
+        Returns:
+            Number of rows that went from unreviewed to reviewed.
+        """
+        keys = self._normalize_words(words)
+        if not keys:
+            return 0
+        with closing(self._connect()) as conn:
+            if not self._has_reviewed_column(conn):
+                return 0
+            before = conn.total_changes
+            conn.executemany(
+                "UPDATE known_words SET reviewed = 1 WHERE lemma = ? AND reviewed = 0",
+                [(key,) for key in keys],
+            )
+            conn.commit()
+            changed = conn.total_changes - before
+        if changed:
+            self._invalidate_cache()
+        return changed
+
+    def get_reviewed_words(self) -> set[str]:
+        """Return the cached forms flagged reviewed (F-01), folded like every read.
+
+        Memoised for the run like :meth:`get_known_words`. A file without the
+        column reads as nothing reviewed.
+        """
+        self._drop_cache_if_stale()
+        if self._reviewed_cache is not None:
+            return self._reviewed_cache
+        with closing(self._connect()) as conn:
+            if self._has_reviewed_column(conn):
+                cursor = conn.execute("SELECT lemma FROM known_words WHERE reviewed = 1")
+                words = self._normalize_words({row[0] for row in cursor.fetchall()})
+            else:
+                words = set()
+        log_summary(logger, "Known words reviewed load done", rows=len(words), db=self._db_path)
+        self._reviewed_cache = words
+        return words
+
+    def list_rows(self) -> list[KnownWordRow]:
+        """Every row with its source and date added, ordered by word (WP-06's browser).
+
+        A missing file lists nothing and is not created: the browser reads,
+        it never initializes a language the user never mined.
+        """
+        if not self._db_path.exists():
+            return []
+        with closing(self._connect()) as conn:
+            cursor = conn.execute("SELECT lemma, source, added_at FROM known_words ORDER BY lemma")
+            return [
+                KnownWordRow(str(lemma), str(source or ""), str(added_at or ""))
+                for lemma, source, added_at in cursor.fetchall()
+            ]
 
     def add_words(self, words: set[str], source: str = "anki") -> int:
         """Bulk insert words into the database, ignoring duplicates.
@@ -588,4 +692,65 @@ def collect_known_forms(
                 known |= known_word_db.get_known_words()
             except (sqlite3.Error, OSError) as e:
                 logger.warning("Could not read known_words.db (%s); using Anki vocabulary only.", e)
+    return known
+
+
+def collect_knowledge_forms(
+    known_word_db: KnownWordDB | None,
+    config: "AnkiMinerConfig",
+    anki_vocabulary: set[str],
+    fetch_reviewed: Callable[[], set[str]],
+    *,
+    record_reviews: bool = False,
+) -> set[str]:
+    """Every form that counts as known when SCORING text (F-01, owner ruling R3).
+
+    Readability and the i+1 snapshot read this; mining exclusion and Deck
+    Filter keep :func:`collect_known_forms` over every card, so a word whose
+    card is still new is never mined twice. With Settings → Word Filters →
+    "Count a word as known only after its card has been reviewed" off, this IS
+    :func:`collect_known_forms`. On: the reviewed cards, the user list, and —
+    when ``use_known_words_db`` — the cached rows flagged reviewed (a reviewed
+    word whose card was later deleted stays known, as the cache promises).
+
+    Args:
+        known_word_db: The active language's known-words DB, or ``None``.
+        config: Supplies ``known_from_reviewed_cards`` and ``use_known_words_db``.
+        anki_vocabulary: Every card front in Anki, for the setting-off answer
+            and the fallback.
+        fetch_reviewed: ``AnkiService.get_reviewed_vocabulary``; called only
+            with the setting on.
+        record_reviews: Flag the reviewed forms in the DB first. The mining
+            path passes True; Readability writes nothing and leaves it False.
+    """
+    if not config.known_from_reviewed_cards:
+        return collect_known_forms(known_word_db, config, anki_vocabulary)
+    try:
+        reviewed = fetch_reviewed()
+    except AnkiConnectionError as e:
+        log_summary(
+            logger,
+            "Known from reviews unavailable",
+            level=logging.WARNING,
+            fallback="every_card",
+            exc_type=type(e).__name__,
+            error=str(e),
+        )
+        return collect_known_forms(known_word_db, config, anki_vocabulary)
+    known = set(reviewed)
+    if known_word_db is None or not known_word_db.is_available():
+        return known
+    try:
+        known |= known_word_db.get_words_by_source("user")
+    except (sqlite3.Error, OSError) as e:
+        logger.warning("Could not read the user ignore list from known_words.db (%s); proceeding without it.", e)
+    if config.use_known_words_db:
+        try:
+            if record_reviews:
+                known_word_db.mark_reviewed(reviewed)
+            known |= known_word_db.get_reviewed_words()
+        except (sqlite3.Error, OSError) as e:
+            logger.warning(
+                "Could not read reviewed words from known_words.db (%s); using Anki's reviewed cards only.", e
+            )
     return known

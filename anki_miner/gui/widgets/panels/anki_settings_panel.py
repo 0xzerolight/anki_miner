@@ -363,6 +363,17 @@ class AnkiSettingsPanel(FormPanel):
             helper=self.tr("Space-separated tags applied to every mined card. Leave blank for no tags."),
         )
 
+        # F-03: the tokens live in this field; one line says so (no setting).
+        self.anki_tags_helper = QLabel(
+            self.tr(
+                "{series}, {episode} and {volume} become each card's show, episode or book volume, "
+                "for example mined::{series}::{episode}."
+            )
+        )
+        self.anki_tags_helper.setObjectName("helper-text")
+        self.anki_tags_helper.setWordWrap(True)
+        self.add_widget(self.anki_tags_helper)
+
         # One connection row (C03). Refresh replaces Test Connection and the two
         # list Refresh buttons: it re-tests AnkiConnect and reloads both lists,
         # which is what a user who has just started Anki wants either way.
@@ -406,6 +417,18 @@ class AnkiSettingsPanel(FormPanel):
                 self.tr("Anki Miner can't find Anki where its installer puts it, so it can't open it.")
             )
 
+        # AI-03 (owner ruling R6): off by default. One sync after a run that
+        # added cards; a failed sync is a warning line, the run still succeeds.
+        self.sync_anki_after_run_checkbox = QCheckBox(self.tr("Sync Anki after mining"))
+        self.add_field(
+            "",
+            self.sync_anki_after_run_checkbox,
+            helper=self.tr(
+                "After a run that added cards, ask Anki to sync with AnkiWeb. "
+                "If the sync fails, the Activity Log says so and the cards stay added."
+            ),
+        )
+
         # The one status line (C03): the most important problem, or nothing.
         # "3 deck(s) loaded" and "Loading…" are gone -- a line that only ever
         # confirms things trains the eye to skip the line that matters.
@@ -425,6 +448,14 @@ class AnkiSettingsPanel(FormPanel):
             self.ankiconnect_url_input,
             helper=self.tr("Default http://127.0.0.1:8765. Change if AnkiConnect uses a different port."),
         )
+        # AI-02 (owner ruling R7): an API key rides in the URL, so there is no
+        # second field to keep out of exports; AnkiConnect gets it in the body.
+        self.ankiconnect_key_helper = QLabel(
+            self.tr("If AnkiConnect asks for an API key, add it to the address: http://127.0.0.1:8765/?key=YOUR_KEY")
+        )
+        self.ankiconnect_key_helper.setObjectName("helper-text")
+        self.ankiconnect_key_helper.setWordWrap(True)
+        self.add_widget(self.ankiconnect_key_helper)
         # Every problem on either line described the previous address.
         self.ankiconnect_url_input.textChanged.connect(lambda _text: self._clear_status_parts())
         self.ankiconnect_url_input.textChanged.connect(lambda _text: self.set_fill_status(None, ""))
@@ -1226,6 +1257,7 @@ class AnkiSettingsPanel(FormPanel):
         self.set_card_type_marker_fields(config.card_type_marker_fields)
         self.set_strict_card_order(config.strict_card_order)
         self.auto_open_anki_checkbox.setChecked(config.auto_open_anki)
+        self.sync_anki_after_run_checkbox.setChecked(config.sync_anki_after_run)
         self.reading_tone_color_checkbox.setChecked(config.reading_tone_color)
         capabilities = get_profile(config_language(config)).capabilities
         self._presets_allowed = "note_presets" in capabilities
@@ -1253,6 +1285,7 @@ class AnkiSettingsPanel(FormPanel):
             card_type_marker_fields=self.get_card_type_marker_fields(),
             strict_card_order=self.get_strict_card_order(),
             auto_open_anki=self.auto_open_anki_checkbox.isChecked(),
+            sync_anki_after_run=self.sync_anki_after_run_checkbox.isChecked(),
         )
         # Language-scoped: only written while the row is on screen, same
         # rationale as the hook fields above (see FilteringSettingsPanel's twin

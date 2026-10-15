@@ -20,6 +20,7 @@ import logging
 import threading
 import time
 from typing import Any
+from urllib.parse import unquote, urlsplit, urlunsplit
 
 import requests
 
@@ -58,6 +59,51 @@ def reset_connection_warning() -> None:
     global _connection_warning_logged
     with _LOG_STATE_LOCK:
         _connection_warning_logged = False
+
+
+#: The query parameter that carries AnkiConnect's API key (owner ruling R7).
+_KEY_PARAM = "key"
+
+
+def split_ankiconnect_url(ankiconnect_url: str) -> tuple[str, str | None]:
+    """Split the API key off an AnkiConnect URL: ``(endpoint, key)``.
+
+    AI-02: a user who set AnkiConnect's ``apiKey`` writes it into the URL,
+    ``http://127.0.0.1:8765/?key=SECRET``, so no second setting exists. The
+    endpoint keeps every other query parameter as written; the key is
+    percent-decoded but a ``+`` stays a ``+`` (a key is not form data). ``None``
+    means no key parameter; ``""`` means an empty one, which sends no key.
+    """
+    try:
+        parts = urlsplit(ankiconnect_url)
+    except ValueError:
+        return ankiconnect_url, None
+    if not parts.query:
+        return ankiconnect_url, None
+    key: str | None = None
+    kept: list[str] = []
+    for piece in parts.query.split("&"):
+        name, _sep, value = piece.partition("=")
+        if unquote(name) == _KEY_PARAM:
+            key = unquote(value)
+        else:
+            kept.append(piece)
+    if key is None:
+        return ankiconnect_url, None
+    return urlunsplit(parts._replace(query="&".join(kept))), key
+
+
+def redact_ankiconnect_url(ankiconnect_url: str) -> str:
+    """The URL as every log line, receipt and diagnostics bundle shows it: ``key=***``.
+
+    Unchanged when the URL carries no key, so every existing log line reads
+    exactly as before for a user without one.
+    """
+    endpoint, key = split_ankiconnect_url(ankiconnect_url)
+    if key is None:
+        return ankiconnect_url
+    separator = "&" if urlsplit(endpoint).query else "?"
+    return f"{endpoint}{separator}{_KEY_PARAM}=***"
 
 
 def _body_snippet(response: requests.Response | None) -> str:
@@ -199,7 +245,8 @@ def post_action(
 
     Args:
         ankiconnect_url: AnkiConnect endpoint, typically
-            ``http://localhost:8765``.
+            ``http://localhost:8765``. A ``?key=…`` parameter (AI-02) is moved
+            into the request body and shown as ``key=***`` in every log line.
         action: AnkiConnect action name (e.g. ``"findNotes"``).
         params: Action-specific parameters dict. ``None`` is sent as ``{}``.
         timeout: Request timeout in seconds.
@@ -217,19 +264,20 @@ def post_action(
         len(params or {}),
         timeout,
     )
+    endpoint, key = split_ankiconnect_url(ankiconnect_url)
+    log_url = redact_ankiconnect_url(ankiconnect_url)
+    body: dict[str, Any] = {"action": action, "version": _API_VERSION, "params": params or {}}
+    if key:
+        body[_KEY_PARAM] = key
     started = time.monotonic()
     response: requests.Response | None = None
     try:
-        response = _post(
-            ankiconnect_url,
-            json={"action": action, "version": _API_VERSION, "params": params or {}},
-            timeout=timeout,
-        )
+        response = _post(endpoint, json=body, timeout=timeout)
         response.raise_for_status()
         _check_response_size(response, action)
         result = response.json()
     except requests.exceptions.ConnectionError as e:
-        _log_connection_failure(ankiconnect_url, action, e, time.monotonic() - started)
+        _log_connection_failure(log_url, action, e, time.monotonic() - started)
         raise AnkiConnectionError("Cannot connect to AnkiConnect. Is Anki running?") from e
     except requests.exceptions.Timeout as e:
         # Only read timeouts reach here: ConnectTimeout is also a
@@ -239,14 +287,14 @@ def post_action(
             "AnkiConnect request timed out",
             level=logging.WARNING,
             action=action,
-            url=ankiconnect_url,
+            url=log_url,
             timeout=timeout,
             elapsed=f"{time.monotonic() - started:.3f}s",
             exc_type=type(e).__name__,
         )
         raise AnkiConnectionError(_timeout_message(action, timeout)) from e
     except (requests.RequestException, ValueError) as e:
-        _log_request_failed(ankiconnect_url, action, e, time.monotonic() - started, response)
+        _log_request_failed(log_url, action, e, time.monotonic() - started, response)
         raise AnkiConnectionError("Anki sent an unusable reply.") from e
     if not isinstance(result, dict):
         # A non-object body (wrong service on the port, a proxy error page that
@@ -256,7 +304,7 @@ def post_action(
             "AnkiConnect response invalid",
             level=logging.WARNING,
             action=action,
-            url=ankiconnect_url,
+            url=log_url,
             type=type(result).__name__,
             body=_body_snippet(response),
         )
@@ -268,12 +316,12 @@ def post_action(
         logger.warning(
             "AnkiConnect error: action=%s url=%s elapsed=%.3fs error=%s",
             action,
-            ankiconnect_url,
+            log_url,
             time.monotonic() - started,
             result["error"],
         )
         raise AnkiConnectionError(f"AnkiConnect error in '{action}': {result['error']}")
-    _log_ready(ankiconnect_url, action, result)
+    _log_ready(log_url, action, result)
     return result.get("result")
 
 
@@ -286,6 +334,11 @@ def post_multi(
 
     Per-sub-action errors are returned in the list as-is (dicts with an
     ``"error"`` key); only top-level transport / AnkiConnect failures raise.
+
+    A ``?key=…`` in the URL (AI-02) goes on the envelope AND on every
+    sub-action: AnkiConnect's ``multi`` runs each sub-action through its
+    request handler, which checks the key per request. The caller's dicts are
+    copied, never mutated.
 
     Args:
         ankiconnect_url: AnkiConnect endpoint, typically ``http://localhost:8765``.
@@ -305,19 +358,21 @@ def post_multi(
         len(actions),
         timeout,
     )
+    endpoint, key = split_ankiconnect_url(ankiconnect_url)
+    log_url = redact_ankiconnect_url(ankiconnect_url)
+    sent_actions = [{**action, _KEY_PARAM: key} for action in actions] if key else actions
+    body: dict[str, Any] = {"action": "multi", "version": _API_VERSION, "params": {"actions": sent_actions}}
+    if key:
+        body[_KEY_PARAM] = key
     started = time.monotonic()
     response: requests.Response | None = None
     try:
-        response = _post(
-            ankiconnect_url,
-            json={"action": "multi", "version": _API_VERSION, "params": {"actions": actions}},
-            timeout=timeout,
-        )
+        response = _post(endpoint, json=body, timeout=timeout)
         response.raise_for_status()
         _check_response_size(response, "multi")
         result = response.json()
     except requests.exceptions.ConnectionError as e:
-        _log_connection_failure(ankiconnect_url, "multi", e, time.monotonic() - started)
+        _log_connection_failure(log_url, "multi", e, time.monotonic() - started)
         raise AnkiConnectionError("Cannot connect to AnkiConnect. Is Anki running?") from e
     except requests.exceptions.Timeout as e:
         # Only read timeouts reach here: ConnectTimeout is also a
@@ -327,14 +382,14 @@ def post_multi(
             "AnkiConnect request timed out",
             level=logging.WARNING,
             action="multi",
-            url=ankiconnect_url,
+            url=log_url,
             timeout=timeout,
             elapsed=f"{time.monotonic() - started:.3f}s",
             exc_type=type(e).__name__,
         )
         raise AnkiConnectionError(_timeout_message("multi", timeout)) from e
     except (requests.RequestException, ValueError) as e:
-        _log_request_failed(ankiconnect_url, "multi", e, time.monotonic() - started, response)
+        _log_request_failed(log_url, "multi", e, time.monotonic() - started, response)
         raise AnkiConnectionError("Anki sent an unusable reply.") from e
     if not isinstance(result, dict):
         log_summary(
@@ -342,7 +397,7 @@ def post_multi(
             "AnkiConnect response invalid",
             level=logging.WARNING,
             action="multi",
-            url=ankiconnect_url,
+            url=log_url,
             type=type(result).__name__,
             body=_body_snippet(response),
         )
@@ -351,12 +406,12 @@ def post_multi(
         # See post_action: the error string stays verbatim at end of line.
         logger.warning(
             "AnkiConnect error: action=multi url=%s elapsed=%.3fs error=%s",
-            ankiconnect_url,
+            log_url,
             time.monotonic() - started,
             result["error"],
         )
         raise AnkiConnectionError(f"AnkiConnect error in 'multi': {result['error']}")
-    _log_ready(ankiconnect_url, "multi", result)
+    _log_ready(log_url, "multi", result)
     return _expect_list(result.get("result"), "multi", len(actions))
 
 

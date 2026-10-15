@@ -1,18 +1,24 @@
 """Enhanced dialog for displaying processing results with stat cards."""
 
+import contextlib
 import logging
+from pathlib import Path
 from typing import Callable, cast
 
 from PyQt6.QtGui import QCloseEvent, QFont
 from PyQt6.QtWidgets import QApplication, QFrame, QHBoxLayout, QLabel, QMessageBox, QPushButton, QTextEdit, QVBoxLayout
 
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
-from anki_miner.gui.utils import result_copy
+from anki_miner.gui.utils import file_dialogs, result_copy
+from anki_miner.gui.utils.dialog_paths import resolve_start_dir
 from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.gui.widgets.base import EnhancedDialog
 from anki_miner.gui.widgets.enhanced import StatCard
 from anki_miner.models import ProcessingResult, TerminalOutcome
+from anki_miner.models.processing import NotMinedReport
+from anki_miner.services.word_export import write_run_words_csv
 from anki_miner.utils.i18n import tr_format
+from anki_miner.utils.logging_ext import log_summary
 
 logger = logging.getLogger(__name__)
 
@@ -163,6 +169,13 @@ class ResultsDialog(EnhancedDialog):
         if self._summary_text:
             self._copy_button = self.add_button(self.tr("Copy summary"), "secondary", self._on_copy_summary)
 
+        # WP-34 (owner ruling R10): the run's mined and not-mined words, with
+        # the reason each was skipped, as a fixed-column CSV.
+        self._export_button: QPushButton | None = None
+        report = getattr(self.processing_result, "not_mined", None)
+        if isinstance(report, NotMinedReport) and (report.mined or report.words):
+            self._export_button = self.add_button(self.tr("Export words…"), "secondary", self._on_export_words)
+
         # Add undo button if callback and card IDs are available
         if self._undo_callback and self.processing_result.card_ids:
             self._undo_button = self.add_button(
@@ -184,6 +197,49 @@ class ResultsDialog(EnhancedDialog):
         if clipboard is None:
             return
         clipboard.setText(self._summary_text)
+
+    def _on_export_words(self) -> None:
+        """Ask where, then write the run's words off the GUI thread (no modal: D24)."""
+        report = self.processing_result.not_mined
+        button = self._export_button
+        if report is None or button is None:
+            return
+
+        def _on_picked(path_str: str) -> None:
+            if not path_str:
+                return
+            button.setEnabled(False)
+            run_off_thread(
+                self,
+                lambda: write_run_words_csv(Path(path_str), report),
+                lambda _count: self._on_export_words_done(path_str),
+                lambda message: self._on_export_words_failed(path_str, message),
+            )
+
+        file_dialogs.pick_save_file(
+            self,
+            self.tr("Export Words"),
+            str(Path(resolve_start_dir(None, file_mode=True)) / "words.csv"),
+            self.tr("CSV files (*.csv)"),
+            on_done=_on_picked,
+        )
+
+    def _on_export_words_done(self, path_str: str) -> None:
+        # bucket C: the window can be gone by the time the write finishes.
+        with contextlib.suppress(RuntimeError):
+            if self._export_button is not None:
+                self._export_button.setText(self.tr("Words exported"))
+                self._export_button.setToolTip(path_str)
+                self._export_button.setEnabled(True)
+
+    def _on_export_words_failed(self, path_str: str, message: str) -> None:
+        log_summary(logger, "Run words export failed", level=logging.WARNING, path=path_str, error=message)
+        # bucket C: the window can be gone by the time the write fails.
+        with contextlib.suppress(RuntimeError):
+            if self._export_button is not None:
+                self._export_button.setText(self.tr("Export failed — try again"))
+                self._export_button.setToolTip(message)
+                self._export_button.setEnabled(True)
 
     def _on_undo_clicked(self) -> None:
         """Confirm, then run the card delete OFF the GUI thread.

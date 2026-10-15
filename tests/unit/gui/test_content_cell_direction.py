@@ -141,14 +141,19 @@ def test_the_content_columns_follow_the_mining_language(qtbot, module_name, clas
     assert table.itemDelegateForColumn(chrome_column) is None, "a chrome column must keep the stock delegate"
 
 
-def test_the_known_words_list_takes_the_content_direction(qtbot, tmp_path):
+def test_the_known_words_table_lays_words_out_in_the_content_direction(qtbot, tmp_path):
     rtl = KnownWordsManagerDialog(KnownWordDB(tmp_path / "ar.db"), language="ar", content_style=AR)
     qtbot.addWidget(rtl)
     ltr = KnownWordsManagerDialog(KnownWordDB(tmp_path / "ja.db"))
     qtbot.addWidget(ltr)
 
-    assert rtl.word_list.layoutDirection() == Qt.LayoutDirection.RightToLeft
-    assert not ltr.word_list.testAttribute(Qt.WidgetAttribute.WA_SetLayoutDirection)
+    rtl_delegate = rtl.word_table.itemDelegateForColumn(0)
+    ltr_delegate = ltr.word_table.itemDelegateForColumn(0)
+    assert isinstance(rtl_delegate, ContentCellDelegate)
+    assert isinstance(ltr_delegate, ContentCellDelegate)
+    assert rtl_delegate._style().direction == "rtl"
+    assert ltr_delegate._style().direction != "rtl"
+    assert rtl.word_table.itemDelegateForColumn(1) is None, "a chrome column keeps the stock delegate"
 
 
 # --- right-to-left UI (ar/fa/he interface) around left-to-right content -------

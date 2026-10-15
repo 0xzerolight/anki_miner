@@ -292,23 +292,23 @@ class TestKnownWordsIsADataSurface:
     def test_rows_use_the_shared_metric(self, qtbot, tmp_path):
         dialog = self._dialog(qtbot, tmp_path, {"食べる", "走る"})
 
-        assert dialog.word_list.sizeHintForRow(0) >= data_row_height(dialog.word_list)
+        assert dialog.word_table.rowHeight(0) >= data_row_height(dialog.word_table)
 
     def test_selected_words_copy_one_per_line(self, qtbot, qapp, tmp_path):
         dialog = self._dialog(qtbot, tmp_path, {"食べる", "走る"})
-        for row in range(dialog.word_list.count()):
-            dialog.word_list.item(row).setSelected(True)
+        dialog.word_table.selectAll()
 
-        _trigger_copy(dialog.word_list)
+        _trigger_copy(dialog.word_table)
 
-        assert set(qapp.clipboard().text().split("\n")) == {"食べる", "走る"}
+        lines = qapp.clipboard().text().split("\n")
+        assert {line.split("\t")[0] for line in lines} == {"食べる", "走る"}
 
     def test_the_list_scrolls_per_pixel(self, qtbot, tmp_path):
         from PyQt6.QtWidgets import QAbstractItemView
 
         dialog = self._dialog(qtbot, tmp_path, {"食べる"})
 
-        assert dialog.word_list.verticalScrollMode() == QAbstractItemView.ScrollMode.ScrollPerPixel
+        assert dialog.word_table.verticalScrollMode() == QAbstractItemView.ScrollMode.ScrollPerPixel
 
 
 class TestRowsSurviveEveryTextScale:
@@ -326,7 +326,7 @@ class TestRowsSurviveEveryTextScale:
         font_scale(scale)
         dialog = TestKnownWordsIsADataSurface._dialog(qtbot, tmp_path, {"営業部の会議"})
 
-        assert dialog.word_list.sizeHintForRow(0) >= dialog.word_list.fontMetrics().height()
+        assert dialog.word_table.rowHeight(0) >= dialog.word_table.fontMetrics().height()
 
 
 class TestTheOrderedSurfacesAreDataToo:

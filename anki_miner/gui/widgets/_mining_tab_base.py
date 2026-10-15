@@ -485,6 +485,38 @@ class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidge
             self._log_whitelist_report(receipt.whitelist)
         if receipt.not_mined is not None:
             self._log_not_mined_report(receipt.not_mined)
+        # AI-03: here and only here, so a twelve-episode queue syncs once.
+        self._sync_anki_after_run(receipt.notes_added)
+
+    def _sync_anki_after_run(self, notes_added: int) -> None:
+        """Ask Anki to sync once after a run that added cards (AI-03, owner ruling R6).
+
+        Off the GUI thread: AnkiConnect answers only when Anki has taken the
+        request, and a closed Anki is a connect timeout. A failure is one
+        warning line in this screen's Activity Log (and the file log, through
+        ``sync_after_run``); the run's receipt is never touched.
+        """
+        if notes_added <= 0 or not self.config.sync_anki_after_run:
+            return
+        from anki_miner.services.anki_service import sync_after_run
+
+        def _on_done(synced: object) -> None:
+            if synced is True:
+                return
+            log_widget = getattr(self, "log_widget", None)
+            if log_widget is None:
+                return
+            # bucket C: the screen can be gone by the time Anki answers.
+            with contextlib.suppress(RuntimeError):
+                log_widget.append_warning(
+                    QCoreApplication.translate(
+                        "MiningTabBase",
+                        "Anki didn't sync after this run. Your cards are added; sync from Anki, "
+                        "or see the log for why.",
+                    )
+                )
+
+        run_off_thread(self, partial(sync_after_run, self.config, notes_added), _on_done)
 
     def _log_whitelist_report(self, coverage: WhitelistCoverage) -> None:
         """Put the run-level whitelist line in this screen's Activity Log, once.
