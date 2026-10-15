@@ -114,6 +114,10 @@ class BookSyncWorker(FileQueueWorker):
         def _on_align_start() -> None:
             self.file_progress.emit(idx, UNMEASURED, self.tr("Aligning to the book…"))
 
+        def _on_transcript_reused() -> None:
+            # F-12: hours of transcription skipped; say so instead of a silent jump to aligning.
+            self.file_progress.emit(idx, UNMEASURED, self.tr("Reusing the saved transcript"))
+
         def _log(line: str) -> None:
             # The aligner's re-anchor / skip notes: diagnostics in the
             # service's own words, surfaced like Generate's service lines.
@@ -135,6 +139,7 @@ class BookSyncWorker(FileQueueWorker):
                 ct2_model_session=self._ct2_model_session,
                 language=get_profile(config_language(self._config)).asr_language,
                 log=_log,
+                on_transcript_reused=_on_transcript_reused,
             )
         except Exception as exc:  # noqa: BLE001 — per-file isolation
             logger.exception("booksync_worker: error on %s", audio_path)

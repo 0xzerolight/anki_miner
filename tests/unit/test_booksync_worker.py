@@ -209,3 +209,18 @@ def test_progress_callbacks_reach_file_progress(qapp, tmp_path):
     assert pct_by_message["Transcribing: 50%"] == 50
     for unmeasured in ("Extracting audio: ch01.mp3", "Aligning to the book…", "Re-anchored at sentence 7"):
         assert pct_by_message[unmeasured] == UNMEASURED
+
+
+def test_a_reused_transcript_is_said_in_the_progress_line(qapp, tmp_path):
+    audio = tmp_path / "ch01.mp3"
+    audio.touch()
+    w = _worker(tmp_path, [audio])
+
+    def fake_sync(config, extractor, audio, book, cursor, out, **kw):
+        kw["on_transcript_reused"]()
+        return BookSyncResult(BookSyncStatus.SUCCESS, out_srt=out, cues=1)
+
+    with patch(_LOAD_BOOK, return_value=_BOOK), patch(_SYNC_ONE, side_effect=fake_sync):
+        cap = _run(w)
+
+    assert "Reusing the saved transcript" in [msg for _idx, _pct, msg in cap["progress"]]

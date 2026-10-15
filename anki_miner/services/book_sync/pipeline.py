@@ -110,13 +110,20 @@ def sync_one(
     ct2_model_session: Ct2ModelSession | None = None,
     language: str = "ja",
     log: Callable[[str], None] | None = None,
+    on_transcript_reused: Callable[[], None] | None = None,
 ) -> BookSyncResult:
     """Transcribe *audio_path*, align it to *book* from *cursor*, write *out_srt*.
 
     ``on_align_start`` fires after transcription, before alignment (the
     worker's "Aligning to the book…" line). ``log`` receives the aligner's
     re-anchor / skip notes, in the app's own words for the Activity log.
+    The transcript is read from, and saved to, the transcript cache shared
+    with Generate (F-12); ``on_transcript_reused`` fires when it came from
+    there. Segments are re-broken at the mining language's sentence ends
+    (MS-21), the same transcript Generate writes, which also keeps the
+    aligner's per-segment time interpolation short.
     """
+    from anki_miner.languages.registry import config_language, get_profile
     from anki_miner.services.asr import long_audio, srt_writer
 
     transcript = long_audio.transcribe_media(
@@ -129,6 +136,9 @@ def sync_one(
         on_transcribe_start=on_transcribe_start,
         ct2_model_session=ct2_model_session,
         language=language,
+        sentence_rules=get_profile(config_language(config)).sentence_rules,
+        use_cache=True,
+        on_cache_hit=on_transcript_reused,
     )
     if transcript.status is long_audio.LongAudioStatus.CANCELLED:
         return BookSyncResult(BookSyncStatus.CANCELLED)

@@ -326,3 +326,45 @@ def test_generate_asks_for_the_cache_and_the_mining_languages_sentence_rules(tmp
 
     assert seen["use_cache"] is True
     assert seen["sentence_rules"] is get_profile("es").sentence_rules
+
+
+def test_audiobook_sync_reuses_the_transcript_generate_saved(tmp_path, monkeypatch, cache_dir):
+    """R16: one cache for Generate and Audiobook Sync — the second tool never extracts or transcribes."""
+    from anki_miner.services.book_sync.aligner import BookCursor, BookText
+    from anki_miner.services.book_sync.normalize import normalize_for_alignment
+    from anki_miner.services.book_sync.pipeline import sync_one
+
+    _patch_pipeline(monkeypatch)
+    import anki_miner.services.asr.transcriber as t
+
+    calls: list[str] = []
+    real_fake = t.transcribe
+
+    def counting(audio, **kwargs):
+        calls.append("transcribe")
+        return real_fake(audio, **kwargs)
+
+    monkeypatch.setattr(t, "transcribe", counting)
+    config = _make_config(tmp_path)
+    media = tmp_path / "book.m4b"
+    media.write_bytes(b"audio")
+    generate_subtitle_one(config, _FakeExtractor(), media, tmp_path / "book.srt")
+    assert calls == ["transcribe"]
+
+    sentences = ("こんにちは世界",)
+    book = BookText(title="t", sentences=sentences, keys=tuple(normalize_for_alignment(s) for s in sentences))
+    extractor = _FakeExtractor()
+    reused: list[str] = []
+    sync_one(
+        config,
+        extractor,
+        media,
+        book,
+        BookCursor(),
+        tmp_path / "out" / "book.srt",
+        on_transcript_reused=lambda: reused.append("hit"),
+    )
+
+    assert calls == ["transcribe"]  # not transcribed again
+    assert extractor.calls == []  # not even extracted
+    assert reused == ["hit"]

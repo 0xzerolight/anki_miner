@@ -209,3 +209,36 @@ def test_sync_one_forwards_language_and_session(tmp_path, monkeypatch):
         ct2_model_session=session,  # type: ignore[arg-type]
     )
     assert seen["language"] == "ko" and seen["ct2_model_session"] is session
+
+
+def test_sync_one_shares_the_transcript_cache_and_the_mining_languages_sentence_rules(tmp_path, monkeypatch):
+    """F-12 + MS-21: the same cached, re-broken transcript Generate uses; a reuse is announced."""
+    import dataclasses
+
+    import anki_miner.services.asr.long_audio as la
+    from anki_miner.languages.registry import get_profile
+
+    seen: dict = {}
+
+    def fake(config, extractor, media, **kwargs):
+        seen.update(kwargs)
+        kwargs["on_cache_hit"]()
+        return la.LongAudioResult(la.LongAudioStatus.OK, [(0.0, 2.0, "吾輩は猫である")])
+
+    monkeypatch.setattr(la, "transcribe_media", fake)
+    reused: list[str] = []
+    config = dataclasses.replace(_make_config(tmp_path), language="es")
+
+    sync_one(
+        config,
+        object(),
+        tmp_path / "a.mp3",
+        _book(),
+        BookCursor(),
+        tmp_path / "a.srt",
+        on_transcript_reused=lambda: reused.append("hit"),
+    )
+
+    assert seen["use_cache"] is True
+    assert seen["sentence_rules"] is get_profile("es").sentence_rules
+    assert reused == ["hit"]
