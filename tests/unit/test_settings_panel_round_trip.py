@@ -78,6 +78,7 @@ def _non_default_save_config(tmp_path: Path) -> AnkiMinerConfig:
         },
         strict_card_order=False,  # T10: moved here from FilteringSettingsPanel; default is True
         auto_open_anki=False,  # default is True
+        sync_anki_after_run=True,  # AI-03; default is False
         # --- MediaSettingsPanel ---
         audio_format="opus",
         audio_bitrate=128,  # default is 96
@@ -148,6 +149,7 @@ _SAVE_PATH_FIELDS = frozenset(
         "card_type_marker_fields",
         "strict_card_order",  # T10: moved here from FilteringSettingsPanel
         "auto_open_anki",
+        "sync_anki_after_run",
         # MediaSettingsPanel
         "audio_format",
         "audio_bitrate",
@@ -291,6 +293,7 @@ class TestSavePathRoundTrip:
             "card_type_marker_fields",
             "strict_card_order",
             "auto_open_anki",
+            "sync_anki_after_run",
         ):
             assert getattr(result, field_name) == getattr(original, field_name), field_name
 

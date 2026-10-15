@@ -417,6 +417,18 @@ class AnkiSettingsPanel(FormPanel):
                 self.tr("Anki Miner can't find Anki where its installer puts it, so it can't open it.")
             )
 
+        # AI-03 (owner ruling R6): off by default. One sync after a run that
+        # added cards; a failed sync is a warning line, the run still succeeds.
+        self.sync_anki_after_run_checkbox = QCheckBox(self.tr("Sync Anki after mining"))
+        self.add_field(
+            "",
+            self.sync_anki_after_run_checkbox,
+            helper=self.tr(
+                "After a run that added cards, ask Anki to sync with AnkiWeb. "
+                "If the sync fails, the Activity Log says so and the cards stay added."
+            ),
+        )
+
         # The one status line (C03): the most important problem, or nothing.
         # "3 deck(s) loaded" and "Loading…" are gone -- a line that only ever
         # confirms things trains the eye to skip the line that matters.
@@ -1245,6 +1257,7 @@ class AnkiSettingsPanel(FormPanel):
         self.set_card_type_marker_fields(config.card_type_marker_fields)
         self.set_strict_card_order(config.strict_card_order)
         self.auto_open_anki_checkbox.setChecked(config.auto_open_anki)
+        self.sync_anki_after_run_checkbox.setChecked(config.sync_anki_after_run)
         self.reading_tone_color_checkbox.setChecked(config.reading_tone_color)
         capabilities = get_profile(config_language(config)).capabilities
         self._presets_allowed = "note_presets" in capabilities
@@ -1272,6 +1285,7 @@ class AnkiSettingsPanel(FormPanel):
             card_type_marker_fields=self.get_card_type_marker_fields(),
             strict_card_order=self.get_strict_card_order(),
             auto_open_anki=self.auto_open_anki_checkbox.isChecked(),
+            sync_anki_after_run=self.sync_anki_after_run_checkbox.isChecked(),
         )
         # Language-scoped: only written while the row is on screen, same
         # rationale as the hook fields above (see FilteringSettingsPanel's twin
