@@ -3,7 +3,7 @@
 from dataclasses import replace
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QCheckBox, QComboBox, QDoubleSpinBox, QSpinBox
+from PyQt6.QtWidgets import QCheckBox, QComboBox, QDoubleSpinBox, QLabel, QSpinBox
 
 from anki_miner.gui.widgets.base import FormPanel
 from anki_miner.languages.registry import config_language, get_profile
@@ -84,6 +84,19 @@ class MediaSettingsPanel(FormPanel):
                 "MP3: universal compatibility. Opus: smaller files at equivalent quality (needs ffmpeg with libopus)."
             ),
         )
+
+        # CC-21 (R14): no Opus container is documented to play in AnkiMobile,
+        # AnkiDroid and Anki desktop alike (iOS reads Opus only from MP4; Android
+        # documents Opus extraction only from Ogg and WebM), so the option warns
+        # instead of switching containers. Shown only while Opus is chosen.
+        self.opus_warning_label = QLabel(
+            self.tr("Opus clips do not play in AnkiMobile on iPhone or iPad. Choose MP3 if you review there.")
+        )
+        self.opus_warning_label.setObjectName("helper-text")
+        self.opus_warning_label.setWordWrap(True)
+        self.add_field("", self.opus_warning_label)
+        self.audio_format_combo.currentTextChanged.connect(self._sync_opus_warning)
+        self._sync_opus_warning(self.audio_format_combo.currentText())
 
         # Audio bitrate (Issue #18)
         self.audio_bitrate_spinbox = QSpinBox()
@@ -219,6 +232,10 @@ class MediaSettingsPanel(FormPanel):
         """Enable or disable the animated screenshot sub-controls."""
         for widget in (self.animated_format_combo, self.animated_duration_spinbox, self.animated_size_combo):
             widget.setEnabled(enabled)
+
+    def _sync_opus_warning(self, audio_format: str) -> None:
+        """Show the AnkiMobile warning only while Opus is the chosen format (CC-21)."""
+        self.opus_warning_label.setVisible(audio_format == "opus")
 
     def _on_animated_size_activated(self, index: int) -> None:
         """Drop the Custom entry once the user picks a real preset.
