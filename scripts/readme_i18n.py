@@ -66,6 +66,46 @@ def stamp_line(source_text: str) -> str:
 
 # --- language nav ----------------------------------------------------------
 
+# The dropdown's closed label, filled with the page's own language name. The
+# word is each UI catalog's reviewed translation of "Language"; punctuation
+# follows the locale (full-width colon in CJK, no-break space before it in fr).
+NAV_SUMMARIES = {
+    "en": "Language: {}",
+    "ja": "言語：{}",
+    "ru": "Язык: {}",
+    "fr": "Langue : {}",
+    "es": "Idioma: {}",
+    "de": "Sprache: {}",
+    "pt_br": "Idioma: {}",
+    "id": "Bahasa: {}",
+    "vi": "Ngôn ngữ: {}",
+    "zh_cn": "语言：{}",
+    "zh_tw": "語言：{}",
+    "it": "Lingua: {}",
+    "ar": "اللغة: {}",
+    "yue": "語言：{}",
+    "sl": "Jezik: {}",
+    "ko": "언어: {}",
+    "pt_pt": "Idioma: {}",
+    "nl": "Taal: {}",
+    "th": "ภาษา: {}",
+    "he": "שפה: {}",
+    "fa": "زبان: {}",
+    "ca": "Llengua: {}",
+    "nb": "Språk: {}",
+    "sv": "Språk: {}",
+    "da": "Sprog: {}",
+    "pl": "Język: {}",
+    "uk": "Мова: {}",
+    "hr": "Jezik: {}",
+    "lt": "Kalba: {}",
+    "fi": "Kieli: {}",
+    "hu": "Nyelv: {}",
+    "el": "Γλώσσα: {}",
+    "ro": "Limbă: {}",
+    "tr": "Dil: {}",
+}
+
 
 def _nav_href(code: str, current: str) -> str:
     """Link from the ``current`` document to the ``code`` one."""
@@ -91,7 +131,7 @@ def render_nav(current: str) -> str:
         cells.append(f'<a href="{_nav_href(code, current)}">{name}</a>')
     return (
         '<div align="center">\n<details>\n'
-        f"<summary>🌐 {languages[current]}</summary>\n"
+        f"<summary>{NAV_SUMMARIES[current].format(languages[current])}</summary>\n"
         "<p>\n" + " ·\n".join(cells) + "\n</p>\n</details>\n</div>"
     )
 

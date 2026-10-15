@@ -54,11 +54,26 @@ def test_render_nav_is_a_collapsed_dropdown_labelled_with_the_current_language()
     for code, name in available_languages().items():
         nav = ri.render_nav(code)
         assert nav.startswith('<div align="center">\n<details>\n')
-        assert f"<summary>🌐 {name}</summary>" in nav
+        summary = nav.split("<summary>")[1].split("</summary>")[0]
+        assert summary.endswith(name)
+        assert "🌐" not in nav
         assert nav.endswith("</details>\n</div>")
         # PyPI drops `open`; a blank line would end GFM's raw HTML block.
         assert "open" not in nav.split("<summary>")[0]
         assert "\n\n" not in nav
+
+
+def test_nav_summary_says_language_in_the_readers_own_language() -> None:
+    assert "<summary>Language: English</summary>" in ri.render_nav("en")
+    assert "<summary>言語：日本語</summary>" in ri.render_nav("ja")
+    assert "<summary>Langue : Français</summary>" in ri.render_nav("fr")
+    assert "<summary>اللغة: العربية</summary>" in ri.render_nav("ar")
+
+
+def test_every_ui_language_has_a_nav_summary() -> None:
+    from anki_miner.gui.i18n import available_languages
+
+    assert set(ri.NAV_SUMMARIES) == set(available_languages())
 
 
 def test_replace_nav_swaps_only_the_marked_region() -> None:

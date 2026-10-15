@@ -14,7 +14,7 @@
 <!-- i18n-nav:start -->
 <div align="center">
 <details>
-<summary>🌐 English</summary>
+<summary>Language: English</summary>
 <p>
 <b>English</b> ·
 <a href="i18n/README.ja.md">日本語</a> ·
