@@ -174,3 +174,102 @@ def test_show_in_anki_with_anki_closed_is_a_banner(make_tab, monkeypatch):
     assert issue is not None
     assert issue.summary == "Anki Miner couldn't open this run's cards in Anki."
     assert "Cannot connect" in issue.details
+
+
+class _FakeAnki:
+    """AnkiConnect at the post_action seam."""
+
+    def __init__(self, existing=(), reviewed=()) -> None:
+        self.existing = set(existing)
+        self.reviewed = set(reviewed)
+        self.deleted: list[list[int]] = []
+
+    def __call__(self, *args, **kwargs):
+        action = args[1]
+        params = kwargs.get("params") or {}
+        if action == "findNotes":
+            query = params["query"]
+            ids = {int(part) for part in query.split()[0].removeprefix("nid:").split(",")}
+            return sorted(ids & (self.reviewed if "-is:new" in query else self.existing))
+        if action == "deleteNotes":
+            self.deleted.append(list(params["notes"]))
+            return None
+        raise AssertionError(action)
+
+
+def test_the_confirm_counts_the_cards_and_the_reviewed_ones(make_tab, monkeypatch, message_boxes):
+    fake = _FakeAnki(existing=(11, 13), reviewed=(13,))
+    monkeypatch.setattr(_POST, fake)
+    tab = make_tab([_session(1, 3, 15)])
+    tab.stats_service.get_run_receipt.return_value = RunReceipt(1, "ja", (11, 12, 13), ())
+    _select(tab, 1)
+
+    tab.delete_run_button.click()
+
+    [(title, text)] = message_boxes["questions"]
+    assert title == "Delete This Run's Cards"
+    assert "still in Anki: 2" in text
+    assert "Reviewed at least once: 1" in text
+    assert fake.deleted == [[11, 13]]
+    tab.stats_service.forget_run_notes.assert_called_once_with(1)
+    assert tab.run_action_note.text() == "Cards deleted from Anki: 2."
+
+
+def test_declining_deletes_nothing(make_tab, monkeypatch, message_boxes):
+    fake = _FakeAnki(existing=(11,), reviewed=())
+    monkeypatch.setattr(_POST, fake)
+    message_boxes["answer"] = QMessageBox.StandardButton.No
+    tab = make_tab([_session(1, 1, 15)])
+    tab.stats_service.get_run_receipt.return_value = RunReceipt(1, "ja", (11,), ())
+    _select(tab, 1)
+
+    tab.delete_run_button.click()
+
+    assert fake.deleted == []
+    tab.stats_service.forget_run_notes.assert_not_called()
+    assert tab.delete_run_button.isEnabled()
+
+
+def test_all_cards_already_gone_forgets_the_list_without_asking(make_tab, monkeypatch, message_boxes):
+    """Review Focus 4: every note was deleted in Anki; nothing to confirm, the list is dropped."""
+    monkeypatch.setattr(_POST, _FakeAnki(existing=(), reviewed=()))
+    tab = make_tab([_session(1, 2, 15)])
+    tab.stats_service.get_run_receipt.return_value = RunReceipt(1, "ja", (11, 12), ())
+    _select(tab, 1)
+
+    tab.delete_run_button.click()
+
+    assert message_boxes["questions"] == []
+    tab.stats_service.forget_run_notes.assert_called_once_with(1)
+    assert tab.run_action_note.text() == "None of this run's cards are in Anki any more."
+
+
+def test_an_unreachable_anki_on_delete_is_a_banner(make_tab, monkeypatch, message_boxes):
+    """Review Focus 4: Anki closed is a banner, and the row stays armed for a retry."""
+
+    def _down(*_a, **_k):
+        raise AnkiConnectionError("Cannot connect to AnkiConnect. Is Anki running?")
+
+    monkeypatch.setattr(_POST, _down)
+    tab = make_tab([_session(1, 2, 15)])
+    tab.stats_service.get_run_receipt.return_value = RunReceipt(1, "ja", (11,), ())
+    _select(tab, 1)
+
+    tab.delete_run_button.click()
+
+    issue = tab.issue_banner().current_issue()
+    assert issue is not None and issue.summary == "This run's cards could not be deleted."
+    assert message_boxes["questions"] == []
+    assert tab.delete_run_button.isEnabled()
+
+
+def test_a_delete_refreshes_the_page(make_tab, monkeypatch, message_boxes):
+    monkeypatch.setattr(_POST, _FakeAnki(existing=(11,), reviewed=()))
+    tab = make_tab([_session(1, 1, 15)])
+    tab.stats_service.get_run_receipt.return_value = RunReceipt(1, "ja", (11,), ())
+    _select(tab, 1)
+    before = tab.stats_service.get_overall_stats.call_count
+
+    tab.delete_run_button.click()
+
+    assert tab.stats_service.get_overall_stats.call_count == before + 1

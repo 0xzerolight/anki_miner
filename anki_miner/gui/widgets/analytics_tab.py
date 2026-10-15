@@ -4,7 +4,7 @@ import contextlib
 import logging
 import time
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont
@@ -35,6 +35,7 @@ from anki_miner.gui.utils.qt_helpers import (
     make_table_item,
 )
 from anki_miner.gui.utils.run_off_thread import run_off_thread
+from anki_miner.gui.utils.service_factory import resolve_known_words_db_path
 from anki_miner.gui.widgets.base import (
     PageWidth,
     ScreenIssue,
@@ -53,6 +54,8 @@ from anki_miner.models.stats import (
     OverallStats,
 )
 from anki_miner.services.anki_service import AnkiService
+from anki_miner.services.known_word_db import KnownWordDB
+from anki_miner.services.run_history import RunNotesCheck, check_run_notes, delete_run
 from anki_miner.services.stats_service import StatsService
 from anki_miner.utils.i18n import tr_format
 from anki_miner.utils.logging_ext import log_summary
@@ -752,7 +755,109 @@ class AnalyticsTab(ScreenIssueHost, QWidget):
             )
 
     def _on_delete_run_clicked(self) -> None:
-        """Filled in by L2.AI16.T7."""
+        """Ask Anki what is left of the selected run, then confirm (AI-16)."""
+        session = self._selected_session()
+        if session is None or session.id is None or self._config_provider is None or self._run_action_in_flight:
+            return
+        config = self._config_provider()
+        service = self.stats_service
+        session_id = session.id
+        self._set_run_action_in_flight(True)
+        self.run_action_note.hide()
+
+        def _check() -> RunNotesCheck:
+            # Worker thread: which recorded notes still exist, and how many were reviewed.
+            receipt = service.get_run_receipt(session_id)
+            return check_run_notes(AnkiService(config), receipt.note_ids if receipt is not None else ())
+
+        run_off_thread(
+            self,
+            _check,
+            lambda check: self._confirm_delete_run(session_id, config, check),
+            self._on_delete_run_error,
+        )
+
+    def _confirm_delete_run(self, session_id: int, config: AnkiMinerConfig, check: object) -> None:
+        """GUI thread: the last moment to say no, naming what would be lost."""
+        self._set_run_action_in_flight(False)
+        if self._teardown_generation or not isinstance(check, RunNotesCheck):
+            return
+        service = self.stats_service
+        if not check.present:
+            # Review Focus 4: Anki already lost every note (an Undo, or a delete
+            # in Anki). Nothing to confirm; drop the list so the row disarms.
+            self._show_run_note(self.tr("None of this run's cards are in Anki any more."))
+            run_off_thread(
+                self,
+                lambda: service.forget_run_notes(session_id),
+                lambda _result: self.refresh_data(force=True),
+                self._on_delete_run_error,
+            )
+            return
+        answer = QMessageBox.question(
+            self,
+            self.tr("Delete This Run's Cards"),
+            tr_format(
+                self.tr(
+                    "Cards this run added that are still in Anki: %1. Reviewed at least once: %2.\n\n"
+                    "Delete them from Anki? Their review history is deleted with them. This cannot be undone."
+                ),
+                f"{len(check.present):,}",
+                f"{check.reviewed:,}",
+            ),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        log_summary(
+            logging.getLogger(__name__),
+            "Confirm",
+            action="delete_run_cards",
+            answer="yes" if answer == QMessageBox.StandardButton.Yes else "no",
+            cards=len(check.present),
+            reviewed=check.reviewed,
+        )
+        if answer != QMessageBox.StandardButton.Yes:
+            return
+        self._set_run_action_in_flight(True)
+
+        def _known_words_db_for(code: str) -> KnownWordDB:
+            # The run's own language: its mined rows live in that DB (Review Focus 5).
+            return KnownWordDB(resolve_known_words_db_path(replace(config, language=code)), language=code)
+
+        run_off_thread(
+            self,
+            lambda: delete_run(AnkiService(config), service, session_id, known_words_db_for=_known_words_db_for),
+            self._on_delete_run_done,
+            self._on_delete_run_error,
+        )
+
+    def _on_delete_run_done(self, deleted: object) -> None:
+        """GUI thread: say what went, then re-read the page so the row disarms."""
+        self._set_run_action_in_flight(False)
+        if self._teardown_generation:
+            return
+        count = deleted if isinstance(deleted, int) else 0
+        with contextlib.suppress(RuntimeError):
+            self._show_run_note(tr_format(self.tr("Cards deleted from Anki: %1."), f"{count:,}"))
+            self.refresh_data(force=True)
+
+    def _on_delete_run_error(self, msg: str) -> None:
+        """GUI thread: re-arm the row and report on screen (D24)."""
+        self._set_run_action_in_flight(False)
+        logging.getLogger(__name__).warning("Analytics: deleting a run's cards failed: %s", msg)
+        if self._teardown_generation:
+            return
+        with contextlib.suppress(RuntimeError):
+            self.show_screen_issue(ScreenIssue(summary=self.tr("This run's cards could not be deleted."), details=msg))
+
+    def _set_run_action_in_flight(self, in_flight: bool) -> None:
+        self._run_action_in_flight = in_flight
+        with contextlib.suppress(RuntimeError):
+            self._sync_run_actions()
+
+    def _show_run_note(self, text: str) -> None:
+        self.run_action_note.setText(text)
+        self.run_action_note.show()
 
     def _update_difficulty_ranking(self, difficulties: list[DifficultyEntry]) -> None:
         has_difficulties = len(difficulties) > 0
