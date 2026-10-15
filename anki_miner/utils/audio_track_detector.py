@@ -330,6 +330,75 @@ def list_subtitle_streams(video_path: Path, ffprobe_cmd: str = "ffprobe") -> lis
     return result
 
 
+@dataclass(frozen=True)
+class Chapter:
+    """One container chapter from ffprobe: its span in seconds and its title tag."""
+
+    start: float
+    end: float
+    title: str | None
+
+
+def list_chapters(media_path: Path, ffprobe_cmd: str = "ffprobe") -> list[Chapter]:
+    """Probe *media_path*'s chapters with one ``ffprobe -show_chapters`` call.
+
+    Returns ``[]`` when the file has no chapters (the common case) and on any
+    failure: ffprobe missing, a timeout, a non-zero exit, output that is not a
+    JSON object. Failures log at DEBUG only, because a file without readable
+    chapters is simply mined whole (F-08 step 2). A chapter whose times do not
+    parse is skipped. ``ffprobe_cmd`` is ``resolve_ffprobe(config)`` at a
+    config-bearing call site, so frozen bundles use the bundled binary.
+    """
+    cmd = [ffprobe_cmd, "-v", "quiet", "-print_format", "json", "-show_chapters", str(media_path)]
+    log_command(logger, "ffprobe", cmd, timeout_s=30)
+    started_at = time.monotonic()
+    try:
+        proc = subprocess.run(
+            cmd,
+            stdin=subprocess.DEVNULL,
+            capture_output=True,
+            timeout=30,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            **no_window_kwargs(),  # hide the Windows cmd.exe flash (Issue #79)
+        )
+    except (subprocess.SubprocessError, OSError, ValueError) as e:
+        logger.debug("Chapter probe failed for %s: %s: %s", media_path, type(e).__name__, e)
+        return []
+    elapsed_s = time.monotonic() - started_at
+    if proc.returncode != 0:
+        log_command_result(
+            logger,
+            "ffprobe",
+            cmd,
+            returncode=proc.returncode,
+            stderr_tail=tail_for_log(proc.stderr or ""),
+            elapsed_s=elapsed_s,
+        )
+        return []
+    try:
+        data = json.loads(proc.stdout)
+    except json.JSONDecodeError as e:
+        logger.debug("Chapter probe of %s returned malformed JSON: %s", media_path, e)
+        return []
+    if not isinstance(data, dict):
+        return []
+    log_command_result(logger, "ffprobe", cmd, returncode=0, elapsed_s=elapsed_s)
+
+    chapters: list[Chapter] = []
+    for raw in data.get("chapters") or []:
+        try:
+            start = float(raw["start_time"])
+            end = float(raw["end_time"])
+        except (KeyError, TypeError, ValueError):
+            continue
+        tags = raw.get("tags") or {}
+        title = tags.get("title") or tags.get("TITLE") or None
+        chapters.append(Chapter(start=start, end=end, title=title))
+    return chapters
+
+
 def find_japanese_audio_stream(
     video_file: Path, ffprobe_cmd: str = "ffprobe", *, codes: frozenset[str] | None = None
 ) -> AudioStream | None:
