@@ -56,6 +56,9 @@ class SubtitleStream:
     tracks carry only foreign-dialogue lines, which makes them useless as a
     retiming reference (see ``services/retime_reference.py``); they default to
     False so callers constructing a stream by hand stay unaffected.
+    ``width``/``height`` are the canvas ffprobe reports for an image track (PGS
+    1920x1080, VobSub 720x480); None for text tracks and when unknown. Video OCR
+    draws an image track on a canvas this size (F-18).
     """
 
     index: int
@@ -66,6 +69,8 @@ class SubtitleStream:
     is_text: bool
     is_forced: bool = False
     is_default: bool = False
+    width: int | None = None
+    height: int | None = None
 
 
 def matches_language_tag(language_tag: str | None, codes: frozenset[str]) -> bool:
@@ -83,6 +88,17 @@ def matches_language_tag(language_tag: str | None, codes: frozenset[str]) -> boo
         return True
     primary, sep, _ = normalized.partition("-")
     return bool(sep) and primary in codes
+
+
+def _positive_int(value: object) -> int | None:
+    """ffprobe's ``width``/``height`` as an int, or None when absent, zero or not a number."""
+    if isinstance(value, bool) or not isinstance(value, (int, float, str)):
+        return None
+    try:
+        number = int(value)
+    except (ValueError, OverflowError):
+        return None
+    return number if number > 0 else None
 
 
 def _run_ffprobe_json(video_path: Path, select_streams: str, ffprobe_cmd: str) -> dict | None:
@@ -326,6 +342,8 @@ def list_subtitle_streams(video_path: Path, ffprobe_cmd: str = "ffprobe") -> lis
                 is_text=is_text,
                 is_forced=disposition.get("forced") == 1,
                 is_default=disposition.get("default") == 1,
+                width=_positive_int(stream.get("width")),
+                height=_positive_int(stream.get("height")),
             )
         )
 
@@ -390,6 +408,23 @@ def get_primary_video_codec(video_file: Path, ffprobe_cmd: str = "ffprobe") -> s
 
     codec = streams[0].get("codec_name")
     return codec.lower() if codec else None
+
+
+def get_video_size(video_file: Path, ffprobe_cmd: str = "ffprobe") -> tuple[int, int] | None:
+    """Return the first video stream's ``(width, height)``, or None.
+
+    None on any ffprobe failure, for a file with no video stream (a ``.sup``),
+    and when either dimension is missing. Video OCR's canvas for an image
+    subtitle track whose own size ffprobe does not report (F-18).
+    """
+    data = _run_ffprobe_json(video_file, "v:0", ffprobe_cmd)
+    if data is None:
+        return None
+    streams = data.get("streams", [])
+    if not streams:
+        return None
+    width, height = _positive_int(streams[0].get("width")), _positive_int(streams[0].get("height"))
+    return (width, height) if width is not None and height is not None else None
 
 
 class TrackTitle(IntEnum):
