@@ -317,6 +317,12 @@ def _reexec_via_launcher() -> None:
     dies before reaching the app. The child's bootloader would also record the
     polluted value as the original and leak the bundle into every subprocess.
 
+    ``PYINSTALLER_RESET_ENVIRONMENT`` makes the child a new instance. Since
+    PyInstaller 6.9 a process running the same executable is otherwise taken
+    for a worker of this one and skips its library-path setup, and bundled
+    libraries such as libxcb-cursor no longer resolve: the X11 plugin fails to
+    load.
+
     A failed exec changes nothing, and the app starts as it always did.
     """
     if sys.platform != "linux" or not getattr(sys, "frozen", False) or os.environ.get(_LAUNCHER_ENV):
@@ -326,6 +332,7 @@ def _reexec_via_launcher() -> None:
         return
     env = dict(os.environ)
     env[_LAUNCHER_ENV] = "1"
+    env["PYINSTALLER_RESET_ENVIRONMENT"] = "1"
     original = env.pop("LD_LIBRARY_PATH_ORIG", None)
     if original is not None:
         env["LD_LIBRARY_PATH"] = original

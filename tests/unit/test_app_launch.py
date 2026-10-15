@@ -356,6 +356,10 @@ def test_frozen_linux_launch_without_the_launcher_reexecs_through_it(
     assert path == launcher
     assert argv == [launcher, "--one", "two words"]
     assert env["ANKI_MINER_LAUNCHER"] == "1"
+    # Without it the child bootloader (PyInstaller >= 6.9) takes itself for a
+    # worker of this instance and never puts _internal on the library path, so
+    # bundled libraries such as libxcb-cursor stop resolving.
+    assert env["PYINSTALLER_RESET_ENVIRONMENT"] == "1"
     # The launcher is bash: with the bundle on LD_LIBRARY_PATH it would load
     # the bundled libreadline and die before reaching the app.
     assert env["LD_LIBRARY_PATH"] == "/user/lib"
