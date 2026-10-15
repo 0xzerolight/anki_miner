@@ -25,6 +25,11 @@ class Region:
         return (round(self.x, 4), round(self.y, 4), round(self.w, 4), round(self.h, 4))
 
 
+#: The whole frame. Image subtitles are read over all of it (F-18): their canvas
+#: holds nothing but the subtitles, and a saved region was drawn for other footage.
+FULL_FRAME = Region(0.0, 0.0, 1.0, 1.0)
+
+
 def crop_box(region: Region, size: tuple[int, int]) -> tuple[int, int, int, int]:
     """Pixel crop (x, y, w, h) for ``region`` on a ``size`` frame: even, at least MIN_REGION_PX, inside."""
     frame_w, frame_h = size
