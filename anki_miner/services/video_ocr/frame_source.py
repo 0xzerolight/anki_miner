@@ -18,6 +18,7 @@ import numpy as np
 from PIL import Image
 
 from anki_miner.exceptions import OperationCancelled
+from anki_miner.services.video_ocr.bitmap_source import BitmapSource, ffmpeg_input_args, overlay_filter
 from anki_miner.services.video_ocr.errors import FrameSourceError
 from anki_miner.services.video_ocr.region import MAX_SAMPLE_WIDTH, MIN_REGION_PX, Region, crop_box, sample_size
 from anki_miner.utils.ffmpeg_resolver import resolve_ffmpeg
@@ -97,6 +98,7 @@ def iter_samples(
     *,
     fps: int,
     cancel_event: threading.Event | None = None,
+    bitmap: BitmapSource | None = None,
 ) -> Iterator[tuple[float, np.ndarray]]:
     """Yield ``(t_seconds, BGR region)`` every ``1/fps`` seconds, timed from the FILE start.
 
@@ -106,26 +108,53 @@ def iter_samples(
     count it twice. Raises ``OperationCancelled`` when ``cancel_event`` stopped
     the decode, and :class:`FrameSourceError` when ffmpeg failed before the first
     sample. A failure after some samples (a damaged tail) only logs.
+
+    With ``bitmap`` (F-18), ``video`` is not decoded as a picture: ffmpeg draws
+    that image subtitle track on a canvas of its size (``bitmap_source``), and
+    the same crop/fps/scale chain samples the result.
     """
-    first = still_at(config, video, 0.0)
-    x, y, w, h = crop_box(region, (first.shape[1], first.shape[0]))
+    if bitmap is None:
+        first = still_at(config, video, 0.0)
+        size = (first.shape[1], first.shape[0])
+    else:
+        size = (bitmap.width, bitmap.height)
+    x, y, w, h = crop_box(region, size)
     out_w, out_h = sample_size(w, h)
-    cmd = [
-        resolve_ffmpeg(config),
-        "-nostdin",
-        "-v",
-        "error",
-        "-i",
-        str(video),
-        "-an",
-        "-sn",
-        "-dn",
-        "-vf",
-        f"crop={w}:{h}:{x}:{y}:exact=1,fps={fps},scale={out_w}:{out_h},format=bgr24",
-        "-f",
-        "rawvideo",
-        "pipe:1",
-    ]
+    chain = f"crop={w}:{h}:{x}:{y}:exact=1,fps={fps},scale={out_w}:{out_h},format=bgr24"
+    if bitmap is None:
+        cmd = [
+            resolve_ffmpeg(config),
+            "-nostdin",
+            "-v",
+            "error",
+            "-i",
+            str(video),
+            "-an",
+            "-sn",
+            "-dn",
+            "-vf",
+            chain,
+            "-f",
+            "rawvideo",
+            "pipe:1",
+        ]
+    else:
+        cmd = [
+            resolve_ffmpeg(config),
+            "-nostdin",
+            "-v",
+            "error",
+            *ffmpeg_input_args(bitmap, fps),
+            "-filter_complex",
+            f"{overlay_filter(bitmap)},{chain}[ocr]",
+            "-map",
+            "[ocr]",
+            "-an",
+            "-dn",
+            "-f",
+            "rawvideo",
+            "pipe:1",
+        ]
     log_command(logger, "Video OCR scan", cmd)
     frame_bytes = out_w * out_h * 3
     proc = subprocess.Popen(

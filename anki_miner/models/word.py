@@ -284,6 +284,13 @@ class TokenizedWord:
     # render hooks that print gender/aspect/article. "" on every ja path:
     # fugashi nodes and SyntheticTokens carry no ``morph`` attribute.
     morph: str = ""
+    # Word Curator "use this dictionary on the card" pick (F-10): the display
+    # name of the dictionary whose entry the Definition should use. "" (the
+    # default, and every non-interactive path) means the chain's first hit, so
+    # an untouched word is defined exactly as before this field existed.
+    # Stamped by the curator via get_selected_words; read only by
+    # services.definition_service.preferred_dictionaries.
+    dictionary_pick: str = ""
 
     @property
     def bold_end(self) -> int:

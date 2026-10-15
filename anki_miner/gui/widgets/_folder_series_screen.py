@@ -25,7 +25,11 @@ from PyQt6.QtGui import QDragEnterEvent, QDropEvent
 from anki_miner.gui.utils.qt_helpers import urls_from_event
 from anki_miner.gui.widgets._mining_tab_base import MiningTabBase
 from anki_miner.gui.widgets.base import ScreenIssue
-from anki_miner.gui.widgets.dialogs.word_curation_dialog import CurationMediaContext
+from anki_miner.gui.widgets.dialogs.word_curation_dialog import (
+    CurationMediaContext,
+    auto_translation_of,
+    with_auto_translation,
+)
 from anki_miner.gui.widgets.enhanced import FileSelector
 from anki_miner.gui.widgets.progress_widget import ProgressWidget
 from anki_miner.utils.file_pairing import is_same_folder
@@ -182,13 +186,19 @@ class FolderSeriesScreenBase(MiningTabBase):
         w = self.worker_thread
         if w is None:
             return None, None
-        media_context = self._make_curation_media_context(
-            self.config,
-            w._curation_video,
-            w._curation_subtitle,
-            offset=w._curation_offset,
-            secondary_subtitle=w._curation_secondary,
-            secondary_offset=w._curation_secondary_offset,
+        proc = w.curation_processor
+        media_context = with_auto_translation(
+            self._make_curation_media_context(
+                self.config,
+                w._curation_video,
+                w._curation_subtitle,
+                offset=w._curation_offset,
+                secondary_subtitle=w._curation_secondary,
+                secondary_offset=w._curation_secondary_offset,
+            ),
+            # F-04: an episode with no translation file shows the track the run picked itself.
+            auto_translation_of(proc, w._curation_video),
+            w._curation_secondary,
         )
         season_map = getattr(w, "_curation_media_map", None)
         if media_context is not None and season_map:
@@ -199,22 +209,29 @@ class FolderSeriesScreenBase(MiningTabBase):
             # error-swallowing, so the resolver is safe off the GUI thread.
             snapshot = dict(season_map)
             config = self.config
+            # Read now, while the worker is parked: the resolver runs later, off
+            # the GUI thread, and must not touch the processor.
+            picks = {video: auto_translation_of(proc, video) for video in snapshot}
 
             def _resolve(video: Path) -> CurationMediaContext | None:
                 episode = snapshot.get(video)
                 if episode is None:
                     return None
-                return MiningTabBase._make_curation_media_context(
-                    config,
-                    video,
-                    episode.subtitle,
-                    offset=episode.offset,
-                    secondary_subtitle=episode.secondary,
-                    secondary_offset=episode.secondary_offset,
+                return with_auto_translation(
+                    MiningTabBase._make_curation_media_context(
+                        config,
+                        video,
+                        episode.subtitle,
+                        offset=episode.offset,
+                        secondary_subtitle=episode.secondary,
+                        secondary_offset=episode.secondary_offset,
+                    ),
+                    picks.get(video, []),
+                    episode.secondary,
                 )
 
             media_context = replace(media_context, context_resolver=_resolve)
-        return media_context, self._lookup_fn_from_processor(w.curation_processor)
+        return media_context, self._lookup_fn_from_processor(proc)
 
     def _show_terminal_progress(self, widget: ProgressWidget, total_cards: int) -> None:
         """Write the run's terminal end state onto ``widget``.

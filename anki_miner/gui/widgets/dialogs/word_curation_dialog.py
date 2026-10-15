@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     from anki_miner.gui.widgets.subtitle_player_widget import SubtitlePlayerWidget
     from anki_miner.models.reading import ImageRef, ReadingUnit
 
-from PyQt6.QtCore import QByteArray, QItemSelectionModel, QModelIndex, QPoint, QSize, Qt, QTimer
+from PyQt6.QtCore import QByteArray, QItemSelectionModel, QModelIndex, QPoint, QSize, Qt, QTimer, QUrl
 from PyQt6.QtGui import (
     QAction,
     QCloseEvent,
@@ -283,6 +283,36 @@ class CurationMediaContext:
     page_units_are_cards: bool = False
 
 
+def auto_translation_of(processor: object | None, video: Path | None) -> list[tuple[float, float, str]]:
+    """The translation cues the run picked itself for ``video`` (F-04), or [].
+
+    ``processor`` is a worker's ``curation_processor``. Anything that is not a
+    real pick (no processor, a stand-in without the method, a mock's return
+    value) reads as no pick, so a test double never paints a Translation column.
+    """
+    lookup = getattr(processor, "auto_translation_entries", None)
+    if video is None or not callable(lookup):
+        return []
+    entries = lookup(video)
+    return entries if isinstance(entries, list) else []
+
+
+def with_auto_translation(
+    context: CurationMediaContext | None,
+    entries: list[tuple[float, float, str]],
+    chosen: Path | None,
+) -> CurationMediaContext | None:
+    """``context`` carrying the run's auto-picked translation when the user chose no file (F-04).
+
+    A chosen file (``chosen``) always wins. The picked track sits on the
+    video's own timeline, so it carries offset 0.0, as the processor attaches
+    it; the column and the cards then agree by construction.
+    """
+    if context is None or chosen is not None or not entries:
+        return context
+    return dataclasses.replace(context, secondary_entries=list(entries), secondary_offset=0.0)
+
+
 class WordCurationDialog(ScreenIssueHost, QDialog):
     """Dialog for selecting which words to include in card creation.
 
@@ -463,6 +493,16 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         self._lookup_gen = 0
         self._lookup_inflight = False
         self._pending_lookup: tuple[str, str | None, str | None] | None = None
+        # F-10: per-word "use this dictionary on the card" picks, keyed by
+        # original word index like the other overrides. The value keeps the card
+        # front the pick was made for: a sentence pick or edit that changes the
+        # front makes it lapse in get_selected_words, so no explicit drop is
+        # needed. Empty for every run where nobody clicked.
+        self._dictionary_picks: dict[int, tuple[str, str]] = {}
+        # The word index the dictionary pane describes, and what it last painted
+        # (term, entries), so a pick link can repaint without a new lookup.
+        self._definition_index: int | None = None
+        self._shown_definition: tuple[str, list[tuple[str, str]]] | None = None
 
         # Debounce timer for row-focus changes (avoid hammering lookup on arrow-key scroll).
         self._focus_timer = QTimer(self)
@@ -1361,6 +1401,9 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
             self.definition_view = QTextBrowser()
             self.definition_view.setReadOnly(True)
             self.definition_view.setOpenExternalLinks(False)
+            # F-10: the pane's own links pick a dictionary; nothing in it navigates.
+            self.definition_view.setOpenLinks(False)
+            self.definition_view.anchorClicked.connect(self._on_definition_anchor)
             # Glossary markup is authored for a browser; Qt's rich-text engine
             # implements a small CSS subset, so the card's stylesheet is inert here
             # and the pane rendered raw. See services/dictionary/preview_html.py for
@@ -2512,7 +2555,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
             rank_cell = self.table.item(row, 5)
             if rank_cell is not None:
                 rank_cell.setToolTip(self.tr("Frequency is looked up again for the edited word when the card is made."))
-        self._refresh_definition(token)
+        self._refresh_definition(token, idx)
         self._refresh_expansion_buttons()
         logger.info(
             "curator: sentence edit staged for word %d: %r -> %r", idx, self._words[idx].mined_form, token.mined_form
@@ -2523,7 +2566,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         if self._sentence_edits.pop(idx, None) is None:
             return
         self._apply_pick_to_row(idx, self._shown_line(idx))
-        self._refresh_definition(self._chosen.get(idx, self._words[idx]))
+        self._refresh_definition(self._chosen.get(idx, self._words[idx]), idx)
         self._refresh_expansion_buttons()
 
     def _on_focus_timer_fired(self) -> None:
@@ -2565,13 +2608,13 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         # POS (nouns) the pick moves mined_form, so a word-keyed pane showed the
         # first occurrence's entry after the user picked another (Issue #108).
         # An edited row shows the edited word's entry, for the same reason.
-        self._refresh_definition(self._sentence_edits.get(idx, chosen))
+        self._refresh_definition(self._sentence_edits.get(idx, chosen), idx)
 
         # Line-expansion and frame-pick buttons follow the focused word.
         self._refresh_expansion_buttons()
         self._refresh_frame_buttons()
 
-    def _refresh_definition(self, word: TokenizedWord) -> None:
+    def _refresh_definition(self, word: TokenizedWord, idx: int | None = None) -> None:
         """Point the definition pane at ``word``'s card front.
 
         Looks up by ``mined_form`` (the card-front spelling, the same primary key
@@ -2585,7 +2628,11 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         already keeps one request in flight with only the newest queued behind
         it, and paints only the generation that is still current — so holding a
         key down in the picker cannot pile up or paint a superseded entry.
+
+        ``idx`` is the original word index the pane now describes; its
+        dictionary pick (F-10) is shown and changed against it.
         """
+        self._definition_index = idx
         if self._show_dict and hasattr(self, "definition_view"):
             self._lookup_and_render(word.mined_form, word.lemma, word.pos or None)
 
@@ -2732,12 +2779,58 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         """Paint ``entries`` into the definition pane (GUI thread only)."""
         if self._closing or not hasattr(self, "definition_view"):
             return
+        self._shown_definition = (term, entries)
         if not entries:
             escaped = html.escape(term)
             self.definition_view.setHtml(f'<p style="color:gray">No offline dictionary entry for <b>{escaped}</b></p>')
             return
 
-        self.definition_view.setHtml(to_preview_html(entries))
+        self.definition_view.setHtml(self._definition_html(term, entries))
+
+    def _definition_html(self, term: str, entries: list[tuple[str, str]]) -> str:
+        """The pane body: with two or more dictionaries, each group gets its pick line (F-10).
+
+        ``entries`` arrive grouped by dictionary in chain order
+        (``lookup_all_offline``: each provider's exact hit, then its ladder
+        hits), so grouping by name keeps their order. One dictionary has
+        nothing to choose between and renders exactly as before.
+        """
+        names = list(dict.fromkeys(name for name, _html in entries))
+        if len(names) < 2 or self._definition_index is None:
+            return to_preview_html(entries)
+        pick = self._dictionary_picks.get(self._definition_index)
+        picked = pick[1] if pick is not None and pick[0] == term else None
+        parts: list[str] = []
+        for position, name in enumerate(names):
+            parts.append(self._pick_line(position, on_card=name == picked))
+            parts.append(to_preview_html([entry for entry in entries if entry[0] == name]))
+        return "".join(parts)
+
+    def _pick_line(self, position: int, *, on_card: bool) -> str:
+        """The link above one dictionary's entries: choose it, or (when chosen) go back."""
+        if on_card:
+            used = html.escape(self.tr("Used on the card"))
+            back = html.escape(self.tr("Back to the first match"))
+            return f'<p><i>{used}</i> · <a href="am-dict:clear">{back}</a></p>'
+        use = html.escape(self.tr("Use this dictionary on the card"))
+        return f'<p><a href="am-dict:{position}">{use}</a></p>'
+
+    def _on_definition_anchor(self, url: QUrl) -> None:
+        """A pick link in the dictionary pane: store or clear this word's dictionary (F-10)."""
+        idx, shown = self._definition_index, self._shown_definition
+        if url.scheme() != "am-dict" or idx is None or shown is None:
+            return
+        term, entries = shown
+        target = url.path()
+        if target == "clear":
+            self._dictionary_picks.pop(idx, None)
+        else:
+            names = list(dict.fromkeys(name for name, _html in entries))
+            if not target.isdigit() or int(target) >= len(names):
+                return
+            self._dictionary_picks[idx] = (term, names[int(target)])
+        logger.info("curator: dictionary pick for word %d (%r): %s", idx, term, self._dictionary_picks.get(idx))
+        self._render_definitions(term, entries)
 
     def _populate_candidate_list(self, word: TokenizedWord, idx: int) -> None:
         """Fill the sentence picker for the focused word and select its current pick.
@@ -2835,7 +2928,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         # yields (the COPY_ROLE payload, Issue #95 on the row-copy path), and the
         # definition beside it (Issue #108).
         self._apply_pick_to_row(idx, self._shown_line(idx))
-        self._refresh_definition(chosen)
+        self._refresh_definition(chosen, idx)
         self._refresh_expansion_buttons()
         self._refresh_frame_buttons()
 
@@ -3778,6 +3871,11 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
                     expansion = self._line_expansions.get(original_index, (0, 0))
                     frame = self._screenshot_overrides.get(original_index)
                     edited = self._sentence_edits.get(original_index)
+                    # F-10: stamped only for the card front it was made for (an
+                    # edit or a sentence pick that changed the front lapses it).
+                    front = edited.mined_form if edited is not None else word.mined_form
+                    pick = self._dictionary_picks.get(original_index)
+                    dictionary = pick[1] if pick is not None and pick[0] == front else ""
                     # `expansion != word.line_expansion` rather than `!= (0, 0)`:
                     # a word may ARRIVE stamped (the automatic cue merge), and
                     # Reset has to be able to write the (0, 0) back over it.
@@ -3786,6 +3884,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
                         or expansion != word.line_expansion
                         or frame is not None
                         or edited is not None
+                        or dictionary
                     ):
                         word = dataclasses.replace(
                             word,
@@ -3799,6 +3898,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
                                 if edited is not None
                                 else word.sentence_edit
                             ),
+                            dictionary_pick=dictionary or word.dictionary_pick,
                         )
                     selected.append(word)
         return selected

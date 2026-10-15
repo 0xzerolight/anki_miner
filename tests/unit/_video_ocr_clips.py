@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import struct
 import subprocess
 from collections.abc import Sequence
 from pathlib import Path
@@ -83,3 +84,47 @@ def color_clip(path: Path, *, seconds: int, size: tuple[int, int] = (640, 360), 
 def solid(color: int, size: tuple[int, int] = (640, 360)) -> np.ndarray:
     """A flat BGR frame; the colour doubles as a code a fake OCR reader can map to text."""
     return np.full((size[1], size[0], 3), color, dtype=np.uint8)
+
+
+def _pgs_segment(kind: int, payload: bytes, seconds: float) -> bytes:
+    """One PGS segment: 'PG', PTS and DTS at 90 kHz, type, size, payload."""
+    return b"PG" + struct.pack(">IIBH", int(round(seconds * 90000)), 0, kind, len(payload)) + payload
+
+
+def write_pgs(
+    path: Path,
+    cues: Sequence[tuple[float, float]],
+    *,
+    size: tuple[int, int] = (320, 96),
+    box: tuple[int, int] = (64, 32),
+    luma: int = 235,
+) -> Path:
+    """A Blu-ray PGS ``.sup`` showing a solid box at the top-left during each ``(start, end)`` cue.
+
+    Hand-written segments (presentation, window, palette, object, end), because
+    ffmpeg cannot encode PGS. Palette entry 1 is grey level ``luma`` (235 = white),
+    fully opaque; entry 0 is transparent. Each cue ends with an empty
+    presentation segment, which is how PGS clears the screen.
+    """
+    width, height = size
+    box_w, box_h = box
+    # One run of colour 1 per line (0x00, 0b11 + 14-bit length, colour), then end of line (0x00 0x00).
+    line = b"\x00" + bytes([0xC0 | (box_w >> 8), box_w & 0xFF, 1]) + b"\x00\x00"
+    rle = line * box_h
+    window = struct.pack(">BBHHHH", 1, 0, 0, 0, box_w, box_h)
+    palette = struct.pack(">BB", 0, 0) + bytes([0, 16, 128, 128, 0]) + bytes([1, luma, 128, 128, 255])
+    obj = struct.pack(">HBB", 0, 0, 0xC0) + (len(rle) + 4).to_bytes(3, "big") + struct.pack(">HH", box_w, box_h) + rle
+    out = bytearray()
+    composition = 0
+    for start, end in cues:
+        show = struct.pack(">HHBHBBBB", width, height, 0x10, composition, 0x80, 0, 0, 1) + struct.pack(
+            ">HBBHH", 0, 0, 0, 0, 0
+        )
+        out += _pgs_segment(0x16, show, start) + _pgs_segment(0x17, window, start)
+        out += _pgs_segment(0x14, palette, start) + _pgs_segment(0x15, obj, start) + _pgs_segment(0x80, b"", start)
+        composition += 1
+        clear = struct.pack(">HHBHBBBB", width, height, 0x10, composition, 0x00, 0, 0, 0)
+        out += _pgs_segment(0x16, clear, end) + _pgs_segment(0x17, window, end) + _pgs_segment(0x80, b"", end)
+        composition += 1
+    path.write_bytes(bytes(out))
+    return path
