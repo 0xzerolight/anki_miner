@@ -6,6 +6,7 @@ import json
 import os
 import sqlite3
 import stat
+from dataclasses import replace
 from datetime import date
 from pathlib import Path
 
@@ -15,6 +16,8 @@ from anki_miner.services.db_backup import (
     MANIFEST_NAME,
     PENDING_RESTORE_NAME,
     apply_pending_restore,
+    backup_sources,
+    backups_root,
     list_backups,
     pending_restore,
     run_daily_backup,
@@ -230,3 +233,41 @@ def test_a_restore_recreates_a_deleted_folder(data, tmp_path):
 
     assert apply_pending_restore(root) == 1
     assert _read(nested) == "words"
+
+
+def test_sources_cover_every_language_db_stats_config_and_profiles(tmp_path, test_config):
+    kw = tmp_path / "kw"
+    kw.mkdir()
+    for name in ("known_words.db", "known_words.zh.db", "known_words.es.db", "known_words.notalanguage.db"):
+        (kw / name).write_bytes(b"")
+    (tmp_path / "stats.db").write_bytes(b"")
+    config_file = tmp_path / "gui_config.json"
+    config_file.write_text("{}", encoding="utf-8")
+    profiles = tmp_path / "profiles"
+    profiles.mkdir()
+    (profiles / "work.json").write_text("{}", encoding="utf-8")
+    (profiles / "notes.txt").write_text("x", encoding="utf-8")
+    config = replace(test_config, known_words_db_path=kw / "known_words.db", stats_db_path=tmp_path / "stats.db")
+
+    sources = backup_sources(config, config_file=config_file, profiles_dir=profiles)
+
+    assert sources[0] == kw / "known_words.db"
+    assert set(sources) == {
+        kw / "known_words.db",
+        kw / "known_words.zh.db",
+        kw / "known_words.es.db",
+        tmp_path / "stats.db",
+        config_file,
+        profiles / "work.json",
+    }
+    assert len(sources) == len(set(sources))
+
+
+def test_missing_files_are_not_sources(tmp_path, test_config):
+    config = replace(test_config, known_words_db_path=tmp_path / "known_words.db", stats_db_path=tmp_path / "stats.db")
+
+    assert backup_sources(config, config_file=tmp_path / "gui_config.json", profiles_dir=tmp_path / "profiles") == []
+
+
+def test_the_backups_folder_sits_beside_the_config(tmp_path):
+    assert backups_root(tmp_path / "gui_config.json") == tmp_path / "backups"

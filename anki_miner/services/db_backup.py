@@ -24,12 +24,16 @@ import shutil
 import sqlite3
 import tempfile
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date, datetime
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from anki_miner.utils.atomic_io import atomic_write_path
 from anki_miner.utils.logging_ext import log_summary
+
+if TYPE_CHECKING:  # pragma: no cover - typing only
+    from anki_miner.config import AnkiMinerConfig
 
 logger = logging.getLogger(__name__)
 
@@ -286,3 +290,39 @@ def apply_pending_restore(root: Path) -> int | None:
     finally:
         with contextlib.suppress(OSError):
             pending_path.unlink(missing_ok=True)
+
+
+def backups_root(config_file: Path) -> Path:
+    """The backups folder: beside ``gui_config.json`` in the data folder.
+
+    Derived from the config file the caller names (``GUIConfigManager.CONFIG_FILE``)
+    rather than from ``ANKI_MINER_HOME`` at import, the way ``ProfileStore``
+    finds its folder, so an isolated test home is honoured.
+    """
+    return config_file.parent / BACKUPS_DIRNAME
+
+
+def backup_sources(config: AnkiMinerConfig, *, config_file: Path, profiles_dir: Path) -> list[Path]:
+    """The files a daily backup copies (R9), existing ones only.
+
+    Every mining language's known-words database, the stats database,
+    ``gui_config.json`` and each settings profile. Language paths come from
+    ``resolve_known_words_db_path``, their sole derivation, so a moved
+    known-words file is followed.
+    """
+    # Function-local: the derivation lives in the GUI composition module,
+    # which imports most services (this one included, through gui.app).
+    from anki_miner.gui.utils.service_factory import resolve_known_words_db_path
+    from anki_miner.languages import AVAILABLE_LANGUAGES
+
+    candidates = [resolve_known_words_db_path(replace(config, language=code)) for code in AVAILABLE_LANGUAGES]
+    candidates += [config.stats_db_path, config_file]
+    try:
+        candidates += sorted(profiles_dir.glob("*.json"))
+    except OSError as exc:
+        logger.warning("Backup: could not list settings profiles in %s: %s", profiles_dir, exc)
+    sources: list[Path] = []
+    for path in candidates:
+        if path not in sources and path.is_file():
+            sources.append(path)
+    return sources
