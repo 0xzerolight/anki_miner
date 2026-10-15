@@ -167,3 +167,55 @@ def test_an_unexpected_fetch_failure_is_reported(tab, monkeypatch):
     issue = tab.issue_banner().current_issue()
     assert (issue.summary, issue.details) == ("The pages could not be fetched.", "RuntimeError: parser crashed")
     assert tab.fetch_button.isEnabled()
+
+
+def test_mine_after_fetch_makes_one_item_per_article_with_its_source(tab, monkeypatch):
+    _fetch(tab, monkeypatch, "https://example.com/neko\nhttps://example.org/inu", [_NEKO, _INU])
+
+    tab._on_mine_clicked()
+
+    items = _items(tab)
+    assert [item.title for item in items] == ["猫の話 — example.com", "犬の話 — example.org"]
+    assert [item.source.text for item in items] == [_NEKO.text, _INU.text]
+    assert all(item.source.kind == "text" and item.source.path is None for item in items)
+
+
+def test_an_edited_single_article_keeps_its_source(tab, monkeypatch):
+    _fetch(tab, monkeypatch, "https://example.com/neko", [_NEKO])
+    tab.text_edit.setPlainText("吾輩は猫である。")
+
+    tab._on_mine_clicked()
+
+    [item] = _items(tab)
+    assert (item.title, item.source.text) == ("猫の話 — example.com", "吾輩は猫である。")
+
+
+def test_edited_text_from_several_pages_is_mined_as_one_text(tab, monkeypatch):
+    _fetch(tab, monkeypatch, "https://example.com/neko\nhttps://example.org/inu", [_NEKO, _INU])
+    tab.text_edit.setPlainText("吾輩は猫である。犬が走る。")
+
+    tab._on_mine_clicked()
+
+    [item] = _items(tab)
+    assert item.title == "Text"
+    assert "The fetched text was edited, so it is mined as one text without its page titles." in _log(tab)
+
+
+def test_clearing_the_editor_forgets_the_fetched_pages(tab, monkeypatch):
+    _fetch(tab, monkeypatch, "https://example.com/neko", [_NEKO])
+    tab.text_edit.clear()
+    tab.text_edit.setPlainText("別の文。")
+
+    tab._on_mine_clicked()
+
+    [item] = _items(tab)
+    assert item.title == "Text"
+
+
+def test_pasted_text_still_mines_as_text(tab):
+    tab.text_edit.setPlainText("今日は晴れ。")
+
+    tab._on_mine_clicked()
+
+    [item] = _items(tab)
+    assert item.title == "Text"

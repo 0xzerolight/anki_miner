@@ -325,6 +325,11 @@ class ReadingTextTab(_ReadingMiningTabBase):
         self._japanese_leading = False
         self.set_content_style(get_profile(config_language(self.config)).content_style)
         self.text_edit.textChanged.connect(self._recompute_buttons)
+        # F-14: on the document, not textChanged, whose receivers the typography
+        # tests count to prove the Japanese leading keeper is (un)wired.
+        document = self.text_edit.document()
+        if document is not None:
+            document.contentsChanged.connect(self._forget_fetch_if_cleared)
         card_layout.addWidget(self.text_edit)
 
         # Pasted text has no page of its own, so the one picture every card in
@@ -485,6 +490,12 @@ class ReadingTextTab(_ReadingMiningTabBase):
             return self.tr("This is not a web address.")
         return self.tr("No article text found on this page. Pages that draw their text with JavaScript cannot be read.")
 
+    def _forget_fetch_if_cleared(self) -> None:
+        """An emptied box ends the fetched text's claim to its pages' Source."""
+        if self._fetched and not self.text_edit.toPlainText().strip():
+            self._fetched = []
+            self._fetched_text = ""
+
     # ------------------------------------------------------------------
     # Run lifecycle
     # ------------------------------------------------------------------
@@ -521,13 +532,33 @@ class ReadingTextTab(_ReadingMiningTabBase):
             )
             return
 
-        # Constant identity by design (see text_source.py) — untranslated data
-        # constant, like aozora's series="Books".
-        ref = ReadingSourceRef(kind="text", title="Text", text=text, image_root=image_root)
-        item = ReadingQueueItem(source=ref, title=ref.title, kind=ref.kind)
-
-        if self._launch_run([item]):
+        if self._launch_run(self._text_items(text, image_root)):
             self._begin_progress()
+
+    def _text_items(self, text: str, image_root: Path | None) -> list[ReadingQueueItem]:
+        """The run's items: one per fetched article, or one for the box's text (F-14).
+
+        While the box holds exactly what Fetch put there, each article is its
+        own item titled "page title — site", the card Source (R17). Fetched
+        text from one page that was edited keeps that page's Source: the edit
+        is the review R17 asks for. Edited text from several pages can no
+        longer be split back into pages, so it is mined as one text with the
+        constant identity, and Activity says so. Pasted text keeps "Text" — an
+        untranslated data constant, like aozora's series="Books" (see
+        text_source.py).
+        """
+        if self._fetched and text == self._fetched_text:
+            pairs = [(article.source_label, article.text) for article in self._fetched]
+        elif len(self._fetched) == 1:
+            pairs = [(self._fetched[0].source_label, text)]
+        else:
+            if self._fetched:
+                self.log_widget.append_info(
+                    self.tr("The fetched text was edited, so it is mined as one text without its page titles.")
+                )
+            pairs = [("Text", text)]
+        refs = [ReadingSourceRef(kind="text", title=title, text=body, image_root=image_root) for title, body in pairs]
+        return [ReadingQueueItem(source=ref, title=ref.title, kind=ref.kind) for ref in refs]
 
     def _picked_image(self) -> tuple[bool, Path | None]:
         """Resolve the optional card picture as ``(usable, path)``.
