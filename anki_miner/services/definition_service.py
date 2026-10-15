@@ -5,7 +5,7 @@ from __future__ import annotations
 import contextlib
 import logging
 from collections import Counter
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Iterable, Iterator
 from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import QCoreApplication
@@ -26,6 +26,7 @@ if TYPE_CHECKING:
     # would close that cycle. `from __future__ import annotations` keeps the
     # annotation a string.
     from anki_miner.languages.profile import LookupStrategy
+    from anki_miner.models import TokenizedWord
     from anki_miner.services.dictionary.registry import DictionaryRegistry
 
 logger = logging.getLogger(__name__)
@@ -165,6 +166,20 @@ def collect_dictionary_css(config: AnkiMinerConfig) -> str:
     envelope-stamping gate).
     """
     return "\n\n".join(css for _, _, css in collect_dictionary_css_entries(config))
+
+
+def preferred_dictionaries(words: Iterable[TokenizedWord]) -> dict[str, str]:
+    """Card front -> the dictionary the Word Curator picked for it (F-10).
+
+    The one reader of ``TokenizedWord.dictionary_pick``. The first pick for a
+    front wins, as the definition batch keeps the first of duplicate fronts.
+    Empty when nothing was picked, which keeps the lookup call unchanged.
+    """
+    picks: dict[str, str] = {}
+    for word in words:
+        if word.dictionary_pick:
+            picks.setdefault(word.mined_form, word.dictionary_pick)
+    return picks
 
 
 class DefinitionService:
@@ -417,6 +432,66 @@ class DefinitionService:
             described.append(f"{provider.name}:{getattr(provider, 'dict_id', None) or '-'}:{availability}")
         return described
 
+    def _lookup_pairs(
+        self,
+        provider: DictionaryProvider,
+        pairs: list[tuple[str, str | None]],
+        lemma_context: dict[str, str] | None,
+        pos_context: dict[str, str] | None,
+    ) -> dict[tuple[str, str | None], str]:
+        """*pairs* that *provider* alone answers, with their entries; {} when it raises.
+
+        The provider boundary never raises (see :meth:`get_definitions_batch`):
+        a broken dictionary is a miss, logged, and the chain walk goes on.
+        """
+        found: dict[tuple[str, str | None], str] = {}
+        batch_fn = getattr(provider, "lookup_many", None)
+        try:
+            if callable(batch_fn):
+                for batch in _word_unique_batches(pairs):
+                    hits = batch_fn(batch, **_token_kwargs(batch, lemma_context, pos_context))
+                    for pair in batch:
+                        html = hits.get(pair[0])
+                        if html:
+                            found[pair] = html
+            else:
+                for pair in pairs:
+                    html = provider.lookup(pair[0])
+                    if html:
+                        found[pair] = html
+        except Exception as e:
+            _log_provider_failure(provider, "lookup_many" if callable(batch_fn) else "lookup", e)
+        return found
+
+    def _resolve_preferred(
+        self,
+        remaining: list[tuple[str, str | None]],
+        preferred: dict[str, str],
+        resolved: dict[tuple[str, str | None], str],
+        hits_by_provider: Counter[str],
+        lemma_context: dict[str, str] | None,
+        pos_context: dict[str, str] | None,
+    ) -> list[tuple[str, str | None]]:
+        """F-10: answer each picked word from its picked dictionary; return the pairs still open.
+
+        A pick naming a dictionary that is not in the chain, not loaded, or
+        without an entry for the word leaves that word to the normal walk.
+        Picks name a provider's display name (``provider.name``, what the
+        curator pane shows); two providers with one name resolve to the first.
+        """
+        by_name: dict[str, DictionaryProvider] = {}
+        for provider in self._providers:
+            by_name.setdefault(provider.name, provider)
+        for name in dict.fromkeys(preferred.values()):
+            picked = by_name.get(name)
+            if picked is None or not picked.is_available():
+                continue
+            wanted = [pair for pair in remaining if preferred.get(pair[0]) == name]
+            for pair, html in self._lookup_pairs(picked, wanted, lemma_context, pos_context).items():
+                resolved[pair] = html
+                hits_by_provider[picked.name] += 1
+        return [pair for pair in remaining if pair not in resolved]
+
     def get_definitions_batch(
         self,
         words: list[tuple[str, str | None]],
@@ -426,6 +501,7 @@ class DefinitionService:
         is_cancelled: Callable[[], bool] | None = None,
         lemma_context: dict[str, str] | None = None,
         pos_context: dict[str, str] | None = None,
+        preferred_dictionaries: dict[str, str] | None = None,
     ) -> list[str | None]:
         """Resolve definitions for a list of ``(word, reading | None)`` pairs,
         preserving first-hit-wins. The reading is a per-word ranking BOOST
@@ -462,6 +538,11 @@ class DefinitionService:
         verb opens on its verb row, not on the noun row the index put first.
         The miss ladder hands it to ``lookup_fallback`` for the profile's
         splice test. Absent/empty ⇒ no ``pos`` kwarg, as with ``lemma_context``.
+
+        ``preferred_dictionaries`` maps a lookup word to the display name of the
+        dictionary the Word Curator picked for it (F-10). Those words are
+        answered by that dictionary first; one it cannot answer, or that is not
+        loaded, walks the chain as before. Absent/empty: unchanged behaviour.
         """
         if progress_callback:
             progress_callback.on_start(
@@ -487,6 +568,10 @@ class DefinitionService:
         # "definitions are missing" report needs and the chain order alone
         # cannot give.
         hits_by_provider: Counter[str] = Counter()
+        if preferred_dictionaries:
+            remaining = self._resolve_preferred(
+                remaining, preferred_dictionaries, resolved, hits_by_provider, lemma_context, pos_context
+            )
 
         # NOTE: the two ``except Exception`` clauses below are deliberately broad,
         # not an oversight. This is the never-raises provider boundary: a provider
