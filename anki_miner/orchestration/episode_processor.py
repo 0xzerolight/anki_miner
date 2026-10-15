@@ -3316,6 +3316,10 @@ class EpisodeProcessor:
                     return ctx.build_result()
                 unknown_words: list[TokenizedWord] = []
             else:
+                # MS-28: before phase 2, so the warning leads the filter lines.
+                # Not on the season mine pass: its pre-pass already checked this file.
+                if getattr(curation_callback, "fixed_subset", None) is None:
+                    self._warn_if_wrong_language(all_words)
                 with timed_phase("filter", logger):
                     unknown_words = self._phase2_filter(ctx, all_words, line_index, progress_callback, collapse=False)
                 if self.cancelled:
@@ -3916,6 +3920,8 @@ class EpisodeProcessor:
                 )
                 return ctx.build_result()
 
+            # MS-28: before phase 2, so the warning leads the filter lines.
+            self._warn_if_wrong_language(all_words)
             with timed_phase("filter", logger):
                 unknown_words = self._phase2_filter(
                     ctx,
