@@ -10,9 +10,10 @@ import pytest
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QMessageBox
 
+from anki_miner.exceptions import AnkiConnectionError
 from anki_miner.gui.widgets import analytics_tab as analytics_tab_module
 from anki_miner.gui.widgets.analytics_tab import AnalyticsTab
-from anki_miner.models.stats import MiningSession, OverallStats
+from anki_miner.models.stats import MiningSession, OverallStats, RunReceipt
 
 _POST = "anki_miner.services.anki_service.post_action"
 
@@ -143,3 +144,33 @@ def test_the_app_hands_analytics_the_live_config():
     from anki_miner.gui import app
 
     assert "config_provider=window.get_config" in inspect.getsource(app.compose_main_window)
+
+
+def test_show_in_anki_browses_the_runs_notes(make_tab, monkeypatch):
+    calls: list[tuple] = []
+    monkeypatch.setattr(_POST, lambda *a, **k: calls.append((a[1], k.get("params"))) or None)
+    tab = make_tab([_session(1, 2, 15)])
+    tab.stats_service.get_run_receipt.return_value = RunReceipt(1, "ja", (11, 12), ())
+    _select(tab, 1)
+
+    tab.show_in_anki_button.click()
+
+    assert calls == [("guiBrowse", {"query": "nid:11,12"})]
+    assert tab.issue_banner().current_issue() is None
+
+
+def test_show_in_anki_with_anki_closed_is_a_banner(make_tab, monkeypatch):
+    def _down(*_a, **_k):
+        raise AnkiConnectionError("Cannot connect to AnkiConnect. Is Anki running?")
+
+    monkeypatch.setattr(_POST, _down)
+    tab = make_tab([_session(1, 2, 15)])
+    tab.stats_service.get_run_receipt.return_value = RunReceipt(1, "ja", (11,), ())
+    _select(tab, 1)
+
+    tab.show_in_anki_button.click()
+
+    issue = tab.issue_banner().current_issue()
+    assert issue is not None
+    assert issue.summary == "Anki Miner couldn't open this run's cards in Anki."
+    assert "Cannot connect" in issue.details

@@ -52,6 +52,7 @@ from anki_miner.models.stats import (
     MiningSession,
     OverallStats,
 )
+from anki_miner.services.anki_service import AnkiService
 from anki_miner.services.stats_service import StatsService
 from anki_miner.utils.i18n import tr_format
 from anki_miner.utils.logging_ext import log_summary
@@ -722,7 +723,33 @@ class AnalyticsTab(ScreenIssueHost, QWidget):
             button.setToolTip(tip)
 
     def _on_show_in_anki_clicked(self) -> None:
-        """Filled in by L2.AI16.T6."""
+        """Open Anki's browser on the selected run's notes (AI-16), off the GUI thread."""
+        session = self._selected_session()
+        if session is None or session.id is None or self._config_provider is None:
+            return
+        config = self._config_provider()
+        service = self.stats_service
+        session_id = session.id
+
+        def _browse() -> int:
+            # Worker thread: stats.db and AnkiConnect only, never a widget.
+            receipt = service.get_run_receipt(session_id)
+            note_ids = list(receipt.note_ids) if receipt is not None else []
+            AnkiService(config).gui_browse_notes(note_ids)
+            return len(note_ids)
+
+        # Success is Anki's own window; this tab has nothing to change.
+        run_off_thread(self, _browse, lambda _count: None, self._on_show_in_anki_error)
+
+    def _on_show_in_anki_error(self, msg: str) -> None:
+        """GUI thread: say on screen that Anki's browser could not be opened (D24)."""
+        logging.getLogger(__name__).warning("Analytics: Show in Anki failed: %s", msg)
+        if self._teardown_generation:
+            return
+        with contextlib.suppress(RuntimeError):
+            self.show_screen_issue(
+                ScreenIssue(summary=self.tr("Anki Miner couldn't open this run's cards in Anki."), details=msg)
+            )
 
     def _on_delete_run_clicked(self) -> None:
         """Filled in by L2.AI16.T7."""
