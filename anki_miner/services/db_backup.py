@@ -28,6 +28,7 @@ from dataclasses import dataclass
 from datetime import date, datetime
 from pathlib import Path
 
+from anki_miner.utils.atomic_io import atomic_write_path
 from anki_miner.utils.logging_ext import log_summary
 
 logger = logging.getLogger(__name__)
@@ -213,3 +214,75 @@ def prune_backups(root: Path, *, keep: int = KEEP_DAYS) -> int:
         shutil.rmtree(old.path, ignore_errors=True)
         removed += 1
     return removed
+
+
+def schedule_restore(root: Path, day: date) -> None:
+    """Ask the next launch to restore ``day``'s backup (Settings → General).
+
+    Raises:
+        ValueError: There is no complete backup for ``day``.
+        OSError: The request could not be written.
+    """
+    if not any(backup.day == day for backup in list_backups(root)):
+        raise ValueError(f"no backup for {day.isoformat()}")
+    root.mkdir(parents=True, exist_ok=True)
+    with atomic_write_path(root / PENDING_RESTORE_NAME) as staged:
+        staged.write_text(json.dumps({"day": day.isoformat()}), encoding="utf-8")
+
+
+def pending_restore(root: Path) -> date | None:
+    """The day a restore is scheduled for, or ``None`` (absent or corrupt request)."""
+    try:
+        payload = json.loads((root / PENDING_RESTORE_NAME).read_text(encoding="utf-8"))
+        return date.fromisoformat(payload["day"])
+    except (OSError, ValueError, KeyError, TypeError):
+        return None
+
+
+def _restore_entry(folder: Path, entry: BackupEntry) -> None:
+    """Put one copy back over its source path, atomically."""
+    target = entry.source
+    target.parent.mkdir(parents=True, exist_ok=True)
+    if entry.kind == "sqlite":
+        for suffix in _SQLITE_SIDECARS:
+            Path(f"{target}{suffix}").unlink(missing_ok=True)
+    with atomic_write_path(target) as staged:
+        shutil.copyfile(folder / entry.name, staged)
+        if os.name == "posix" and entry.kind == "file":
+            os.chmod(staged, 0o600)
+
+
+def apply_pending_restore(root: Path) -> int | None:
+    """Apply a scheduled restore; return the files restored, or ``None`` when none was scheduled.
+
+    Must run before anything opens these files: ``gui.app`` calls it ahead of
+    the config load, holding the instance and run locks. The request is
+    removed whatever happens, so a restore that fails is reported once in the
+    log and never turns into a boot loop.
+    """
+    pending_path = root / PENDING_RESTORE_NAME
+    day = pending_restore(root)
+    if day is None:
+        if pending_path.exists():
+            logger.warning("Backup restore request unreadable; dropping it: %s", pending_path)
+            with contextlib.suppress(OSError):
+                pending_path.unlink()
+        return None
+    restored = 0
+    try:
+        backup = next((candidate for candidate in list_backups(root) if candidate.day == day), None)
+        if backup is None:
+            logger.warning("Backup restore skipped: no complete backup for %s", day.isoformat())
+            return 0
+        for entry in backup.entries:
+            try:
+                _restore_entry(backup.path, entry)
+            except OSError as exc:
+                logger.warning("Backup restore of %s failed: %s", entry.source, exc)
+                continue
+            restored += 1
+        log_summary(logger, "Backup restored", day=day.isoformat(), files=restored, of=len(backup.entries))
+        return restored
+    finally:
+        with contextlib.suppress(OSError):
+            pending_path.unlink(missing_ok=True)

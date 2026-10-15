@@ -11,7 +11,15 @@ from pathlib import Path
 
 import pytest
 
-from anki_miner.services.db_backup import MANIFEST_NAME, list_backups, run_daily_backup
+from anki_miner.services.db_backup import (
+    MANIFEST_NAME,
+    PENDING_RESTORE_NAME,
+    apply_pending_restore,
+    list_backups,
+    pending_restore,
+    run_daily_backup,
+    schedule_restore,
+)
 
 
 def _sqlite(path: Path, value: str) -> Path:
@@ -148,3 +156,77 @@ def test_copies_are_owner_only(data):
     assert dest is not None
     assert stat.S_IMODE((dest / "01-gui_config.json").stat().st_mode) == 0o600
     assert stat.S_IMODE(dest.stat().st_mode) == 0o700
+
+
+def test_a_scheduled_restore_puts_every_file_back(data):
+    root = data / "backups"
+    sources = [data / "stats.db", data / "gui_config.json"]
+    run_daily_backup(sources, root, today=date(2026, 10, 14))
+    _sqlite(data / "stats.db", "later")
+    (data / "gui_config.json").write_text('{"a": 2}', encoding="utf-8")
+
+    schedule_restore(root, date(2026, 10, 14))
+    assert pending_restore(root) == date(2026, 10, 14)
+    restored = apply_pending_restore(root)
+
+    assert restored == 2
+    assert _read(data / "stats.db") == "stats"
+    assert (data / "gui_config.json").read_text(encoding="utf-8") == '{"a": 1}'
+    assert pending_restore(root) is None
+    assert not (root / PENDING_RESTORE_NAME).exists()
+
+
+def test_nothing_pending_does_nothing(data):
+    assert apply_pending_restore(data / "backups") is None
+
+
+def test_scheduling_a_day_without_a_backup_is_refused(data):
+    with pytest.raises(ValueError):
+        schedule_restore(data / "backups", date(2026, 1, 1))
+
+
+def test_a_pending_day_that_vanished_is_dropped(data):
+    root = data / "backups"
+    root.mkdir()
+    (root / PENDING_RESTORE_NAME).write_text(json.dumps({"day": "2026-01-01"}), encoding="utf-8")
+
+    assert apply_pending_restore(root) == 0
+    assert not (root / PENDING_RESTORE_NAME).exists()
+
+
+def test_a_corrupt_pending_file_is_cleared(data):
+    root = data / "backups"
+    root.mkdir()
+    (root / PENDING_RESTORE_NAME).write_text("nope", encoding="utf-8")
+
+    assert pending_restore(root) is None
+    assert apply_pending_restore(root) is None
+    assert not (root / PENDING_RESTORE_NAME).exists()
+
+
+def test_a_stale_journal_goes_with_the_restore(data):
+    root = data / "backups"
+    run_daily_backup([data / "stats.db"], root, today=date(2026, 10, 14))
+    journal = data / "stats.db-journal"
+    journal.write_bytes(b"stale")
+
+    schedule_restore(root, date(2026, 10, 14))
+    apply_pending_restore(root)
+
+    assert not journal.exists()
+    assert _read(data / "stats.db") == "stats"
+
+
+def test_a_restore_recreates_a_deleted_folder(data, tmp_path):
+    root = data / "backups"
+    nested = tmp_path / "elsewhere" / "known_words.db"
+    nested.parent.mkdir()
+    _sqlite(nested, "words")
+    run_daily_backup([nested], root, today=date(2026, 10, 14))
+    nested.unlink()
+    nested.parent.rmdir()
+
+    schedule_restore(root, date(2026, 10, 14))
+
+    assert apply_pending_restore(root) == 1
+    assert _read(nested) == "words"
