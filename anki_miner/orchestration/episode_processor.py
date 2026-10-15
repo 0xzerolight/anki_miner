@@ -57,7 +57,7 @@ from anki_miner.services.pitch_accent.render import (
 from anki_miner.services.pitch_accent_service import pitch_position_field_value
 from anki_miner.services.reading.images import ReadingImageArchiveError, ReadingImageMemberError, prepare_card_image
 from anki_miner.services.resource_staleness import stale_resource_reimport_error
-from anki_miner.services.secondary_subtitles import attach_translations
+from anki_miner.services.secondary_subtitles import attach_translations, load_auto_translation
 from anki_miner.services.sentence_edit import resolve_sentence_edit
 from anki_miner.services.subtitle_parser import _differs_by_okurigana_only
 from anki_miner.services.word_filter import (
@@ -562,6 +562,11 @@ class EpisodeProcessor:
         #: it merged into, in source order. The --api result's `filter` reads it.
         #: Reset per run.
         self.last_collapsed: list[tuple[TokenizedWord, str]] = []
+        #: F-04: the translation cues this processor picked per video when the
+        #: user chose no file (None = looked, found nothing). Kept for the
+        #: processor's life, so a season's pre-pass and mine pass pick once and
+        #: the curator reads the same cues the cards get.
+        self._auto_translations: dict[Path, list[tuple[float, float, str]] | None] = {}
         # Resolved, not required: every existing caller builds this positionally
         # or by the create_episode_processor kwargs, and ja is the only profile
         # until Stage 2.
@@ -3020,6 +3025,44 @@ class EpisodeProcessor:
         logger.info("secondary subtitle: %d cue(s) from %s", len(entries), secondary_subtitle_file.name)
         return entries
 
+    def _auto_secondary_entries(self, video_file: Path, temp_dir: Path) -> list[tuple[float, float, str]] | None:
+        """F-04: the translation track picked for ``video_file`` when the user chose none, or None.
+
+        Picked once per video for this processor's life and named in the
+        Activity Log on that first pick (R15). Finding nothing is only a log
+        line: a run without a translation stays as quiet as it always was.
+        """
+        if video_file in self._auto_translations:
+            return self._auto_translations[video_file]
+        picked = load_auto_translation(video_file, self.config, self.subtitle_parser, temp_dir)
+        if picked is None:
+            self._auto_translations[video_file] = None
+            logger.info("secondary subtitle: no translation track found for %s", video_file.name)
+            return None
+        self._auto_translations[video_file] = picked.entries
+        if picked.candidate.sidecar is not None:
+            template = QCoreApplication.translate("EpisodeProcessor", "Translation subtitles picked automatically: %1")
+        else:
+            template = QCoreApplication.translate(
+                "EpisodeProcessor", "Translation subtitles picked automatically: embedded track %1"
+            )
+        self.presenter.show_info(tr_format(template, picked.candidate.label))
+        logger.info(
+            "secondary subtitle: auto-picked %s for %s, %d cue(s)",
+            picked.candidate.label,
+            video_file.name,
+            len(picked.entries),
+        )
+        return picked.entries
+
+    def auto_translation_entries(self, video_file: Path) -> list[tuple[float, float, str]]:
+        """The cues :meth:`_auto_secondary_entries` picked for ``video_file``; [] when none was picked.
+
+        Read by the curation context builders while the worker is parked in
+        the curator, so the Translation column shows what the cards will get.
+        """
+        return list(self._auto_translations.get(video_file) or [])
+
     def _apply_strict_card_order(
         self,
         words: list[TokenizedWord],
@@ -3192,6 +3235,22 @@ class EpisodeProcessor:
             # Parsed here, not lazily: a second file that will not parse should
             # fail the run before filtering and curation spend their time.
             secondary_entries = self._load_secondary_entries(secondary_subtitle_file)
+            # F-04: the feature is on and no file was chosen, so the run picks a
+            # translation itself (a sidecar named for the video or a text track
+            # inside it). That track sits on the video's own timeline: the
+            # offset the caller passed belongs to a chosen file, not to it.
+            # Audiobooks and the YouTube inner run have no translation input;
+            # --api runs turn the switch off in resolve_run_config (the caller
+            # names its own track).
+            translation_offset = secondary_subtitle_offset
+            if (
+                secondary_entries is None
+                and self.config.secondary_subtitle_enabled
+                and not audio_only
+                and _outer_kind is None
+            ):
+                secondary_entries = self._auto_secondary_entries(video_file, run_temp_folder)
+                translation_offset = 0.0
             # The --api callback (cli/api/lines.py WordSelection) can make a named
             # word from its named line, so an empty parse, phase 2 or merge stamp
             # does not end its run: it gets whatever is left, possibly nothing.
@@ -3288,7 +3347,7 @@ class EpisodeProcessor:
                 # sentence pick or a +line has already moved the window this
                 # matches against. The curator painted its column from the same
                 # cues with the same function, so the card agrees with it.
-                attach_translations(unknown_words, secondary_entries, offset=secondary_subtitle_offset)
+                attach_translations(unknown_words, secondary_entries, offset=translation_offset)
 
             unknown_words = self._apply_strict_card_order(unknown_words, all_words)
 
