@@ -719,6 +719,12 @@ a = Analysis(  # noqa: F821 - injected into the spec namespace by PyInstaller
         # collect every submodule and the bundle never silently falls back to
         # the pure-Python implementation.
         *collect_submodules("rapidfuzz"),
+        # pypdf (Reading → Novels PDF books, TS-05): reached only through the
+        # function-local `from . import pdf_source` in services/reading/
+        # detector.load. Bytecode analysis follows that IMPORT opcode; pinned
+        # here like budoux so a refactor of the lazy dispatch never drops it.
+        # Pure Python, no data files.
+        "pypdf",
         # Modules the ASR engine pack imports at package load that nothing in
         # the BASE graph reaches once the pack packages are excluded below. The
         # base imports bare `tqdm` (ffsubsync/speech_transformers.py,
