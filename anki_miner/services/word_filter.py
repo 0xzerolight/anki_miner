@@ -701,6 +701,7 @@ class WordFilterService:
         spaced: bool,
         max_duration: float = 0.0,
         max_chars: int = 0,
+        max_unknown: int = 0,
     ) -> list[TokenizedWord]:
         """Move each word to its clearest line (F-07, ruling R5).
 
@@ -733,6 +734,10 @@ class WordFilterService:
                 spaces (``SentenceRules.space_aware``).
             max_duration: The Sentences duration cap (``0.0`` = none).
             max_chars: The Sentences character cap (``0`` = none).
+            max_unknown: The most unknown words a moved-to line may hold
+                (``0`` = no limit). The i+1 filter passes ``1`` so the pick
+                stays among i+1 lines: a word whose only i+1 line breaks a cap
+                must not move onto a line with more unknowns.
 
         Returns:
             The words in input order, each on its chosen line.
@@ -752,14 +757,16 @@ class WordFilterService:
         result: list[TokenizedWord] = []
         for word in words:
             usable = [
-                entry
+                (rank(entry), entry[1])
                 for entry in self._compatible_lines(word, lines_by_front, lines_by_lemma)
                 if within_sentence_caps(entry[1].duration, entry[1].line_text, max_duration, max_chars)
             ]
+            if max_unknown > 0:
+                usable = [item for item in usable if item[0][0] <= max_unknown]
             if not usable:
                 result.append(word)
                 continue
-            _position, best = min(usable, key=rank)
+            _rank, best = min(usable, key=lambda item: item[0])
             result.append(word if _is_on_line(word, best) else self._swap_word_to_line(word, best))
         return result
 

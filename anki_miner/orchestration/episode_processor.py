@@ -1847,6 +1847,8 @@ class EpisodeProcessor:
                 spaced=self.profile.sentence_rules.space_aware,
                 max_duration=self.config.max_sentence_duration_seconds,
                 max_chars=self.config.max_sentence_chars,
+                # With i+1 the pick stays among i+1 lines (one unknown, the word).
+                max_unknown=1 if self.config.use_i_plus_one_filter else 0,
             )
             _log_sentence_moves("Best sentence", previous, unknown_words)
 

@@ -330,6 +330,19 @@ def test_after_i_plus_one_the_clearest_i_plus_one_line_wins(test_config):
     assert [(word.mined_form, word.sentence) for word in plain] == [("犬", terse.line_text)]
 
 
+def test_with_i_plus_one_the_best_sentence_never_leaves_the_i_plus_one_lines(test_config):
+    """A word whose only i+1 line breaks the caps is dropped as before, never moved to an i+2 line."""
+    config = _config(test_config, pick_best_sentence=True, use_i_plus_one_filter=True, max_sentence_chars=12)
+    long = _line("公園で大きな犬が元気に走っている。", 0.0, "犬")  # i+1 for 犬, over the 12-character cap
+    crowded = _line("犬と鳥がいる。", 10.0, "犬", "鳥")  # inside the cap, two unknowns: i+1 for nobody
+    dog = _word("犬", long.line_text, 0.0)
+    bird = _word("鳥", crowded.line_text, 10.0)
+
+    kept, _ctx = _phase2(_processor(config), [dog, bird], [long, crowded])
+
+    assert kept == []
+
+
 @pytest.mark.parametrize(
     ("language", "terse", "full", "front"),
     [
