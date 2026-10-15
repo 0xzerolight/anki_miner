@@ -3,11 +3,16 @@
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pysubs2
 
-from anki_miner.services.audio_condenser import CondenseStatus, condense_one, load_subtitle_events
+from anki_miner.services.audio_condenser import (
+    CondenseStatus,
+    condense_one,
+    drop_events_in_ranges,
+    load_subtitle_events,
+)
 
 
 def _write_ass(path: Path, cues: list[tuple[int, int, str, str]]) -> Path:
@@ -89,3 +94,67 @@ def test_a_config_mock_without_the_field_set_skips_nothing(tmp_path):
     condense_one(svc, cfg, tmp_path / "ep01.mkv", sub, tmp_path / "out.mp3", padding_ms=0)
 
     assert svc.periods == [[(1000, 2000), (3000, 4000), (5000, 6000), (7000, 8000)]]
+
+
+_PROBE = "anki_miner.services.audio_condenser.op_ed_skip_ranges"
+_RESOLVE_FFPROBE = "anki_miner.services.audio_condenser.resolve_ffprobe"
+
+
+def test_drop_events_in_ranges_uses_the_midpoint():
+    events = [(0, 2000, "a"), (58_000, 61_000, "b"), (59_000, 61_000, "c"), (100_000, 101_000, "d")]
+
+    # a: middle 1.0 s, in. b: 59.5 s, in. c: 60.0 s, the open end, out. d: out.
+    assert drop_events_in_ranges(events, ((0.0, 60.0),)) == [(59_000, 61_000, "c"), (100_000, 101_000, "d")]
+    assert drop_events_in_ranges(events, ()) == events
+
+
+def _chaptered(tmp_path: Path) -> tuple[Path, Path]:
+    media = tmp_path / "ep01.mkv"
+    media.write_bytes(b"")
+    sub = _write_ass(
+        tmp_path / "ep01.ass",
+        [
+            (1000, 2000, "Lyric one", "Default"),
+            (5000, 6000, "Lyric two", "Default"),
+            (100_000, 101_000, "Hello", "Default"),
+        ],
+    )
+    return media, sub
+
+
+def test_condense_leaves_out_cues_in_the_medias_op_chapter(tmp_path):
+    media, sub = _chaptered(tmp_path)
+    svc = _Recorder()
+
+    with patch(_RESOLVE_FFPROBE, lambda config: "ffprobe-x"), patch(_PROBE, return_value=((0.0, 90.0),)) as probe:
+        result = condense_one(
+            svc, _config(skip=True), media, sub, tmp_path / "out.mp3", padding_ms=0, collect_events=True
+        )
+
+    probe.assert_called_once_with(media, "ffprobe-x")
+    assert svc.periods == [[(100_000, 101_000)]]
+    assert result.condensed_events == ((0, 1000, "Hello"),)
+
+
+def test_the_offset_puts_cues_on_the_media_timeline(tmp_path):
+    media = tmp_path / "ep01.mkv"
+    media.write_bytes(b"")
+    sub = _write_ass(tmp_path / "ep01.ass", [(0, 1000, "Lyric", "Default"), (10_000, 11_000, "Hello", "Default")])
+    svc = _Recorder()
+
+    # File 0-1 s is media 2-3 s with a +2 s offset: inside the 1.5-3.5 s chapter.
+    with patch(_RESOLVE_FFPROBE, lambda config: "ffprobe"), patch(_PROBE, return_value=((1.5, 3.5),)):
+        condense_one(svc, _config(skip=True), media, sub, tmp_path / "out.mp3", offset_ms=2000, padding_ms=0)
+
+    assert svc.periods == [[(12_000, 13_000)]]
+
+
+def test_condense_switch_off_never_probes(tmp_path):
+    media, sub = _chaptered(tmp_path)
+    svc = _Recorder()
+
+    with patch(_PROBE, side_effect=AssertionError("probed with the switch off")):
+        result = condense_one(svc, _config(skip=False), media, sub, tmp_path / "out.mp3", padding_ms=0)
+
+    assert result.status is CondenseStatus.SUCCESS
+    assert svc.periods == [[(1000, 2000), (5000, 6000), (100_000, 101_000)]]

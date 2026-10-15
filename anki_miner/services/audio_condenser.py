@@ -48,7 +48,7 @@ from anki_miner.languages.registry import config_language, get_profile, subtitle
 from anki_miner.services.asr.srt_writer import segments_to_srt
 from anki_miner.services.audio_tagger import TaggingError, TrackMetadata, tag_audio_file
 from anki_miner.services.media_extractor import MediaExtractorService
-from anki_miner.services.subtitle_cleaner import mining_events
+from anki_miner.services.subtitle_cleaner import midpoint_in_ranges, mining_events, op_ed_skip_ranges
 from anki_miner.utils.atomic_io import atomic_write_path
 from anki_miner.utils.audio_track_detector import (
     get_media_duration_seconds,
@@ -195,6 +195,17 @@ def _is_whole_line_bracketed(text: str) -> bool:
                     return index == len(text) - 1
         return False
     return False
+
+
+def drop_events_in_ranges(events: list[Event], ranges: Sequence[tuple[float, float]]) -> list[Event]:
+    """Drop the cues whose midpoint falls in *ranges* (seconds, F-08 chapters).
+
+    *events* must already be shifted (:func:`shift_events`), so they are on the
+    media's timeline, the one its chapters are on. No ranges, no change.
+    """
+    if not ranges:
+        return events
+    return [event for event in events if not midpoint_in_ranges(event[0] / 1000, event[1] / 1000, ranges)]
 
 
 def build_periods(events: list[Event], padding_ms: int) -> list[Period]:
@@ -1069,6 +1080,10 @@ def condense_one(
         )
         shifted = shift_events(events, offset_ms)
         filtered = filter_lines(shifted, filtered_chars)
+        if skip_op_ed:
+            # On the media's timeline now (shifted once, above), where its
+            # chapters are; an external subtitle uses its media's chapters.
+            filtered = drop_events_in_ranges(filtered, op_ed_skip_ranges(media, resolve_ffprobe(config)))
         periods = build_periods(filtered, padding_ms)
         if not periods:
             return CondenseResult(CondenseStatus.NO_DIALOGUE)
