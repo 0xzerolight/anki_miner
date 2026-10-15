@@ -37,6 +37,7 @@ class VideoOcrWorker(FileQueueWorker):
         *,
         output_dir: Path | None = None,
         overwrite: bool = False,
+        bitmap_track: int | None = None,
         parent=None,
     ) -> None:
         """Initialise the worker."""
@@ -46,6 +47,9 @@ class VideoOcrWorker(FileQueueWorker):
         self._region = region
         self._output_dir = output_dir
         self._overwrite = overwrite
+        #: A video's image subtitle track to read instead of its picture (F-18); None reads
+        #: the picture. Image subtitle files (.sup, .idx, .sub) are read as images regardless.
+        self._bitmap_track = bitmap_track
 
     def _queue_items(self) -> list[Path]:
         return self._video_files
@@ -77,7 +81,13 @@ class VideoOcrWorker(FileQueueWorker):
             self.file_progress.emit(idx, pct, message)
 
         result = scanner.scan_video(
-            self._config, video, self._region, out_srt, progress_cb=_progress, cancel_event=self._cancel_event
+            self._config,
+            video,
+            self._region,
+            out_srt,
+            progress_cb=_progress,
+            cancel_event=self._cancel_event,
+            bitmap_track=self._bitmap_track,
         )
         self._emit_result(idx, video, result)
 

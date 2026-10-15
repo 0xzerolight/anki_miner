@@ -12,19 +12,29 @@ numpy-free at import: the region dialog and the scan stack load on first use
 from __future__ import annotations
 
 import dataclasses
+import logging
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtCore import QTimer, pyqtSignal
 from PyQt6.QtGui import QPixmap
-from PyQt6.QtWidgets import QCheckBox, QFrame, QHBoxLayout, QLabel, QScrollArea, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import (
+    QCheckBox,
+    QComboBox,
+    QFrame,
+    QHBoxLayout,
+    QLabel,
+    QScrollArea,
+    QVBoxLayout,
+    QWidget,
+)
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.capabilities import CapabilityTarget
 from anki_miner.gui.resources.styles import SPACING
-from anki_miner.gui.utils.run_off_thread import still_running
+from anki_miner.gui.utils.run_off_thread import run_off_thread, still_running
 from anki_miner.gui.utils.run_options import RunOptionsMixin
 from anki_miner.gui.widgets._tool_tab_base import _ToolTabBase, _ToolTabStrings
 from anki_miner.gui.widgets.base import FormPanel, PageWidth, ScreenIssue, configure_card_layout
@@ -34,8 +44,11 @@ from anki_miner.languages.registry import config_language, get_profile
 from anki_miner.services.asr import onnx_pack_installer
 from anki_miner.services.ocr import ONNXRUNTIME_WHEEL_MB, model_installer
 from anki_miner.services.video_ocr import runtime
+from anki_miner.services.video_ocr.bitmap_source import BITMAP_FILE_SUFFIXES, is_bitmap_file, vobsub_index
 from anki_miner.services.video_ocr.errors import EngineLoadError
-from anki_miner.services.video_ocr.region import Region
+from anki_miner.services.video_ocr.region import FULL_FRAME, Region
+from anki_miner.utils.audio_track_detector import SubtitleStream, list_subtitle_streams
+from anki_miner.utils.ffmpeg_resolver import resolve_ffprobe
 from anki_miner.utils.file_pairing import FilePairMatcher
 from anki_miner.utils.i18n import tr_format
 
@@ -43,7 +56,17 @@ if TYPE_CHECKING:
     from anki_miner.gui.widgets.dialogs.ocr_region_dialog import OcrRegionDialog
 
 _VIDEO_EXTENSIONS = FilePairMatcher.VIDEO_EXTENSIONS
-_VIDEO_FILTER = "Video Files (" + " ".join(f"*{e}" for e in sorted(_VIDEO_EXTENSIONS)) + ");;All Files (*)"
+_VIDEO_FILTER = (
+    "Video Files ("
+    + " ".join(f"*{e}" for e in sorted(_VIDEO_EXTENSIONS))
+    + ");;Image Subtitles ("
+    + " ".join(f"*{e}" for e in sorted(BITMAP_FILE_SUFFIXES))
+    + ");;All Files (*)"
+)
+#: Typing a path fires path_changed per keystroke; list the image tracks once it settles (Tracks' rule).
+_PROBE_DEBOUNCE_MS = 300
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -126,6 +149,14 @@ class VideoOcrTab(RunOptionsMixin, _ToolTabBase):
             output_default=self.tr("Next to each video"),
             task_title=self.tr("Video OCR"),
         )
+        # F-18: the single video's image subtitle tracks, listed off the GUI
+        # thread once its path settles. The generation drops a stale listing.
+        self._image_track_generation = 0
+        self._image_tracks_found = False
+        self._image_track_timer = QTimer(self)
+        self._image_track_timer.setSingleShot(True)
+        self._image_track_timer.setInterval(_PROBE_DEBOUNCE_MS)
+        self._image_track_timer.timeout.connect(self._probe_image_tracks)
         self._setup_ui()
         self._show_region(None)
         self._refresh_engine_state()
@@ -145,6 +176,57 @@ class VideoOcrTab(RunOptionsMixin, _ToolTabBase):
     def _apply_mode(self, single: bool) -> None:
         self.file_selector.setVisible(single)
         self.folder_selector.setVisible(not single)
+        self.source_row.setVisible(single and self._image_tracks_found)
+
+    def _on_file_changed(self, _path: str) -> None:
+        """A new single file: forget its tracks and list them again once the path settles (F-18)."""
+        self._image_track_generation += 1
+        self._show_image_tracks([])
+        self._image_track_timer.start()
+
+    def _probe_image_tracks(self) -> None:
+        """List the single video's image subtitle tracks off the GUI thread."""
+        path_str = self.file_selector.path_or_none()
+        if path_str is None:
+            return
+        video = Path(path_str)
+        if not _is_video(video) or not video.is_file():
+            return
+        generation = self._image_track_generation
+        ffprobe = resolve_ffprobe(self.config)
+
+        def _done(result: object) -> None:
+            if generation == self._image_track_generation and isinstance(result, list):
+                self._show_image_tracks(result)
+
+        def _failed(message: str) -> None:
+            logger.warning("Video OCR: could not list the subtitle tracks of %s: %s", video.name, message)
+
+        run_off_thread(
+            self, lambda: [s for s in list_subtitle_streams(video, ffprobe) if not s.is_text], _done, _failed
+        )
+
+    def _show_image_tracks(self, streams: list[SubtitleStream]) -> None:
+        """Offer the picture plus each image track; the picture stays the default."""
+        self.source_combo.clear()
+        self.source_combo.addItem(self.tr("The picture (burned-in text)"), None)
+        for stream in streams:
+            label = tr_format(self.tr("Image subtitle track %1"), stream.sub_index + 1)
+            details = " · ".join(part for part in (stream.language_tag or "", stream.title or "") if part)
+            self.source_combo.addItem(f"{label} ({details})" if details else label, stream.sub_index)
+        self._image_tracks_found = bool(streams)
+        self.source_row.setVisible(self._image_tracks_found and not self.file_selector.isHidden())
+
+    def _image_track(self) -> int | None:
+        """The image track chosen for the single video, or None to read its picture."""
+        if self.file_selector.isHidden() or self.source_row.isHidden():
+            return None
+        data = self.source_combo.currentData()
+        return data if isinstance(data, int) else None
+
+    def _reads_image_subtitles(self, path: Path) -> bool:
+        """Whether this single-file run reads image subtitles (no region needed) rather than a picture."""
+        return is_bitmap_file(path) or self._image_track() is not None
 
     def _probe_engine(self) -> Callable[[], object]:
         config = self.config
@@ -245,9 +327,29 @@ class VideoOcrTab(RunOptionsMixin, _ToolTabBase):
             file_mode=True,
             file_filter=_VIDEO_FILTER,
             history_key="tools.videoocr.inputs",
-            drop_validator=accepts_suffixes(_VIDEO_EXTENSIONS, self.tr("This field takes a video file.")),
+            drop_validator=accepts_suffixes(
+                _VIDEO_EXTENSIONS | BITMAP_FILE_SUFFIXES,
+                self.tr("This field takes a video or an image subtitle file (.sup, .idx, .sub)."),
+            ),
         )
+        self.file_selector.path_changed.connect(self._on_file_changed)
         layout.addWidget(self.file_selector)
+
+        # F-18: shown only while the single video carries image subtitle tracks.
+        self.source_row = QWidget()
+        source_layout = QHBoxLayout(self.source_row)
+        source_layout.setContentsMargins(0, 0, 0, 0)
+        source_layout.setSpacing(SPACING.xs)
+        source_label = QLabel(self.tr("Read from:"))
+        self.source_combo = QComboBox()
+        self.source_combo.setToolTip(
+            self.tr("Read text drawn into the picture, or one of the video's image subtitle tracks.")
+        )
+        source_label.setBuddy(self.source_combo)
+        source_layout.addWidget(source_label)
+        source_layout.addWidget(self.source_combo, 1)
+        self.source_row.hide()
+        layout.addWidget(self.source_row)
 
         self.folder_selector = FileSelector(
             label=self.tr("Video Folder:"),
@@ -426,6 +528,11 @@ class VideoOcrTab(RunOptionsMixin, _ToolTabBase):
                 ScreenIssue(summary=self.tr("Choose a video first, then set the region on one of its frames."))
             )
             return
+        if self._reads_image_subtitles(Path(path)):
+            self.show_screen_issue(
+                ScreenIssue(summary=self.tr("Image subtitles are read over the whole frame, so they need no region."))
+            )
+            return
         self._open_region_dialog(Path(path))
 
     def _open_region_dialog(self, video: Path) -> None:
@@ -506,13 +613,18 @@ class VideoOcrTab(RunOptionsMixin, _ToolTabBase):
         if not self._engine_is_available or still_running(self.worker_thread):
             return
         self.clear_screen_issue()
-        if self._region is None:
-            self._ask_for_region()
-            return
         if not self.file_selector.isHidden():
             files = self._collect_single_video_file()
-            if files:
-                self._continue(files)
+            if not files:
+                return
+            # Image subtitles are read over the whole frame (F-18): no region needed.
+            if self._region is None and not self._reads_image_subtitles(files[0]):
+                self._ask_for_region()
+                return
+            self._continue(files)
+            return
+        if self._region is None:
+            self._ask_for_region()
             return
         # Disabled for the folder scan, so a second click cannot start a second scan.
         self.ocr_button.setEnabled(False)
@@ -536,7 +648,9 @@ class VideoOcrTab(RunOptionsMixin, _ToolTabBase):
         )
 
     def _continue(self, files: list[Path]) -> None:
-        region = self._region
+        image_track = self._image_track()
+        reads_images = not self.file_selector.isHidden() and self._reads_image_subtitles(files[0])
+        region = FULL_FRAME if reads_images else self._region
         if region is None:  # a profile switch during the folder listing cleared it
             self._ask_for_region()
             self.ocr_button.setEnabled(True)
@@ -552,7 +666,12 @@ class VideoOcrTab(RunOptionsMixin, _ToolTabBase):
         self.log_widget.clear_log()
         self.progress_widget.reset()
         worker = VideoOcrWorker(
-            self.config, files, region, output_dir=out_dir, overwrite=self.overwrite_checkbox.isChecked()
+            self.config,
+            files,
+            region,
+            output_dir=out_dir,
+            overwrite=self.overwrite_checkbox.isChecked(),
+            bitmap_track=image_track,
         )
         self._start_queue_worker(worker)
 
@@ -565,6 +684,14 @@ class VideoOcrTab(RunOptionsMixin, _ToolTabBase):
         p = Path(path_str)
         if not p.is_file():
             self.show_screen_issue(ScreenIssue(summary=self.tr("That video file no longer exists."), details=path_str))
+            return []
+        if p.suffix.lower() in {".idx", ".sub"} and vobsub_index(p) is None:
+            self.show_screen_issue(
+                ScreenIssue(
+                    summary=self.tr("A DVD subtitle needs its .idx and .sub files in the same folder."),
+                    details=path_str,
+                )
+            )
             return []
         return [p]
 
