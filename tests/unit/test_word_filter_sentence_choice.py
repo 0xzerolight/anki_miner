@@ -10,7 +10,7 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.languages.registry import bound_mined_form, get_profile
 from anki_miner.languages.switching import switch_language
 from anki_miner.models import LineLemmas, TokenizedWord
-from anki_miner.services.word_filter import WordFilterService, within_sentence_caps
+from anki_miner.services.word_filter import WordFilterService, sentence_length, within_sentence_caps
 
 
 def _ja(front: str, sentence: str, start: float) -> TokenizedWord:
@@ -221,3 +221,129 @@ def test_es_losing_word_moves_to_another_line():
         ("perro", "el perro y el gato"),
         ("gato", "un gato negro"),
     ]
+
+
+# --- F-07: best-sentence pick -------------------------------------------------
+
+_DOG_ONLY = {"犬"}
+_CROWD = {"犬", "鳥", "魚"}
+
+
+def test_sentence_length_counts_words_where_the_script_spaces_them():
+    assert sentence_length("el perro come pan", spaced=True) == 4
+
+
+def test_sentence_length_counts_characters_where_it_does_not():
+    assert sentence_length("我 喜欢 猫", spaced=False) == 4
+    assert sentence_length("犬がいる。", spaced=False) == 5
+
+
+def test_the_line_with_fewest_unknowns_wins():
+    service = _ja_filter()
+    crowded = _line("犬と鳥と魚がいる。", 0.0, "犬", "鳥", "魚")
+    clear = _line("犬がいる。", 10.0, "犬")
+    dog = _ja("犬", crowded.line_text, 0.0)
+
+    (picked,) = service.pick_best_sentences([dog], [crowded, clear], _CROWD, _CROWD, spaced=False)
+
+    assert picked.sentence == "犬がいる。"
+    assert picked.start_time == pytest.approx(10.0)
+    assert picked.end_time == pytest.approx(12.0)
+
+
+def test_a_line_inside_the_band_beats_a_shorter_one_outside_it():
+    service = _ja_filter()
+    terse = _line("犬だ。", 0.0, "犬")  # 3 characters: under the 10-character floor
+    full = _line("公園で大きな犬が走っている。", 10.0, "犬")  # 14 characters
+    dog = _ja("犬", terse.line_text, 0.0)
+
+    (picked,) = service.pick_best_sentences([dog], [terse, full], _DOG_ONLY, _DOG_ONLY, spaced=False)
+
+    assert picked.sentence == full.line_text
+
+
+def test_the_shorter_line_wins_inside_the_band():
+    service = _ja_filter()
+    long = _line("昨日の夕方に公園で大きな犬を見かけました。", 0.0, "犬")  # 21 characters
+    short = _line("公園で大きな犬が走っている。", 10.0, "犬")  # 14 characters
+    dog = _ja("犬", long.line_text, 0.0)
+
+    (picked,) = service.pick_best_sentences([dog], [long, short], _DOG_ONLY, _DOG_ONLY, spaced=False)
+
+    assert picked.sentence == short.line_text
+
+
+def test_the_earlier_line_breaks_a_tie_and_an_unmoved_word_is_the_same_object():
+    service = _ja_filter()
+    first = _line("犬がいる。", 0.0, "犬")
+    second = _line("犬がいた。", 10.0, "犬")
+    dog = _ja("犬", first.line_text, 0.0)
+
+    (picked,) = service.pick_best_sentences([dog], [first, second], _DOG_ONLY, _DOG_ONLY, spaced=False)
+
+    assert picked is dog
+
+
+def test_a_line_over_the_caps_is_never_picked():
+    service = _ja_filter()
+    crowded = _line("犬と鳥と魚がいる。", 0.0, "犬", "鳥", "魚")
+    clear = _line("犬がいる。", 10.0, "犬", duration=9.0)
+    dog = _ja("犬", crowded.line_text, 0.0)
+
+    (picked,) = service.pick_best_sentences([dog], [crowded, clear], _CROWD, _CROWD, spaced=False, max_duration=5.0)
+
+    assert picked is dog
+
+
+def test_a_word_whose_every_line_breaks_the_caps_keeps_its_own():
+    service = _ja_filter()
+    crowded = _line("犬と鳥と魚がいる。", 0.0, "犬", "鳥", "魚", duration=9.0)
+    clear = _line("犬がいる。", 10.0, "犬", duration=9.0)
+    dog = _ja("犬", crowded.line_text, 0.0)
+
+    (picked,) = service.pick_best_sentences([dog], [crowded, clear], _CROWD, _CROWD, spaced=False, max_duration=5.0)
+
+    assert picked is dog
+
+
+def test_the_words_themselves_count_as_unknown():
+    """The targets are unioned into the snapshot, as filter_i_plus_one does."""
+    service = _ja_filter()
+    crowded = _line("犬と鳥がいる。", 0.0, "犬", "鳥")
+    clear = _line("犬が走る。", 10.0, "犬")
+    dog, bird = _ja("犬", crowded.line_text, 0.0), _ja("鳥", crowded.line_text, 0.0)
+
+    picked = service.pick_best_sentences([dog, bird], [crowded, clear], set(), set(), spaced=False)
+
+    assert [word.sentence for word in picked] == ["犬が走る。", crowded.line_text]
+    assert picked[1] is bird
+
+
+def test_es_ranks_by_words_not_characters():
+    """Review Focus 3: a spaced script measures words (3 words is under the 4-word floor)."""
+    service = _profile_filter("es")
+    terse = _line("el perro come", 0.0, "perro")  # 3 words, 11 characters
+    long = _line(
+        "mi perro grande y negro duerme tranquilamente todo el día en el sofá viejo", 10.0, "perro"
+    )  # 14 words, 61 characters
+    dog = _other("perro", terse.line_text, 0.0)
+
+    (by_words,) = service.pick_best_sentences([dog], [terse, long], {"perro"}, {"perro"}, spaced=True)
+    (by_characters,) = service.pick_best_sentences([dog], [terse, long], {"perro"}, {"perro"}, spaced=False)
+
+    assert by_words.sentence == long.line_text
+    assert by_characters is dog
+
+
+def test_zh_ranks_by_characters_not_words():
+    """Review Focus 3, segmentation: a zh line is one whitespace 'word', so only characters tell lines apart."""
+    service = _profile_filter("zh")
+    terse = _line("我的狗", 0.0, "狗")  # 3 characters
+    full = _line("我昨天在公园里看见了一只很大的狗", 10.0, "狗")  # 16 characters
+    dog = _other("狗", terse.line_text, 0.0)
+
+    (by_characters,) = service.pick_best_sentences([dog], [terse, full], {"狗"}, {"狗"}, spaced=False)
+    (by_words,) = service.pick_best_sentences([dog], [terse, full], {"狗"}, {"狗"}, spaced=True)
+
+    assert by_characters.sentence == full.line_text
+    assert by_words is dog
