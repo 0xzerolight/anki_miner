@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from enum import IntEnum
 from pathlib import Path
 
-from anki_miner.utils.audio_track_detector import matches_language_tag
+from anki_miner.utils.audio_track_detector import TrackTitle, matches_language_tag, track_title_rank
 from anki_miner.utils.episode_matcher import EpisodeInfo, EpisodeMatcher, EpisodeNumberExtractor
 from anki_miner.utils.file_utils import is_junk_path
 from anki_miner.utils.logging_ext import suppressed
@@ -507,6 +507,81 @@ def _rank_key(
         _is_forced(path),
         exts.index(suffix) if suffix in exts else len(exts),
     )
+
+
+@dataclass(frozen=True)
+class TranslationSidecar:
+    """A subtitle named for a video and tagged for a language the learner reads (F-04).
+
+    ``preference`` is the index of the ``preferred`` tag set its tag matched
+    (0 = the interface language, 1 = English); ``title`` is what its name tags
+    say it holds (``.forced`` is :attr:`TrackTitle.PARTIAL`, ``.sdh``
+    :attr:`TrackTitle.ANNOTATED`). Ranking is the caller's.
+    """
+
+    path: Path
+    preference: int
+    title: TrackTitle
+
+
+def find_translation_sidecars(
+    video_path: Path, language: SubtitleLanguage, preferred: Sequence[frozenset[str]]
+) -> list[TranslationSidecar]:
+    """Subtitles beside *video_path* named for it and tagged for one of the *preferred* languages.
+
+    Rule 2 of :func:`find_sibling_subtitle` only (the stem plus tags, or a file
+    in ``Subs/<stem>/``), over the video's folder and then its ``Subs``-style
+    folders: a translation is attached without anyone reviewing it, so the
+    episode-number and lone-video guesses (rules 3-4) are not used. A name must
+    carry a tag that is not the mining language's (:attr:`SubtitleTag.OTHER`
+    against *language*) and that names one of *preferred*. Returned nearest
+    folder first, then by name. An unreadable folder logs one WARNING and
+    finds nothing.
+    """
+    folder = video_path.parent
+    files: list[Path] = []
+    sub_dirs: list[Path] = []
+    with suppressed(logger, f"scanning {folder} for translation subtitles", level=logging.WARNING):
+        children = [p for p in folder.iterdir() if not is_junk_path(p.name)]
+        files = [p for p in children if p.is_file()]
+        sub_dirs = sorted(p for p in children if p.name.casefold() in _SUBTITLE_DIR_NAMES and p.is_dir())
+    media_exts = FilePairMatcher.VIDEO_EXTENSIONS | _OTHER_MEDIA_EXTENSIONS | {video_path.suffix.lower()}
+    video_key = _nfc(video_path.name).casefold()
+    stem_cf = _nfc(video_path.stem).casefold()
+    other_stems = [
+        _nfc(p.stem).casefold()
+        for p in files
+        if p.suffix.lower() in media_exts and _nfc(p.name).casefold() != video_key
+    ]
+    longer_stems = [s for s in other_stems if len(s) > len(stem_cf)]
+    # One reader per preferred language: a tag that reads as "mining" for it names that language.
+    readers = [SubtitleLanguage(mining=codes, known=language.known | codes) for codes in preferred]
+    found: list[TranslationSidecar] = []
+    for loose, per_video in _subtitle_sources(files, sub_dirs, stem_cf):
+        subtitles = sorted(
+            (p for p in loose if p.suffix.lower() in DEFAULT_SUBTITLE_PRIORITY), key=lambda p: _nfc(p.name)
+        )
+        named_dir = sorted(
+            (p for p in per_video if p.suffix.lower() in DEFAULT_SUBTITLE_PRIORITY), key=lambda p: _nfc(p.name)
+        )
+        for path, tag in _named_candidates(stem_cf, longer_stems, subtitles, named_dir, language):
+            if tag is not SubtitleTag.OTHER:
+                continue
+            in_dir = path in named_dir
+            name_cf = _nfc(path.stem).casefold()
+            tags = name_cf if in_dir else name_cf[len(stem_cf) :]
+            preference = next(
+                (
+                    i
+                    for i, reader in enumerate(readers)
+                    if (subtitle_language_tag(path, reader) if in_dir else _tail_tag(tags, reader))
+                    is SubtitleTag.MINING
+                ),
+                None,
+            )
+            if preference is not None:
+                found.append(TranslationSidecar(path, preference, track_title_rank(tags)))
+    return found
 
 
 def _sort_subtitles(subtitles: list[Path], prefer_retimed: bool, language: SubtitleLanguage | None = None) -> None:
