@@ -27,13 +27,14 @@ from enum import Enum, auto
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from anki_miner.services.asr import model_manager
+from anki_miner.services.asr import model_manager, transcript_cache
 from anki_miner.utils.audio_track_detector import get_media_duration_seconds
 from anki_miner.utils.ffmpeg_resolver import resolve_ffprobe
 from anki_miner.utils.logging_ext import log_summary
 
 if TYPE_CHECKING:
     from anki_miner.config.config import AnkiMinerConfig
+    from anki_miner.languages.profile import SentenceRules
     from anki_miner.services.asr.transcriber import Ct2ModelSession
 
 logger = logging.getLogger(__name__)
@@ -109,6 +110,9 @@ def transcribe_media(
     ct2_model_session: Ct2ModelSession | None = None,
     language: str = "ja",
     probe_duration: Callable[[Path], float | None] | None = None,
+    sentence_rules: SentenceRules | None = None,
+    use_cache: bool = False,
+    on_cache_hit: Callable[[], None] | None = None,
 ) -> LongAudioResult:
     """Extract → load → transcribe *media_path*, windowed when it is longer than one window.
 
@@ -119,8 +123,26 @@ def transcribe_media(
     each fire once, before the first window's extraction / decode.
     Raises ``SetupError`` before any probe or extraction when ``config.asr_model``
     has no token for *language* (Cantonese on ``small``).
+    ``sentence_rules`` (the mining language's) re-break long segments at
+    sentence ends (MS-21, CT2 path only).
+
+    With ``use_cache`` a transcript saved by an earlier run on the same file,
+    model and language is returned without extracting or transcribing
+    (``on_cache_hit`` fires, then ``progress_cb(1.0)``), and a fresh non-empty
+    transcript is saved (F-12, :mod:`~anki_miner.services.asr.transcript_cache`).
     """
     language = model_manager.decode_language(config.asr_model, language)
+
+    key = transcript_cache.cache_key(media_path, model=config.asr_model, language=language) if use_cache else None
+    if key is not None:
+        cached = transcript_cache.load_transcript(key)
+        if cached is not None:
+            log_summary(logger, "Transcript reused", file=media_path, segments=len(cached))
+            if on_cache_hit is not None:
+                on_cache_hit()
+            if progress_cb is not None:
+                progress_cb(1.0)
+            return LongAudioResult(LongAudioStatus.OK, cached)
 
     from anki_miner.services.asr import transcriber
     from anki_miner.services.media_extractor import wav_to_float32
@@ -136,6 +158,8 @@ def transcribe_media(
         transcribe_kwargs["ct2_model_session"] = ct2_model_session
     if language != "ja":  # omit-when-ja keeps the historical call shape
         transcribe_kwargs["language"] = language
+    if sentence_rules is not None:  # MS-21; omitted when absent, same reason
+        transcribe_kwargs["sentence_rules"] = sentence_rules
 
     reported = 0.0  # last fraction handed to progress_cb
 
@@ -242,4 +266,6 @@ def transcribe_media(
         seconds=f"{pos:.0f}",
         segments=len(segments),
     )
+    if key is not None and segments:
+        transcript_cache.store_transcript(key, segments)
     return LongAudioResult(LongAudioStatus.OK, segments)

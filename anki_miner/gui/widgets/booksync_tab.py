@@ -6,6 +6,13 @@ writes ``<audio stem>.srt`` whose cues are the book's own sentences, timed
 from the transcript (:mod:`anki_miner.services.book_sync`). The output feeds
 the Audiobook mining tab, Reading → Subtitles, or any reader.
 
+Folder mode also takes a shelf (WP-27): a folder with no audio of its own
+whose subfolders each hold one book and its audio
+(:func:`~anki_miner.services.book_sync.library.scan_book_folder`). The books
+run in order in one worker, and the Book card's picker is not needed. After a
+run each synced book gets one report line (sentence %, audio %, grade; MS-25)
+under the Book card and in the Activity log.
+
 Structure and idioms are cloned from
 :mod:`anki_miner.gui.widgets.subtitle_creation_tab` (Generate): mode toggle,
 off-thread folder scan, engine probe, model guard, output section, worker
@@ -30,13 +37,16 @@ from anki_miner.gui.capabilities import CapabilityTarget
 from anki_miner.gui.constants import AUDIO_EXTENSIONS
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils.qt_helpers import reveal_settings
+from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.gui.widgets._tool_tab_base import _ToolTabBase, _ToolTabStrings
 from anki_miner.gui.widgets.base import PageWidth, ScreenIssue, configure_card_layout, field_label_width
 from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader, accepts_suffixes
 from anki_miner.gui.workers.booksync_worker import BookSyncWorker
+from anki_miner.models import TerminalOutcome
 from anki_miner.services.asr import _engine
 from anki_miner.services.asr.model_availability import usable_model_installed
-from anki_miner.services.reading._util import natural_sort_key
+from anki_miner.services.book_sync.library import BookJob, FolderScan, SkipReason, scan_book_folder
+from anki_miner.services.book_sync.report import BookSyncReport
 from anki_miner.utils.i18n import tr_format
 
 _AUDIO_FILE_FILTER = "Audio Files (" + " ".join(f"*{e}" for e in sorted(AUDIO_EXTENSIONS)) + ");;All Files (*)"
@@ -80,6 +90,8 @@ class BookSyncTab(_ToolTabBase):
         self._total_files: int = 0
         self._cancelled: bool = False
         self._engine_is_available: bool = False
+        #: This run's report lines, one per synced book (MS-25).
+        self._report_lines: list[str] = []
         # Built here (not in the base) so each literal stays in this tab's
         # tr-context — see _ToolTabBase for the rationale.
         self._strings = _ToolTabStrings(
@@ -182,7 +194,10 @@ class BookSyncTab(_ToolTabBase):
             single_label=self.tr("Single File"),
             folder_label=self.tr("Folder"),
             single_tip=self.tr("Sync one audio file to the book."),
-            folder_tip=self.tr("Every audio file in the folder, in file-name order, one .srt each."),
+            folder_tip=self.tr(
+                "Every audio file in the folder, in file-name order, one .srt each. A folder of book "
+                "folders (each with its EPUB and audio) syncs every book in turn."
+            ),
         )
 
         # The book selector's label is the longest of the three; align all on it.
@@ -229,6 +244,21 @@ class BookSyncTab(_ToolTabBase):
             drop_validator=accepts_suffixes(_BOOK_EXTENSIONS, self.tr("This field takes an .epub or .txt file.")),
         )
         layout.addWidget(self.book_selector)
+
+        # MS-25: how well the last run synced, one line per book. Inline, not a
+        # dialog (D24); hidden until a run has something to report.
+        self.report_label = QLabel()
+        self.report_label.setObjectName("helper-text")
+        self.report_label.setWordWrap(True)
+        self.report_label.setToolTip(
+            self.tr(
+                "Sentences: how many of the book's sentences, from the first one found to the last, got a "
+                "subtitle. Audio: how much of the narration matched the book. Grade: A from 90% on both, "
+                "B from 75%, C from 50%, else D."
+            )
+        )
+        self.report_label.hide()
+        layout.addWidget(self.report_label)
 
         group.setLayout(layout)
         return group
@@ -310,12 +340,11 @@ class BookSyncTab(_ToolTabBase):
         # A fresh attempt supersedes the complaint about the last one (D24).
         self.clear_screen_issue()
 
-        book = self._collect_book()
-        if book is None:
-            return
-
         if not self.file_selector.isHidden():
             # Single-file mode: no directory scan, stays synchronous.
+            book = self._collect_book()
+            if book is None:
+                return
             audio_files = self._collect_single_audio_file()
             if not audio_files:
                 return
@@ -325,16 +354,25 @@ class BookSyncTab(_ToolTabBase):
         # Folder mode: the directory listing can stall on a network share —
         # run it off the GUI thread and continue from its completion
         # callback. Disabled here (not just at worker-start) so a second
-        # click during the scan can't fire a second concurrent scan.
+        # click during the scan can't fire a second concurrent scan. The
+        # book is asked for only once the scan says the folder is one book
+        # (a shelf names its books itself, WP-27).
         self.sync_button.setEnabled(False)
 
-        def _on_files(audio_files: list[Path]) -> None:
-            if not audio_files:
+        def _on_scan(scan: FolderScan | None) -> None:
+            if scan is None:
                 self.sync_button.setEnabled(True)
                 return
-            self._continue_sync(audio_files, book)
+            if scan.books:
+                self._continue_shelf(scan)
+                return
+            book = self._collect_book()
+            if book is None:
+                self.sync_button.setEnabled(True)
+                return
+            self._continue_sync(list(scan.audio_files), book)
 
-        self._collect_folder_audio_files_async(_on_files)
+        self._scan_folder_for_books_async(_on_scan)
 
     def _collect_book(self) -> Path | None:
         """Return the chosen book path, or ``None`` after showing why it was refused."""
@@ -365,43 +403,62 @@ class BookSyncTab(_ToolTabBase):
             return []
         return [audio]
 
-    def _collect_folder_audio_files_async(self, on_files: Callable[[list[Path]], None]) -> None:
-        """Folder mode: scan the folder off the GUI thread, then call ``on_files``
-        on the GUI thread with the audio files in natural file-name order
-        (``[]`` on failure — screen-issue feedback already shown).
+    def _scan_folder_for_books_async(self, on_scan: Callable[[FolderScan | None], None]) -> None:
+        """Folder mode: classify the folder off the GUI thread, then call ``on_scan``
+        on the GUI thread with what it holds (``None`` on refusal — the screen
+        issue already says why).
         """
         path_str = self.folder_selector.path_or_none()
         if path_str is None:
             self.show_screen_issue(ScreenIssue(summary=self.tr("Choose a folder before syncing.")))
-            on_files([])
+            on_scan(None)
             return
         folder = Path(path_str)
         if not folder.is_dir():
             self.show_screen_issue(ScreenIssue(summary=self.tr("That folder no longer exists."), details=path_str))
-            on_files([])
+            on_scan(None)
             return
 
-        # Natural order (1, 2, 10): the files are one book read in sequence, so
-        # order is meaning.
-        self._scan_folder_async(
-            folder,
-            lambda f: f.suffix.lower() in AUDIO_EXTENSIONS,
-            on_files,
-            sort_key=lambda f: natural_sort_key(f.name),
-            empty_summary=self.tr("No audio files were found in that folder."),
-            failed_summary=self.tr("That folder could not be scanned."),
-        )
+        def _apply(result: object) -> None:
+            self._folder_scan_pending = False
+            scan = result if isinstance(result, FolderScan) else FolderScan()
+            if not scan.audio_files and not scan.books:
+                self.show_screen_issue(
+                    ScreenIssue(
+                        summary=self.tr(
+                            "No audio files were found in that folder, and no book folders (each with its "
+                            "book and audio)."
+                        ),
+                        details="\n".join(self._skip_line(name, reason) for name, reason in scan.skipped),
+                    )
+                )
+                on_scan(None)
+                return
+            on_scan(scan)
 
-    def _continue_sync(self, audio_files: list[Path], book: Path) -> None:
-        """Check writability + the model, then start the worker."""
-        out_dir = self._custom_output_dir
+        def _on_error(message: str) -> None:
+            self._folder_scan_pending = False
+            self.show_screen_issue(ScreenIssue(summary=self.tr("That folder could not be scanned."), details=message))
+            on_scan(None)
 
-        # Pre-run writable check. When out_dir is None every output lands
-        # next to its audio, so check the first audio file's parent.
-        check_dir = out_dir if out_dir is not None else audio_files[0].parent
+        # Natural order (1, 2, 10): the files are one book read in sequence,
+        # and the books of a shelf are volumes, so order is meaning.
+        self._folder_scan_pending = True
+        run_off_thread(self, lambda: scan_book_folder(folder, AUDIO_EXTENSIONS), _apply, _on_error)
+
+    def _skip_line(self, name: str, reason: SkipReason) -> str:
+        """One translated line saying why a subfolder of a shelf is not a book."""
+        if reason is SkipReason.NO_AUDIO:
+            return tr_format(self.tr("Skipped folder %1: no audio files"), name)
+        if reason is SkipReason.NO_BOOK:
+            return tr_format(self.tr("Skipped folder %1: no .epub or .txt book"), name)
+        return tr_format(self.tr("Skipped folder %1: more than one book"), name)
+
+    def _ready_to_run(self, check_dir: Path) -> bool:
+        """The pre-run guards every run passes: a writable output folder and a ready model."""
         if not self._output_dir_writable(check_dir, self.tr("Output folder is not writable.")):
             self.sync_button.setEnabled(True)
-            return
+            return False
 
         # Model-downloaded guard — the same rule as Generate's, for the same
         # reasons (see subtitle_creation_tab._continue_generate): cheap on-disk
@@ -416,15 +473,18 @@ class BookSyncTab(_ToolTabBase):
                 action=lambda: reveal_settings(self, "subtitles"),
             )
             self.sync_button.setEnabled(True)
+            return False
+        return True
+
+    def _continue_sync(self, audio_files: list[Path], book: Path) -> None:
+        """One book: check writability + the model, then start the worker."""
+        out_dir = self._custom_output_dir
+        # When out_dir is None every output lands next to its audio, so check
+        # the first audio file's parent.
+        if not self._ready_to_run(out_dir if out_dir is not None else audio_files[0].parent):
             return
-
-        # Build and start worker
-        self._begin_tool_run(len(audio_files))
-        self._total_files = len(audio_files)
-        self.log_widget.clear_log()
-        self.progress_widget.reset()
+        self._open_run(len(audio_files))
         self.log_widget.append_info(tr_format(self.tr("Book: %1"), book.name))
-
         worker = BookSyncWorker(
             self.config,
             audio_files,
@@ -432,7 +492,64 @@ class BookSyncTab(_ToolTabBase):
             output_dir=out_dir,
             overwrite=self.overwrite_checkbox.isChecked(),
         )
+        self._start_sync_worker(worker)
+
+    def _continue_shelf(self, scan: FolderScan) -> None:
+        """A shelf (WP-27): the same guards, then one worker for every book in order."""
+        books: tuple[BookJob, ...] = scan.books
+        out_dir = self._custom_output_dir
+        if not self._ready_to_run(out_dir if out_dir is not None else books[0].audio_files[0].parent):
+            return
+        self._open_run(sum(len(job.audio_files) for job in books))
+        self.log_widget.append_info(
+            tr_format(self.tr("Books: %1 — %2"), len(books), ", ".join(job.book.name for job in books))
+        )
+        for name, reason in scan.skipped:
+            self.log_widget.append_info(self._skip_line(name, reason))
+        worker = BookSyncWorker(
+            self.config,
+            [],
+            None,
+            books=books,
+            output_dir=out_dir,
+            overwrite=self.overwrite_checkbox.isChecked(),
+        )
+        self._start_sync_worker(worker)
+
+    def _open_run(self, total_files: int) -> None:
+        """Publish the run and clear what the last one left on the page."""
+        self._begin_tool_run(total_files)
+        self._total_files = total_files
+        self._report_lines = []
+        self.report_label.clear()
+        self.report_label.hide()
+        self.log_widget.clear_log()
+        self.progress_widget.reset()
+
+    def _start_sync_worker(self, worker: BookSyncWorker) -> None:
+        """Connect the per-book report, then hand the worker to the shared launch."""
+        worker.book_report.connect(self._on_book_report)
         self._start_queue_worker(worker)
+
+    def _on_book_report(self, report: object) -> None:
+        """One synced book's report line, logged now and shown when the run ends (MS-25)."""
+        if not isinstance(report, BookSyncReport):
+            return
+        line = tr_format(
+            self.tr("%1: sentences %2%, audio %3% — grade %4"),
+            report.book_name,
+            report.sentence_pct,
+            report.audio_pct,
+            report.grade,
+        )
+        self._report_lines.append(line)
+        self.log_widget.append_info(line)
+
+    def _on_queue_finished(self, outcome: object = TerminalOutcome.SUCCESS) -> None:
+        super()._on_queue_finished(outcome)
+        if self._report_lines:
+            self.report_label.setText("\n".join(self._report_lines))
+            self.report_label.show()
 
     # ------------------------------------------------------------------
     # Worker signal slots

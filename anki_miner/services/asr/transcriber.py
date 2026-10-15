@@ -15,11 +15,14 @@ import os
 import types
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable
+from typing import TYPE_CHECKING, Any, Callable
 
-from anki_miner.services.asr import _engine, ggml_model_installer, onnx_pack_installer
+from anki_miner.services.asr import _engine, ggml_model_installer, onnx_pack_installer, resegment
 from anki_miner.utils.logging_ext import log_summary
 from anki_miner.utils.timing import timed_phase
+
+if TYPE_CHECKING:
+    from anki_miner.languages.profile import SentenceRules
 
 logger = logging.getLogger(__name__)
 
@@ -579,6 +582,7 @@ def transcribe(
     onnx_pack_root: Path | None = None,
     ct2_model_session: Ct2ModelSession | None = None,
     language: str = "ja",
+    sentence_rules: SentenceRules | None = None,
 ) -> list[tuple[float, float, str]]:
     """Transcribe *audio* using the specified faster-whisper model.
 
@@ -607,6 +611,10 @@ def transcribe(
             :meth:`Ct2ModelSession.release` after the queue terminates.
         language: ISO code from ``LanguageProfile.asr_language``; the default
             keeps every existing caller on Japanese.
+        sentence_rules: The mining language's sentence rules. Given, a long
+            CT2 segment is re-broken at sentence ends using its word
+            timestamps (MS-21, :mod:`~anki_miner.services.asr.resegment`);
+            whisper.cpp segments have no word times and stay whole.
 
     Returns:
         A list of ``(start_s, end_s, text)`` tuples in chronological order.
@@ -649,6 +657,7 @@ def transcribe(
                 onnx_pack_root=onnx_pack_root,
                 ct2_model_session=ct2_model_session,
                 language=language,
+                sentence_rules=sentence_rules,
             )
         else:
             # CT2 only understands cpu/cuda/auto; a 'vulkan' request that did not
@@ -674,6 +683,7 @@ def transcribe(
                     onnx_pack_root=onnx_pack_root,
                     ct2_model_session=ct2_model_session,
                     language=language,
+                    sentence_rules=sentence_rules,
                     # Only 'auto' reconsiders: it committed to CT2 on CUDA-device
                     # PRESENCE alone, before knowing CUDA can initialise (another
                     # app may own the VRAM; cuDNN may be absent). Explicit
@@ -702,6 +712,7 @@ def transcribe(
                         onnx_pack_root=onnx_pack_root,
                         ct2_model_session=ct2_model_session,
                         language=language,
+                        sentence_rules=sentence_rules,
                     )
                 else:
                     logger.warning("ASR: CUDA unusable (%s) and no whisper.cpp route; using CPU.", exc)
@@ -717,6 +728,7 @@ def transcribe(
                         onnx_pack_root=onnx_pack_root,
                         ct2_model_session=ct2_model_session,
                         language=language,
+                        sentence_rules=sentence_rules,
                     )
 
     log_summary(
@@ -790,6 +802,7 @@ def _transcribe_cpp(
     onnx_pack_root: Path | None,
     ct2_model_session: Ct2ModelSession | None = None,
     language: str = "ja",
+    sentence_rules: SentenceRules | None = None,
 ) -> list[tuple[float, float, str]]:
     """Transcribe via the whisper.cpp (pywhispercpp) engine, with a CT2 CPU fallback.
 
@@ -870,6 +883,7 @@ def _transcribe_cpp(
             onnx_pack_root=onnx_pack_root,
             ct2_model_session=ct2_model_session,
             language=language,
+            sentence_rules=sentence_rules,
         )
 
 
@@ -887,6 +901,7 @@ def _transcribe_ct2(
     ct2_model_session: Ct2ModelSession | None = None,
     raise_on_cuda_failure: bool = False,
     language: str = "ja",
+    sentence_rules: SentenceRules | None = None,
 ) -> list[tuple[float, float, str]]:
     """The faster-whisper (ctranslate2) transcription path — unchanged behaviour.
 
@@ -1030,7 +1045,9 @@ def _transcribe_ct2(
         if cancel_event is not None and cancel_event.is_set():
             break
         if not _is_nonspeech_ct2_segment(seg, speech):
-            results.append((seg.start, seg.end, seg.text.strip()))
+            results.extend(
+                resegment.split_segment(seg.start, seg.end, seg.text, getattr(seg, "words", None), sentence_rules)
+            )
         if progress_cb is not None and duration_s > 0:
             progress_cb(min(seg.end / duration_s, 1.0))
 

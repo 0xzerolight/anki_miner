@@ -143,6 +143,7 @@ def _patch_transcribe(monkeypatch, *, segments=None, raise_exc=None):
         cuda_libs_root=None,
         onnx_pack_root=None,
         ct2_model_session=None,
+        sentence_rules=None,
     ):
         if raise_exc is not None:
             raise raise_exc
@@ -416,6 +417,7 @@ def test_cancel_during_transcribe_emits_no_per_item_outcome(qapp, tmp_path, monk
         cuda_libs_root=None,
         onnx_pack_root=None,
         ct2_model_session=None,
+        sentence_rules=None,
     ):
         if cancel_event is not None:
             cancel_event.set()  # user cancels mid-transcription
@@ -579,6 +581,7 @@ def test_overwrite_re_transcribes_existing(qapp, tmp_path, monkeypatch):
         cuda_libs_root=None,
         onnx_pack_root=None,
         ct2_model_session=None,
+        sentence_rules=None,
     ):
         transcribe_calls.append(1)
         if progress_cb is not None:
@@ -888,6 +891,7 @@ def test_final_progress_is_100_on_success(qapp, tmp_path, monkeypatch):
         cuda_libs_root=None,
         onnx_pack_root=None,
         ct2_model_session=None,
+        sentence_rules=None,
     ):
         # Only emit 50%, not 100% — worker must force 100%.
         if progress_cb is not None:
@@ -944,6 +948,7 @@ def test_transcribe_receives_device_and_cuda_libs_root_from_config(qapp, tmp_pat
         cuda_libs_root=None,
         onnx_pack_root=None,
         ct2_model_session=None,
+        sentence_rules=None,
     ):
         captured["device"] = device
         captured["cuda_libs_root"] = cuda_libs_root

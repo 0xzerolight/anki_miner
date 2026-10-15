@@ -28,8 +28,15 @@ window redone from the first booked character), then the transcript window's
 first ``REANCHOR_PROBE_CHARS`` searched in the book ahead,
 ``REANCHOR_SPAN_CHARS`` at a time, nearest first (an unread preface or
 skipped chapter — the cursor jumps there and the window is redone; a jump
-that does not pay off is undone). If both fail the window's transcript is
-skipped and the cursor stays.
+that does not pay off is undone). If both fail, the passage may have been
+read out of book order (a foreword read last, a chapter read late; MS-24):
+the window's first characters are searched in the book BEHIND the cursor
+and, on a hit, the window is aligned there as a detour that leaves the main
+cursor alone; consecutive detour windows continue where the last one ended.
+Only sentences nobody has timed yet (``BookCursor.timed``, across the
+book's files) count toward a detour. Otherwise the window's transcript is
+skipped and the cursor stays. Detour cues sit where the audio has them, so
+:func:`align_to_book` returns its timings in audio order.
 
 Timing: a transcript character's time is linear interpolation inside its
 segment; a sentence's cue is [time of its first matched char, time after its
@@ -44,7 +51,7 @@ from __future__ import annotations
 import math
 import statistics
 from collections.abc import Callable, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from rapidfuzz import fuzz
 from rapidfuzz.distance import Levenshtein
@@ -103,6 +110,8 @@ class BookCursor:
     """First sentence not yet consumed; shared across the audio files of one book."""
 
     sentence: int = 0
+    #: Every sentence any file of this book has timed so far (MS-24, MS-25).
+    timed: set[int] = field(default_factory=set)
 
 
 @dataclass(frozen=True)
@@ -134,11 +143,12 @@ class _Stream:
         self.lengths = lengths
 
 
-def _book_stream(book: BookText, first: int, min_chars: int) -> _Stream:
-    """Book stream from sentence ``first`` holding at least ``min_chars`` (or to the end)."""
+def _book_stream(book: BookText, first: int, min_chars: int, stop: int | None = None) -> _Stream:
+    """Book stream from sentence ``first`` holding at least ``min_chars`` (or up to ``stop``, default the end)."""
     last = first
     total = 0
-    while last < len(book.keys) and total < min_chars:
+    end = len(book.keys) if stop is None else stop
+    while last < end and total < min_chars:
         total += len(book.keys[last])
         last += 1
     return _Stream(book.keys[first:last], first)
@@ -195,6 +205,74 @@ def _char_time(segments: Sequence[TimedText], stream: _Stream, i: int, *, after:
     return seg.start + (seg.end - seg.start) * min(p, length) / length
 
 
+@dataclass
+class _WindowMatch:
+    """One transcript window aligned against one book window (see :func:`_align_window`)."""
+
+    #: Committed transcript characters that EQUAL-matched a book character.
+    matched: int
+    #: Per book sentence: equal-matched committed characters.
+    hits: dict[int, int]
+    #: Per book sentence: first / last committed transcript character (absolute index) aligned to it.
+    first: dict[int, int]
+    last: dict[int, int]
+    #: Book sentence of the last equal-matched character, or None when nothing matched.
+    last_equal_sentence: int | None
+
+
+@dataclass
+class _Tally:
+    """Running per-sentence matches of one pass (the main pass, or the detours)."""
+
+    hits: dict[int, int] = field(default_factory=dict)
+    first: dict[int, int] = field(default_factory=dict)
+    last: dict[int, int] = field(default_factory=dict)
+
+    def add(self, match: _WindowMatch, skip: set[int] | None = None) -> None:
+        """Add ``match``'s per-sentence hits, leaving out the sentences in ``skip``."""
+        for s, c in match.hits.items():
+            if skip is not None and s in skip:
+                continue
+            self.hits[s] = self.hits.get(s, 0) + c
+            self.first.setdefault(s, match.first[s])
+            self.last[s] = max(self.last.get(s, -1), match.last[s])
+
+
+def _need(book: BookText, s: int) -> int:
+    """Equal-matched characters sentence ``s`` needs before it gets a cue."""
+    return max(MIN_SENTENCE_MATCH, math.ceil(MIN_SENTENCE_MATCH_SHARE * len(book.keys[s])))
+
+
+def _align_window(window: str, commit: int, offset: int, book_win: _Stream) -> _WindowMatch:
+    """Align ``window`` (transcript chars from absolute ``offset``) to ``book_win``; count its first ``commit``."""
+    matched = 0
+    last_equal_book = -1
+    hits: dict[int, int] = {}
+    first: dict[int, int] = {}
+    last: dict[int, int] = {}
+    for op in Levenshtein.opcodes(window, book_win.chars):
+        if op.tag not in ("equal", "replace"):
+            continue
+        i1, j1 = op.src_start, op.dest_start
+        for k in range(i1, min(op.src_end, commit)):
+            j = j1 + (k - i1)
+            sentence = book_win.owner[j]
+            t_index = offset + k
+            if op.tag == "equal":
+                matched += 1
+                hits[sentence] = hits.get(sentence, 0) + 1
+                last_equal_book = max(last_equal_book, j)
+            first.setdefault(sentence, t_index)
+            last[sentence] = t_index
+    return _WindowMatch(
+        matched=matched,
+        hits=hits,
+        first=first,
+        last=last,
+        last_equal_sentence=book_win.owner[last_equal_book] if last_equal_book >= 0 else None,
+    )
+
+
 def align_to_book(
     segments: Sequence[TimedText],
     book: BookText,
@@ -203,15 +281,53 @@ def align_to_book(
     cancel_check: Callable[[], bool] | None = None,
     log: Callable[[str], None] | None = None,
 ) -> list[SentenceTiming]:
-    """See the module docstring. Advances ``cursor`` past the last timed sentence."""
+    """See the module docstring. Advances ``cursor`` past the last timed sentence.
+
+    Returns the timings in audio order. Without a detour that is also book
+    order; a detour's sentences (an earlier passage read later, MS-24) sit
+    where the audio has them. Every returned index is added to
+    ``cursor.timed``.
+    """
     transcript = _Stream([normalize_for_alignment(s.text) for s in segments])
-    if not transcript.chars or cursor.sentence >= len(book.keys):
+    if not transcript.chars:
         return []
     window_floor, reanchor_floor = _null_floors(book)
 
-    hits: dict[int, int] = {}
-    first_char: dict[int, int] = {}
-    last_char: dict[int, int] = {}
+    main = _Tally()
+    # MS-24: sentences timed by a detour, kept apart so the main pass's cursor
+    # and its monotonic clipping never see them.
+    detour = _Tally()
+    detour_at: int | None = None  # where the running detour continues, or None
+
+    def _try_detour(window: str, commit: int, offset: int) -> int | None:
+        """Align ``window`` behind the cursor; return where the detour continues, or None.
+
+        First where the running detour left off, then wherever the window's
+        first ``REANCHOR_PROBE_CHARS`` turn up in the book before the cursor.
+        Only sentences nobody has timed count toward the floor, so a recap of
+        a passage already timed is not taken for a detour.
+        """
+        taken = cursor.timed | {s for s, c in main.hits.items() if c >= _need(book, s)} | detour.hits.keys()
+        starts: list[int] = []
+        if detour_at is not None and detour_at < len(book.keys):
+            starts.append(detour_at)
+        stop = min(cursor.sentence, len(book.keys))
+        found = _find_in(window[:REANCHOR_PROBE_CHARS], book, 0, stop, reanchor_floor)
+        if found is not None and found not in starts:
+            starts.append(found)
+        for start in starts:
+            book_win = _book_stream(book, start, int(len(window) * BOOK_WINDOW_SLACK) + BOOK_WINDOW_EXTRA)
+            if not book_win.chars:
+                continue
+            match = _align_window(window, commit, offset, book_win)
+            fresh = sum(c for s, c in match.hits.items() if s not in taken)
+            if fresh / commit < window_floor or match.last_equal_sentence is None:
+                continue
+            detour.add(match, skip=taken)
+            if log is not None and start != detour_at:
+                log(f"Found sentence {start + 1} again later in the audio; timed it out of book order")
+            return match.last_equal_sentence
+        return None
 
     i = 0
     n = len(transcript.chars)
@@ -230,43 +346,29 @@ def align_to_book(
         if not book_win.chars:
             if jumped_from is not None:
                 cursor.sentence = jumped_from  # the jump landed past the end; undo it
-            break  # book exhausted
+                jumped_from = None
+            # Nothing is left ahead of the cursor, so what is left of the audio
+            # can only be a passage read out of order (a foreword read last).
+            detour_at = _try_detour(window, commit, i)
+            if detour_at is None:
+                break  # book exhausted
+            i += commit
+            continue
 
-        matched = 0
-        last_equal_book = -1
-        local_hits: dict[int, int] = {}
-        local_first: dict[int, int] = {}
-        local_last: dict[int, int] = {}
-        for op in Levenshtein.opcodes(window, book_win.chars):
-            if op.tag not in ("equal", "replace"):
-                continue
-            i1, j1 = op.src_start, op.dest_start
-            for k in range(i1, min(op.src_end, commit)):
-                j = j1 + (k - i1)
-                sentence = book_win.owner[j]
-                t_index = i + k
-                if op.tag == "equal":
-                    matched += 1
-                    local_hits[sentence] = local_hits.get(sentence, 0) + 1
-                    last_equal_book = max(last_equal_book, j)
-                local_first.setdefault(sentence, t_index)
-                local_last[sentence] = t_index
-
-        if matched / commit >= window_floor:
-            for s, c in local_hits.items():
-                hits[s] = hits.get(s, 0) + c
-                first_char.setdefault(s, local_first[s])
-                last_char[s] = max(last_char.get(s, -1), local_last[s])
-            if last_equal_book >= 0:
+        match = _align_window(window, commit, i, book_win)
+        if match.matched / commit >= window_floor:
+            main.add(match)
+            if match.last_equal_sentence is not None:
                 # Only an EQUAL character moves the cursor. Unit-cost Levenshtein
                 # will "replace" an unbooked transcript stretch against unread
                 # book text when that is cheaper than deleting it, and a cursor
                 # advanced on those replacements would skip real sentences for
                 # good (nothing ever moves it backwards).
-                cursor.sentence = book_win.owner[last_equal_book]
+                cursor.sentence = match.last_equal_sentence
             i += commit
             tried_prefix = tried_jump = False
             jumped_from = None
+            detour_at = None
             continue
 
         # Off track. (a) Unbooked transcript prefix (narrator intro, chapter
@@ -294,37 +396,58 @@ def align_to_book(
                 if log is not None:
                     log(f"Re-anchored at sentence {cursor.sentence + 1}")
                 continue  # redo against the book from the new cursor
-        # Both probes tried (or inapplicable): give this window up. A jump that
-        # did not pay off is undone — kept, it would skip every sentence in
-        # between for good.
+        # Both probes tried (or inapplicable). A jump that did not pay off is
+        # undone — kept, it would skip every sentence in between for good.
         if jumped_from is not None:
             cursor.sentence = jumped_from
-        if log is not None:
-            log(f"Skipped {commit} transcript characters with no match in the book")
-        i += commit
         tried_prefix = tried_jump = False
         jumped_from = None
+        # (c) MS-24: nothing at or ahead of the cursor matched. A chapter read
+        # out of book order sits BEHIND the cursor: align this window there as
+        # a detour; the main cursor stays where it is.
+        detour_at = _try_detour(window, commit, i)
+        if detour_at is None and log is not None:
+            log(f"Skipped {commit} transcript characters with no match in the book")
+        i += commit
 
-    return _emit(segments, transcript, book, cursor, hits, first_char, last_char)
+    timings = _emit(segments, transcript, book, main)
+    if timings:
+        # Just past the last TIMED sentence, not max() with the loop's cursor:
+        # the last window is committed whole, and a file cut mid-sentence ends
+        # on a fragment whose stray equal characters can land in a later
+        # sentence. Kept, that cursor makes the next file skip the sentences
+        # in between for good.
+        cursor.sentence = timings[-1].index + 1
+    in_main = {t.index for t in timings}
+    detoured = [t for t in _emit(segments, transcript, book, detour, audio_order=True) if t.index not in in_main]
+    if detoured:
+        timings = sorted(timings + detoured, key=lambda t: (t.start, t.index))
+    cursor.timed.update(t.index for t in timings)
+    return timings
 
 
 def _find_ahead(probe: str, book: BookText, first: int, min_score: float) -> int | None:
-    """Sentence where ``probe`` starts in the book at or after ``first``, or None.
+    """Sentence where ``probe`` starts in the book at or after ``first``, or None."""
+    return _find_in(probe, book, first, len(book.keys), min_score)
+
+
+def _find_in(probe: str, book: BookText, first: int, stop: int, min_score: float) -> int | None:
+    """Sentence in ``[first, stop)`` where ``probe`` starts, or None.
 
     Searches ``REANCHOR_SPAN_CHARS`` at a time, nearest span first, so a hit
-    close to the cursor wins over an equal one further on. Consecutive spans
+    close to ``first`` wins over an equal one further on. Consecutive spans
     overlap by the probe's length, so a match across a span edge is not lost.
     """
     start = first
-    while start < len(book.keys):
-        search = _book_stream(book, start, REANCHOR_SPAN_CHARS)
+    while start < stop:
+        search = _book_stream(book, start, REANCHOR_SPAN_CHARS, stop=stop)
         if len(search.chars) <= len(probe):
             return None
         hit = fuzz.partial_ratio_alignment(probe, search.chars)
         if hit is not None and hit.score >= min_score:
             return search.owner[min(hit.dest_start, len(search.owner) - 1)]
-        if start + len(search.lengths) >= len(book.keys):
-            return None  # this span reached the end of the book
+        if start + len(search.lengths) >= stop:
+            return None  # this span reached the end of the range
         start = max(start + 1, search.owner[len(search.chars) - len(probe)])
     return None
 
@@ -333,28 +456,28 @@ def _emit(
     segments: Sequence[TimedText],
     transcript: _Stream,
     book: BookText,
-    cursor: BookCursor,
-    hits: dict[int, int],
-    first_char: dict[int, int],
-    last_char: dict[int, int],
+    tally: _Tally,
+    *,
+    audio_order: bool = False,
 ) -> list[SentenceTiming]:
+    """One cue per sentence with enough matches, clipped monotonic.
+
+    The main pass walks its sentences in book order, as it always has. The
+    detours walk theirs in audio order (``audio_order``): two detours whose
+    book order is the reverse of their audio order (chapters read C, B, A
+    with B and A behind the cursor) would otherwise clip the earlier-heard
+    passage's cues to start after the later one's audio.
+    """
     timings: list[SentenceTiming] = []
     prev_end = -math.inf
-    for s in sorted(hits):
-        need = max(MIN_SENTENCE_MATCH, math.ceil(MIN_SENTENCE_MATCH_SHARE * len(book.keys[s])))
-        if hits[s] < need:
+    order = sorted(tally.hits, key=lambda s: (tally.first[s], s)) if audio_order else sorted(tally.hits)
+    for s in order:
+        if tally.hits[s] < _need(book, s):
             continue
-        start = _char_time(segments, transcript, first_char[s])
-        end = _char_time(segments, transcript, last_char[s], after=True)
+        start = _char_time(segments, transcript, tally.first[s])
+        end = _char_time(segments, transcript, tally.last[s], after=True)
         start = max(start, prev_end)
         end = max(end, start + MIN_CUE_SECONDS)
         timings.append(SentenceTiming(index=s, start=start, end=end))
         prev_end = end
-    if timings:
-        # Just past the last TIMED sentence, not max() with the loop's cursor:
-        # the last window is committed whole, and a file cut mid-sentence ends
-        # on a fragment whose stray equal characters can land in a later
-        # sentence. Kept, that cursor makes the next file skip the sentences
-        # in between for good.
-        cursor.sentence = timings[-1].index + 1
     return timings

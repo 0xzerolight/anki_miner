@@ -98,9 +98,13 @@ def generate_subtitle_one(
     """
     # Lazy imports keep the heavy ASR / media-extractor modules off this module's
     # import path and let tests patch them at their canonical location.
+    from anki_miner.languages.registry import config_language, get_profile
     from anki_miner.services.asr import long_audio, srt_writer
 
     # --- Stages 1–3: extract → load → transcribe (windowed past 2 h) ---
+    # MS-21: long segments are re-broken at the mining language's sentence
+    # ends. F-12: a transcript saved by an earlier run (here or in Audiobook
+    # Sync) on the same file, model and language is reused.
     result = long_audio.transcribe_media(
         config,
         extractor,
@@ -111,6 +115,8 @@ def generate_subtitle_one(
         on_transcribe_start=on_transcribe_start,
         ct2_model_session=ct2_model_session,
         language=language,
+        sentence_rules=get_profile(config_language(config)).sentence_rules,
+        use_cache=True,
     )
     if result.status is long_audio.LongAudioStatus.CANCELLED:
         return SubtitleGenResult(SubtitleGenStatus.CANCELLED)

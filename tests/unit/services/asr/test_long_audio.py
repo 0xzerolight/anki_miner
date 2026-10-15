@@ -315,3 +315,131 @@ def test_default_probe_uses_the_resolved_ffprobe(tmp_path, monkeypatch):
     _patch_transcribe(monkeypatch, record=[])
     transcribe_media(_make_config(tmp_path), _FakeExtractor(total_s=5.0), tmp_path / "x.mp3")
     assert seen["cmd"] == "/opt/ffprobe"
+
+
+# --- F-12 transcript cache ----------------------------------------------------
+
+
+@pytest.fixture
+def cache_dir(tmp_path, monkeypatch) -> Path:
+    from anki_miner.services.asr import transcript_cache
+
+    folder = tmp_path / "transcripts"
+    monkeypatch.setattr(transcript_cache, "cache_root", lambda: folder)
+    return folder
+
+
+def _real_media(tmp_path: Path) -> Path:
+    media = tmp_path / "book.m4b"
+    media.write_bytes(b"not really audio" * 64)
+    return media
+
+
+def test_a_second_run_on_the_same_file_reuses_the_saved_transcript(tmp_path, monkeypatch, cache_dir):
+    record: list = []
+    _patch_transcribe(monkeypatch, record=record)
+    media = _real_media(tmp_path)
+    first_extractor = _FakeExtractor(total_s=20.0)
+    first = transcribe_media(
+        _make_config(tmp_path), first_extractor, media, probe_duration=lambda p: 20.0, use_cache=True
+    )
+    assert first.status is LongAudioStatus.OK and len(record) == 1
+
+    again = _FakeExtractor(total_s=20.0)
+    hits: list[str] = []
+    fractions: list[float] = []
+    second = transcribe_media(
+        _make_config(tmp_path),
+        again,
+        media,
+        probe_duration=lambda p: pytest.fail("a cache hit never probes"),
+        use_cache=True,
+        on_cache_hit=lambda: hits.append("hit"),
+        progress_cb=fractions.append,
+        on_extract_start=lambda: pytest.fail("a cache hit never extracts"),
+    )
+
+    assert second.status is LongAudioStatus.OK
+    assert second.segments == first.segments
+    assert again.full_calls == [] and again.window_calls == []
+    assert len(record) == 1  # the transcriber ran once
+    assert hits == ["hit"] and fractions == [1.0]
+
+
+def test_without_use_cache_nothing_is_read_or_saved(tmp_path, monkeypatch, cache_dir):
+    record: list = []
+    _patch_transcribe(monkeypatch, record=record)
+    media = _real_media(tmp_path)
+    for _ in range(2):
+        transcribe_media(_make_config(tmp_path), _FakeExtractor(total_s=20.0), media, probe_duration=lambda p: 20.0)
+
+    assert len(record) == 2
+    assert not cache_dir.exists()
+
+
+def test_a_language_switch_transcribes_again(tmp_path, monkeypatch, cache_dir):
+    """Review Focus 5: a ja transcript is never served to a zh run of the same file."""
+    record: list = []
+    _patch_transcribe(monkeypatch, record=record)
+    media = _real_media(tmp_path)
+    config = replace(_make_config(tmp_path), asr_model="large-v3")
+    transcribe_media(config, _FakeExtractor(total_s=20.0), media, probe_duration=lambda p: 20.0, use_cache=True)
+    transcribe_media(
+        config, _FakeExtractor(total_s=20.0), media, probe_duration=lambda p: 20.0, use_cache=True, language="zh"
+    )
+
+    assert len(record) == 2
+    assert len(list(cache_dir.iterdir())) == 2
+
+
+def test_an_empty_or_cancelled_transcript_is_not_saved(tmp_path, monkeypatch, cache_dir):
+    record: list = []
+    _patch_transcribe(monkeypatch, record=record, per_window=lambda d: [])
+    media = _real_media(tmp_path)
+    result = transcribe_media(
+        _make_config(tmp_path), _FakeExtractor(total_s=20.0), media, probe_duration=lambda p: 20.0, use_cache=True
+    )
+    assert result.status is LongAudioStatus.OK and result.segments == []
+
+    cancel = threading.Event()
+    cancel.set()
+    cancelled = transcribe_media(
+        _make_config(tmp_path),
+        _FakeExtractor(total_s=20.0),
+        media,
+        probe_duration=lambda p: 20.0,
+        use_cache=True,
+        cancel_event=cancel,
+    )
+    assert cancelled.status is LongAudioStatus.CANCELLED
+    assert not cache_dir.exists() or list(cache_dir.iterdir()) == []
+
+
+# --- MS-21 sentence rules ---
+
+
+def test_sentence_rules_reach_the_transcriber_only_when_given(tmp_path, monkeypatch):
+    import anki_miner.services.asr.transcriber as t
+    from anki_miner.languages.registry import get_profile
+
+    seen: list[dict] = []
+
+    def fake(audio, **kwargs):
+        seen.append(kwargs)
+        return [(0.0, 1.0, "a")]
+
+    monkeypatch.setattr(t, "transcribe", fake)
+    rules = get_profile("es").sentence_rules
+    transcribe_media(
+        _make_config(tmp_path), _FakeExtractor(total_s=5.0), tmp_path / "a.mkv", probe_duration=lambda p: 5.0
+    )
+    transcribe_media(
+        _make_config(tmp_path),
+        _FakeExtractor(total_s=5.0),
+        tmp_path / "b.mkv",
+        probe_duration=lambda p: 5.0,
+        sentence_rules=rules,
+    )
+
+    assert "sentence_rules" not in seen[0]
+    assert seen[1]["sentence_rules"] is rules

@@ -20,7 +20,8 @@ from typing import TYPE_CHECKING, Any
 from anki_miner.exceptions import SetupError
 from anki_miner.services.book_sync.aligner import BookCursor, BookText, TimedText, align_to_book
 from anki_miner.services.book_sync.normalize import normalize_for_alignment
-from anki_miner.utils.logging_ext import log_summary
+from anki_miner.services.book_sync.report import speech_coverage, unheard_gaps
+from anki_miner.utils.logging_ext import capped, log_summary
 
 if TYPE_CHECKING:
     from anki_miner.config.config import AnkiMinerConfig
@@ -53,6 +54,9 @@ class BookSyncResult:
     #: Sentences between the first and last cue that got no audio (skipped by
     #: the narrator, or lost to a transcription hole).
     unmatched_sentences: int = 0
+    #: Seconds of transcript speech, and how many of them a cue covers (MS-25).
+    speech_seconds: float = 0.0
+    matched_seconds: float = 0.0
 
 
 def load_book(
@@ -110,13 +114,20 @@ def sync_one(
     ct2_model_session: Ct2ModelSession | None = None,
     language: str = "ja",
     log: Callable[[str], None] | None = None,
+    on_transcript_reused: Callable[[], None] | None = None,
 ) -> BookSyncResult:
     """Transcribe *audio_path*, align it to *book* from *cursor*, write *out_srt*.
 
     ``on_align_start`` fires after transcription, before alignment (the
     worker's "Aligning to the book…" line). ``log`` receives the aligner's
     re-anchor / skip notes, in the app's own words for the Activity log.
+    The transcript is read from, and saved to, the transcript cache shared
+    with Generate (F-12); ``on_transcript_reused`` fires when it came from
+    there. Segments are re-broken at the mining language's sentence ends
+    (MS-21), the same transcript Generate writes, which also keeps the
+    aligner's per-segment time interpolation short.
     """
+    from anki_miner.languages.registry import config_language, get_profile
     from anki_miner.services.asr import long_audio, srt_writer
 
     transcript = long_audio.transcribe_media(
@@ -129,6 +140,9 @@ def sync_one(
         on_transcribe_start=on_transcribe_start,
         ct2_model_session=ct2_model_session,
         language=language,
+        sentence_rules=get_profile(config_language(config)).sentence_rules,
+        use_cache=True,
+        on_cache_hit=on_transcript_reused,
     )
     if transcript.status is long_audio.LongAudioStatus.CANCELLED:
         return BookSyncResult(BookSyncStatus.CANCELLED)
@@ -140,6 +154,9 @@ def sync_one(
 
     if on_align_start is not None:
         on_align_start()
+    # What earlier files of this book timed (MS-24): a detour spans text they
+    # already synced, and that text is not "unheard" here.
+    already = set(cursor.timed)
     timings = align_to_book(
         [TimedText(start, end, text) for start, end, text in transcript.segments],
         book,
@@ -154,16 +171,40 @@ def sync_one(
         return BookSyncResult(BookSyncStatus.NO_MATCH)
 
     out_srt.parent.mkdir(parents=True, exist_ok=True)
+    # Timings are in audio order (a detour's cues sit where the audio has them, MS-24).
     srt_writer.segments_to_srt([(t.start, t.end, book.sentences[t.index]) for t in timings], out_srt)
-    span = timings[-1].index - timings[0].index + 1
-    unmatched = span - len(timings)
+    first = min(t.index for t in timings)
+    last = max(t.index for t in timings)
+    timed_here = {t.index for t in timings}
+    unmatched = sum(1 for i in range(first, last + 1) if i not in timed_here and i not in already)
+    # ``already`` (B4): what earlier files of this book timed is not unheard here.
+    gaps = unheard_gaps(timings, known=already)
+    if gaps:
+        # Never a cue (a guessed time would put the wrong audio on a card);
+        # the guess goes to the app log so the user can find the passage.
+        log_summary(
+            logger,
+            "Book sync unheard",
+            file=audio_path,
+            gaps=capped(f"{g.first + 1}-{g.last + 1}@{g.start:.1f}-{g.end:.1f}s" for g in gaps),
+        )
+    speech_seconds, matched_seconds = speech_coverage(transcript.segments, timings)
     log_summary(
         logger,
         "Book sync done",
         file=audio_path,
         cues=len(timings),
         unmatched=unmatched,
-        first=timings[0].index,
-        last=timings[-1].index,
+        first=first,
+        last=last,
+        speech_s=f"{speech_seconds:.0f}",
+        matched_s=f"{matched_seconds:.0f}",
     )
-    return BookSyncResult(BookSyncStatus.SUCCESS, out_srt=out_srt, cues=len(timings), unmatched_sentences=unmatched)
+    return BookSyncResult(
+        BookSyncStatus.SUCCESS,
+        out_srt=out_srt,
+        cues=len(timings),
+        unmatched_sentences=unmatched,
+        speech_seconds=speech_seconds,
+        matched_seconds=matched_seconds,
+    )
