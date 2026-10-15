@@ -416,7 +416,7 @@ class TestOneClearAddAndOneRedTrash:
         assert red == [panel._remove_btn]
 
     def test_removal_is_an_outline_not_a_fill(self, panel):
-        """D41: solid red is reserved for the three irreversible actions."""
+        """D41: solid red is reserved for the irreversible actions."""
         assert panel._remove_btn.objectName() == "danger"
 
     def test_the_remove_glyph_is_flat_ui_text_not_an_emoji(self):
