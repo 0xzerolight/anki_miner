@@ -20,6 +20,7 @@ import logging
 import threading
 import time
 from typing import Any
+from urllib.parse import unquote, urlsplit, urlunsplit
 
 import requests
 
@@ -58,6 +59,51 @@ def reset_connection_warning() -> None:
     global _connection_warning_logged
     with _LOG_STATE_LOCK:
         _connection_warning_logged = False
+
+
+#: The query parameter that carries AnkiConnect's API key (owner ruling R7).
+_KEY_PARAM = "key"
+
+
+def split_ankiconnect_url(ankiconnect_url: str) -> tuple[str, str | None]:
+    """Split the API key off an AnkiConnect URL: ``(endpoint, key)``.
+
+    AI-02: a user who set AnkiConnect's ``apiKey`` writes it into the URL,
+    ``http://127.0.0.1:8765/?key=SECRET``, so no second setting exists. The
+    endpoint keeps every other query parameter as written; the key is
+    percent-decoded but a ``+`` stays a ``+`` (a key is not form data). ``None``
+    means no key parameter; ``""`` means an empty one, which sends no key.
+    """
+    try:
+        parts = urlsplit(ankiconnect_url)
+    except ValueError:
+        return ankiconnect_url, None
+    if not parts.query:
+        return ankiconnect_url, None
+    key: str | None = None
+    kept: list[str] = []
+    for piece in parts.query.split("&"):
+        name, _sep, value = piece.partition("=")
+        if unquote(name) == _KEY_PARAM:
+            key = unquote(value)
+        else:
+            kept.append(piece)
+    if key is None:
+        return ankiconnect_url, None
+    return urlunsplit(parts._replace(query="&".join(kept))), key
+
+
+def redact_ankiconnect_url(ankiconnect_url: str) -> str:
+    """The URL as every log line, receipt and diagnostics bundle shows it: ``key=***``.
+
+    Unchanged when the URL carries no key, so every existing log line reads
+    exactly as before for a user without one.
+    """
+    endpoint, key = split_ankiconnect_url(ankiconnect_url)
+    if key is None:
+        return ankiconnect_url
+    separator = "&" if urlsplit(endpoint).query else "?"
+    return f"{endpoint}{separator}{_KEY_PARAM}=***"
 
 
 def _body_snippet(response: requests.Response | None) -> str:
