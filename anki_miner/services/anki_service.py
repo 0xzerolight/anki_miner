@@ -149,6 +149,41 @@ def is_transient_anki_transport_error(exc: BaseException) -> bool:
     return isinstance(exc.__cause__, (requests.exceptions.ConnectionError, requests.exceptions.Timeout))
 
 
+#: AnkiConnect ``sync`` hands the work to Anki's own sync and answers; a slow
+#: AnkiWeb round trip must not read as a dead Anki (AI-03).
+_SYNC_TIMEOUT_S = 120
+
+
+def sync_after_run(config: AnkiMinerConfig, cards_created: int) -> bool:
+    """Sync Anki once after a run that added cards (AI-03, owner ruling R6).
+
+    The one rule every run end calls (the mining screens now; the command line
+    after the merge): nothing unless Settings → Cards & Anki → "Sync Anki
+    after mining" is on and the run added at least one card. A failure — Anki
+    closed, no AnkiWeb login — is one WARNING line and never fails the run.
+
+    Returns:
+        True when Anki accepted the sync request; False when skipped or failed.
+    """
+    if not config.sync_anki_after_run or cards_created <= 0:
+        return False
+    try:
+        AnkiService(config).sync()
+    except (AnkiConnectionError, ValueError) as exc:
+        # ValueError: an incomplete field map refuses AnkiService itself.
+        log_summary(
+            logger,
+            "Anki sync after run failed",
+            level=logging.WARNING,
+            cards=cards_created,
+            exc_type=type(exc).__name__,
+            error=str(exc),
+        )
+        return False
+    log_summary(logger, "Anki sync after run", cards=cards_created)
+    return True
+
+
 class AnkiService:
     """Service for interacting with Anki via AnkiConnect (stateless service)."""
 
@@ -569,6 +604,19 @@ class AnkiService:
             params={"query": "nid:" + ",".join(str(note_id) for note_id in ids)},
             timeout=15,
         )
+
+    def sync(self) -> None:
+        """Ask Anki to sync the collection with AnkiWeb (AnkiConnect ``sync``).
+
+        AI-03: called through :func:`sync_after_run` only. AnkiConnect starts
+        Anki's own sync; a collection that needs a one-way full sync makes Anki
+        ask the user, which is why the setting is off by default.
+
+        Raises:
+            AnkiConnectionError: AnkiConnect is unreachable or refused.
+        """
+        log_summary(logger, "Anki sync requested")
+        post_action(self.config.ankiconnect_url, "sync", timeout=_SYNC_TIMEOUT_S)
 
     def media_dir_path(self) -> Path | None:
         """Return Anki's ``collection.media`` folder (AnkiConnect ``getMediaDirPath``).
