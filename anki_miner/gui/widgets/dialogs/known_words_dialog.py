@@ -36,7 +36,7 @@ from anki_miner.gui.widgets.base import ScreenIssue, ScreenIssueHost
 from anki_miner.gui.widgets.base.enhanced_dialog import EnhancedDialog
 from anki_miner.gui.widgets.enhanced import ModernButton
 from anki_miner.languages.profile import ContentTextStyle
-from anki_miner.languages.registry import get_profile
+from anki_miner.languages.registry import get_profile, language_display_name
 from anki_miner.services.known_word_db import KnownWordDB
 from anki_miner.services.known_words_import import (
     KnownWordsImportError,
@@ -249,6 +249,8 @@ class KnownWordsManagerDialog(ScreenIssueHost, EnhancedDialog):
             "migaku_legacy": self.tr("Migaku legacy add-on backup"),
             "ankimorphs": self.tr("AnkiMorphs known morphs"),
             "migaku_csv": self.tr("Migaku word export (CSV)"),
+            "kindle_vocab": self.tr("Kindle Vocabulary Builder"),
+            "lute_csv": self.tr("Lute or LWT term export"),
             "generic": self.tr("plain word list"),
         }
         return labels.get(format_key, format_key)
@@ -292,6 +294,7 @@ class KnownWordsManagerDialog(ScreenIssueHost, EnhancedDialog):
                     return parse_known_words_file(
                         path,
                         encodings=profile.import_encodings,
+                        language=self._language,
                         **script_check_kwarg(profile.import_encodings, profile.script),
                     )
                 except KnownWordsImportError as exc:
@@ -308,7 +311,7 @@ class KnownWordsManagerDialog(ScreenIssueHost, EnhancedDialog):
             self,
             self.tr("Import Known Words"),
             resolve_start_dir(None, file_mode=True),
-            self.tr("Known word lists (*.csv *.txt *.json);;All Files (*)"),
+            self.tr("Known word lists (*.csv *.tsv *.txt *.json *.db);;All Files (*)"),
             on_done=_on_picked,
         )
 
@@ -367,6 +370,14 @@ class KnownWordsManagerDialog(ScreenIssueHost, EnhancedDialog):
                 self.tr("Detected: %1 — but no entries in this file qualify as known."),
                 self._format_display_name(error.format_key or "generic"),
             )
+        elif error.reason == "other_language":
+            # Ruling C3: a Lute/LWT file that holds only other languages says
+            # which, so a Spanish learner with a Japanese export knows why.
+            message = tr_format(
+                self.tr("This file has no words for %1. It contains: %2."),
+                language_display_name(self._language),
+                ", ".join(error.languages),
+            )
         elif error.reason == "too_large":
             message = self.tr("That file is too large to import.")
         elif error.reason == "unreadable":
@@ -377,6 +388,7 @@ class KnownWordsManagerDialog(ScreenIssueHost, EnhancedDialog):
             message = self.tr(
                 "File format not recognized. Supported: jpdb review export (JSON), "
                 "Migaku word export (JSON/CSV), AnkiMorphs known morphs (CSV), "
+                "Kindle Vocabulary Builder (vocab.db), Lute or LWT term export (CSV/TSV), "
                 "plain word lists (one word per line)."
             )
         self.show_screen_issue(ScreenIssue(summary=message))

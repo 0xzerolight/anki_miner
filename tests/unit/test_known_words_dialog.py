@@ -631,3 +631,68 @@ class TestFrame:
             assert button.width() >= button.sizeHint().width(), button.text()
         right_edge = dlg.reset_button.mapTo(dlg, dlg.reset_button.rect().topRight()).x()
         assert right_edge < dlg.width()
+
+
+class TestKindleAndLuteImport:
+    """SK-09: the dialog names the two new formats and parses for the mining language."""
+
+    def test_the_new_formats_have_their_own_names(self, qtbot, tmp_path):
+        dlg = KnownWordsManagerDialog(_db_with_user_words(tmp_path))
+        qtbot.addWidget(dlg)
+
+        assert dlg._format_display_name("kindle_vocab") == "Kindle Vocabulary Builder"
+        assert dlg._format_display_name("lute_csv") == "Lute or LWT term export"
+
+    def test_the_picker_offers_kindle_databases(self, qtbot, tmp_path, monkeypatch):
+        dlg = KnownWordsManagerDialog(_db_with_user_words(tmp_path))
+        qtbot.addWidget(dlg)
+        seen: dict[str, str] = {}
+
+        def pick(*args, on_done, **kwargs):
+            seen["filter"] = args[3]
+            on_done("")
+
+        monkeypatch.setattr(known_words_dialog_mod.file_dialogs, "pick_open_file", pick)
+        dlg._on_import()
+
+        assert "*.db" in seen["filter"]
+
+    def test_the_parse_is_for_the_mining_language(self, qtbot, tmp_path, monkeypatch, capture_off_thread):
+        dlg = KnownWordsManagerDialog(_db_with_user_words(tmp_path), language="es")
+        qtbot.addWidget(dlg)
+        seen: dict[str, object] = {}
+
+        def parse(path, **kwargs):
+            seen.update(kwargs)
+            return _import_result({"gato"})
+
+        monkeypatch.setattr(known_words_dialog_mod, "parse_known_words_file", parse)
+        _start_import(dlg, monkeypatch)
+        capture_off_thread["work"]()
+
+        assert seen["language"] == "es"
+
+    def test_the_not_recognized_message_names_the_new_formats(self, qtbot, tmp_path):
+        dlg = KnownWordsManagerDialog(_db_with_user_words(tmp_path))
+        qtbot.addWidget(dlg)
+
+        dlg._show_import_error(KnownWordsImportError("unrecognized"))
+
+        summary = dlg.issue_banner().current_issue().summary
+        assert "Kindle" in summary
+        assert "Lute" in summary
+
+    def test_a_file_in_other_languages_names_them(self, qtbot, tmp_path):
+        """Ruling C3: a Lute file with no row in the mining language says what it holds."""
+        from anki_miner.languages.registry import language_display_name
+
+        dlg = KnownWordsManagerDialog(_db_with_user_words(tmp_path), language="de")
+        qtbot.addWidget(dlg)
+
+        dlg._show_import_error(
+            KnownWordsImportError("other_language", format_key="lute_csv", languages=("Japanese", "Spanish"))
+        )
+
+        summary = dlg.issue_banner().current_issue().summary
+        assert language_display_name("de") in summary
+        assert "Japanese, Spanish" in summary
