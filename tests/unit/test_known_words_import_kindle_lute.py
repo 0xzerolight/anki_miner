@@ -82,3 +82,83 @@ def test_another_sqlite_file_is_not_recognized(tmp_path):
         parse_known_words_file(path, language="ja")
 
     assert caught.value.reason == "unrecognized"
+
+
+_LUTE = (
+    "term,parent,translation,language,tags,added,status,link_status,pronunciation\n"
+    "食べる,,to eat,Japanese,,2024-01-01,99,,\n"
+    "猫,,cat,Japanese,,2024-01-01,5,,\n"
+    "犬,,dog,Japanese,,2024-01-01,3,,\n"
+    "は,,,Japanese,,2024-01-01,98,,\n"
+    "gato,,cat,Spanish,,2024-01-01,99,,\n"
+    "por​favor,,please,Spanish,,2024-01-01,5,,\n"
+)
+
+
+def _text(tmp_path: Path, name: str, text: str) -> Path:
+    path = tmp_path / name
+    path.write_text(text, encoding="utf-8")
+    return path
+
+
+def test_lute_imports_well_known_and_learned_terms_of_the_mining_language(tmp_path):
+    result = parse_known_words_file(_text(tmp_path, "terms.csv", _LUTE), language="ja")
+
+    assert result.format_key == "lute_csv"
+    assert result.words == frozenset({"食べる", "猫"})
+    assert result.total_entries == 4
+
+
+def test_lute_spanish_rows_and_multiword_terms(tmp_path):
+    result = parse_known_words_file(_text(tmp_path, "terms.csv", _LUTE), language="es")
+
+    assert result.words == frozenset({"gato", "porfavor"})
+
+
+def test_lute_never_imports_its_header_or_ignored_or_learning_rows(tmp_path):
+    result = parse_known_words_file(_text(tmp_path, "terms.csv", _LUTE))
+
+    assert "term" not in result.words
+    assert "は" not in result.words
+    assert "犬" not in result.words
+
+
+def test_a_file_that_never_names_the_language_imports_nothing_and_says_what_it_holds(tmp_path):
+    """Ruling C3: the refusal carries the languages the file does contain."""
+    with pytest.raises(KnownWordsImportError) as caught:
+        parse_known_words_file(_text(tmp_path, "terms.csv", _LUTE), language="de")
+
+    assert caught.value.reason == "other_language"
+    assert caught.value.format_key == "lute_csv"
+    assert caught.value.languages == ("Japanese", "Spanish")
+
+
+def test_rows_of_the_language_that_are_all_still_learning_are_no_known_words(tmp_path):
+    text = "term,language,status\nHund,German,1\nKatze,German,98\n"
+
+    with pytest.raises(KnownWordsImportError) as caught:
+        parse_known_words_file(_text(tmp_path, "terms.csv", text), language="de")
+
+    assert caught.value.reason == "no_known_words"
+    assert caught.value.languages == ()
+
+
+def test_lwt_tab_separated_columns(tmp_path):
+    text = "WoText\tWoTranslation\tWoStatus\nhola\thello\t99\nadiós\tbye\t2\n"
+
+    result = parse_known_words_file(_text(tmp_path, "words.tsv", text), language="es")
+
+    assert result.format_key == "lute_csv"
+    assert result.words == frozenset({"hola"})
+
+
+def test_lute_letter_statuses(tmp_path):
+    result = parse_known_words_file(_text(tmp_path, "terms.csv", "term,status\nyes,W\nno,I\n"), language="en")
+
+    assert result.words == frozenset({"yes"})
+
+
+def test_a_plain_list_with_a_comma_is_still_a_plain_list(tmp_path):
+    result = parse_known_words_file(_text(tmp_path, "words.txt", "食べる,taberu\n猫\n"), language="ja")
+
+    assert result.format_key == "generic"
