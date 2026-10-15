@@ -87,6 +87,7 @@ def _non_default_save_config(tmp_path: Path) -> AnkiMinerConfig:
         reading_tts_google_enabled=False,
         reading_tts_papago_enabled=True,
         screenshot_offset=2.0,
+        crop_manga_to_text=False,  # default is True
         screenshot_animated=True,
         screenshot_animated_format="webp",
         screenshot_animated_clip_duration=3.0,
@@ -157,6 +158,7 @@ _SAVE_PATH_FIELDS = frozenset(
         "reading_tts_google_enabled",
         "reading_tts_papago_enabled",
         "screenshot_offset",
+        "crop_manga_to_text",
         "screenshot_animated",
         "screenshot_animated_format",
         "screenshot_animated_clip_duration",
@@ -332,6 +334,7 @@ class TestSavePathRoundTrip:
             "reading_tts_google_enabled",
             "reading_tts_papago_enabled",
             "screenshot_offset",
+            "crop_manga_to_text",
             "screenshot_animated",
             "screenshot_animated_format",
             "screenshot_animated_clip_duration",

@@ -172,6 +172,17 @@ class MediaSettingsPanel(FormPanel):
             helper=self.tr("Measured from the subtitle start time."),
         )
 
+        # F-11 (R4): manga cards keep the sentence's speech bubble, padded, instead
+        # of the whole page. On for fresh installs; a config saved before it loads off.
+        self.crop_manga_checkbox = QCheckBox(self.tr("Crop manga pictures to the speech bubble"))
+        self.crop_manga_checkbox.setToolTip(
+            self.tr(
+                "Manga cards show the speech bubble and the art around it instead of the whole page. "
+                "A sentence with no bubble position keeps the whole page."
+            )
+        )
+        self.add_field("", self.crop_manga_checkbox)
+
         # Animated screenshot toggle
         self.animated_checkbox = QCheckBox(self.tr("Enable animated screenshots"))
         self.animated_checkbox.setToolTip(
@@ -471,6 +482,7 @@ class MediaSettingsPanel(FormPanel):
             config.reading_tts_papago_enabled,
         )
         self.set_screenshot_offset(config.screenshot_offset)
+        self.crop_manga_checkbox.setChecked(config.crop_manga_to_text)
         self.set_screenshot_animated(config.screenshot_animated)
         self.set_screenshot_animated_format(config.screenshot_animated_format)
         self.set_screenshot_animated_clip_duration(config.screenshot_animated_clip_duration)
@@ -499,6 +511,7 @@ class MediaSettingsPanel(FormPanel):
             reading_tts_google_enabled=reading_tts_google_enabled,
             reading_tts_papago_enabled=reading_tts_papago_enabled,
             screenshot_offset=self.get_screenshot_offset(),
+            crop_manga_to_text=self.crop_manga_checkbox.isChecked(),
             screenshot_animated=self.get_screenshot_animated(),
             screenshot_animated_format=self.get_screenshot_animated_format(),
             screenshot_animated_clip_duration=self.get_screenshot_animated_clip_duration(),
