@@ -363,7 +363,7 @@ class QueuePanel(QFrame):
         offset_label.setFixedWidth(label_w)
         offset_spinbox = QDoubleSpinBox()
         offset_spinbox.setRange(SUBTITLE_OFFSET_MIN, SUBTITLE_OFFSET_MAX)
-        offset_spinbox.setSingleStep(0.5)
+        offset_spinbox.setSingleStep(0.1)
         offset_spinbox.setValue(widget.subtitle_offset)
         offset_spinbox.setSuffix(self.tr(" seconds"))
         offset_spinbox.setToolTip(self.tr("Adjust subtitle timing (positive = later, negative = earlier)"))
@@ -381,7 +381,7 @@ class QueuePanel(QFrame):
         secondary_offset_label.setFixedWidth(label_w)
         secondary_offset_spinbox = QDoubleSpinBox()
         secondary_offset_spinbox.setRange(SUBTITLE_OFFSET_MIN, SUBTITLE_OFFSET_MAX)
-        secondary_offset_spinbox.setSingleStep(0.5)
+        secondary_offset_spinbox.setSingleStep(0.1)
         secondary_offset_spinbox.setValue(widget.secondary_offset)
         secondary_offset_spinbox.setSuffix(self.tr(" seconds"))
         secondary_offset_spinbox.setToolTip(

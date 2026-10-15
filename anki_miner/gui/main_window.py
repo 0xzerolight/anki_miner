@@ -206,7 +206,7 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         # the next Undo delete instead of the stale startup endpoint.
         self._build_config_bound_services()
         self._validation_silent = True
-        # Opt-in Open Anki at startup. The lambda reads the current service:
+        # Open Anki at startup (on by default). The lambda reads the current service:
         # _build_config_bound_services replaces it on every save.
         self._anki_auto_opener = AnkiAutoOpener(
             self,

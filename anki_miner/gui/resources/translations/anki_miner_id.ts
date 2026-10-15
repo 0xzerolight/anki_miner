@@ -6992,8 +6992,8 @@ Lanjutkan?</translation>
         <translation>Bitrate Audio</translation>
     </message>
     <message>
-        <source>Higher = better quality, larger files. 64-96 kbps Opus or 128-192 kbps MP3 are good defaults.</source>
-        <translation>Lebih tinggi = kualitas lebih baik, berkas lebih besar. 64-96 kbps Opus atau 128-192 kbps MP3 adalah default yang baik.</translation>
+        <source>Clips are mono. Higher = better quality, larger files; 64-96 kbps is plenty for speech.</source>
+        <translation>Klip berformat mono. Lebih tinggi = kualitas lebih baik, berkas lebih besar; 64-96 kbps sudah cukup untuk ucapan.</translation>
     </message>
     <message>
         <source> seconds</source>

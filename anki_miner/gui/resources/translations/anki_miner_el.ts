@@ -7029,8 +7029,8 @@ Continue?</source>
         <translation>Ρυθμός bit ήχου</translation>
     </message>
     <message>
-        <source>Higher = better quality, larger files. 64-96 kbps Opus or 128-192 kbps MP3 are good defaults.</source>
-        <translation>Υψηλότερο = καλύτερη ποιότητα, μεγαλύτερα αρχεία. Καλές προεπιλογές είναι 64-96 kbps για Opus ή 128-192 kbps για MP3.</translation>
+        <source>Clips are mono. Higher = better quality, larger files; 64-96 kbps is plenty for speech.</source>
+        <translation>Τα αποσπάσματα είναι μονοφωνικά. Υψηλότερο = καλύτερη ποιότητα, μεγαλύτερα αρχεία· για ομιλία αρκούν τα 64-96 kbps.</translation>
     </message>
     <message>
         <source> seconds</source>

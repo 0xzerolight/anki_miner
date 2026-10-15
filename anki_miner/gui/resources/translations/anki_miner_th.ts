@@ -6992,8 +6992,8 @@ Continue?</source>
         <translation>บิตเรตเสียง</translation>
     </message>
     <message>
-        <source>Higher = better quality, larger files. 64-96 kbps Opus or 128-192 kbps MP3 are good defaults.</source>
-        <translation>สูงขึ้น = คุณภาพดีขึ้น ไฟล์ใหญ่ขึ้น Opus 64-96 kbps หรือ MP3 128-192 kbps เป็นค่าเริ่มต้นที่ดี</translation>
+        <source>Clips are mono. Higher = better quality, larger files; 64-96 kbps is plenty for speech.</source>
+        <translation>คลิปเป็นแบบโมโน สูงขึ้น = คุณภาพดีขึ้น ไฟล์ใหญ่ขึ้น สำหรับเสียงพูด 64-96 kbps ก็เพียงพอแล้ว</translation>
     </message>
     <message>
         <source> seconds</source>

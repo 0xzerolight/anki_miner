@@ -7,6 +7,7 @@ import dataclasses
 import pytest
 
 from anki_miner.config import AnkiMinerConfig
+from anki_miner.config.config import DEFAULT_SUBTITLE_CLEANUP_PATTERN
 from anki_miner.languages.registry import get_profile
 from anki_miner.languages.switching import LANGUAGE_SCOPED_FIELDS, switch_language
 from anki_miner.services.subtitle_parser import compile_subtitle_regex_filter
@@ -19,13 +20,17 @@ def _trio(config: AnkiMinerConfig) -> tuple[object, ...]:
     return tuple(getattr(config, name) for name in TRIO)
 
 
+def _profile_trio(code: str) -> tuple[object, ...]:
+    return tuple(get_profile(code).scoped_defaults[name] for name in TRIO)
+
+
 def test_the_trio_is_scoped():
     assert set(TRIO) <= set(LANGUAGE_SCOPED_FIELDS)
 
 
-def test_ja_and_zh_first_visit_values_equal_the_dataclass_defaults():
+def test_ja_zh_and_yue_first_visit_values_equal_the_dataclass_defaults():
     blank = _trio(AnkiMinerConfig())
-    for code in ("ja", "zh"):
+    for code in ("ja", "zh", "yue"):
         assert tuple(get_profile(code).scoped_defaults[name] for name in TRIO) == blank
 
 
@@ -106,9 +111,9 @@ def test_after_the_first_scoped_switch_a_missing_key_takes_the_profile_default()
         subtitle_regex_filter=r"\(.*?\)",
     )
 
-    assert _trio(switch_language(on_ko, "zh")) == (False, "", "")
+    assert _trio(switch_language(on_ko, "zh")) == _profile_trio("zh") == (True, DEFAULT_SUBTITLE_CLEANUP_PATTERN, "")
 
 
 def test_a_first_visit_never_carries_the_live_value():
     on_ja = dataclasses.replace(AnkiMinerConfig(), use_subtitle_regex_filter=True, subtitle_regex_filter=BRACKETS)
-    assert _trio(switch_language(on_ja, "zh")) == (False, "", "")
+    assert _trio(switch_language(on_ja, "zh")) == _profile_trio("zh") != _trio(on_ja)

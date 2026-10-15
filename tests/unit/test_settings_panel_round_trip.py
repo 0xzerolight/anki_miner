@@ -76,11 +76,11 @@ def _non_default_save_config(tmp_path: Path) -> AnkiMinerConfig:
             "sentence": "SN",
             "audio": "AU",
         },
-        strict_card_order=True,  # T10: moved here from FilteringSettingsPanel
-        auto_open_anki=True,
+        strict_card_order=False,  # T10: moved here from FilteringSettingsPanel; default is True
+        auto_open_anki=False,  # default is True
         # --- MediaSettingsPanel ---
         audio_format="opus",
-        audio_bitrate=96,
+        audio_bitrate=128,  # default is 96
         audio_padding=0.5,
         reading_tts_enabled=True,
         reading_tts_google_enabled=False,
@@ -118,10 +118,10 @@ def _non_default_save_config(tmp_path: Path) -> AnkiMinerConfig:
         # --- SentencesSettingsPanel ---
         subtitle_regex_filter=r"\([^)]*\)",
         subtitle_regex_replacement="",
-        use_subtitle_regex_filter=True,
+        use_subtitle_regex_filter=False,  # default is True
         secondary_subtitle_enabled=True,
         merge_incomplete_cues=True,
-        bold_target_in_sentence=True,
+        bold_target_in_sentence=False,  # default is True
         # --- YouTubeSettingsPanel ---
         # C10: a file and a browser are one choice; the file wins, so a config carrying both is not round-trip-stable.
         youtube_cookies_from_browser=None,

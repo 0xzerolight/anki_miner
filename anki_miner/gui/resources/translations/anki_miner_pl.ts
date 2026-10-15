@@ -7066,8 +7066,8 @@ Kontynuować?</translation>
         <translation>Przepływność audio</translation>
     </message>
     <message>
-        <source>Higher = better quality, larger files. 64-96 kbps Opus or 128-192 kbps MP3 are good defaults.</source>
-        <translation>Wyższa = lepsza jakość, większe pliki. Dobre wartości domyślne to 64–96 kbps dla Opus lub 128–192 kbps dla MP3.</translation>
+        <source>Clips are mono. Higher = better quality, larger files; 64-96 kbps is plenty for speech.</source>
+        <translation>Klipy są mono. Wyższa = lepsza jakość, większe pliki; do mowy w zupełności wystarczy 64–96 kbps.</translation>
     </message>
     <message>
         <source> seconds</source>

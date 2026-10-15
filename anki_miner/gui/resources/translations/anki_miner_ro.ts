@@ -7066,8 +7066,8 @@ Continuați?</translation>
         <translation>Rată de biți audio</translation>
     </message>
     <message>
-        <source>Higher = better quality, larger files. 64-96 kbps Opus or 128-192 kbps MP3 are good defaults.</source>
-        <translation>Mai mare = calitate mai bună, fișiere mai mari. 64-96 kb/s Opus sau 128-192 kb/s MP3 sunt valori implicite bune.</translation>
+        <source>Clips are mono. Higher = better quality, larger files; 64-96 kbps is plenty for speech.</source>
+        <translation>Clipurile sunt mono. Mai mare = calitate mai bună, fișiere mai mari; pentru vorbire ajung 64-96 kb/s.</translation>
     </message>
     <message>
         <source> seconds</source>

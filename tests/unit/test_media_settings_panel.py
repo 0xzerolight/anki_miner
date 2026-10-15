@@ -22,7 +22,7 @@ def test_audio_bitrate_tooltip_merges_helper_and_old_tooltip(qtbot):
     panel = MediaSettingsPanel()
     qtbot.addWidget(panel)
     assert panel.audio_bitrate_spinbox.toolTip() == (
-        "Higher = better quality, larger files. " "64-96 kbps Opus or 128-192 kbps MP3 are good defaults."
+        "Clips are mono. Higher = better quality, larger files; 64-96 kbps is plenty for speech."
     )
 
 

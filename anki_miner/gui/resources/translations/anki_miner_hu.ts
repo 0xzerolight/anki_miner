@@ -6992,8 +6992,8 @@ Folytatja?</translation>
         <translation>Hang bitrátája</translation>
     </message>
     <message>
-        <source>Higher = better quality, larger files. 64-96 kbps Opus or 128-192 kbps MP3 are good defaults.</source>
-        <translation>Nagyobb = jobb minőség, nagyobb fájlok. Jó alapérték a 64–96 kbps Opus vagy a 128–192 kbps MP3.</translation>
+        <source>Clips are mono. Higher = better quality, larger files; 64-96 kbps is plenty for speech.</source>
+        <translation>A klipek monók. Nagyobb = jobb minőség, nagyobb fájlok; beszédhez bőven elég a 64–96 kbps.</translation>
     </message>
     <message>
         <source> seconds</source>

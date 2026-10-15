@@ -7029,8 +7029,8 @@ Continue?</source>
         <translation>קצב סיביות של השמע</translation>
     </message>
     <message>
-        <source>Higher = better quality, larger files. 64-96 kbps Opus or 128-192 kbps MP3 are good defaults.</source>
-        <translation>גבוה יותר = איכות טובה יותר וקבצים גדולים יותר. ערכים של 64-96 kbps ל-Opus או 128-192 kbps ל-MP3 הם ברירות מחדל טובות.</translation>
+        <source>Clips are mono. Higher = better quality, larger files; 64-96 kbps is plenty for speech.</source>
+        <translation>הקליפים הם מונו. גבוה יותר = איכות טובה יותר וקבצים גדולים יותר; לדיבור מספיקים 64-96 kbps.</translation>
     </message>
     <message>
         <source> seconds</source>

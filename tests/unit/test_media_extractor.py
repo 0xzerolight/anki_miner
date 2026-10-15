@@ -11,6 +11,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from anki_miner.config import AnkiMinerConfig
 from anki_miner.models import MediaData
 from anki_miner.services.media_extractor import (
     MIN_CLIP_SECONDS,
@@ -321,6 +322,8 @@ class TestExtractScreenshot:
             str(video_file),
             "-frames:v",
             "1",
+            "-vf",
+            "scale=-2:'min(720,ih)'",
             "-q:v",
             "2",
             str(output_path),
@@ -1241,8 +1244,8 @@ class TestExtractAudio:
         # No ffmpeg encode call should have been made.
         mock_popen.assert_not_called()
 
-    def test_opus_downmixes_to_stereo(self, test_config, video_file, tmp_path):
-        """Should pass -ac 2 when opus to avoid libopus 5.1 channel-mapping error (Issue #18)."""
+    def test_opus_is_mono(self, test_config, video_file, tmp_path):
+        """-ac 1 for opus: mono speech, and it also avoids libopus's 5.1 channel-mapping error (Issue #18)."""
         cfg = dataclasses.replace(test_config, audio_format="opus", audio_bitrate=64)
         with patch(f"{MODULE}.ensure_directory"):
             svc = MediaExtractorService(cfg)
@@ -1261,10 +1264,36 @@ class TestExtractAudio:
 
         cmd = mock_popen.call_args[0][0]
         ac_index = cmd.index("-ac")
-        assert cmd[ac_index + 1] == "2"
+        assert cmd[ac_index + 1] == "1"
 
-    def test_mp3_does_not_force_stereo(self, service, video_file, tmp_path):
-        """MP3 path preserves source channel layout (libmp3lame handles 5.1 natively)."""
+    def test_default_bitrate_is_96(self):
+        assert AnkiMinerConfig().audio_bitrate == 96
+
+    @pytest.mark.parametrize(
+        ("audio_format", "bitrate", "expected"), [("opus", 320, "256k"), ("opus", 96, "96k"), ("mp3", 320, "320k")]
+    )
+    def test_opus_bitrate_capped_at_the_mono_ceiling(
+        self, test_config, video_file, tmp_path, audio_format, bitrate, expected
+    ):
+        """libopus refuses more than 256 kbps for one channel; a saved 320 kbps opus setting must still cut audio."""
+        cfg = dataclasses.replace(test_config, audio_format=audio_format, audio_bitrate=bitrate)
+        with patch(f"{MODULE}.ensure_directory"):
+            svc = MediaExtractorService(cfg)
+        svc._animated_encoder_ok.update(libopus=True, libmp3lame=True)
+        output_path = tmp_path / f"out.{audio_format}"
+        output_path.write_bytes(b"x")
+
+        with (
+            patch(f"{MODULE}.subprocess.Popen", return_value=_popen_mock()) as mock_popen,
+            patch.object(svc, "_get_japanese_audio_stream", return_value=None),
+        ):
+            svc._extract_audio(video_file, 1.0, 2.0, output_path)
+
+        cmd = mock_popen.call_args[0][0]
+        assert cmd[cmd.index("-b:a") + 1] == expected
+
+    def test_mp3_is_mono(self, service, video_file, tmp_path):
+        """A dialogue clip gains nothing from stereo, so MP3 is downmixed to mono too."""
         output_path = tmp_path / "out.mp3"
         output_path.write_bytes(b"\xff\xfbfake")
 
@@ -1277,7 +1306,7 @@ class TestExtractAudio:
             service._extract_audio(video_file, 1.0, 2.0, output_path)
 
         cmd = mock_popen.call_args[0][0]
-        assert "-ac" not in cmd
+        assert cmd[cmd.index("-ac") + 1] == "1"
 
     def test_filename_extension_matches_format(self, test_config, video_file, make_tokenized_word, tmp_path):
         """extract_media should produce .opus filename when audio_format='opus' (Issue #18)."""
@@ -3370,9 +3399,39 @@ def test_a_still_height_scales_the_still(test_config, tmp_path, monkeypatch) -> 
     assert seen["cmd"][seen["cmd"].index("-vf") + 1] == "scale=-2:480"
 
 
-def test_no_still_height_keeps_the_still_unscaled(test_config, tmp_path, monkeypatch) -> None:
+def test_default_still_is_capped_at_720_without_enlarging(test_config, tmp_path, monkeypatch) -> None:
     service = MediaExtractorService(test_config)
     seen = {}
     monkeypatch.setattr(service, "_run_ffmpeg", lambda cmd, *a, **k: seen.setdefault("cmd", cmd) and False)
     service._extract_static_screenshot(tmp_path / "v.mkv", 1.0, 2.0, tmp_path / "out.jpg")
-    assert "-vf" not in seen["cmd"]
+    assert seen["cmd"][seen["cmd"].index("-vf") + 1] == "scale=-2:'min(720,ih)'"
+
+
+@pytest.mark.skipif(shutil.which("ffmpeg") is None or shutil.which("ffprobe") is None, reason="needs ffmpeg")
+@pytest.mark.parametrize(("size", "height"), [("1920x1080", 720), ("640x480", 480)])
+def test_default_still_filter_shrinks_tall_frames_and_keeps_short_ones(tmp_path, size, height) -> None:
+    """The real filter: a 1080p frame comes out 720 high, a 480p one is not enlarged."""
+    out = tmp_path / "out.jpg"
+    subprocess.run(
+        ["ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i", f"testsrc=size={size}:duration=1"]
+        + ["-frames:v", "1", "-vf", "scale=-2:'min(720,ih)'", str(out)],
+        check=True,
+    )
+    probe = subprocess.run(
+        [
+            "ffprobe",
+            "-v",
+            "error",
+            "-select_streams",
+            "v:0",
+            "-show_entries",
+            "stream=height",
+            "-of",
+            "csv=p=0",
+            str(out),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    assert int(probe.stdout.strip()) == height

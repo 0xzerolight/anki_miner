@@ -197,12 +197,19 @@ def _attach_position_labels(words: list[TokenizedWord], unit_labels: Mapping[int
             candidate.position_label = _position_label(candidate.start_time, unit_labels)
 
 
-# Strips a contiguous trailing run of ``[...]`` groups plus an optional
-# ``-ReleaseGroup`` suffix (Issue #83). ``[^\]]*`` (no nested brackets) keeps this
-# linear-time and confines the match to a *trailing* block, so mid-title brackets
-# like ``[Blu-ray]`` survive. End-anchored, so a leading series/season prefix is
-# never touched.
-_ARR_METADATA_RE = re.compile(r"\s*(?:\[[^\]]*\]\s*)+(?:-\S+)?\s*$")
+# Strips a contiguous trailing run of ``[...]`` groups and resolution parens such
+# as ``(1080p)`` or ``(BD 1920x1080 HEVC)``, plus an optional ``-ReleaseGroup``
+# suffix (Issue #83). ``[^\]]*`` / ``[^()]*`` (no nesting) confine the match to a
+# *trailing* block, so mid-title brackets like ``[Blu-ray]`` and a year paren like
+# ``(2019)`` survive. Labels are short (file stems), so the lookahead is cheap.
+_ARR_METADATA_RE = re.compile(
+    r"\s*(?:(?:\[[^\]]*\]|\((?=[^()]*(?<!\d)\d{3,4}(?:[pP]|[xX×]\d{3,4}))[^()]*\))\s*)+(?:-\S+)?\s*$"
+)
+# One leading fansub tag (``[SubsPlease] Title``). Applied after the trailing strip.
+# Only a tag with no space: a bracket with words in it reads as a title such as
+# ``[Oshi no Ko] 01``. Also skipped when nothing but a dash or nothing at all
+# would follow it.
+_LEADING_GROUP_RE = re.compile(r"^\s*\[[^\]\s]*\]\s*")
 
 _OFFLINE_DICTIONARY_REQUIRED_MESSAGE = (
     "No usable offline dictionary is installed. Use Tools → Download Recommended Resources or Settings → Dictionaries."
@@ -228,9 +235,28 @@ def require_usable_offline_provider(
 
 
 def sanitize_source_label(label: str) -> str:
-    """Remove *arr release metadata (e.g. ``[WEBRip-1080p][JA]-Trix``) from a
-    source label, leaving the human-readable title."""
-    return _ARR_METADATA_RE.sub("", label).strip()
+    """Remove release metadata from a source label, leaving the human-readable title.
+
+    Drops the trailing *arr block (``[WEBRip-1080p][JA]-Trix``), a trailing
+    resolution paren (``(1080p)``) and one leading fansub tag (``[SubsPlease]``).
+    """
+    label = _ARR_METADATA_RE.sub("", label).strip()
+    rest = _LEADING_GROUP_RE.sub("", label, count=1)
+    if rest and rest[0] not in "-–—":
+        return rest
+    return label
+
+
+def _source_label(series: str, episode: str) -> str:
+    """``series — episode`` for the Source field, each part sanitized on its own.
+
+    The episode stem carries its own fansub tag, which would otherwise sit
+    mid-label after the separator where the leading-tag strip cannot see it. A
+    part that sanitizes to nothing is kept as written: a folder named only
+    ``[Oshi no Ko]`` is a title, not release metadata.
+    """
+    parts = ((sanitize_source_label(part) or part.strip()) for part in (series, episode))
+    return " — ".join(part for part in parts if part)
 
 
 def _online_run_identity(site: str, video_id: str) -> tuple[str, str]:
@@ -3123,7 +3149,7 @@ class EpisodeProcessor:
             subtitle_file_str=str(subtitle_file),
             episode_name=episode_name,
             series_name=series_name,
-            source_label=source_label_override or sanitize_source_label(f"{series_name} — {episode_name}"),
+            source_label=source_label_override or _source_label(series_name, episode_name),
             kind=_outer_kind or "episode",
             receipt=(
                 None
@@ -3683,7 +3709,7 @@ class EpisodeProcessor:
         # parent folder), so prefix it; books use the bare episode title, and
         # an Anki deck its name (episode), which is its whole identity.
         if document.kind in ("manga", "subtitle"):
-            source_label = sanitize_source_label(f"{document.series} — {document.episode}")
+            source_label = _source_label(document.series, document.episode)
         else:
             source_label = document.episode
         ctx = _EpisodeContext(

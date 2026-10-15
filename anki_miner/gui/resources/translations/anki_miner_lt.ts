@@ -7066,8 +7066,8 @@ Tęsti?</translation>
         <translation>Garso sparta</translation>
     </message>
     <message>
-        <source>Higher = better quality, larger files. 64-96 kbps Opus or 128-192 kbps MP3 are good defaults.</source>
-        <translation>Didesnė – geresnė kokybė, didesni failai. 64–96 kbps Opus arba 128–192 kbps MP3 yra geros numatytosios reikšmės.</translation>
+        <source>Clips are mono. Higher = better quality, larger files; 64-96 kbps is plenty for speech.</source>
+        <translation>Klipai yra mono. Didesnė – geresnė kokybė, didesni failai; kalbai visiškai pakanka 64–96 kbps.</translation>
     </message>
     <message>
         <source> seconds</source>

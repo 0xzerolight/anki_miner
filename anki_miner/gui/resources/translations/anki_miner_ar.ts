@@ -7177,8 +7177,8 @@ Continue?</source>
         <translation>معدل بت الصوت</translation>
     </message>
     <message>
-        <source>Higher = better quality, larger files. 64-96 kbps Opus or 128-192 kbps MP3 are good defaults.</source>
-        <translation>أعلى = جودة أفضل وملفات أكبر. القيم 64-96 كيلوبت/ث لـ Opus أو 128-192 كيلوبت/ث لـ MP3 خيارات افتراضية جيدة.</translation>
+        <source>Clips are mono. Higher = better quality, larger files; 64-96 kbps is plenty for speech.</source>
+        <translation>المقاطع أحادية القناة. أعلى = جودة أفضل وملفات أكبر؛ وتكفي 64-96 كيلوبت/ث للكلام.</translation>
     </message>
     <message>
         <source> seconds</source>

@@ -751,6 +751,13 @@ def test_config(temp_dir):
         known_words_db_path=temp_dir / "known_words.db",
         # Every tool on the Utilities tab, as the suite was written against (D18 hides two for new installs).
         hidden_utilities=(),
+        # Curated card order, as the suite was written against (on by default since 2026-10).
+        strict_card_order=False,
+        # Plain sentences, as the suite was written against (bold on by default since 2026-10).
+        bold_target_in_sentence=False,
+        # No subtitle cleanup, as the suite was written against (on by default since 2026-10).
+        use_subtitle_regex_filter=False,
+        subtitle_regex_filter="",
     )
 
 

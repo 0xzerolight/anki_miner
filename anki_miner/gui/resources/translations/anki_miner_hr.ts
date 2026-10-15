@@ -7066,8 +7066,8 @@ Nastaviti?</translation>
         <translation>Brzina prijenosa zvuka</translation>
     </message>
     <message>
-        <source>Higher = better quality, larger files. 64-96 kbps Opus or 128-192 kbps MP3 are good defaults.</source>
-        <translation>Više = bolja kvaliteta, veće datoteke. Opus 64–96 kbps ili MP3 128–192 kbps dobre su zadane vrijednosti.</translation>
+        <source>Clips are mono. Higher = better quality, larger files; 64-96 kbps is plenty for speech.</source>
+        <translation>Isječci su mono. Više = bolja kvaliteta, veće datoteke; za govor je 64–96 kbps sasvim dovoljno.</translation>
     </message>
     <message>
         <source> seconds</source>

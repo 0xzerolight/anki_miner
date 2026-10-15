@@ -7103,8 +7103,8 @@ Najprej zaprite brskalnik kartic in urejevalnik zapiskov v Anki — v odprtem za
         <translation>Bitna hitrost zvoka</translation>
     </message>
     <message>
-        <source>Higher = better quality, larger files. 64-96 kbps Opus or 128-192 kbps MP3 are good defaults.</source>
-        <translation>Višje = boljša kakovost, večje datoteke. Dobre privzete vrednosti so 64–96 kb/s za Opus ali 128–192 kb/s za MP3.</translation>
+        <source>Clips are mono. Higher = better quality, larger files; 64-96 kbps is plenty for speech.</source>
+        <translation>Posnetki so mono. Višje = boljša kakovost, večje datoteke; za govor povsem zadostuje 64–96 kb/s.</translation>
     </message>
     <message>
         <source> seconds</source>

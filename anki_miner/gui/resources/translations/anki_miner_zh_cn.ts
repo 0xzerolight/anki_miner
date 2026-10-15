@@ -6992,8 +6992,8 @@ Continue?</source>
         <translation>音频比特率</translation>
     </message>
     <message>
-        <source>Higher = better quality, larger files. 64-96 kbps Opus or 128-192 kbps MP3 are good defaults.</source>
-        <translation>越高 = 质量越好，文件越大。Opus 用 64-96 kbps 或 MP3 用 128-192 kbps 是不错的默认值。</translation>
+        <source>Clips are mono. Higher = better quality, larger files; 64-96 kbps is plenty for speech.</source>
+        <translation>片段为单声道。越高 = 质量越好，文件越大；语音用 64-96 kbps 就足够了。</translation>
     </message>
     <message>
         <source> seconds</source>

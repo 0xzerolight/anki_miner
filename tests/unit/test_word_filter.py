@@ -1105,7 +1105,7 @@ class TestWordFilterService:
             assert swapped.surface_start == 3
             assert swapped.surface_end == 6
             assert swapped.sentence == "今日も食べる"
-            # Bolded fields are empty because config flag is off (default).
+            # Bolded fields are empty because test_config turns the flag off.
             assert swapped.sentence_bolded == ""
             assert swapped.sentence_furigana_bolded == ""
 

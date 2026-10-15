@@ -7029,8 +7029,8 @@ Continuar?</translation>
         <translation>Taxa de Bits do Áudio</translation>
     </message>
     <message>
-        <source>Higher = better quality, larger files. 64-96 kbps Opus or 128-192 kbps MP3 are good defaults.</source>
-        <translation>Maior = melhor qualidade, arquivos maiores. 64-96 kbps em Opus ou 128-192 kbps em MP3 são bons padrões.</translation>
+        <source>Clips are mono. Higher = better quality, larger files; 64-96 kbps is plenty for speech.</source>
+        <translation>Os clipes são mono. Maior = melhor qualidade, arquivos maiores; 64-96 kbps bastam para fala.</translation>
     </message>
     <message>
         <source> seconds</source>

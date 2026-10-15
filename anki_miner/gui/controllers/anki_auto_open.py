@@ -1,6 +1,8 @@
 """Start Anki once per launch when the startup check finds it closed.
 
-Opt-in through ``auto_open_anki``. Only the launch-time system check triggers
+On by default through ``auto_open_anki``; never in an offscreen session (tests,
+the /verify and e2e harnesses), which must not start a real Anki. Only the
+launch-time system check triggers
 it; a check the user asks for (Refresh, Re-check) never starts Anki. After the
 start it asks AnkiConnect again off the GUI thread every few seconds until Anki
 answers or the attempts run out, then calls ``on_ready`` so the full checks run
@@ -16,6 +18,7 @@ import logging
 from collections.abc import Callable
 
 from PyQt6.QtCore import QObject, QTimer
+from PyQt6.QtGui import QGuiApplication
 
 from anki_miner.gui.utils.ankiconnect_help import anki_launch_command, launch_anki
 from anki_miner.gui.utils.run_off_thread import run_off_thread
@@ -25,6 +28,11 @@ logger = logging.getLogger(__name__)
 #: Anki can sit on its profile picker or a sync before AnkiConnect listens.
 POLL_INTERVAL_MS = 3000
 POLL_ATTEMPTS = 40  # two minutes
+
+
+def _launch_suppressed() -> bool:
+    """Never start a real Anki from a headless run (pytest, /verify, ui_atlas, e2e, bundle smoke)."""
+    return QGuiApplication.platformName() == "offscreen"
 
 
 class AnkiAutoOpener(QObject):
@@ -55,6 +63,9 @@ class AnkiAutoOpener(QObject):
         if self._opened:
             return
         self._opened = True
+        if _launch_suppressed():
+            logger.info("Open Anki at startup: skipped in an offscreen session")
+            return
         command = anki_launch_command()
         if command is None:
             logger.info("Open Anki at startup: Anki is not in its standard install place")

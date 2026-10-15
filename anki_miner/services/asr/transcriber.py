@@ -479,6 +479,17 @@ class _Ct2CudaUnavailable(Exception):
     """
 
 
+def _ct2_cpu_threads(cpu_count: int | None) -> int:
+    """CTranslate2 CPU threads: about one per physical core (logical count / 2).
+
+    Never below the old fixed ``min(4, n)``, and at most 8: on a 16-core/32-thread
+    CPU, large-v3 int8 took 18.6 s at 4 threads, 14.8 s at 8 and 15.3 s at 16 for
+    a 60 s clip, with the same text at every count.
+    """
+    n = cpu_count or 4
+    return max(min(4, n), min(8, n // 2))
+
+
 def _resolve_model(
     requested_device: str,
     cuda_libs_root: Path | None,
@@ -889,7 +900,7 @@ def _transcribe_ct2(
     can reconsider the whisper.cpp route first (device='auto' only).
     """
     whisper_model_cls = _engine.get_whisper_model_cls()
-    cpu_threads = min(4, os.cpu_count() or 4)
+    cpu_threads = _ct2_cpu_threads(os.cpu_count())
     if ct2_model_session is not None and ct2_model_session.model is not None:
         model = ct2_model_session.model
         device_used = ct2_model_session.device_used or "cpu"

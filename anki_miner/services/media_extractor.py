@@ -65,6 +65,13 @@ _FILTER_PROBE_GRAPH = "aselect='between(t,1000,1001)',asetpts=N/SR/TB"
 #: negative-length ffmpeg ``-t`` if a bound ever arrives unclamped.
 MIN_CLIP_SECONDS = 0.2
 
+#: Tallest static card picture when the caller names no height. Matches the
+#: animated picture's default; a shorter source is never enlarged.
+STILL_MAX_HEIGHT = 720
+
+#: libopus's bitrate ceiling for one channel; card clips are mono.
+OPUS_MONO_MAX_KBPS = 256
+
 #: Longest track ``wav_to_float32`` will decode. Deliberately generous — this
 #: stops the 20h-audiobook OOM-kill (float32 output ≈ 230 MB/hour; the ~7 GB
 #: peak at 20h was the OLD int16-buffer-plus-float32-buffer combined resident
@@ -273,8 +280,8 @@ class MediaExtractorService:
         Args:
             config: Configuration for media extraction
             still_height: Scale the static picture to this height in pixels
-                (the ``--api media`` call's key); ``None`` keeps the video's
-                own size, as cards always have.
+                (the ``--api media`` call's key); ``None`` caps it at
+                ``STILL_MAX_HEIGHT`` without enlarging a shorter video.
         """
         self.config = config
         self._still_height = still_height
@@ -1112,7 +1119,12 @@ class MediaExtractorService:
         if screenshot_time is None:
             screenshot_time = resolve_screenshot_time(None, start_time, duration, self.config.screenshot_offset)
 
-        scale = ["-vf", f"scale=-2:{self._still_height}"] if self._still_height else []
+        # The quotes are filtergraph quoting for the comma inside min(); ffmpeg
+        # reads them itself, so they belong in the argv element.
+        scale = [
+            "-vf",
+            (f"scale=-2:{self._still_height}" if self._still_height else f"scale=-2:'min({STILL_MAX_HEIGHT},ih)'"),
+        ]
         cmd = [
             resolve_ffmpeg(self.config),
             "-y",  # Overwrite output
@@ -1565,23 +1577,25 @@ class MediaExtractorService:
             cmd.extend(["-map", "0:a:0"])  # First audio stream
             self._warn_no_japanese_audio_once(video_file)
 
+        # libopus takes at most 256 kbps per channel, so a mono opus clip caps
+        # there; a saved 272-320 kbps opus setting would otherwise fail every cut.
+        bitrate = self.config.audio_bitrate
+        if encoder == "libopus":
+            bitrate = min(bitrate, OPUS_MONO_MAX_KBPS)
         cmd.extend(
             [
                 "-vn",  # No video
                 "-acodec",
                 encoder,
                 "-b:a",
-                f"{self.config.audio_bitrate}k",
+                f"{bitrate}k",
             ]
         )
 
-        # libopus rejects multi-channel input (e.g. 5.1 surround eac3 common in
-        # anime BD/WEB-DL releases) without an explicit channel mapping. Downmix
-        # to stereo — Anki flashcards play through headphones/laptop speakers,
-        # surround serves no purpose. MP3 (libmp3lame) tolerates 5.1 natively so
-        # we leave its channel layout alone to preserve existing behavior.
-        if self.config.audio_format == "opus":
-            cmd.extend(["-ac", "2"])
+        # Mono for every codec: a dialogue clip gains nothing from stereo, so the
+        # bitrate all goes to one channel. -ac also downmixes 5.1 (common in anime
+        # BD/WEB-DL releases), which libopus rejects without a channel mapping.
+        cmd.extend(["-ac", "1"])
 
         cmd.append(str(output_path))
 

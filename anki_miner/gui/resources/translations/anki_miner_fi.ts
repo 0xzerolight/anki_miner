@@ -7029,8 +7029,8 @@ Jatketaanko?</translation>
         <translation>Äänen bittinopeus</translation>
     </message>
     <message>
-        <source>Higher = better quality, larger files. 64-96 kbps Opus or 128-192 kbps MP3 are good defaults.</source>
-        <translation>Suurempi = parempi laatu, isommat tiedostot. 64–96 kbps Opus tai 128–192 kbps MP3 ovat hyviä oletuksia.</translation>
+        <source>Clips are mono. Higher = better quality, larger files; 64-96 kbps is plenty for speech.</source>
+        <translation>Leikkeet ovat monoa. Suurempi = parempi laatu, isommat tiedostot; puheelle 64–96 kbps riittää hyvin.</translation>
     </message>
     <message>
         <source> seconds</source>

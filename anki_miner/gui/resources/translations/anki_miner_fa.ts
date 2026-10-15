@@ -6992,8 +6992,8 @@ Continue?</source>
         <translation>نرخ بیت صوت</translation>
     </message>
     <message>
-        <source>Higher = better quality, larger files. 64-96 kbps Opus or 128-192 kbps MP3 are good defaults.</source>
-        <translation>بیشتر = کیفیت بهتر، فایل‌های بزرگ‌تر. ‏64-96 kbps برای Opus یا 128-192 kbps برای MP3 پیش‌فرض‌های خوبی هستند.</translation>
+        <source>Clips are mono. Higher = better quality, larger files; 64-96 kbps is plenty for speech.</source>
+        <translation>کلیپ‌ها تک‌کاناله‌اند. بیشتر = کیفیت بهتر، فایل‌های بزرگ‌تر؛ برای گفتار ‏64-96 kbps کاملاً کافی است.</translation>
     </message>
     <message>
         <source> seconds</source>

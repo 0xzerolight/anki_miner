@@ -217,7 +217,7 @@ Episodes run one at a time, and each run's `result-<n>.json` is written as it en
 | `run_dir` | an existing folder |
 | `profile` | a profile `id`, as for `mine` |
 | `language` | the mining language code |
-| `still_height` | the picture's height in pixels, animated or still; left out, the profile's (a still is the video's own size) |
+| `still_height` | the picture's height in pixels, animated or still; left out, the profile's (a still is at most 720 pixels high, never enlarged) |
 | `audio_bitrate` | kbps; left out, the profile's |
 | `episodes` | one or more episodes |
 

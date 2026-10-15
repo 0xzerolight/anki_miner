@@ -7029,8 +7029,8 @@ Doorgaan?</translation>
         <translation>Audiobitrate</translation>
     </message>
     <message>
-        <source>Higher = better quality, larger files. 64-96 kbps Opus or 128-192 kbps MP3 are good defaults.</source>
-        <translation>Hoger = betere kwaliteit, grotere bestanden. 64-96 kbps Opus of 128-192 kbps MP3 zijn goede standaardwaarden.</translation>
+        <source>Clips are mono. Higher = better quality, larger files; 64-96 kbps is plenty for speech.</source>
+        <translation>Clips zijn mono. Hoger = betere kwaliteit, grotere bestanden; voor spraak is 64-96 kbps ruim voldoende.</translation>
     </message>
     <message>
         <source> seconds</source>

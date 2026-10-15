@@ -7029,8 +7029,8 @@ Vil du fortsætte?</translation>
         <translation>Lydbithastighed</translation>
     </message>
     <message>
-        <source>Higher = better quality, larger files. 64-96 kbps Opus or 128-192 kbps MP3 are good defaults.</source>
-        <translation>Højere = bedre kvalitet, større filer. 64-96 kbps Opus eller 128-192 kbps MP3 er gode standardværdier.</translation>
+        <source>Clips are mono. Higher = better quality, larger files; 64-96 kbps is plenty for speech.</source>
+        <translation>Klippene er mono. Højere = bedre kvalitet, større filer; 64-96 kbps er rigeligt til tale.</translation>
     </message>
     <message>
         <source> seconds</source>

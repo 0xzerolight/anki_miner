@@ -680,7 +680,7 @@ class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidge
 
         self.offset_spinbox = QDoubleSpinBox()
         self.offset_spinbox.setRange(SUBTITLE_OFFSET_MIN, SUBTITLE_OFFSET_MAX)
-        self.offset_spinbox.setSingleStep(0.5)
+        self.offset_spinbox.setSingleStep(0.1)
         self.offset_spinbox.setValue(self.config.subtitle_offset)
         self.offset_spinbox.setSuffix(seconds_suffix)
         self.offset_spinbox.setToolTip(offset_tip)
@@ -706,7 +706,7 @@ class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidge
 
         self.secondary_offset_spinbox = QDoubleSpinBox()
         self.secondary_offset_spinbox.setRange(SUBTITLE_OFFSET_MIN, SUBTITLE_OFFSET_MAX)
-        self.secondary_offset_spinbox.setSingleStep(0.5)
+        self.secondary_offset_spinbox.setSingleStep(0.1)
         self.secondary_offset_spinbox.setValue(0.0)
         self.secondary_offset_spinbox.setSuffix(seconds_suffix)
         self.secondary_offset_spinbox.setToolTip(translation_tip)

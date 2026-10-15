@@ -297,7 +297,9 @@ class TestParseTextUnitsSubtitleCleanup:
         assert all("旬" not in w.sentence for w in words)
 
     def test_physical_line_annotations_never_become_dialogue(self, tmp_path):
-        config = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
+        # The user regex filter off: an active filter re-joins the unit's lines
+        # with a space, and this test is about the annotation strip alone.
+        config = AnkiMinerConfig(media_temp_folder=tmp_path / "media", use_subtitle_regex_filter=False)
         service = SubtitleParserService(config)
         units = [ReadingUnit(text="猫が好き\n（案内）犬が眠る", index=0, location_label="0:01")]
 

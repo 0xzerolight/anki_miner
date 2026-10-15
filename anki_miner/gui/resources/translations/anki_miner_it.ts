@@ -7029,8 +7029,8 @@ Continuare?</translation>
         <translation>Bitrate audio</translation>
     </message>
     <message>
-        <source>Higher = better quality, larger files. 64-96 kbps Opus or 128-192 kbps MP3 are good defaults.</source>
-        <translation>Più alto = qualità migliore, file più grandi. 64-96 kbps Opus o 128-192 kbps MP3 sono buoni valori predefiniti.</translation>
+        <source>Clips are mono. Higher = better quality, larger files; 64-96 kbps is plenty for speech.</source>
+        <translation>Le clip sono mono. Più alto = qualità migliore, file più grandi; 64-96 kbps bastano per il parlato.</translation>
     </message>
     <message>
         <source> seconds</source>

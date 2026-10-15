@@ -6992,8 +6992,8 @@ Continue?</source>
         <translation>오디오 비트레이트</translation>
     </message>
     <message>
-        <source>Higher = better quality, larger files. 64-96 kbps Opus or 128-192 kbps MP3 are good defaults.</source>
-        <translation>높을수록 품질이 좋고 파일이 커집니다. Opus 64-96 kbps 또는 MP3 128-192 kbps가 적절한 기본값입니다.</translation>
+        <source>Clips are mono. Higher = better quality, larger files; 64-96 kbps is plenty for speech.</source>
+        <translation>클립은 모노입니다. 높을수록 품질이 좋고 파일이 커집니다. 음성에는 64-96 kbps면 충분합니다.</translation>
     </message>
     <message>
         <source> seconds</source>

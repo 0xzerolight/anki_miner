@@ -6992,8 +6992,8 @@ Devam edilsin mi?</translation>
         <translation>Ses Bit Hızı</translation>
     </message>
     <message>
-        <source>Higher = better quality, larger files. 64-96 kbps Opus or 128-192 kbps MP3 are good defaults.</source>
-        <translation>Yüksek değer = daha iyi kalite, daha büyük dosyalar. 64-96 kbps Opus veya 128-192 kbps MP3 iyi varsayılanlardır.</translation>
+        <source>Clips are mono. Higher = better quality, larger files; 64-96 kbps is plenty for speech.</source>
+        <translation>Klipler monodur. Yüksek değer = daha iyi kalite, daha büyük dosyalar; konuşma için 64-96 kbps fazlasıyla yeterlidir.</translation>
     </message>
     <message>
         <source> seconds</source>
