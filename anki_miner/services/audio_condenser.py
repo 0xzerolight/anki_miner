@@ -197,6 +197,13 @@ def _is_whole_line_bracketed(text: str) -> bool:
     return False
 
 
+#: Kept stretches closer than this join into one (MS-10, ruling R22), so the
+#: short pause between two lines stays in the condensed audio instead of being
+#: cut out. Measured between padded stretches: with the default 500 ms padding,
+#: lines up to 2 s apart join (subs2cia's threshold/2 + padding rule).
+CONDENSE_JOIN_GAP_MS = 1000
+
+
 def drop_events_in_ranges(events: list[Event], ranges: Sequence[tuple[float, float]]) -> list[Event]:
     """Drop the cues whose midpoint falls in *ranges* (seconds, F-08 chapters).
 
@@ -208,14 +215,16 @@ def drop_events_in_ranges(events: list[Event], ranges: Sequence[tuple[float, flo
     return [event for event in events if not midpoint_in_ranges(event[0] / 1000, event[1] / 1000, ranges)]
 
 
-def build_periods(events: list[Event], padding_ms: int) -> list[Period]:
+def build_periods(events: list[Event], padding_ms: int, *, join_gap_ms: int = CONDENSE_JOIN_GAP_MS) -> list[Period]:
     """Build padded, merged keep-periods from *already-shifted* events.
 
     Each cue is padded by ``padding_ms`` on both sides, the period start is
-    floored at 0 **after** padding, then periods are sorted and overlapping or
-    adjacent ones merged. A cue shifted fully before t=0 (its padded end is
-    ``<= 0``) is dropped rather than emitted as an inverted period. The trailing
-    pad on the last period is kept (D3).
+    floored at 0 **after** padding, then periods are sorted and merged when they
+    overlap, touch, or are less than *join_gap_ms* apart (MS-10: the pause
+    between two close lines stays in the audio). ``join_gap_ms=0`` merges only
+    overlapping or touching periods. A cue shifted fully before t=0 (its padded
+    end is ``<= 0``) is dropped rather than emitted as an inverted period. The
+    trailing pad on the last period is kept (D3).
     """
     intervals: list[Period] = []
     for start, end, _text in events:
@@ -231,7 +240,7 @@ def build_periods(events: list[Event], padding_ms: int) -> list[Period]:
 
     merged: list[Period] = []
     for start, end in intervals:
-        if merged and start <= merged[-1][1]:
+        if merged and (start <= merged[-1][1] or start - merged[-1][1] < join_gap_ms):
             prev_start, prev_end = merged[-1]
             merged[-1] = (prev_start, max(prev_end, end))
         else:

@@ -8,10 +8,13 @@ from unittest.mock import MagicMock, patch
 import pysubs2
 
 from anki_miner.services.audio_condenser import (
+    CONDENSE_JOIN_GAP_MS,
     CondenseStatus,
+    build_periods,
     condense_one,
     drop_events_in_ranges,
     load_subtitle_events,
+    map_events_to_condensed,
 )
 
 
@@ -158,3 +161,42 @@ def test_condense_switch_off_never_probes(tmp_path):
 
     assert result.status is CondenseStatus.SUCCESS
     assert svc.periods == [[(1000, 2000), (5000, 6000), (100_000, 101_000)]]
+
+
+def test_the_join_gap_is_one_second():
+    assert CONDENSE_JOIN_GAP_MS == 1000
+
+
+def test_kept_stretches_closer_than_a_second_join():
+    assert build_periods([(0, 1000, "a"), (1900, 3000, "b")], 0) == [(0, 3000)]
+
+
+def test_a_second_apart_stays_split():
+    assert build_periods([(0, 1000, "a"), (2000, 3000, "b")], 0) == [(0, 1000), (2000, 3000)]
+
+
+def test_the_gap_is_measured_between_padded_stretches():
+    # Raw gap 1900 ms; padded by 500 ms on each side the stretches are 900 ms apart.
+    assert build_periods([(1000, 2000, "a"), (3900, 5000, "b")], 500) == [(500, 5500)]
+    # Raw gap 2000 ms; padded, exactly 1000 ms apart: not closer than a second.
+    assert build_periods([(1000, 2000, "a"), (4000, 5000, "b")], 500) == [(500, 2500), (3500, 5500)]
+
+
+def test_join_gap_zero_is_the_old_rule():
+    assert build_periods([(0, 1000, "a"), (1000, 2000, "b")], 0, join_gap_ms=0) == [(0, 2000)]
+    assert build_periods([(0, 1000, "a"), (1500, 2000, "b")], 0, join_gap_ms=0) == [(0, 1000), (1500, 2000)]
+
+
+def test_a_joined_pause_stays_in_the_condensed_timeline():
+    events = [(0, 1000, "a"), (1900, 3000, "b")]
+
+    assert map_events_to_condensed(events, build_periods(events, 0)) == [(0, 1000, "a"), (1900, 3000, "b")]
+
+
+def test_condense_one_sends_the_joined_stretch(tmp_path):
+    sub = _write_ass(tmp_path / "ep01.ass", [(1000, 2000, "Hi", "Default"), (2600, 3000, "there", "Default")])
+    svc = _Recorder()
+
+    condense_one(svc, _config(skip=False), tmp_path / "ep01.mkv", sub, tmp_path / "out.mp3", padding_ms=0)
+
+    assert svc.periods == [[(1000, 3000)]]
