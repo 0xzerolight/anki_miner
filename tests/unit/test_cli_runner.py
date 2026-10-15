@@ -15,6 +15,7 @@ from anki_miner.cli.events import EventSink
 from anki_miner.exceptions import AnkiConnectionError, SetupError
 from anki_miner.exceptions.youtube import BotDetectionError, YouTubeFetchError
 from anki_miner.models import CANCELLED_ERROR, AnkiWriteState, ProcessingResult
+from anki_miner.services.reading.web_article import WebArticle
 
 VIDEO_URL = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
 
@@ -395,3 +396,59 @@ def test_check_card_target_setup_error_is_setup_failure(test_config) -> None:
     anki.verify_card_target.side_effect = SetupError("Deck 'X' is not in Anki")
     with pytest.raises(runner.SetupFailure, match="Deck 'X'"):
         runner.check_card_target(test_config, anki, MagicMock())
+
+
+# ---- web articles (F-14) ------------------------------------------------------
+
+ARTICLE_URL = "https://www.example.com/neko"
+
+
+def _article() -> WebArticle:
+    return WebArticle(url=ARTICLE_URL, title="猫の話", site="example.com", text="吾輩は猫である。")
+
+
+def test_reading_parser_keeps_a_web_address_intact() -> None:
+    from anki_miner.cli.entry import build_parser
+
+    args = build_parser().parse_args(["mine", "reading", ARTICLE_URL, "book.epub"])
+
+    assert args.paths == [ARTICLE_URL, "book.epub"]
+
+
+def test_reading_jobs_turn_web_addresses_into_article_jobs(tmp_path: Path) -> None:
+    srt = tmp_path / "a.srt"
+    srt.touch()
+    ref = SimpleNamespace(kind="subtitle", title="a", path=srt)
+    with patch.object(runner.detector, "detect", return_value=[ref]) as detect:
+        article_job, reading_job = runner.reading_jobs([ARTICLE_URL, str(srt)])
+
+    assert article_job == runner.ArticleJob(url=ARTICLE_URL)
+    assert (article_job.kind, article_job.describe()) == ("reading", {"url": ARTICLE_URL})
+    assert isinstance(reading_job, runner.ReadingJob) and reading_job.path == srt.resolve()
+    detect.assert_called_once_with(srt.resolve())
+
+
+def test_a_bare_domain_is_a_path_not_an_address(tmp_path: Path) -> None:
+    with pytest.raises(runner.InputError, match="File not found: example.com/neko"):
+        runner.reading_jobs(["example.com/neko"])
+
+
+def test_article_job_fetches_then_mines_as_titled_text(services, test_config) -> None:
+    services.process_reading.return_value = _ok()
+    sink, lines = _sink()
+    cancel = threading.Event()
+    with (
+        patch.object(runner, "fetch_article", return_value=_article()) as fetch,
+        patch.object(runner, "load_reading_source", return_value="DOC") as load,
+    ):
+        [report] = runner.MiningRun(test_config, sink, cancel).run([runner.ArticleJob(ARTICLE_URL)])
+
+    assert report.status == "success"
+    assert report.input == {"url": ARTICLE_URL}
+    assert fetch.call_args.args == (ARTICLE_URL,)
+    assert fetch.call_args.kwargs["rules"] == runner.get_profile("ja").sentence_rules
+    source = load.call_args.args[2]
+    assert (source.kind, source.title, source.text) == ("text", "猫の話 — example.com", "吾輩は猫である。")
+    assert services.process_reading.call_args.args == ("DOC",)
+    messages = [e["text"] for e in _events(lines) if e["event"] == "message"]
+    assert "Fetched 猫の話 — example.com." in messages

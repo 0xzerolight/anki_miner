@@ -121,8 +121,13 @@ def build_parser() -> argparse.ArgumentParser:
     pairs = sources.add_parser("pairs", help="Mine explicit video/subtitle pairs.")
     pairs.add_argument("--pair", nargs=2, action="append", required=True, type=Path, metavar=("VIDEO", "SUBTITLE"))
     add_deck(pairs)
-    reading = sources.add_parser("reading", help="Mine subtitle files without video (also novels, mokuro manga).")
-    reading.add_argument("paths", nargs="+", type=Path)
+    reading = sources.add_parser(
+        "reading",
+        help="Mine subtitle files without video (also novels, PDF books, mokuro manga and web article addresses).",
+    )
+    # str, not Path: Path would fold "https://" to "https:/" before a web
+    # address could be told apart from a file (F-14).
+    reading.add_argument("paths", nargs="+", metavar="PATH_OR_URL")
     add_deck(reading)
     youtube = sources.add_parser("youtube", help="Download and mine YouTube videos.")
     youtube.add_argument("urls", nargs="+")
