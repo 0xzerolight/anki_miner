@@ -171,6 +171,11 @@ class TestHandEditsSurvive:
         out = to_yomitan_export(_wrap(_env("D", [_item(table, ""), _item(styled, "")])))
         assert "tailend" in out and "\x0b" not in out
 
+    def test_xml_noncharacters_do_not_raise(self):
+        styled = '<span class="gloss-sc-span" style="color: red￿">x￾y</span>'
+        out = to_yomitan_export(_wrap(_env("D", [_item(styled, "")])))
+        assert "xy" in out and "￿" not in out and "￾" not in out
+
     def test_text_around_the_wrapper(self):
         out = to_yomitan_export("note: " + _wrap(_env("D", [_item("a", "")])) + "<p>mine</p>tail")
         assert out.startswith(OPEN) and out.endswith(CLOSE + "note: <p>mine</p>tail")
@@ -217,6 +222,20 @@ class TestYomitanNormalize:
         )
         background = _parse(to_yomitan_export(_wrap(_env("D", [_item(img, "")])))).find(".//img").getnext()
         assert background.get("style").endswith("display: none;")
+
+    def test_media_and_link_urls_are_written_raw_not_percent_encoded(self):
+        # Anki stores media under the raw name; a percent-encoded src is a
+        # missing file to Check Media and leaves the real one "unused".
+        img = '<img class="gloss-image" src="d__画像 1.png">'
+        link = '<a class="gloss-sc-a" href="https://ja.wikipedia.org/wiki/猫 x&amp;y">猫</a>'
+        field = _wrap(_env("D", [_item(img + link, "")])).replace(
+            "</ol>", '<li data-dictionary="Y"><img src="画 3.png"></li></ol>'
+        )
+        out = to_yomitan_export(field + '<p><img src="自分 2.png"></p>')
+        for raw in ('src="d__画像 1.png"', 'href="https://ja.wikipedia.org/wiki/猫 x&amp;y"', 'src="画 3.png"'):
+            assert raw in out
+        assert 'src="自分 2.png"' in out
+        assert "%" not in out
 
     def test_data_sc_attributes_survive_other_data_attributes_do_not(self):
         inner = '<span class="gloss-sc-span" data-sc-content="tag" data-inflection="past">x</span>'

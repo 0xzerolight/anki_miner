@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import html as html_lib
 import re
+from typing import Any
 
 from lxml import html as lxml_html  # type: ignore[import-untyped]
 
@@ -118,8 +119,14 @@ _YOMITAN_CLASS_RULES: tuple[tuple[str, str], ...] = (
 )
 
 _TOKEN_RE = re.compile(r"\.([\w-]+)|:not\(\[([\w-]+)=([^\]]+)\]\)|\[([\w-]+)=([^\]]+)\]")
-#: XML-invalid control characters (tab, newline and carriage return are valid).
-CONTROL_CHARS_RE = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f]")
+#: XML-invalid characters: C0 controls (tab, newline and carriage return are
+#: valid), lone surrogates and the U+FFFE/U+FFFF noncharacters.
+CONTROL_CHARS_RE = re.compile("[\x00-\x08\x0b\x0c\x0e-\x1f\ud800-\udfff￾￿]")
+#: Attributes lxml's HTML serializer URI-escapes (libxml2): ``d__画像 1.png``
+#: would come out ``d__%E7%94%BB%E5%83%8F%201.png``, a name Anki's media store
+#: never had. A browser, and so Yomitan, writes them raw.
+_URI_ATTRS = ("href", "src", "action", "name")
+_RAW_TOKEN = "anki-miner-raw-attr-{}"
 _OPEN = '<div style="text-align: left;" class="yomitan-glossary"><ol>'
 _CLOSE = "</ol></div>"
 
@@ -218,9 +225,31 @@ def _keep_tail(node, out: list[str]) -> None:
         out.append(_text(node.tail))
 
 
+def _tostring(el, *, with_tail: bool) -> str:
+    """``lxml.html.tostring`` with URI attributes written raw (``_URI_ATTRS``)."""
+    swapped: list[tuple[Any, str, str]] = []
+    for node in el.iter():
+        if not isinstance(node.tag, str):
+            continue
+        for attr in _URI_ATTRS:
+            value = node.get(attr)
+            if value is not None:
+                node.set(attr, _RAW_TOKEN.format(len(swapped)))
+                swapped.append((node, attr, value))
+    try:
+        out = str(lxml_html.tostring(el, encoding="unicode", with_tail=with_tail))
+    finally:
+        for node, attr, value in swapped:
+            node.set(attr, value)
+    for index, (_node, _attr, value) in enumerate(swapped):
+        raw = html_lib.escape(value, quote=False).replace('"', "&quot;")
+        out = out.replace(f'="{_RAW_TOKEN.format(index)}"', f'="{raw}"', 1)
+    return out
+
+
 def _outer(el) -> str:
     """``el`` serialized with its tail."""
-    return str(lxml_html.tostring(el, encoding="unicode", with_tail=True))
+    return _tostring(el, with_tail=True)
 
 
 def _inner_html(el) -> str:
@@ -307,7 +336,7 @@ def _export_envelope(envelope, direction: str, items: list[str], leftovers: list
     (or hand-made): it is kept verbatim as one item.
     """
     if not any(child.tag == "ul" and "gloss-list" in _classes(child) for child in envelope):
-        items.append(str(lxml_html.tostring(envelope, encoding="unicode", with_tail=False)))
+        items.append(_tostring(envelope, with_tail=False))
         return
     title = envelope.get("data-dictionary") or ""
     dict_id = envelope.get("data-dictionary-id")

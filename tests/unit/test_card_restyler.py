@@ -97,6 +97,15 @@ class TestConvertField:
     def test_control_characters_do_not_abort_the_run(self):
         assert _convert_field(BODY.replace("cat", "c\x0bat"), [], "ltr") == CONVERTED
 
+    def test_xml_noncharacters_do_not_abort_the_run(self):
+        assert _convert_field(BODY.replace("cat", "c￾at"), [], "ltr") == CONVERTED
+
+    def test_old_card_media_name_stays_raw(self):
+        # The old card's src is the raw name Anki stored; converting must not
+        # percent-encode it into a name Check Media calls missing.
+        body = BODY.replace(">cat<", '><img class="gloss-image" src="d__画像 1.png"><')
+        assert 'src="d__画像 1.png"' in _convert_field(body, [], "ltr")
+
     def test_refused_notes_are_logged(self, caplog):
         svc = _svc([_note(7, f"<style>{OWNED}</style>{BODY}<style>{OWNED}</style>")])
         with caplog.at_level("INFO", logger="anki_miner.services.card_restyler"):
