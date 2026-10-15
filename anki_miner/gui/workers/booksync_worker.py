@@ -15,7 +15,8 @@ gets its own :class:`BookCursor`, so a folder of per-chapter files is one
 continuous read of the book. A one-book run loads its book before the first
 file and a failure there propagates to ``FileQueueWorker.run`` (every file
 depends on it); on a shelf a book that will not load fails its first file and
-skips the rest of its files, and the next book still runs.
+skips the rest of its files, and the next book still runs. When a book's
+files are done, :attr:`book_report` carries its sync report (MS-25).
 """
 
 from __future__ import annotations
@@ -25,12 +26,15 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from PyQt6.QtCore import pyqtSignal
+
 from anki_miner.gui.utils.service_factory import import_decode_ladder
 from anki_miner.gui.workers.file_queue_worker import UNMEASURED, FileQueueWorker
 from anki_miner.languages.registry import config_language, get_profile
 from anki_miner.services.book_sync.aligner import BookCursor, BookText
 from anki_miner.services.book_sync.library import BookJob
 from anki_miner.services.book_sync.pipeline import BookSyncResult, BookSyncStatus, load_book, sync_one
+from anki_miner.services.book_sync.report import build_report
 from anki_miner.utils.file_pairing import resolve_output_path
 from anki_miner.utils.i18n import tr_format
 
@@ -53,6 +57,9 @@ class BookSyncWorker(FileQueueWorker):
         extractor: Media extractor (a ``MediaExtractorService`` by default).
         parent: Optional QObject parent.
     """
+
+    #: A finished book's :class:`~anki_miner.services.book_sync.report.BookSyncReport`.
+    book_report = pyqtSignal(object)
 
     def __init__(
         self,
@@ -89,6 +96,8 @@ class BookSyncWorker(FileQueueWorker):
         self._book: BookText | None = None
         self._book_error: str | None = None  # why the running book did not load (shelf runs)
         self._cursor = BookCursor()
+        self._speech_seconds = 0.0
+        self._matched_seconds = 0.0
 
     def _process_queue(self) -> None:
         from anki_miner.services.asr.transcriber import Ct2ModelSession
@@ -100,6 +109,8 @@ class BookSyncWorker(FileQueueWorker):
         self._ct2_model_session = session
         try:
             super()._process_queue()
+            if not self.is_cancelled:
+                self._finish_book()
         finally:
             self._ct2_model_session = None
             session.release()
@@ -110,6 +121,8 @@ class BookSyncWorker(FileQueueWorker):
         self._book = None
         self._book_error = None
         self._cursor = BookCursor()
+        self._speech_seconds = 0.0
+        self._matched_seconds = 0.0
         profile = get_profile(config_language(self._config))
         try:
             self._book = load_book(
@@ -126,6 +139,16 @@ class BookSyncWorker(FileQueueWorker):
             )
             self._book_error = str(exc)
 
+    def _finish_book(self) -> None:
+        """Report the running book, if any of its files timed a sentence."""
+        if self._job_idx is None or self._book is None:
+            return
+        report = build_report(
+            self._jobs[self._job_idx].book.name, self._cursor, self._speech_seconds, self._matched_seconds
+        )
+        if report is not None:
+            self.book_report.emit(report)
+
     def _queue_items(self) -> list[tuple[int, Path]]:
         return self._items
 
@@ -133,6 +156,7 @@ class BookSyncWorker(FileQueueWorker):
         job_idx, audio_path = item
         job = self._jobs[job_idx]
         if job_idx != self._job_idx:
+            self._finish_book()
             self._start_book(job_idx)
             if len(self._jobs) > 1:
                 self.file_progress.emit(idx, UNMEASURED, tr_format(self.tr("Book: %1"), job.book.name))
@@ -210,6 +234,8 @@ class BookSyncWorker(FileQueueWorker):
         name = audio_path.name
         status = result.status
         if status is BookSyncStatus.SUCCESS:
+            self._speech_seconds += result.speech_seconds
+            self._matched_seconds += result.matched_seconds
             self.file_progress.emit(
                 idx,
                 100,

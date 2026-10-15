@@ -298,3 +298,62 @@ def test_a_shelf_with_a_chosen_output_folder_writes_each_book_into_its_own_subfo
         _run(w)
 
     assert [call.args[5] for call in sync.call_args_list] == [out_dir / "vol1" / "01.srt", out_dir / "vol2" / "01.srt"]
+
+
+# --- MS-25 one report per synced book ----------------------------------------------
+
+
+def _capture_reports(worker: BookSyncWorker) -> list:
+    reports: list = []
+    worker.book_report.connect(reports.append)
+    return reports
+
+
+def test_each_book_of_a_shelf_gets_its_report(qapp, tmp_path):
+    jobs = (_job(tmp_path, "vol1", ("01.mp3", "02.mp3")), _job(tmp_path, "vol2", ("01.mp3",)))
+    w = BookSyncWorker(_make_config(tmp_path), [], None, books=jobs, extractor=MagicMock())
+    reports = _capture_reports(w)
+
+    def fake_sync(config, extractor, audio, book, cursor, out, **kw):
+        start = len(cursor.timed)
+        cursor.timed.update(range(start, start + 10))
+        return BookSyncResult(BookSyncStatus.SUCCESS, out_srt=out, cues=10, speech_seconds=100.0, matched_seconds=95.0)
+
+    with patch(_LOAD_BOOK, return_value=_BOOK), patch(_SYNC_ONE, side_effect=fake_sync):
+        _run(w)
+
+    assert [r.book_name for r in reports] == ["vol1.epub", "vol2.epub"]
+    assert (reports[0].sentences_timed, reports[0].speech_seconds, reports[0].grade) == (20, 200.0, "A")
+    assert (reports[1].sentences_timed, reports[1].matched_seconds) == (10, 95.0)
+
+
+def test_a_one_book_run_reports_once_and_never_after_a_cancel(qapp, tmp_path):
+    audio = tmp_path / "ch01.mp3"
+    audio.touch()
+
+    def fake_sync(config, extractor, audio, book, cursor, out, **kw):
+        cursor.timed.update(range(5))
+        return BookSyncResult(BookSyncStatus.SUCCESS, out_srt=out, cues=5, speech_seconds=10.0, matched_seconds=4.0)
+
+    w = _worker(tmp_path, [audio])
+    reports = _capture_reports(w)
+    with patch(_LOAD_BOOK, return_value=_BOOK), patch(_SYNC_ONE, side_effect=fake_sync):
+        _run(w)
+    assert [(r.book_name, r.audio_pct, r.grade) for r in reports] == [("neko.epub", 40, "D")]
+
+    cancelled = _worker(tmp_path, [audio], overwrite=True)
+    cancelled_reports = _capture_reports(cancelled)
+    cancelled.cancel()
+    with patch(_LOAD_BOOK, return_value=_BOOK), patch(_SYNC_ONE, side_effect=fake_sync):
+        _run(cancelled)
+    assert cancelled_reports == []
+
+
+def test_a_book_that_timed_nothing_gets_no_report(qapp, tmp_path):
+    audio = tmp_path / "ch01.mp3"
+    audio.touch()
+    w = _worker(tmp_path, [audio])
+    reports = _capture_reports(w)
+    with patch(_LOAD_BOOK, return_value=_BOOK), patch(_SYNC_ONE, return_value=BookSyncResult(BookSyncStatus.NO_MATCH)):
+        _run(w)
+    assert reports == []
