@@ -65,6 +65,15 @@ _CHILD_LOG_MAX_BYTES = 1024 * 1024
 _CHILD_LOG_BACKUP_COUNT = 1
 
 
+# The Linux launcher shim (packaging/linux-launcher.sh) sits beside the frozen
+# binary under this name in both packages: packaging/appimage/build-appimage.sh
+# installs it as the AppRun target, packaging/nfpm.yaml into /opt/anki-miner/.
+# It exports the marker before it execs the app. Both are literals for the same
+# reason as the flags above, and a test pins them to the packaging files.
+_LAUNCHER_NAME = "anki-miner-launcher"
+_LAUNCHER_ENV = "ANKI_MINER_LAUNCHER"
+
+
 # Mirrors ``config.paths.HOME_FALLBACK_REASON``, deliberately duplicated rather
 # than imported: this module is the bootstrap and stays free of package imports
 # (importing config here would drag Qt into every launch). Whichever of the two
@@ -287,6 +296,54 @@ def _inject_system_truststore() -> None:
     TRUSTSTORE_INJECTED = True
 
 
+def _reexec_via_launcher() -> None:
+    """Restart a frozen Linux GUI through its launcher shim if it was started without it.
+
+    The bundle ships the build host's libstdc++ on the bootloader's
+    LD_LIBRARY_PATH. When Qt brings up GL, the host Mesa driver is loaded
+    against that copy; a driver built for a newer libstdc++ cannot load, so
+    Wayland reports "EGL not available" and X11 aborts with "Could not
+    initialize GLX". The launcher preloads the host's newer runtime first, and
+    only works when it is the thing that starts the app. Our own first-run
+    menu entry, packager wrappers and manual runs all start ``AnkiMiner``
+    directly, so the binary routes itself through the launcher instead.
+
+    The marker is set before the exec, so a launcher that never exports it
+    still cannot loop. A user can set it to skip this step.
+
+    The child gets the pre-bootloader LD_LIBRARY_PATH back, the same restore
+    ``gui/app.py`` ``_scrub_pyinstaller_env`` does: the launcher is bash, and
+    with the bundle on the library path bash loads the bundled libreadline and
+    dies before reaching the app. The child's bootloader would also record the
+    polluted value as the original and leak the bundle into every subprocess.
+
+    ``PYINSTALLER_RESET_ENVIRONMENT`` makes the child a new instance. Since
+    PyInstaller 6.9 a process running the same executable is otherwise taken
+    for a worker of this one and skips its library-path setup, and bundled
+    libraries such as libxcb-cursor no longer resolve: the X11 plugin fails to
+    load.
+
+    A failed exec changes nothing, and the app starts as it always did.
+    """
+    if sys.platform != "linux" or not getattr(sys, "frozen", False) or os.environ.get(_LAUNCHER_ENV):
+        return
+    launcher = Path(sys.executable).resolve().with_name(_LAUNCHER_NAME)
+    if not os.access(launcher, os.X_OK):
+        return
+    env = dict(os.environ)
+    env[_LAUNCHER_ENV] = "1"
+    env["PYINSTALLER_RESET_ENVIRONMENT"] = "1"
+    original = env.pop("LD_LIBRARY_PATH_ORIG", None)
+    if original is not None:
+        env["LD_LIBRARY_PATH"] = original
+    else:
+        env.pop("LD_LIBRARY_PATH", None)
+    try:
+        os.execve(launcher, [str(launcher), *sys.argv[1:]], env)
+    except OSError:
+        return
+
+
 def main() -> int:
     """Install early recovery, then hand control to the full GUI application."""
     # A frozen bundle has no interpreter, so multiprocessing's helper processes
@@ -314,6 +371,10 @@ def main() -> int:
         from anki_miner.cli import main as cli_main
 
         return cli_main(sys.argv[1:])
+
+    # Only the GUI brings up GL, so only the GUI path needs the launcher. Before
+    # the crash sink: an exec here replaces this process outright.
+    _reexec_via_launcher()
 
     _install_early_crash_sink()
     _create_windows_app_mutex()

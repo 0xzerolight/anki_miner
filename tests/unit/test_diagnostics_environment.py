@@ -133,6 +133,15 @@ class TestDisplayAndGlFields:
         assert "XDG_SESSION_TYPE=wayland" in snapshot.session_type
         assert "QT_QPA_PLATFORM=xcb" in snapshot.qt_env
 
+    def test_qt_env_shows_whether_the_linux_launcher_ran(self, monkeypatch):
+        """'EGL not available' from a frozen Linux build means the launcher shim
+        did not run; these two say so without asking the reporter."""
+        monkeypatch.setenv("LD_PRELOAD", "/usr/lib/libstdc++.so.6:/usr/lib/libgcc_s.so.1")
+        monkeypatch.setenv("ANKI_MINER_LAUNCHER", "1")
+        qt_env = collect_environment(create_default_config()).qt_env
+        assert "LD_PRELOAD=/usr/lib/libstdc++.so.6:/usr/lib/libgcc_s.so.1" in qt_env
+        assert "ANKI_MINER_LAUNCHER=1" in qt_env
+
     def test_unset_env_renders_as_a_dash_not_an_empty_string(self, monkeypatch):
         for name in ("XDG_SESSION_TYPE", "WAYLAND_DISPLAY", "DISPLAY"):
             monkeypatch.delenv(name, raising=False)

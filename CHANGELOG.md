@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Restyle cards… converts older cards to the new format (Utilities → Card Backfill).** It removes the old built-in styling and keeps each dictionary's own styling. Cards it cannot convert without losing text are left as they are.
 
 ### Fixed
+- **The Linux app keeps its video preview when started from its own menu entry or a packager's wrapper.** On first run the app adds a menu entry that starts `AnkiMiner` directly, and that entry takes the place of the one the `.deb` installs. Started that way, the app skipped the launcher that puts the system's newer `libstdc++` in front of the bundled one, so on recent distributions the graphics driver could not load. The preview and the Word Curator then failed with "EGL not available" on Wayland, and the app quit on X11. The app now restarts itself through the launcher when it was started without it. Set `ANKI_MINER_LAUNCHER=1` to skip that step.
 
 ### Removed
 - **The built-in glossary stylesheet.** Tag pills, note boxes and the other Anki Miner styling are gone; your note type styles the card.

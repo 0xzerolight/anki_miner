@@ -294,6 +294,7 @@ def test_main_creates_app_mutex_after_early_sink_before_heavy_imports(
     from anki_miner.gui import launch
 
     calls = []
+    monkeypatch.setattr(launch, "_reexec_via_launcher", lambda: calls.append("reexec"))
     monkeypatch.setattr(launch, "_install_early_crash_sink", lambda: calls.append("sink"))
     monkeypatch.setattr(launch, "_create_windows_app_mutex", lambda: calls.append("mutex"))
     monkeypatch.setattr(launch, "_inject_system_truststore", lambda: calls.append("truststore"))
@@ -302,7 +303,137 @@ def test_main_creates_app_mutex_after_early_sink_before_heavy_imports(
     monkeypatch.setitem(sys.modules, "anki_miner.gui.app", fake_app)
 
     assert launch.main() == 0
-    assert calls == ["sink", "mutex", "truststore", "app"]
+    assert calls == ["reexec", "sink", "mutex", "truststore", "app"]
+
+
+class _Execed(Exception):
+    """Stands in for os.execve never returning."""
+
+
+def _frozen_linux_bundle(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, *, launcher_mode: int | None = 0o755):
+    """Fake a frozen Linux bundle in *tmp_path*; return (launch, execve calls)."""
+    from anki_miner.gui import launch
+
+    binary = tmp_path / "AnkiMiner"
+    binary.write_text("", encoding="utf-8")
+    if launcher_mode is not None:
+        launcher = tmp_path / "anki-miner-launcher"
+        launcher.write_text("#!/bin/sh\n", encoding="utf-8")
+        launcher.chmod(launcher_mode)
+    monkeypatch.setattr(launch.sys, "platform", "linux")
+    monkeypatch.setattr(launch.sys, "frozen", True, raising=False)
+    monkeypatch.setattr(launch.sys, "executable", str(binary))
+    monkeypatch.setattr(launch.sys, "argv", [str(binary), "--one", "two words"])
+    monkeypatch.delenv("ANKI_MINER_LAUNCHER", raising=False)
+    calls: list[tuple[str, list[str], dict[str, str]]] = []
+
+    def fake_execve(path, argv, env):
+        calls.append((str(path), list(argv), dict(env)))
+        raise _Execed
+
+    monkeypatch.setattr(launch.os, "execve", fake_execve)
+    return launch, calls
+
+
+@pytest.mark.skipif(os.name == "nt", reason="POSIX execute bits decide whether the launcher is usable")
+def test_frozen_linux_launch_without_the_launcher_reexecs_through_it(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """A raw ``AnkiMiner`` start (stale menu entry, packager wrapper) goes through the shim.
+
+    Without it the bundled libstdc++ shadows the host's and Mesa's EGL/GLX
+    cannot load: "EGL not available" on Wayland, an abort on X11.
+    """
+    launch, calls = _frozen_linux_bundle(monkeypatch, tmp_path)
+    monkeypatch.setenv("LD_LIBRARY_PATH", f"{tmp_path}/_internal:/user/lib")
+    monkeypatch.setenv("LD_LIBRARY_PATH_ORIG", "/user/lib")
+
+    with pytest.raises(_Execed):
+        launch._reexec_via_launcher()
+
+    launcher = str(tmp_path / "anki-miner-launcher")
+    [(path, argv, env)] = calls
+    assert path == launcher
+    assert argv == [launcher, "--one", "two words"]
+    assert env["ANKI_MINER_LAUNCHER"] == "1"
+    # Without it the child bootloader (PyInstaller >= 6.9) takes itself for a
+    # worker of this instance and never puts _internal on the library path, so
+    # bundled libraries such as libxcb-cursor stop resolving.
+    assert env["PYINSTALLER_RESET_ENVIRONMENT"] == "1"
+    # The launcher is bash: with the bundle on LD_LIBRARY_PATH it would load
+    # the bundled libreadline and die before reaching the app.
+    assert env["LD_LIBRARY_PATH"] == "/user/lib"
+    assert "LD_LIBRARY_PATH_ORIG" not in env
+    # The parent's own environment is left as it was.
+    assert os.environ["LD_LIBRARY_PATH_ORIG"] == "/user/lib"
+    assert "ANKI_MINER_LAUNCHER" not in os.environ
+
+
+@pytest.mark.skipif(os.name == "nt", reason="POSIX execute bits decide whether the launcher is usable")
+def test_reexec_drops_bootloader_library_path_when_there_was_none(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    launch, calls = _frozen_linux_bundle(monkeypatch, tmp_path)
+    monkeypatch.setenv("LD_LIBRARY_PATH", f"{tmp_path}/_internal")
+    monkeypatch.delenv("LD_LIBRARY_PATH_ORIG", raising=False)
+
+    with pytest.raises(_Execed):
+        launch._reexec_via_launcher()
+
+    [(_path, _argv, env)] = calls
+    assert "LD_LIBRARY_PATH" not in env
+
+
+@pytest.mark.skipif(os.name == "nt", reason="POSIX execute bits decide whether the launcher is usable")
+@pytest.mark.parametrize(
+    "case",
+    ["launched-by-launcher", "not-frozen", "not-linux", "no-launcher", "launcher-not-executable"],
+)
+def test_reexec_is_skipped_when_it_cannot_or_need_not_run(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, case: str
+) -> None:
+    launcher_mode = {"no-launcher": None, "launcher-not-executable": 0o644}.get(case, 0o755)
+    launch, calls = _frozen_linux_bundle(monkeypatch, tmp_path, launcher_mode=launcher_mode)
+    if case == "launched-by-launcher":
+        monkeypatch.setenv("ANKI_MINER_LAUNCHER", "1")
+    elif case == "not-frozen":
+        monkeypatch.setattr(launch.sys, "frozen", False, raising=False)
+    elif case == "not-linux":
+        monkeypatch.setattr(launch.sys, "platform", "darwin")
+
+    launch._reexec_via_launcher()
+
+    assert calls == []
+
+
+@pytest.mark.skipif(os.name == "nt", reason="POSIX execute bits decide whether the launcher is usable")
+def test_failed_reexec_falls_through_to_the_gui_boot(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    launch, _calls = _frozen_linux_bundle(monkeypatch, tmp_path)
+
+    def failing_execve(path, argv, env):
+        raise PermissionError("noexec mount")
+
+    monkeypatch.setattr(launch.os, "execve", failing_execve)
+    booted = []
+    monkeypatch.setattr(launch, "_install_early_crash_sink", lambda: None)
+    monkeypatch.setattr(launch, "_create_windows_app_mutex", lambda: None)
+    monkeypatch.setattr(launch, "_inject_system_truststore", lambda: None)
+    fake_app = ModuleType("anki_miner.gui.app")
+    fake_app.main = lambda: booted.append("app") or 0  # type: ignore[attr-defined]
+    monkeypatch.setitem(sys.modules, "anki_miner.gui.app", fake_app)
+
+    assert launch.main() == 0
+    assert booted == ["app"]
+
+
+def test_launcher_marker_and_name_match_the_packaging() -> None:
+    """The literals in launch.py are duplicated from the packaging; pin them equal."""
+    from anki_miner.gui import launch
+
+    launcher_text = (PROJECT_ROOT / "packaging" / "linux-launcher.sh").read_text(encoding="utf-8")
+    assert f"export {launch._LAUNCHER_ENV}=1" in launcher_text
+    for packaging_file in ("packaging/nfpm.yaml", "packaging/appimage/build-appimage.sh"):
+        assert launch._LAUNCHER_NAME in (PROJECT_ROOT / packaging_file).read_text(encoding="utf-8")
 
 
 def test_cli_command_dispatches_before_any_gui_bootstrap(
@@ -312,6 +443,7 @@ def test_cli_command_dispatches_before_any_gui_bootstrap(
     from anki_miner.gui import launch
 
     calls = []
+    monkeypatch.setattr(launch, "_reexec_via_launcher", lambda: calls.append("reexec"))
     monkeypatch.setattr(launch, "_install_early_crash_sink", lambda: calls.append("sink"))
     monkeypatch.setattr(launch, "_create_windows_app_mutex", lambda: calls.append("mutex"))
     monkeypatch.setattr(launch, "_inject_system_truststore", lambda: calls.append("truststore"))
@@ -347,6 +479,7 @@ def test_ffsubsync_child_flag_dispatches_before_any_bootstrap(
     from anki_miner.gui import launch
 
     calls = []
+    monkeypatch.setattr(launch, "_reexec_via_launcher", lambda: calls.append("reexec"))
     monkeypatch.setattr(launch, "_install_early_crash_sink", lambda: calls.append("sink"))
     monkeypatch.setattr(launch, "_create_windows_app_mutex", lambda: calls.append("mutex"))
     monkeypatch.setattr(launch, "_inject_system_truststore", lambda: calls.append("truststore"))
