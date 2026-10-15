@@ -27,7 +27,7 @@ from __future__ import annotations
 import logging
 import re
 from bisect import bisect_left
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -41,6 +41,7 @@ __all__ = [
     "CleanedForAlignment",
     "clean_for_alignment",
     "clean_reference",
+    "collapse_frame_bursts",
     "map_deltas_back",
     "transcode_for_alignment",
 ]
@@ -366,3 +367,82 @@ def map_deltas_back(
         logger.warning("subtitle cleaner: could not write %s", out, exc_info=True)
         return False
     return True
+
+
+# ---------------------------------------------------------------------------
+# The cues mining, Condense and Readability read (MS-12, F-08, SK-19)
+# ---------------------------------------------------------------------------
+
+#: A cue showing the same text as an open run joins it when it starts no
+#: earlier than the run's first cue and at most this long after the run's latest
+#: end (subminer's subtitle-cue-dedup threshold, findings/subminer.md S4).
+_BURST_GAP_MS = 50
+#: A run with no animation tag is a burst only when it has at least this many
+#: frames, each at most _BURST_FRAME_MS long: two equal lines in a row are
+#: ordinary dialogue far more often than an effect.
+_BURST_MIN_FRAMES = 3
+_BURST_FRAME_MS = 300
+#: ASS overrides that animate a line: transforms, karaoke timing, moves, fades.
+_ANIMATION_TAG_RE = re.compile(r"\\(?:t\(|[kK][fo]?\d|move\(|fade?\()")
+
+
+def _burst_key(event: pysubs2.SSAEvent) -> str:
+    """The text a viewer sees, whitespace-folded: frames of one burst share it."""
+    return " ".join(event.plaintext.split())
+
+
+def _is_burst(run: list[pysubs2.SSAEvent]) -> bool:
+    """Whether a run of same-text cues is one effect rather than separate lines."""
+    if len(run) < 2:
+        return False
+    first = run[0]
+    if all(event.start == first.start and event.end == first.end for event in run):
+        return True  # layered copies of one cue: shadow, border and fill
+    if any(_ANIMATION_TAG_RE.search(event.text) for event in run):
+        return True
+    return len(run) >= _BURST_MIN_FRAMES and all(event.end - event.start <= _BURST_FRAME_MS for event in run)
+
+
+def collapse_frame_bursts(events: Sequence[pysubs2.SSAEvent]) -> list[pysubs2.SSAEvent]:
+    """Collapse each karaoke or animated-sign frame burst into one cue (MS-12).
+
+    Fansub karaoke and animated signs repeat one line once per frame, which
+    inflates occurrence counts and turns 50 ms fragments into sentence
+    candidates. A burst is a run of cues with the same visible text, each
+    starting within ``_BURST_GAP_MS`` of the run's end, that is layered copies,
+    carries an animation tag, or is at least three short frames. It becomes a
+    copy of its first cue ending at the run's latest end, in that first cue's
+    place. Every other cue keeps its place and timing; *events* is not changed.
+    """
+    runs: list[list[pysubs2.SSAEvent]] = []
+    run_ends: list[int] = []
+    run_of: list[int] = []
+    open_runs: dict[str, int] = {}
+    for event in events:
+        key = _burst_key(event)
+        index = open_runs.get(key) if key else None
+        if index is not None and runs[index][0].start <= event.start <= run_ends[index] + _BURST_GAP_MS:
+            runs[index].append(event)
+            run_ends[index] = max(run_ends[index], event.end)
+        else:
+            index = len(runs)
+            runs.append([event])
+            run_ends.append(event.end)
+            if key:
+                open_runs[key] = index
+        run_of.append(index)
+
+    bursts = [_is_burst(run) for run in runs]
+    result: list[pysubs2.SSAEvent] = []
+    emitted: set[int] = set()
+    for event, index in zip(events, run_of, strict=True):
+        if not bursts[index]:
+            result.append(event)
+            continue
+        if index in emitted:
+            continue
+        emitted.add(index)
+        merged = runs[index][0].copy()
+        merged.end = run_ends[index]
+        result.append(merged)
+    return result
