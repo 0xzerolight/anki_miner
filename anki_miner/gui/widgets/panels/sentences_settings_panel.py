@@ -187,8 +187,9 @@ class SentencesSettingsPanel(FormPanel):
         self.sentence_rule_combo.setItemData(
             1,
             self.tr(
-                "Mines at most one word per example sentence — the first one found in that sentence. "
-                "Every other word sharing it is skipped. Whitelisted words are still mined."
+                "Mines at most one word per example sentence. A word whose sentence is already taken "
+                "moves to another line it appears on, and is skipped only when every one of its lines "
+                "is taken. Whitelisted words are still mined."
             ),
             Qt.ItemDataRole.ToolTipRole,
         )

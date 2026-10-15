@@ -369,3 +369,14 @@ def test_sentence_rule_contributes(qtbot, index, expected):
     panel.sentence_rule_combo.setCurrentIndex(index)
     out = panel.contribute(create_default_config())
     assert (out.deduplicate_sentences, out.use_i_plus_one_filter) == expected
+
+
+def test_one_card_per_sentence_tooltip_says_a_losing_word_moves(qtbot):
+    """F-06: the word whose sentence is taken moves to another of its lines first."""
+    panel = SentencesSettingsPanel()
+    qtbot.addWidget(panel)
+    index = panel.sentence_rule_combo.findData("dedup")
+    tip = panel.sentence_rule_combo.itemData(index, Qt.ItemDataRole.ToolTipRole)
+    assert "moves to another line" in tip
+    assert "first one found" not in tip
+    assert "Whitelisted words are still mined." in tip
