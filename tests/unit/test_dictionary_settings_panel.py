@@ -1378,3 +1378,17 @@ def test_update_now_follows_the_mutation_lock(qapp, qtbot, tmp_path):
     assert not panel.update_now_button.isEnabled()
     panel._set_mutation_controls_enabled(True)
     assert panel.update_now_button.isEnabled()
+
+
+@pytest.mark.parametrize(("fmt", "label"), [("stardict", "StarDict"), ("csv", "CSV")])
+def test_plain_format_rows_name_their_format(qtbot, tmp_path, fmt, label):
+    """F-17: a StarDict or CSV/TSV slot says what it is, like a Yomitan or JMdict one."""
+    _make_dict_on_disk(tmp_path, "plain", fmt=fmt, schema_version=SCHEMA_VERSION, source_name="Plain")
+    panel = DictionarySettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
+    registry = DictionaryRegistry(tmp_path)
+    registry.load()
+
+    spec = panel._row_spec(ChainEntry(kind="indexed", dict_id="plain", enabled=True), registry)
+
+    assert spec.metadata[0] == label
