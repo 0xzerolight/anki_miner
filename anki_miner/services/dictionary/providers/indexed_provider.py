@@ -116,9 +116,8 @@ class IndexedDictProvider:
         # This dictionary's own styles.css, scoped to its glossary markup
         # (Issue #87), as a bare CSS string (no <style> wrapper). Empty unless
         # the dict shipped a styles.css that survived scoping; computed in
-        # load(). Concatenated by collect_dictionary_css and emitted in each
-        # card's per-card <style> block by build_card_style_block (assembled at
-        # the EpisodeProcessor._phase5_create seam).
+        # load(). Gathered by DefinitionService.css_entries() and attached per field by
+        # dict_css_scope.attach_dict_css.
         self._scoped_css = ""
 
     @property
@@ -554,6 +553,37 @@ class IndexedDictProvider:
         escaped_id = html.escape(self.dict_id, quote=True)
         tag_meta = self._tag_meta()
 
+        # Per-definition tag label for the Yomitan-export pass (anki_export), which
+        # writes one `<i>(tags, dict)</i>` per definition with Yomitan compactTags:
+        # a definition whose partOfSpeech set equals the previous one's in this
+        # dictionary drops its partOfSpeech tags (translator.js
+        # _flagRedundantDefinitionTags). The stored `tags` column unions
+        # definitionTags and termTags, and Yomitan never puts term tags in the
+        # glossary, so a tag on EVERY definition of a sequence group (term tags
+        # are, by construction) shows once, on the group's first definition.
+        sense_label: dict[str, str] = {}
+        last_pos: tuple[str, ...] | None = None
+        for group in capped_groups:
+            shared = set(sense_tags[group[0]]).intersection(*(sense_tags[c] for c in group[1:]))
+            for index, content in enumerate(group):
+                metas = sorted(
+                    (
+                        tag_meta[t]
+                        for t in sense_tags[content]
+                        if t in tag_meta and not _is_jmdict_sense_index_tag(tag_meta[t])
+                    ),
+                    key=lambda m: (m.ord, -m.score, m.name),
+                )
+                pos = tuple(sorted(m.name for m in metas if m.category == "partOfSpeech"))
+                drop_pos, last_pos = pos == last_pos, pos
+                names = [
+                    m.name
+                    for m in metas
+                    if not (drop_pos and m.category == "partOfSpeech") and (index == 0 or m.name not in shared)
+                ]
+                names += [t for t in sense_tags[content] if t not in tag_meta and (index == 0 or t not in shared)]
+                sense_label[content] = html.escape(", ".join(names), quote=True)
+
         # One sub-block per group: its own chips + italic tag line + gloss-list.
         blocks: list[str] = []
         for group in capped_groups:
@@ -565,7 +595,12 @@ class IndexedDictProvider:
                         group_tags_seen.add(tag)
                         group_tags.append(tag)
 
-            merged = "".join(group)
+            merged = "".join(
+                content.replace(
+                    '<li class="gloss-item"', f'<li class="gloss-item" data-am-tags="{sense_label[content]}"', 1
+                )
+                for content in group
+            )
             item_count = merged.count('<li class="gloss-item"')
 
             # Resolve first, then filter for display. Order is load-bearing: a
@@ -587,24 +622,10 @@ class IndexedDictProvider:
                 f'{chips}<i>({escaped_italic})</i><ul class="gloss-list" data-count="{item_count}">{merged}</ul>'
             )
 
-        # data-has-styles gates the base sheet's data-sc-* gap-fillers OFF for
-        # dictionaries that ship a usable styles.css (glossary.css keys every
-        # gap-filler on `li[data-dictionary]:not([data-has-styles])`), so the
-        # dictionary's own scoped CSS governs its structured content — Yomitan
-        # parity. Accepted limitations: (a) non-empty scoped CSS != complete
-        # coverage — a partially sanitized or partially authored styles.css
-        # still stamps, so any hook it doesn't style renders bare (Yomitan
-        # gives such a dict no fallback either); (b) a pathological title
-        # containing </>/control chars has those stripped from its CSS scope
-        # selector (pre-existing css_string_escape fail-safe), so its own
-        # styles.css never matches its markup — such an entry is stamped and
-        # renders fully unstyled, consistently between fresh render and
-        # restyle. Real titles never trip it.
-        stamp = ' data-has-styles=""' if self._scoped_css else ""
         return (
             '<div class="yomitan-glossary">'
             '<ol data-count="1">'
-            f'<li data-dictionary="{escaped_attr}" data-dictionary-id="{escaped_id}"{stamp}>'
+            f'<li data-dictionary="{escaped_attr}" data-dictionary-id="{escaped_id}">'
             f"{''.join(blocks)}"
             "</li>"
             "</ol>"
