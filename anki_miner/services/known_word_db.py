@@ -9,6 +9,7 @@ from contextlib import closing
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar
 
+from anki_miner.exceptions import AnkiConnectionError
 from anki_miner.utils.logging_ext import log_summary
 
 if TYPE_CHECKING:
@@ -664,4 +665,65 @@ def collect_known_forms(
                 known |= known_word_db.get_known_words()
             except (sqlite3.Error, OSError) as e:
                 logger.warning("Could not read known_words.db (%s); using Anki vocabulary only.", e)
+    return known
+
+
+def collect_knowledge_forms(
+    known_word_db: KnownWordDB | None,
+    config: "AnkiMinerConfig",
+    anki_vocabulary: set[str],
+    fetch_reviewed: Callable[[], set[str]],
+    *,
+    record_reviews: bool = False,
+) -> set[str]:
+    """Every form that counts as known when SCORING text (F-01, owner ruling R3).
+
+    Readability and the i+1 snapshot read this; mining exclusion and Deck
+    Filter keep :func:`collect_known_forms` over every card, so a word whose
+    card is still new is never mined twice. With Settings → Word Filters →
+    "Count a word as known only after its card has been reviewed" off, this IS
+    :func:`collect_known_forms`. On: the reviewed cards, the user list, and —
+    when ``use_known_words_db`` — the cached rows flagged reviewed (a reviewed
+    word whose card was later deleted stays known, as the cache promises).
+
+    Args:
+        known_word_db: The active language's known-words DB, or ``None``.
+        config: Supplies ``known_from_reviewed_cards`` and ``use_known_words_db``.
+        anki_vocabulary: Every card front in Anki, for the setting-off answer
+            and the fallback.
+        fetch_reviewed: ``AnkiService.get_reviewed_vocabulary``; called only
+            with the setting on.
+        record_reviews: Flag the reviewed forms in the DB first. The mining
+            path passes True; Readability writes nothing and leaves it False.
+    """
+    if not config.known_from_reviewed_cards:
+        return collect_known_forms(known_word_db, config, anki_vocabulary)
+    try:
+        reviewed = fetch_reviewed()
+    except AnkiConnectionError as e:
+        log_summary(
+            logger,
+            "Known from reviews unavailable",
+            level=logging.WARNING,
+            fallback="every_card",
+            exc_type=type(e).__name__,
+            error=str(e),
+        )
+        return collect_known_forms(known_word_db, config, anki_vocabulary)
+    known = set(reviewed)
+    if known_word_db is None or not known_word_db.is_available():
+        return known
+    try:
+        known |= known_word_db.get_words_by_source("user")
+    except (sqlite3.Error, OSError) as e:
+        logger.warning("Could not read the user ignore list from known_words.db (%s); proceeding without it.", e)
+    if config.use_known_words_db:
+        try:
+            if record_reviews:
+                known_word_db.mark_reviewed(reviewed)
+            known |= known_word_db.get_reviewed_words()
+        except (sqlite3.Error, OSError) as e:
+            logger.warning(
+                "Could not read reviewed words from known_words.db (%s); using Anki's reviewed cards only.", e
+            )
     return known
