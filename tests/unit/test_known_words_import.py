@@ -286,7 +286,16 @@ class TestEncodingAndSize:
 
 class TestContract:
     def test_format_keys_enumeration(self):
-        assert FORMAT_KEYS == ("jpdb", "migaku_json", "migaku_legacy", "ankimorphs", "migaku_csv", "generic")
+        assert FORMAT_KEYS == (
+            "jpdb",
+            "migaku_json",
+            "migaku_legacy",
+            "ankimorphs",
+            "migaku_csv",
+            "kindle_vocab",
+            "lute_csv",
+            "generic",
+        )
 
     def test_result_words_are_frozenset(self, tmp_path):
         result = parse_known_words_file(_write(tmp_path, "words.txt", "犬\n"))
