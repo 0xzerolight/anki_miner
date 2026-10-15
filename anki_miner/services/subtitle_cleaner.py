@@ -27,6 +27,7 @@ from __future__ import annotations
 import logging
 import re
 from bisect import bisect_left
+from collections import Counter
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -42,7 +43,9 @@ __all__ = [
     "clean_for_alignment",
     "clean_reference",
     "collapse_frame_bursts",
+    "drop_non_dialogue_events",
     "map_deltas_back",
+    "mining_events",
     "transcode_for_alignment",
 ]
 
@@ -384,6 +387,9 @@ _BURST_MIN_FRAMES = 3
 _BURST_FRAME_MS = 300
 #: ASS overrides that animate a line: transforms, karaoke timing, moves, fades.
 _ANIMATION_TAG_RE = re.compile(r"\\(?:t\(|[kK][fo]?\d|move\(|fade?\()")
+#: A line whose first override block puts it at a fixed place on screen: a
+#: typeset sign (SK-19), unless the file's main dialogue style carries it.
+_POSITIONED_START_RE = re.compile(r"^\{[^}]*\\(?:pos|move)\(")
 
 
 def _burst_key(event: pysubs2.SSAEvent) -> str:
@@ -446,3 +452,49 @@ def collapse_frame_bursts(events: Sequence[pysubs2.SSAEvent]) -> list[pysubs2.SS
         merged.end = run_ends[index]
         result.append(merged)
     return result
+
+
+def _main_styles(events: Sequence[pysubs2.SSAEvent]) -> frozenset[str]:
+    """The style (or tied styles) most cues use: the file's dialogue."""
+    counts = Counter(event.style for event in events)
+    if not counts:
+        return frozenset()
+    most = max(counts.values())
+    return frozenset(style for style, count in counts.items() if count == most)
+
+
+def drop_non_dialogue_events(events: Sequence[pysubs2.SSAEvent]) -> list[pysubs2.SSAEvent]:
+    """Drop song, sign and drawing cues (F-08 step 1, SK-19).
+
+    A drawing (``\\p1``…``\\p9``) goes in any style. Outside the file's main
+    style, a cue goes when its style name is a song/sign/credits name
+    (:data:`NON_DIALOGUE_STYLE_RE`, the retime path's vocabulary) or its text
+    opens with a ``\\pos``/``\\move`` placement. The main style is never
+    dropped by name, so a file whose dialogue style is called "Caption" keeps
+    its dialogue. An unstyled file (SRT, VTT: every cue "Default") is untouched.
+    """
+    main = _main_styles(events)
+    kept: list[pysubs2.SSAEvent] = []
+    for event in events:
+        text = event.text or ""
+        if ASS_DRAWING_RE.search(text):
+            continue
+        if event.style not in main and (
+            NON_DIALOGUE_STYLE_RE.search(event.style or "") or _POSITIONED_START_RE.match(text)
+        ):
+            continue
+        kept.append(event)
+    return kept
+
+
+def mining_events(events: Sequence[pysubs2.SSAEvent], *, skip_non_dialogue: bool) -> list[pysubs2.SSAEvent]:
+    """The cues mining, Condense and Readability read from a loaded file.
+
+    Comment events go, karaoke and animated-sign bursts collapse (MS-12, always),
+    and with *skip_non_dialogue* (``config.skip_opening_ending``, F-08) songs,
+    signs and drawings go too. The collapse runs first, so a karaoke opening's
+    hundreds of frames cannot make its style the file's main style.
+    """
+    spoken = [event for event in events if getattr(event, "is_comment", None) is not True]
+    collapsed = collapse_frame_bursts(spoken)
+    return drop_non_dialogue_events(collapsed) if skip_non_dialogue else collapsed

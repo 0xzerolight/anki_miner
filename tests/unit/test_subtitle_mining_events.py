@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pysubs2
 
-from anki_miner.services.subtitle_cleaner import collapse_frame_bursts
+from anki_miner.services.subtitle_cleaner import collapse_frame_bursts, drop_non_dialogue_events, mining_events
 
 
 def _ev(start: int, end: int, text: str, style: str = "Default", *, comment: bool = False) -> pysubs2.SSAEvent:
@@ -72,3 +72,80 @@ class TestCollapseFrameBursts:
         blanks = [_ev(0, 40, ""), _ev(40, 80, ""), _ev(80, 120, "")]
 
         assert len(collapse_frame_bursts(blanks)) == 3
+
+
+class TestDropNonDialogueEvents:
+    def test_song_and_sign_styles_go_and_dialogue_stays(self):
+        events = [
+            _ev(0, 1000, "Hello", "Default"),
+            _ev(1000, 2000, "Lyric", "OP"),
+            _ev(2000, 3000, "How are you", "Default"),
+            _ev(3000, 4000, "SHOP", "Signs"),
+            _ev(4000, 5000, "Fine", "Default"),
+            _ev(5000, 6000, "Lyric two", "ED - Romaji"),
+        ]
+
+        assert [event.plaintext for event in drop_non_dialogue_events(events)] == ["Hello", "How are you", "Fine"]
+
+    def test_the_files_main_style_is_kept_whatever_its_name(self):
+        events = [_ev(i * 1000, i * 1000 + 900, f"Line {i}", "Caption") for i in range(3)]
+        events.append(_ev(9000, 9500, "Lyric", "OP"))
+
+        assert [event.plaintext for event in drop_non_dialogue_events(events)] == ["Line 0", "Line 1", "Line 2"]
+
+    def test_a_positioned_line_outside_the_main_style_is_a_sign(self):
+        events = [
+            _ev(0, 1000, "Hello"),
+            _ev(1000, 2000, r"{\pos(320,50)}Hello up here"),
+            _ev(2000, 3000, "Bye"),
+            _ev(2000, 3000, r"{\an7\pos(10,10)}Ramen Shop", "TS"),
+            _ev(3000, 4000, r"{\move(0,0,100,100)}Train", "Overlay"),
+            _ev(4000, 5000, r"Top line{\pos(1,1)}", "Top"),
+        ]
+
+        assert [event.plaintext for event in drop_non_dialogue_events(events)] == [
+            "Hello",
+            "Hello up here",
+            "Bye",
+            "Top line",
+        ]
+
+    def test_a_drawing_goes_in_any_style(self):
+        events = [_ev(0, 1000, "Hello"), _ev(1000, 2000, r"{\p1}m 0 0 l 100 0 100 100{\p0}"), _ev(2000, 3000, "Bye")]
+
+        assert [event.plaintext for event in drop_non_dialogue_events(events)] == ["Hello", "Bye"]
+
+    def test_an_unstyled_file_is_untouched(self):
+        events = [_ev(0, 1000, "One"), _ev(1000, 2000, "Two")]
+
+        assert drop_non_dialogue_events(events) == events
+
+    def test_no_events(self):
+        assert drop_non_dialogue_events([]) == []
+
+
+class TestMiningEvents:
+    _DIALOGUE = [_ev(0, 1000, "One"), _ev(1000, 2000, "Two"), _ev(2000, 3000, "Three")]
+    # Twenty frames would outnumber the three dialogue lines if styles were
+    # counted before the collapse, and the karaoke style would pass as the main one.
+    _KARAOKE = [_ev(10_000 + 40 * i, 10_040 + 40 * i, rf"{{\k{i}}}La la", "Karaoke") for i in range(20)]
+
+    def test_switch_on_collapses_then_drops(self):
+        out = mining_events(self._DIALOGUE + self._KARAOKE, skip_non_dialogue=True)
+
+        assert [event.plaintext for event in out] == ["One", "Two", "Three"]
+
+    def test_switch_off_keeps_songs_but_still_collapses(self):
+        out = mining_events(self._DIALOGUE + self._KARAOKE, skip_non_dialogue=False)
+
+        assert [(event.start, event.end, event.plaintext) for event in out] == [
+            (0, 1000, "One"),
+            (1000, 2000, "Two"),
+            (2000, 3000, "Three"),
+            (10_000, 10_800, "La la"),
+        ]
+
+    def test_comments_never_come_through(self):
+        events = [_ev(0, 1000, "Note to the editor", comment=True), _ev(0, 1000, "Hi")]
+
+        assert [event.plaintext for event in mining_events(events, skip_non_dialogue=False)] == ["Hi"]
