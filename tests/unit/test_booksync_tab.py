@@ -242,3 +242,79 @@ def test_update_config_adopts_new_model(qtbot, tmp_path):
         tab.update_config(dataclasses.replace(config, asr_model="small"))
         assert tab._availability_worker.wait(3000)
     assert tab.config.asr_model == "small"
+
+
+# --- WP-27 shelf folders --------------------------------------------------------
+
+
+def _shelf(tmp_path: Path) -> Path:
+    shelf = tmp_path / "shelf"
+    for name, files in (
+        ("Vol 10", ("01.mp3",)),
+        ("Vol 2", ("02.mp3", "01.mp3", "notes.txt")),
+        ("Covers", ("front.jpg",)),
+        ("Vol 3", ("01.mp3",)),
+    ):
+        folder = shelf / name
+        folder.mkdir(parents=True)
+        for f in files:
+            (folder / f).write_bytes(b"x")
+        if name.startswith("Vol") and name != "Vol 3":
+            (folder / f"{name}.epub").write_bytes(b"PK")
+    return shelf
+
+
+def _start_folder_run(tab, qtbot, folder: Path, *, book: Path | None = None) -> None:
+    tab._on_folder_mode()
+    tab.folder_selector.set_path(str(folder))
+    if book is not None:
+        tab.book_selector.set_path(str(book))
+    with (
+        patch(_WORKER_CLS, _FakeWorker),
+        patch(_USABLE_MODEL, return_value=True),
+        patch(_ENGINE_AVAILABLE, return_value=True),
+    ):
+        tab._on_sync()
+        qtbot.waitUntil(
+            lambda: bool(_FakeWorker.instances) or tab.issue_banner().current_issue() is not None, timeout=3000
+        )
+
+
+def test_a_shelf_folder_queues_every_book_in_name_order_without_a_picked_book(qtbot, tmp_path):
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+
+    _start_folder_run(tab, qtbot, _shelf(tmp_path))
+
+    worker = _FakeWorker.instances[0]
+    books = worker.kwargs["books"]
+    assert [job.book.name for job in books] == ["Vol 2.epub", "Vol 10.epub"]
+    assert [p.name for p in books[0].audio_files] == ["01.mp3", "02.mp3"]
+    assert worker.kwargs["output_dir"] is None and worker.kwargs["overwrite"] is False
+    assert tab._item_total() == 3
+    log = tab.log_widget.text_edit.toPlainText()
+    assert "Covers" in log and "Vol 3" in log  # the folders that are not books are named
+
+
+def test_a_folder_of_audio_still_needs_the_picked_book(qtbot, tmp_path):
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    audio_dir, _book = _inputs(tmp_path, folder=True)
+
+    _start_folder_run(tab, qtbot, audio_dir)
+
+    assert _FakeWorker.instances == []
+    assert tab.issue_banner().current_issue() is not None
+    assert tab.sync_button.isEnabled()
+
+
+def test_a_folder_with_neither_audio_nor_books_says_why(qtbot, tmp_path):
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    empty = tmp_path / "empty"
+    (empty / "Covers").mkdir(parents=True)
+    (empty / "Covers" / "front.jpg").write_bytes(b"x")
+
+    _start_folder_run(tab, qtbot, empty)
+
+    issue = tab.issue_banner().current_issue()
+    assert _FakeWorker.instances == []
+    assert issue is not None and "Covers" in issue.details
+    assert tab.sync_button.isEnabled()
