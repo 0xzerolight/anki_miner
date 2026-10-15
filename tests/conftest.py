@@ -758,6 +758,12 @@ def test_config(temp_dir):
         # No subtitle cleanup, as the suite was written against (on by default since 2026-10).
         use_subtitle_regex_filter=False,
         subtitle_regex_filter="",
+        # The 2026-10-15 batch's fresh-install switches, off as the suite was written against.
+        # A test of the new behaviour turns its switch on with dataclasses.replace.
+        normalize_audio_loudness=False,
+        crop_manga_to_text=False,
+        pick_best_sentence=False,
+        skip_opening_ending=False,
     )
 
 

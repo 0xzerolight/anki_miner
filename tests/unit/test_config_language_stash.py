@@ -166,6 +166,12 @@ def test_pre_change_config_loads_every_field_unchanged(isolated_config_file):
         "auto_open_anki",
         "video_ocr_region",
         "video_ocr_models_root",
+        "known_from_reviewed_cards",
+        "sync_anki_after_run",
+        "normalize_audio_loudness",
+        "crop_manga_to_text",
+        "pick_best_sentence",
+        "skip_opening_ending",
     }
     assert loaded.script_variant == "" and loaded.reading_tone_color is False
 

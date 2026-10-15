@@ -268,6 +268,12 @@ class AnkiMinerConfig:
     # nothing. Portable, not language-scoped: one preference for every mining
     # language.
     auto_open_anki: bool = True
+    # AI-03: after a run that added at least one card, ask Anki to sync with
+    # AnkiWeb once (AnkiConnect `sync`). A failed sync is a log warning, never a
+    # failed run. Off by default, and off for a saved config that predates the
+    # field (the dataclass default already says so). Portable, not
+    # language-scoped.
+    sync_anki_after_run: bool = False
     anki_tags: str = "auto-mined"  # Whitespace-separated tags applied to every mined card; empty string means no tags
     # Deck names excluded from known-words detection (Issue #38). Notes in these
     # decks (and their subdecks) are dropped from the findNotes query, so their
@@ -281,6 +287,13 @@ class AnkiMinerConfig:
     # Audio extraction settings (Issue #18)
     audio_format: str = "mp3"  # "mp3" | "opus"
     audio_bitrate: int = 96  # kbps, mono clips; applies to both mp3 and opus
+    # F-02: loudness-normalise every sentence clip (single-pass loudnorm, plus a
+    # 30 ms fade in and out); Condense runs the same filter on its output. On for
+    # fresh installs. A saved config that predates the field loads it False
+    # (GUIConfigManager._migrate_dict, keep_legacy_feature_switches), so an
+    # existing user's clips stay byte-identical until they tick it. Portable,
+    # not language-scoped.
+    normalize_audio_loudness: bool = True
 
     # Audio Condenser settings. Persisted defaults for the Condense tab's inline
     # run options; the tab seeds its widgets from these on load and writes them
@@ -433,6 +446,11 @@ class AnkiMinerConfig:
     reading_tts_enabled: bool = False
     reading_tts_google_enabled: bool = True
     reading_tts_papago_enabled: bool = True
+    # F-11: crop a manga card's picture to the sentence's text blocks (their
+    # union, padded 1.5x, clamped to the page; the full page when the unit has no
+    # box). On for fresh installs. A saved config that predates the field loads
+    # it False (keep_legacy_feature_switches). Portable, not language-scoped.
+    crop_manga_to_text: bool = True
 
     # Pitch accent settings. Activation is resource-driven (see the pitch_active
     # property): the lookup runs iff at least one enabled source is in the
@@ -487,6 +505,12 @@ class AnkiMinerConfig:
     # Known word database
     known_words_db_path: Path = field(default_factory=lambda: ANKI_MINER_HOME / "known_words.db")
     use_known_words_db: bool = False
+    # F-01: when True, Readability and the i+1 filter count a word as known only
+    # once its Anki card has been reviewed at least once; mining exclusion and
+    # Deck Filter keep using every card. Off by default, and off for a saved
+    # config that predates the field (the dataclass default already says so).
+    # Portable, not language-scoped.
+    known_from_reviewed_cards: bool = False
     # When True (default), a word whose mined_form is written entirely in kana
     # also counts as known when its dictionary lemma is in the known set — so a
     # subtitle spelling うなずく doesn't re-mine an existing 頷く card. Kana-only
@@ -545,6 +569,12 @@ class AnkiMinerConfig:
     subtitle_regex_filter: str = DEFAULT_SUBTITLE_CLEANUP_PATTERN
     subtitle_regex_replacement: str = ""
     use_subtitle_regex_filter: bool = True
+    # F-08: drop the cues that fall inside an opening or ending (named by the
+    # video's chapter titles) before mining. On for fresh installs. A saved
+    # config that predates the field loads it False
+    # (keep_legacy_feature_switches). Portable, not language-scoped: the chapter
+    # names it matches are the same in every mining language.
+    skip_opening_ending: bool = True
 
     # Card formatting
     # When True, wrap the mined target word in <b>...</b> inside the
@@ -580,6 +610,12 @@ class AnkiMinerConfig:
     # with an obligatory overt subject opens nearly every line on a pronoun, so
     # the line's real vocabulary is what gets traded away.
     deduplicate_sentences: bool = False
+    # F-07: when a word occurs in several sentences, card the best-ranked one
+    # instead of the first. On for fresh installs. A saved config that predates
+    # the field loads it False (keep_legacy_feature_switches), so an existing
+    # user's cards keep their sentence until they tick it. Portable, not
+    # language-scoped.
+    pick_best_sentence: bool = True
 
     # i+1 sentence filtering. When True, only mine words that have at least
     # one example sentence containing exactly one unknown lemma.
