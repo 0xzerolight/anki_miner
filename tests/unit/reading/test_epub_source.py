@@ -1045,3 +1045,41 @@ def test_a_file_that_opens_with_a_title_page_section_keeps_its_chapter(tmp_path:
     doc = load(_ref(_build_epub(tmp_path, files)), rules=_ES_RULES)
 
     assert _texts(doc)[-1] == "El perro ladra."
+
+
+# --------------------------------------------------------------------------- #
+# Author furigana rides on its sentence (SK-31)
+# --------------------------------------------------------------------------- #
+
+
+def test_ruby_pairs_ride_on_the_sentence_that_holds_their_base(tmp_path: Path) -> None:
+    body = (
+        "<p><ruby>今日<rt>こんにち</rt></ruby>は良い天気だ。"
+        "<ruby>漢<rt>かん</rt>字<rt>じ</rt></ruby>を読む。</p>"
+        "<p><ruby>本<rp>(</rp><rt>ほん</rt><rp>)</rp></ruby>を買う。</p>"
+        "<p>次の文。</p>"
+    )
+    files = {
+        "OEBPS/content.opf": _opf([("c1", "ch1.xhtml", "application/xhtml+xml", "")], [("c1", None)]),
+        "OEBPS/ch1.xhtml": _xhtml(body),
+    }
+
+    doc = load(_ref(_build_epub(tmp_path, files)))
+
+    assert [(u.text, u.ruby) for u in doc.units] == [
+        ("今日は良い天気だ。", (("今日", "こんにち"),)),
+        ("漢字を読む。", (("漢字", "かんじ"),)),
+        ("本を買う。", (("本", "ほん"),)),
+        ("次の文。", ()),
+    ]
+
+
+def test_a_book_without_ruby_has_empty_hints(tmp_path: Path) -> None:
+    files = {
+        "OEBPS/content.opf": _opf([("c1", "ch1.xhtml", "application/xhtml+xml", "")], [("c1", None)]),
+        "OEBPS/ch1.xhtml": _xhtml("<p>El gato duerme. El perro come.</p>"),
+    }
+
+    doc = load(_ref(_build_epub(tmp_path, files)), rules=_ES_RULES)
+
+    assert [u.ruby for u in doc.units] == [(), ()]

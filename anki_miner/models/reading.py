@@ -56,6 +56,11 @@ class ReadingUnit:
     ``audio_ref`` and ``translation`` are set only by the Anki-deck loader
     (kind="deck"): the card's own sentence clip in Anki's ``collection.media``
     and its native-language line. Every other kind leaves them empty.
+
+    ``ruby`` is set only by the EPUB loader (SK-31): the ``(base, reading)``
+    pairs of the author's ``<ruby>`` furigana whose base occurs in this unit's
+    text, raw and language-neutral. The parser applies them only for a profile
+    that takes author ruby (``LanguageProfile.takes_author_ruby``).
     """
 
     text: str
@@ -65,6 +70,7 @@ class ReadingUnit:
     block_box: tuple[int, int, int, int] | None = None
     audio_ref: Path | None = None
     translation: str = ""
+    ruby: tuple[tuple[str, str], ...] = ()
 
 
 @dataclass(frozen=True)

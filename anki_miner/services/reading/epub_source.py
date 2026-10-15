@@ -20,6 +20,8 @@ walking the container/OPF ourselves). The flow mirrors the reader spec:
    spine document's own ``epub:type``; skipped only near either end of the book.
 6. Each spine XHTML → base text (ruby readings and ``<img>`` gaiji dropped),
    paragraph-split on block close / ``<br>`` → ``sentence_splitter`` → units.
+   Each ``<ruby>``'s (base, reading) pair rides on the unit whose sentence holds
+   the base (``ReadingUnit.ruby``, SK-31); the text itself never carries it.
 
 Loading decodes no image bytes and never materializes a page — the one disk
 touch beyond text is the bomb-safe cover peek. The single shared cover
@@ -327,11 +329,12 @@ def load(
             if in_zone and _is_matter_typed(body):
                 matter_skipped += 1
                 continue
-            paragraphs, gaiji = _walk_body(body, cancel_check=cancel_check, line_join=_line_join(rules))
+            ruby: list[list[tuple[str, str]]] = []
+            paragraphs, gaiji = _walk_body(body, cancel_check=cancel_check, line_join=_line_join(rules), ruby_out=ruby)
             gaiji_total += gaiji
             label = chapter_map.get(entry, f"ch.{content_i}")
             content_i += 1
-            for para in paragraphs:
+            for para, para_ruby in zip(paragraphs, ruby, strict=True):
                 raise_if_cancelled(cancel_check, READING_CANCELLED)
                 for sentence in split_sentences(para, rules=rules):
                     raise_if_cancelled(cancel_check, READING_CANCELLED)
@@ -341,6 +344,7 @@ def load(
                             index=index,
                             location_label=label,
                             image_ref=cover_ref,
+                            ruby=tuple(dict.fromkeys(pair for pair in para_ruby if pair[0] in sentence)),
                         )
                     )
                     index += 1
@@ -808,11 +812,43 @@ def _parse_content(raw: bytes):
     return body, _is_cover_typed(root, body)
 
 
+def _ruby_pair(ruby) -> tuple[str, str] | None:
+    """``(base, reading)`` of one ``<ruby>``: its base text and its ``<rt>`` text, both stripped.
+
+    Group ruby (``<ruby>漢字<rt>かんじ</rt></ruby>``) and per-character ruby
+    (``<ruby>漢<rt>かん</rt>字<rt>じ</rt></ruby>``) both give ``("漢字",
+    "かんじ")``; ``<rp>`` fallback parentheses are not part of either. Raw and
+    language-neutral: whether the reading is usable is the parser's call.
+    """
+    base: list[str] = []
+    reading: list[str] = []
+
+    def collect(node) -> None:
+        name = _local(node)
+        if name == "rt":
+            reading.append("".join(node.itertext()))
+            return
+        if not name or name in _SKIP_TAGS:
+            return
+        if node.text:
+            base.append(node.text)
+        for child in node:
+            collect(child)
+            if child.tail:
+                base.append(child.tail)
+
+    collect(ruby)
+    base_text = "".join(base).strip()
+    reading_text = "".join(reading).strip()
+    return (base_text, reading_text) if base_text and reading_text else None
+
+
 def _walk_body(
     body,
     *,
     cancel_check: _CancelCheck | None = None,
     line_join: str = "",
+    ruby_out: list[list[tuple[str, str]]] | None = None,
 ) -> tuple[list[str], int]:
     """Depth-first text walk → (paragraphs, gaiji-image count).
 
@@ -820,19 +856,25 @@ def _walk_body(
     contributes no text; a paragraph flushes on a block close or ``<br>``, then
     has its leading whitespace (incl. U+3000) stripped and empties dropped.
     ``line_join`` replaces each source line wrap inside a paragraph
-    (:func:`_line_join`).
+    (:func:`_line_join`). With ``ruby_out``, one list of :func:`_ruby_pair`
+    pairs is appended per kept paragraph, in step with the paragraphs (SK-31).
     """
     paragraphs: list[str] = []
     buf: list[str] = []
+    hints: list[tuple[str, str]] = []
     gaiji = 0
 
     def flush() -> None:
         if not buf:
+            hints.clear()
             return
         text = _INTERNAL_LINEBREAK.sub(line_join, "".join(buf)).lstrip()
         buf.clear()
         if text:
             paragraphs.append(text)
+            if ruby_out is not None:
+                ruby_out.append(list(hints))
+        hints.clear()
 
     def visit(el) -> None:
         nonlocal gaiji
@@ -846,6 +888,10 @@ def _walk_body(
         if name == "img":
             gaiji += 1
             return
+        if name == "ruby" and ruby_out is not None:
+            pair = _ruby_pair(el)
+            if pair is not None:
+                hints.append(pair)
         if el.text:
             buf.append(el.text)
         for child in el:
