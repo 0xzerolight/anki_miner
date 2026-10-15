@@ -47,7 +47,7 @@ import pysubs2
 from anki_miner.languages.registry import config_language, get_profile, subtitle_language
 from anki_miner.services.asr.srt_writer import segments_to_srt
 from anki_miner.services.audio_tagger import TaggingError, TrackMetadata, tag_audio_file
-from anki_miner.services.media_extractor import MediaExtractorService
+from anki_miner.services.media_extractor import LOUDNORM_FILTER, LOUDNORM_SAMPLE_RATE, MediaExtractorService
 from anki_miner.utils.atomic_io import atomic_write_path
 from anki_miner.utils.audio_track_detector import (
     get_media_duration_seconds,
@@ -610,6 +610,10 @@ class AudioCondenserService:
             )
 
         graph_text = build_aselect_graph(periods)
+        if self.config.normalize_audio_loudness:
+            # F-02 (R1): the card clips' single-pass target, after the select so
+            # it measures only the kept dialogue. One switch covers both.
+            graph_text = f"{graph_text},{LOUDNORM_FILTER}"
         graph_fd, graph_name = tempfile.mkstemp(
             suffix=".txt", prefix="condense_graph_", dir=str(self.config.media_temp_folder)
         )
@@ -656,6 +660,10 @@ class AudioCondenserService:
                         cmd += ["-ar", _MERGE_SAMPLE_RATE]
                         if not downmix:
                             cmd += ["-ac", _MERGE_CHANNELS]
+                    elif self.config.normalize_audio_loudness:
+                        # loudnorm resamples to 192 kHz; pin the rate back (a merge
+                        # run already pinned the same 48 kHz above).
+                        cmd += ["-ar", LOUDNORM_SAMPLE_RATE]
                     cmd.append(str(staged_audio))
 
                     total_ms = sum(end - start for start, end in periods)

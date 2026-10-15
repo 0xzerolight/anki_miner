@@ -515,6 +515,8 @@ def _make_config(tmp_path: Path) -> MagicMock:
     cfg.media_temp_folder = tmp_path
     cfg.ffmpeg_location = None
     cfg.ffprobe_location = None
+    # F-02: a MagicMock attribute is truthy; the suite was written before the switch.
+    cfg.normalize_audio_loudness = False
     return cfg
 
 
