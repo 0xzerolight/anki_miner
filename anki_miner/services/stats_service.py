@@ -162,6 +162,16 @@ class StatsService:
                 PRIMARY KEY (session_id, form)
             )
         """)
+        # AI-16, ruling C5: a run whose cards were deleted from Analytics keeps
+        # its row and totals, and this mark says so across restarts. ``cards``
+        # is how many of the run's recorded notes were gone from Anki once the
+        # delete finished (this delete's plus any deleted in Anki before).
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS session_deleted (
+                session_id INTEGER PRIMARY KEY,
+                cards INTEGER NOT NULL
+            )
+        """)
         self._migrate_language_column(conn)
 
     @staticmethod
@@ -267,15 +277,26 @@ class StatsService:
                 series_count=row["series_count"],
             )
 
-    def get_recent_sessions(self, limit: int = 20) -> list[MiningSession]:
-        """Get the most recent mining sessions, most recent first."""
+    def get_recent_sessions(self, limit: int | None = 20) -> list[MiningSession]:
+        """Get the most recent mining sessions, most recent first.
+
+        Args:
+            limit: Rows to return; ``None`` returns the whole history (ST-02).
+                Each row carries ``note_count``, how many note ids it kept,
+                and ``deleted_count``, its "cards deleted" mark (AI-16).
+        """
         if not self._initialized:
             return []
         with self._connect() as conn:
             rows = conn.execute(
-                """SELECT * FROM mining_sessions WHERE language = ?
-                   ORDER BY mined_at DESC LIMIT ?""",
-                (self._language, limit),
+                """SELECT s.*,
+                          (SELECT COUNT(*) FROM session_notes n WHERE n.session_id = s.id) AS note_count,
+                          COALESCE((SELECT d.cards FROM session_deleted d WHERE d.session_id = s.id), 0)
+                              AS deleted_count
+                   FROM mining_sessions s WHERE s.language = ?
+                   ORDER BY s.mined_at DESC LIMIT ?""",
+                # SQLite reads a negative LIMIT as "no limit".
+                (self._language, -1 if limit is None else limit),
             ).fetchall()
             return [self._row_to_session(row) for row in rows]
 
@@ -307,6 +328,28 @@ class StatsService:
                 )
             )
         return RunReceipt(session_id=session_id, language=str(row["language"]), note_ids=note_ids, mined_forms=forms)
+
+    def forget_run_notes(self, session_id: int) -> None:
+        """Drop run ``session_id``'s note ids and mined forms, and mark it deleted.
+
+        Called once its cards are gone from Anki, so the history row stops
+        offering actions it can no longer perform. The run's row and its
+        ``cards_created`` stay; ``session_deleted`` records how many recorded
+        notes went, so the row reads "cards deleted" after a restart too
+        (ruling C5). A run with no note ids gets no mark. One transaction.
+        """
+        if not self._ensure_loaded():
+            return
+        with self._connect() as conn:
+            cards = int(
+                conn.execute("SELECT COUNT(*) FROM session_notes WHERE session_id = ?", (session_id,)).fetchone()[0]
+            )
+            conn.execute("DELETE FROM session_notes WHERE session_id = ?", (session_id,))
+            conn.execute("DELETE FROM session_forms WHERE session_id = ?", (session_id,))
+            if cards:
+                conn.execute(
+                    "INSERT OR REPLACE INTO session_deleted (session_id, cards) VALUES (?, ?)", (session_id, cards)
+                )
 
     # === Feature 2: Difficulty Ranking ===
 
@@ -437,6 +480,13 @@ class StatsService:
         with self._connect() as conn:
             removed = conn.execute("SELECT COUNT(*) FROM mining_sessions WHERE language = ?", language).fetchone()[0]
             removed += conn.execute("SELECT COUNT(*) FROM series_difficulty WHERE language = ?", language).fetchone()[0]
+            # AI-16 lists and marks hang off the sessions being deleted; drop
+            # them first, while the language's session ids can still be selected.
+            for table in ("session_notes", "session_forms", "session_deleted"):
+                conn.execute(
+                    f"DELETE FROM {table} WHERE session_id IN (SELECT id FROM mining_sessions WHERE language = ?)",
+                    language,
+                )
             conn.execute("DELETE FROM mining_sessions WHERE language = ?", language)
             conn.execute("DELETE FROM series_difficulty WHERE language = ?", language)
         logger.info("Reset stats database for language %s, removed %d row(s)", self._language, removed)
@@ -444,6 +494,8 @@ class StatsService:
 
     @staticmethod
     def _row_to_session(row: sqlite3.Row) -> MiningSession:
+        # ``in row`` would test the values of a sqlite3.Row, not its columns.
+        columns = row.keys()
         return MiningSession(
             id=row["id"],
             series_name=row["series_name"],
@@ -453,4 +505,6 @@ class StatsService:
             cards_created=row["cards_created"],
             elapsed_time=row["elapsed_time"],
             mined_at=datetime.fromisoformat(row["mined_at"]),
+            note_count=int(row["note_count"]) if "note_count" in columns else 0,
+            deleted_count=int(row["deleted_count"]) if "deleted_count" in columns else 0,
         )
