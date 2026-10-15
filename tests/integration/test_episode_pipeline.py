@@ -49,6 +49,8 @@ class TestEpisodePipeline:
             media_temp_folder=tmp_path / "media",
             jmdict_path=tmp_path / "JMdict_e",
             max_parallel_workers=1,
+            # First-wins sentences, as these tests were written against (F-07 is on for fresh installs).
+            pick_best_sentence=False,
         )
 
     @staticmethod
@@ -351,6 +353,8 @@ class TestIPlusOneFilterIntegration:
             use_whitelist=False,
             use_known_words_db=False,
             deduplicate_sentences=False,
+            # The legacy first-wins pick the i+1 tests compare against (F-07 is on for fresh installs).
+            pick_best_sentence=False,
         )
 
     def _write_srt(self, path, lines):
@@ -524,3 +528,27 @@ class TestIPlusOneFilterIntegration:
         assert "珍しい" not in by_lemma_on
         assert "本" not in by_lemma_on
         assert by_lemma_on["言葉"].sentence == "言葉が好き"
+
+    def test_best_sentence_picks_the_line_with_fewer_unknowns(self, base_config, tmp_path):
+        """F-07 through the real parser with i+1 off: 難しい leaves its i+2 first line for L3."""
+        from dataclasses import replace
+
+        srt = tmp_path / "ep.srt"
+        self._write_srt(
+            srt,
+            [
+                (0.0, 1.0, "新しい単語が出た"),
+                (1.0, 2.0, "新しい難しい単語"),
+                (2.0, 3.0, "難しい言葉だ"),
+            ],
+        )
+        known = {"単語", "出る", "言葉"}
+
+        words = self._run_capture(replace(base_config, pick_best_sentence=True), srt, known)
+
+        by_lemma = {w.lemma: w for w in words}
+        assert set(by_lemma) == {"新しい", "難しい"}
+        assert by_lemma["新しい"].sentence == "新しい単語が出た"
+        assert by_lemma["難しい"].sentence == "難しい言葉だ"
+        assert by_lemma["難しい"].start_time == pytest.approx(2.0)
+        assert by_lemma["難しい"].end_time == pytest.approx(3.0)

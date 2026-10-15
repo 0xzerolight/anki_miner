@@ -7,6 +7,8 @@ import logging
 from dataclasses import replace
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from anki_miner.languages.registry import bound_mined_form, get_profile
 from anki_miner.languages.switching import switch_language
 from anki_miner.models import LineLemmas, NotMinedReason, TokenizedWord
@@ -215,3 +217,136 @@ def test_without_a_line_index_phase_two_keeps_first_wins(test_config):
 
     assert [word.mined_form for word in kept] == ["猫"]
     assert ctx.not_mined == {"犬": NotMinedReason.ONE_PER_SENTENCE}
+
+
+# --- F-07 in phase 2 ---------------------------------------------------------
+
+
+def test_best_sentence_builds_the_line_index_without_a_curator(test_config, mock_services, tmp_path):
+    config = replace(test_config, pick_best_sentence=True)
+    word = make_word("食べる")
+    parser = mock_services["subtitle_parser"]
+    parser.parse_subtitle_file_with_index.side_effect = lambda f, offset=None: ([word], [])
+    processor = build_processor(config, **mock_services)
+
+    with patch.object(EpisodeProcessor, "_phase2_filter", return_value=[]):
+        processor.process_episode(tmp_path / "ep.mkv", tmp_path / "ep.ass")
+
+    parser.parse_subtitle_file_with_index.assert_called_once_with(tmp_path / "ep.ass", None)
+    parser.parse_subtitle_file.assert_not_called()
+
+
+def test_reading_builds_the_line_index_for_best_sentence(test_config, mock_services):
+    config = replace(test_config, pick_best_sentence=True)
+    parser = mock_services["subtitle_parser"]
+    parser.parse_text_units.return_value = ([], None, collections.Counter())
+    processor = build_processor(config, **mock_services)
+
+    processor.process_reading(_document())
+
+    assert parser.parse_text_units.call_args.args[1] is True
+
+
+def test_phase_two_picks_the_clearest_line(test_config, caplog):
+    config = _config(test_config, pick_best_sentence=True)
+    crowded = _line("犬と鳥と魚がいる。", 0.0, "犬", "鳥", "魚")
+    clear = _line("犬がいる。", 10.0, "犬")
+    words = [_word(front, crowded.line_text, 0.0) for front in ("犬", "鳥", "魚")]
+    processor = _processor(config)
+
+    with caplog.at_level(logging.INFO, logger=_LOGGER):
+        kept, ctx = _phase2(processor, words, [crowded, clear])
+
+    assert [(word.mined_form, word.sentence) for word in kept] == [
+        ("犬", "犬がいる。"),
+        ("鳥", crowded.line_text),
+        ("魚", crowded.line_text),
+    ]
+    assert kept[0].start_time == pytest.approx(10.0)
+    assert kept[1] is words[1]
+    assert ctx.not_mined == {}
+    assert "Best sentence: moved=1 words=3" in caplog.text
+
+
+def test_best_sentence_off_keeps_the_first_line(test_config):
+    """A config saved before F-07 loads pick_best_sentence False (F0): phase 2 is unchanged."""
+    config = _config(test_config)
+    crowded = _line("犬と鳥と魚がいる。", 0.0, "犬", "鳥", "魚")
+    clear = _line("犬がいる。", 10.0, "犬")
+    words = [_word(front, crowded.line_text, 0.0) for front in ("犬", "鳥", "魚")]
+
+    kept, _ctx = _phase2(_processor(config), words, [crowded, clear])
+
+    assert kept == words
+    assert all(after is before for after, before in zip(kept, words, strict=True))
+
+
+def test_a_bypass_run_keeps_the_first_line(test_config):
+    """Deck Builder and the golden contract skip every coverage step, F-07 included."""
+    config = _config(test_config, pick_best_sentence=True, bypass_optional_filters=True)
+    crowded = _line("犬と鳥と魚がいる。", 0.0, "犬", "鳥", "魚")
+    clear = _line("犬がいる。", 10.0, "犬")
+    words = [_word(front, crowded.line_text, 0.0) for front in ("犬", "鳥", "魚")]
+
+    kept, _ctx = _phase2(_processor(config), words, [crowded, clear])
+
+    assert kept[0] is words[0]
+
+
+def test_best_sentence_runs_before_one_card_per_sentence(test_config):
+    """F-07 first: 猫 and 犬 leave the crowded line for clearer ones, so dedup drops nobody.
+
+    Dedup first would keep 猫 on the crowded line, move 犬 to the pair line and drop 鳥.
+    """
+    config = _config(test_config, pick_best_sentence=True, deduplicate_sentences=True)
+    crowded = _line("猫と犬と鳥がいる。", 0.0, "猫", "犬", "鳥")
+    pair = _line("猫と犬が遊ぶ。", 10.0, "猫", "犬")
+    single = _line("犬が走る。", 20.0, "犬")
+    words = [_word(front, crowded.line_text, 0.0) for front in ("猫", "犬", "鳥")]
+
+    kept, ctx = _phase2(_processor(config), words, [crowded, pair, single])
+
+    assert [(word.mined_form, word.sentence) for word in kept] == [
+        ("猫", pair.line_text),
+        ("犬", single.line_text),
+        ("鳥", crowded.line_text),
+    ]
+    assert ctx.not_mined == {}
+
+
+def test_after_i_plus_one_the_clearest_i_plus_one_line_wins(test_config):
+    """i+1 alone takes the earliest i+1 line; F-07 then prefers the one inside the length band."""
+    config = _config(test_config, pick_best_sentence=True, use_i_plus_one_filter=True)
+    terse = _line("犬だ。", 0.0, "犬")  # i+1 for 犬, 3 characters: outside the band
+    full = _line("公園で大きな犬が走っている。", 10.0, "犬")  # i+1 for 犬, 14 characters
+    crowded = _line("犬と鳥がいる公園の朝です。", 20.0, "犬", "鳥")  # two unknowns: i+1 for nobody
+    dog = _word("犬", terse.line_text, 0.0)
+    bird = _word("鳥", crowded.line_text, 20.0)
+
+    kept, _ctx = _phase2(_processor(config), [dog, bird], [terse, full, crowded])
+    plain, _ctx = _phase2(_processor(replace(config, pick_best_sentence=False)), [dog, bird], [terse, full, crowded])
+
+    assert [(word.mined_form, word.sentence) for word in kept] == [("犬", full.line_text)]
+    assert [(word.mined_form, word.sentence) for word in plain] == [("犬", terse.line_text)]
+
+
+@pytest.mark.parametrize(
+    ("language", "terse", "full", "front"),
+    [
+        # es spaces words: 3 words is under the 4-word floor, 12 words is inside the band.
+        # Counted in characters both would be inside the band and the shorter (terse) would win.
+        ("es", "el perro come", "mi perro grande y negro duerme todo el día en su sofá", "perro"),
+        # zh does not: 3 characters is under the 10-character floor, 16 is inside.
+        # Counted in whitespace words both lines are one word and the earlier (terse) would win.
+        ("zh", "我的狗", "我昨天在公园里看见了一只很大的狗", "狗"),
+    ],
+)
+def test_the_profile_decides_how_length_is_measured(test_config, language, terse, full, front):
+    """Review Focus 3: SentenceRules.space_aware comes from the run's own profile."""
+    config = _config(test_config, language, pick_best_sentence=True)
+    lines = [_line(terse, 0.0, front), _line(full, 10.0, front)]
+    word = _word(front, terse, 0.0, language=language)
+
+    kept, _ctx = _phase2(_processor(config, language), [word], lines)
+
+    assert [w.sentence for w in kept] == [full]

@@ -1017,13 +1017,14 @@ class EpisodeProcessor:
     def _wants_line_index(self) -> bool:
         """Whether phase 2 reads the per-line index even with no curator in the run.
 
-        i+1 picks each word's line from it, and one card per sentence moves a
-        word whose line is taken to another of its lines (F-06). Without the
-        index each falls back silently (i+1 would drop every word). A curator
-        asks for the index on its own (``want_line_index``).
+        i+1 picks each word's line from it, one card per sentence moves a word
+        whose line is taken to another of its lines (F-06), and the
+        best-sentence pick ranks a word's lines (F-07). Without the index each
+        falls back silently (i+1 would drop every word). A curator asks for the
+        index on its own (``want_line_index``).
         """
         config = self.config
-        return bool(config.use_i_plus_one_filter or config.deduplicate_sentences)
+        return bool(config.use_i_plus_one_filter or config.deduplicate_sentences or config.pick_best_sentence)
 
     def _phase1_parse(
         self,
@@ -1603,7 +1604,10 @@ class EpisodeProcessor:
         """Phase 2: run the coverage filters in order; return the words they keep.
 
         Frequency band, word lists, script type, name wordsets, the reading
-        occurrence floor, sentence dedup, i+1, then sentence length. Whitelist
+        occurrence floor, i+1, the best-sentence pick (F-07), sentence dedup,
+        then sentence length. Dedup and i+1 never both run, so their order is
+        free; the best-sentence pick sits after i+1 (it refines i+1's line) and
+        before dedup (which then sees the chosen lines). Whitelist
         force-included words never reach here. Fills each filter's reject
         counter.
         """
@@ -1749,6 +1753,54 @@ class EpisodeProcessor:
             _note_dropped(drops, NotMinedReason.OCCURRENCE, previous, unknown_words)
             counts.episode_rejects += before - len(unknown_words)
 
+        # i+1 sentence filtering. Restricts mining to words with an i+1 example
+        # sentence (exactly one unknown overall — checked against the pre-filter
+        # snapshot, Issue #74 — and that unknown must be mineable). Rescans
+        # lines and may swap the chosen sentence per word. Drops words with no
+        # i+1 coverage.
+        if self.config.use_i_plus_one_filter and not self.config.bypass_optional_filters:
+            before = len(unknown_words)
+            previous = unknown_words
+            unknown_words = self.word_filter.filter_i_plus_one(
+                unknown_words,
+                line_index or [],
+                all_unknown_lemmas=all_unknown_lemmas,
+                all_unknown_fronts=all_unknown_fronts,
+            )
+            _note_dropped(drops, NotMinedReason.I_PLUS_ONE, previous, unknown_words)
+            kept = len(unknown_words)
+            counts.i_plus_one_rejects = before - kept
+            pct = (kept / before * 100.0) if before else 0.0
+            self.presenter.show_info(
+                tr_format(
+                    QCoreApplication.translate("EpisodeProcessor", "i+1 filter: kept %1/%2 words (%3%)"),
+                    kept,
+                    before,
+                    f"{pct:.0f}",
+                )
+            )
+
+        # Best sentence (F-07, ruling R5). A word that appears on several lines
+        # moves to its clearest one: fewest unknown words, then a length inside
+        # the band, then the shorter, then the earlier line. After i+1, whose
+        # pick it refines among i+1 lines (every line holds the word itself, so
+        # the fewest unknowns there is 1); before dedup, which then sees the
+        # chosen lines. Lines over the length caps are never picked. Whether
+        # length counts words or characters is the profile's
+        # SentenceRules.space_aware.
+        if self.config.pick_best_sentence and line_index and not self.config.bypass_optional_filters:
+            previous = unknown_words
+            unknown_words = self.word_filter.pick_best_sentences(
+                unknown_words,
+                line_index,
+                all_unknown_lemmas,
+                all_unknown_fronts,
+                spaced=self.profile.sentence_rules.space_aware,
+                max_duration=self.config.max_sentence_duration_seconds,
+                max_chars=self.config.max_sentence_chars,
+            )
+            _log_sentence_moves("Best sentence", previous, unknown_words)
+
         # Sentence deduplication (one card per sentence). i+1 filter does its own
         # sentence picking; dedup would be a no-op (post-i+1 sentences are unique
         # by construction). With a line index, a word whose line an earlier word
@@ -1784,33 +1836,6 @@ class EpisodeProcessor:
                         deduped,
                     )
                 )
-
-        # i+1 sentence filtering. Restricts mining to words with an i+1 example
-        # sentence (exactly one unknown overall — checked against the pre-filter
-        # snapshot, Issue #74 — and that unknown must be mineable). Rescans
-        # lines and may swap the chosen sentence per word. Drops words with no
-        # i+1 coverage.
-        if self.config.use_i_plus_one_filter and not self.config.bypass_optional_filters:
-            before = len(unknown_words)
-            previous = unknown_words
-            unknown_words = self.word_filter.filter_i_plus_one(
-                unknown_words,
-                line_index or [],
-                all_unknown_lemmas=all_unknown_lemmas,
-                all_unknown_fronts=all_unknown_fronts,
-            )
-            _note_dropped(drops, NotMinedReason.I_PLUS_ONE, previous, unknown_words)
-            kept = len(unknown_words)
-            counts.i_plus_one_rejects = before - kept
-            pct = (kept / before * 100.0) if before else 0.0
-            self.presenter.show_info(
-                tr_format(
-                    QCoreApplication.translate("EpisodeProcessor", "i+1 filter: kept %1/%2 words (%3%)"),
-                    kept,
-                    before,
-                    f"{pct:.0f}",
-                )
-            )
 
         # Sentence length filter (Issue #33). Drops words whose FINAL example
         # sentence exceeds the configured audio-duration and/or character caps.
@@ -3800,8 +3825,8 @@ class EpisodeProcessor:
             # path splits this across caller (curation) and callee
             # (_wants_line_index); here we call parse_text_units directly, so a
             # Mine run whose phase 2 reads the index (i+1, one card per
-            # sentence) must set want_line_index itself — otherwise i+1 gets an
-            # empty index and silently drops every word.
+            # sentence, best sentence) must set want_line_index itself —
+            # otherwise i+1 gets an empty index and silently drops every word.
             want_line_index = self._wants_line_index() or curation_callback is not None
             self._announce_stage(
                 progress_callback,
