@@ -292,3 +292,37 @@ def test_generate_reports_no_speech_for_empty_transcript(tmp_path, monkeypatch):
     monkeypatch.setattr(la, "transcribe_media", lambda *a, **k: la.LongAudioResult(la.LongAudioStatus.OK, []))
     result = generate_subtitle_one(_make_config(tmp_path), _FakeExtractor(), tmp_path / "ep.mkv", tmp_path / "ep.srt")
     assert result.status is SubtitleGenStatus.NO_SPEECH
+
+
+# --- MS-21 sentence rules, F-12 shared transcript cache -----------------------
+
+
+@pytest.fixture
+def cache_dir(tmp_path, monkeypatch) -> Path:
+    from anki_miner.services.asr import transcript_cache
+
+    folder = tmp_path / "transcripts"
+    monkeypatch.setattr(transcript_cache, "cache_root", lambda: folder)
+    return folder
+
+
+def test_generate_asks_for_the_cache_and_the_mining_languages_sentence_rules(tmp_path, monkeypatch):
+    import dataclasses
+
+    import anki_miner.services.asr.long_audio as la
+    from anki_miner.languages.registry import get_profile
+
+    seen: dict = {}
+
+    def fake_transcribe_media(config, extractor, media_path, **kwargs):
+        seen.update(kwargs)
+        return la.LongAudioResult(la.LongAudioStatus.OK, list(_FAKE_SEGMENTS))
+
+    monkeypatch.setattr(la, "transcribe_media", fake_transcribe_media)
+    monkeypatch.setattr("anki_miner.services.asr.srt_writer.segments_to_srt", lambda segs, out: None)
+    config = dataclasses.replace(_make_config(tmp_path), language="es")
+
+    generate_subtitle_one(config, _FakeExtractor(), tmp_path / "ep.mkv", tmp_path / "ep.srt", language="es")
+
+    assert seen["use_cache"] is True
+    assert seen["sentence_rules"] is get_profile("es").sentence_rules
