@@ -29,12 +29,27 @@ def _db_with_user_words(tmp_path, user=("ラーメン", "カレー"), anki=("食
     return db
 
 
+def _shown(dlg) -> list[str]:
+    """The words the browser shows, top to bottom."""
+    return [row.lemma for row in dlg.visible_rows()]
+
+
+def _select(dlg, word: str) -> None:
+    """Select the browser row showing ``word``, and only it."""
+    proxy = dlg.word_table.model()
+    for row in range(proxy.rowCount()):
+        if proxy.index(row, 0).data() == word:
+            dlg.word_table.selectRow(row)
+            return
+    raise AssertionError(f"{word!r} is not shown")
+
+
 class TestPopulation:
     def test_lists_only_user_words_sorted(self, qtbot, tmp_path):
         db = _db_with_user_words(tmp_path)
         dlg = KnownWordsManagerDialog(db)
         qtbot.addWidget(dlg)
-        shown = [dlg.word_list.item(r).text() for r in range(dlg.word_list.count())]
+        shown = _shown(dlg)
         assert shown == sorted({"ラーメン", "カレー"})
 
     def test_count_label_splits_user_and_cached(self, qtbot, tmp_path):
@@ -78,13 +93,10 @@ class TestRemove:
         db = _db_with_user_words(tmp_path, user=("ラーメン", "カレー", "寿司"))
         dlg = KnownWordsManagerDialog(db)
         qtbot.addWidget(dlg)
-        # Select the row showing カレー.
-        for r in range(dlg.word_list.count()):
-            if dlg.word_list.item(r).text() == "カレー":
-                dlg.word_list.item(r).setSelected(True)
+        _select(dlg, "カレー")
         dlg._on_remove()
         assert db.get_words_by_source("user") == {"ラーメン", "寿司"}
-        shown = [dlg.word_list.item(r).text() for r in range(dlg.word_list.count())]
+        shown = _shown(dlg)
         assert "カレー" not in shown
 
     def test_remove_no_selection_is_noop(self, qtbot, tmp_path):
@@ -104,7 +116,7 @@ class TestReset:
         dlg._refresh()
         assert db.get_words_by_source("user") == set()
         assert db.get_known_words() == {"食べる"}
-        assert dlg.word_list.count() == 0
+        assert dlg.word_table.model().rowCount() == 0
 
 
 class TestSearch:
@@ -113,9 +125,7 @@ class TestSearch:
         dlg = KnownWordsManagerDialog(db)
         qtbot.addWidget(dlg)
         dlg.search_input.setText("カレー")
-        hidden = {dlg.word_list.item(r).text(): dlg.word_list.item(r).isHidden() for r in range(dlg.word_list.count())}
-        assert hidden["カレー"] is False
-        assert hidden["ラーメン"] is True
+        assert _shown(dlg) == ["カレー"]
 
 
 class TestExportDialogStartDir:
@@ -344,7 +354,7 @@ class TestImportSlot:
 
         assert message_boxes["questions"], "confirm dialog must be shown"
         assert db.get_words_by_source("user") == {"寿司", "天ぷら"}
-        shown = [dlg.word_list.item(r).text() for r in range(dlg.word_list.count())]
+        shown = _shown(dlg)
         assert sorted(shown) == sorted({"寿司", "天ぷら"})
         assert message_boxes["infos"], "success info must be shown"
         assert dlg.import_button.isEnabled() is True
@@ -480,21 +490,28 @@ class TestJapaneseTypeface:
     """
 
     def test_entries_use_the_japanese_face(self, qtbot, tmp_path):
+        from PyQt6.QtCore import Qt
+
         from anki_miner.gui.utils.fonts import resolved_families
 
         db = _db_with_user_words(tmp_path)
         dlg = KnownWordsManagerDialog(db)
         qtbot.addWidget(dlg)
-        assert dlg.word_list.count()
-        for row in range(dlg.word_list.count()):
-            assert dlg.word_list.item(row).font().family() == resolved_families().japanese
+        proxy = dlg.word_table.model()
+        assert proxy.rowCount()
+        for row in range(proxy.rowCount()):
+            font = proxy.index(row, 0).data(Qt.ItemDataRole.FontRole)
+            assert font.family() == resolved_families().japanese
 
     def test_entries_pin_no_size_into_the_row(self, qtbot, tmp_path):
+        from PyQt6.QtCore import Qt
+
         db = _db_with_user_words(tmp_path)
         dlg = KnownWordsManagerDialog(db)
         qtbot.addWidget(dlg)
-        for row in range(dlg.word_list.count()):
-            assert dlg.word_list.item(row).font().pixelSize() == -1
+        proxy = dlg.word_table.model()
+        for row in range(proxy.rowCount()):
+            assert proxy.index(row, 0).data(Qt.ItemDataRole.FontRole).pixelSize() == -1
 
 
 class TestContentStyleFollowsLanguage:
