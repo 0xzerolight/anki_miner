@@ -14,7 +14,6 @@ from anki_miner.services.dictionary.card_style_block import (
     base_css_variant,
     build_card_style_block,
     css_witnesses,
-    filter_dict_css_entries,
     split_group_regions,
 )
 from anki_miner.services.dictionary.card_style_presets import load_glossary_css
@@ -241,46 +240,6 @@ MINER_FIELD = (
     '<div class="yomitan-glossary"><ol data-count="1">'
     '<li data-dictionary="D" data-has-styles="">content</li></ol></div>'
 )
-
-
-class TestFilterDictCssEntries:
-    def test_same_title_new_dicts_stay_isolated_by_id(self):
-        field = MINER_FIELD.replace(
-            'data-dictionary="D"',
-            'data-dictionary="Same Title" data-dictionary-id="a-dict"',
-        )
-        entries = [
-            ("a-dict", "Same Title", ".a{color:red}"),
-            ("b-dict", "Same Title", ".b{color:blue}"),
-        ]
-
-        assert filter_dict_css_entries(field, entries) == ".a{color:red}"
-
-    def test_stable_id_matches_when_display_title_differs(self):
-        field = MINER_FIELD.replace(
-            'data-dictionary="D"',
-            'data-dictionary="Display Title" data-dictionary-id="stable-id"',
-        )
-        assert filter_dict_css_entries(field, [("stable-id", "Display Title", ".d{color:red}")]) == ".d{color:red}"
-
-    def test_keeps_only_dicts_present_in_field(self):
-        entries = [("d-id", "D", ".d{color:red}"), ("e-id", "E", ".e{color:blue}")]
-        assert filter_dict_css_entries(MINER_FIELD, entries) == ".d{color:red}"
-
-    def test_html_escaped_title_round_trips(self):
-        # The renderer writes the envelope attr with html.escape; the filter must
-        # recover the pre-escape title. css_string_escape matching would MISS
-        # this dict and silently drop its stylesheet — the forbidden outcome.
-        title = 'A&B "quoted"'
-        field = '<div class="yomitan-glossary"><ol data-count="1"><li data-dictionary="A&amp;B &quot;quoted&quot;">x</li></ol></div>'
-        assert filter_dict_css_entries(field, [("ab-id", title, ".ab{}")]) == ".ab{}"
-
-    def test_duplicate_display_names_both_kept(self):
-        entries = [("one-id", "D", ".one{}"), ("two-id", "D", ".two{}")]
-        assert filter_dict_css_entries(MINER_FIELD, entries) == ".one{}\n\n.two{}"
-
-    def test_no_match_yields_empty(self):
-        assert filter_dict_css_entries(MINER_FIELD, [("other-id", "Other", ".o{}")]) == ""
 
 
 class TestAttachCardStyleBlock:

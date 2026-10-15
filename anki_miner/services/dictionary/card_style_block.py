@@ -41,12 +41,12 @@ bundled read. The scoped per-dictionary CSS is gathered separately by
 
 from __future__ import annotations
 
-import html as html_lib
 import re
 from collections.abc import Iterable
 from functools import lru_cache
 
 from anki_miner.services.dictionary.card_style_presets import load_glossary_css
+from anki_miner.services.dictionary.dict_css_scope import filter_dict_css_entries
 
 # Conservative CSS minifier: strip /* */ comments, collapse all whitespace runs
 # to a single space, and tighten spacing around block/statement delimiters. It
@@ -308,35 +308,11 @@ def build_card_style_block(*, dict_css: str, card_html: str, direction: str = "l
     return f"<style>{body}</style>"
 
 
-# Dictionary envelopes in a field body, stamped or not (contrast
-# UNSTAMPED_ENVELOPE_RE, which is deliberately blind to stamped envelopes).
-# Restricting the probe to ``<li>`` avoids treating selectors in carried legacy
-# ``<style>`` blocks as card envelopes.
-_ENVELOPE_RE = re.compile(r'<li data-dictionary="([^"]*)"(?: data-dictionary-id="([^"]*)")?')
-
 # The miner-markup fingerprint a field must carry before any styling attaches.
 # Same probe the restyler uses to recognize miner fields; a field without it
 # has nothing our CSS could style, and attaching a block to empty content
 # would emit a field-LEADING <style> — the head-hoist hazard (module docstring).
 _MINER_MARKUP_TOKENS = ("yomitan-glossary", "data-count")
-
-
-def filter_dict_css_entries(field_html: str, entries: Iterable[tuple[str, str, str]]) -> str:
-    """Join the scoped CSS of exactly the dictionaries present in ``field_html``.
-
-    ``entries`` is ``collect_dictionary_css_entries`` output: ordered
-    ``(dict_id, display_name, scoped_css)`` triples, duplicates preserved. New
-    envelopes carrying ``data-dictionary-id`` match only by stable ID, preserving
-    same-title isolation. Legacy envelopes lacking that attribute match by their
-    ``html.unescape``d display title for back-compat.
-    """
-    envelopes = [
-        (html_lib.unescape(title), html_lib.unescape(dict_id) if dict_id else None)
-        for title, dict_id in _ENVELOPE_RE.findall(field_html)
-    ]
-    ids = {dict_id for _, dict_id in envelopes if dict_id is not None}
-    legacy_titles = {title for title, dict_id in envelopes if dict_id is None}
-    return "\n\n".join(css for dict_id, display_name, css in entries if dict_id in ids or display_name in legacy_titles)
 
 
 def attach_card_style_block(
