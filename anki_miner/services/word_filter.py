@@ -164,6 +164,19 @@ def _normalize_sentence(text: str) -> str:
     return " ".join(unicodedata.normalize("NFKC", text).split())
 
 
+def within_sentence_caps(duration: float, text: str, max_duration: float, max_chars: int) -> bool:
+    """Whether a sentence passes the Sentences page caps.
+
+    ``0`` (or ``0.0``) disables a cap; both caps are inclusive. The one copy of
+    the rule :meth:`WordFilterService.filter_by_sentence_length` applies, so a
+    sentence picker that moves a word to another of its lines (F-06, F-07)
+    never moves it onto a line the length filter would then drop.
+    """
+    if max_duration > 0.0 and duration > max_duration:
+        return False
+    return not (max_chars > 0 and len(text) > max_chars)
+
+
 def whitelisted_keys(front: str, lemma: str, word_list_service: WordListService) -> tuple[str, ...]:
     """The whitelist entries a word matches: its card front, then its lemma.
 
@@ -603,15 +616,7 @@ class WordFilterService:
             return words
 
         read = measure if measure is not None else (lambda word: (word.duration, word.sentence))
-        result = []
-        for word in words:
-            duration, sentence = read(word)
-            if max_duration > 0.0 and duration > max_duration:
-                continue
-            if max_chars > 0 and len(sentence) > max_chars:
-                continue
-            result.append(word)
-        return result
+        return [word for word in words if within_sentence_caps(*read(word), max_duration, max_chars)]
 
     def filter_i_plus_one(
         self,
@@ -974,6 +979,50 @@ class WordFilterService:
             line_expansion=(0, 0),
         )
 
+    @staticmethod
+    def _index_lines(
+        line_index: list[LineLemmas],
+    ) -> tuple[dict[str, list[tuple[int, LineLemmas]]], dict[str, list[tuple[int, LineLemmas]]]]:
+        """``(lines_by_front, lines_by_lemma)``: each line under every key it carries.
+
+        A parsed line (``front_spans`` set) is keyed by its card fronts; a
+        hand-built line without fronts by its lemmas. Each list holds
+        ``(position, line)`` in ``line_index`` order.
+        """
+        lines_by_front: dict[str, list[tuple[int, LineLemmas]]] = {}
+        lines_by_lemma: dict[str, list[tuple[int, LineLemmas]]] = {}
+        for position, line in enumerate(line_index):
+            if line.front_spans:
+                for front in line.fronts:
+                    lines_by_front.setdefault(front, []).append((position, line))
+            else:
+                for lemma in line.lemmas:
+                    lines_by_lemma.setdefault(lemma, []).append((position, line))
+        return lines_by_front, lines_by_lemma
+
+    def _compatible_lines(
+        self,
+        word: TokenizedWord,
+        lines_by_front: Mapping[str, list[tuple[int, LineLemmas]]],
+        lines_by_lemma: Mapping[str, list[tuple[int, LineLemmas]]],
+    ) -> list[tuple[int, LineLemmas]]:
+        """Every ``(position, line)`` that can carry ``word``'s card, in subtitle order.
+
+        A line holding the word's card front; on a hand-built line without
+        fronts, its lemma with a surface that keeps the card front
+        (:meth:`_line_preserves_mined_form`). A line holding only a UniDic
+        lemma-sibling (取る for 撮る) is never one. Shared by the curator's
+        sentence picker (:meth:`attach_sentence_candidates`), one card per
+        sentence (F-06) and the best-sentence pick (F-07), so all three agree
+        on where a word can go.
+        """
+        compatible = list(lines_by_front.get(word.mined_form, ())) + [
+            (position, line)
+            for position, line in lines_by_lemma.get(word.lemma, ())
+            if self._line_preserves_mined_form(word, line)
+        ]
+        return sorted(compatible, key=lambda entry: entry[0])
+
     def attach_sentence_candidates(
         self,
         words: list[TokenizedWord],
@@ -1003,23 +1052,9 @@ class WordFilterService:
         """
         if not line_index:
             return
-        lines_by_front: dict[str, list[tuple[int, LineLemmas]]] = {}
-        lines_by_lemma: dict[str, list[tuple[int, LineLemmas]]] = {}
-        for position, line in enumerate(line_index):
-            if line.front_spans:
-                for front in line.fronts:
-                    lines_by_front.setdefault(front, []).append((position, line))
-            else:
-                for lemma in line.lemmas:
-                    lines_by_lemma.setdefault(lemma, []).append((position, line))
-
+        lines_by_front, lines_by_lemma = self._index_lines(line_index)
         for word in words:
-            compatible = lines_by_front.get(word.mined_form, []) + [
-                (position, line)
-                for position, line in lines_by_lemma.get(word.lemma, ())
-                if self._line_preserves_mined_form(word, line)
-            ]
-            lines = [line for _, line in sorted(compatible, key=lambda entry: entry[0])]
+            lines = [line for _, line in self._compatible_lines(word, lines_by_front, lines_by_lemma)]
             if len(lines) < 2:
                 continue
             if max_candidates is not None:
