@@ -48,6 +48,7 @@ from anki_miner.languages.registry import config_language, get_profile, subtitle
 from anki_miner.services.asr.srt_writer import segments_to_srt
 from anki_miner.services.audio_tagger import TaggingError, TrackMetadata, tag_audio_file
 from anki_miner.services.media_extractor import MediaExtractorService
+from anki_miner.services.subtitle_cleaner import mining_events
 from anki_miner.utils.atomic_io import atomic_write_path
 from anki_miner.utils.audio_track_detector import (
     get_media_duration_seconds,
@@ -91,6 +92,7 @@ def load_subtitle_events(
     *,
     encodings: tuple[str, ...] | None = None,
     script_check: Callable[[str], bool] | None = None,
+    skip_non_dialogue: bool = False,
 ) -> list[Event]:
     """Load *path* into ``(start_ms, end_ms, text)`` tuples.
 
@@ -98,10 +100,14 @@ def load_subtitle_events(
     UTF-16/32 BOM when one is present, otherwise walks the *encodings* ladder
     (``cp932`` first — the dominant non-BOM non-UTF-8 input) and then, only if
     every leg fails to decode, a charset-normalizer-detected encoding, finally
-    re-raising the original UTF-8 error (D10). ``Comment`` events are skipped.
-    Times come straight from ``event.start`` / ``event.end`` (millisecond
-    ints); text is the raw cue text — markup stripping happens later in
-    :func:`filter_lines`.
+    re-raising the original UTF-8 error (D10). Times come straight from
+    ``event.start`` / ``event.end`` (millisecond ints); text is the raw cue
+    text — markup stripping happens later in :func:`filter_lines`.
+
+    The cues are the mining parser's (:func:`~anki_miner.services.subtitle_cleaner.mining_events`):
+    ``Comment`` events skipped, karaoke and animated-sign frame bursts collapsed
+    into one cue (MS-12), and with *skip_non_dialogue* (the F-08 switch) song,
+    sign and drawing cues dropped.
 
     *encodings* is the mining language's ladder (``None`` = the built-in
     Japanese one); a config-bearing caller passes
@@ -121,7 +127,8 @@ def load_subtitle_events(
         # Empty (or contentless) file — no cues to condense.
         return []
 
-    return [(event.start, event.end, event.text) for event in subs if not event.is_comment]
+    events = mining_events(subs.events, skip_non_dialogue=skip_non_dialogue)
+    return [(event.start, event.end, event.text) for event in events]
 
 
 # ---------------------------------------------------------------------------
@@ -1050,9 +1057,14 @@ def condense_one(
         assert sub_path is not None  # failure is None ⇒ a source was resolved
 
         profile = get_profile(config_language(config))
+        # The F-08 switch is shared with mining. Strict ``is True``: the tests
+        # drive this with a MagicMock config, whose auto-attribute must not
+        # switch it on.
+        skip_op_ed = config.skip_opening_ending is True
         events = load_subtitle_events(
             sub_path,
             encodings=profile.import_encodings,
+            skip_non_dialogue=skip_op_ed,
             **script_check_kwarg(profile.import_encodings, profile.script),
         )
         shifted = shift_events(events, offset_ms)
