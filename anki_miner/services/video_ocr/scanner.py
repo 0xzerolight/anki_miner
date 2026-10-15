@@ -16,7 +16,9 @@ import numpy as np
 from anki_miner.exceptions import OperationCancelled
 from anki_miner.languages.registry import config_language, get_profile
 from anki_miner.services.video_ocr import runtime
+from anki_miner.services.video_ocr.bitmap_source import BitmapSource, is_bitmap_file, open_bitmap_source
 from anki_miner.services.video_ocr.frame_source import FrameSourceError, Region, iter_samples
+from anki_miner.services.video_ocr.region import FULL_FRAME
 from anki_miner.services.video_ocr.segmenter import SAMPLE_FPS, segment
 from anki_miner.services.video_ocr.text_cleanup import keep_script_rows
 from anki_miner.utils.audio_track_detector import get_media_duration_seconds
@@ -81,14 +83,28 @@ def scan_video(
     progress_cb: Callable[[float, float | None], None] | None = None,
     cancel_event: threading.Event | None = None,
     reader: TextReader | None = None,
+    bitmap_track: int | None = None,
 ) -> VideoOcrResult:
     """Read ``region`` of ``video`` into ``out_srt``.
 
     ``EngineLoadError`` is the one error meant to stop a queue. Others (writing the .srt, a
     runtime failure mid-scan) propagate too, and the queue worker records them as that file's failure.
+
+    An image subtitle file (``.sup``, ``.idx``, ``.sub``), or ``bitmap_track`` (a video's
+    image subtitle track position), reads that track instead of the picture, over the
+    whole frame whatever ``region`` says (F-18). A track that cannot be opened is
+    ``DECODE_FAILED`` with the reason in ``detail``.
     """
     started = time.monotonic()
-    duration = get_media_duration_seconds(video, resolve_ffprobe(config))
+    bitmap: BitmapSource | None = None
+    if bitmap_track is not None or is_bitmap_file(video):
+        try:
+            bitmap = open_bitmap_source(config, video, bitmap_track)
+        except FrameSourceError as exc:
+            logger.warning("Video OCR: %s has no readable image subtitles: %s", video.name, exc)
+            return VideoOcrResult(VideoOcrStatus.DECODE_FAILED, detail=str(exc))
+        region = FULL_FRAME
+    duration = bitmap.end_seconds if bitmap is not None else get_media_duration_seconds(video, resolve_ffprobe(config))
     read = _script_filtered(config, _reader(config, reader))
 
     def _on_sample(t: float) -> None:
@@ -96,7 +112,7 @@ def scan_video(
             progress_cb(t, duration)
 
     try:
-        samples = iter_samples(config, video, region, fps=SAMPLE_FPS, cancel_event=cancel_event)
+        samples = iter_samples(config, video, region, fps=SAMPLE_FPS, cancel_event=cancel_event, bitmap=bitmap)
         cues = segment(samples, read, on_progress=_on_sample)
     except OperationCancelled:
         return VideoOcrResult(VideoOcrStatus.CANCELLED)
