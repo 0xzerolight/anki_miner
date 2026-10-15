@@ -127,7 +127,25 @@ class GUIConfigManager:
     # Version 4 flipped the (since-removed) native-file-dialogs setting on once;
     # that shim is gone along with the field, but the marker stays at 4 — no
     # migration currently gates on version 5.
+    #
+    # The 2026-10-15 feature batch's four fresh-install switches
+    # (_LEGACY_OFF_FIELDS) need no version bump either. Like hidden_utilities
+    # (D18), "key absent from a SAVED file" already means "written before the
+    # field existed", because every save writes every field. The rule that turns
+    # them off runs on the load path only (keep_legacy_feature_switches); the
+    # NOTE above about import_settings is why it is a load-only flag and not a
+    # shared "key missing -> False" rule.
     CONFIG_SCHEMA_VERSION = 4
+
+    # Fields the 2026-10-15 feature batch turns on for fresh installs only. A
+    # saved file without the key predates the field, i.e. an existing install,
+    # and loads it False (keep_legacy_feature_switches, LOAD path only).
+    _LEGACY_OFF_FIELDS: tuple[str, ...] = (
+        "normalize_audio_loudness",
+        "crop_manga_to_text",
+        "pick_best_sentence",
+        "skip_opening_ending",
+    )
 
     @classmethod
     def _changed_fields(cls, new: dict[str, Any]) -> list[str]:
@@ -354,6 +372,7 @@ class GUIConfigManager:
             disable_legacy_ytdlp_update=True,
             seed_first_run_flags=True,
             keep_legacy_utilities=True,
+            keep_legacy_feature_switches=True,
         )
         return AnkiMinerConfig(**cls._decode_field_types(migrated))
 
@@ -416,6 +435,7 @@ class GUIConfigManager:
         disable_legacy_ytdlp_update: bool = False,
         seed_first_run_flags: bool = False,
         keep_legacy_utilities: bool = False,
+        keep_legacy_feature_switches: bool = False,
     ) -> dict[str, Any]:
         """Run the full pre-construction migration pipeline on a raw JSON dict.
 
@@ -443,6 +463,10 @@ class GUIConfigManager:
             keep_legacy_utilities: When True (LOAD path only), an existing
                 config with no ``hidden_utilities`` key keeps every Utilities
                 tool, whatever the new-install default hides (D18).
+            keep_legacy_feature_switches: When True (LOAD path only), each
+                field in ``_LEGACY_OFF_FIELDS`` absent from an existing config
+                is set False, so an upgrade changes no mining output until the
+                user opts in. Import leaves absent keys at their current value.
         """
         # Which shims actually rewrote a value, for the `Config migrated`
         # receipt below: a file that loads "wrong" is usually a file a version
@@ -526,6 +550,15 @@ class GUIConfigManager:
         if keep_legacy_utilities and "hidden_utilities" not in config_dict:
             config_dict["hidden_utilities"] = []
             shims.append("keep_every_utility")
+
+        # 2026-10-15 batch: loudness, manga crop, best sentence and OP/ED skip
+        # are on for new installs only. A file with no key is an existing
+        # install and keeps today's behaviour; a file with the key keeps it.
+        if keep_legacy_feature_switches:
+            for key in cls._LEGACY_OFF_FIELDS:
+                if key not in config_dict:
+                    config_dict[key] = False
+                    shims.append(f"legacy_off_{key}")
 
         # Drop the three JSON-only marker keys — none is a dataclass field:
         #   config_schema_version (see CONFIG_SCHEMA_VERSION; a missing marker
