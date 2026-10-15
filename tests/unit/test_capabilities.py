@@ -326,7 +326,7 @@ def test_word_audio_entry_scopes_edge_tts_to_the_languages_that_offer_it() -> No
     with_edge = {code for code in AVAILABLE_LANGUAGES if get_profile(code).audio.edge_voice}
     cap = _entry("expression-audio")
 
-    assert with_edge == {"yue", "he", "fa", "sl"}
+    assert with_edge == set(AVAILABLE_LANGUAGES)  # CC-17; X rewrites the sentence below
     assert "Microsoft Edge text-to-speech (Cantonese, Hebrew, Persian, Slovenian)" in cap.description
     assert "edge tts" in cap.keywords
 

@@ -50,6 +50,7 @@ RU_AUDIO = AudioDefaults(
     papago_speaker=None,
     # Google TTS only: the Wiktionary/Lingua Libre kind is not built (DECIDED 1).
     default_chain=(AudioSourceEntry(kind="googletts"),),
+    edge_voice="ru-RU-SvetlanaNeural",
     candidates=spaced_audio_candidates,
     speakable=spaced_speakable,
 )

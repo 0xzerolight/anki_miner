@@ -71,6 +71,7 @@ RO_AUDIO = AudioDefaults(
     papago_speaker=None,
     # Lingua Libre leads once the wiktionary audio kind exists (Stage W); Google TTS until then.
     default_chain=(AudioSourceEntry(kind="googletts"),),
+    edge_voice="ro-RO-AlinaNeural",
     candidates=spaced_audio_candidates,
     speakable=spaced_speakable,
 )

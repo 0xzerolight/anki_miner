@@ -53,6 +53,7 @@ LT_AUDIO = AudioDefaults(
     papago_speaker=None,
     # Wiktionary native audio is Stage W (not built).
     default_chain=(AudioSourceEntry(kind="googletts"),),
+    edge_voice="lt-LT-OnaNeural",
     candidates=spaced_audio_candidates,
     speakable=spaced_speakable,
 )

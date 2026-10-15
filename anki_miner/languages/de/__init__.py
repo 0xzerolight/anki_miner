@@ -56,6 +56,7 @@ DE_AUDIO = AudioDefaults(
     custom_fetcher_language="de",
     papago_speaker=None,
     default_chain=(AudioSourceEntry(kind="googletts"),),
+    edge_voice="de-DE-KatjaNeural",
     candidates=spaced_audio_candidates,
     speakable=spaced_speakable,
 )

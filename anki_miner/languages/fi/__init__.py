@@ -42,6 +42,7 @@ FI_AUDIO = AudioDefaults(
     papago_speaker=None,
     # Wiktionary recordings (Fi-, LL-Q1412 (fin)-) lead once the wiktionary kind exists (Stage W); Google TTS until then.
     default_chain=(AudioSourceEntry(kind="googletts"),),
+    edge_voice="fi-FI-NooraNeural",
     candidates=spaced_audio_candidates,
     speakable=spaced_speakable,
 )

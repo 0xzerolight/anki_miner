@@ -51,6 +51,7 @@ PL_AUDIO = AudioDefaults(
     # Wiktionary/Lingua Libre (Pl-, LL-Q809 (pol)-) leads once the wiktionary kind exists (Stage W);
     # Google TTS until then.
     default_chain=(AudioSourceEntry(kind="googletts"),),
+    edge_voice="pl-PL-ZofiaNeural",
     candidates=spaced_audio_candidates,
     speakable=spaced_speakable,
 )

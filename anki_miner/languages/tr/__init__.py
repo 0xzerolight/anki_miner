@@ -40,6 +40,7 @@ TR_AUDIO = AudioDefaults(
     custom_fetcher_language="tr",
     papago_speaker=None,
     default_chain=(AudioSourceEntry(kind="googletts"),),
+    edge_voice="tr-TR-EmelNeural",
     candidates=spaced_audio_candidates,
     speakable=spaced_speakable,
 )

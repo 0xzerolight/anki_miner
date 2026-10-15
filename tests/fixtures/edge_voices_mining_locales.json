@@ -1,0 +1,27 @@
+{
+  "source": "Microsoft Edge read-aloud voice list (speech.platform.bing.com .../readaloud/voices/list, the token EDGE_CLIENT uses), fetched 2026-10-15: the ShortName of every voice in the 32 mining languages' locales.",
+  "short_names": [
+    "ar-SA-HamedNeural", "ar-SA-ZariyahNeural", "ca-ES-EnricNeural", "ca-ES-JoanaNeural", "da-DK-ChristelNeural",
+    "da-DK-JeppeNeural", "de-DE-AmalaNeural", "de-DE-ConradNeural", "de-DE-FlorianMultilingualNeural",
+    "de-DE-KatjaNeural", "de-DE-KillianNeural", "de-DE-SeraphinaMultilingualNeural", "el-GR-AthinaNeural",
+    "el-GR-NestorasNeural", "en-US-AnaNeural", "en-US-AndrewMultilingualNeural", "en-US-AndrewNeural",
+    "en-US-AriaNeural", "en-US-AvaMultilingualNeural", "en-US-AvaNeural", "en-US-BrianMultilingualNeural",
+    "en-US-BrianNeural", "en-US-ChristopherNeural", "en-US-EmmaMultilingualNeural", "en-US-EmmaNeural",
+    "en-US-EricNeural", "en-US-GuyNeural", "en-US-JennyNeural", "en-US-MichelleNeural", "en-US-RogerNeural",
+    "en-US-SteffanNeural", "es-ES-AlvaroNeural", "es-ES-ElviraNeural", "es-ES-XimenaNeural", "fa-IR-DilaraNeural",
+    "fa-IR-FaridNeural", "fi-FI-HarriNeural", "fi-FI-NooraNeural", "fr-FR-DeniseNeural", "fr-FR-EloiseNeural",
+    "fr-FR-HenriNeural", "fr-FR-RemyMultilingualNeural", "fr-FR-VivienneMultilingualNeural", "he-IL-AvriNeural",
+    "he-IL-HilaNeural", "hr-HR-GabrijelaNeural", "hr-HR-SreckoNeural", "hu-HU-NoemiNeural", "hu-HU-TamasNeural",
+    "id-ID-ArdiNeural", "id-ID-GadisNeural", "it-IT-DiegoNeural", "it-IT-ElsaNeural",
+    "it-IT-GiuseppeMultilingualNeural", "it-IT-IsabellaNeural", "ja-JP-KeitaNeural", "ja-JP-NanamiNeural",
+    "ko-KR-HyunsuMultilingualNeural", "ko-KR-InJoonNeural", "ko-KR-SunHiNeural", "lt-LT-LeonasNeural",
+    "lt-LT-OnaNeural", "nb-NO-FinnNeural", "nb-NO-PernilleNeural", "nl-NL-ColetteNeural", "nl-NL-FennaNeural",
+    "nl-NL-MaartenNeural", "pl-PL-MarekNeural", "pl-PL-ZofiaNeural", "pt-BR-AntonioNeural", "pt-BR-FranciscaNeural",
+    "pt-BR-ThalitaMultilingualNeural", "ro-RO-AlinaNeural", "ro-RO-EmilNeural", "ru-RU-DmitryNeural",
+    "ru-RU-SvetlanaNeural", "sl-SI-PetraNeural", "sl-SI-RokNeural", "sv-SE-MattiasNeural", "sv-SE-SofieNeural",
+    "th-TH-NiwatNeural", "th-TH-PremwadeeNeural", "tr-TR-AhmetNeural", "tr-TR-EmelNeural", "uk-UA-OstapNeural",
+    "uk-UA-PolinaNeural", "vi-VN-HoaiMyNeural", "vi-VN-NamMinhNeural", "zh-CN-XiaoxiaoNeural",
+    "zh-CN-XiaoyiNeural", "zh-CN-YunjianNeural", "zh-CN-YunxiNeural", "zh-CN-YunxiaNeural", "zh-CN-YunyangNeural",
+    "zh-HK-HiuGaaiNeural", "zh-HK-HiuMaanNeural", "zh-HK-WanLungNeural"
+  ]
+}

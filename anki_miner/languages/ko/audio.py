@@ -60,6 +60,7 @@ KO_AUDIO = AudioDefaults(
     custom_fetcher_language="ko",
     papago_speaker="kyuri",
     default_chain=(AudioSourceEntry(kind="googletts"),),
+    edge_voice="ko-KR-SunHiNeural",
     candidates=ko_audio_candidates,
     speakable=ko_speakable,
 )

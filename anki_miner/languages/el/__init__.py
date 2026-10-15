@@ -48,6 +48,7 @@ EL_AUDIO = AudioDefaults(
     papago_speaker=None,
     # Wiktionary native audio is Stage W (not built); for el it would near-always miss (LL ell = 0 files).
     default_chain=(AudioSourceEntry(kind="googletts"),),
+    edge_voice="el-GR-AthinaNeural",
     candidates=spaced_audio_candidates,
     speakable=spaced_speakable,
 )

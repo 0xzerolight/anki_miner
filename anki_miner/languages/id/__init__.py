@@ -49,6 +49,7 @@ ID_AUDIO = AudioDefaults(
     custom_fetcher_language="id",
     papago_speaker=None,
     default_chain=(AudioSourceEntry(kind="googletts"),),
+    edge_voice="id-ID-GadisNeural",
     candidates=spaced_audio_candidates,
     speakable=spaced_speakable,
 )

@@ -48,6 +48,7 @@ HU_AUDIO = AudioDefaults(
     custom_fetcher_language="hu",
     papago_speaker=None,
     default_chain=(AudioSourceEntry(kind="googletts"),),
+    edge_voice="hu-HU-NoemiNeural",
     candidates=spaced_audio_candidates,
     speakable=spaced_speakable,
 )

@@ -55,6 +55,7 @@ NB_AUDIO = AudioDefaults(
     custom_fetcher_language="nb",
     papago_speaker=None,
     default_chain=(AudioSourceEntry(kind="googletts"),),
+    edge_voice="nb-NO-PernilleNeural",
     candidates=spaced_audio_candidates,
     speakable=spaced_speakable,
 )

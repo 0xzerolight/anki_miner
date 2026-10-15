@@ -50,6 +50,7 @@ FR_AUDIO = AudioDefaults(
     custom_fetcher_language="fr",
     papago_speaker=None,
     default_chain=(AudioSourceEntry(kind="googletts"),),
+    edge_voice="fr-FR-DeniseNeural",
     candidates=spaced_audio_candidates,
     speakable=spaced_speakable,
 )

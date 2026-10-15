@@ -93,10 +93,10 @@ def tab(test_config: AnkiMinerConfig, qtbot):
 
 
 def test_settings_tells_the_panel_whether_the_language_has_an_edge_voice(tab, monkeypatch):
-    assert tab.audio_panel._edge_tts_available is False  # ja names no Edge voice
+    assert tab.audio_panel._edge_tts_available is True  # CC-17: ja names an Edge voice too
 
-    audio = dataclasses.replace(get_profile("ja").audio, edge_voice="zh-HK-HiuMaanNeural")
+    audio = dataclasses.replace(get_profile("ja").audio, edge_voice="")
     register_stub_profile(monkeypatch, "zh", audio=audio)
     tab.reload_from_config(dataclasses.replace(tab.config, language="zh"))
 
-    assert tab.audio_panel._edge_tts_available is True
+    assert tab.audio_panel._edge_tts_available is False

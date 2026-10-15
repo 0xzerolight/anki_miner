@@ -49,6 +49,7 @@ IT_AUDIO = AudioDefaults(
     custom_fetcher_language="it",
     papago_speaker=None,
     default_chain=(AudioSourceEntry(kind="googletts"),),
+    edge_voice="it-IT-ElsaNeural",
     candidates=spaced_audio_candidates,
     speakable=spaced_speakable,
 )

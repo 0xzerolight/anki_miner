@@ -57,6 +57,7 @@ AR_AUDIO = AudioDefaults(
     papago_speaker=None,
     # No Pod101 dictionary endpoint exists for Arabic; Wiktionary audio is Stage W (not built).
     default_chain=(AudioSourceEntry(kind="googletts"),),
+    edge_voice="ar-SA-ZariyahNeural",
     candidates=ar_audio_candidates,
     speakable=spaced_speakable,
 )
