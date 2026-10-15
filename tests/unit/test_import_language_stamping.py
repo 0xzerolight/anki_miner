@@ -157,7 +157,7 @@ def test_dictionary_add_passes_the_config_language(qapp, tmp_path, monkeypatch, 
     from anki_miner.gui.controllers.dictionary_import_flow import DictionaryImportFlow
 
     seen: dict = {}
-    _capture_factory(monkeypatch, ImportWorker, "for_yomitan", seen)
+    _capture_factory(monkeypatch, ImportWorker, "for_dictionary_file", seen)
     flow = DictionaryImportFlow(
         parent=None,
         panel=MagicMock(),
