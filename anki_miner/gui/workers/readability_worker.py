@@ -22,7 +22,7 @@ from anki_miner.gui.workers.file_queue_worker import FileQueueWorker
 from anki_miner.gui.workers.reading_queue_worker import load_reading_source
 from anki_miner.models.readability import ReadabilityStats
 from anki_miner.services.audio_fetch_common import close_all
-from anki_miner.services.known_word_db import collect_known_forms
+from anki_miner.services.known_word_db import collect_knowledge_forms
 from anki_miner.services.readability import combine, measure
 from anki_miner.services.reading import detector
 from anki_miner.services.reading.aozora_source import split_oversize
@@ -55,7 +55,7 @@ class ReadabilityWorker(FileQueueWorker):
             # Readability measures the text: a mining preference list must not
             # move its numbers, and the parser's whitelist rescue (R1) would.
             # use_known_words_db only gates create_services' initialize(), a
-            # write; collect_known_forms below reads the user's own setting.
+            # write; collect_knowledge_forms below reads the user's own setting.
             services = create_services(
                 replace(self._config, use_whitelist=False, use_known_words_db=False), shared_lookup=shared
             )
@@ -74,7 +74,16 @@ class ReadabilityWorker(FileQueueWorker):
                 self._fatal_error = True
                 self.error.emit(str(exc))
                 return
-            self._known = collect_known_forms(services.known_word_db, self._config, vocabulary)
+            # F-01: with Word Filters → "Count a word as known only after its
+            # card has been reviewed" on, known % counts reviewed cards only;
+            # a failed review query falls back to every card. Read-only: the
+            # reviewed flags in the cache are written by mining runs alone.
+            self._known = collect_knowledge_forms(
+                services.known_word_db,
+                self._config,
+                vocabulary,
+                services.anki_service.get_reviewed_vocabulary,
+            )
             self._services = services
             super()._process_queue()
         finally:
