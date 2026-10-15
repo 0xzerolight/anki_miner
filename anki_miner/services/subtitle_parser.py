@@ -57,6 +57,7 @@ from anki_miner.services.morphology import (
     resolve_attested_reading,
     resolve_reading_override,
 )
+from anki_miner.services.subtitle_cleaner import mining_events
 from anki_miner.services.tagger import get_shared_tagger
 from anki_miner.utils import (
     clean_subtitle_text,
@@ -114,6 +115,9 @@ PARSE_RELEVANT_CONFIG_FIELDS = (
     "use_whitelist",
     "whitelist_path",
     "bypass_optional_filters",
+    # Songs, signs and drawings leave the loaded events, so the cached line
+    # states differ with it (F-08).
+    "skip_opening_ending",
 )
 
 # Dictionary-attested compound matching (Yomitan longest-match principle):
@@ -1176,6 +1180,13 @@ class SubtitleParserService:
                 _log_decode(subtitle_file, bom="-", ladder=(), tried=("utf-8",), chosen="utf-8", level=logging.DEBUG)
             if subs.format == "sami":
                 _apply_sami_timing(subs)
+            if isinstance(subs, pysubs2.SSAFile):
+                # Karaoke bursts always collapse (MS-12); songs, signs and drawings
+                # go with the F-08 switch. Done in the loader, so mining, the line
+                # index, the curator's context lines, line expansion and
+                # Readability all read the same lines. A test's MagicMock stand-in
+                # for pysubs2.load is not an SSAFile and is left as it is.
+                subs.events = mining_events(subs.events, skip_non_dialogue=self.config.skip_opening_ending is True)
             return subs
         except FileNotFoundError as e:
             raise SubtitleParseError(f"Subtitle file not found: {subtitle_file}") from e
