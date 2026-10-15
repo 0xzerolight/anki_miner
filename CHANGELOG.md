@@ -7,6 +7,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [Unreleased]
 
 ### Added
+
+### Changed
+
+### Fixed
+
+### Removed
+
+## [3.9.0] - 2026-10-15
+
+Twenty-two new interface languages, readability for books and manga, and OCR in more languages. The interface now comes in every mining language, with Arabic, Persian and Hebrew laid out right to left. Utilities → Readability takes EPUB and .txt books and mokuro manga volumes besides subtitles, and Manga OCR and Video OCR read every mining language except Hebrew, Vietnamese and Cantonese. Card pictures stop at 720 pixels high, sentence audio is mono, and the Source field drops release groups and resolutions. New installs clean up Japanese, Chinese and Cantonese subtitles, bold the mined word, create cards in order of appearance and open Anki at startup; existing installs keep their settings. Some Japanese parsing changes alter card output: everyday words such as 魔王 are no longer treated as names, 思わず, 実は and about thirty similar words are mined whole, plain 知らせる is mined as itself, and 彼の方 joins only when the line reads it as one word. The video preview no longer covers its subtitle strip in a short window.
+
+### Added
 - **The interface comes in every mining language (Settings → General → Interface language).** Twenty-two new interface languages: Korean, Catalan, Dutch, Norwegian Bokmål, Romanian, Greek, Finnish, Hungarian, Croatian, Swedish, Polish, Lithuanian, Danish, Turkish, Arabic, Thai, Persian, Slovenian, Ukrainian, Hebrew, Cantonese (written Cantonese) and European Portuguese, each with a translated README. Arabic, Persian and Hebrew lay the whole window out right to left; mined text keeps its own direction, so a Japanese sentence in an Arabic interface still reads left to right, and the video timeline always runs left to right.
 - **Check how much of a book or manga you can read (Utilities → Readability).** Besides subtitles, the readability report takes an EPUB or .txt book and a mokuro manga volume (.mokuro, or a .cbz/.zip with its OCR data), or a folder of them. It shows the share of words you know, how many new words there are, and the share of sentences or text bubbles with no new word or one, per book or volume and in total. In a folder, a .zip without OCR data is left out, and so is a .txt beside subtitles.
 - **Manga OCR and Video OCR read every mining language except Hebrew, Vietnamese and Cantonese (Utilities → Manga OCR, Video OCR).** No free recogniser reads those three well enough. Japanese keeps its own OCR engines. Other languages download a small text-recognition model from the tool's setup card on first use, and Manga OCR adds onnxruntime to its mokuro install.
@@ -32,8 +44,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Meanings no longer run together on Senren cards ("to waveto shaketo swing").** The card's stylesheet removed the note type's " | " between meanings but could lose the fight to keep them one per line, so a note type that lays them out in a row, such as Senren for Jitendex, showed them with nothing in between. Each meaning now keeps its own line. Existing cards pick this up with Utilities → Card Backfill → Restyle cards…
 - **A one-file Utilities run shows how far through the file it is.** Video OCR, Generate, Audiobook Sync, Condense, Manga OCR and Tracks used to read 0% in the status bar and on the pinned bar until the file was done, because the bar counted finished files. A two-hour video therefore looked stuck for the whole scan. They now show the file's measured position. A run of several files still counts finished files.
 - **Video OCR keeps a line with an ellipsis as one subtitle.** On some frames the OCR engine read an extra dot after "…", so one line on screen, such as おお…客人たちよ, became several subtitles that differed only in that dot. The extra dot is now dropped. Run Video OCR again to rebuild a .srt made before the fix.
-
-### Removed
 
 ## [3.8.0] - 2026-10-10
 
