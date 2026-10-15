@@ -65,14 +65,10 @@ AGENTS.md
 resources/
 debug/
 gifs/gif-tools
-# ...but keep the bundled card stylesheet, which lives in a package directory
-# named "resources" (Issue #44). Negate the dir + just its tracked file types,
-# so the broad rule above doesn't drop it (and __pycache__ stays ignored).
-!anki_miner/services/dictionary/resources/
-!anki_miner/services/dictionary/resources/__init__.py
-!anki_miner/services/dictionary/resources/*.css
-# Same for the GUI theme JSONs (Issue #27 family, #48 Dracula). Climb each
-# parent dir the broad resources/ rule excludes so themes/*.json can be tracked.
+# ...but keep the GUI theme JSONs (Issue #27 family, #48 Dracula), which live in
+# a package directory named "resources". Climb each parent dir the broad
+# resources/ rule excludes so themes/*.json can be tracked (and __pycache__ stays
+# ignored).
 !anki_miner/gui/resources/
 !anki_miner/gui/resources/styles/
 !anki_miner/gui/resources/styles/themes/

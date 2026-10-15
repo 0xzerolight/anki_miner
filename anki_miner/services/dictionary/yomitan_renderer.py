@@ -269,7 +269,8 @@ def _img_presentation_attrs(node: dict[str, YomitanNode], *, bg_suppressed: bool
 
     Ported from Yomitan's `createDefinitionImage` dataset stamping
     (ext/js/display/structured-content-generator.js, upstream e2ed450). These
-    drive the monochrome-recolor and pixelated CSS hooks in glossary.css:
+    drive the monochrome-recolor and pixelated rules that the export pass inlines
+    from Yomitan's structured-content-style.json (anki_export):
       - data-appearance: verbatim `appearance` (e.g. 'monochrome'), else 'auto'.
       - data-image-rendering: verbatim `imageRendering`, else 'pixelated' when
         the `pixelated` bool is true, else 'auto'.
@@ -283,8 +284,8 @@ def _img_presentation_attrs(node: dict[str, YomitanNode], *, bg_suppressed: bool
 
     `bg_suppressed` means `_render_img` did not emit the `.gloss-image-background`
     recolor layer (its `--image` url would be CSS-unsafe). A `monochrome`
-    appearance zeroes the real `<img>`'s opacity in glossary.css on the assumption
-    that mask layer is behind it; with no mask, the image would vanish entirely.
+    appearance zeroes the real `<img>`'s opacity (Yomitan's inlined rule) on the
+    assumption that mask layer is behind it; with no mask, the image would vanish entirely.
     So when the layer is suppressed we downgrade the effective appearance to
     'auto' — the two must be computed together to keep the image visible.
     """
@@ -674,7 +675,7 @@ def _render_img(
     raw_path = node.get("path")
     data_path = escape(raw_path, quote=True) if isinstance(raw_path, str) else ""
     src_attr = escape(img_src, quote=True)
-    # Sibling recolor layer for monochrome art: glossary.css masks currentColor
+    # Sibling recolor layer for monochrome art: Yomitan's inlined rule masks currentColor
     # through the image alpha via the `--image` custom property, making black-
     # stroke accent SVGs visible on dark note types. Suppressed when the src could
     # break out of the url("…") we embed in the style attr (see _CSS_URL_UNSAFE_RE).
@@ -827,12 +828,12 @@ def render_glossary_entry(
         inner = members[0]
     else:
         nested = "".join(f'<li class="gloss-sc-li">{member}</li>' for member in members)
-        # `list-style-type: circle` inline, not via glossary.css: it mirrors both
-        # Yomitan's own `.gloss-list` (ext/css/display.css) and the inline style
-        # the structured-content path already carries for the same role, so a
+        # `list-style-type: circle` inline: it mirrors both Yomitan's own
+        # `.gloss-list` (ext/css/display.css) and the inline style the
+        # structured-content path already carries for the same role, so a
         # synthesized members list and a source-authored one look identical on one
-        # card. Inline also survives a dictionary that ships its own styles.css
-        # (those stamp `data-has-styles`, which gates every glossary.css rule off).
+        # card. anki_export recognises this exact list and unwraps it into
+        # Yomitan's `<ul><li>` members.
         inner = f'<ul class="gloss-sc-ul" style="list-style-type: circle">{nested}</ul>'
 
     item_attrs = 'class="gloss-item"'

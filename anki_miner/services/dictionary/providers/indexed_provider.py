@@ -116,8 +116,8 @@ class IndexedDictProvider:
         # This dictionary's own styles.css, scoped to its glossary markup
         # (Issue #87), as a bare CSS string (no <style> wrapper). Empty unless
         # the dict shipped a styles.css that survived scoping; computed in
-        # load(). Gathered by DefinitionService.css_entries() and attached per field by
-        # dict_css_scope.attach_dict_css.
+        # load(). Gathered by DefinitionService.css_entries() and attached per
+        # field by dict_css_scope.attach_dict_css.
         self._scoped_css = ""
 
     @property
@@ -129,8 +129,9 @@ class IndexedDictProvider:
         """This dictionary's scoped styles.css (bare CSS, no <style> wrapper).
 
         Empty for JMdict and dicts imported before styles.css capture.
-        Concatenated by ``collect_dictionary_css`` into each card's per-card
-        ``<style>`` block; only valid after a successful ``load()``.
+        Attached to each card field that carries this dictionary
+        (``dict_css_scope.attach_dict_css``); only valid after a successful
+        ``load()``.
         """
         return self._scoped_css
 
@@ -196,9 +197,10 @@ class IndexedDictProvider:
                     return False
 
             # Scope the dict's own styles.css (Issue #87) once. Stored bare (no
-            # <style> wrapper) and exposed via `dictionary_css`; collect_dictionary_css
-            # concatenates it into each card's per-card <style> block. Absent for
-            # JMdict and for dicts imported before styles.css capture.
+            # <style> wrapper) and exposed via `dictionary_css`, which
+            # dict_css_scope.attach_dict_css appends to each card field carrying
+            # this dictionary. Absent for JMdict and for dicts imported before
+            # styles.css capture.
             self._scoped_css = scope_dict_css(meta.get("styles_css", ""), self.dict_id, self._display_name)
             return True
 

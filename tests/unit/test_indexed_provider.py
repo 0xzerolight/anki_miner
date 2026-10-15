@@ -945,9 +945,9 @@ class TestIndexedDictProviderDatabaseErrorGuard:
 class TestDictionaryCss:
     """Per-dictionary styles.css exposed (scoped) via ``dictionary_css``.
 
-    The scoped CSS is folded into the shared note-type managed block by
-    ``collect_dictionary_css`` — it is NOT injected per card. ``_render`` must
-    never emit a ``<style>`` block.
+    The scoped CSS is attached per card field by
+    ``dict_css_scope.attach_dict_css``, never by ``_render``, which must never
+    emit a ``<style>`` block.
     """
 
     def _seed(self, db_path: Path, *, styles_css: str | None) -> None:

@@ -601,12 +601,6 @@ a = Analysis(  # noqa: F821 - injected into the spec namespace by PyInstaller
             os.path.join(project_root, "anki_miner", "gui", "resources"),
             os.path.join("anki_miner", "gui", "resources"),
         ),
-        # Bundled dictionary card stylesheet (Issue #44) — loaded at runtime via
-        # importlib.resources, so it must land at the same package path.
-        (
-            os.path.join(project_root, "anki_miner", "services", "dictionary", "resources"),
-            os.path.join("anki_miner", "services", "dictionary", "resources"),
-        ),
         # Bundled name wordsets (Issue #59) — loaded at runtime via
         # importlib.resources, so they must land at the same package path.
         (

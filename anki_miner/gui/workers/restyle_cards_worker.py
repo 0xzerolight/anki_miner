@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 class RestyleCardsWorker(CancellableWorker):
     """Runs ``restyle_mined_cards`` off the GUI thread.
 
-    The AnkiConnect reads/writes plus ``collect_dictionary_css``'s SQLite I/O all
+    The AnkiConnect reads/writes plus ``collect_dictionary_css_entries``' SQLite I/O all
     happen here. Cancellation is honored between note chunks (committed chunks
     stay written; a re-run resumes since the write is idempotent).
     """

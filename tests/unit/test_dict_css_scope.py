@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import time
 from html.parser import HTMLParser
+from pathlib import Path
 
 from anki_miner.services.dictionary.dict_css_scope import (
     attach_dict_css,
@@ -332,3 +333,25 @@ class TestAttachDictCss:
     def test_field_without_internal_markup_is_untouched(self):
         for value in ("", "plain text", _YOMITAN):
             assert attach_dict_css(value, dict_css_entries=_ENTRIES) == value
+
+
+class TestNoNoteTypeCssWrite:
+    """The whole point of the self-contained model: Anki Miner never writes note-type CSS."""
+
+    def test_ankiservice_has_no_model_styling_methods(self):
+        from anki_miner.services.anki_service import AnkiService
+
+        assert not hasattr(AnkiService, "get_model_styling")
+        assert not hasattr(AnkiService, "update_model_styling")
+
+    def test_no_updatemodelstyling_anywhere_in_production_source(self):
+        import anki_miner
+
+        root = Path(anki_miner.__file__).parent
+        offenders = [
+            str(p.relative_to(root))
+            for p in root.rglob("*.py")
+            if "updateModelStyling" in p.read_text(encoding="utf-8")
+            or "update_model_styling" in p.read_text(encoding="utf-8")
+        ]
+        assert offenders == [], f"note-type CSS write path resurfaced in {offenders}"

@@ -1,8 +1,8 @@
 """Assert built wheel ships every bundled resource file on disk.
 
-Fails CI if an asset type (e.g. new JSON theme, icon format, dictionary card-style
-preset) lands on disk but is missing from the wheel. Also verifies the PyInstaller
-spec references the same resource roots, so both build paths share one source of truth.
+Fails CI if an asset type (e.g. new JSON theme, icon format, wordset) lands on disk
+but is missing from the wheel. Also verifies the PyInstaller spec references the
+same resource roots, so both build paths share one source of truth.
 
 Run after ``python -m build --wheel``.
 """
@@ -19,13 +19,11 @@ from packaging.requirements import Requirement
 from packaging.utils import canonicalize_name
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-# Every package resource tree that must ship intact in the wheel. The dictionary
-# resources hold the universal glossary stylesheet (glossary.css) loaded at
-# runtime via importlib.resources; a dropped/mistyped package-data glob would
-# ship a broken install while CI stayed green, which this gate prevents.
+# Every package resource tree that must ship intact in the wheel. A
+# dropped/mistyped package-data glob would ship a broken install while CI stayed
+# green, which this gate prevents.
 RESOURCE_DIRS = [
     REPO_ROOT / "anki_miner" / "gui" / "resources",
-    REPO_ROOT / "anki_miner" / "services" / "dictionary" / "resources",
     REPO_ROOT / "anki_miner" / "resources",
 ]
 SPEC_FILE = REPO_ROOT / "anki_miner.spec"
@@ -137,7 +135,6 @@ def check_spec_references_resources() -> None:
     text = SPEC_FILE.read_text(encoding="utf-8")
     expected = [
         '"anki_miner", "gui", "resources"',
-        '"anki_miner", "services", "dictionary", "resources"',
         '"anki_miner", "resources"',
         '"anki_miner", "languages", "fa", "data"',
         '"licenses", "local-audio-yomichan"',
