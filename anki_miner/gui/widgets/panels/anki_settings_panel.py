@@ -363,6 +363,17 @@ class AnkiSettingsPanel(FormPanel):
             helper=self.tr("Space-separated tags applied to every mined card. Leave blank for no tags."),
         )
 
+        # F-03: the tokens live in this field; one line says so (no setting).
+        self.anki_tags_helper = QLabel(
+            self.tr(
+                "{series}, {episode} and {volume} become each card's show, episode or book volume, "
+                "for example mined::{series}::{episode}."
+            )
+        )
+        self.anki_tags_helper.setObjectName("helper-text")
+        self.anki_tags_helper.setWordWrap(True)
+        self.add_widget(self.anki_tags_helper)
+
         # One connection row (C03). Refresh replaces Test Connection and the two
         # list Refresh buttons: it re-tests AnkiConnect and reloads both lists,
         # which is what a user who has just started Anki wants either way.
