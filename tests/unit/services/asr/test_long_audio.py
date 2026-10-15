@@ -413,3 +413,33 @@ def test_an_empty_or_cancelled_transcript_is_not_saved(tmp_path, monkeypatch, ca
     )
     assert cancelled.status is LongAudioStatus.CANCELLED
     assert not cache_dir.exists() or list(cache_dir.iterdir()) == []
+
+
+# --- MS-21 sentence rules ---
+
+
+def test_sentence_rules_reach_the_transcriber_only_when_given(tmp_path, monkeypatch):
+    import anki_miner.services.asr.transcriber as t
+    from anki_miner.languages.registry import get_profile
+
+    seen: list[dict] = []
+
+    def fake(audio, **kwargs):
+        seen.append(kwargs)
+        return [(0.0, 1.0, "a")]
+
+    monkeypatch.setattr(t, "transcribe", fake)
+    rules = get_profile("es").sentence_rules
+    transcribe_media(
+        _make_config(tmp_path), _FakeExtractor(total_s=5.0), tmp_path / "a.mkv", probe_duration=lambda p: 5.0
+    )
+    transcribe_media(
+        _make_config(tmp_path),
+        _FakeExtractor(total_s=5.0),
+        tmp_path / "b.mkv",
+        probe_duration=lambda p: 5.0,
+        sentence_rules=rules,
+    )
+
+    assert "sentence_rules" not in seen[0]
+    assert seen[1]["sentence_rules"] is rules

@@ -1890,3 +1890,33 @@ def test_transcribe_keeps_high_no_speech_prob_window_end_to_end(monkeypatch, tmp
         device="cpu",
     )
     assert result == [(11.0, 14.0, "私の常識は"), (15.0, 21.0, "孤立無縁の環境で")]
+
+
+# ---------------------------------------------------------------------------
+# MS-21: long CT2 segments re-broken at the mining language's sentence ends
+# ---------------------------------------------------------------------------
+
+
+def _segment_with_words(start, end, words):
+    seg = make_segment(start, end, "".join(w for w, _s, _e in words))
+    seg.words = [SimpleNamespace(word=w, start=s, end=e) for w, s, e in words]
+    return seg
+
+
+def test_ct2_long_segment_is_rebroken_when_sentence_rules_are_given(monkeypatch, tmp_path):
+    import numpy as np
+
+    from anki_miner.languages.registry import get_profile
+
+    seg = _segment_with_words(0.0, 8.0, [("今日は晴れです。", 0.0, 3.0), ("明日は雨でしょう。", 3.5, 8.0)])
+    monkeypatch.setattr(_engine, "get_whisper_model_cls", lambda: fake_model_cls_factory([seg]))
+    monkeypatch.setattr(transcriber, "_speech_mask", lambda audio, onnx_pack_root: None)
+    kwargs = {"model_name": "small", "models_root": tmp_path, "sample_rate": 16000, "duration_s": 8.0, "device": "cpu"}
+
+    whole = transcriber.transcribe(np.zeros(16000, dtype=np.float32), **kwargs)
+    split = transcriber.transcribe(
+        np.zeros(16000, dtype=np.float32), sentence_rules=get_profile("ja").sentence_rules, **kwargs
+    )
+
+    assert whole == [(0.0, 8.0, "今日は晴れです。明日は雨でしょう。")]
+    assert split == [(0.0, 3.0, "今日は晴れです。"), (3.5, 8.0, "明日は雨でしょう。")]

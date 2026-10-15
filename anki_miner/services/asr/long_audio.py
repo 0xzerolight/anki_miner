@@ -34,6 +34,7 @@ from anki_miner.utils.logging_ext import log_summary
 
 if TYPE_CHECKING:
     from anki_miner.config.config import AnkiMinerConfig
+    from anki_miner.languages.profile import SentenceRules
     from anki_miner.services.asr.transcriber import Ct2ModelSession
 
 logger = logging.getLogger(__name__)
@@ -109,6 +110,7 @@ def transcribe_media(
     ct2_model_session: Ct2ModelSession | None = None,
     language: str = "ja",
     probe_duration: Callable[[Path], float | None] | None = None,
+    sentence_rules: SentenceRules | None = None,
     use_cache: bool = False,
     on_cache_hit: Callable[[], None] | None = None,
 ) -> LongAudioResult:
@@ -121,6 +123,8 @@ def transcribe_media(
     each fire once, before the first window's extraction / decode.
     Raises ``SetupError`` before any probe or extraction when ``config.asr_model``
     has no token for *language* (Cantonese on ``small``).
+    ``sentence_rules`` (the mining language's) re-break long segments at
+    sentence ends (MS-21, CT2 path only).
 
     With ``use_cache`` a transcript saved by an earlier run on the same file,
     model and language is returned without extracting or transcribing
@@ -154,6 +158,8 @@ def transcribe_media(
         transcribe_kwargs["ct2_model_session"] = ct2_model_session
     if language != "ja":  # omit-when-ja keeps the historical call shape
         transcribe_kwargs["language"] = language
+    if sentence_rules is not None:  # MS-21; omitted when absent, same reason
+        transcribe_kwargs["sentence_rules"] = sentence_rules
 
     reported = 0.0  # last fraction handed to progress_cb
 
