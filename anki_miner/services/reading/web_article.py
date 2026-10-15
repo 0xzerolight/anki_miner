@@ -19,14 +19,19 @@ from __future__ import annotations
 
 import logging
 import re
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Literal
 from urllib.parse import urlsplit
 
+import requests
+from charset_normalizer import from_bytes
 from lxml import etree, html  # type: ignore[import-untyped]
 
 from anki_miner.services.reading._util import _line_join
 from anki_miner.services.reading.epub_source import _walk_body
+from anki_miner.utils.logging_ext import log_summary
+from anki_miner.utils.url_redaction import split_loggable_url
 
 if TYPE_CHECKING:
     from anki_miner.languages.profile import SentenceRules
@@ -252,3 +257,150 @@ def extract_article(page: str, url: str, *, rules: SentenceRules | None = None) 
     if len(text) < MIN_ARTICLE_CHARS:
         raise ArticleFetchError(url, "no_text", f"No article text found at {url}.")
     return WebArticle(url=url, title=title, site=_site(url), text=text)
+
+
+# --------------------------------------------------------------------------- #
+# Fetching
+# --------------------------------------------------------------------------- #
+
+#: Largest page body read. A long article is well under 1 MiB of HTML.
+MAX_PAGE_BYTES = 5 * 1024 * 1024
+#: (connect, read) timeout in seconds.
+_TIMEOUT = (10, 30)
+_ACCEPT = "text/html,application/xhtml+xml;q=0.9,*/*;q=0.5"
+_META_CHARSET = re.compile(rb"""<meta[^>]+charset\s*=\s*["']?\s*([A-Za-z0-9_.:-]+)""", re.IGNORECASE)
+
+
+def _declared_charset(content_type: str) -> str | None:
+    for param in content_type.split(";")[1:]:
+        key, _, value = param.partition("=")
+        if key.strip().lower() == "charset" and value.strip().strip("\"'"):
+            return value.strip().strip("\"'")
+    return None
+
+
+def decode_page(raw: bytes, content_type: str = "") -> str:
+    """Decode a page body: a UTF-8 BOM, the header's charset, ``<meta charset>``, then detection.
+
+    A named charset that is unknown or does not fit the bytes falls through to
+    the next rung; charset-normalizer (already a dependency) is the last
+    guess, and UTF-8 with replacement characters the floor.
+    """
+    if raw.startswith(b"\xef\xbb\xbf"):
+        return raw[3:].decode("utf-8", errors="replace")
+    candidates: list[str] = []
+    declared = _declared_charset(content_type)
+    if declared:
+        candidates.append(declared)
+    meta = _META_CHARSET.search(raw[:4096])
+    if meta:
+        candidates.append(meta.group(1).decode("ascii", errors="replace"))
+    for encoding in candidates:
+        try:
+            return raw.decode(encoding)
+        except (LookupError, UnicodeDecodeError):
+            continue
+    best = from_bytes(raw).best()
+    if best is not None:
+        return str(best)
+    return raw.decode("utf-8", errors="replace")
+
+
+def _loggable_host(url: str) -> str:
+    split = split_loggable_url(url)
+    return split[1] if split is not None else "<redacted>"
+
+
+def _read_capped(response: requests.Response, url: str) -> bytes:
+    chunks: list[bytes] = []
+    size = 0
+    try:
+        for chunk in response.iter_content(chunk_size=64 * 1024):
+            size += len(chunk)
+            if size > MAX_PAGE_BYTES:
+                raise ArticleFetchError(url, "too_large", f"{url} is too large to read (over 5 MB).")
+            chunks.append(chunk)
+    except requests.RequestException as exc:
+        raise ArticleFetchError(url, "network", f"Could not read {url}: {exc}", transient=True) from exc
+    return b"".join(chunks)
+
+
+def fetch_article(
+    url: str,
+    *,
+    rules: SentenceRules | None = None,
+    session: requests.Session | None = None,
+) -> WebArticle:
+    """Fetch ``url`` and keep its article text (see :func:`extract_article`).
+
+    ``requests`` honours the system proxy settings (``HTTP(S)_PROXY``) the
+    way every other fetcher in the app does, and a frozen build's TLS trust
+    comes from the boot-time truststore injection. Without a ``session`` one
+    browser-UA session is opened and closed here. Raises
+    :class:`ArticleFetchError`; the article's ``url`` is the address after
+    redirects, which also names the site.
+    """
+    if not is_web_url(url):
+        raise ArticleFetchError(url, "invalid_url", f"Not a web address: {url}")
+    own_session = session is None
+    if session is None:
+        from anki_miner.services.audio_fetch_common import new_browser_session
+
+        session = new_browser_session()
+    host = _loggable_host(url)
+    try:
+        try:
+            response = session.get(url, timeout=_TIMEOUT, stream=True, headers={"Accept": _ACCEPT})
+        except requests.RequestException as exc:
+            log_summary(logger, "Web article fetch failed", level=logging.WARNING, host=host, error=type(exc).__name__)
+            raise ArticleFetchError(url, "network", f"Could not reach {url}: {exc}", transient=True) from exc
+        try:
+            status = int(response.status_code)
+            if status >= 400:
+                log_summary(logger, "Web article fetch failed", level=logging.WARNING, host=host, status=status)
+                raise ArticleFetchError(
+                    url, "http_status", f"{url} answered HTTP {status}.", transient=status == 429 or status >= 500
+                )
+            content_type = str(response.headers.get("Content-Type") or "")
+            if content_type and not any(kind in content_type.lower() for kind in ("html", "xml")):
+                kind = content_type.split(";")[0].strip()
+                raise ArticleFetchError(url, "not_html", f"{url} is not a web page ({kind}).")
+            raw = _read_capped(response, url)
+            final_url = str(getattr(response, "url", "") or url)
+        finally:
+            response.close()
+    finally:
+        if own_session:
+            session.close()
+    article = extract_article(decode_page(raw, content_type), final_url, rules=rules)
+    log_summary(logger, "Web article fetched", host=host, bytes=len(raw), chars=len(article.text))
+    return article
+
+
+def fetch_articles(
+    urls: Sequence[str],
+    *,
+    rules: SentenceRules | None = None,
+    session: requests.Session | None = None,
+) -> list[WebArticle | ArticleFetchError]:
+    """Fetch every address in order, over one session.
+
+    A failure takes its address's place in the result instead of stopping the
+    rest, so one dead link never costs the other articles.
+    """
+    own_session = session is None
+    if session is None:
+        from anki_miner.services.audio_fetch_common import new_browser_session
+
+        session = new_browser_session()
+    results: list[WebArticle | ArticleFetchError] = []
+    try:
+        for url in urls:
+            try:
+                results.append(fetch_article(url, rules=rules, session=session))
+            except ArticleFetchError as exc:
+                results.append(exc)
+    finally:
+        if own_session:
+            session.close()
+    return results
