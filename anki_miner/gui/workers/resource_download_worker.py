@@ -37,7 +37,9 @@ from PyQt6.QtCore import QCoreApplication, pyqtSignal
 
 from anki_miner.exceptions import SetupError
 from anki_miner.gui.workers.base_worker import CancellableWorker
+from anki_miner.services._install_common import verify_sha256
 from anki_miner.services._sqlite_index import language_kwarg
+from anki_miner.services.dictionary.importers.stardict_importer import import_stardict, is_stardict_source
 from anki_miner.services.dictionary.importers.yomitan_importer import import_yomitan_zip
 from anki_miner.services.dictionary.superseded import sweep_superseded_dicts
 from anki_miner.services.frequency import mode_probe
@@ -531,6 +533,10 @@ def install_resource(
                 return None
             raise PromotionBlocked
 
+        # A row pinned to one release must be exactly that release.
+        if spec.sha256:
+            verify_sha256(temp, spec.sha256, f"{spec.display_name} download")
+
         # The bytes are in; everything after this is local work. Said
         # before the importer starts so a multi-minute index build is
         # never mistaken for a stalled download.
@@ -543,8 +549,11 @@ def install_resource(
         if spec.kind == "dict":
             # Pin the on-disk slot to the stable catalog id so a title
             # embedding a changing release date (Jitendex) overwrites in
-            # place instead of forking a new dir every download.
-            result = import_yomitan_zip(
+            # place instead of forking a new dir every download. A FreeDict
+            # row is a StarDict tarball; the staged ``.part`` name says
+            # nothing, so the file itself picks the importer.
+            importer = import_stardict if is_stardict_source(temp) else import_yomitan_zip
+            result = importer(
                 temp,
                 dicts_root,
                 overwrite=True,
