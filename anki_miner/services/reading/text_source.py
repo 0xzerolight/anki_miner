@@ -3,9 +3,11 @@
 The simplest reading source: ``ref.text`` already holds decoded plain text, so
 there is no file I/O, no encoding sniffing, and no Aozora markup handling
 (users pasting an Aozora-formatted file should mine it in the Novels tab).
-Identity is deliberately constant — series/episode/title are all "Text" — per
-the sub-tab's design: pasted snippets come from arbitrary places and derived
-titles would be noise in history/stats.
+Identity is deliberately constant for pasted text — series/episode/title are
+all "Text" — per the sub-tab's design: pasted snippets come from arbitrary
+places and derived titles would be noise in history/stats. A fetched web
+article (F-14) is the one exception: its ref carries "page title — site",
+which becomes the title and episode (the card Source); the series stays "Text".
 
 Pasted text has no page of its own, so the sub-tab may hand over one optional
 card image in ``ref.image_root``; every unit shares it, exactly as epub shares
@@ -82,11 +84,16 @@ def load(
             )
             index += 1
 
+    # Pasted text keeps the constant "Text" identity. A fetched web article
+    # (F-14) arrives titled "page title — site": that title becomes the
+    # document's name, and so the card Source, while the series stays "Text"
+    # so every text run still files under one series in stats.
+    name = (ref.title or "").strip() or "Text"
     doc = ReadingDocument(
-        title="Text",
+        title=name,
         kind="book",
         series="Text",
-        episode="Text",
+        episode=name,
         units=units,
     )
     log_summary(
