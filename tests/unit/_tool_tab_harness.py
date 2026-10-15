@@ -43,6 +43,7 @@ class FakeToolWorker:
         self.tracks_probed = MagicMock()
         self.playlist_resolved = MagicMock()
         self.probe_error = MagicMock()
+        self.book_report = MagicMock()  # Audiobook Sync (MS-25)
         self.finished = MagicMock()  # native QThread.finished (lifecycle release)
         self.deleteLater = MagicMock()
         self._started = False

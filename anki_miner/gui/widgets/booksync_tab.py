@@ -9,7 +9,9 @@ the Audiobook mining tab, Reading → Subtitles, or any reader.
 Folder mode also takes a shelf (WP-27): a folder with no audio of its own
 whose subfolders each hold one book and its audio
 (:func:`~anki_miner.services.book_sync.library.scan_book_folder`). The books
-run in order in one worker, and the Book card's picker is not needed.
+run in order in one worker, and the Book card's picker is not needed. After a
+run each synced book gets one report line (sentence %, audio %, grade; MS-25)
+under the Book card and in the Activity log.
 
 Structure and idioms are cloned from
 :mod:`anki_miner.gui.widgets.subtitle_creation_tab` (Generate): mode toggle,
@@ -40,9 +42,11 @@ from anki_miner.gui.widgets._tool_tab_base import _ToolTabBase, _ToolTabStrings
 from anki_miner.gui.widgets.base import PageWidth, ScreenIssue, configure_card_layout, field_label_width
 from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader, accepts_suffixes
 from anki_miner.gui.workers.booksync_worker import BookSyncWorker
+from anki_miner.models import TerminalOutcome
 from anki_miner.services.asr import _engine
 from anki_miner.services.asr.model_availability import usable_model_installed
 from anki_miner.services.book_sync.library import BookJob, FolderScan, SkipReason, scan_book_folder
+from anki_miner.services.book_sync.report import BookSyncReport
 from anki_miner.utils.i18n import tr_format
 
 _AUDIO_FILE_FILTER = "Audio Files (" + " ".join(f"*{e}" for e in sorted(AUDIO_EXTENSIONS)) + ");;All Files (*)"
@@ -86,6 +90,8 @@ class BookSyncTab(_ToolTabBase):
         self._total_files: int = 0
         self._cancelled: bool = False
         self._engine_is_available: bool = False
+        #: This run's report lines, one per synced book (MS-25).
+        self._report_lines: list[str] = []
         # Built here (not in the base) so each literal stays in this tab's
         # tr-context — see _ToolTabBase for the rationale.
         self._strings = _ToolTabStrings(
@@ -238,6 +244,21 @@ class BookSyncTab(_ToolTabBase):
             drop_validator=accepts_suffixes(_BOOK_EXTENSIONS, self.tr("This field takes an .epub or .txt file.")),
         )
         layout.addWidget(self.book_selector)
+
+        # MS-25: how well the last run synced, one line per book. Inline, not a
+        # dialog (D24); hidden until a run has something to report.
+        self.report_label = QLabel()
+        self.report_label.setObjectName("helper-text")
+        self.report_label.setWordWrap(True)
+        self.report_label.setToolTip(
+            self.tr(
+                "Sentences: how many of the book's sentences, from the first one found to the last, got a "
+                "subtitle. Audio: how much of the narration matched the book. Grade: A from 90% on both, "
+                "B from 75%, C from 50%, else D."
+            )
+        )
+        self.report_label.hide()
+        layout.addWidget(self.report_label)
 
         group.setLayout(layout)
         return group
@@ -471,7 +492,7 @@ class BookSyncTab(_ToolTabBase):
             output_dir=out_dir,
             overwrite=self.overwrite_checkbox.isChecked(),
         )
-        self._start_queue_worker(worker)
+        self._start_sync_worker(worker)
 
     def _continue_shelf(self, scan: FolderScan) -> None:
         """A shelf (WP-27): the same guards, then one worker for every book in order."""
@@ -493,14 +514,42 @@ class BookSyncTab(_ToolTabBase):
             output_dir=out_dir,
             overwrite=self.overwrite_checkbox.isChecked(),
         )
-        self._start_queue_worker(worker)
+        self._start_sync_worker(worker)
 
     def _open_run(self, total_files: int) -> None:
         """Publish the run and clear what the last one left on the page."""
         self._begin_tool_run(total_files)
         self._total_files = total_files
+        self._report_lines = []
+        self.report_label.clear()
+        self.report_label.hide()
         self.log_widget.clear_log()
         self.progress_widget.reset()
+
+    def _start_sync_worker(self, worker: BookSyncWorker) -> None:
+        """Connect the per-book report, then hand the worker to the shared launch."""
+        worker.book_report.connect(self._on_book_report)
+        self._start_queue_worker(worker)
+
+    def _on_book_report(self, report: object) -> None:
+        """One synced book's report line, logged now and shown when the run ends (MS-25)."""
+        if not isinstance(report, BookSyncReport):
+            return
+        line = tr_format(
+            self.tr("%1: sentences %2%, audio %3% — grade %4"),
+            report.book_name,
+            report.sentence_pct,
+            report.audio_pct,
+            report.grade,
+        )
+        self._report_lines.append(line)
+        self.log_widget.append_info(line)
+
+    def _on_queue_finished(self, outcome: object = TerminalOutcome.SUCCESS) -> None:
+        super()._on_queue_finished(outcome)
+        if self._report_lines:
+            self.report_label.setText("\n".join(self._report_lines))
+            self.report_label.show()
 
     # ------------------------------------------------------------------
     # Worker signal slots

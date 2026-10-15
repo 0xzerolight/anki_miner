@@ -37,6 +37,7 @@ class _FakeWorker:
             "file_skipped",
             "queue_finished",
             "error",
+            "book_report",
             "finished",
         ):
             setattr(self, name, MagicMock())
@@ -318,3 +319,43 @@ def test_a_folder_with_neither_audio_nor_books_says_why(qtbot, tmp_path):
     assert _FakeWorker.instances == []
     assert issue is not None and "Covers" in issue.details
     assert tab.sync_button.isEnabled()
+
+
+def test_the_report_line_shows_under_the_book_after_the_run(qtbot, tmp_path):
+    from anki_miner.services.book_sync.report import BookSyncReport
+
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    audio, book = _inputs(tmp_path)
+    tab.file_selector.set_path(str(audio))
+    tab.book_selector.set_path(str(book))
+    with (
+        patch(_WORKER_CLS, _FakeWorker),
+        patch(_USABLE_MODEL, return_value=True),
+        patch(_ENGINE_AVAILABLE, return_value=True),
+    ):
+        tab._on_sync()
+    assert not tab.report_label.isVisibleTo(tab)
+
+    tab._on_book_report(BookSyncReport("neko.epub", 95, 100, 100.0, 80.0))
+    tab._on_queue_finished(TerminalOutcome.SUCCESS)
+
+    assert tab.report_label.isVisibleTo(tab)
+    assert tab.report_label.text() == "neko.epub: sentences 95%, audio 80% — grade B"
+    assert "grade B" in tab.log_widget.text_edit.toPlainText()
+    tab._on_worker_finished()  # the thread exits
+
+    with (
+        patch(_WORKER_CLS, _FakeWorker),
+        patch(_USABLE_MODEL, return_value=True),
+        patch(_ENGINE_AVAILABLE, return_value=True),
+    ):
+        tab._on_sync()  # the next run clears the old report
+    assert not tab.report_label.isVisibleTo(tab) and tab.report_label.text() == ""
+
+
+def test_every_run_listens_for_book_reports(qtbot, tmp_path):
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+
+    _start_folder_run(tab, qtbot, _shelf(tmp_path))
+
+    _FakeWorker.instances[0].book_report.connect.assert_called_once_with(tab._on_book_report)
