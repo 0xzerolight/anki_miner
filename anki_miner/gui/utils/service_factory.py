@@ -50,6 +50,7 @@ from anki_miner.services.sentence_tts_fetcher import (
 )
 from anki_miner.services.stats_service import StatsService
 from anki_miner.services.subtitle_parser import SubtitleParserService
+from anki_miner.services.wikimedia_audio_fetcher import WikimediaAudioFetcher
 from anki_miner.services.word_filter import WordFilterService
 from anki_miner.services.word_list_service import WordListService, active_whitelist
 from anki_miner.services.wordset_service import WordsetService
@@ -529,6 +530,9 @@ def _build_expression_audio_fetcher(
     ``kind="edgetts"`` entries become
     :class:`~anki_miner.services.edge_tts_audio_fetcher.EdgeTtsAudioFetcher`
     speaking with the profile's ``AudioDefaults.edge_voice`` (none when it is "");
+    ``kind="wikimedia"`` entries become
+    :class:`~anki_miner.services.wikimedia_audio_fetcher.WikimediaAudioFetcher`
+    over the profile's ``AudioDefaults.wikimedia_prefixes`` (none when they are empty);
     ``kind="pack"`` entries are resolved against :class:`AudioPackRegistry`;
     ``kind="custom"``/``"custom_json"`` entries become
     :class:`~anki_miner.services.custom_audio_fetcher.CustomAudioFetcher` (cached
@@ -567,6 +571,7 @@ def _build_expression_audio_fetcher(
     jpod_cache = audio_cache_root / "jpod101"
     googletts_cache = audio_cache_root / "googletts"
     edgetts_cache = audio_cache_root / "edgetts"
+    wikimedia_cache = audio_cache_root / "wikimedia"
     pack_cache = audio_cache_root / "local_packs"
 
     # Scan only when needed — see _load_audio_pack_registry for the predicate.
@@ -611,6 +616,18 @@ def _build_expression_audio_fetcher(
                     delay=config.expression_audio_delay,
                     voice=audio.edge_voice,
                     speakable=audio.speakable,
+                )
+            )
+        elif entry.kind == "wikimedia":
+            if not audio.wikimedia_prefixes:
+                # A language with no Commons prefixes (ja, zh) has no leg.
+                continue
+            fetchers.append(
+                WikimediaAudioFetcher(
+                    cache_dir=wikimedia_cache,
+                    delay=config.expression_audio_delay,
+                    prefixes=audio.wikimedia_prefixes,
+                    language=audio.custom_fetcher_language,
                 )
             )
         elif entry.kind in ("custom", "custom_json"):
