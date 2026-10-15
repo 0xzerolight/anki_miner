@@ -334,6 +334,16 @@ _NOT_CREATED_REASONS = {
     "uncertain": NotMinedReason.ANKI_FAILED,
 }
 
+#: MS-28 (ruling R21): the language check samples a run's first content words
+#: (phase 1's first-appearance order), stays silent below a minimum sample, and
+#: warns when fewer than this share of them have a dictionary entry. A correct
+#: Japanese run sits near 98 % (the owner's 2026-09 logs: 1-15 no-definition
+#: rejects per 255-1095 unique words); a file in another language falls far
+#: below half.
+_LANGUAGE_CHECK_SAMPLE = 200
+_LANGUAGE_CHECK_MIN_WORDS = 30
+_LANGUAGE_CHECK_FLOOR = 0.5
+
 
 def _build_pos_context(words: list[TokenizedWord]) -> dict[str, str]:
     """Map each word's ``mined_form`` to its token's part of speech for the
@@ -1588,6 +1598,45 @@ class EpisodeProcessor:
             )
         ]
         return viable
+
+    def _warn_if_wrong_language(self, all_words: list[TokenizedWord]) -> None:
+        """MS-28 (ruling R21): warn when few of the run's first words have a dictionary entry.
+
+        A subtitle or text in another language than the one being mined parses
+        into words the mining language's dictionaries mostly lack. The check
+        probes the first :data:`_LANGUAGE_CHECK_SAMPLE` phase-1 words (known
+        ones included) with phase 2's own probe, :meth:`definition_viable`, so
+        "has an entry" means what the no-definition gate means, and warns in the
+        Activity Log below :data:`_LANGUAGE_CHECK_FLOOR`. A warning only: the
+        run goes on.
+
+        Silent when fewer than :data:`_LANGUAGE_CHECK_MIN_WORDS` words were
+        parsed (too few to judge), when no usable offline dictionary is loaded
+        (nothing to measure against), and on a bypass run that skips the
+        dictionary gates (the golden contract), like the no-definition gate.
+        """
+        if self.config.bypass_optional_filters and self.bypass_skips_dictionary_gates:
+            return
+        sample = all_words[:_LANGUAGE_CHECK_SAMPLE]
+        if len(sample) < _LANGUAGE_CHECK_MIN_WORDS:
+            return
+        if not self.definition_service.has_usable_offline_provider():
+            return
+        hits = sum(self.definition_viable(sample))
+        log_summary(logger, "Language check", sampled=len(sample), hits=hits, floor=_LANGUAGE_CHECK_FLOOR)
+        if hits >= _LANGUAGE_CHECK_FLOOR * len(sample):
+            return
+        self.presenter.show_warning(
+            tr_format(
+                QCoreApplication.translate(
+                    "EpisodeProcessor",
+                    "Only %1% of the first %2 words have an entry in your dictionaries. "
+                    "Is this file in the language you are mining?",
+                ),
+                round(hits * 100 / len(sample)),
+                len(sample),
+            )
+        )
 
     def _phase2_coverage_filters(
         self,
