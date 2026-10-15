@@ -6,6 +6,7 @@ their canonical modules; the SRT writer runs for real into tmp_path.
 
 from __future__ import annotations
 
+import logging
 import threading
 from pathlib import Path
 
@@ -275,3 +276,52 @@ def test_sync_one_does_not_count_a_sentence_an_earlier_file_timed_as_unheard(tmp
     )
 
     assert result.cues == 2 and result.unmatched_sentences == 0
+
+
+# --- MS-25 speech coverage, MS-24 unheard sentences ---------------------------
+
+
+def _two_of_three(monkeypatch) -> None:
+    """Sentences 0 and 2 timed, sentence 1 not heard (between 2.0 s and 4.0 s)."""
+    import anki_miner.services.book_sync.pipeline as pl
+
+    monkeypatch.setattr(
+        pl, "align_to_book", lambda segs, book, cursor, **kw: [SentenceTiming(0, 0.0, 2.0), SentenceTiming(2, 4.0, 7.0)]
+    )
+
+
+def test_sync_one_reports_speech_and_matched_seconds(tmp_path, monkeypatch):
+    _patch_transcribe(monkeypatch)  # speech 0-2, 2-4, 4-7 s
+    _two_of_three(monkeypatch)
+
+    result = sync_one(_make_config(tmp_path), object(), tmp_path / "a.mp3", _book(), BookCursor(), tmp_path / "a.srt")
+
+    assert result.speech_seconds == pytest.approx(7.0)
+    assert result.matched_seconds == pytest.approx(5.0)
+
+
+def test_an_unheard_sentence_gets_no_cue_and_its_guessed_place_goes_to_the_log(tmp_path, monkeypatch, caplog):
+    _patch_transcribe(monkeypatch)
+    _two_of_three(monkeypatch)
+    caplog.set_level(logging.INFO, logger="anki_miner.services.book_sync.pipeline")
+    out = tmp_path / "a.srt"
+
+    sync_one(_make_config(tmp_path), object(), tmp_path / "a.mp3", _book(), BookCursor(), out)
+
+    text = out.read_text(encoding="utf-8")
+    assert _SENTENCES[1] not in text  # never mined: no cue for a guessed time
+    assert "Book sync unheard" in caplog.text and "2-2@2.0-4.0s" in caplog.text
+
+
+def test_a_sentence_an_earlier_file_timed_is_not_logged_as_unheard(tmp_path, monkeypatch, caplog):
+    """MS-24: sentence 1 sits in this file's span but an earlier file of the book timed it."""
+    _patch_transcribe(monkeypatch)
+    _two_of_three(monkeypatch)
+    caplog.set_level(logging.INFO, logger="anki_miner.services.book_sync.pipeline")
+
+    result = sync_one(
+        _make_config(tmp_path), object(), tmp_path / "a.mp3", _book(), BookCursor(timed={1}), tmp_path / "a.srt"
+    )
+
+    assert result.unmatched_sentences == 0
+    assert "Book sync unheard" not in caplog.text

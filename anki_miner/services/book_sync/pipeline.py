@@ -20,7 +20,8 @@ from typing import TYPE_CHECKING, Any
 from anki_miner.exceptions import SetupError
 from anki_miner.services.book_sync.aligner import BookCursor, BookText, TimedText, align_to_book
 from anki_miner.services.book_sync.normalize import normalize_for_alignment
-from anki_miner.utils.logging_ext import log_summary
+from anki_miner.services.book_sync.report import speech_coverage, unheard_gaps
+from anki_miner.utils.logging_ext import capped, log_summary
 
 if TYPE_CHECKING:
     from anki_miner.config.config import AnkiMinerConfig
@@ -53,6 +54,9 @@ class BookSyncResult:
     #: Sentences between the first and last cue that got no audio (skipped by
     #: the narrator, or lost to a transcription hole).
     unmatched_sentences: int = 0
+    #: Seconds of transcript speech, and how many of them a cue covers (MS-25).
+    speech_seconds: float = 0.0
+    matched_seconds: float = 0.0
 
 
 def load_book(
@@ -173,6 +177,18 @@ def sync_one(
     last = max(t.index for t in timings)
     timed_here = {t.index for t in timings}
     unmatched = sum(1 for i in range(first, last + 1) if i not in timed_here and i not in already)
+    # ``already`` (B4): what earlier files of this book timed is not unheard here.
+    gaps = unheard_gaps(timings, known=already)
+    if gaps:
+        # Never a cue (a guessed time would put the wrong audio on a card);
+        # the guess goes to the app log so the user can find the passage.
+        log_summary(
+            logger,
+            "Book sync unheard",
+            file=audio_path,
+            gaps=capped(f"{g.first + 1}-{g.last + 1}@{g.start:.1f}-{g.end:.1f}s" for g in gaps),
+        )
+    speech_seconds, matched_seconds = speech_coverage(transcript.segments, timings)
     log_summary(
         logger,
         "Book sync done",
@@ -181,5 +197,14 @@ def sync_one(
         unmatched=unmatched,
         first=first,
         last=last,
+        speech_s=f"{speech_seconds:.0f}",
+        matched_s=f"{matched_seconds:.0f}",
     )
-    return BookSyncResult(BookSyncStatus.SUCCESS, out_srt=out_srt, cues=len(timings), unmatched_sentences=unmatched)
+    return BookSyncResult(
+        BookSyncStatus.SUCCESS,
+        out_srt=out_srt,
+        cues=len(timings),
+        unmatched_sentences=unmatched,
+        speech_seconds=speech_seconds,
+        matched_seconds=matched_seconds,
+    )
