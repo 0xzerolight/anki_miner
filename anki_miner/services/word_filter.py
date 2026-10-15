@@ -556,12 +556,26 @@ class WordFilterService:
         self,
         words: list[TokenizedWord],
         text_of: Callable[[TokenizedWord], str] | None = None,
+        *,
+        line_index: list[LineLemmas] | None = None,
+        max_duration: float = 0.0,
+        max_chars: int = 0,
     ) -> list[TokenizedWord]:
-        """Remove words that share a sentence with an already-selected word.
+        """Keep one word per example sentence, moving a losing word when it can (F-06).
 
-        For each unique sentence text, only the first word is kept. The dedup
-        key is NFKC-normalized with whitespace collapsed so that punctuation
-        and spacing variants do not slip through.
+        First pass, unchanged since before F-06: for each unique sentence text
+        the first word keeps it. The key is NFKC-normalized with whitespace
+        collapsed, so punctuation and spacing variants do not slip through.
+
+        Second pass, only with a ``line_index`` and no ``text_of``: each word
+        that lost its sentence, in input order, moves to the first other line
+        it appears on (:meth:`_compatible_lines`, subtitle order) whose text no
+        word holds yet and that passes the Sentences caps
+        (:func:`within_sentence_caps`). The move is :meth:`_swap_word_to_line`,
+        the i+1 filter's. A word with no such line is dropped, as before.
+        Because the keepers are settled first, every word the first pass keeps
+        stays kept on its own line, and a loser never takes a line another word
+        first appears on.
 
         Args:
             words: List of words to deduplicate.
@@ -570,20 +584,43 @@ class WordFilterService:
                 the merged text a word is about to acquire, so two words on
                 adjacent cues that converge on one sentence dedup against each
                 other before the card exists — the same "one card per sentence"
-                rule, applied to what the card will actually say.
+                rule, applied to what the card will actually say. That call
+                never reassigns: the word carries a merge stamp for its line.
+            line_index: The run's per-line index; enables the second pass.
+            max_duration: The Sentences duration cap a moved-to line must pass
+                (``0.0`` = no cap).
+            max_chars: The Sentences character cap a moved-to line must pass
+                (``0`` = no cap).
 
         Returns:
-            Deduplicated list of words.
+            The kept words, in input order (a moved word in its original slot).
         """
         read = text_of if text_of is not None else (lambda word: word.sentence)
         seen_sentences: set[str] = set()
-        result = []
+        kept: list[TokenizedWord | None] = []
+        losers: list[int] = []
         for word in words:
             key = _normalize_sentence(read(word))
-            if key not in seen_sentences:
+            if key in seen_sentences:
+                losers.append(len(kept))
+                kept.append(None)
+            else:
                 seen_sentences.add(key)
-                result.append(word)
-        return result
+                kept.append(word)
+        if losers and line_index and text_of is None:
+            lines_by_front, lines_by_lemma = self._index_lines(line_index)
+            for slot in losers:
+                word = words[slot]
+                for _position, line in self._compatible_lines(word, lines_by_front, lines_by_lemma):
+                    key = _normalize_sentence(line.line_text)
+                    if key in seen_sentences:
+                        continue
+                    if not within_sentence_caps(line.duration, line.line_text, max_duration, max_chars):
+                        continue
+                    seen_sentences.add(key)
+                    kept[slot] = self._swap_word_to_line(word, line)
+                    break
+        return [item for item in kept if item is not None]
 
     def filter_by_sentence_length(
         self,

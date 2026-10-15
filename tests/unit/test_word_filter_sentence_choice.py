@@ -109,3 +109,115 @@ def test_candidates_still_list_every_compatible_line_in_order():
     service.attach_sentence_candidates([word], index)
 
     assert [candidate.sentence for candidate in word.sentence_candidates] == ["犬が走る。", "犬と猫。"]
+
+
+# --- F-06: one card per sentence moves a losing word ------------------------
+
+
+def _three_line_episode():
+    """猫 and 犬 first appear together on A; 犬 also has B and C, 鳥 owns B by first appearance."""
+    line_a = _line("猫と犬がいる。", 0.0, "猫", "犬")
+    line_b = _line("犬と鳥が遊ぶ。", 10.0, "犬", "鳥")
+    line_c = _line("犬が走る。", 20.0, "犬")
+    words = [
+        _ja("猫", line_a.line_text, 0.0),
+        _ja("犬", line_a.line_text, 0.0),
+        _ja("鳥", line_b.line_text, 10.0),
+    ]
+    return words, [line_a, line_b, line_c]
+
+
+def test_a_losing_word_moves_to_its_first_unused_line():
+    service = _ja_filter()
+    line_a = _line("猫と犬がいる。", 0.0, "猫", "犬")
+    line_b = _line("犬が走る。", 10.0, "犬")
+    cat, dog = _ja("猫", line_a.line_text, 0.0), _ja("犬", line_a.line_text, 0.0)
+
+    kept = service.deduplicate_by_sentence([cat, dog], line_index=[line_a, line_b])
+
+    assert [word.mined_form for word in kept] == ["猫", "犬"]
+    assert kept[0] is cat
+    assert kept[1].sentence == "犬が走る。"
+    assert kept[1].start_time == pytest.approx(10.0)
+    assert kept[1].end_time == pytest.approx(12.0)
+
+
+def test_a_word_whose_every_line_is_taken_is_still_dropped():
+    service = _ja_filter()
+    line_a = _line("猫と犬がいる。", 0.0, "猫", "犬")
+    cat, dog = _ja("猫", line_a.line_text, 0.0), _ja("犬", line_a.line_text, 0.0)
+
+    kept = service.deduplicate_by_sentence([cat, dog], line_index=[line_a])
+
+    assert kept == [cat]
+
+
+def test_a_loser_never_takes_the_line_a_later_word_first_appears_on():
+    """Two passes: 鳥 keeps B (its first line), so 犬 goes on to C, not B."""
+    service = _ja_filter()
+    words, index = _three_line_episode()
+
+    kept = service.deduplicate_by_sentence(words, line_index=index)
+
+    assert [(word.mined_form, word.sentence) for word in kept] == [
+        ("猫", "猫と犬がいる。"),
+        ("犬", "犬が走る。"),
+        ("鳥", "犬と鳥が遊ぶ。"),
+    ]
+
+
+def test_every_word_plain_dedup_keeps_stays_on_its_line():
+    service = _ja_filter()
+    words, index = _three_line_episode()
+    plain = service.deduplicate_by_sentence(words)
+
+    kept = service.deduplicate_by_sentence(words, line_index=index)
+
+    assert all(any(word is survivor for word in kept) for survivor in plain)
+
+
+def test_reassignment_skips_lines_over_the_caps():
+    service = _ja_filter()
+    line_a = _line("猫と犬がいる。", 0.0, "猫", "犬")
+    line_b = _line("犬が走る。", 10.0, "犬", duration=9.0)
+    line_c = _line("犬だ。", 30.0, "犬")
+    cat, dog = _ja("猫", line_a.line_text, 0.0), _ja("犬", line_a.line_text, 0.0)
+
+    kept = service.deduplicate_by_sentence([cat, dog], line_index=[line_a, line_b, line_c], max_duration=5.0)
+
+    assert kept[1].sentence == "犬だ。"
+
+
+def test_without_a_line_index_the_first_word_wins_as_before():
+    service = _ja_filter()
+    line_a = _line("猫と犬がいる。", 0.0, "猫", "犬")
+    cat, dog = _ja("猫", line_a.line_text, 0.0), _ja("犬", line_a.line_text, 0.0)
+
+    assert service.deduplicate_by_sentence([cat, dog]) == [cat]
+
+
+def test_the_cue_merge_dedup_never_reassigns():
+    """``text_of`` (the automatic cue merge's merged text) keeps first-wins (L3a ruling 6)."""
+    service = _ja_filter()
+    line_a = _line("猫と犬がいる。", 0.0, "猫", "犬")
+    line_b = _line("犬が走る。", 10.0, "犬")
+    cat, dog = _ja("猫", line_a.line_text, 0.0), _ja("犬", line_a.line_text, 0.0)
+
+    kept = service.deduplicate_by_sentence([cat, dog], lambda word: word.sentence, line_index=[line_a, line_b])
+
+    assert kept == [cat]
+
+
+def test_es_losing_word_moves_to_another_line():
+    """Review Focus 3: a spaced, lemma-fronted language through the same reassignment."""
+    service = _profile_filter("es")
+    line_a = _line("el perro y el gato", 0.0, "perro", "gato")
+    line_b = _line("un gato negro", 5.0, "gato")
+    dog, cat = _other("perro", line_a.line_text, 0.0), _other("gato", line_a.line_text, 0.0)
+
+    kept = service.deduplicate_by_sentence([dog, cat], line_index=[line_a, line_b])
+
+    assert [(word.mined_form, word.sentence) for word in kept] == [
+        ("perro", "el perro y el gato"),
+        ("gato", "un gato negro"),
+    ]
