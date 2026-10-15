@@ -91,6 +91,7 @@ class SentencesSettingsPanel(FormPanel):
     Provides:
     - Subtitle text cleanup: one plain-language box, the raw regex behind a disclosure (D15 extension)
     - Sentence rule (dedup / i+1) and sentence length caps (C13)
+    - Best-sentence pick (F-07)
     - Secondary-language subtitles (F7)
     - Whole-sentence merging across subtitle lines
     - Bolding the mined word in the sentence
@@ -206,6 +207,20 @@ class SentencesSettingsPanel(FormPanel):
             self.tr("Sentence Rule"),
             self.sentence_rule_combo,
             anchor_text=self._sentence_rule_search_text,
+        )
+
+        # Best sentence (F-07, ruling R5). On for fresh installs only: F0's
+        # load-path rule keeps it off for a config saved before it existed.
+        self.pick_best_sentence_checkbox = QCheckBox(self.tr("Pick the clearest sentence for each word"))
+        self.add_field(
+            "",
+            self.pick_best_sentence_checkbox,
+            helper=self.tr(
+                "When a word appears on several lines, its card uses the line with the fewest unknown "
+                "words and a comfortable length instead of the first one. The Word Curator still lists "
+                "every line, and card order does not change."
+            ),
+            anchor_text=lambda: ("best sentence", "clearest sentence", "shortest sentence"),
         )
 
         # No master toggle (Issue #33): each cap is off at 0, which its
@@ -374,6 +389,14 @@ class SentencesSettingsPanel(FormPanel):
         if index >= 0:
             self.sentence_rule_combo.setCurrentIndex(index)
 
+    def get_pick_best_sentence(self) -> bool:
+        """Return whether each word's card uses its clearest line (F-07)."""
+        return self.pick_best_sentence_checkbox.isChecked()
+
+    def set_pick_best_sentence(self, value: bool) -> None:
+        """Set the best-sentence checkbox."""
+        self.pick_best_sentence_checkbox.setChecked(value)
+
     def get_max_sentence_duration_seconds(self) -> float:
         """Return the max sentence duration (seconds)."""
         return self.max_sentence_duration_spinbox.value()
@@ -429,6 +452,7 @@ class SentencesSettingsPanel(FormPanel):
         self.set_merge_incomplete_cues(config.merge_incomplete_cues)
         self.set_bold_target_in_sentence(config.bold_target_in_sentence)
         self.set_sentence_rule(config.deduplicate_sentences, config.use_i_plus_one_filter)
+        self.set_pick_best_sentence(config.pick_best_sentence)
         self.set_max_sentence_duration_seconds(config.max_sentence_duration_seconds)
         self.set_max_sentence_chars(config.max_sentence_chars)
 
@@ -454,6 +478,7 @@ class SentencesSettingsPanel(FormPanel):
             bold_target_in_sentence=self.get_bold_target_in_sentence(),
             deduplicate_sentences=deduplicate_sentences,
             use_i_plus_one_filter=use_i_plus_one_filter,
+            pick_best_sentence=self.get_pick_best_sentence(),
             max_sentence_duration_seconds=self.get_max_sentence_duration_seconds(),
             max_sentence_chars=self.get_max_sentence_chars(),
         )
