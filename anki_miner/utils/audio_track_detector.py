@@ -2,9 +2,11 @@
 
 import json
 import logging
+import re
 import subprocess
 import time
 from dataclasses import dataclass
+from enum import IntEnum
 from pathlib import Path
 
 from anki_miner.utils.subprocess_log import log_command, log_command_result, tail_for_log
@@ -388,3 +390,74 @@ def get_primary_video_codec(video_file: Path, ffprobe_cmd: str = "ffprobe") -> s
 
     codec = streams[0].get("codec_name")
     return codec.lower() if codec else None
+
+
+class TrackTitle(IntEnum):
+    """What a subtitle track's title, or a sidecar's name tags, says it holds; best first (MS-06, F-04)."""
+
+    #: Says it is the whole dialogue: "Full Subtitles", "Dialogue".
+    FULL = 0
+    #: Says neither: no title, a language name, a release group.
+    PLAIN = 1
+    #: Dialogue plus sound notes: "SDH", "CC", "Hearing Impaired".
+    ANNOTATED = 2
+    #: Not the dialogue: signs, songs, forced lines, commentary, karaoke.
+    PARTIAL = 3
+
+
+# Every keyword is bounded by a non-word character (or an end) on both sides, the
+# way subtitle_cleaner.NON_DIALOGUE_STYLE_RE bounds ASS style names, so "Designs"
+# is not "signs", "Fullmetal" is not "full" and "Hide" is not "hi". A sidecar's
+# tags (".en.forced", "_track3_[eng]") read through the same patterns.
+_FULL_TITLE_RE = re.compile(r"(?:^|[\W_])(?:full|dialogue|dialog|complete)(?:$|[\W_])", re.IGNORECASE)
+_PARTIAL_TITLE_RE = re.compile(
+    r"(?:^|[\W_])(?:signs?|songs?|s&s|forced|commentary|karaoke|lyrics|typesetting|op[\W_]*ed)(?:$|[\W_])",
+    re.IGNORECASE,
+)
+_ANNOTATED_TITLE_RE = re.compile(
+    r"(?:^|[\W_])(?:sdh|cc|hi|hoh|hearing[\W_]*impaired|hard[\W_]*of[\W_]*hearing)(?:$|[\W_])",
+    re.IGNORECASE,
+)
+
+
+def track_title_rank(text: str | None) -> TrackTitle:
+    """Rank a track title or a sidecar's name tags; ``None`` and ``""`` are :attr:`TrackTitle.PLAIN`.
+
+    A title that says "full" or "dialogue" wins over any other keyword in it
+    ("Full Subtitles (Signs excluded)" is the dialogue track); otherwise a
+    partial keyword beats an SDH one ("SDH Forced" is forced).
+    """
+    if not text:
+        return TrackTitle.PLAIN
+    if _FULL_TITLE_RE.search(text):
+        return TrackTitle.FULL
+    if _PARTIAL_TITLE_RE.search(text):
+        return TrackTitle.PARTIAL
+    if _ANNOTATED_TITLE_RE.search(text):
+        return TrackTitle.ANNOTATED
+    return TrackTitle.PLAIN
+
+
+def subtitle_stream_title(stream: SubtitleStream) -> TrackTitle:
+    """*stream*'s title rank; the forced disposition is :attr:`TrackTitle.PARTIAL` whatever the title says."""
+    return TrackTitle.PARTIAL if stream.is_forced else track_title_rank(stream.title)
+
+
+def primary_subtitle_key(stream: SubtitleStream, codes: frozenset[str]) -> tuple[bool, bool, int, int]:
+    """Sort key for the mining track among a video's subtitle streams, smallest first (MS-06).
+
+    Partial tracks (signs, songs, forced) last; then the mining language
+    (*codes*, the profile's ``audio_track_codes``) before any other; then full
+    dialogue before a plain title before SDH; then stream order. With no titles
+    this is exactly the order ``audio_condenser._pick_subtitle_stream`` used
+    before MS-06 (forced, language, index), so an untitled file picks the same
+    stream as before. A partial track is ranked, never refused: a lone signs
+    track is still better than nothing.
+    """
+    title = subtitle_stream_title(stream)
+    return (
+        title is TrackTitle.PARTIAL,
+        not matches_language_tag(stream.language_tag, codes),
+        int(title),
+        stream.sub_index,
+    )
