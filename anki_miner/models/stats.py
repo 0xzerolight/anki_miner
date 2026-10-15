@@ -17,6 +17,33 @@ class MiningSession:
     cards_created: int = 0
     elapsed_time: float = 0.0
     mined_at: datetime = field(default_factory=datetime.now)
+    #: Write side (AI-16): the Anki note ids this run created and the forms it
+    #: wrote to known_words.db as source='mined'. ``record_session`` stores
+    #: both; rows read back leave them empty and fill ``note_count`` instead.
+    note_ids: list[int] = field(default_factory=list)
+    mined_forms: list[str] = field(default_factory=list)
+    #: Read side (AI-16): how many note ids are stored for this run. 0 for a
+    #: run recorded before AI-16, one that made no cards, or one whose cards
+    #: were deleted from Analytics.
+    note_count: int = 0
+    #: Read side (AI-16, ruling C5): how many of this run's cards were gone
+    #: from Anki when Analytics deleted the run and forgot its list. 0 for a
+    #: run never deleted there. ``cards_created`` keeps the original count.
+    deleted_count: int = 0
+
+
+@dataclass(frozen=True)
+class RunReceipt:
+    """What one past run put into Anki and known_words.db (AI-16).
+
+    ``language`` is the run's own mining language, read from its row, so a
+    delete after a language switch reverts the right known-words database.
+    """
+
+    session_id: int
+    language: str
+    note_ids: tuple[int, ...]
+    mined_forms: tuple[str, ...]
 
 
 @dataclass

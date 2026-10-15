@@ -13,6 +13,7 @@ from anki_miner.models.stats import (
     MilestoneKind,
     MiningSession,
     OverallStats,
+    RunReceipt,
 )
 
 logger = logging.getLogger(__name__)
@@ -142,6 +143,25 @@ class StatsService:
             CREATE INDEX IF NOT EXISTS idx_difficulty_series
             ON series_difficulty(series_name)
         """)
+        # AI-16: what each run put into Anki, so Analytics can show or delete
+        # any past run's cards. CREATE IF NOT EXISTS is the whole migration: an
+        # older stats.db gains empty tables here and its old runs simply have
+        # no rows. No FOREIGN KEY: SQLite enforces none without PRAGMA
+        # foreign_keys, so reset() deletes these rows itself.
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS session_notes (
+                session_id INTEGER NOT NULL,
+                note_id INTEGER NOT NULL,
+                PRIMARY KEY (session_id, note_id)
+            )
+        """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS session_forms (
+                session_id INTEGER NOT NULL,
+                form TEXT NOT NULL,
+                PRIMARY KEY (session_id, form)
+            )
+        """)
         self._migrate_language_column(conn)
 
     @staticmethod
@@ -206,7 +226,19 @@ class StatsService:
                     self._language,
                 ),
             )
-            return cursor.lastrowid or -1
+            session_id = cursor.lastrowid or -1
+            if session_id > 0:
+                # Same transaction as the row: a run is recorded with its
+                # receipt or not at all.
+                conn.executemany(
+                    "INSERT OR IGNORE INTO session_notes (session_id, note_id) VALUES (?, ?)",
+                    [(session_id, int(note_id)) for note_id in session.note_ids],
+                )
+                conn.executemany(
+                    "INSERT OR IGNORE INTO session_forms (session_id, form) VALUES (?, ?)",
+                    [(session_id, form) for form in session.mined_forms if form],
+                )
+            return session_id
 
     def get_overall_stats(self) -> OverallStats:
         """Get aggregated statistics across all sessions."""
@@ -246,6 +278,35 @@ class StatsService:
                 (self._language, limit),
             ).fetchall()
             return [self._row_to_session(row) for row in rows]
+
+    # === AI-16: past-run receipts ===
+
+    def get_run_receipt(self, session_id: int) -> RunReceipt | None:
+        """What run ``session_id`` created, or ``None`` when there is no such run.
+
+        Read by id across every language, not filtered by the active one: the
+        receipt names the run's own language so its known-words rows are
+        reverted in the right database (Review Focus 5).
+        """
+        if not self._ensure_loaded():
+            return None
+        with self._connect() as conn:
+            row = conn.execute("SELECT language FROM mining_sessions WHERE id = ?", (session_id,)).fetchone()
+            if row is None:
+                return None
+            note_ids = tuple(
+                int(found[0])
+                for found in conn.execute(
+                    "SELECT note_id FROM session_notes WHERE session_id = ? ORDER BY note_id", (session_id,)
+                )
+            )
+            forms = tuple(
+                str(found[0])
+                for found in conn.execute(
+                    "SELECT form FROM session_forms WHERE session_id = ? ORDER BY form", (session_id,)
+                )
+            )
+        return RunReceipt(session_id=session_id, language=str(row["language"]), note_ids=note_ids, mined_forms=forms)
 
     # === Feature 2: Difficulty Ranking ===
 
