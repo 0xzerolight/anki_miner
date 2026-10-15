@@ -82,6 +82,7 @@ def _non_default_save_config(tmp_path: Path) -> AnkiMinerConfig:
         audio_format="opus",
         audio_bitrate=128,  # default is 96
         audio_padding=0.5,
+        normalize_audio_loudness=False,  # default is True
         reading_tts_enabled=True,
         reading_tts_google_enabled=False,
         reading_tts_papago_enabled=True,
@@ -151,6 +152,7 @@ _SAVE_PATH_FIELDS = frozenset(
         "audio_format",
         "audio_bitrate",
         "audio_padding",
+        "normalize_audio_loudness",
         "reading_tts_enabled",
         "reading_tts_google_enabled",
         "reading_tts_papago_enabled",
@@ -325,6 +327,7 @@ class TestSavePathRoundTrip:
             "audio_format",
             "audio_bitrate",
             "audio_padding",
+            "normalize_audio_loudness",
             "reading_tts_enabled",
             "reading_tts_google_enabled",
             "reading_tts_papago_enabled",

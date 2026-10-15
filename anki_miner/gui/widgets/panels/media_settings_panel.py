@@ -107,6 +107,17 @@ class MediaSettingsPanel(FormPanel):
             helper=self.tr("Extra time before and after the subtitle."),
         )
 
+        # F-02 + CC-07 (R1): one switch for clip and Condense loudness and the
+        # clip fade. On for fresh installs; a config saved before it loads off.
+        self.loudness_checkbox = QCheckBox(self.tr("Even out audio volume"))
+        self.loudness_checkbox.setToolTip(
+            self.tr(
+                "Brings sentence clips and condensed audio to one volume and fades each clip in "
+                "and out, so quiet and loud sources sound alike. Applies to new clips."
+            )
+        )
+        self.add_field("", self.loudness_checkbox)
+
         # Sentence TTS for reading sources (manga/novels): folded from the
         # Audio page's master + two provider checkboxes (T11) into one combo.
         # The loaded (enabled, google, papago) triple is kept verbatim until
@@ -431,6 +442,7 @@ class MediaSettingsPanel(FormPanel):
         self.set_audio_format(config.audio_format)
         self.set_audio_bitrate(config.audio_bitrate)
         self.set_audio_padding(config.audio_padding)
+        self.loudness_checkbox.setChecked(config.normalize_audio_loudness)
         audio = get_profile(config_language(config)).audio
         self._populate_reading_tts_items(
             papago=bool(audio.papago_speaker),
@@ -465,6 +477,7 @@ class MediaSettingsPanel(FormPanel):
             audio_format=self.get_audio_format(),
             audio_bitrate=self.get_audio_bitrate(),
             audio_padding=self.get_audio_padding(),
+            normalize_audio_loudness=self.loudness_checkbox.isChecked(),
             reading_tts_enabled=reading_tts_enabled,
             reading_tts_google_enabled=reading_tts_google_enabled,
             reading_tts_papago_enabled=reading_tts_papago_enabled,
