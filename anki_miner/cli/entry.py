@@ -33,6 +33,7 @@ from anki_miner.cli.events import SCHEMA_VERSION, EventSink, fd_writer
 from anki_miner.cli.runner import MiningRun
 from anki_miner.config import paths as config_paths
 from anki_miner.gui.utils.config_manager import GUIConfigManager
+from anki_miner.services.anki_service import sync_after_run
 from anki_miner.utils.logging_ext import suppressed
 
 if TYPE_CHECKING:
@@ -194,11 +195,16 @@ def _mine(args: argparse.Namespace, sink: EventSink) -> int:
             except runner.SetupFailure as exc:
                 return _finish(sink, "setup_error", str(exc))
         status = runner.run_status(reports, cancelled=cancel.is_set())
+        cards_created = sum(r.cards_created for r in reports)
+        # AI-03 (C2): the command line follows "Sync Anki after mining" like the
+        # mining screens. A failed sync is a log warning; the status stands.
+        # The --api surface never reaches here, so it never syncs.
+        sync_after_run(config, cards_created)
         logger.info("CLI run end: status=%s", status)
         return _finish(
             sink,
             status,
-            cards_created=sum(r.cards_created for r in reports),
+            cards_created=cards_created,
             items=[r.to_json() for r in reports],
         )
     finally:

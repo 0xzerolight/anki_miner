@@ -368,3 +368,62 @@ def test_stale_window_marker_is_cleared(booted, fake_run, out, tmp_path: Path) -
     assert marker.exists()
     assert entry.main(_pair(tmp_path)) == 0
     assert not marker.exists()
+
+
+class _SyncRecorder:
+    """Stands in for ``AnkiService.sync``: counts calls, optionally fails."""
+
+    def __init__(self, error: Exception | None = None) -> None:
+        self.calls = 0
+        self.error = error
+
+    def __call__(self) -> None:  # set on the class, so it is called unbound
+        self.calls += 1
+        if self.error is not None:
+            raise self.error
+
+
+def test_a_run_that_added_cards_syncs_once_when_the_setting_is_on(booted, fake_run, monkeypatch, tmp_path) -> None:
+    """AI-03 / C2: ``anki-miner mine`` follows Sync Anki after mining like the GUI."""
+    from dataclasses import replace
+
+    from anki_miner.services.anki_service import AnkiService
+
+    on = replace(booted, sync_anki_after_run=True)
+    monkeypatch.setattr(entry.GUIConfigManager, "load_config", classmethod(lambda cls: on))
+    sync = _SyncRecorder()
+    monkeypatch.setattr(AnkiService, "sync", sync)
+    assert entry.main(_pair(tmp_path)) == 0
+    assert sync.calls == 1
+
+
+def test_a_run_never_syncs_with_the_setting_off_or_no_cards(booted, fake_run, monkeypatch, tmp_path) -> None:
+    from dataclasses import replace
+
+    from anki_miner.services.anki_service import AnkiService
+
+    sync = _SyncRecorder()
+    monkeypatch.setattr(AnkiService, "sync", sync)
+    assert booted.sync_anki_after_run is False
+    assert entry.main(_pair(tmp_path)) == 0
+    on = replace(booted, sync_anki_after_run=True)
+    monkeypatch.setattr(entry.GUIConfigManager, "load_config", classmethod(lambda cls: on))
+    fake_run.reports = [ItemReport(item=0, kind="episode", input={}, status="success", cards_created=0)]
+    assert entry.main(_pair(tmp_path)) == 0
+    assert sync.calls == 0
+
+
+def test_a_failed_sync_leaves_the_exit_status_unchanged(booted, fake_run, monkeypatch, out, tmp_path) -> None:
+    from dataclasses import replace
+
+    from anki_miner.exceptions import AnkiConnectionError
+    from anki_miner.services.anki_service import AnkiService
+
+    on = replace(booted, sync_anki_after_run=True)
+    monkeypatch.setattr(entry.GUIConfigManager, "load_config", classmethod(lambda cls: on))
+    sync = _SyncRecorder(AnkiConnectionError("Anki is closed"))
+    monkeypatch.setattr(AnkiService, "sync", sync)
+    assert entry.main(_pair(tmp_path)) == 0
+    assert sync.calls == 1
+    result = out()[-1]
+    assert result["status"] == "success" and result["cards_created"] == 3
