@@ -422,3 +422,54 @@ def test_pick_best_sentence_follows_the_sentence_rule_and_is_searchable(qtbot):
     assert "Pick the clearest sentence for each word" in anchor.search_text()
     ids = list(anchors)
     assert ids.index("sentences.pick_best_sentence_checkbox") == ids.index("sentences.sentence_rule_combo") + 1
+
+
+# --- F-08: skip openings, endings and signs (C7) ---------------------------------
+
+
+def test_skip_opening_ending_round_trips(qtbot):
+    panel = SentencesSettingsPanel()
+    qtbot.addWidget(panel)
+
+    panel.load_from_config(replace(AnkiMinerConfig(), skip_opening_ending=False))
+    assert panel.skip_opening_ending_checkbox.isChecked() is False
+    assert panel.contribute(AnkiMinerConfig()).skip_opening_ending is False
+
+    panel.load_from_config(replace(AnkiMinerConfig(), skip_opening_ending=True))
+    assert panel.contribute(replace(AnkiMinerConfig(), skip_opening_ending=False)).skip_opening_ending is True
+
+
+def test_skip_opening_ending_is_on_for_a_fresh_install(qtbot):
+    panel = SentencesSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.load_from_config(create_default_config())
+    assert panel.skip_opening_ending_checkbox.isChecked()
+
+
+def test_saving_the_switch_keeps_the_cleanup_fields(qtbot):
+    panel = SentencesSettingsPanel()
+    qtbot.addWidget(panel)
+    loaded = replace(AnkiMinerConfig(), skip_opening_ending=False, subtitle_regex_replacement="X")
+    panel.load_from_config(loaded)
+
+    saved = panel.contribute(AnkiMinerConfig())
+
+    assert saved.skip_opening_ending is False
+    assert saved.subtitle_regex_replacement == "X"
+
+
+def test_skip_opening_ending_ends_the_cleanup_group_and_is_searchable(qtbot):
+    panel = SentencesSettingsPanel()
+    qtbot.addWidget(panel)
+    anchors = {anchor.stable_id: anchor for anchor in panel.setting_anchors()}
+    anchor = anchors["sentences.skip_opening_ending_checkbox"]
+
+    assert anchor.widget is panel.skip_opening_ending_checkbox
+    assert "Skip openings, endings and signs" in anchor.search_text()
+    assert "karaoke" in anchor.search_text()
+    ids = list(anchors)
+    assert (
+        ids.index("sentences.subtitle_regex_edit")
+        < ids.index("sentences.skip_opening_ending_checkbox")
+        < ids.index("sentences.sentence_rule_combo")
+    )

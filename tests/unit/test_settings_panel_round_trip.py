@@ -125,6 +125,7 @@ def _non_default_save_config(tmp_path: Path) -> AnkiMinerConfig:
         use_subtitle_regex_filter=False,  # default is True
         secondary_subtitle_enabled=True,
         merge_incomplete_cues=True,
+        skip_opening_ending=False,  # default is True (F-08, fresh installs)
         bold_target_in_sentence=False,  # default is True
         pick_best_sentence=False,  # default is True (F-07)
         # --- YouTubeSettingsPanel ---
@@ -193,6 +194,7 @@ _SAVE_PATH_FIELDS = frozenset(
         "secondary_subtitle_enabled",
         "merge_incomplete_cues",
         "bold_target_in_sentence",
+        "skip_opening_ending",
         "deduplicate_sentences",
         "use_i_plus_one_filter",
         "max_sentence_duration_seconds",
@@ -424,6 +426,7 @@ class TestSavePathRoundTrip:
             "secondary_subtitle_enabled",
             "merge_incomplete_cues",
             "bold_target_in_sentence",
+            "skip_opening_ending",
             "deduplicate_sentences",
             "use_i_plus_one_filter",
             "max_sentence_duration_seconds",

@@ -90,6 +90,7 @@ class SentencesSettingsPanel(FormPanel):
 
     Provides:
     - Subtitle text cleanup: one plain-language box, the raw regex behind a disclosure (D15 extension)
+    - Skipping openings, endings and signs (F-08)
     - Sentence rule (dedup / i+1) and sentence length caps (C13)
     - Best-sentence pick (F-07)
     - Secondary-language subtitles (F7)
@@ -171,6 +172,22 @@ class SentencesSettingsPanel(FormPanel):
                 self.tr("Sentences"),
             ),
             focus=self.subtitle_regex_group,
+        )
+
+        # Skip openings, endings and signs (F-08, ruling C7): the last row of the
+        # cleanup group, because it decides which subtitle lines are read at all.
+        # On for fresh installs only: F0's load-path rule keeps it off for a
+        # config saved before it existed.
+        self.skip_opening_ending_checkbox = QCheckBox(self.tr("Skip openings, endings and signs"))
+        self.add_field(
+            "",
+            self.skip_opening_ending_checkbox,
+            helper=self.tr(
+                "Leaves out song lyrics, previews and on-screen signs: lines whose subtitle style marks them "
+                "as a song or a sign, and lines inside a video's opening, ending or preview chapters. "
+                "Applies to mining, Condense and Readability."
+            ),
+            anchor_text=lambda: ("OP", "ED", "OP/ED", "opening", "ending", "karaoke", "signs", "chapters", "lyrics"),
         )
 
         # Sentence options (C13): what the example sentence is and looks like.
@@ -341,6 +358,14 @@ class SentencesSettingsPanel(FormPanel):
         self.use_subtitle_regex_checkbox.setChecked(value)
         self._sync_cleanup_box()
 
+    def get_skip_opening_ending(self) -> bool:
+        """Whether song, sign and OP/ED-chapter lines are left out (F-08)."""
+        return self.skip_opening_ending_checkbox.isChecked()
+
+    def set_skip_opening_ending(self, value: bool) -> None:
+        """Set the skip-openings-and-endings checkbox."""
+        self.skip_opening_ending_checkbox.setChecked(value)
+
     def get_secondary_subtitle_enabled(self) -> bool:
         return self.secondary_subtitle_checkbox.isChecked()
 
@@ -448,6 +473,7 @@ class SentencesSettingsPanel(FormPanel):
         self.set_subtitle_regex_replacement(config.subtitle_regex_replacement)
         self.set_use_subtitle_regex_filter(config.use_subtitle_regex_filter)
         self._open_disclosure_for_custom_pattern()
+        self.set_skip_opening_ending(config.skip_opening_ending)
         self.set_secondary_subtitle_enabled(config.secondary_subtitle_enabled)
         self.set_merge_incomplete_cues(config.merge_incomplete_cues)
         self.set_bold_target_in_sentence(config.bold_target_in_sentence)
@@ -473,6 +499,7 @@ class SentencesSettingsPanel(FormPanel):
             subtitle_regex_filter=self.get_subtitle_regex_filter(),
             subtitle_regex_replacement=self.get_subtitle_regex_replacement(),
             use_subtitle_regex_filter=self.get_use_subtitle_regex_filter(),
+            skip_opening_ending=self.get_skip_opening_ending(),
             secondary_subtitle_enabled=self.get_secondary_subtitle_enabled(),
             merge_incomplete_cues=self.get_merge_incomplete_cues(),
             bold_target_in_sentence=self.get_bold_target_in_sentence(),
