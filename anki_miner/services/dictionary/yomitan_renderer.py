@@ -843,5 +843,10 @@ def render_glossary_entry(
         # exact marker on the outer item so both flat and formsTable JMdict rows
         # hide without leaving an empty numbered definition behind.
         item_attrs += ' data-sc-content="forms"'
+    if definition_tags:
+        # The row's own definitionTags, kept apart from the termTags the index's
+        # `tags` column unions in: Yomitan's per-definition label lists these
+        # only. IndexedDictProvider._render reads the stamp and drops it.
+        item_attrs += f' data-am-def-tags="{escape(" ".join(definition_tags), quote=True)}"'
 
     return f'<li {item_attrs}><div class="gloss-content">{inner}</div></li>'

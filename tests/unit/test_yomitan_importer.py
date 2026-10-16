@@ -12,6 +12,7 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import SetupError
 from anki_miner.services._sqlite_index import read_ownership_marker
 from anki_miner.services.definition_service import DefinitionService
+from anki_miner.services.dictionary.anki_export import to_yomitan_export
 from anki_miner.services.dictionary.importers.yomitan_importer import (
     _PROGRESS_SCALE,
     YomitanImportResult,
@@ -47,7 +48,7 @@ class TestImportYomitanZip:
             assert "to eat" in content
             # Tag badges moved to provider-side composition (Task 4); content
             # is now glossary-only items. Task 3 will populate DictRow.tags.
-            assert '<li class="gloss-item">' in content
+            assert content.startswith('<li class="gloss-item" data-am-def-tags=')
         finally:
             conn.close()
 
@@ -826,7 +827,7 @@ class TestImportYomitanZip:
         conn = open_readonly(db_path)
         try:
             content = conn.execute("SELECT content FROM entries WHERE term = ?", ("走る",)).fetchone()[0]
-            assert '<li class="gloss-item">' in content
+            assert content.startswith('<li class="gloss-item" data-am-def-tags=')
             assert "to run" in content
             # Renderer no longer emits tag badges or tag-list wrapper.
             assert "tag-list" not in content
@@ -871,7 +872,7 @@ class TestImportYomitanZip:
             conn.close()
 
         exact_forms, longer_tag = (row[0] for row in rows)
-        assert exact_forms.startswith('<li class="gloss-item" data-sc-content="forms">')
+        assert exact_forms.startswith('<li class="gloss-item" data-sc-content="forms" data-am-def-tags="forms">')
         assert 'data-sc-content="forms"' not in longer_tag
 
     def test_import_marks_forms_table_outer_item_and_preserves_table_marker(self, tmp_path: Path):
@@ -899,7 +900,7 @@ class TestImportYomitanZip:
         finally:
             conn.close()
 
-        assert content.startswith('<li class="gloss-item" data-sc-content="forms">')
+        assert content.startswith('<li class="gloss-item" data-sc-content="forms" data-am-def-tags="forms">')
         assert '<table class="gloss-sc-table" data-sc-content="formsTable">' in content
 
     def test_tags_column_populated_from_definition_and_term_tags(self, tmp_path: Path):
@@ -927,6 +928,30 @@ class TestImportYomitanZip:
 
         # definitionTags first, then termTags, order preserved within each.
         assert tags == "v5r vt common P"
+
+    def test_card_label_lists_definition_tags_only(self, tmp_path: Path):
+        """JMdict お小遣い: definitionTags ``n``, termTags ``⭐ spec``. Yomitan's
+        {glossary} writes ``<i>(n, JMdict)</i>``: termTags go on the headword."""
+        zip_path = build_yomitan_zip(
+            tmp_path / "src" / "test.zip",
+            title="JMdict",
+            term_banks=[[["お小遣い", "おこづかい", "n", "", 0, ["pocket money"], 2408310, "⭐ spec"]]],
+            tag_banks=[
+                [
+                    ["⭐", "popular", -10, "high priority term", 10],
+                    ["spec", "frequent", -2, "common", 0],
+                    ["n", "partOfSpeech", -3, "noun", 0],
+                ]
+            ],
+        )
+        result = import_yomitan_zip(zip_path, tmp_path / "dicts")
+        provider = IndexedDictProvider(result.dict_id, tmp_path / "dicts" / result.dict_id / "index.sqlite", "JMdict")
+        assert provider.load() is True
+        html = provider.lookup("お小遣い")
+        provider.close()
+
+        assert html is not None
+        assert "<i>(n, JMdict)</i> pocket money" in to_yomitan_export(html)
 
     def test_tags_column_empty_when_no_tag_columns(self, tmp_path: Path):
         """When both definitionTags and termTags are empty strings, `tags=""`."""
