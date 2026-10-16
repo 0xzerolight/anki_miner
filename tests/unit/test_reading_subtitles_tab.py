@@ -231,6 +231,14 @@ class TestDragDrop:
         assert tab.listed_paths() == [a, b]
         event.acceptProposedAction.assert_called_once()
 
+    def test_drop_takes_lrc_lyrics(self, tab, tmp_path):
+        song = _sub_file(tmp_path, "song.lrc")
+        event = MagicMock()
+        with patch(_URLS, return_value=[_url(str(song))]):
+            tab.dropEvent(event)
+        assert tab.listed_paths() == [song]
+        assert ".lrc" in tab.add_files_button.toolTip()
+
     def test_drop_dedupes_against_list(self, tab, tmp_path):
         a = _sub_file(tmp_path, "a.srt")
         tab._add_paths([a])

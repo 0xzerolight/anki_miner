@@ -59,8 +59,9 @@ _ARCHIVE_EXTS: tuple[str, ...] = (".cbz", ".zip")
 
 # Subtitle-file extensions mined as text (Reading → Subtitle Files sub-tab). No
 # MicroDVD ``.sub``: frame-based, pysubs2 needs a media-derived fps we don't
-# have without the video. SAMI ``.smi`` is the Korean fansub format.
-_SUBTITLE_EXTS: tuple[str, ...] = (".srt", ".ass", ".ssa", ".vtt", ".smi")
+# have without the video. SAMI ``.smi`` is the Korean fansub format; ``.lrc`` is
+# synced song lyrics.
+_SUBTITLE_EXTS: tuple[str, ...] = (".srt", ".ass", ".ssa", ".vtt", ".smi", ".lrc")
 
 # Book-file extensions (Reading → Novels sub-tab); matched case-insensitively.
 # ``.pdf`` (TS-05) reads the embedded text layer only.
@@ -148,7 +149,7 @@ def detect(
         raise SetupError(
             f"'{path.name}' is not a recognized reading source. Supported: .mokuro, "
             ".cbz/.zip (with a matching .mokuro beside or inside it), .epub, .txt, .pdf, "
-            "subtitle files (.srt/.ass/.ssa/.vtt/.smi), or a folder of .mokuro volumes."
+            "subtitle files (.srt/.ass/.ssa/.vtt/.smi/.lrc), or a folder of .mokuro volumes."
         )
     except SetupError:
         log_summary(

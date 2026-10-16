@@ -100,6 +100,13 @@ def test_vtt_parses(tmp_path):
     assert [u.text for u in doc.units] == ["こんにちは", "元気ですか"]
 
 
+def test_lrc_lyrics_parse_one_unit_per_line(tmp_path):
+    doc = subtitle_source.load(_ref(_write(tmp_path, "Song.lrc", "[00:01.00]空を飛ぶ\n[00:04.50]夢を見た\n")))
+
+    assert [u.text for u in doc.units] == ["空を飛ぶ", "夢を見た"]
+    assert [u.location_label for u in doc.units] == ["0:01", "0:04"]
+
+
 # --------------------------------------------------------------------------- #
 # Cue cleaning: comments, styling tags, empties.
 # --------------------------------------------------------------------------- #

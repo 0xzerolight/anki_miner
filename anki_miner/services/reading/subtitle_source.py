@@ -1,4 +1,4 @@
-"""Load one subtitle file (.srt/.ass/.ssa/.vtt) into per-cue reading units.
+"""Load one subtitle file (.srt/.ass/.ssa/.vtt/.smi/.lrc) into per-cue reading units.
 
 Each surviving cue becomes one :class:`ReadingUnit` — the same sentence
 granularity the video pipeline mines from the same file — with the cue's
@@ -32,11 +32,17 @@ from anki_miner.models.reading import (
     ReadingSourceRef,
     ReadingUnit,
 )
+from anki_miner.services.lrc_format import register_lrc_format
 from anki_miner.services.reading._util import READING_CANCELLED, _decode
 from anki_miner.utils.logging_ext import log_summary
 from anki_miner.utils.text_utils import clean_subtitle_text
 
 logger = logging.getLogger(__name__)
+
+# ``.lrc`` lyrics parse through pysubs2 only once the format is registered
+# (``get_format_identifier`` below); the parser module does it too, but this
+# loader must not depend on that import having happened first.
+register_lrc_format()
 
 # The two over-cap SetupErrors below name this in MB ("over 32 MB"); change both
 # if this changes.

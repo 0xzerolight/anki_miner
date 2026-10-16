@@ -580,7 +580,8 @@ def test_unknown_extension_errors(tmp_path):
         detector.detect(movie)
 
     # The guidance message names every supported input class.
-    assert ".srt/.ass/.ssa/.vtt/.smi" in str(excinfo.value)
+    assert ".srt/.ass/.ssa/.vtt/.smi/.lrc" in str(excinfo.value)
+    assert ".pdf" in str(excinfo.value)
 
 
 # --------------------------------------------------------------------------- #
@@ -588,7 +589,7 @@ def test_unknown_extension_errors(tmp_path):
 # --------------------------------------------------------------------------- #
 
 
-@pytest.mark.parametrize("ext", [".srt", ".ass", ".ssa", ".vtt", ".smi"])
+@pytest.mark.parametrize("ext", [".srt", ".ass", ".ssa", ".vtt", ".smi", ".lrc"])
 def test_subtitle_ref_provisional_fill(tmp_path, ext):
     sub = tmp_path / f"Ep01{ext}"
     sub.write_text("stub", encoding="utf-8")
