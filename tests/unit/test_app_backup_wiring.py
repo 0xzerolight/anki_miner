@@ -130,3 +130,44 @@ def test_nothing_scheduled_touches_no_lock():
         assert held.isLocked()
     finally:
         held.unlock()
+
+
+def test_the_startup_pass_prunes_the_transcript_cache(test_config, monkeypatch):
+    """R16: the saved-transcript cache is trimmed under the same locks as the repair."""
+    from anki_miner.services.asr import transcript_cache
+
+    calls: list = []
+    monkeypatch.setattr(app, "run_startup_store_recovery", lambda config, **kw: None)
+    monkeypatch.setattr(app, "run_daily_backup", lambda *a, **k: None)
+    monkeypatch.setattr(transcript_cache, "prune_transcript_cache", lambda *a, **k: calls.append(a) or 0)
+
+    app._run_store_recovery_if_locked(test_config, _HELD, allow_collection=True)
+
+    assert len(calls) == 1
+
+
+def test_no_instance_lock_means_no_transcript_prune(test_config, monkeypatch):
+    from anki_miner.services.asr import transcript_cache
+
+    calls: list = []
+    monkeypatch.setattr(transcript_cache, "prune_transcript_cache", lambda *a, **k: calls.append(a) or 0)
+
+    app._run_store_recovery_if_locked(test_config, None, allow_collection=True)
+
+    assert calls == []
+
+
+def test_a_failed_prune_does_not_stop_startup(test_config, monkeypatch, caplog):
+    from anki_miner.services.asr import transcript_cache
+
+    def _broken(*_a, **_k):
+        raise RuntimeError("prune broke")
+
+    monkeypatch.setattr(app, "run_startup_store_recovery", lambda config, **kw: None)
+    monkeypatch.setattr(app, "run_daily_backup", lambda *a, **k: None)
+    monkeypatch.setattr(transcript_cache, "prune_transcript_cache", _broken)
+
+    with caplog.at_level(logging.ERROR, logger="anki_miner.gui.app"):
+        app._run_store_recovery_if_locked(test_config, _HELD, allow_collection=True)
+
+    assert any(record.getMessage().startswith("Transcript cache prune failed") for record in caplog.records)

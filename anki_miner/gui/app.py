@@ -1144,7 +1144,7 @@ def _run_store_recovery_if_locked(
 
     It also holds the run lock through the repair, and skips when a
     command-line or API run holds it. It also takes the day's backup (WP-13)
-    under the same locks.
+    and trims the saved-transcript cache (R16) under the same locks.
     """
     if instance_lock is None:
         logger.warning("Skipping startup store recovery because the instance lock is not held")
@@ -1179,6 +1179,14 @@ def _run_store_recovery_if_locked(
             )
         except Exception:  # noqa: BLE001 — bucket A: no backup today; startup continues.
             logger.exception("Daily backup failed; continuing startup")
+        # R16: saved transcripts stay under 2 GB, oldest first. Never raises
+        # by contract; the guard keeps an unexpected fault off the boot path.
+        from anki_miner.services.asr.transcript_cache import prune_transcript_cache
+
+        try:
+            prune_transcript_cache()
+        except Exception:  # noqa: BLE001 — bucket A: an unpruned cache only costs disk space.
+            logger.exception("Transcript cache prune failed; continuing startup")
     finally:
         run_lock.unlock()
 
