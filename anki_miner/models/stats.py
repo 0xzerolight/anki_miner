@@ -113,3 +113,31 @@ class KnownSizePoint:
 
     day: date
     word_count: int
+
+
+class HistoryGrouping(Enum):
+    """How Analytics → Mining History lists the runs (ST-02).
+
+    The values are stable ids stored as combo data, never shown to the user.
+    """
+
+    RUN = "run"
+    DAY = "day"
+    WEEK = "week"
+    MONTH = "month"
+
+
+@dataclass(frozen=True)
+class SessionGroup:
+    """One period of the mining history with its runs summed (ST-02).
+
+    ``key`` is language-neutral (``2026-10-15``, ``2026-W42``, ``2026-10``);
+    ``start`` is the period's first day and its sort key.
+    """
+
+    key: str
+    start: date
+    sessions: int
+    total_words: int
+    unknown_words: int
+    cards_created: int

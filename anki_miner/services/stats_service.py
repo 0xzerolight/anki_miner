@@ -1,21 +1,26 @@
 """Service for recording and querying mining statistics."""
 
+import csv
 import logging
 import sqlite3
 import threading
+from collections.abc import Iterable, Sequence
 from contextlib import contextmanager
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
 from anki_miner.models.stats import (
     DifficultyEntry,
+    HistoryGrouping,
     KnownSizePoint,
     Milestone,
     MilestoneKind,
     MiningSession,
     OverallStats,
     RunReceipt,
+    SessionGroup,
 )
+from anki_miner.utils.atomic_io import atomic_write_path
 
 logger = logging.getLogger(__name__)
 
@@ -547,3 +552,80 @@ class StatsService:
             note_count=int(row["note_count"]) if "note_count" in columns else 0,
             deleted_count=int(row["deleted_count"]) if "deleted_count" in columns else 0,
         )
+
+
+# === ST-02: history ranges, groups and export (pure, no database) ===
+
+
+def sessions_since(sessions: Sequence[MiningSession], since: datetime | None) -> list[MiningSession]:
+    """The runs mined at or after ``since``, in their order; every run when ``since`` is ``None``."""
+    if since is None:
+        return list(sessions)
+    return [session for session in sessions if session.mined_at >= since]
+
+
+def _period(mined_at: datetime, grouping: HistoryGrouping) -> tuple[str, date]:
+    """The key and first day of the period ``mined_at`` falls in."""
+    day = mined_at.date()
+    if grouping is HistoryGrouping.DAY:
+        return day.isoformat(), day
+    if grouping is HistoryGrouping.WEEK:
+        iso = day.isocalendar()
+        return f"{iso.year}-W{iso.week:02d}", day - timedelta(days=iso.weekday - 1)
+    if grouping is HistoryGrouping.MONTH:
+        return f"{day.year}-{day.month:02d}", day.replace(day=1)
+    raise ValueError(f"runs are not grouped: {grouping}")
+
+
+def group_sessions(sessions: Iterable[MiningSession], grouping: HistoryGrouping) -> list[SessionGroup]:
+    """Sum the runs per day, ISO week or month, newest period first (ST-02).
+
+    Grouped here rather than in SQL: SQLite builds older than 3.46 have no ISO
+    week, and ``mined_at`` holds two text formats (``isoformat()`` and the
+    column's ``datetime('now')`` default) that ``fromisoformat`` already
+    reconciles when the rows are read.
+
+    Raises:
+        ValueError: ``grouping`` is ``RUN``, which lists runs one by one.
+    """
+    if grouping is HistoryGrouping.RUN:
+        raise ValueError("runs are not grouped")
+    totals: dict[str, list[int]] = {}
+    starts: dict[str, date] = {}
+    for session in sessions:
+        key, start = _period(session.mined_at, grouping)
+        starts[key] = start
+        row = totals.setdefault(key, [0, 0, 0, 0])
+        row[0] += 1
+        row[1] += session.total_words
+        row[2] += session.unknown_words
+        row[3] += session.cards_created
+    ordered = sorted(totals, key=lambda key: starts[key], reverse=True)
+    return [
+        SessionGroup(
+            key=key,
+            start=starts[key],
+            sessions=totals[key][0],
+            total_words=totals[key][1],
+            unknown_words=totals[key][2],
+            cards_created=totals[key][3],
+        )
+        for key in ordered
+    ]
+
+
+def export_csv(path: Path, header: Sequence[str], rows: Iterable[Sequence[object]]) -> int:
+    """Write ``header`` and ``rows`` to ``path`` as CSV; return the data rows written.
+
+    UTF-8 with a byte-order mark, so a spreadsheet opens Japanese names as
+    text; staged and moved into place, so a failed export never leaves half a
+    file under the name the user chose.
+    """
+    count = 0
+    with atomic_write_path(path) as staged, staged.open("w", encoding="utf-8-sig", newline="") as handle:
+        writer = csv.writer(handle)
+        writer.writerow(header)
+        for row in rows:
+            writer.writerow(row)
+            count += 1
+    return count
