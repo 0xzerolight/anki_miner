@@ -5,13 +5,16 @@ from __future__ import annotations
 from dataclasses import replace
 from datetime import date, timedelta
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
 
 from anki_miner.config import FreqEntry
 from anki_miner.exceptions import AnkiConnectionError
 from anki_miner.gui.widgets import analytics_tab as analytics_tab_module
-from anki_miner.models.stats import KnownSizePoint
+from anki_miner.gui.widgets.analytics_tab import AnalyticsTab, _KnowledgeBundle
+from anki_miner.languages.registry import get_profile
+from anki_miner.models.stats import KnownSizePoint, MiningSession, OverallStats
 from anki_miner.services.anki_service import AnkiService
 from anki_miner.services.frequency import storage
 from anki_miner.services.known_word_db import KnownWordDB
@@ -119,3 +122,150 @@ def test_growth_reference(days_ago, expected_index):
     reference = analytics_tab_module._growth_reference(history, today=today)
 
     assert reference == (None if expected_index is None else history[expected_index])
+
+
+def _sync_run_off_thread(parent, work, on_done, on_error=None, *, error_prefix=""):
+    try:
+        result = work()
+    except Exception as exc:  # noqa: BLE001 — mirror the worker error path
+        if on_error is not None:
+            on_error(f"{error_prefix}{exc}")
+        return None
+    on_done(result)
+    return None
+
+
+TODAY = date.today()
+
+
+def _bundle(**overrides) -> _KnowledgeBundle:
+    values: dict = {
+        "language": "ja",
+        "known_count": 1250,
+        "history": [
+            KnownSizePoint(day=TODAY - timedelta(days=10), word_count=1200),
+            KnownSizePoint(day=TODAY, word_count=1250),
+        ],
+        "coverage": None,
+        "has_numeric_source": False,
+    }
+    values.update(overrides)
+    return _KnowledgeBundle(**values)
+
+
+@pytest.fixture
+def knowledge(qtbot, monkeypatch, test_config):
+    """A tab with one run on record, a fake knowledge fetch, and the fetch's call log."""
+    monkeypatch.setattr(analytics_tab_module, "run_off_thread", _sync_run_off_thread)
+    state: dict = {"bundle": _bundle(), "calls": [], "error": None}
+
+    def _fake_fetch(config, service):
+        state["calls"].append(config.language)
+        if state["error"] is not None:
+            raise state["error"]
+        return state["bundle"]
+
+    monkeypatch.setattr(analytics_tab_module, "_fetch_knowledge", _fake_fetch)
+
+    def _make() -> AnalyticsTab:
+        service = MagicMock()
+        service.is_available.return_value = True
+        service.language = "ja"
+        service.get_overall_stats.return_value = OverallStats(total_sessions=1, total_cards_created=3, series_count=1)
+        service.get_recent_sessions.return_value = [MiningSession(id=1, series_name="S", cards_created=3)]
+        service.get_series_difficulty.return_value = []
+        service.get_milestones.return_value = []
+        service.get_known_size_history.return_value = []
+        tab = AnalyticsTab(service, config_provider=lambda: test_config)
+        qtbot.addWidget(tab)
+        return tab
+
+    state["make"] = _make
+    return state
+
+
+def _show(qtbot, tab: AnalyticsTab) -> None:
+    tab.show()
+    qtbot.waitExposed(tab)
+
+
+def test_the_card_shows_the_live_count_and_its_growth(qtbot, knowledge):
+    tab = knowledge["make"]()
+    _show(qtbot, tab)
+
+    assert tab.card_known_words.value_label.text() == "1,250"
+    caption = tab.known_words_caption.text()
+    assert "Words Anki Miner treats as known in 日本語." in caption
+    assert f"Change since {(TODAY - timedelta(days=10)).isoformat()}: +50" in caption
+
+
+def test_a_hidden_page_scans_nothing(knowledge):
+    tab = knowledge["make"]()
+
+    tab.refresh_data(force=True)
+
+    assert knowledge["calls"] == []
+
+
+def test_the_scan_runs_once_per_window_and_again_after_a_run(qtbot, knowledge):
+    tab = knowledge["make"]()
+    _show(qtbot, tab)
+    assert knowledge["calls"] == ["ja"]
+
+    tab.refresh_data(force=True)
+    assert knowledge["calls"] == ["ja"]
+
+    tab.mark_stale()
+    assert knowledge["calls"] == ["ja", "ja"]
+
+
+def test_a_language_switch_scans_again(qtbot, knowledge):
+    tab = knowledge["make"]()
+    _show(qtbot, tab)
+
+    tab.set_content_style(get_profile("ja").content_style)
+    tab.refresh_data(force=True)
+
+    assert knowledge["calls"] == ["ja", "ja"]
+
+
+def test_anki_down_shows_the_last_count(qtbot, knowledge):
+    knowledge["bundle"] = _bundle(
+        known_count=None, history=[KnownSizePoint(day=date(2026, 10, 1), word_count=40)], anki_error="down"
+    )
+    tab = knowledge["make"]()
+    _show(qtbot, tab)
+
+    assert tab.card_known_words.value_label.text() == "40"
+    assert "Last counted on 2026-10-01; Anki was not reachable." in tab.known_words_caption.text()
+
+
+def test_the_last_recorded_count_shows_before_the_scan(knowledge):
+    tab = knowledge["make"]()
+    tab.stats_service.get_known_size_history.return_value = [KnownSizePoint(day=date(2026, 10, 1), word_count=40)]
+
+    tab.refresh_data(force=True)
+
+    assert not tab.card_known_words.isHidden()
+    assert tab.card_known_words.value_label.text() == "40"
+    assert "Last counted on 2026-10-01." in tab.known_words_caption.text()
+
+
+def test_no_count_at_all_hides_the_card(qtbot, knowledge):
+    knowledge["bundle"] = _bundle(known_count=None, history=[])
+    tab = knowledge["make"]()
+    _show(qtbot, tab)
+
+    assert tab.card_known_words.isHidden()
+    assert tab.known_words_caption.isHidden()
+
+
+def test_a_failed_scan_is_a_banner_with_retry(qtbot, knowledge):
+    knowledge["error"] = RuntimeError("stats.db is locked")
+    tab = knowledge["make"]()
+    _show(qtbot, tab)
+
+    issue = tab.issue_banner().current_issue()
+    assert issue is not None
+    assert issue.summary == "Known words could not be counted."
+    assert issue.action_text == "Retry"

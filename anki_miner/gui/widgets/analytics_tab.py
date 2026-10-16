@@ -4,7 +4,7 @@ import contextlib
 import logging
 import time
 from collections.abc import Callable
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
@@ -144,6 +144,9 @@ class _AnalyticsBundle:
     sessions: list[MiningSession]
     difficulties: list[DifficultyEntry]
     milestones: list[Milestone]
+    #: ST-05: the known-words counts recorded so far, shown until this visit's
+    #: Anki scan lands.
+    known_history: list[KnownSizePoint] = field(default_factory=list)
 
 
 #: Known Words growth compares the latest count with the earliest one in this window (ST-05).
@@ -332,6 +335,11 @@ class AnalyticsTab(ScreenIssueHost, QWidget):
     # within this window so rapid tab clicking stays snappy.
     _REFRESH_TTL_SECONDS = 5.0
 
+    # ST-05/ST-07: the Anki scan behind Known Words and Frequency Coverage is
+    # the cost of a Readability check, so it runs at most this often unless a
+    # run finished (mark_stale) or the mining language changed.
+    _KNOWLEDGE_TTL_SECONDS = 600.0
+
     def __init__(
         self,
         stats_service: StatsService,
@@ -379,6 +387,11 @@ class AnalyticsTab(ScreenIssueHost, QWidget):
         self._all_sessions: list[MiningSession] = []
         # The rows of the table on show, for Export CSV (L2.ST02.T4).
         self._history_export: list[list[object]] = []
+        # ST-05/ST-07: one off-thread scan feeds both sections, only while the
+        # page is on screen (a hidden tab never reaches into Anki).
+        self._knowledge_in_flight = False
+        self._knowledge_at: float | None = None
+        self._has_history = False
         self._setup_ui()
         self._setup_accessibility()
 
@@ -390,6 +403,8 @@ class AnalyticsTab(ScreenIssueHost, QWidget):
         until the next launch. The rows already on screen are re-faced in place:
         the data has not changed, only what it should look like.
         """
+        # A language switch: the next visit counts the new language's words.
+        self._knowledge_at = None
         self._content_style = style
         font = content_cell_font(style)
         for table, columns in (
@@ -516,7 +531,19 @@ class AnalyticsTab(ScreenIssueHost, QWidget):
         grid.addWidget(self.card_total_sessions, 0, 1)
         grid.addWidget(self.card_total_series, 0, 2)
 
+        # ST-05: the label says what is counted (R11); the caption carries
+        # the language and the change.
+        self.card_known_words = StatCard(value="0", label=self.tr("Known Words"))
+        self.card_known_words.setToolTip(self.tr("Words Anki Miner treats as known in the current mining language."))
+        self.card_known_words.hide()
+        grid.addWidget(self.card_known_words, 0, 3)
+
         layout.addLayout(grid)
+        self.known_words_caption = QLabel()
+        self.known_words_caption.setObjectName("helper-text")
+        self.known_words_caption.setWordWrap(True)
+        self.known_words_caption.hide()
+        layout.addWidget(self.known_words_caption)
         group.setLayout(layout)
         return group
 
@@ -742,6 +769,7 @@ class AnalyticsTab(ScreenIssueHost, QWidget):
                 sessions=service.get_recent_sessions(limit=None),
                 difficulties=service.get_series_difficulty(),
                 milestones=service.get_milestones(stats=stats),
+                known_history=service.get_known_size_history(),
             )
 
         run_off_thread(
@@ -758,6 +786,8 @@ class AnalyticsTab(ScreenIssueHost, QWidget):
         clock is cleared, so the next visit's ``showEvent`` re-reads it. A read
         already in flight may predate the run, so it re-runs when it lands.
         """
+        # A run may have added known words: count again on this or the next visit.
+        self._knowledge_at = None
         self._last_refresh = None
         if self._refresh_in_flight:
             self._stale_pending = True
@@ -778,6 +808,7 @@ class AnalyticsTab(ScreenIssueHost, QWidget):
             if not isinstance(bundle, _AnalyticsBundle):  # defensive; never expected
                 return
             self._apply_bundle(bundle)
+            self._maybe_refresh_knowledge()
             if self._stale_pending:
                 self._stale_pending = False
                 self.mark_stale()
@@ -881,6 +912,12 @@ class AnalyticsTab(ScreenIssueHost, QWidget):
         # Nothing recorded means nothing to reset: leave the button disabled
         # rather than raise a confirmation over an empty database.
         self.reset_button.setEnabled(not empty)
+        self._has_history = not empty
+        if self._knowledge_at is None:
+            # Until this visit's scan lands, the last recorded count stands in.
+            self._render_known_words(
+                str(self.stats_service.language), None, list(bundle.known_history), anki_down=False
+            )
         self._update_dashboard(bundle.stats)
         self._all_sessions = list(bundle.sessions)
         self._render_history()
@@ -1280,6 +1317,84 @@ class AnalyticsTab(ScreenIssueHost, QWidget):
         for milestone in milestones:
             self.milestones_layout.addWidget(self._create_milestone_widget(milestone))
 
+    # === ST-05/ST-07: known words and frequency coverage ===
+
+    def _maybe_refresh_knowledge(self) -> None:
+        """Start the off-thread Anki scan when the page is on screen and the last one is old."""
+        if self._config_provider is None or self._knowledge_in_flight or self._teardown_generation:
+            return
+        if not self._has_history or not self.isVisible():
+            return
+        if self._knowledge_at is not None and time.monotonic() - self._knowledge_at < self._KNOWLEDGE_TTL_SECONDS:
+            return
+        config = self._config_provider()
+        service = self.stats_service
+        self._knowledge_in_flight = True
+        run_off_thread(
+            self,
+            lambda: _fetch_knowledge(config, service),
+            self._on_knowledge_done,
+            self._on_knowledge_error,
+        )
+
+    def _on_knowledge_done(self, bundle: object) -> None:
+        """GUI thread: render the scan; only a scan that reached Anki starts the TTL."""
+        self._knowledge_in_flight = False
+        if self._teardown_generation:
+            return
+        with contextlib.suppress(RuntimeError):
+            if not isinstance(bundle, _KnowledgeBundle):  # defensive; never expected
+                return
+            if bundle.known_count is not None:
+                self._knowledge_at = time.monotonic()
+            self._apply_knowledge(bundle)
+
+    def _on_knowledge_error(self, msg: str) -> None:
+        """GUI thread: report on screen, with Retry (D24)."""
+        self._knowledge_in_flight = False
+        logging.getLogger(__name__).warning("Analytics: counting known words failed: %s", msg)
+        if self._teardown_generation:
+            return
+        with contextlib.suppress(RuntimeError):
+            self.show_screen_issue(
+                ScreenIssue(
+                    summary=self.tr("Known words could not be counted."),
+                    details=msg,
+                    action_id="analytics.knowledge-retry",
+                    action_text=self.tr("Retry"),
+                ),
+                action=self._maybe_refresh_knowledge,
+            )
+
+    def _apply_knowledge(self, bundle: _KnowledgeBundle) -> None:
+        """Render one scan: the Known Words card (and, from L2.ST07.T3, coverage)."""
+        self._render_known_words(
+            bundle.language, bundle.known_count, bundle.history, anki_down=bundle.known_count is None
+        )
+
+    def _render_known_words(
+        self, language: str, count: int | None, history: list[KnownSizePoint], *, anki_down: bool
+    ) -> None:
+        """Show the live count, else the last recorded one; hide the card when there is neither."""
+        latest = count if count is not None else (history[-1].word_count if history else None)
+        self.card_known_words.setVisible(latest is not None)
+        self.known_words_caption.setVisible(latest is not None)
+        if latest is None:
+            return
+        self.card_known_words.set_value(f"{latest:,}")
+        parts = [tr_format(self.tr("Words Anki Miner treats as known in %1."), language_display_name(language))]
+        reference = _growth_reference(history, today=date.today())
+        if reference is not None:
+            change = history[-1].word_count - reference.word_count
+            parts.append(tr_format(self.tr("Change since %1: %2"), reference.day.isoformat(), f"{change:+,}"))
+        if count is None and history:
+            last_day = history[-1].day.isoformat()
+            if anki_down:
+                parts.append(tr_format(self.tr("Last counted on %1; Anki was not reachable."), last_day))
+            else:
+                parts.append(tr_format(self.tr("Last counted on %1."), last_day))
+        self.known_words_caption.setText(" ".join(parts))
+
     def _milestone_text(self, milestone: Milestone) -> str:
         """State the milestone as a fact, in the UI language (decision D47).
 
@@ -1331,3 +1446,5 @@ class AnalyticsTab(ScreenIssueHost, QWidget):
         """Refresh data when tab becomes visible."""
         super().showEvent(event)
         self.refresh_data()
+        # The refresh above may be skipped by its TTL; the scan has its own.
+        self._maybe_refresh_knowledge()
