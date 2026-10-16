@@ -56,6 +56,24 @@ def test_read_known_forms_uses_the_active_languages_db(tmp_path, test_config, mo
     assert fold("Gato") == "gato"
 
 
+def test_read_known_forms_follows_known_from_reviewed_cards(tmp_path, test_config, monkeypatch):
+    """F-01: with the switch on, an unreviewed card's word is not known for coverage."""
+    config = replace(
+        test_config, language="es", known_words_db_path=tmp_path / "known_words.db", known_from_reviewed_cards=True
+    )
+    monkeypatch.setattr(
+        AnkiService, "get_existing_vocabulary", lambda self, *, allow_degraded=True: {"perro", "caballo"}
+    )
+    monkeypatch.setattr(AnkiService, "get_reviewed_vocabulary", lambda self: {"perro"})
+
+    known, _fold = analytics_tab_module._read_known_forms(config)
+
+    assert "perro" in known
+    assert "caballo" not in known
+    off, _fold = analytics_tab_module._read_known_forms(replace(config, known_from_reviewed_cards=False))
+    assert {"perro", "caballo"} <= off
+
+
 def test_fetch_records_today_and_measures_coverage(tmp_path, test_config, monkeypatch):
     _source(tmp_path / "freqs", "list", "ja", [("猫", 1), ("犬", 2)])
     config = replace(test_config, freqs_root=tmp_path / "freqs", frequency_chain=(FreqEntry(source_id="list"),))

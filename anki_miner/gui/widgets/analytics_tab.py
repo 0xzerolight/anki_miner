@@ -73,7 +73,7 @@ from anki_miner.services.frequency.coverage import (
     measure_coverage,
     open_first_numeric_source,
 )
-from anki_miner.services.known_word_db import KnownWordDB, collect_known_forms
+from anki_miner.services.known_word_db import KnownWordDB, collect_knowledge_forms
 from anki_miner.services.run_history import RunNotesCheck, check_run_notes, delete_run
 from anki_miner.services.stats_service import StatsService, export_csv, group_sessions, sessions_since
 from anki_miner.utils.i18n import tr_format
@@ -186,16 +186,19 @@ def _read_known_forms(config: AnkiMinerConfig) -> tuple[set[str], Callable[[str]
     A mirror of ``ReadabilityWorker._process_queue``'s recipe: Anki's card
     fronts with ``allow_degraded=False`` (an empty set on a timeout would read
     as "nothing known"), plus the user list and, when it is on, the
-    known-words DB, through ``collect_known_forms``. After the F-01 merge, X
-    points this one function at the knowledge set F-01 gives Readability
-    (L2 README, post-merge item 6).
+    known-words DB, through ``collect_knowledge_forms`` (F-01): with Word
+    Filters → "Count a word as known only after its card has been reviewed"
+    on, only reviewed cards count, and a failed review query falls back to
+    every card. Read-only, like Readability.
 
     Raises:
         AnkiConnectionError: Anki is not reachable.
     """
-    vocabulary = AnkiService(config).get_existing_vocabulary(allow_degraded=False)
+    anki = AnkiService(config)
+    vocabulary = anki.get_existing_vocabulary(allow_degraded=False)
     known_word_db = KnownWordDB(resolve_known_words_db_path(config), language=config_language(config))
-    return collect_known_forms(known_word_db, config, vocabulary), known_word_db.normalize_key
+    known = collect_knowledge_forms(known_word_db, config, vocabulary, anki.get_reviewed_vocabulary)
+    return known, known_word_db.normalize_key
 
 
 def _fetch_knowledge(config: AnkiMinerConfig, service: StatsService) -> _KnowledgeBundle:
