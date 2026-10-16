@@ -226,6 +226,23 @@ def test_a_reused_transcript_is_said_in_the_progress_line(qapp, tmp_path):
     assert "Reusing the saved transcript" in [msg for _idx, _pct, msg in cap["progress"]]
 
 
+def test_a_passage_found_out_of_book_order_is_said_in_a_translatable_line(qapp, tmp_path):
+    audio = tmp_path / "ch01.mp3"
+    audio.touch()
+    w = _worker(tmp_path, [audio])
+
+    def fake_sync(config, extractor, audio, book, cursor, out, **kw):
+        kw["on_out_of_order"](12)
+        return BookSyncResult(BookSyncStatus.SUCCESS, out_srt=out, cues=1)
+
+    with patch(_LOAD_BOOK, return_value=_BOOK), patch(_SYNC_ONE, side_effect=fake_sync):
+        cap = _run(w)
+
+    assert "Found sentence 12 again later in the audio; timed it out of book order" in [
+        msg for _idx, _pct, msg in cap["progress"]
+    ]
+
+
 # --- WP-27 a shelf of books ------------------------------------------------------
 
 

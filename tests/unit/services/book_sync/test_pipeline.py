@@ -170,7 +170,7 @@ def test_sync_one_cancel_during_alignment(tmp_path, monkeypatch):
     event = threading.Event()
     import anki_miner.services.book_sync.pipeline as pl
 
-    def fake_align(segs, book, cursor, *, cancel_check=None, log=None):
+    def fake_align(segs, book, cursor, *, cancel_check=None, log=None, on_out_of_order=None):
         event.set()
         return [SentenceTiming(0, 0.0, 2.0)]
 
@@ -325,3 +325,28 @@ def test_a_sentence_an_earlier_file_timed_is_not_logged_as_unheard(tmp_path, mon
 
     assert result.unmatched_sentences == 0
     assert "Book sync unheard" not in caplog.text
+
+
+def test_sync_one_forwards_the_out_of_order_event_to_the_aligner(tmp_path, monkeypatch):
+    """MS-24: the aligner reports a detour as an event; the worker words it (Z.2 WB3 I-3)."""
+    _patch_transcribe(monkeypatch)
+    import anki_miner.services.book_sync.pipeline as pl
+
+    def fake_align(segs, book, cursor, **kw):
+        kw["on_out_of_order"](2)
+        return [SentenceTiming(0, 0.0, 2.0)]
+
+    monkeypatch.setattr(pl, "align_to_book", fake_align)
+    found: list[int] = []
+
+    sync_one(
+        _make_config(tmp_path),
+        object(),
+        tmp_path / "a.mp3",
+        _book(),
+        BookCursor(),
+        tmp_path / "a.srt",
+        on_out_of_order=found.append,
+    )
+
+    assert found == [2]

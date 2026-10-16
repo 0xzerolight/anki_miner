@@ -280,13 +280,15 @@ def align_to_book(
     *,
     cancel_check: Callable[[], bool] | None = None,
     log: Callable[[str], None] | None = None,
+    on_out_of_order: Callable[[int], None] | None = None,
 ) -> list[SentenceTiming]:
     """See the module docstring. Advances ``cursor`` past the last timed sentence.
 
     Returns the timings in audio order. Without a detour that is also book
     order; a detour's sentences (an earlier passage read later, MS-24) sit
     where the audio has them. Every returned index is added to
-    ``cursor.timed``.
+    ``cursor.timed``. ``on_out_of_order`` gets the 1-based sentence number
+    where each new detour starts; the caller words it for the user.
     """
     transcript = _Stream([normalize_for_alignment(s.text) for s in segments])
     if not transcript.chars:
@@ -328,8 +330,8 @@ def align_to_book(
             # cut in: that sentence keeps collecting, or its cue ends at the cut.
             resumed = {start} - done if start == detour_at else set()
             detour.add(match, skip=taken - resumed)
-            if log is not None and start != detour_at:
-                log(f"Found sentence {start + 1} again later in the audio; timed it out of book order")
+            if on_out_of_order is not None and start != detour_at:
+                on_out_of_order(start + 1)
             return match.last_equal_sentence
         return None
 

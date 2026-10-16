@@ -23,8 +23,9 @@ def test_a_foreword_read_after_the_story_is_timed_where_the_audio_has_it():
     foreword = _shifted(_read(book, 0, 99, rng=random.Random(22)), len(story))
     cursor = BookCursor()
     log: list[str] = []
+    found_again: list[int] = []
 
-    timings = align_to_book(story + foreword, book, cursor, log=log.append)
+    timings = align_to_book(story + foreword, book, cursor, log=log.append, on_out_of_order=found_again.append)
 
     indices = [t.index for t in timings]
     assert len({i for i in indices if i >= 100}) >= 190
@@ -37,7 +38,9 @@ def test_a_foreword_read_after_the_story_is_timed_where_the_audio_has_it():
             assert t.start >= len(story) - 1  # the foreword's cues sit in the foreword's audio
     assert cursor.sentence == 300  # the main cursor is untouched by the detour
     assert cursor.timed == set(indices)
-    assert any("out of book order" in line for line in log)
+    # An event, not a line: the worker words it in the UI language (Z.2 WB3 I-3).
+    assert found_again and all(1 <= n <= 100 for n in found_again)
+    assert not any("out of book order" in line for line in log)
 
 
 def test_a_chapter_skipped_then_read_later_in_the_same_file():

@@ -200,6 +200,14 @@ class BookSyncWorker(FileQueueWorker):
             # F-12: hours of transcription skipped; say so instead of a silent jump to aligning.
             self.file_progress.emit(idx, UNMEASURED, self.tr("Reusing the saved transcript"))
 
+        def _on_out_of_order(sentence: int) -> None:
+            # MS-24: an earlier passage heard again later in this file.
+            self.file_progress.emit(
+                idx,
+                UNMEASURED,
+                tr_format(self.tr("Found sentence %1 again later in the audio; timed it out of book order"), sentence),
+            )
+
         def _log(line: str) -> None:
             # The aligner's re-anchor / skip notes: diagnostics in the
             # service's own words, surfaced like Generate's service lines.
@@ -222,6 +230,7 @@ class BookSyncWorker(FileQueueWorker):
                 language=get_profile(config_language(self._config)).asr_language,
                 log=_log,
                 on_transcript_reused=_on_transcript_reused,
+                on_out_of_order=_on_out_of_order,
             )
         except Exception as exc:  # noqa: BLE001 — per-file isolation
             logger.exception("booksync_worker: error on %s", audio_path)

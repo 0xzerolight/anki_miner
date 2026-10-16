@@ -115,6 +115,7 @@ def sync_one(
     language: str = "ja",
     log: Callable[[str], None] | None = None,
     on_transcript_reused: Callable[[], None] | None = None,
+    on_out_of_order: Callable[[int], None] | None = None,
 ) -> BookSyncResult:
     """Transcribe *audio_path*, align it to *book* from *cursor*, write *out_srt*.
 
@@ -123,7 +124,8 @@ def sync_one(
     re-anchor / skip notes, in the app's own words for the Activity log.
     The transcript is read from, and saved to, the transcript cache shared
     with Generate (F-12); ``on_transcript_reused`` fires when it came from
-    there. Segments are re-broken at the mining language's sentence ends
+    there. ``on_out_of_order`` gets the sentence number where a passage read
+    out of book order starts (MS-24). Segments are re-broken at the mining language's sentence ends
     (MS-21), the same transcript Generate writes, which also keeps the
     aligner's per-segment time interpolation short.
     """
@@ -163,6 +165,7 @@ def sync_one(
         cursor,
         cancel_check=(lambda: cancel_event.is_set()) if cancel_event is not None else None,
         log=log,
+        on_out_of_order=on_out_of_order,
     )
     if cancel_event is not None and cancel_event.is_set():
         return BookSyncResult(BookSyncStatus.CANCELLED)
