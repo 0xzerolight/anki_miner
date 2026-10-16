@@ -6,6 +6,7 @@ import time
 from collections.abc import Callable
 from dataclasses import dataclass, replace
 from datetime import datetime, timedelta
+from pathlib import Path
 
 from PyQt6.QtCore import QEvent, QPointF, QRectF, QSize, Qt
 from PyQt6.QtGui import QFont, QHelpEvent, QPainter, QPalette
@@ -27,7 +28,9 @@ from PyQt6.QtWidgets import (
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
+from anki_miner.gui.utils import file_dialogs
 from anki_miner.gui.utils.content_text import content_cell_font
+from anki_miner.gui.utils.dialog_paths import resolve_start_dir
 from anki_miner.gui.utils.qt_helpers import (
     CellRole,
     SortableTableWidgetItem,
@@ -62,7 +65,7 @@ from anki_miner.models.stats import (
 from anki_miner.services.anki_service import AnkiService
 from anki_miner.services.known_word_db import KnownWordDB
 from anki_miner.services.run_history import RunNotesCheck, check_run_notes, delete_run
-from anki_miner.services.stats_service import StatsService, group_sessions, sessions_since
+from anki_miner.services.stats_service import StatsService, export_csv, group_sessions, sessions_since
 from anki_miner.utils.i18n import tr_format
 from anki_miner.utils.logging_ext import log_summary
 
@@ -465,7 +468,15 @@ class AnalyticsTab(ScreenIssueHost, QWidget):
             self.history_group_combo.addItem(text, grouping.value)
         controls.addWidget(self.history_group_combo)
         controls.addStretch(1)
+        self.export_history_button = ModernButton(self.tr("Export CSV…"), variant="secondary")
+        self.export_history_button.setEnabled(False)
+        self.export_history_button.clicked.connect(self._on_export_history_clicked)
+        controls.addWidget(self.export_history_button)
         layout.addLayout(controls)
+        self.history_export_note = QLabel()
+        self.history_export_note.setObjectName("helper-text")
+        self.history_export_note.hide()
+        layout.addWidget(self.history_export_note)
 
         self.history_chart = _BarChart()
         self.history_chart.hide()
@@ -875,6 +886,7 @@ class AnalyticsTab(ScreenIssueHost, QWidget):
                 [period.key, period.sessions, period.total_words, period.unknown_words, period.cards_created]
                 for period in groups
             ]
+        self.export_history_button.setEnabled(bool(self._history_export))
 
     def _update_history_groups(self, groups: list[SessionGroup]) -> None:
         """Fill the per-period table; hidden when there is nothing to group."""
@@ -900,6 +912,58 @@ class AnalyticsTab(ScreenIssueHost, QWidget):
             table.setSortingEnabled(was_sorting)
             table.setUpdatesEnabled(True)
         hold_numeric_columns(table, _GROUP_COUNT_COLUMNS)
+
+    def _history_header(self) -> list[str]:
+        """The column titles of the table on show, as the CSV header."""
+        per_run = HistoryGrouping(self.history_group_combo.currentData()) is HistoryGrouping.RUN
+        table = self.sessions_table if per_run else self.history_groups_table
+        titles: list[str] = []
+        for column in range(table.columnCount()):
+            item = table.horizontalHeaderItem(column)
+            titles.append(item.text() if item is not None else "")
+        return titles
+
+    def _on_export_history_clicked(self) -> None:
+        """Ask where, then write the rows on show as CSV off the GUI thread (ST-02)."""
+        header = self._history_header()
+        rows = list(self._history_export)
+        if not rows:
+            return
+
+        def _on_picked(path_str: str) -> None:
+            if not path_str:
+                return
+            path = Path(path_str)
+            run_off_thread(
+                self,
+                lambda: export_csv(path, header, rows),
+                lambda _count: self._on_history_exported(path),
+                self._on_history_export_error,
+            )
+
+        file_dialogs.pick_save_file(
+            self,
+            self.tr("Export Mining History"),
+            str(Path(resolve_start_dir(None, file_mode=True)) / "mining_history.csv"),
+            self.tr("CSV Files (*.csv);;All Files (*)"),
+            on_done=_on_picked,
+        )
+
+    def _on_history_exported(self, path: Path) -> None:
+        """GUI thread: a quiet line under the controls is the receipt."""
+        if self._teardown_generation:
+            return
+        with contextlib.suppress(RuntimeError):
+            self.history_export_note.setText(tr_format(self.tr("History saved to %1."), path.name))
+            self.history_export_note.show()
+
+    def _on_history_export_error(self, msg: str) -> None:
+        """GUI thread: report the failed write on screen (D24)."""
+        logging.getLogger(__name__).warning("Analytics: history export failed: %s", msg)
+        if self._teardown_generation:
+            return
+        with contextlib.suppress(RuntimeError):
+            self.show_screen_issue(ScreenIssue(summary=self.tr("The history could not be exported."), details=msg))
 
     # === AI-16: act on one past run ===
 

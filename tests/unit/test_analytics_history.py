@@ -7,6 +7,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from anki_miner.gui.utils import file_dialogs
 from anki_miner.gui.widgets import analytics_tab as analytics_tab_module
 from anki_miner.gui.widgets.analytics_tab import AnalyticsTab, _AnalyticsBundle
 from anki_miner.models.stats import MiningSession, OverallStats
@@ -143,3 +144,55 @@ def test_the_chart_follows_the_grouping(tab):
     _choose(tab.history_group_combo, "month")
 
     assert tab.history_chart.bars() == [("2026-09", 3), ("2026-10", 2)]
+
+
+def test_export_writes_the_runs_on_show(tab, monkeypatch, tmp_path):
+    monkeypatch.setattr(analytics_tab_module, "run_off_thread", _sync_run_off_thread)
+    target = tmp_path / "history.csv"
+    monkeypatch.setattr(file_dialogs, "pick_save_file", lambda *a, on_done, **k: on_done(str(target)))
+    run = _run(1, datetime(2026, 10, 15, 9, 30), 5)
+    run.series_name = "葬送のフリーレン"
+    _render(tab, [run])
+
+    tab.export_history_button.click()
+
+    assert target.read_text(encoding="utf-8-sig").splitlines() == [
+        "Date,Series,Episode,Words,New Words,Cards",
+        "2026-10-15 09:30,葬送のフリーレン,ep01,100,10,5",
+    ]
+    assert tab.history_export_note.text() == "History saved to history.csv."
+
+
+def test_export_of_a_grouping_writes_the_periods(tab, monkeypatch, tmp_path):
+    monkeypatch.setattr(analytics_tab_module, "run_off_thread", _sync_run_off_thread)
+    target = tmp_path / "weeks.csv"
+    monkeypatch.setattr(file_dialogs, "pick_save_file", lambda *a, on_done, **k: on_done(str(target)))
+    _render(tab, [_run(1, datetime(2026, 10, 12, 9), 5)])
+    _choose(tab.history_group_combo, "week")
+
+    tab.export_history_button.click()
+
+    assert target.read_text(encoding="utf-8-sig").splitlines() == [
+        "Period,Sessions,Words,New Words,Cards",
+        "2026-W42,1,100,10,5",
+    ]
+
+
+def test_a_failed_export_is_a_banner(tab, monkeypatch, tmp_path):
+    monkeypatch.setattr(analytics_tab_module, "run_off_thread", _sync_run_off_thread)
+    target = tmp_path / "missing-folder" / "history.csv"
+    monkeypatch.setattr(file_dialogs, "pick_save_file", lambda *a, on_done, **k: on_done(str(target)))
+    _render(tab, [_run(1, datetime(2026, 10, 15), 1)])
+
+    tab.export_history_button.click()
+
+    issue = tab.issue_banner().current_issue()
+    assert issue is not None and issue.summary == "The history could not be exported."
+
+
+def test_nothing_on_show_disables_export(tab):
+    _render(tab, [_run(1, datetime.now() - timedelta(days=60), 1)])
+
+    _choose(tab.history_range_combo, 7)
+
+    assert not tab.export_history_button.isEnabled()
