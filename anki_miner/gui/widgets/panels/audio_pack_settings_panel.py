@@ -59,6 +59,23 @@ def _robust_rmtree(target: Path) -> RmtreeOutcome:
     return robust_rmtree(target, mode="outcome")
 
 
+def _insert_above_first_synthetic(
+    chain: Iterable[AudioSourceEntry], entry: AudioSourceEntry
+) -> tuple[AudioSourceEntry, ...]:
+    """Splice a recordings source above the first enabled synthetic voice (else append).
+
+    Synthetic speech exists for every word, so a recordings row below it would
+    never be consulted (F-16).
+    """
+    out = list(chain)
+    at = next(
+        (index for index, existing in enumerate(out) if existing.kind in ("googletts", "edgetts") and existing.enabled),
+        len(out),
+    )
+    out[at:at] = [entry]
+    return tuple(out)
+
+
 class _AddSourceDialog(QDialog):
     """Prompt for a new online audio source: a kind + a URL template.
 
@@ -77,7 +94,9 @@ class _AddSourceDialog(QDialog):
         ("custom", "Custom URL (a direct audio file URL)"),
     ]
 
-    def __init__(self, parent: QWidget | None = None, *, offer_edge_tts: bool = False) -> None:
+    def __init__(
+        self, parent: QWidget | None = None, *, offer_edge_tts: bool = False, offer_wikimedia: bool = False
+    ) -> None:
         super().__init__(parent)
         self.setWindowTitle(self.tr("Add Audio Source"))
         layout = QVBoxLayout(self)
@@ -86,6 +105,8 @@ class _AddSourceDialog(QDialog):
         self._kind_combo = QComboBox()
         for kind, label in self._KINDS:
             self._kind_combo.addItem(self.tr(label), kind)
+        if offer_wikimedia:
+            self._kind_combo.addItem(self.tr("Wikimedia Commons (native recordings)"), "wikimedia")
         if offer_edge_tts:
             self._kind_combo.addItem(self.tr("Microsoft Edge read-aloud (synthetic TTS)"), "edgetts")
         self._kind_combo.currentIndexChanged.connect(self._on_kind_changed)
@@ -168,6 +189,8 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
         # Whether the mining language names an Edge voice; SettingsTab sets it
         # from the profile on every config load (set_edge_tts_available).
         self._edge_tts_available = False
+        # Whether the mining language names Commons prefixes (F-16); set the same way.
+        self._wikimedia_available = False
         self._strings = _ChainPanelStrings(
             loading=self.tr("Loading…"),
             retry_label=self.tr("Retry"),
@@ -199,6 +222,14 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
         read-aloud kind: for any other language the entry would build nothing.
         """
         self._edge_tts_available = available
+
+    def set_wikimedia_available(self, available: bool) -> None:
+        """Whether the mining language names Commons prefixes (``AudioDefaults.wikimedia_prefixes``).
+
+        Only then does Add audio source -> Online Source offer Wikimedia Commons:
+        for any other language the row would build nothing.
+        """
+        self._wikimedia_available = available
 
     def request_resource_release(self) -> bool:
         """Ask the app to close cached resource handles before replacement."""
@@ -370,7 +401,11 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
             entry.kind,
             urlsplit(entry.url).netloc if entry.url else "-",
         )
-        self._write_chain(insert_above_first_enabled_jpod101(self.get_chain(), (entry,)))
+        chain = self.get_chain()
+        if entry.kind == "wikimedia":
+            self._write_chain(_insert_above_first_synthetic(chain, entry))
+        else:
+            self._write_chain(insert_above_first_enabled_jpod101(chain, (entry,)))
         self._rebuild_list()
         self.chain_changed.emit()
 
@@ -382,8 +417,11 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
         try:
             # One Edge leg is enough: the voice is the language's, so a second
             # entry would synthesise the same file.
-            offer_edge_tts = self._edge_tts_available and not any(e.kind == "edgetts" for e in self.get_chain())
-            dialog = _AddSourceDialog(self, offer_edge_tts=offer_edge_tts)
+            chain = self.get_chain()
+            offer_edge_tts = self._edge_tts_available and not any(e.kind == "edgetts" for e in chain)
+            # One Commons row is enough too: the prefixes are the language's.
+            offer_wikimedia = self._wikimedia_available and not any(e.kind == "wikimedia" for e in chain)
+            dialog = _AddSourceDialog(self, offer_edge_tts=offer_edge_tts, offer_wikimedia=offer_wikimedia)
             if dialog.exec() != QDialog.DialogCode.Accepted:
                 return
             self.add_source_entry(
@@ -418,6 +456,8 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
             return self.tr("Google Translate (synthetic TTS)"), "online", None, False, False
         if entry.kind == "edgetts":
             return self.tr("Microsoft Edge (synthetic TTS)"), "online", None, False, False
+        if entry.kind == "wikimedia":
+            return self.tr("Wikimedia Commons (native recordings)"), "online", None, False, False
         if entry.kind in ("custom", "custom_json"):
             label = self.tr("Custom JSON") if entry.kind == "custom_json" else self.tr("Custom URL")
             return (f"{label}: {entry.url}" if entry.url else label), "custom", None, False, False

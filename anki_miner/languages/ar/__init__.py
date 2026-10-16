@@ -55,8 +55,10 @@ AR_AUDIO = AudioDefaults(
     sentence_cache_stem_prefix="sentencetts_ar",
     custom_fetcher_language="ar",
     papago_speaker=None,
-    # No Pod101 dictionary endpoint exists for Arabic; Wiktionary audio is Stage W (not built).
-    default_chain=(AudioSourceEntry(kind="googletts"),),
+    # No Pod101 dictionary endpoint exists for Arabic.
+    wikimedia_prefixes=("Ar-", "LL-Q13955 (ara)-"),
+    default_chain=(AudioSourceEntry(kind="wikimedia"), AudioSourceEntry(kind="googletts")),
+    edge_voice="ar-SA-ZariyahNeural",
     candidates=ar_audio_candidates,
     speakable=spaced_speakable,
 )

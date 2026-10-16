@@ -51,6 +51,7 @@ JA_AUDIO = AudioDefaults(
     custom_fetcher_language="ja",
     papago_speaker=PAPAGO_SPEAKER_JA,
     default_chain=AnkiMinerConfig().expression_audio_chain,
+    edge_voice="ja-JP-NanamiNeural",
     candidates=None,
 )
 

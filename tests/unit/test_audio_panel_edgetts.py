@@ -52,7 +52,7 @@ def test_the_panel_offers_edge_for_a_voiced_language_until_it_is_in_the_chain(qt
     offers: list[bool] = []
 
     class _Dialog:
-        def __init__(self, parent=None, *, offer_edge_tts: bool = False) -> None:
+        def __init__(self, parent=None, *, offer_edge_tts: bool = False, offer_wikimedia: bool = False) -> None:
             offers.append(offer_edge_tts)
 
         def exec(self) -> QDialog.DialogCode:
@@ -93,10 +93,10 @@ def tab(test_config: AnkiMinerConfig, qtbot):
 
 
 def test_settings_tells_the_panel_whether_the_language_has_an_edge_voice(tab, monkeypatch):
-    assert tab.audio_panel._edge_tts_available is False  # ja names no Edge voice
+    assert tab.audio_panel._edge_tts_available is True  # CC-17: ja names an Edge voice too
 
-    audio = dataclasses.replace(get_profile("ja").audio, edge_voice="zh-HK-HiuMaanNeural")
+    audio = dataclasses.replace(get_profile("ja").audio, edge_voice="")
     register_stub_profile(monkeypatch, "zh", audio=audio)
     tab.reload_from_config(dataclasses.replace(tab.config, language="zh"))
 
-    assert tab.audio_panel._edge_tts_available is True
+    assert tab.audio_panel._edge_tts_available is False

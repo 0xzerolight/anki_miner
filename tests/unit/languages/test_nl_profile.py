@@ -66,7 +66,7 @@ def test_audio_speaks_the_front_through_google():
     audio = get_profile("nl").audio
     stems = (audio.gtts_lang, audio.cache_stem_prefix, audio.sentence_cache_stem_prefix)
     assert stems == ("nl", "googletts_nl", "sentencetts_nl")
-    assert [entry.kind for entry in audio.default_chain] == ["googletts"]
+    assert [entry.kind for entry in audio.default_chain] == ["wikimedia", "googletts"]
     assert audio.speakable is not None and audio.speakable("opbellen", "") == "opbellen"
 
 

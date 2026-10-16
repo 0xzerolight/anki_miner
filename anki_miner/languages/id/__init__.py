@@ -48,7 +48,9 @@ ID_AUDIO = AudioDefaults(
     sentence_cache_stem_prefix="sentencetts_id",
     custom_fetcher_language="id",
     papago_speaker=None,
-    default_chain=(AudioSourceEntry(kind="googletts"),),
+    wikimedia_prefixes=("LL-Q9240 (ind)-",),
+    default_chain=(AudioSourceEntry(kind="wikimedia"), AudioSourceEntry(kind="googletts")),
+    edge_voice="id-ID-GadisNeural",
     candidates=spaced_audio_candidates,
     speakable=spaced_speakable,
 )

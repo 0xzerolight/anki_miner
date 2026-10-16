@@ -92,7 +92,7 @@ def test_word_audio_speaks_the_front_through_google():
         "googletts_hr",
         "sentencetts_hr",
     )
-    assert [entry.kind for entry in audio.default_chain] == ["googletts"]
+    assert [entry.kind for entry in audio.default_chain] == ["wikimedia", "googletts"]
     assert audio.speakable is not None and audio.speakable("knjiga", "") == "knjiga"
 
 

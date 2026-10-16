@@ -39,7 +39,9 @@ TR_AUDIO = AudioDefaults(
     sentence_cache_stem_prefix="sentencetts_tr",
     custom_fetcher_language="tr",
     papago_speaker=None,
-    default_chain=(AudioSourceEntry(kind="googletts"),),
+    wikimedia_prefixes=("LL-Q256 (tur)-",),
+    default_chain=(AudioSourceEntry(kind="wikimedia"), AudioSourceEntry(kind="googletts")),
+    edge_voice="tr-TR-EmelNeural",
     candidates=spaced_audio_candidates,
     speakable=spaced_speakable,
 )

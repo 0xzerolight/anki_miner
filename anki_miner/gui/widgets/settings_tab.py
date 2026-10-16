@@ -1263,6 +1263,10 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
             from anki_miner.languages.registry import config_language, get_profile
 
             self.audio_panel.set_edge_tts_available(bool(get_profile(config_language(self.config)).audio.edge_voice))
+            # F-16: Wikimedia Commons is offered where the language names Commons prefixes.
+            self.audio_panel.set_wikimedia_available(
+                bool(get_profile(config_language(self.config)).audio.wikimedia_prefixes)
+            )
 
             # Frequency source chain lives in the Frequency tab; the chain persists
             # immediately via its own signal. Frequency activation is derived from an

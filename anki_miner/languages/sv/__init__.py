@@ -56,7 +56,9 @@ SV_AUDIO = AudioDefaults(
     sentence_cache_stem_prefix="sentencetts_sv",
     custom_fetcher_language="sv",
     papago_speaker=None,
-    default_chain=(AudioSourceEntry(kind="googletts"),),
+    wikimedia_prefixes=("Sv-", "LL-Q9027 (swe)-"),
+    default_chain=(AudioSourceEntry(kind="wikimedia"), AudioSourceEntry(kind="googletts")),
+    edge_voice="sv-SE-SofieNeural",
     candidates=spaced_audio_candidates,
     speakable=spaced_speakable,
 )

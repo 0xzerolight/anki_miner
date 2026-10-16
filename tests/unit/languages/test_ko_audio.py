@@ -5,8 +5,8 @@ from types import SimpleNamespace
 from anki_miner.languages.ko.audio import KO_AUDIO, ko_audio_candidates
 
 
-def test_default_chain_is_googletts_only_and_enabled():
-    assert [(e.kind, e.enabled) for e in KO_AUDIO.default_chain] == [("googletts", True)]
+def test_default_chain_is_commons_then_googletts_enabled():
+    assert [(e.kind, e.enabled) for e in KO_AUDIO.default_chain] == [("wikimedia", True), ("googletts", True)]
 
 
 def test_no_jpod101_or_class101_entry_ships_by_default():

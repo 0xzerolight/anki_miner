@@ -91,6 +91,7 @@ SL_AUDIO = AudioDefaults(
     sentence_cache_stem_prefix="sentencetts_sl",
     custom_fetcher_language="sl",
     papago_speaker=None,
+    wikimedia_prefixes=("LL-Q9063 (slv)-",),
     default_chain=(AudioSourceEntry(kind="edgetts"),),
     candidates=spaced_audio_candidates,
     speakable=spaced_speakable,

@@ -48,8 +48,9 @@ UK_AUDIO = AudioDefaults(
     sentence_cache_stem_prefix="sentencetts_uk",
     custom_fetcher_language="uk",
     papago_speaker=None,
-    # Google TTS only: the Wiktionary/Lingua Libre kind is not built (DECIDED 1).
-    default_chain=(AudioSourceEntry(kind="googletts"),),
+    wikimedia_prefixes=("Uk-", "LL-Q8798 (ukr)-"),
+    default_chain=(AudioSourceEntry(kind="wikimedia"), AudioSourceEntry(kind="googletts")),
+    edge_voice="uk-UA-PolinaNeural",
     candidates=spaced_audio_candidates,
     speakable=spaced_speakable,
 )

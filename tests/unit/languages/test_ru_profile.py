@@ -76,7 +76,7 @@ def test_word_audio_speaks_the_front_through_google():
         "sentencetts_ru",
     )
     assert audio.custom_fetcher_language == "ru" and audio.papago_speaker is None
-    assert [entry.kind for entry in audio.default_chain] == ["googletts"]
+    assert [entry.kind for entry in audio.default_chain] == ["wikimedia", "googletts"]
 
 
 def test_scoped_defaults_carry_the_russian_sdh_filter_and_the_extra_fields():

@@ -65,7 +65,7 @@ def test_word_audio_is_google_vi_and_speaks_the_front():
         "googletts_vi",
         "sentencetts_vi",
     )
-    assert [entry.kind for entry in audio.default_chain] == ["googletts"]
+    assert [entry.kind for entry in audio.default_chain] == ["wikimedia", "googletts"]
     assert audio.speakable is not None and audio.speakable("hòa bình", "") == "hòa bình"
     assert audio.candidates is not None
 
@@ -76,7 +76,7 @@ def test_scoped_defaults_turn_on_the_vietnamese_sdh_filter():
     assert config.excluded_subtypes == ("stopword", "name")
     assert config.use_subtitle_regex_filter is True and config.subtitle_regex_filter == VI_SUBTITLE_REGEX
     assert config.downloader_subtitle_langs == "vi"
-    assert [entry.kind for entry in config.expression_audio_chain] == ["googletts"]
+    assert [entry.kind for entry in config.expression_audio_chain] == ["wikimedia", "googletts"]
     assert config.anki_fields["expression_furigana"] == "" and config.anki_deck_name == "Anki Miner"
 
 

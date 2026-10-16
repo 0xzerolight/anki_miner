@@ -3,7 +3,7 @@
 from dataclasses import replace
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QCheckBox, QComboBox, QDoubleSpinBox, QSpinBox
+from PyQt6.QtWidgets import QCheckBox, QComboBox, QDoubleSpinBox, QLabel, QSpinBox
 
 from anki_miner.gui.widgets.base import FormPanel
 from anki_miner.languages.registry import config_language, get_profile
@@ -85,6 +85,19 @@ class MediaSettingsPanel(FormPanel):
             ),
         )
 
+        # CC-21 (R14): no Opus container is documented to play in AnkiMobile,
+        # AnkiDroid and Anki desktop alike (iOS reads Opus only from MP4; Android
+        # documents Opus extraction only from Ogg and WebM), so the option warns
+        # instead of switching containers. Shown only while Opus is chosen.
+        self.opus_warning_label = QLabel(
+            self.tr("Opus clips do not play in AnkiMobile on iPhone or iPad. Choose MP3 if you review there.")
+        )
+        self.opus_warning_label.setObjectName("helper-text")
+        self.opus_warning_label.setWordWrap(True)
+        self.add_field("", self.opus_warning_label)
+        self.audio_format_combo.currentTextChanged.connect(self._sync_opus_warning)
+        self._sync_opus_warning(self.audio_format_combo.currentText())
+
         # Audio bitrate (Issue #18)
         self.audio_bitrate_spinbox = QSpinBox()
         self.audio_bitrate_spinbox.setRange(32, 320)
@@ -106,6 +119,17 @@ class MediaSettingsPanel(FormPanel):
             self.audio_padding_spinbox,
             helper=self.tr("Extra time before and after the subtitle."),
         )
+
+        # F-02 + CC-07 (R1): one switch for clip and Condense loudness and the
+        # clip fade. On for fresh installs; a config saved before it loads off.
+        self.loudness_checkbox = QCheckBox(self.tr("Even out audio volume"))
+        self.loudness_checkbox.setToolTip(
+            self.tr(
+                "Brings sentence clips and condensed audio to one volume and fades each clip in "
+                "and out, so quiet and loud sources sound alike. Applies to new clips."
+            )
+        )
+        self.add_field("", self.loudness_checkbox)
 
         # Sentence TTS for reading sources (manga/novels): folded from the
         # Audio page's master + two provider checkboxes (T11) into one combo.
@@ -147,6 +171,17 @@ class MediaSettingsPanel(FormPanel):
             self.screenshot_offset_spinbox,
             helper=self.tr("Measured from the subtitle start time."),
         )
+
+        # F-11 (R4): manga cards keep the sentence's speech bubble, padded, instead
+        # of the whole page. On for fresh installs; a config saved before it loads off.
+        self.crop_manga_checkbox = QCheckBox(self.tr("Crop manga pictures to the speech bubble"))
+        self.crop_manga_checkbox.setToolTip(
+            self.tr(
+                "Manga cards show the speech bubble and the art around it instead of the whole page. "
+                "A sentence with no bubble position keeps the whole page."
+            )
+        )
+        self.add_field("", self.crop_manga_checkbox)
 
         # Animated screenshot toggle
         self.animated_checkbox = QCheckBox(self.tr("Enable animated screenshots"))
@@ -208,6 +243,10 @@ class MediaSettingsPanel(FormPanel):
         """Enable or disable the animated screenshot sub-controls."""
         for widget in (self.animated_format_combo, self.animated_duration_spinbox, self.animated_size_combo):
             widget.setEnabled(enabled)
+
+    def _sync_opus_warning(self, audio_format: str) -> None:
+        """Show the AnkiMobile warning only while Opus is the chosen format (CC-21)."""
+        self.opus_warning_label.setVisible(audio_format == "opus")
 
     def _on_animated_size_activated(self, index: int) -> None:
         """Drop the Custom entry once the user picks a real preset.
@@ -431,6 +470,7 @@ class MediaSettingsPanel(FormPanel):
         self.set_audio_format(config.audio_format)
         self.set_audio_bitrate(config.audio_bitrate)
         self.set_audio_padding(config.audio_padding)
+        self.loudness_checkbox.setChecked(config.normalize_audio_loudness)
         audio = get_profile(config_language(config)).audio
         self._populate_reading_tts_items(
             papago=bool(audio.papago_speaker),
@@ -442,6 +482,7 @@ class MediaSettingsPanel(FormPanel):
             config.reading_tts_papago_enabled,
         )
         self.set_screenshot_offset(config.screenshot_offset)
+        self.crop_manga_checkbox.setChecked(config.crop_manga_to_text)
         self.set_screenshot_animated(config.screenshot_animated)
         self.set_screenshot_animated_format(config.screenshot_animated_format)
         self.set_screenshot_animated_clip_duration(config.screenshot_animated_clip_duration)
@@ -465,10 +506,12 @@ class MediaSettingsPanel(FormPanel):
             audio_format=self.get_audio_format(),
             audio_bitrate=self.get_audio_bitrate(),
             audio_padding=self.get_audio_padding(),
+            normalize_audio_loudness=self.loudness_checkbox.isChecked(),
             reading_tts_enabled=reading_tts_enabled,
             reading_tts_google_enabled=reading_tts_google_enabled,
             reading_tts_papago_enabled=reading_tts_papago_enabled,
             screenshot_offset=self.get_screenshot_offset(),
+            crop_manga_to_text=self.crop_manga_checkbox.isChecked(),
             screenshot_animated=self.get_screenshot_animated(),
             screenshot_animated_format=self.get_screenshot_animated_format(),
             screenshot_animated_clip_duration=self.get_screenshot_animated_clip_duration(),

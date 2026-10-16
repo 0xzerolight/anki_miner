@@ -65,7 +65,7 @@ def test_audio_speaks_the_front_through_google():
         "sentencetts_fi",
     )
     assert audio.custom_fetcher_language == "fi"
-    assert [entry.kind for entry in audio.default_chain] == ["googletts"]
+    assert [entry.kind for entry in audio.default_chain] == ["wikimedia", "googletts"]
     assert audio.speakable is not None and audio.speakable("kirja", "") == "kirja"
 
 

@@ -72,6 +72,18 @@ STILL_MAX_HEIGHT = 720
 #: libopus's bitrate ceiling for one channel; card clips are mono.
 OPUS_MONO_MAX_KBPS = 256
 
+#: F-02 (R1): one loudness target for every sentence clip and condensed track,
+#: EBU R128 in a single pass. Fixed in code on purpose: there is no dB setting.
+LOUDNORM_FILTER = "loudnorm=I=-16:TP=-1.5:LRA=11"
+
+#: loudnorm upsamples to 192 kHz internally, so the output rate is pinned back
+#: to one that libmp3lame and libopus both take.
+LOUDNORM_SAMPLE_RATE = "48000"
+
+#: CC-07: the fade at each end of a clip, so a cut mid-waveform does not click.
+#: It follows the loudness switch, so a switched-off clip stays byte-identical.
+CLIP_FADE_SECONDS = 0.03
+
 #: Longest track ``wav_to_float32`` will decode. Deliberately generous — this
 #: stops the 20h-audiobook OOM-kill (float32 output ≈ 230 MB/hour; the ~7 GB
 #: peak at 20h was the OLD int16-buffer-plus-float32-buffer combined resident
@@ -84,6 +96,20 @@ _MAX_ASR_DURATION_S = 6 * 60 * 60  # 6 hours
 #: output array. Keeps only one small int16 chunk resident alongside the
 #: full-length float32 array, instead of the whole int16 byte buffer.
 _WAV_READ_CHUNK_FRAMES = 1_000_000
+
+
+def clip_audio_filter(duration: float) -> str:
+    """The ``-af`` chain for a normalised sentence clip ``duration`` seconds long.
+
+    Loudness first, then the fades, so the fades act on the final level. The
+    clip's own clock starts at 0 (``-ss`` sits before ``-i``), so the fade-out
+    starts ``CLIP_FADE_SECONDS`` before the end of the window the cut was given.
+    """
+    fade_out_start = max(duration - CLIP_FADE_SECONDS, 0.0)
+    return (
+        f"{LOUDNORM_FILTER},afade=t=in:d={CLIP_FADE_SECONDS},"
+        f"afade=t=out:st={fade_out_start:.3f}:d={CLIP_FADE_SECONDS}"
+    )
 
 
 def resolve_audio_window(word: TokenizedWord, padding: float) -> tuple[float, float]:
@@ -1596,6 +1622,11 @@ class MediaExtractorService:
         # bitrate all goes to one channel. -ac also downmixes 5.1 (common in anime
         # BD/WEB-DL releases), which libopus rejects without a channel mapping.
         cmd.extend(["-ac", "1"])
+
+        # F-02 + CC-07 (R1): one switch covers the loudness filter and the fade.
+        # Off, the command stays byte-identical to the cut before the switch.
+        if self.config.normalize_audio_loudness:
+            cmd.extend(["-af", clip_audio_filter(audio_duration), "-ar", LOUDNORM_SAMPLE_RATE])
 
         cmd.append(str(output_path))
 

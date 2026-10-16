@@ -21,11 +21,11 @@ def test_cache_stems_are_namespaced_per_language():
     assert TH_AUDIO.cache_stem_prefix == "googletts_th"
     assert TH_AUDIO.sentence_cache_stem_prefix == "sentencetts_th"
     assert TH_AUDIO.custom_fetcher_language == "th"
-    assert TH_AUDIO.edge_voice == ""
+    assert TH_AUDIO.edge_voice == "th-TH-PremwadeeNeural"
 
 
-def test_default_chain_is_the_google_voice_only():
-    assert [entry.kind for entry in TH_AUDIO.default_chain] == ["googletts"]
+def test_default_chain_is_commons_then_the_google_voice():
+    assert [entry.kind for entry in TH_AUDIO.default_chain] == ["wikimedia", "googletts"]
 
 
 def test_audio_candidates_are_one_pair_and_drop_the_abbreviation_mark():

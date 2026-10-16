@@ -55,7 +55,9 @@ DA_AUDIO = AudioDefaults(
     sentence_cache_stem_prefix="sentencetts_da",
     custom_fetcher_language="da",
     papago_speaker=None,
-    default_chain=(AudioSourceEntry(kind="googletts"),),
+    wikimedia_prefixes=("Da-", "LL-Q9035 (dan)-"),
+    default_chain=(AudioSourceEntry(kind="wikimedia"), AudioSourceEntry(kind="googletts")),
+    edge_voice="da-DK-ChristelNeural",
     candidates=spaced_audio_candidates,
     speakable=spaced_speakable,
 )

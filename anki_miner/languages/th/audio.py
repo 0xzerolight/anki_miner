@@ -5,14 +5,11 @@ directly, so the default chain is the one synthetic entry the app already
 carries. The Paiboon field is never fed to TTS: it is Latin, and a th-TH voice
 reads Latin letters as Latin letters.
 
-No Edge read-aloud leg: ``edge_voice`` is for a language with no Google voice
-(fa, sl) or one a user may add by hand (he, yue). Thai has a Google voice, and
-the seam's contract is that a language declaring no voice gets no Edge leg
-offered in Settings -> Word Audio.
+``edge_voice`` names a Thai voice so the Edge read-aloud leg can be added by
+hand (Settings -> Word Audio); the default chain stays Google's (CC-17).
 
-Commons carries roughly 250 Thai recordings plus 289 Lingua Libre files -- too
-few to be worth a fetcher, and the wiktionary audio kind is out of scope this
-session anyway.
+Commons carries roughly 250 Thai recordings (``Th-``) plus 289 Lingua Libre
+files; the ``wikimedia`` leg (F-16) tries the ``Th-`` ones before Google.
 
 Cache stems are namespaced (``googletts_th`` / ``sentencetts_th``) because the
 caches key on term and reading only.
@@ -63,7 +60,9 @@ TH_AUDIO = AudioDefaults(
     sentence_cache_stem_prefix="sentencetts_th",
     custom_fetcher_language="th",
     papago_speaker=None,
-    default_chain=(AudioSourceEntry(kind="googletts"),),
+    wikimedia_prefixes=("Th-",),
+    default_chain=(AudioSourceEntry(kind="wikimedia"), AudioSourceEntry(kind="googletts")),
+    edge_voice="th-TH-PremwadeeNeural",
     candidates=th_audio_candidates,
     speakable=th_speakable,
 )

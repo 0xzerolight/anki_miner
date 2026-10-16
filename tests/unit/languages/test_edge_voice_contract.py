@@ -9,7 +9,9 @@ nobody edits this file to add one.
 
 from __future__ import annotations
 
+import json
 import re
+from pathlib import Path
 
 import pytest
 
@@ -20,8 +22,8 @@ from anki_miner.languages.registry import get_profile
 
 _VOICE = re.compile(r"^[a-z]{2,3}-[A-Z]{2}-[A-Za-z]+Neural$")
 
-#: The 21 languages that shipped before the edgetts seam. The seam is inert for
-#: them: none names a voice or defaults to the Edge leg.
+#: The 21 languages that shipped before the edgetts seam. None defaults to the
+#: Edge leg; since CC-17 each names a voice, so a user can add the leg by hand.
 _SHIPPED_BEFORE_EDGETTS = (
     "ja",
     "ko",
@@ -97,7 +99,25 @@ def test_a_language_with_neither_voice_has_no_sentence_web_voice():
 
 
 @pytest.mark.parametrize("code", _SHIPPED_BEFORE_EDGETTS)
-def test_the_seam_is_inert_for_the_shipped_languages(code):
+def test_the_edge_leg_stays_out_of_the_shipped_default_chains(code):
     audio = get_profile(code).audio
-    assert audio.edge_voice == ""
     assert not any(entry.kind == "edgetts" for entry in audio.default_chain)
+
+
+#: CC-17 (R13): the voice list the endpoint published, so a typo in a profile fails here.
+_PUBLISHED_VOICES = frozenset(
+    json.loads(
+        (Path(__file__).resolve().parents[2] / "fixtures" / "edge_voices_mining_locales.json").read_text(
+            encoding="utf-8"
+        )
+    )["short_names"]
+)
+
+
+@pytest.mark.parametrize("code", AVAILABLE_LANGUAGES)
+def test_every_language_names_a_published_edge_voice(code):
+    voice = get_profile(code).audio.edge_voice
+    assert voice in _PUBLISHED_VOICES, (code, voice)
+    # The voice speaks this language: its locale's language part is the profile code
+    # (Cantonese is served from zh-HK).
+    assert voice.split("-", 1)[0] == {"yue": "zh"}.get(code, code), (code, voice)

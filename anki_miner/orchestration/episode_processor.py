@@ -3815,7 +3815,10 @@ class EpisodeProcessor:
         # their remaining refs, warn once each), and a set of individual refs
         # whose page failed to decode (skip re-attempt, warn once each even when
         # the page/cover is shared by many words).
-        ref_cache: dict[ImageRef, Path] = {}
+        # Keyed by (page, block box), not the page alone (F-11): with manga crop
+        # on, two words on one page with different blocks need two pictures.
+        # With crop off every key's box is None, which is the per-page memo of old.
+        ref_cache: dict[tuple[ImageRef, tuple[int, int, int, int] | None], Path] = {}
         failed_archives: set[Path] = set()
         failed_refs: set[ImageRef] = set()
         # One open ZipFile per archive for the whole phase (a manga volume's
@@ -3845,11 +3848,16 @@ class EpisodeProcessor:
                 media = MediaData()
                 unit = units_by_index.get(int(word.start_time))
                 ref = unit.image_ref if unit is not None else None
+                crop_box = unit.block_box if unit is not None and self.config.crop_manga_to_text else None
                 if picture_mapped and ref is not None and ref.source not in failed_archives and ref not in failed_refs:
-                    image_path = ref_cache.get(ref)
+                    image_path = ref_cache.get((ref, crop_box))
                     if image_path is None:
                         try:
-                            image_path = prepare_card_image(ref, images_dir, archive_handles)
+                            # No crop keeps the pre-F-11 call exactly, so a crop-off run is unchanged.
+                            if crop_box is None:
+                                image_path = prepare_card_image(ref, images_dir, archive_handles)
+                            else:
+                                image_path = prepare_card_image(ref, images_dir, archive_handles, block_box=crop_box)
                         except SetupError as exc:
                             # Appending to document.warnings here would be lost (the
                             # up-front drain already ran) — surface directly, once
@@ -3921,7 +3929,7 @@ class EpisodeProcessor:
                                 )
                             image_path = None
                         else:
-                            ref_cache[ref] = image_path
+                            ref_cache[(ref, crop_box)] = image_path
                     if image_path is not None:
                         media.screenshot_path = image_path
                         media.screenshot_filename = image_path.name

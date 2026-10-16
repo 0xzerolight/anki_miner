@@ -131,7 +131,7 @@ def test_a_first_switch_lands_on_the_hebrew_defaults():
     assert config.language == "he"
     assert config.downloader_subtitle_langs == "iw"
     assert config.anki_fields["expression_reading"] == "Reading"
-    assert config.expression_audio_chain == (AudioSourceEntry(kind="googletts"),)
+    assert config.expression_audio_chain == (AudioSourceEntry(kind="wikimedia"), AudioSourceEntry(kind="googletts"))
     assert tuple(config.allowed_pos) == HE_ALLOWED_POS
     assert tuple(config.excluded_subtypes) == HE_EXCLUDED_SUBTYPES
     assert config.anki_deck_name == "Anki Miner"
@@ -166,7 +166,7 @@ def test_the_edge_voice_is_set_but_google_stays_the_default_leg():
     import re
 
     assert re.fullmatch(r"[a-z]{2,3}-[A-Z]{2}-[A-Za-z]+Neural", HE_AUDIO.edge_voice)
-    assert HE_AUDIO.default_chain == (AudioSourceEntry(kind="googletts"),)
+    assert HE_AUDIO.default_chain == (AudioSourceEntry(kind="wikimedia"), AudioSourceEntry(kind="googletts"))
 
 
 def test_the_cache_stems_are_namespaced_by_language():

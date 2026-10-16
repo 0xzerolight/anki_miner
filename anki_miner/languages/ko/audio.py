@@ -59,7 +59,9 @@ KO_AUDIO = AudioDefaults(
     sentence_cache_stem_prefix="sentencetts_ko",
     custom_fetcher_language="ko",
     papago_speaker="kyuri",
-    default_chain=(AudioSourceEntry(kind="googletts"),),
+    wikimedia_prefixes=("Ko-",),
+    default_chain=(AudioSourceEntry(kind="wikimedia"), AudioSourceEntry(kind="googletts")),
+    edge_voice="ko-KR-SunHiNeural",
     candidates=ko_audio_candidates,
     speakable=ko_speakable,
 )

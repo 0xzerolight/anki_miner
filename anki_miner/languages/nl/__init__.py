@@ -55,7 +55,9 @@ NL_AUDIO = AudioDefaults(
     sentence_cache_stem_prefix="sentencetts_nl",
     custom_fetcher_language="nl",
     papago_speaker=None,
-    default_chain=(AudioSourceEntry(kind="googletts"),),
+    wikimedia_prefixes=("Nl-", "LL-Q7411 (nld)-"),
+    default_chain=(AudioSourceEntry(kind="wikimedia"), AudioSourceEntry(kind="googletts")),
+    edge_voice="nl-NL-ColetteNeural",
     candidates=spaced_audio_candidates,
     speakable=spaced_speakable,
 )

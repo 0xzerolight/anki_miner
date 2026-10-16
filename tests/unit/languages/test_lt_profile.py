@@ -95,7 +95,7 @@ def test_word_audio_speaks_the_front_through_google():
         "googletts_lt",
         "sentencetts_lt",
     )
-    assert [entry.kind for entry in audio.default_chain] == ["googletts"]
+    assert [entry.kind for entry in audio.default_chain] == ["wikimedia", "googletts"]
     assert audio.speakable is not None and audio.speakable("knyga", "") == "knyga"
     assert audio.candidates is not None
 
@@ -107,7 +107,7 @@ def test_scoped_defaults_turn_on_the_lithuanian_sdh_filter():
     assert config.use_subtitle_regex_filter is True and config.subtitle_regex_filter == LT_SUBTITLE_REGEX
     assert {key: config.anki_fields[key] for key in ("pos", "noun_gender")} == {"pos": "", "noun_gender": ""}
     assert config.downloader_subtitle_langs == "lt"
-    assert [entry.kind for entry in config.expression_audio_chain] == ["googletts"]
+    assert [entry.kind for entry in config.expression_audio_chain] == ["wikimedia", "googletts"]
 
 
 def test_the_parser_is_the_spaced_factory_with_the_form_of_repair():

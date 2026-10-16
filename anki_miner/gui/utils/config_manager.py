@@ -31,7 +31,7 @@ _INVALID_CONFIG = object()
 #: build survives a newer build's chain. Serves the top-level chain, every chain
 #: parked in ``language_stash`` and settings profiles. Pinned to the Literal by
 #: tests/unit/test_audio_source_kinds.py.
-_AUDIO_SOURCE_KINDS = ("pack", "jpod101", "googletts", "custom", "custom_json", "edgetts")
+_AUDIO_SOURCE_KINDS = ("pack", "jpod101", "googletts", "custom", "custom_json", "edgetts", "wikimedia")
 
 
 class _ConfigReadError(ValueError):

@@ -66,6 +66,7 @@ ZH_AUDIO = AudioDefaults(
     custom_fetcher_language="zh",
     papago_speaker=None,
     default_chain=(AudioSourceEntry(kind="googletts"),),
+    edge_voice="zh-CN-XiaoxiaoNeural",
     candidates=zh_audio_candidates,
     speakable=zh_speakable,
 )

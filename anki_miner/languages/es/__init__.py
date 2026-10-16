@@ -40,7 +40,9 @@ ES_AUDIO = AudioDefaults(
     sentence_cache_stem_prefix="sentencetts_es",
     custom_fetcher_language="es",
     papago_speaker=None,
-    default_chain=(AudioSourceEntry(kind="googletts"),),
+    wikimedia_prefixes=("LL-Q1321 (spa)-", "Es-", "Es-am-lat-"),
+    default_chain=(AudioSourceEntry(kind="wikimedia"), AudioSourceEntry(kind="googletts")),
+    edge_voice="es-ES-ElviraNeural",
     candidates=spaced_audio_candidates,
     speakable=spaced_speakable,
 )

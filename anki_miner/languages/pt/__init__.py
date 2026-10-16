@@ -73,7 +73,9 @@ PT_AUDIO = AudioDefaults(
     sentence_cache_stem_prefix="sentencetts_pt",
     custom_fetcher_language="pt",
     papago_speaker=None,
-    default_chain=(AudioSourceEntry(kind="googletts"),),
+    wikimedia_prefixes=("LL-Q5146 (por)-", "Pt-br-", "Pt-pt-"),
+    default_chain=(AudioSourceEntry(kind="wikimedia"), AudioSourceEntry(kind="googletts")),
+    edge_voice="pt-BR-FranciscaNeural",
     candidates=spaced_audio_candidates,
     speakable=spaced_speakable,
 )

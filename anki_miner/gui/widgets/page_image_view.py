@@ -30,6 +30,7 @@ from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils import image_fit
 from anki_miner.gui.utils.fonts import make_scaled_font
 from anki_miner.models.reading import ImageRef
+from anki_miner.services.reading.images import manga_crop_box
 from anki_miner.utils.pil_limits import apply_pil_image_limits, validate_image_pixel_budget
 
 # Decompression-bomb ceiling: explicit project pin (== Pillow's default),
@@ -139,6 +140,15 @@ class PageImageView(QWidget):
         self._canvas.set_content(None, None, message="")
         self._caption.setText("")
 
+    def set_crop_preview(self, enabled: bool) -> None:
+        """Outline the part of the page a manga card keeps (F-11), around the block highlight.
+
+        The curator turns it on when Settings → Card Media crops manga pictures,
+        so the page view shows what the card will hold.
+        """
+        self._canvas.crop_preview = enabled
+        self._canvas.update()
+
     # Exposed for tests.
     @property
     def current_pixmap(self) -> QPixmap | None:
@@ -147,6 +157,10 @@ class PageImageView(QWidget):
     @property
     def current_box(self) -> tuple[int, int, int, int] | None:
         return self._canvas.box
+
+    @property
+    def current_crop(self) -> tuple[int, int, int, int] | None:
+        return self._canvas.crop_box()
 
     @property
     def current_message(self) -> str:
@@ -167,6 +181,8 @@ class _PageCanvas(QWidget):
         self.pixmap: QPixmap | None = None
         self.box: tuple[int, int, int, int] | None = None
         self.message: str = ""
+        #: F-11: also outline the card crop (``manga_crop_box``) around the block.
+        self.crop_preview = False
 
     def set_content(
         self,
@@ -182,6 +198,12 @@ class _PageCanvas(QWidget):
 
     fit_transform = staticmethod(image_fit.fit_transform)
     clamped_box = staticmethod(image_fit.clamped_box)
+
+    def crop_box(self) -> tuple[int, int, int, int] | None:
+        """The card crop for the shown page and box; None while the preview is off or nothing is cropped."""
+        if not self.crop_preview or self.box is None or self.pixmap is None or self.pixmap.isNull():
+            return None
+        return manga_crop_box(self.box, (self.pixmap.width(), self.pixmap.height()))
 
     def paintEvent(self, event) -> None:  # noqa: N802 - Qt override
         painter = QPainter(self)
@@ -219,5 +241,14 @@ class _PageCanvas(QWidget):
             painter.fillRect(highlight, fill)
             painter.setPen(QPen(_HIGHLIGHT_COLOR, _HIGHLIGHT_PEN_WIDTH))
             painter.drawRect(highlight)
+
+            crop = self.crop_box()
+            if crop is not None:
+                # The card's padded crop, dashed, in the same page-to-pane transform.
+                left, top, right, bottom = crop
+                painter.setPen(QPen(_HIGHLIGHT_COLOR, _HIGHLIGHT_PEN_WIDTH, Qt.PenStyle.DashLine))
+                painter.drawRect(
+                    QRectF(dx + left * scale, dy + top * scale, (right - left) * scale, (bottom - top) * scale)
+                )
         finally:
             painter.end()

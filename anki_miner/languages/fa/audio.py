@@ -44,6 +44,7 @@ FA_AUDIO = AudioDefaults(
     sentence_cache_stem_prefix="sentencetts_fa",
     custom_fetcher_language="fa",
     papago_speaker=None,
+    wikimedia_prefixes=("Fa-",),
     default_chain=(AudioSourceEntry(kind="edgetts"),),
     candidates=fa_audio_candidates,
     speakable=fa_speakable,

@@ -248,6 +248,11 @@ class AudioDefaults:
     #: in ``default_chain`` (spec D14, tests/unit/languages/test_edge_voice_contract.py).
     #: For that language the voice also reads sentence TTS (see sentence_web_voice).
     edge_voice: str = ""
+    #: Commons file-name prefixes the ``wikimedia`` word-audio kind accepts, in
+    #: preference order (``Pl-``, ``LL-Q809 (pol)-``); an entry with a ``{term}``
+    #: slot is a whole-name template (nb's bot uploads, spec R29). Empty means no
+    #: Commons leg: service_factory builds none and Settings -> Word Audio offers none.
+    wikimedia_prefixes: tuple[str, ...] = ()
 
     def resolved_gtts_lang(self, config: AnkiMinerConfig) -> str:
         """The gTTS code for *config*; "" when the language has no Google voice."""

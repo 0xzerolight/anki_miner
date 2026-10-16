@@ -9,7 +9,7 @@ The ladder offers the vocalised reading first: fed the points, the Google voice 
 vowels a bare Hebrew spelling leaves out. A word the dictionary did not resolve has no reading, and
 then the bare front is all there is to say.
 
-``edge_voice`` is set but the default chain is Google's: Hebrew HAS a Google voice, so the Edge leg
+``edge_voice`` is set but the default chain's synthetic leg is Google's: Hebrew HAS a Google voice, so the Edge leg
 is the user-addable alternative (Settings -> Word Audio -> Add audio source -> Online Source), not the
 default. That is the seam's "user-added leg" shape, and the D14 contract test allows it.
 """
@@ -28,7 +28,8 @@ HE_AUDIO = AudioDefaults(
     sentence_cache_stem_prefix="sentencetts_he",
     custom_fetcher_language="he",
     papago_speaker=None,
-    default_chain=(AudioSourceEntry(kind="googletts"),),
+    wikimedia_prefixes=("LL-Q9288 (heb)-", "He-"),
+    default_chain=(AudioSourceEntry(kind="wikimedia"), AudioSourceEntry(kind="googletts")),
     candidates=he_audio_candidates,
     speakable=he_speakable,
     edge_voice="he-IL-HilaNeural",
