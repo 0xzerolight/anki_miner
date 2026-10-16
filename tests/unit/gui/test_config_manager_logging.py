@@ -65,6 +65,17 @@ class TestSaveReceipt:
         assert "fields=1" in line
         assert "anki_note_type" not in line
 
+    def test_a_keyed_ankiconnect_url_is_logged_with_the_key_masked(self, test_config, caplog):
+        GUIConfigManager.save_config(test_config)
+        keyed = replace(test_config, ankiconnect_url="http://127.0.0.1:8765/?key=SECRET123")
+
+        with caplog.at_level(logging.INFO, logger=_CONFIG_LOGGER):
+            GUIConfigManager.save_config(keyed)
+
+        line = _one(caplog, "Config saved:")
+        assert "SECRET123" not in caplog.text
+        assert "changed=ankiconnect_url=http://127.0.0.1:8765/?key=***" in line
+
     def test_an_unchanged_resave_reports_no_fields(self, test_config, caplog):
         GUIConfigManager.save_config(test_config)
 

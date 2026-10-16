@@ -16,6 +16,7 @@ import anki_miner.config.config as _config_module
 from anki_miner.config import ZOOM_PRESETS, AnkiMinerConfig, create_default_config
 from anki_miner.config.paths import ANKI_MINER_HOME
 from anki_miner.languages.switching import switch_language
+from anki_miner.services._ankiconnect import redact_ankiconnect_url
 from anki_miner.services.startup_store_recovery import backup_config_repair_is_safe
 from anki_miner.utils.atomic_io import atomic_write_path
 from anki_miner.utils.bounded_reader import read_json_bounded
@@ -171,6 +172,8 @@ class GUIConfigManager:
                 continue
             if isinstance(value, (str, int, float, bool)) or value is None:
                 rendered = str(value)
+                if key == "ankiconnect_url":
+                    rendered = redact_ankiconnect_url(rendered)
                 if len(rendered) > cls._SAVE_DIFF_VALUE_CHARS:
                     rendered = rendered[: cls._SAVE_DIFF_VALUE_CHARS] + "..."
                 changed.append(f"{key}={rendered}")
