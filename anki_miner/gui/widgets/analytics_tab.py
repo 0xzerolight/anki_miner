@@ -5,7 +5,7 @@ import logging
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, replace
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
 from PyQt6.QtCore import QEvent, QPointF, QRectF, QSize, Qt
@@ -27,6 +27,7 @@ from PyQt6.QtWidgets import (
 )
 
 from anki_miner.config import AnkiMinerConfig
+from anki_miner.exceptions import AnkiConnectionError
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
 from anki_miner.gui.utils import file_dialogs
 from anki_miner.gui.utils.content_text import content_cell_font
@@ -52,10 +53,11 @@ from anki_miner.gui.widgets.base import (
 )
 from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader, StatCard
 from anki_miner.languages.profile import ContentTextStyle
-from anki_miner.languages.registry import get_profile, language_display_name
+from anki_miner.languages.registry import config_language, get_profile, language_display_name
 from anki_miner.models.stats import (
     DifficultyEntry,
     HistoryGrouping,
+    KnownSizePoint,
     Milestone,
     MilestoneKind,
     MiningSession,
@@ -63,7 +65,8 @@ from anki_miner.models.stats import (
     SessionGroup,
 )
 from anki_miner.services.anki_service import AnkiService
-from anki_miner.services.known_word_db import KnownWordDB
+from anki_miner.services.frequency.coverage import FrequencyCoverage, measure_coverage, open_first_numeric_source
+from anki_miner.services.known_word_db import KnownWordDB, collect_known_forms
 from anki_miner.services.run_history import RunNotesCheck, check_run_notes, delete_run
 from anki_miner.services.stats_service import StatsService, export_csv, group_sessions, sessions_since
 from anki_miner.utils.i18n import tr_format
@@ -141,6 +144,89 @@ class _AnalyticsBundle:
     sessions: list[MiningSession]
     difficulties: list[DifficultyEntry]
     milestones: list[Milestone]
+
+
+#: Known Words growth compares the latest count with the earliest one in this window (ST-05).
+_GROWTH_WINDOW_DAYS = 30
+
+
+@dataclass(frozen=True)
+class _KnowledgeBundle:
+    """The known-words count and frequency coverage, read off the GUI thread (ST-05, ST-07).
+
+    ``known_count`` is ``None`` when Anki was not reachable; ``history`` still
+    holds the counts recorded before. ``coverage`` is ``None`` without a
+    numeric frequency source, or without Anki.
+    """
+
+    language: str
+    known_count: int | None
+    history: list[KnownSizePoint]
+    coverage: FrequencyCoverage | None
+    has_numeric_source: bool
+    anki_error: str = ""
+
+
+def _read_known_forms(config: AnkiMinerConfig) -> tuple[set[str], Callable[[str], str]]:
+    """The known set Readability measures against, and the fold its DB rows use.
+
+    A mirror of ``ReadabilityWorker._process_queue``'s recipe: Anki's card
+    fronts with ``allow_degraded=False`` (an empty set on a timeout would read
+    as "nothing known"), plus the user list and, when it is on, the
+    known-words DB, through ``collect_known_forms``. After the F-01 merge, X
+    points this one function at the knowledge set F-01 gives Readability
+    (L2 README, post-merge item 6).
+
+    Raises:
+        AnkiConnectionError: Anki is not reachable.
+    """
+    vocabulary = AnkiService(config).get_existing_vocabulary(allow_degraded=False)
+    known_word_db = KnownWordDB(resolve_known_words_db_path(config), language=config_language(config))
+    return collect_known_forms(known_word_db, config, vocabulary), known_word_db.normalize_key
+
+
+def _fetch_knowledge(config: AnkiMinerConfig, service: StatsService) -> _KnowledgeBundle:
+    """Worker thread: count the known words, record today's count, measure coverage."""
+    language = config_language(config)
+    provider = open_first_numeric_source(config)
+    try:
+        try:
+            known, fold = _read_known_forms(config)
+        except AnkiConnectionError as exc:
+            # Anki simply not running is expected: one WARNING line, no traceback.
+            logging.getLogger(__name__).warning("Analytics: Anki not reachable for the known-words count: %s", exc)
+            return _KnowledgeBundle(
+                language=language,
+                known_count=None,
+                history=service.get_known_size_history(),
+                coverage=None,
+                has_numeric_source=provider is not None,
+                anki_error=str(exc),
+            )
+        # The stats service follows the language on config_refreshed; a count
+        # for one language must never land under another's row.
+        if service.language == language:
+            service.record_known_size(len(known))
+        return _KnowledgeBundle(
+            language=language,
+            known_count=len(known),
+            history=service.get_known_size_history(),
+            coverage=measure_coverage(provider, known, fold) if provider is not None else None,
+            has_numeric_source=provider is not None,
+        )
+    finally:
+        if provider is not None:
+            provider.close()
+
+
+def _growth_reference(history: list[KnownSizePoint], *, today: date) -> KnownSizePoint | None:
+    """The count the latest one is compared with: the earliest in the window, else the latest before it."""
+    if len(history) < 2:
+        return None
+    earlier = history[:-1]
+    window_start = today - timedelta(days=_GROWTH_WINDOW_DAYS)
+    in_window = [point for point in earlier if point.day >= window_start]
+    return in_window[0] if in_window else earlier[-1]
 
 
 class _BarChart(QWidget):
