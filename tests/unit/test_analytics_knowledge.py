@@ -272,6 +272,19 @@ def test_a_failed_scan_is_a_banner_with_retry(qtbot, knowledge):
     assert issue.action_text == "Retry"
 
 
+def test_a_retry_that_lands_clears_the_banner(qtbot, knowledge):
+    knowledge["error"] = RuntimeError("stats.db is locked")
+    tab = knowledge["make"]()
+    _show(qtbot, tab)
+    knowledge["error"] = None
+    scans = len(knowledge["calls"])
+
+    tab.issue_banner().action_button.click()
+
+    assert len(knowledge["calls"]) == scans + 1
+    assert tab.issue_banner().current_issue() is None
+
+
 def _coverage() -> FrequencyCoverage:
     return FrequencyCoverage(
         source_name="JPDB",

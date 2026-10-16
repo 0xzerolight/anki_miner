@@ -1432,6 +1432,11 @@ class AnalyticsTab(ScreenIssueHost, QWidget):
         with contextlib.suppress(RuntimeError):
             if not isinstance(bundle, _KnowledgeBundle):  # defensive; never expected
                 return
+            # A landed scan clears its own failure, never a refresh's (D24).
+            banner = self.issue_banner()
+            issue = banner.current_issue() if banner is not None else None
+            if issue is not None and issue.action_id == "analytics.knowledge-retry":
+                self.clear_screen_issue()
             if bundle.known_count is not None:
                 self._knowledge_at = time.monotonic()
             self._apply_knowledge(bundle)
