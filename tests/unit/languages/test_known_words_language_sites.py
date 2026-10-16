@@ -27,6 +27,9 @@ EXPECTED_SITES = {
     # both receive the path from resolve_known_words_db_path in the GUI layer.
     "anki_miner/services/resource_bundle/export.py",
     "anki_miner/services/resource_bundle/install.py",
+    # Analytics counts the active language's known words off the GUI thread
+    # (ST-05), from the path resolve_known_words_db_path gives it.
+    "anki_miner/gui/widgets/analytics_tab.py",
 }
 
 
