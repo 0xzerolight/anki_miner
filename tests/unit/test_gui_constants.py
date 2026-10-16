@@ -21,6 +21,25 @@ def test_the_mining_formats_include_sami():
     assert ".smi" in DEFAULT_SUBTITLE_PRIORITY
 
 
+def test_the_mining_formats_include_lrc_lyrics():
+    """L3b: a .lrc beside a video pairs, last in priority; Retime cannot write it."""
+    assert ".lrc" in DEFAULT_SUBTITLE_PRIORITY
+    assert DEFAULT_SUBTITLE_PRIORITY[-1] == ".lrc"
+    assert "*.lrc" in SUBTITLE_FILE_FILTER
+    assert "*.lrc" not in RETIME_SUBTITLE_FILE_FILTER
+
+
+def test_pysubs2_cannot_write_lrc(tmp_path):
+    """The reason .lrc stays out of Retime: the registered LrcFormat has no to_file."""
+    from anki_miner.services.lrc_format import register_lrc_format
+
+    register_lrc_format()
+    subs = pysubs2.SSAFile()
+    subs.append(pysubs2.SSAEvent(start=0, end=1000, text="la"))
+    with pytest.raises(NotImplementedError):
+        subs.save(str(tmp_path / "out.lrc"))
+
+
 def test_retime_takes_every_mining_format_but_sami():
     """Retime writes its output in the input's format, and pysubs2 cannot write SAMI."""
     assert sorted(RETIME_SUBTITLE_EXTENSIONS) == [".ass", ".srt", ".ssa", ".vtt"]

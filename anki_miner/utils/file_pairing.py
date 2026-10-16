@@ -22,9 +22,11 @@ logger = logging.getLogger(__name__)
 #: parse. SAMI (.smi), the long-standing Korean fansub format, is poorer still:
 #: it states no cue ends (the parser ends each cue at the next SYNC) and its
 #: styling is dropped, so it sorts last and is only picked when nothing better
-#: sits beside the video. Utilities -> Retime takes every format but SAMI
+#: sits beside the video. LRC lyrics (.lrc) carry only line starts and no
+#: styling, so a lyrics file beside a video is the poorest match of all.
+#: Utilities -> Retime takes every format but SAMI and LRC
 #: (``gui.constants.RETIME_SUBTITLE_EXTENSIONS``).
-DEFAULT_SUBTITLE_PRIORITY: tuple[str, ...] = (".ass", ".ssa", ".srt", ".vtt", ".smi")
+DEFAULT_SUBTITLE_PRIORITY: tuple[str, ...] = (".ass", ".ssa", ".srt", ".vtt", ".smi", ".lrc")
 
 #: Stem suffix Utilities → Retime appends to its output, so a retimed subtitle
 #: sits beside the original instead of replacing it. Discovery prefers a file

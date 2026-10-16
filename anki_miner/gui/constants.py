@@ -29,10 +29,11 @@ VIDEO_FILE_FILTER = "Video Files (*.mp4 *.mkv *.avi *.m4v *.mov);;All Files (*)"
 SUBTITLE_FILE_FILTER = (
     f"Subtitle Files ({' '.join(f'*{ext}' for ext in sorted(DEFAULT_SUBTITLE_PRIORITY))});;All Files (*)"
 )
-#: What Utilities -> Retime takes: every mining format but SAMI. The retimed
-#: file keeps the input's format (``map_deltas_back`` saves what it read), and
-#: pysubs2 reads SAMI but raises NotImplementedError writing it.
-RETIME_SUBTITLE_EXTENSIONS: frozenset[str] = frozenset(DEFAULT_SUBTITLE_PRIORITY) - {".smi"}
+#: What Utilities -> Retime takes: every mining format but SAMI and LRC. The
+#: retimed file keeps the input's format (``map_deltas_back`` saves what it
+#: read), and pysubs2 reads SAMI and (once registered) LRC but raises
+#: NotImplementedError writing either.
+RETIME_SUBTITLE_EXTENSIONS: frozenset[str] = frozenset(DEFAULT_SUBTITLE_PRIORITY) - {".smi", ".lrc"}
 RETIME_SUBTITLE_FILE_FILTER = (
     f"Subtitle Files ({' '.join(f'*{ext}' for ext in sorted(RETIME_SUBTITLE_EXTENSIONS))});;All Files (*)"
 )
