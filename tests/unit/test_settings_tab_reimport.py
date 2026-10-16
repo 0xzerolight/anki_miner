@@ -31,12 +31,15 @@ def stub_worker(monkeypatch):
     ``running=True`` keeps this module's original input: its stub never set
     ``isRunning``, so ``still_running`` saw a truthy MagicMock.
     """
-    return patch_stub_worker_factories(
+    factory = patch_stub_worker_factories(
         monkeypatch,
         "anki_miner.gui.controllers.dictionary_import_flow.ImportWorker.for_yomitan",
         "anki_miner.gui.controllers.dictionary_import_flow.ImportWorker.for_yomitan_repair",
         running=True,
     )
+    # Add builds its worker through for_dictionary_file (Yomitan, StarDict or CSV/TSV).
+    monkeypatch.setattr("anki_miner.gui.controllers.dictionary_import_flow.ImportWorker.for_dictionary_file", factory)
+    return factory
 
 
 def test_no_saved_source_shows_warning_and_skips_worker(tab, monkeypatch, stub_worker):
