@@ -541,9 +541,9 @@ All persistent user data under `~/.anki_miner/`:
 | `recent_files.json` | JSON | Most-recent video/subtitle pairs (`gui/utils/recent_files.py`) |
 | `JMdict_e` | XML | Source JMdict XML (~60MB); migrated to SQLite on first launch |
 | `dicts/<dict-id>/index.sqlite` | SQLite | Indexed offline dictionaries (e.g. `jmdict-english/`); queried by `IndexedDictProvider` |
-| `known_words.db` | SQLite | Known word cache with Anki sync. Japanese only: every other mining language gets a `known_words.<lang>.db` sibling, derived solely by `service_factory.resolve_known_words_db_path` |
+| `known_words.db` | SQLite | Known word cache with Anki sync. Japanese only: every other mining language gets a `known_words.<lang>.db` sibling, derived solely by `service_factory.resolve_known_words_db_path`. Its `reviewed` column (`INTEGER NOT NULL DEFAULT 0`, added in place to an older file) marks a word whose Anki card had been reviewed when a mining run last looked; `known_from_reviewed_cards` reads it |
 | `wordlists/<lang>/{blacklist,whitelist}.txt` | Text | Word lists installed from a resource bundle; `blacklist_path` / `whitelist_path` point here |
-| `stats.db` | SQLite | Analytics. Exactly two tables — `mining_sessions` and `series_difficulty`; milestones are derived at query time, not stored. Both carry a `language TEXT NOT NULL DEFAULT 'ja'` column (`_migrate_language_column`) and reads filter on it |
+| `stats.db` | SQLite | Analytics. `mining_sessions` and `series_difficulty` carry a `language TEXT NOT NULL DEFAULT 'ja'` column (`_migrate_language_column`) and reads filter on it; milestones are derived at query time, not stored. `session_notes` and `session_forms` keep each run's note ids and mined forms, and `session_deleted` marks a run whose cards were deleted from Analytics (AI-16); a run recorded before these tables has no rows in them. `known_size` holds one known-words count per day and `language` (ST-05) |
 | `pitch/<source_id>/index.sqlite` | SQLite | Per-source pitch accent index; the runtime-authoritative first-hit-wins chain (`config.pitch_chain`) |
 | `pitch_accent.csv` | CSV | Legacy single pitch file; auto-imported into `pitch/legacy-pitch/` on first launch, then no longer read (kept on disk for downgrade) |
 | `frequency.csv` | CSV | Legacy single frequency list; no longer read (superseded by the `freqs/` chain — the one-time migration was removed) |
@@ -551,10 +551,14 @@ All persistent user data under `~/.anki_miner/`:
 | `audio_cache/jpod101/` | Files | JapanesePod101 expression audio cache: `jpod101_{mined_form}_{reading}.mp3` + zero-byte `.miss` negative markers |
 | `audio_packs/<pack_id>/index.sqlite` | SQLite | Per-pack expression audio index; audio files stay in their original location |
 | `audio_cache/local_packs/` | Files | Per-hit cache copies from installed packs: `{pack_id}_{mined_form}_{reading}{ext}` |
+| `audio_cache/wikimedia/` | Files | Wikimedia Commons word-audio cache (`services/wikimedia_audio_fetcher.py`): `wikimedia_<lang>_<word>.mp3` + zero-byte `.miss` markers for a word Commons answered for with no matching file (a rate-limited answer writes none) |
 | `audio_cache/googletts/` | Files | Google Translate synthetic-TTS cache: `googletts_{mined_form}_{reading}.mp3` (no `.miss` markers — synthetic failures are transient). The stem prefix comes from the active language's `AudioDefaults.cache_stem_prefix`, so the filenames above are the Japanese case, not a literal |
 | `audio_cache/edgetts/` | Files | Microsoft Edge read-aloud TTS cache (`services/edge_tts_audio_fetcher.py`): `edgetts_{voice}_{mined_form}_{reading}.mp3`, no `.miss` markers |
 | `audio_cache/custom_*/` | Files | Per-source caches for the `custom` / `custom_json` URL-template audio kinds (`services/custom_audio_fetcher.py`) |
 | `audio_cache/sentence_tts/` | Files | Reading-path sentence TTS: `sentencetts_{provider}_{sha1(sentence)[:16]}.mp3` (content-hash keys, no `.miss` markers) |
+| `cache/transcripts/` | JSON | Saved Whisper transcripts (`services/asr/transcript_cache.py`), one `<key>.json` per media file, model and language; the key hashes the file's path, size, mtime and first MiB. Shared by Utilities → Generate and Audiobook Sync, trimmed to 2 GB oldest first at startup, safe to delete, and in no export, profile, backup or diagnostics bundle |
+| `backups/<YYYY-MM-DD>/` | Files | Daily backup taken at startup (`services/db_backup.py`): numbered copies (`01-known_words.db`, …) of every known-words DB, `stats.db`, `gui_config.json` and the profiles, plus `manifest.json` mapping each copy to its source path. A day is written into a `.staging-*` folder and renamed into place; the 7 newest days are kept |
+| `backups/restore-pending.json` | JSON | The day Settings → General → Restore a backup… scheduled; `gui/app.py` applies it at the next launch before any database opens, then removes it |
 | `runtime_state/downloads/` | Files | Partial-download resume state: `<key>.part` bodies + `<key>.json` manifests (`services/download_resume.py`) |
 | `runtime_state/queues/` | JSON | Queue-contents snapshots written on close, one file per queue (`gui/utils/queue_state_store.py`) |
 | `runtime_state/resource_update_check` | File (mtime) | When the weekly resource-update check last ran its course (`services/resource_updates.py`) |
