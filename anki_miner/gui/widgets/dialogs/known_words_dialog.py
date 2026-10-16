@@ -150,7 +150,7 @@ class KnownWordsFilter(QSortFilterProxyModel):
         self._source = source
         self.invalidateFilter()
 
-    def filterAcceptsRow(self, source_row: int, source_parent: QModelIndex) -> bool:
+    def filterAcceptsRow(self, source_row: int, _source_parent: QModelIndex) -> bool:
         model = self.sourceModel()
         if not isinstance(model, KnownWordsTableModel):
             return True
