@@ -143,4 +143,11 @@ def resolve_run_config(profile_id: str | None, language: object, overlay: Mappin
         # use_whitelist is on, as it did before.
         use_whitelist=True,
         whitelist_path=config.whitelist_path if config.use_whitelist else None,
+        # The caller names its own lines (API.md, Choosing the line): no line is
+        # left out behind its back (F-08, ruling R25).
+        skip_opening_ending=False,
+        # The caller names its own translation track (API.md, secondary_subtitle_file);
+        # the auto-pick (F-04) never fills the Translation field behind its back. A
+        # passed file still loads: _load_secondary_entries ignores this switch.
+        secondary_subtitle_enabled=False,
     )

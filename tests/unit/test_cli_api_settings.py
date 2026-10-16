@@ -100,6 +100,18 @@ def test_run_config_forces_sentence_dedup_and_i_plus_one_off(test_config) -> Non
     assert config.use_i_plus_one_filter is False
 
 
+def test_run_config_keeps_every_subtitle_line(test_config) -> None:
+    """R25 / F-08: the caller names its own lines, so OP/ED skipping is off for API runs."""
+    GUIConfigManager.save_config(replace(test_config, skip_opening_ending=True))
+    assert settings.resolve_run_config(None, "ja", {}).skip_opening_ending is False
+
+
+def test_run_config_turns_the_translation_auto_pick_off(test_config) -> None:
+    """F-04: an API run never picks a translation track the caller did not name."""
+    GUIConfigManager.save_config(replace(test_config, secondary_subtitle_enabled=True))
+    assert settings.resolve_run_config(None, "ja", {}).secondary_subtitle_enabled is False
+
+
 def test_run_config_turns_the_whitelist_on_keeping_the_profiles_file_only_when_it_was_on(test_config, tmp_path) -> None:
     wl = tmp_path / "wl.txt"
     GUIConfigManager.save_config(replace(test_config, use_whitelist=False, whitelist_path=wl))
