@@ -713,3 +713,38 @@ def test_a_rebinding_reaches_the_next_curator_not_the_open_one(qapp, qtbot):
 
     assert created[0].kwargs["key_bindings"] == {}
     assert created[1].kwargs["key_bindings"] == {"curator.mark_known": "J"}
+
+
+_CHAPTERED_SRT = "1\n00:00:01,000 --> 00:00:03,000\n空を飛ぶ歌\n\n" "2\n00:01:40,000 --> 00:01:42,000\n食べるのテスト\n"
+
+
+def test_make_curation_media_context_skips_the_runs_op_ed_chapters(test_config, tmp_path):
+    """F-08: the curator's own parser leaves out the cues the run's parser leaves out."""
+    from anki_miner.utils.ffmpeg_resolver import resolve_ffprobe
+
+    video = tmp_path / "ep.mkv"
+    video.write_bytes(b"\x00")
+    sub = tmp_path / "ep.srt"
+    sub.write_text(_CHAPTERED_SRT, encoding="utf-8")
+    config = replace(test_config, skip_opening_ending=True)
+
+    with patch("anki_miner.services.subtitle_cleaner.op_ed_skip_ranges", return_value=((0.0, 90.0),)) as probe:
+        ctx = MiningTabBase._make_curation_media_context(config, video, sub, 2.0)
+
+    assert ctx is not None
+    assert [text for _start, _end, text in ctx.subtitle_entries] == ["食べるのテスト"]
+    probe.assert_called_once_with(video, resolve_ffprobe(config))
+
+
+def test_make_curation_media_context_switch_off_never_probes(test_config, tmp_path):
+    video = tmp_path / "ep.mkv"
+    video.write_bytes(b"\x00")
+    sub = tmp_path / "ep.srt"
+    sub.write_text(_CHAPTERED_SRT, encoding="utf-8")
+    config = replace(test_config, skip_opening_ending=False)
+
+    with patch("anki_miner.services.subtitle_cleaner.op_ed_skip_ranges", side_effect=AssertionError("probed")):
+        ctx = MiningTabBase._make_curation_media_context(config, video, sub, 2.0)
+
+    assert ctx is not None
+    assert [text for _start, _end, text in ctx.subtitle_entries] == ["空を飛ぶ歌", "食べるのテスト"]

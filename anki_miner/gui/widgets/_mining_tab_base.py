@@ -1216,8 +1216,16 @@ class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidge
             return None
         try:
             from anki_miner.gui.utils.service_factory import create_profile_parser
+            from anki_miner.services.subtitle_cleaner import op_ed_skip_ranges
+            from anki_miner.utils.ffmpeg_resolver import resolve_ffprobe
 
             parser = create_profile_parser(replace(config, subtitle_offset=0.0), SubtitleParserService)
+            if config.skip_opening_ending is True:
+                # The run's parser got these OP/ED chapter ranges (F-08); without them the
+                # context, the ± line buttons and the auto-merge preview would show lyric
+                # cues the card's line expansion never sees. Ranges are stored on the
+                # file's timeline, so this zero-offset parse drops the same cues.
+                parser.set_skip_ranges(subtitle, op_ed_skip_ranges(video, resolve_ffprobe(config)), offset=offset)
             entries = parser.parse_raw_entries(subtitle)
             secondary_entries: list[tuple[float, float, str]] = []
             if secondary_subtitle is not None:
