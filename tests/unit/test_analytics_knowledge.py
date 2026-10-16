@@ -230,6 +230,23 @@ def test_a_language_switch_scans_again(qtbot, knowledge):
     assert knowledge["calls"] == ["ja", "ja"]
 
 
+def test_a_scan_of_the_previous_language_is_dropped(qtbot, knowledge, test_config):
+    """Review Focus 5: a scan that started before a language switch never shows."""
+    tab = knowledge["make"]()
+    _show(qtbot, tab)
+    es_config = replace(test_config, language="es")
+    tab._config_provider = lambda: es_config
+    tab.set_content_style(get_profile("es").content_style)
+    knowledge["bundle"] = _bundle(language="es", known_count=7, history=[])
+
+    # The ja scan that was in flight during the switch lands now.
+    tab._knowledge_in_flight = True
+    tab._on_knowledge_done(_bundle(language="ja", known_count=999))
+
+    assert knowledge["calls"][-1] == "es"
+    assert tab.card_known_words.value_label.text() == "7"
+
+
 def test_anki_down_shows_the_last_count(qtbot, knowledge):
     knowledge["bundle"] = _bundle(
         known_count=None, history=[KnownSizePoint(day=date(2026, 10, 1), word_count=40)], anki_error="down"

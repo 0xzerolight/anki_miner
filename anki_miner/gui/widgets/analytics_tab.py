@@ -1432,6 +1432,11 @@ class AnalyticsTab(ScreenIssueHost, QWidget):
         with contextlib.suppress(RuntimeError):
             if not isinstance(bundle, _KnowledgeBundle):  # defensive; never expected
                 return
+            # A scan started before a language switch counts the old language:
+            # drop it and count the active one (Review Focus 5).
+            if self._config_provider is not None and bundle.language != config_language(self._config_provider()):
+                self._maybe_refresh_knowledge()
+                return
             # A landed scan clears its own failure, never a refresh's (D24).
             banner = self.issue_banner()
             issue = banner.current_issue() if banner is not None else None
