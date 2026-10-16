@@ -536,11 +536,12 @@ def op_ed_skip_ranges(media: Path, ffprobe_cmd: str) -> SkipRanges:
     read, and the pipeline reports the missing file itself. A file without such
     chapters returns ``()``, which leaves every cue in place. An external
     subtitle file paired with a video is judged by the video's chapters: the
-    caller passes the video here.
+    caller passes the video here. Media without a moving picture (an
+    audiobook, cover art or not) skips nothing: its chapters are the book's.
     """
     if not media.is_file():
         return ()
-    chapters = list_chapters(media, ffprobe_cmd)
+    chapters = list_chapters(media, ffprobe_cmd, require_video=True)
     ranges = op_ed_ranges(chapters)
     if ranges:
         titles = [chapter.title for chapter in chapters if (chapter.start, chapter.end) in ranges]

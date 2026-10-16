@@ -359,8 +359,13 @@ class Chapter:
     title: str | None
 
 
-def list_chapters(media_path: Path, ffprobe_cmd: str = "ffprobe") -> list[Chapter]:
+def list_chapters(media_path: Path, ffprobe_cmd: str = "ffprobe", *, require_video: bool = False) -> list[Chapter]:
     """Probe *media_path*'s chapters with one ``ffprobe -show_chapters`` call.
+
+    With *require_video*, the same call also lists the file's moving-picture
+    streams (``-select_streams V``, which leaves out cover art) and a file
+    without one has no chapters: an audiobook's chapters carry the book's own
+    titles ("Opening the Door"), never an anime opening or ending.
 
     Returns ``[]`` when the file has no chapters (the common case) and on any
     failure: ffprobe missing, a timeout, a non-zero exit, output that is not a
@@ -369,7 +374,10 @@ def list_chapters(media_path: Path, ffprobe_cmd: str = "ffprobe") -> list[Chapte
     parse is skipped. ``ffprobe_cmd`` is ``resolve_ffprobe(config)`` at a
     config-bearing call site, so frozen bundles use the bundled binary.
     """
-    cmd = [ffprobe_cmd, "-v", "quiet", "-print_format", "json", "-show_chapters", str(media_path)]
+    cmd = [ffprobe_cmd, "-v", "quiet", "-print_format", "json", "-show_chapters"]
+    if require_video:
+        cmd += ["-show_entries", "stream=index", "-select_streams", "V"]
+    cmd.append(str(media_path))
     log_command(logger, "ffprobe", cmd, timeout_s=30)
     started_at = time.monotonic()
     try:
@@ -405,6 +413,8 @@ def list_chapters(media_path: Path, ffprobe_cmd: str = "ffprobe") -> list[Chapte
     if not isinstance(data, dict):
         return []
     log_command_result(logger, "ffprobe", cmd, returncode=0, elapsed_s=elapsed_s)
+    if require_video and not data.get("streams"):
+        return []
 
     chapters: list[Chapter] = []
     for raw in data.get("chapters") or []:

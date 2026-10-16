@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import json
 import logging
+import shutil
+import subprocess
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -51,6 +53,47 @@ class TestListChapters:
             "-show_chapters",
             str(video),
         ]
+
+    def test_require_video_asks_for_picture_streams_in_the_same_probe(self, tmp_path):
+        video = tmp_path / "ep01.mkv"
+        stdout = json.dumps({"streams": [{"index": 0}], **json.loads(_chapters_json(("0.0", "90.0", "OP")))})
+
+        with patch(f"{_DETECTOR}.subprocess.run", return_value=_proc(stdout)) as run:
+            chapters = list_chapters(video, "ffprobe-x", require_video=True)
+
+        assert chapters == [Chapter(0.0, 90.0, "OP")]
+        assert run.call_count == 1
+        command = run.call_args.args[0]
+        assert command[command.index("-select_streams") + 1] == "V"
+        assert command[-1] == str(video)
+
+    def test_require_video_gives_audio_only_media_no_chapters(self, tmp_path):
+        """An audiobook's chapters are the book's own: "Opening the Door" is not an opening."""
+        book = tmp_path / "book.m4b"
+        stdout = json.dumps({"streams": [], **json.loads(_chapters_json(("0.0", "600.0", "Opening the Door")))})
+
+        with patch(f"{_DETECTOR}.subprocess.run", return_value=_proc(stdout)):
+            assert list_chapters(book, "ffprobe", require_video=True) == []
+
+    @pytest.mark.skipif(shutil.which("ffmpeg") is None, reason="needs ffmpeg/ffprobe")
+    def test_cover_art_is_not_video_on_a_real_file(self, tmp_path):
+        meta = tmp_path / "chapters.txt"
+        meta.write_text(
+            ";FFMETADATA1\n[CHAPTER]\nTIMEBASE=1/1000\nSTART=0\nEND=2000\ntitle=Opening the Door\n",
+            encoding="utf-8",
+        )
+        book = tmp_path / "book.m4b"
+        subprocess.run(
+            ["ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i", "sine=d=2", "-f", "lavfi"]
+            + ["-i", "color=c=red:s=64x64:d=1", "-i", str(meta), "-map", "0:a", "-map", "1:v"]
+            + ["-map_chapters", "2", "-c:a", "aac", "-c:v", "mjpeg", "-frames:v", "1"]
+            + ["-disposition:v", "attached_pic", str(book)],
+            check=True,
+            timeout=60,
+        )
+
+        assert [c.title for c in list_chapters(book, "ffprobe")] == ["Opening the Door"]
+        assert list_chapters(book, "ffprobe", require_video=True) == []
 
     def test_a_file_without_chapters_has_none(self, tmp_path):
         with patch(f"{_DETECTOR}.subprocess.run", return_value=_proc('{"chapters": []}')):
@@ -157,7 +200,7 @@ class TestOpEdSkipRanges:
         ):
             assert op_ed_skip_ranges(video, "ffprobe-x") == ((0.0, 90.0),)
 
-        probe.assert_called_once_with(video, "ffprobe-x")
+        probe.assert_called_once_with(video, "ffprobe-x", require_video=True)
         assert "OP" in caplog.text
 
     def test_no_matching_chapter_skips_nothing(self, tmp_path):

@@ -1143,7 +1143,7 @@ class EpisodeProcessor:
         MagicMock config). The video's chapters
         apply to an external subtitle file too: they are media time, and the
         run's offset puts the file's cues on that timeline. Audiobooks passes
-        the audio file, whose "Chapter 1" titles never match.
+        the audio file, which has no moving picture, so its chapters skip nothing.
         """
         if self.config.skip_opening_ending is not True:
             return
