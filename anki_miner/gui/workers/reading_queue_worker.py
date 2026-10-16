@@ -95,6 +95,9 @@ def load_reading_source(
         loader_kwargs["normalize"] = normalize
     if has_target_script is not None:
         loader_kwargs["has_target_script"] = has_target_script
+    if source.kind == "subtitle" and config.skip_opening_ending is True:
+        # The F-08 switch reaches Reading → Subtitle Files as it reaches Video.
+        loader_kwargs["skip_non_dialogue"] = True
     if source.kind == "deck":
         # An Anki deck is read through AnkiConnect, with the run's own service.
         loader_kwargs["anki"] = processor.anki_service

@@ -123,3 +123,24 @@ def test_load_reading_source_omits_absent_parser_seams(test_config) -> None:
     kwargs = load.call_args.kwargs
     assert "normalize" not in kwargs
     assert "has_target_script" not in kwargs
+
+
+def test_load_reading_source_hands_the_op_ed_switch_to_subtitle_refs_only(test_config, tmp_path) -> None:
+    processor = SimpleNamespace(subtitle_parser=None)
+    on = replace(test_config, skip_opening_ending=True)
+    with patch.object(reading_queue_worker.detector, "load", return_value="DOC") as load:
+        reading_queue_worker.load_reading_source(
+            processor, on, ReadingSourceRef(kind="subtitle", path=tmp_path / "a.srt"), cancel_check=lambda: False
+        )
+        assert load.call_args.kwargs["skip_non_dialogue"] is True
+        reading_queue_worker.load_reading_source(
+            processor,
+            test_config,
+            ReadingSourceRef(kind="subtitle", path=tmp_path / "a.srt"),
+            cancel_check=lambda: False,
+        )
+        assert "skip_non_dialogue" not in load.call_args.kwargs
+        reading_queue_worker.load_reading_source(
+            processor, on, ReadingSourceRef(kind="txt", path=tmp_path / "a.txt"), cancel_check=lambda: False
+        )
+        assert "skip_non_dialogue" not in load.call_args.kwargs

@@ -182,6 +182,7 @@ def load(
     normalize: Callable[[str], str] | None = None,
     has_target_script: Callable[[str], bool] | None = None,
     anki: DeckNoteReader | None = None,
+    skip_non_dialogue: bool = False,
 ) -> ReadingDocument:
     """Dispatch a ref to its source loader and return the loaded document.
 
@@ -210,6 +211,9 @@ def load(
 
     ``anki`` reaches the Anki-deck loader only (``kind="deck"`` refs are
     pathless, built by the Anki Deck sub-tab, and read through AnkiConnect).
+
+    ``skip_non_dialogue`` reaches the subtitle loader only, and only when set,
+    so the call shape of every other caller is unchanged.
 
     Each optional argument is built as its own fragment and omitted when
     ``None``, so a call that supplies none is the pre-transition
@@ -247,6 +251,8 @@ def load(
         cleaning: dict[str, Any] = {} if normalize is None else {"normalize": normalize}
         if has_target_script is not None:
             cleaning["has_target_script"] = has_target_script
+        if skip_non_dialogue:
+            cleaning["skip_non_dialogue"] = True
         return subtitle_source.load(ref, **common, **sniffing, **cleaning)
     if ref.kind == "text":
         from . import text_source

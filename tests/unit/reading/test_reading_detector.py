@@ -1015,3 +1015,15 @@ def test_load_hands_a_pdf_the_rules_but_not_the_ladder(monkeypatch: pytest.Monke
     detector.load(ref, encodings=("utf-8",), rules=rules)
 
     fake.assert_called_once_with(ref, rules=rules)
+
+
+def test_load_hands_the_op_ed_switch_to_the_subtitle_loader_only_when_set(tmp_path) -> None:
+    """F-08: ``skip_non_dialogue`` reaches subtitle_source.load only when set."""
+    from unittest.mock import patch
+
+    ref = ReadingSourceRef(kind="subtitle", path=tmp_path / "Ep01.ass")
+    with patch("anki_miner.services.reading.subtitle_source.load") as load:
+        detector.load(ref)
+        assert "skip_non_dialogue" not in load.call_args.kwargs
+        detector.load(ref, skip_non_dialogue=True)
+        assert load.call_args.kwargs["skip_non_dialogue"] is True

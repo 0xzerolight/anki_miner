@@ -6,6 +6,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
+import pysubs2
 import pytest
 
 from anki_miner.exceptions import SetupError
@@ -210,3 +211,32 @@ def test_format_cue_time_trims_leading_zero_units():
     assert _format_cue_time(1.0) == "0:01"
     assert _format_cue_time(83.5) == "1:23"
     assert _format_cue_time(3723.0) == "1:02:03"
+
+
+# --------------------------------------------------------------------------- #
+# F-08 / MS-12: the same event pass mining and Condense read.
+# --------------------------------------------------------------------------- #
+
+
+def _write_styled_ass(tmp_path: Path) -> Path:
+    subs = pysubs2.SSAFile()
+    for style in ("Default", "OP"):
+        subs.styles[style] = pysubs2.SSAStyle()
+    cues = [(0, 2000, "こんにちは", "Default"), (2000, 4000, "元気ですか", "Default"), (4000, 6000, "空を飛ぶ歌", "OP")]
+    cues += [(7000 + 40 * i, 7040 + 40 * i, rf"{{\k{i}}}猫が好き", "OP") for i in range(10)]
+    cues.append((10000, 12000, "また明日", "Default"))
+    for start, end, text, style in cues:
+        subs.append(pysubs2.SSAEvent(start=start, end=end, text=text, style=style))
+    path = tmp_path / "Ep01.ass"
+    subs.save(str(path))
+    return path
+
+
+def test_switch_on_leaves_out_song_lines(tmp_path):
+    doc = subtitle_source.load(_ref(_write_styled_ass(tmp_path)), skip_non_dialogue=True)
+    assert [unit.text for unit in doc.units] == ["こんにちは", "元気ですか", "また明日"]
+
+
+def test_switch_off_keeps_songs_and_a_karaoke_burst_is_one_unit(tmp_path):
+    doc = subtitle_source.load(_ref(_write_styled_ass(tmp_path)))
+    assert [unit.text for unit in doc.units] == ["こんにちは", "元気ですか", "空を飛ぶ歌", "猫が好き", "また明日"]
