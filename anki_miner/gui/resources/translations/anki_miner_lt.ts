@@ -2926,14 +2926,6 @@ Indekso failai neištrinami.</translation>
         <translation>Pasirinkite, kurioje Anki kaladėje ir kokio užrašo tipo kuriamos naujos kortelės.</translation>
     </message>
     <message>
-        <source>Card styling / CSS</source>
-        <translation>Kortelių stilius / CSS</translation>
-    </message>
-    <message>
-        <source>Apply a built-in card style or your own CSS.</source>
-        <translation>Taikykite įtaisytąjį kortelių stilių arba savo CSS.</translation>
-    </message>
-    <message>
         <source>Furigana / readings</source>
         <translation>Furigana / skaitymai</translation>
     </message>
@@ -3122,8 +3114,8 @@ Indekso failai neištrinami.</translation>
         <translation>Atnaujinti surinktų kortelių stilių</translation>
     </message>
     <message>
-        <source>Re-apply the latest Anki Miner styling to cards you mined earlier -- Utilities → Card Backfill.</source>
-        <translation>Pritaikykite naujausią Anki Miner stilių anksčiau surinktoms kortelėms -- Priemonės → Papildyti.</translation>
+        <source>Convert cards you mined earlier to the current card format, so your note type styles them -- Utilities → Card Backfill.</source>
+        <translation>Konvertuokite anksčiau surinktas korteles į dabartinį kortelių formatą, kad jų stilių nustatytų jūsų užrašo tipas -- Priemonės → Papildyti.</translation>
     </message>
     <message>
         <source>System health check</source>
@@ -3340,10 +3332,6 @@ Indekso failai neištrinami.</translation>
         <translation>Perrašyti esamas reikšmes</translation>
     </message>
     <message>
-        <source>Overwritten cards may need to use Restyle cards… to refresh their styling.</source>
-        <translation>Perrašytoms kortelėms gali prireikti „Atnaujinti kortelių stilių…“, kad būtų atnaujintas jų stilius.</translation>
-    </message>
-    <message>
         <source>Scan Anki (read-only)</source>
         <translation>Nuskaityti Anki (tik skaityti)</translation>
     </message>
@@ -3352,8 +3340,8 @@ Indekso failai neištrinami.</translation>
         <translation>Atnaujinti kortelių stilių…</translation>
     </message>
     <message>
-        <source>Refresh the dictionary styling on every card of your note type</source>
-        <translation>Atnaujinti žodyno stilių kiekvienoje jūsų užrašo tipo kortelėje</translation>
+        <source>Convert every card of your note type to the current card format</source>
+        <translation>Konvertuoti kiekvieną jūsų užrašo tipo kortelę į dabartinį kortelių formatą</translation>
     </message>
     <message>
         <source>Cancel</source>
@@ -7272,12 +7260,12 @@ Pridedamų žodžių: %3. Tęsti?</translation>
         <translation>Atnaujinti surinktų kortelių stilių</translation>
     </message>
     <message>
-        <source>Re-applies the current built-in styling to your mined cards.
+        <source>Converts your mined cards to the current card format, so your note type styles them.
 
 Close Anki's card browser and note editor first — an open note can lose unsaved edits.
 
 Continue?</source>
-        <translation>Surinktoms kortelėms bus pritaikytas dabartinis įtaisytasis stilius.
+        <translation>Surinktos kortelės bus konvertuotos į dabartinį kortelių formatą, kad jų stilių nustatytų jūsų užrašo tipas.
 
 Pirmiausia užverkite Anki kortelių naršyklę ir užrašų redaktorių — atvertame užraše galima prarasti neįrašytus pakeitimus.
 

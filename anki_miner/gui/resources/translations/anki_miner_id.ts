@@ -2920,14 +2920,6 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Pilih dek Anki dan tipe catatan mana kartu baru dibuat.</translation>
     </message>
     <message>
-        <source>Card styling / CSS</source>
-        <translation>Penataan kartu / CSS</translation>
-    </message>
-    <message>
-        <source>Apply a built-in card style or your own CSS.</source>
-        <translation>Terapkan gaya kartu bawaan atau CSS sendiri.</translation>
-    </message>
-    <message>
         <source>Furigana / readings</source>
         <translation>Furigana / bacaan</translation>
     </message>
@@ -3116,8 +3108,8 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Ubah gaya kartu hasil mining</translation>
     </message>
     <message>
-        <source>Re-apply the latest Anki Miner styling to cards you mined earlier -- Utilities → Card Backfill.</source>
-        <translation>Terapkan ulang gaya Anki Miner terbaru ke kartu yang sudah Anda mining sebelumnya — Utilitas → Pengisian Bidang Kartu.</translation>
+        <source>Convert cards you mined earlier to the current card format, so your note type styles them -- Utilities → Card Backfill.</source>
+        <translation>Konversikan kartu yang sudah Anda mining sebelumnya ke format kartu saat ini, agar gayanya diatur oleh tipe catatan Anda — Utilitas → Pengisian Bidang Kartu.</translation>
     </message>
     <message>
         <source>System health check</source>
@@ -3334,10 +3326,6 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Timpa nilai yang ada</translation>
     </message>
     <message>
-        <source>Overwritten cards may need to use Restyle cards… to refresh their styling.</source>
-        <translation>Kartu yang ditimpa mungkin perlu memakai Tata ulang kartu… untuk menyegarkan gayanya.</translation>
-    </message>
-    <message>
         <source>Scan Anki (read-only)</source>
         <translation>Pindai Anki (hanya-baca)</translation>
     </message>
@@ -3346,8 +3334,8 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Tata ulang kartu…</translation>
     </message>
     <message>
-        <source>Refresh the dictionary styling on every card of your note type</source>
-        <translation>Segarkan gaya kamus pada setiap kartu dari tipe catatan Anda</translation>
+        <source>Convert every card of your note type to the current card format</source>
+        <translation>Konversikan setiap kartu dari tipe catatan Anda ke format kartu saat ini</translation>
     </message>
     <message>
         <source>Cancel</source>
@@ -7196,12 +7184,12 @@ Kata yang akan ditambahkan: %3. Lanjutkan?</translation>
         <translation>Tata Ulang Kartu Hasil Mining</translation>
     </message>
     <message>
-        <source>Re-applies the current built-in styling to your mined cards.
+        <source>Converts your mined cards to the current card format, so your note type styles them.
 
 Close Anki's card browser and note editor first — an open note can lose unsaved edits.
 
 Continue?</source>
-        <translation>Menerapkan ulang gaya bawaan saat ini pada kartu hasil mining Anda.
+        <translation>Mengonversi kartu hasil mining Anda ke format kartu saat ini, agar gayanya diatur oleh tipe catatan Anda.
 
 Tutup peramban kartu Anki dan editor catatan terlebih dahulu — catatan yang terbuka dapat kehilangan perubahan yang belum disimpan.
 

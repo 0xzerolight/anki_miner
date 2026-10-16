@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:ecd0ab0242935ee3 -->
+<!-- i18n-source: README.md sha256:59bb362dc4da97e4 -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -163,7 +163,7 @@ Untuk pengaturan pengembangan lengkap, lihat [CONTRIBUTING.md](../CONTRIBUTING.m
 - Pratinjau video libmpv tersemat - putar adegan sebuah kata saat mengkurasi, atau sesuaikan waktu subtitel dengan pemutaran langsung.
 - Tangkapan layar beranimasi (lihat contoh kartu di atas).
 - Profil pengaturan - simpan konfigurasi bernama dan beralih di antaranya dari header.
-- Tata Ulang Kartu Hasil Mining - terapkan ulang gaya kartu Anda saat ini ke kartu yang sudah Anda buat (Utilitas → Pengisian Bidang Kartu).
+- Tata Ulang Kartu Hasil Mining - ubah kartu yang sudah Anda buat ke format kartu saat ini (Utilitas → Pengisian Bidang Kartu).
 
 <details>
 <summary><strong>Tema bawaan (29)</strong></summary>

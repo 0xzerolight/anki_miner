@@ -2920,14 +2920,6 @@ No index files are deleted.</source>
         <translation>揀新卡片建立喺邊個 Anki 牌組同筆記類型。</translation>
     </message>
     <message>
-        <source>Card styling / CSS</source>
-        <translation>卡片樣式 / CSS</translation>
-    </message>
-    <message>
-        <source>Apply a built-in card style or your own CSS.</source>
-        <translation>套用內建卡片樣式或者你自己嘅 CSS。</translation>
-    </message>
-    <message>
         <source>Furigana / readings</source>
         <translation>振假名 / 讀音</translation>
     </message>
@@ -3116,8 +3108,8 @@ No index files are deleted.</source>
         <translation>重新套用卡片樣式</translation>
     </message>
     <message>
-        <source>Re-apply the latest Anki Miner styling to cards you mined earlier -- Utilities → Card Backfill.</source>
-        <translation>將最新嘅 Anki Miner 樣式重新套用到你之前採集嘅卡片 -- 「實用工具 → 卡片補填」。</translation>
+        <source>Convert cards you mined earlier to the current card format, so your note type styles them -- Utilities → Card Backfill.</source>
+        <translation>將你之前採集嘅卡片轉換成目前嘅卡片格式，等你嘅筆記類型幫佢哋套用樣式 -- 「實用工具 → 卡片補填」。</translation>
     </message>
     <message>
         <source>System health check</source>
@@ -3334,10 +3326,6 @@ No index files are deleted.</source>
         <translation>覆寫現有值</translation>
     </message>
     <message>
-        <source>Overwritten cards may need to use Restyle cards… to refresh their styling.</source>
-        <translation>被覆寫嘅卡片可能要用「重新套用卡片樣式…」更新佢哋嘅樣式。</translation>
-    </message>
-    <message>
         <source>Scan Anki (read-only)</source>
         <translation>掃描 Anki（唯讀）</translation>
     </message>
@@ -3346,8 +3334,8 @@ No index files are deleted.</source>
         <translation>重新套用卡片樣式…</translation>
     </message>
     <message>
-        <source>Refresh the dictionary styling on every card of your note type</source>
-        <translation>更新你筆記類型每張卡片嘅字典樣式</translation>
+        <source>Convert every card of your note type to the current card format</source>
+        <translation>將你筆記類型嘅每張卡片轉換成目前嘅卡片格式</translation>
     </message>
     <message>
         <source>Cancel</source>
@@ -7196,12 +7184,12 @@ Words to add: %3. Continue?</source>
         <translation>重新套用卡片樣式</translation>
     </message>
     <message>
-        <source>Re-applies the current built-in styling to your mined cards.
+        <source>Converts your mined cards to the current card format, so your note type styles them.
 
 Close Anki's card browser and note editor first — an open note can lose unsaved edits.
 
 Continue?</source>
-        <translation>將目前內建嘅樣式重新套用到你採集咗嘅卡片。
+        <translation>將你採集咗嘅卡片轉換成目前嘅卡片格式，等你嘅筆記類型幫佢哋套用樣式。
 
 請先關閉 Anki 嘅卡片瀏覽器同筆記編輯器 — 打開緊嘅筆記可能會冇咗未儲存嘅修改。
 

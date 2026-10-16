@@ -79,6 +79,8 @@ class EnvironmentSnapshot:
 
 #: Read verbatim into ``qt_env``. Every one of them changes which GL stack Qt
 #: brings up, which is the difference between a working preview and an abort.
+#: The last two say whether the Linux launcher shim ran and which C++ runtime it
+#: put in front of the host GL driver (packaging/linux-launcher.sh).
 _QT_ENV_VARS = (
     "QT_QPA_PLATFORM",
     "QT_OPENGL",
@@ -86,6 +88,8 @@ _QT_ENV_VARS = (
     "LIBGL_ALWAYS_SOFTWARE",
     "__GLX_VENDOR_LIBRARY_NAME",
     "MESA_LOADER_DRIVER_OVERRIDE",
+    "ANKI_MINER_LAUNCHER",
+    "LD_PRELOAD",
 )
 
 

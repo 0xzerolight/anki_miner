@@ -376,12 +376,11 @@ Documentation = "https://github.com/0xzerolight/anki_miner/blob/main/README.md"
 [tool.setuptools]
 include-package-data = true
 
-# Ship the bundled universal glossary stylesheet (Issue #44) and the
-# JMnedict-derived name wordsets (Issue #59). They live outside gui/resources
-# (which MANIFEST.in already covers), so declare them explicitly so pip/pipx
-# wheels include them. The PyInstaller bundle wires these via anki_miner.spec.
+# Ship the JMnedict-derived name wordsets (Issue #59). They live outside
+# gui/resources (which MANIFEST.in already covers), so declare them explicitly
+# so pip/pipx wheels include them. The PyInstaller bundle wires these via
+# anki_miner.spec.
 [tool.setuptools.package-data]
-"anki_miner.services.dictionary.resources" = ["*.css"]
 "anki_miner.resources.wordsets" = ["*.txt"]
 "anki_miner.gui.resources.translations" = ["*.ts", "*.qm"]
 # Persian light-verb and colloquial tables: first-party derived data the fa

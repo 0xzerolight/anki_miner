@@ -47,12 +47,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **The Activity Log warns when a file looks like another language.** When few of the first 200 content words have a dictionary entry, the run says the subtitle or text may not be in the mining language. The run still goes ahead, and the check is skipped when the language has no dictionary installed.
 - **Video OCR leaves out lines with none of the mining language's letters.** A stray English caption in a Japanese video no longer becomes a subtitle.
 - **The Opus option warns that AnkiMobile cannot play it (Settings → Card Media).** Choose MP3 if you review on an iPhone or iPad.
+- **Cards now look the way your note type intends.** Definitions and glossaries are written in the same HTML Yomitan writes, so Lapis, Senren, Kiku and Anki Miner Note style them as designed, and Anki Miner no longer embeds its own stylesheet. Each dictionary's own styling still travels with the card. On a plain note type (Basic) the glossary uses default list styling.
+- **Restyle cards… converts older cards to the new format (Utilities → Card Backfill).** It removes the old built-in styling and keeps each dictionary's own styling. Cards it cannot convert without losing text are left as they are.
 
 ### Fixed
 - **Karaoke and animated sign frames count as one subtitle line.** A styled OP that repeats a line dozens of times with tiny timing steps no longer inflates word counts or turns into 50 ms sentences.
 - **Audiobook Sync times passages read out of book order.** When narration moves to another part of the book, the sync searches the whole transcript for it instead of stalling. Sentences the narrator skipped get no subtitle rather than a guessed timing.
+- **The Linux app keeps its video preview when started from its own menu entry or a packager's wrapper.** On first run the app adds a menu entry that starts `AnkiMiner` directly, and that entry takes the place of the one the `.deb` installs. Started that way, the app skipped the launcher that puts the system's newer `libstdc++` in front of the bundled one, so on recent distributions the graphics driver could not load. The preview and the Word Curator then failed with "EGL not available" on Wayland, and the app quit on X11. The app now restarts itself through the launcher when it was started without it. Set `ANKI_MINER_LAUNCHER=1` to skip that step.
 
 ### Removed
+- **The built-in glossary stylesheet.** Tag pills, note boxes and the other Anki Miner styling are gone; your note type styles the card.
 
 ## [3.9.0] - 2026-10-15
 

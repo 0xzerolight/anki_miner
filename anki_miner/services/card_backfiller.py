@@ -64,7 +64,8 @@ from anki_miner.services.backfill_audio import word_audio_candidates
 # AnkiService._build_vocab_query — ``Core_2k`` would otherwise glob-match).
 from anki_miner.services.card_restyler import _escape_note_type as _escape_anki_search
 from anki_miner.services.definition_service import collect_dictionary_css_entries
-from anki_miner.services.dictionary.card_style_block import attach_card_style_block
+from anki_miner.services.dictionary.anki_export import to_yomitan_export
+from anki_miner.services.dictionary.dict_css_scope import attach_dict_css
 from anki_miner.services.frequency.multi_frequency_service import harmonic_rank
 from anki_miner.services.frequency.render import render_frequency_html
 from anki_miner.services.morphology import extract_lemma
@@ -520,7 +521,7 @@ def _scan_backfill_impl(
     # Tier (c) of the reading ladder, and whether it needs the dictionary.
     reading_support = profile.reading
     wants_attested_readings = definition_service is not None and reconciles_attested_readings(config)
-    # S21: mining's rtl block rule, so backfilled bytes equal fresh-mine bytes.
+    # The rtl example-sentence bidi in the export pass, as on mining.
     style_direction = profile.content_style.direction
     # The language's own card fields, filled by the same hooks mining runs.
     # Empty for Japanese, whose fields are all rendered inline in _phase5_create.
@@ -981,25 +982,15 @@ def _compute_note_changes(
     if "expression_furigana" in selected and ctx.reading_source == "field":
         proposals["expression_furigana"] = html.escape(_format_furigana(ctx.mined_form, ctx.reading))
 
-    # Style block: every freshly-proposed miner field carries its OWN trailing
-    # block, tree-shaken against that field alone and with its dict CSS
-    # filtered to the dictionaries present in it — byte-identical to what
-    # mining would write (attach_card_style_block enforces the trailing /
-    # never-leading placement and no-ops on markup-less proposals). No
-    # cross-field gate: the other field's styling is irrelevant to this one on
-    # field-isolating note types, and a divergent block here would make the
-    # restyler churn backfilled cards forever. Proposals are fresh renders, so
-    # they are born stamped — no stamping needed (that's the restyler's job
-    # for legacy bodies).
+    # Each proposed dictionary field carries its dictionaries' scoped CSS, the
+    # same bytes mining attaches (dict_css_scope.attach_dict_css).
     for key in ("definition", "glossary"):
         if key in proposals:
-            proposals[key] = attach_card_style_block(
-                proposals[key], dict_css_entries=dict_css_entries, direction=style_direction
-            )
+            proposals[key] = attach_dict_css(proposals[key], dict_css_entries=dict_css_entries)
 
     # The language's own card fields, rendered by the profile's hooks — after
-    # the style-block loop, because mining runs them on the card definition
-    # (_phase5_create passes `card_definition`, block and all), and a hook that
+    # the dict-CSS loop, because mining runs them on the card definition
+    # (_phase5_create passes `card_definition`, CSS and all), and a hook that
     # parses the gloss has to see the same bytes here. Then build_note's own
     # escaping pass, since nothing downstream of a backfill applies it.
     # setdefault, not update: the pipeline's own value wins a collision, as it
@@ -1008,18 +999,22 @@ def _compute_note_changes(
         card_definition = proposals.get("definition")
         if card_definition is None:
             # The definition field is not being filled this run, so build what
-            # it WOULD have carried: mining attaches the block whenever that
+            # it WOULD have carried: mining attaches the dict CSS whenever that
             # field is mapped, whatever else the run is writing.
             card_definition = definition or ""
             if card_definition and anki_fields.get("definition"):
-                card_definition = attach_card_style_block(
-                    card_definition, dict_css_entries=dict_css_entries, direction=style_direction
-                )
+                card_definition = attach_dict_css(card_definition, dict_css_entries=dict_css_entries)
         rendered = _hook_proposals(ctx, config, hook_keys, render_hooks, card_definition, anki_fields)
         for key, value in rendered.items():
             proposals.setdefault(key, value if key in raw_hook_keys else html.escape(value))
 
-    # Word audio, after the style-block loop (it carries no markup to stamp).
+    # Yomitan's Anki-export shape, as build_note writes it on mining: after the
+    # hooks, which parse the internal markup (anki_export).
+    for key in ("definition", "glossary"):
+        if key in proposals:
+            proposals[key] = to_yomitan_export(proposals[key], direction=style_direction)
+
+    # Word audio, after the export pass (it carries no glossary markup).
     # Fillability is checked HERE, before the fetch, rather than left to the
     # policy loop below: this is the only proposal that costs a network round
     # trip, so a card that already has audio must not pay for one in fill-only

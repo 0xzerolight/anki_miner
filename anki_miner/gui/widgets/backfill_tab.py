@@ -238,22 +238,19 @@ class CardBackfillTab(RunOptionsMixin, _AnkiPlanTabBase):
         # silently. Pinned by
         # tests/unit/test_run_option_persistence.py::test_overwrite_is_never_persisted.
         self.overwrite_checkbox = QCheckBox(self.tr("Overwrite existing values"))
-        self.overwrite_checkbox.setToolTip(
-            self.tr("Overwritten cards may need to use Restyle cards… to refresh their styling.")
-        )
         fields_layout.addWidget(self.overwrite_checkbox)
         layout.addWidget(self.fields_card)
 
         # Scan, Apply and Cancel all live in the pinned bar (D6). Scan is the
         # primary until a preview exists; after that Apply takes over and Scan
         # stays reachable as the quiet way to rescan. Restyle is unrelated to
-        # the scan/apply cycle -- it re-applies styling to every card of the
-        # note type, not just the previewed ones -- so it sits beside Scan
-        # rather than swapping with it.
+        # the scan/apply cycle -- it converts every card of the note type, not
+        # just the previewed ones -- so it sits beside Scan rather than
+        # swapping with it.
         self.scan_button = ModernButton(self.tr("Scan Anki (read-only)"), variant="primary")
         self.scan_button.clicked.connect(self._start_scan)
         self.restyle_button = ModernButton(self.tr("Restyle cards…"), variant="secondary")
-        self.restyle_button.setToolTip(self.tr("Refresh the dictionary styling on every card of your note type"))
+        self.restyle_button.setToolTip(self.tr("Convert every card of your note type to the current card format"))
         self.restyle_button.clicked.connect(self.restyle_requested.emit)
         self.cancel_button = ModernButton(self.tr("Cancel"), variant="secondary")
         self.cancel_button.hide()  # shown only while a scan or apply runs (E07)

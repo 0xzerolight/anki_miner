@@ -49,7 +49,7 @@ from anki_miner.services.anki_note_builder import CARD_TAGS_KEY, has_tag_tokens,
 from anki_miner.services.anki_service import is_transient_anki_transport_error
 from anki_miner.services.cue_merge import auto_line_expansion, merge_budget_seconds
 from anki_miner.services.definition_service import preferred_dictionaries
-from anki_miner.services.dictionary.card_style_block import attach_card_style_block
+from anki_miner.services.dictionary.dict_css_scope import attach_dict_css
 from anki_miner.services.frequency.multi_frequency_service import harmonic_rank, min_rank
 from anki_miner.services.frequency.render import render_frequency_html
 from anki_miner.services.known_word_db import collect_knowledge_forms
@@ -2447,28 +2447,15 @@ class EpisodeProcessor:
             QCoreApplication.translate("EpisodeProcessor", "Creating Anki cards"),
         )
         card_data: list[CardPayload] = []
-        # Self-contained PER-FIELD glossary styling: read the dictionary CSS
-        # entries ONCE per episode off the already-loaded provider chain
-        # (DefinitionService.css_entries — no registry rescan, no per-dict
-        # SQLite I/O; PB1) but attach a <style> block to EVERY mapped styled
-        # field inside the loop — tree-shaken against that field's own HTML
-        # and filtered to the dictionaries present in it (Issue #93;
-        # witness/variant scans are cheap cached string work; freshly rendered
-        # bodies are born stamped, so witnesses are already post-stamp). Each
-        # field must carry its own TRAILING block: JS-driven note types (Kiku)
-        # keep fields in inert <template>s and re-inject them one at a time
-        # through DOMParser→body.innerHTML, so a <style> in another field never
-        # applies and a field-LEADING <style> is hoisted to <head> and dropped
-        # (attach_card_style_block enforces both — the old single-carrier
-        # "card-wide <style>" model broke every Kiku page). Skipping the read
-        # when neither field is mapped keeps the no-styling path work-free.
+        # Each mapped dictionary field carries its dictionaries' own scoped
+        # styles.css as a trailing <style> (dict_css_scope.attach_dict_css), per
+        # field because JS note types (Kiku) render one field at a time. There is
+        # no base sheet: build_note converts the field to Yomitan's export shape
+        # (anki_export) and the note type styles it.
         glossary_mapped = bool(self.config.anki_fields.get("glossary"))
         definition_mapped = bool(self.config.anki_fields.get("definition"))
         styling_on = glossary_mapped or definition_mapped
         episode_dict_css_entries = self.definition_service.css_entries() if styling_on else []
-        # S21: an rtl language's blocks carry the example-sentence rule; the
-        # profile says which (card_style_block.RTL_GLOSSARY_CSS).
-        style_direction = self.profile.content_style.direction
         # F-03: {series} / {episode} / {volume} in the tag string render once
         # per item from its source. A tag string without tokens stamps nothing,
         # so those notes stay byte-identical (Review Focus 1).
@@ -2536,9 +2523,7 @@ class EpisodeProcessor:
                 extra_fields["frequency_sort"] = str(word.frequency_harmonic_rank)
             if glossary:
                 extra_fields["glossary"] = (
-                    attach_card_style_block(
-                        glossary, dict_css_entries=episode_dict_css_entries, direction=style_direction
-                    )
+                    attach_dict_css(glossary, dict_css_entries=episode_dict_css_entries)
                     if glossary_mapped
                     else glossary
                 )
@@ -2553,13 +2538,11 @@ class EpisodeProcessor:
                 extra_fields[CARD_TAGS_KEY] = card_tags
 
             # Per-field self-containment: the definition field carries its OWN
-            # trailing block whenever it's mapped — regardless of the glossary
-            # field, which JS note types never render alongside it.
+            # dict CSS whenever it's mapped — regardless of the glossary field,
+            # which JS note types never render alongside it.
             card_definition = definition
             if definition_mapped:
-                card_definition = attach_card_style_block(
-                    definition, dict_css_entries=episode_dict_css_entries, direction=style_direction
-                )
+                card_definition = attach_dict_css(definition, dict_css_entries=episode_dict_css_entries)
 
             self._apply_render_hooks(word, card_definition, extra_fields)
 

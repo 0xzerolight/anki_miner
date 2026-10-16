@@ -2920,14 +2920,6 @@ No index files are deleted.</source>
         <translation>选择在哪个 Anki 牌组和笔记类型中创建新卡片。</translation>
     </message>
     <message>
-        <source>Card styling / CSS</source>
-        <translation>卡片样式 / CSS</translation>
-    </message>
-    <message>
-        <source>Apply a built-in card style or your own CSS.</source>
-        <translation>应用内置卡片样式或你自己的 CSS。</translation>
-    </message>
-    <message>
         <source>Furigana / readings</source>
         <translation>注音假名 / 读音</translation>
     </message>
@@ -3116,8 +3108,8 @@ No index files are deleted.</source>
         <translation>重新设置挖词卡片样式</translation>
     </message>
     <message>
-        <source>Re-apply the latest Anki Miner styling to cards you mined earlier -- Utilities → Card Backfill.</source>
-        <translation>将最新的 Anki Miner 样式重新应用到你之前挖取的卡片——“实用工具 → 卡片字段补全”。</translation>
+        <source>Convert cards you mined earlier to the current card format, so your note type styles them -- Utilities → Card Backfill.</source>
+        <translation>将你之前挖取的卡片转换为当前的卡片格式，以便由你的笔记类型为其设置样式——“实用工具 → 卡片字段补全”。</translation>
     </message>
     <message>
         <source>System health check</source>
@@ -3334,10 +3326,6 @@ No index files are deleted.</source>
         <translation>覆盖现有值</translation>
     </message>
     <message>
-        <source>Overwritten cards may need to use Restyle cards… to refresh their styling.</source>
-        <translation>被覆盖的卡片可能需要使用“重新设置卡片样式…”来刷新其样式。</translation>
-    </message>
-    <message>
         <source>Scan Anki (read-only)</source>
         <translation>扫描 Anki（只读）</translation>
     </message>
@@ -3346,8 +3334,8 @@ No index files are deleted.</source>
         <translation>重新设置卡片样式…</translation>
     </message>
     <message>
-        <source>Refresh the dictionary styling on every card of your note type</source>
-        <translation>刷新你的笔记类型下每张卡片的词典样式</translation>
+        <source>Convert every card of your note type to the current card format</source>
+        <translation>将你的笔记类型下的每张卡片转换为当前的卡片格式</translation>
     </message>
     <message>
         <source>Cancel</source>
@@ -7196,12 +7184,12 @@ Words to add: %3. Continue?</source>
         <translation>重新设置挖词卡片样式</translation>
     </message>
     <message>
-        <source>Re-applies the current built-in styling to your mined cards.
+        <source>Converts your mined cards to the current card format, so your note type styles them.
 
 Close Anki's card browser and note editor first — an open note can lose unsaved edits.
 
 Continue?</source>
-        <translation>为你挖取的卡片重新应用当前的内置样式。
+        <translation>将你挖取的卡片转换为当前的卡片格式，以便由你的笔记类型为其设置样式。
 
 请先关闭 Anki 的卡片浏览器和笔记编辑器——打开中的笔记可能会丢失未保存的修改。
 

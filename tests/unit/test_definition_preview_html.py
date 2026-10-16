@@ -16,7 +16,6 @@ from __future__ import annotations
 import pytest
 from PyQt6.QtGui import QTextDocument
 
-from anki_miner.services.dictionary.card_style_block import _SC_GAPFILL_HOOKS
 from anki_miner.services.dictionary.preview_html import (
     PREVIEW_CSS,
     adapt_entry,
@@ -203,12 +202,6 @@ class TestEnvelopeChrome:
 
 
 class TestStylesheetCoverage:
-    def test_every_card_gapfill_hook_is_styled_in_the_pane(self):
-        """The pane ignores per-dictionary ``styles.css`` (Qt cannot apply it), so a
-        hook the card sheet gap-fills must be covered here or it renders bare."""
-        missing = [hook for hook in _SC_GAPFILL_HOOKS if f"[{hook}" not in PREVIEW_CSS]
-        assert missing == []
-
     def test_the_preview_is_blind_to_data_has_styles(self):
         """A stamped envelope defers to the dictionary's own CSS on a card. That CSS
         does not exist in the pane, so the preview must style it regardless."""

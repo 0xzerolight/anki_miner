@@ -2920,14 +2920,6 @@ No index files are deleted.</source>
         <translation>เลือกสำรับ Anki และประเภทโน้ตที่จะใช้สร้างการ์ดใหม่</translation>
     </message>
     <message>
-        <source>Card styling / CSS</source>
-        <translation>รูปแบบการ์ด / CSS</translation>
-    </message>
-    <message>
-        <source>Apply a built-in card style or your own CSS.</source>
-        <translation>ใช้รูปแบบการ์ดในตัวหรือ CSS ของคุณเอง</translation>
-    </message>
-    <message>
         <source>Furigana / readings</source>
         <translation>ฟุริงานะ / คำอ่าน</translation>
     </message>
@@ -3116,8 +3108,8 @@ No index files are deleted.</source>
         <translation>จัดรูปแบบการ์ดที่ขุดใหม่</translation>
     </message>
     <message>
-        <source>Re-apply the latest Anki Miner styling to cards you mined earlier -- Utilities → Card Backfill.</source>
-        <translation>นำรูปแบบล่าสุดของ Anki Miner ไปใช้กับการ์ดที่คุณขุดไว้ก่อนหน้า -- ยูทิลิตี้ → เติมการ์ด</translation>
+        <source>Convert cards you mined earlier to the current card format, so your note type styles them -- Utilities → Card Backfill.</source>
+        <translation>แปลงการ์ดที่คุณขุดไว้ก่อนหน้าเป็นรูปแบบการ์ดปัจจุบัน เพื่อให้ประเภทโน้ตของคุณจัดรูปแบบการ์ดเหล่านั้นได้ -- ยูทิลิตี้ → เติมการ์ด</translation>
     </message>
     <message>
         <source>System health check</source>
@@ -3334,10 +3326,6 @@ No index files are deleted.</source>
         <translation>เขียนทับค่าที่มีอยู่</translation>
     </message>
     <message>
-        <source>Overwritten cards may need to use Restyle cards… to refresh their styling.</source>
-        <translation>การ์ดที่ถูกเขียนทับอาจต้องใช้ จัดรูปแบบการ์ดใหม่… เพื่อรีเฟรชรูปแบบ</translation>
-    </message>
-    <message>
         <source>Scan Anki (read-only)</source>
         <translation>สแกน Anki (อ่านอย่างเดียว)</translation>
     </message>
@@ -3346,8 +3334,8 @@ No index files are deleted.</source>
         <translation>จัดรูปแบบการ์ดใหม่…</translation>
     </message>
     <message>
-        <source>Refresh the dictionary styling on every card of your note type</source>
-        <translation>รีเฟรชรูปแบบพจนานุกรมบนการ์ดทุกใบของประเภทโน้ตของคุณ</translation>
+        <source>Convert every card of your note type to the current card format</source>
+        <translation>แปลงการ์ดทุกใบของประเภทโน้ตของคุณเป็นรูปแบบการ์ดปัจจุบัน</translation>
     </message>
     <message>
         <source>Cancel</source>
@@ -7196,12 +7184,12 @@ Words to add: %3. Continue?</source>
         <translation>จัดรูปแบบการ์ดที่ขุดใหม่</translation>
     </message>
     <message>
-        <source>Re-applies the current built-in styling to your mined cards.
+        <source>Converts your mined cards to the current card format, so your note type styles them.
 
 Close Anki's card browser and note editor first — an open note can lose unsaved edits.
 
 Continue?</source>
-        <translation>นำรูปแบบในตัวปัจจุบันไปใช้กับการ์ดที่ขุดไว้อีกครั้ง
+        <translation>แปลงการ์ดที่คุณขุดไว้เป็นรูปแบบการ์ดปัจจุบัน เพื่อให้ประเภทโน้ตของคุณจัดรูปแบบการ์ดเหล่านั้นได้
 
 ปิดตัวเรียกดูการ์ดและตัวแก้ไขโน้ตของ Anki ก่อน — โน้ตที่เปิดอยู่อาจสูญเสียการแก้ไขที่ยังไม่บันทึก
 

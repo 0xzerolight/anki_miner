@@ -2926,14 +2926,6 @@ Nijedna datoteka indeksa neće biti izbrisana.</translation>
         <translation>Odaberite u kojem se Anki špilu i vrsti bilješke izrađuju nove kartice.</translation>
     </message>
     <message>
-        <source>Card styling / CSS</source>
-        <translation>Stil kartica / CSS</translation>
-    </message>
-    <message>
-        <source>Apply a built-in card style or your own CSS.</source>
-        <translation>Primijenite ugrađeni stil kartica ili vlastiti CSS.</translation>
-    </message>
-    <message>
         <source>Furigana / readings</source>
         <translation>Furigana / čitanja</translation>
     </message>
@@ -3122,8 +3114,8 @@ Nijedna datoteka indeksa neće biti izbrisana.</translation>
         <translation>Preoblikovanje prikupljenih kartica</translation>
     </message>
     <message>
-        <source>Re-apply the latest Anki Miner styling to cards you mined earlier -- Utilities → Card Backfill.</source>
-        <translation>Ponovno primijenite najnoviji stil programa Anki Miner na kartice koje ste prije prikupili -- Pomagala → Dopuna kartica.</translation>
+        <source>Convert cards you mined earlier to the current card format, so your note type styles them -- Utilities → Card Backfill.</source>
+        <translation>Pretvorite kartice koje ste prije prikupili u trenutačni format kartica kako bi ih oblikovala vaša vrsta bilješke -- Pomagala → Dopuna kartica.</translation>
     </message>
     <message>
         <source>System health check</source>
@@ -3340,10 +3332,6 @@ Nijedna datoteka indeksa neće biti izbrisana.</translation>
         <translation>Prebriši postojeće vrijednosti</translation>
     </message>
     <message>
-        <source>Overwritten cards may need to use Restyle cards… to refresh their styling.</source>
-        <translation>Za prebrisane kartice možda će trebati upotrijebiti Preoblikuj kartice… kako bi se osvježio njihov stil.</translation>
-    </message>
-    <message>
         <source>Scan Anki (read-only)</source>
         <translation>Skeniraj Anki (samo čitanje)</translation>
     </message>
@@ -3352,8 +3340,8 @@ Nijedna datoteka indeksa neće biti izbrisana.</translation>
         <translation>Preoblikuj kartice…</translation>
     </message>
     <message>
-        <source>Refresh the dictionary styling on every card of your note type</source>
-        <translation>Osvježi stil rječnika na svakoj kartici vaše vrste bilješke</translation>
+        <source>Convert every card of your note type to the current card format</source>
+        <translation>Pretvori svaku karticu vaše vrste bilješke u trenutačni format kartica</translation>
     </message>
     <message>
         <source>Cancel</source>
@@ -7272,12 +7260,12 @@ Riječi za dodavanje: %3. Nastaviti?</translation>
         <translation>Preoblikuj prikupljene kartice</translation>
     </message>
     <message>
-        <source>Re-applies the current built-in styling to your mined cards.
+        <source>Converts your mined cards to the current card format, so your note type styles them.
 
 Close Anki's card browser and note editor first — an open note can lose unsaved edits.
 
 Continue?</source>
-        <translation>Na prikupljene kartice ponovno se primjenjuje trenutačni ugrađeni stil.
+        <translation>Prikupljene kartice pretvaraju se u trenutačni format kartica kako bi ih oblikovala vaša vrsta bilješke.
 
 Najprije zatvorite preglednik kartica i uređivač bilježaka u Ankiju — otvorena bilješka može izgubiti nespremljene izmjene.
 

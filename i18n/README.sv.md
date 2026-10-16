@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:ecd0ab0242935ee3 -->
+<!-- i18n-source: README.md sha256:59bb362dc4da97e4 -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -163,7 +163,7 @@ För en fullständig utvecklingsmiljö, se [CONTRIBUTING.md](../CONTRIBUTING.md)
 - Inbyggd videoförhandsvisning med libmpv – spela upp ett ords scen medan du granskar, eller finjustera undertexternas tidsinställning med direktuppspelning.
 - Animerade skärmbilder (se exempelkorten ovan).
 - Inställningsprofiler – spara namngivna konfigurationer och växla mellan dem från programhuvudet.
-- Formatera om insamlade kort – tillämpa din nuvarande kortformatering på kort som du redan har skapat (Hjälpprogram → Fyll i kort).
+- Formatera om insamlade kort – konvertera kort som du redan har skapat till nuvarande kortformat (Hjälpprogram → Fyll i kort).
 
 <details>
 <summary><strong>Inbyggda teman (29)</strong></summary>

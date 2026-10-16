@@ -2923,14 +2923,6 @@ Nenhum ficheiro de índice é eliminado.</translation>
         <translation>Escolha em que baralho e tipo de nota do Anki os novos cartões são criados.</translation>
     </message>
     <message>
-        <source>Card styling / CSS</source>
-        <translation>Estilo dos cartões / CSS</translation>
-    </message>
-    <message>
-        <source>Apply a built-in card style or your own CSS.</source>
-        <translation>Aplique um estilo de cartão integrado ou o seu próprio CSS.</translation>
-    </message>
-    <message>
         <source>Furigana / readings</source>
         <translation>Furigana / leituras</translation>
     </message>
@@ -3119,8 +3111,8 @@ Nenhum ficheiro de índice é eliminado.</translation>
         <translation>Reaplicar estilo aos cartões minerados</translation>
     </message>
     <message>
-        <source>Re-apply the latest Anki Miner styling to cards you mined earlier -- Utilities → Card Backfill.</source>
-        <translation>Reaplique o estilo mais recente do Anki Miner aos cartões que minerou anteriormente -- Utilitários → Completar cartões.</translation>
+        <source>Convert cards you mined earlier to the current card format, so your note type styles them -- Utilities → Card Backfill.</source>
+        <translation>Converta os cartões que minerou anteriormente para o formato de cartão atual, para que o seu tipo de nota lhes defina o estilo -- Utilitários → Completar cartões.</translation>
     </message>
     <message>
         <source>System health check</source>
@@ -3337,10 +3329,6 @@ Nenhum ficheiro de índice é eliminado.</translation>
         <translation>Substituir valores existentes</translation>
     </message>
     <message>
-        <source>Overwritten cards may need to use Restyle cards… to refresh their styling.</source>
-        <translation>Os cartões substituídos podem precisar de Reaplicar estilo… para atualizar o estilo.</translation>
-    </message>
-    <message>
         <source>Scan Anki (read-only)</source>
         <translation>Analisar o Anki (só leitura)</translation>
     </message>
@@ -3349,8 +3337,8 @@ Nenhum ficheiro de índice é eliminado.</translation>
         <translation>Reaplicar estilo…</translation>
     </message>
     <message>
-        <source>Refresh the dictionary styling on every card of your note type</source>
-        <translation>Atualizar o estilo do dicionário em todos os cartões do seu tipo de nota</translation>
+        <source>Convert every card of your note type to the current card format</source>
+        <translation>Converter todos os cartões do seu tipo de nota para o formato de cartão atual</translation>
     </message>
     <message>
         <source>Cancel</source>
@@ -7234,12 +7222,12 @@ Palavras a adicionar: %3. Continuar?</translation>
         <translation>Reaplicar estilo aos cartões minerados</translation>
     </message>
     <message>
-        <source>Re-applies the current built-in styling to your mined cards.
+        <source>Converts your mined cards to the current card format, so your note type styles them.
 
 Close Anki's card browser and note editor first — an open note can lose unsaved edits.
 
 Continue?</source>
-        <translation>Reaplica o estilo integrado atual aos seus cartões minerados.
+        <translation>Converte os seus cartões minerados para o formato de cartão atual, para que o seu tipo de nota lhes defina o estilo.
 
 Feche primeiro o navegador de cartões e o editor de notas do Anki — uma nota aberta pode perder alterações não guardadas.
 

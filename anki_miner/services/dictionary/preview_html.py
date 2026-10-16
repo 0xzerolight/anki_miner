@@ -1,15 +1,15 @@
 """Glossary markup adapted for the curator's ``QTextBrowser`` definition pane.
 
-The pane shows the SAME HTML a mined card carries (``IndexedDictProvider._render``
-output), but Qt's rich-text engine is not a browser: ``QTextDocument`` implements a
-small CSS subset, so the card's stylesheet is inert there. Measured against Qt 6.11:
+The pane shows the internal glossary markup (``IndexedDictProvider._render`` output,
+before ``anki_export`` converts it for the card), but Qt's rich-text engine is not a
+browser: ``QTextDocument`` implements a small CSS subset. Measured against Qt 6.11:
 
 ============================================  =========
-feature ``glossary.css`` is built on          supported
+feature                                       supported
 ============================================  =========
 ``::before`` / ``::after`` generated content  no
-``:not([data-has-styles])`` gates             no
-``var(--am-chip)`` / ``color-mix()``          no
+``:not(…)`` gates                             no
+``var(…)`` / ``color-mix()``                  no
 ``padding`` / ``border`` on an inline span    no
 class / type / ``[attr="value"]`` selectors   yes
 ``color`` / ``background-color`` / ``font-*`` yes
@@ -17,10 +17,8 @@ block ``margin``                              yes
 ``list-style-type`` / ``-qt-list-indent``     yes
 ============================================  =========
 
-Every rule in ``glossary.css`` is gated on ``ol[data-count] … :not([data-has-styles])``
-and most of its layout is generated content, so handing that sheet to the pane paints
-nothing. Hence this module: a Qt-subset sheet (:data:`PREVIEW_CSS`) plus the smallest
-markup adaptation that Qt's parser needs (:func:`to_preview_html`).
+Hence this module: a Qt-subset sheet (:data:`PREVIEW_CSS`) plus the smallest markup
+adaptation that Qt's parser needs (:func:`to_preview_html`).
 
 Two things CSS alone cannot fix here, both verified against real JMdict output:
 
@@ -35,15 +33,12 @@ Two things CSS alone cannot fix here, both verified against real JMdict output:
 
 Scope, deliberately:
 
-* **The card pipeline is not touched.** ``indexed_provider``, ``glossary.css`` and
-  ``card_style_block`` are what Anki renders; changing chip markup for the benefit of a
+* **The card pipeline is not touched.** ``indexed_provider``'s markup feeds the render
+  hooks, the media store and the card export; changing chip markup for the benefit of a
   preview pane would change every mined card.
 * **Per-dictionary ``styles.css`` is ignored.** It is modern CSS written for a browser;
-  Qt cannot apply it. Consequence: the preview is deliberately BLIND to
-  ``data-has-styles``. On a card that stamp hands chrome to the dictionary's own sheet,
-  but in the pane that sheet does not exist, so a stamp-aware preview would render
-  Jitendex (which ships 6.4 KB of ``styles.css``) completely bare. Every entry gets
-  the same treatment here.
+  Qt cannot apply it, so every entry gets the same treatment here, including old
+  entries stamped ``data-has-styles``.
 
 Pure string transform: no Qt import, no I/O. The Qt-side contract — that these rules
 resolve the way the docstring claims — is pinned by ``QTextDocument`` assertions in
@@ -56,9 +51,8 @@ import html
 import re
 
 # The sheet is applied with ``QTextDocument.setDefaultStyleSheet`` and must precede
-# every ``setHtml``. Colors follow glossary.css's discipline — solid/rgba grays that
-# read on a light and a dark palette alike — rather than importing the Theme singleton
-# into a service module.
+# every ``setHtml``. Colors are solid/rgba grays that read on a light and a dark
+# palette alike, rather than importing the Theme singleton into a service module.
 #
 # ``list-style-type: none`` on the envelope ``<ol>`` resolves to Qt's
 # ``ListStyleUndefined`` (no marker drawn); that is what suppresses the stray "1."
@@ -83,9 +77,8 @@ span.gloss-tag { background-color: rgba(128, 128, 128, 0.22); font-size: 8pt; }
 
 a.gloss-sc-a { color: #6f9dff; }
 
-/* The data-sc-* hook set card_style_block._SC_GAPFILL_HOOKS enumerates, mapped to the
- * plain attribute selectors Qt does support. Kept in step with that tuple by a drift
- * test so a new hook cannot land unstyled in the pane. */
+/* Common Yomitan data-sc-* hooks, mapped to the plain attribute selectors Qt does
+ * support. */
 [data-sc-class="tag"] { background-color: rgba(128, 128, 128, 0.22); font-size: 8pt; }
 [data-sc-content="tag"] { background-color: rgba(128, 128, 128, 0.22); font-size: 8pt; }
 [data-sc-content="part-of-speech-info"] { background-color: rgba(120, 190, 120, 0.26); }
