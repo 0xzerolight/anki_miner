@@ -168,6 +168,11 @@ def capture_payloads(tmp_home: Path) -> list[dict]:
                 dictionary_chain=(ChainEntry(kind="indexed", dict_id=DEFAULT_DICT_ID, enabled=True),),
                 frequency_chain=(FreqEntry(source_id=FREQ_SOURCE_ID, enabled=True),),
                 pitch_chain=(PitchSourceEntry(source_id=PITCH_SOURCE_ID, enabled=True),),
+                # The canaries pin extraction; the batch's fresh-install switches have their own tests.
+                normalize_audio_loudness=False,
+                crop_manga_to_text=False,
+                pick_best_sentence=False,
+                skip_opening_ending=False,
             )
             processor = create_episode_processor(config, NullPresenter())
             try:

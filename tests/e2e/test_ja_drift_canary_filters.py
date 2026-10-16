@@ -294,6 +294,11 @@ def _config(fake: FakeAnkiConnect, whitelist_path: Path) -> AnkiMinerConfig:
         exclude_katakana_only_words=True,
         use_whitelist=True,
         whitelist_path=whitelist_path,
+        # The canaries pin extraction; the batch's fresh-install switches have their own tests.
+        normalize_audio_loudness=False,
+        crop_manga_to_text=False,
+        pick_best_sentence=False,
+        skip_opening_ending=False,
     )
 
 
