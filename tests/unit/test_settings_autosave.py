@@ -233,11 +233,12 @@ class TestCommitSelfEcho:
         qtbot.waitUntil(lambda: len(scan_roots) == 2, timeout=3000)
         assert scan_roots == [expected_root, expected_root]
 
-        def probe_import(_zip_path: Path, dest_root: Path):
+        def probe_import(_zip_path: Path, dest_root: Path, **_kwargs):
             import_roots.append(dest_root)
             raise RuntimeError("import probe")
 
-        monkeypatch.setattr(ImportWorker, "for_yomitan", staticmethod(probe_import))
+        # Add builds its worker through for_dictionary_file (Yomitan, StarDict or CSV/TSV).
+        monkeypatch.setattr(ImportWorker, "for_dictionary_file", staticmethod(probe_import))
         # Add is a batch now: a worker that cannot even be constructed is that
         # item's failure, reported as a banner, not an exception out of the slot.
         issues: list[tuple[str, str]] = []

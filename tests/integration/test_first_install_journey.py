@@ -53,8 +53,7 @@ class _ImportReceipt:
     cancelled: QSignalSpy
     failed: QSignalSpy
     finished: QSignalSpy
-    overwrite: bool
-    dict_id: str | None
+    language: str
 
 
 def _term_bank(prefix: str, count: int, *, sequence_offset: int = 0) -> list[list[object]]:
@@ -216,15 +215,17 @@ def test_first_install_journey(
 
     monkeypatch.setattr(import_flow_common, "QProgressDialog", capture_progress_dialog)
 
-    real_worker_factory = ImportWorker.for_yomitan
+    # Add builds its worker through for_dictionary_file, which never overwrites
+    # or pins a slot; it tells a Yomitan zip from StarDict or CSV/TSV itself.
+    real_worker_factory = ImportWorker.for_dictionary_file
 
     def observed_worker_factory(
         zip_path: Path,
         dest_root: Path,
-        overwrite: bool = False,
-        dict_id: str | None = None,
+        *,
+        language: str = "ja",
     ) -> ImportWorker:
-        worker = real_worker_factory(zip_path, dest_root, overwrite=overwrite, dict_id=dict_id)
+        worker = real_worker_factory(zip_path, dest_root, language=language)
         receipts.append(
             _ImportReceipt(
                 worker=worker,
@@ -233,13 +234,12 @@ def test_first_install_journey(
                 cancelled=QSignalSpy(worker.cancelled),
                 failed=QSignalSpy(worker.failed),
                 finished=QSignalSpy(worker.finished),
-                overwrite=overwrite,
-                dict_id=dict_id,
+                language=language,
             )
         )
         return worker
 
-    monkeypatch.setattr(ImportWorker, "for_yomitan", staticmethod(observed_worker_factory))
+    monkeypatch.setattr(ImportWorker, "for_dictionary_file", staticmethod(observed_worker_factory))
 
     real_worker_run = ImportWorker.run
 
@@ -506,7 +506,7 @@ def test_first_install_journey(
         assert len(second_receipt.cancelled) == 0
         assert len(second_receipt.failed) == 0
         assert len(information_dialogs) == 2
-        assert all(receipt.overwrite is False and receipt.dict_id is None for receipt in receipts)
+        assert all(receipt.language == "ja" for receipt in receipts)
         assert not picker_paths
 
         messages = [record.getMessage() for record in caplog.records]

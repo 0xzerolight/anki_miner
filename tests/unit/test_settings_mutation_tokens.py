@@ -317,13 +317,13 @@ def test_root_edit_is_committed_before_immediate_add(tab, monkeypatch, tmp_path)
     )
     captured_roots = []
 
-    def fake_for_yomitan(zip_path, root, **kwargs):
+    def fake_for_dictionary_file(zip_path, root, **kwargs):
         captured_roots.append(root)
         return object()
 
     monkeypatch.setattr(
-        "anki_miner.gui.controllers.dictionary_import_flow.ImportWorker.for_yomitan",
-        fake_for_yomitan,
+        "anki_miner.gui.controllers.dictionary_import_flow.ImportWorker.for_dictionary_file",
+        fake_for_dictionary_file,
     )
 
     def fake_run_chained_imports(**kwargs):
