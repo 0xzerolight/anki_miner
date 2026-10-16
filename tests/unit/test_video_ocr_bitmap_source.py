@@ -152,3 +152,31 @@ def test_the_module_does_not_load_numpy():
     # The Video OCR tab imports it at app startup, which must stay numpy-free.
     code = "import sys, anki_miner.services.video_ocr.bitmap_source; sys.exit(1 if 'numpy' in sys.modules else 0)"
     assert subprocess.run([sys.executable, "-c", code], timeout=120).returncode == 0
+
+
+def test_a_video_container_that_starts_late_is_moved_to_the_file_start(test_config, tmp_path):
+    video = tmp_path / "v.m2ts"
+    video.write_bytes(b"x")
+
+    def probe(cmd, **_kw):
+        return _packets("1.500000\n") if "format=start_time" in cmd else _packets("2.5,N/A\n4.5,N/A\n")
+
+    with patch(_LIST, return_value=[_image()]), patch(_RUN, side_effect=probe):
+        source = open_bitmap_source(test_config, video, sub_index=0)
+
+    assert source.start_seconds == pytest.approx(1.5)
+    assert source.end_seconds == pytest.approx(4.5 - 1.5 + 1.0)
+    args = ffmpeg_input_args(source, 10)
+    assert args[args.index("-itsoffset") + 1] == "-1.500000"
+    assert args.index("-itsoffset") > args.index(f"color=c={CANVAS_COLOUR}:s=1920x1080:r=10")
+    assert args[-1] == str(video)
+
+
+def test_a_bare_sup_is_never_shifted(test_config, tmp_path):
+    sup = tmp_path / "m.sup"
+    sup.write_bytes(b"x")
+    with patch(_LIST, return_value=[_image()]), patch(_RUN, return_value=_packets("3.0,N/A\n")) as run:
+        source = open_bitmap_source(test_config, sup)
+    assert source.start_seconds == 0.0
+    assert all("format=start_time" not in call.args[0] for call in run.call_args_list)
+    assert "-itsoffset" not in ffmpeg_input_args(source, 10)

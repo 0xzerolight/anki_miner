@@ -123,3 +123,31 @@ def test_a_missing_track_is_a_decode_failure(test_config, tmp_path):
     out = tmp_path / "episode.srt"
     result = scan_video(test_config, _mkv_with_pgs(tmp_path), FULL_FRAME, out, reader=_WhiteReader(), bitmap_track=5)
     assert result.status is VideoOcrStatus.DECODE_FAILED and "image subtitle track" in result.detail
+
+
+def test_a_transport_stream_that_starts_late_keeps_cues_on_the_file_start_clock(test_config, tmp_path):
+    """MPEG-TS/M2TS (Blu-ray) containers start above 0 s. Mining's ffmpeg -ss counts from the
+    file start, as the picture path does, so the cues must too (Z.2 WB3 I-2)."""
+    mkv = _mkv_with_pgs(tmp_path)
+    ts = tmp_path / "episode.m2ts"
+    subprocess.run(
+        ["ffmpeg", "-v", "error", "-y", "-copyts", "-i", str(mkv), "-map", "0", "-c:v", "mpeg2video"]
+        + ["-c:s", "copy", "-f", "mpegts", str(ts)],
+        check=True,
+        timeout=120,
+    )
+    start = subprocess.run(
+        ["ffprobe", "-v", "error", "-show_entries", "format=start_time", "-of", "csv=p=0", str(ts)],
+        capture_output=True,
+        text=True,
+        check=True,
+        timeout=60,
+    ).stdout.strip()
+    assert float(start) > 0.5  # the premise: this container does not start at 0
+
+    out = tmp_path / "episode.srt"
+    result = scan_video(test_config, ts, FULL_FRAME, out, reader=_WhiteReader(), bitmap_track=0)
+
+    assert result.status is VideoOcrStatus.SUCCESS and result.cue_count == 2
+    for event, (cue_start, cue_end) in zip(pysubs2.load(str(out)), _CUES, strict=True):
+        assert abs(event.start / 1000 - cue_start) <= 0.25 and abs(event.end / 1000 - cue_end) <= 0.25

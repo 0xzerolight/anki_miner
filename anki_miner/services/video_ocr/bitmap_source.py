@@ -51,6 +51,10 @@ class BitmapSource:
     width: int
     height: int
     end_seconds: float
+    #: The container's ``format.start_time``: a Blu-ray .m2ts/.ts starts above 0 s.
+    #: Cues are moved back by it onto the file-start clock that mining's ``-ss``
+    #: and the picture path use. Always 0 for a bare .sup or VobSub pair.
+    start_seconds: float = 0.0
 
 
 def is_bitmap_file(path: Path) -> bool:
@@ -111,6 +115,20 @@ def track_end_seconds(path: Path, sub_index: int, ffprobe_cmd: str) -> float | N
     return end
 
 
+def container_start_seconds(path: Path, ffprobe_cmd: str) -> float:
+    """*path*'s ``format.start_time`` in seconds; 0 when it is unset or cannot be read."""
+    cmd = [ffprobe_cmd, "-v", "error", "-show_entries", "format=start_time", "-of", "csv=p=0", str(path)]
+    done = run_supervised(cmd, timeout_s=30, op="ffprobe start-time")
+    if done.state is not SupervisedState.COMPLETED or done.returncode != 0:
+        logger.warning("Video OCR: could not read the start time of %s; assuming 0", path.name)
+        return 0.0
+    try:
+        start = float((done.stdout or "").strip().splitlines()[0])
+    except (IndexError, ValueError):  # "N/A" or nothing: the file has no start offset
+        return 0.0
+    return max(start, 0.0)
+
+
 def open_bitmap_source(config, path: Path, sub_index: int | None = None) -> BitmapSource:
     """Resolve *path* (a video, a ``.sup``, or either half of a VobSub pair) to the image track to read.
 
@@ -143,17 +161,28 @@ def open_bitmap_source(config, path: Path, sub_index: int | None = None) -> Bitm
     end = track_end_seconds(target, stream.sub_index, ffprobe)
     if end is None:
         raise FrameSourceError(f"{target.name}: the subtitle track's timing could not be read")
-    return BitmapSource(target, stream.sub_index, width - width % 2, height - height % 2, end + END_MARGIN_S)
+    # A bare image-subtitle file keeps its own clock: its "start" is its first cue.
+    start = 0.0 if is_bitmap_file(target) else container_start_seconds(target, ffprobe)
+    return BitmapSource(
+        target,
+        stream.sub_index,
+        width - width % 2,
+        height - height % 2,
+        end - start + END_MARGIN_S,
+        start_seconds=start,
+    )
 
 
 def ffmpeg_input_args(source: BitmapSource, fps: int) -> list[str]:
     """The ffmpeg inputs for *source*: a bounded colour canvas, then the subtitle file itself.
 
-    ``-copyts`` keeps every cue on the file's own clock; ``-t`` ends the canvas,
-    which otherwise never ends.
+    ``-copyts`` keeps every cue on the file's own clock; ``-itsoffset`` moves a
+    container that starts above 0 s back to the file start; ``-t`` ends the
+    canvas, which otherwise never ends.
     """
     canvas = f"color=c={CANVAS_COLOUR}:s={source.width}x{source.height}:r={fps}"
-    return ["-copyts", "-f", "lavfi", "-t", f"{source.end_seconds:.3f}", "-i", canvas, "-i", str(source.path)]
+    shift = ["-itsoffset", f"{-source.start_seconds:.6f}"] if source.start_seconds else []
+    return ["-copyts", "-f", "lavfi", "-t", f"{source.end_seconds:.3f}", "-i", canvas, *shift, "-i", str(source.path)]
 
 
 def overlay_filter(source: BitmapSource) -> str:
