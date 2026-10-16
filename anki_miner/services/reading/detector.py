@@ -85,7 +85,7 @@ def detect(
        archives (title dir), else the sibling ``<name>.mokuro`` (user
        dropped the image dir itself), else error.
     4. ``.epub``/``.txt``/``.pdf`` → one book (metadata deferred to the loader).
-    5. ``.srt``/``.ass``/``.ssa``/``.vtt``/``.smi`` → one subtitle document (metadata
+    5. ``.srt``/``.ass``/``.ssa``/``.vtt``/``.smi``/``.lrc`` → one subtitle document (metadata
        deferred to the loader).
 
     ``diagnostics`` receives ``(archive_path, reason)`` entries for malformed

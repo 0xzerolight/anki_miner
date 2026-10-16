@@ -287,7 +287,7 @@ def find_sibling_subtitle(
         video_path: Video (or media) file whose subtitle is sought.
         priority: Ordered lowercase extensions (e.g. ``(".ass", ".srt")``) to
             accept, best first.  Defaults to :data:`DEFAULT_SUBTITLE_PRIORITY`
-            (``.ass > .ssa > .srt > .vtt > .smi``).  Callers may pass a narrower set to
+            (``.ass > .ssa > .srt > .vtt > .smi > .lrc``).  Callers may pass a narrower set to
             exclude a format, or a wider one to accept extras.
         language: The mining language's tags, or None for no preference.
 
