@@ -326,8 +326,8 @@ def test_word_audio_entry_scopes_edge_tts_to_the_languages_that_offer_it() -> No
     with_edge = {code for code in AVAILABLE_LANGUAGES if get_profile(code).audio.edge_voice}
     cap = _entry("expression-audio")
 
-    assert with_edge == set(AVAILABLE_LANGUAGES)  # CC-17; X rewrites the sentence below
-    assert "Microsoft Edge text-to-speech (Cantonese, Hebrew, Persian, Slovenian)" in cap.description
+    assert with_edge == set(AVAILABLE_LANGUAGES)  # CC-17
+    assert "Microsoft Edge text-to-speech (every language)" in cap.description
     assert "edge tts" in cap.keywords
 
 
@@ -549,3 +549,61 @@ def test_whole_profile_actions_point_at_where_they_live_now() -> None:
 
 def test_fill_in_automatically_is_findable() -> None:
     assert any(cap.id == "note-type-preset" for cap in search("fill in automatically"))
+
+
+# ---------------------------------------------------------------------------
+# Feature batch 2026-10-15 (Xc.T1): every new or edited entry names its feature
+# ---------------------------------------------------------------------------
+
+
+def test_the_feature_batch_entries_exist() -> None:
+    by_id = {cap.id: cap for cap in CAPABILITIES}
+
+    def text(cap_id: str) -> str:
+        assert cap_id in by_id, f"missing Usage Guide entry {cap_id!r}"
+        return f"{by_id[cap_id].title} {by_id[cap_id].description}"
+
+    # L1
+    assert "reviewed at least once" in text("known-from-reviewed")
+    assert "already has a card" in text("known-from-reviewed")
+    assert "suspended" not in text("known-from-reviewed")  # OWNER-RULINGS C1
+    assert "{series}, {episode} and {volume}" in text("tags")
+    assert "?key=YOUR_KEY" in text("anki-connection")
+    assert "AnkiWeb" in text("sync-after-run")
+    assert "Kindle Vocabulary Builder" in text("import-known-words")
+    assert "where it came from" in text("known-words-list")
+    assert "as a CSV file" in text("export-words")
+    assert "Export words…" in text("export-run-words")
+    # L2
+    assert "by day, week or month" in text("analytics-history")
+    assert "Analytics → Mining History" in text("analytics-run-undo")
+    assert "Known Words card" in text("analytics-known-words")
+    assert "Analytics → Frequency Coverage" in text("analytics-frequency-coverage")
+    assert "Restore a backup…" in text("restore-backup")
+    # L3a
+    assert "moves to another line" in text("dedup")
+    assert "fewest unknown words" in text("best-sentence")
+    # L3b
+    assert "Settings → Sentences" in text("skip-opening-ending")
+    assert by_id["skip-opening-ending"].target == CapabilityTarget("settings", "sentences")  # C7
+    assert ".lrc lyrics" in text("lrc-lyrics")
+    # L4
+    assert "Even out audio volume" in text("sentence-audio")
+    assert "Crop manga pictures to the speech bubble" in text("screenshots")
+    assert "Wikimedia Commons" in text("expression-audio")
+    # L5
+    assert "one folder per book" in text("audiobook-sync-shelf")
+    assert "grade from A to D" in text("audiobook-sync-report")
+    assert "reuses the saved transcript" in text("audiobook-sync")
+    assert "split at sentence ends" in text("subtitle-generate")
+    # L6
+    assert "web article" in text("text-mining")
+    assert "PDF" in text("novels-mining")
+    assert "own furigana" in text("epub-author-furigana")
+    assert by_id["epub-author-furigana"].requires == "furigana"
+    # L7
+    assert "picks a translation itself" in text("secondary-subtitles")
+    assert "several dictionaries" in text("word-curator")
+    assert "image subtitles" in text("video-ocr")
+    # L8
+    assert "StarDict" in text("import-dictionary")

@@ -227,7 +227,8 @@ CAPABILITIES: tuple[Capability, ...] = (
         title=QT_TRANSLATE_NOOP("Capabilities", "Review words before mining"),
         description=QT_TRANSLATE_NOOP(
             "Capabilities",
-            "Approve or reject each word, pick its sentence and scene, trim its audio, mark words known, and fix a mistranscribed sentence or swap the word to mine -- before any card is created.",
+            "Approve or reject each word, pick its sentence and scene, trim its audio, mark words known, and fix a mistranscribed sentence or swap the word to mine -- before any card is created. "
+            "When a word has entries in several dictionaries, choose which one the card's Definition uses.",
         ),
         category=_CAT_WORKFLOWS,
         target=CapabilityTarget("video", "batch"),
@@ -244,6 +245,7 @@ CAPABILITIES: tuple[Capability, ...] = (
             "fix transcription",
             "wrong word",
             "ocr error",
+            "dictionary",
         ),
     ),
     Capability(
@@ -253,6 +255,9 @@ CAPABILITIES: tuple[Capability, ...] = (
             "Capabilities",
             "Load a second subtitle file in your own language beside the mining-language one: it shows under "
             "the line in the Word Curator preview and can be saved to a Translation field. "
+            "Leave the file empty and Anki Miner picks a translation itself: a subtitle named for the video, "
+            "or a text track inside it, in your interface language or else English. The Activity Log names "
+            "the track it used. "
             "On Video → Batch, point it at a folder of translation subtitles instead and they pair to the "
             "videos by episode number. Turn it on under Settings → Sentences.",
         ),
@@ -267,6 +272,8 @@ CAPABILITIES: tuple[Capability, ...] = (
             "dual subtitles",
             "batch",
             "folder",
+            "auto pick",
+            "embedded track",
         ),
     ),
     Capability(
@@ -323,6 +330,18 @@ CAPABILITIES: tuple[Capability, ...] = (
         keywords=("audiobook", "audio", "mp3", "book", "listening", "ln"),
     ),
     Capability(
+        id="lrc-lyrics",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Mine songs from .lrc lyrics"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Use a .lrc lyrics file wherever a subtitle file goes. Each line lasts until the next one starts. "
+            "Pair a song with its lyrics on Audiobooks, condense it in Condense, or mine a music video on Video.",
+        ),
+        category=_CAT_WORKFLOWS,
+        target=CapabilityTarget("audiobook"),
+        keywords=("lrc", "lyrics", "song", "music", "karaoke", "synced lyrics"),
+    ),
+    Capability(
         id="manga-mining",
         title=QT_TRANSLATE_NOOP("Capabilities", "Mine from manga"),
         description=QT_TRANSLATE_NOOP("Capabilities", "Mine vocabulary from manga volumes processed with mokuro."),
@@ -334,21 +353,50 @@ CAPABILITIES: tuple[Capability, ...] = (
         id="novels-mining",
         title=QT_TRANSLATE_NOOP("Capabilities", "Mine from novels"),
         description=QT_TRANSLATE_NOOP(
-            "Capabilities", "Mine vocabulary from novels and other text (EPUB, Aozora, plain text)."
+            "Capabilities", "Mine vocabulary from novels and other text (EPUB, PDF, Aozora, plain text)."
         ),
         category=_CAT_WORKFLOWS,
         target=CapabilityTarget("reading", "novels"),
-        keywords=("novel", "epub", "text", "book", "reading", "aozora", "ln", "light novel"),
+        keywords=("novel", "epub", "text", "book", "reading", "aozora", "ln", "light novel", "pdf"),
+    ),
+    Capability(
+        id="epub-author-furigana",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Readings from a book's own furigana"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "When a Japanese EPUB prints furigana over a word, the card takes that reading instead of the "
+            "parser's guess.",
+        ),
+        category=_CAT_WORKFLOWS,
+        target=CapabilityTarget("reading", "novels"),
+        keywords=("furigana", "ruby", "reading", "epub", "name", "author"),
+        requires="furigana",
     ),
     Capability(
         id="text-mining",
-        title=QT_TRANSLATE_NOOP("Capabilities", "Mine pasted text"),
+        title=QT_TRANSLATE_NOOP("Capabilities", "Mine pasted text or a web article"),
         description=QT_TRANSLATE_NOOP(
-            "Capabilities", "Paste text in your mining language and mine it into Anki cards."
+            "Capabilities",
+            "Paste text in your mining language, or fetch a web article by its address, and mine it into Anki "
+            "cards. A fetched article's cards name the page and site as their source.",
         ),
         category=_CAT_WORKFLOWS,
         target=CapabilityTarget("reading", "text"),
-        keywords=("paste", "text", "clipboard", "copy paste", "raw text", "snippet", "article"),
+        keywords=(
+            "paste",
+            "text",
+            "clipboard",
+            "copy paste",
+            "raw text",
+            "snippet",
+            "article",
+            "web",
+            "url",
+            "website",
+            "fetch",
+            "news",
+            "blog",
+        ),
     ),
     Capability(
         id="subtitle-file-mining",
@@ -389,7 +437,9 @@ CAPABILITIES: tuple[Capability, ...] = (
         id="subtitle-generate",
         title=QT_TRANSLATE_NOOP("Capabilities", "Generate subtitles from audio"),
         description=QT_TRANSLATE_NOOP(
-            "Capabilities", "Create subtitles from audio with a local Whisper model -- as a standalone tool."
+            "Capabilities",
+            "Create subtitles from audio with a local Whisper model -- as a standalone tool. Long lines are split "
+            "at sentence ends, and a second run on the same file reuses the saved transcript.",
         ),
         category=_CAT_WORKFLOWS,
         target=CapabilityTarget("subtitles", "generate"),
@@ -488,6 +538,65 @@ CAPABILITIES: tuple[Capability, ...] = (
         category=_CAT_WORKFLOWS,
         target=CapabilityTarget("analytics"),
         keywords=("analytics", "stats", "statistics", "history", "progress", "count", "graph"),
+    ),
+    Capability(
+        id="analytics-history",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Browse your whole mining history"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Analytics lists every run you have mined. Pick a period, group the runs by day, week or month, see "
+            "the cards per period in a chart, and export the table as a CSV file.",
+        ),
+        category=_CAT_WORKFLOWS,
+        target=CapabilityTarget("analytics"),
+        keywords=("history", "chart", "csv", "export history", "cards per day", "per week", "per month", "trend"),
+    ),
+    Capability(
+        id="analytics-run-undo",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Show or delete a past run's cards"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Select a run in Analytics → Mining History to open its cards in Anki's browser or to delete them. "
+            "The confirmation says how many of its cards are still in Anki and how many you have reviewed. Runs "
+            "mined before this version have no card list.",
+        ),
+        category=_CAT_WORKFLOWS,
+        target=CapabilityTarget("analytics"),
+        keywords=(
+            "undo run",
+            "delete run",
+            "delete cards",
+            "show in anki",
+            "browse cards",
+            "remove mined cards",
+            "past run",
+        ),
+    ),
+    Capability(
+        id="analytics-known-words",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Track how many words you know"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "The Known Words card on Analytics counts the words Anki Miner treats as known in the current mining "
+            "language and shows how that number changed. It is counted while Anki is running, at most once every "
+            "ten minutes.",
+        ),
+        category=_CAT_WORKFLOWS,
+        target=CapabilityTarget("analytics"),
+        keywords=("known words", "vocabulary size", "word count", "growth", "progress"),
+    ),
+    Capability(
+        id="analytics-frequency-coverage",
+        title=QT_TRANSLATE_NOOP("Capabilities", "See how much of a frequency list you know"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Analytics → Frequency Coverage counts the words you know in ranks 1–1,000 up to 20,000 of your "
+            "first frequency list with numeric ranks, and lists the missing words of each band. It needs Anki "
+            "running.",
+        ),
+        category=_CAT_WORKFLOWS,
+        target=CapabilityTarget("analytics"),
+        keywords=("coverage", "frequency list", "rank band", "missing words", "top 1000", "top 10000"),
     ),
     Capability(
         id="reset-stats",
@@ -701,6 +810,18 @@ CAPABILITIES: tuple[Capability, ...] = (
         keywords=("known words", "already known", "skip known", "anki collection", "ignore known", "seen"),
     ),
     Capability(
+        id="known-from-reviewed",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Count a word as known only after its card has been reviewed"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Readability and the i+1 sentence rule then count a word as known only when its Anki card has been "
+            "reviewed at least once. Mining still skips every word that already has a card.",
+        ),
+        category=_CAT_FILTERING,
+        target=CapabilityTarget("settings", "filtering"),
+        keywords=("reviewed", "review state", "known", "i+1", "readability"),
+    ),
+    Capability(
         id="excluded-decks",
         title=QT_TRANSLATE_NOOP("Capabilities", "Exclude specific Anki decks from 'known'"),
         description=QT_TRANSLATE_NOOP(
@@ -720,6 +841,43 @@ CAPABILITIES: tuple[Capability, ...] = (
         category=_CAT_FILTERING,
         target=CapabilityTarget("settings", "filtering"),
         keywords=("manage known words", "user list", "mark known", "custom known", "export known words", "txt"),
+    ),
+    Capability(
+        id="known-words-list",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Browse every known word"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Manage Known Words lists every word this language counts as known, with where it came from (added "
+            "by you, mined by Anki Miner, from Anki) and the date it was added. Search it, filter it by source, "
+            "and remove words you added. Words from Anki come back on the next sync.",
+        ),
+        category=_CAT_FILTERING,
+        target=CapabilityTarget("settings", "filtering"),
+        keywords=("known words list", "browse", "source", "remove"),
+    ),
+    Capability(
+        id="import-known-words",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Import known words from Kindle, Lute or LWT"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "In Manage Known Words, Import… also reads a Kindle Vocabulary Builder file (vocab.db; words marked "
+            "mastered) and Lute or LWT term exports (status 5 and 99).",
+        ),
+        category=_CAT_FILTERING,
+        target=CapabilityTarget("settings", "filtering"),
+        keywords=("kindle", "vocab.db", "vocabulary builder", "lute", "lwt"),
+    ),
+    Capability(
+        id="export-words",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Export words to a CSV file"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Export words… saves the list you are looking at in Manage Known Words, or a finished run's mined "
+            "and not-mined words with the reason each was skipped, as a CSV file.",
+        ),
+        category=_CAT_FILTERING,
+        target=CapabilityTarget("settings", "filtering"),
+        keywords=("export", "csv", "word list", "spreadsheet"),
     ),
     Capability(
         id="kana-only-exclude",
@@ -757,11 +915,50 @@ CAPABILITIES: tuple[Capability, ...] = (
         id="dedup",
         title=QT_TRANSLATE_NOOP("Capabilities", "One word per sentence"),
         description=QT_TRANSLATE_NOOP(
-            "Capabilities", "Mine at most one word from each example sentence, skipping the rest."
+            "Capabilities",
+            "Mine at most one word from each example sentence. A word whose sentence is taken moves to another "
+            "line it appears on, and is skipped only when every one of its lines is taken.",
         ),
         category=_CAT_FILTERING,
         target=CapabilityTarget("settings", "sentences"),
         keywords=("duplicate", "dedupe", "deduplicate", "repeat", "unique"),
+    ),
+    Capability(
+        id="best-sentence",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Pick the clearest sentence"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "When a word appears on several lines, its card uses the line with the fewest unknown words and a "
+            "comfortable length instead of the first one. The Word Curator still lists every line.",
+        ),
+        category=_CAT_FILTERING,
+        target=CapabilityTarget("settings", "sentences"),
+        keywords=("best sentence", "clearest sentence", "example sentence", "shortest sentence", "pick sentence"),
+    ),
+    Capability(
+        id="skip-opening-ending",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Skip openings, endings and signs"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Leave opening and ending songs, previews and on-screen signs out of mining, Condense and "
+            "Readability: lines styled as songs or signs, and lines inside a video's opening, ending and preview "
+            "chapters. On by default for new installs; turn it off in Settings → Sentences.",
+        ),
+        category=_CAT_FILTERING,
+        target=CapabilityTarget("settings", "sentences"),
+        keywords=(
+            "OP",
+            "ED",
+            "opening",
+            "ending",
+            "op/ed",
+            "karaoke",
+            "signs",
+            "typesetting",
+            "chapters",
+            "lyrics",
+            "preview",
+        ),
     ),
     Capability(
         id="subtitle-regex",
@@ -869,13 +1066,28 @@ CAPABILITIES: tuple[Capability, ...] = (
     ),
     Capability(
         id="import-dictionary",
-        title=QT_TRANSLATE_NOOP("Capabilities", "Import a Yomitan dictionary"),
+        title=QT_TRANSLATE_NOOP("Capabilities", "Import a dictionary file"),
         description=QT_TRANSLATE_NOOP(
-            "Capabilities", "Add your own Yomitan-format dictionary zip as a definition source."
+            "Capabilities",
+            "Add a Yomitan zip, a StarDict dictionary (its archive or its .ifo file) or a CSV/TSV word list "
+            "(term and definition, or term, reading and definition) as a definition source.",
         ),
         category=_CAT_SOURCES,
         target=CapabilityTarget("settings", "dictionaries"),
-        keywords=("import", "yomitan", "add dictionary", "custom dictionary", "zip", "jitendex", "jmdict"),
+        keywords=(
+            "import",
+            "yomitan",
+            "add dictionary",
+            "custom dictionary",
+            "zip",
+            "jitendex",
+            "jmdict",
+            "stardict",
+            "freedict",
+            "ifo",
+            "csv",
+            "tsv",
+        ),
     ),
     Capability(
         id="update-dictionaries",
@@ -990,7 +1202,8 @@ CAPABILITIES: tuple[Capability, ...] = (
         description=QT_TRANSLATE_NOOP(
             "Capabilities",
             "Attach word audio to cards from audio packs, JPod101 (Japanese), Google text-to-speech, or "
-            "Microsoft Edge text-to-speech (Cantonese, Hebrew, Persian, Slovenian).",
+            "Microsoft Edge text-to-speech (every language). Wikimedia Commons plays recordings of real "
+            "speakers from Wiktionary and Lingua Libre, tried before Google TTS in most languages.",
         ),
         category=_CAT_AUDIO,
         target=CapabilityTarget("settings", "audio"),
@@ -1005,6 +1218,11 @@ CAPABILITIES: tuple[Capability, ...] = (
             "edge",
             "edge tts",
             "read aloud",
+            "wikimedia",
+            "commons",
+            "wiktionary",
+            "lingua libre",
+            "native recordings",
         ),
     ),
     Capability(
@@ -1021,11 +1239,25 @@ CAPABILITIES: tuple[Capability, ...] = (
         id="sentence-audio",
         title=QT_TRANSLATE_NOOP("Capabilities", "Sentence audio from the video"),
         description=QT_TRANSLATE_NOOP(
-            "Capabilities", "Extract the spoken sentence as an audio clip; tune its format and bitrate."
+            "Capabilities",
+            "Extract the spoken sentence as an audio clip; tune its format and bitrate. Even out audio volume "
+            "brings sentence clips and condensed audio to one loudness and fades each clip in and out.",
         ),
         category=_CAT_AUDIO,
         target=CapabilityTarget("settings", "media"),
-        keywords=("sentence audio", "clip audio", "recording", "bitrate", "audio format", "mp3", "opus"),
+        keywords=(
+            "sentence audio",
+            "clip audio",
+            "recording",
+            "bitrate",
+            "audio format",
+            "mp3",
+            "opus",
+            "loudness",
+            "normalize",
+            "volume",
+            "fade",
+        ),
     ),
     Capability(
         id="sentence-tts",
@@ -1053,10 +1285,24 @@ CAPABILITIES: tuple[Capability, ...] = (
     Capability(
         id="screenshots",
         title=QT_TRANSLATE_NOOP("Capabilities", "Screenshots on cards"),
-        description=QT_TRANSLATE_NOOP("Capabilities", "Capture a still frame from the scene to put on the card."),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Capture a still frame from the scene to put on the card. Crop manga pictures to the speech bubble "
+            "shows the bubble and the art around it instead of the whole page.",
+        ),
         category=_CAT_MEDIA,
         target=CapabilityTarget("settings", "media"),
-        keywords=("screenshot", "image", "picture", "frame", "still", "snapshot"),
+        keywords=(
+            "screenshot",
+            "image",
+            "picture",
+            "frame",
+            "still",
+            "snapshot",
+            "crop",
+            "speech bubble",
+            "manga picture",
+        ),
     ),
     Capability(
         id="animated-clips",
@@ -1152,21 +1398,52 @@ CAPABILITIES: tuple[Capability, ...] = (
     Capability(
         id="tags",
         title=QT_TRANSLATE_NOOP("Capabilities", "Auto-tag mined notes"),
-        description=QT_TRANSLATE_NOOP("Capabilities", "Add tags to every note Anki Miner creates."),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Add tags to every note Anki Miner creates. Card tags can use {series}, {episode} and {volume}. "
+            "Each card gets its own show, episode or book volume, for example mined::{series}::{episode} gives "
+            "mined::Frieren::03.",
+        ),
         category=_CAT_CARDS,
         target=CapabilityTarget("settings", "anki"),
-        keywords=("tags", "tag", "label"),
+        keywords=("tags", "tag", "label", "series", "episode", "volume", "per-episode tags"),
     ),
     Capability(
         id="anki-connection",
         title=QT_TRANSLATE_NOOP("Capabilities", "Connect to Anki (AnkiConnect)"),
         description=QT_TRANSLATE_NOOP(
             "Capabilities",
-            "Set the AnkiConnect address; Refresh re-checks the connection to your running Anki.",
+            "Set the AnkiConnect address; Refresh re-checks the connection to your running Anki. If AnkiConnect "
+            "is set up with an API key, add it to the address: http://127.0.0.1:8765/?key=YOUR_KEY. Anki Miner "
+            "sends it with every request and never writes it to the log.",
         ),
         category=_CAT_CARDS,
         target=CapabilityTarget("settings", "anki"),
-        keywords=("ankiconnect", "connection", "url", "port", "8765", "test connection", "cannot connect"),
+        keywords=(
+            "ankiconnect",
+            "connection",
+            "url",
+            "port",
+            "8765",
+            "test connection",
+            "cannot connect",
+            "api key",
+            "apikey",
+            "ankiconnect key",
+            "password",
+        ),
+    ),
+    Capability(
+        id="sync-after-run",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Sync Anki after mining"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "After a run that added cards, Anki Miner asks Anki to sync with AnkiWeb. If the sync fails, the "
+            "Activity Log says so and the cards stay added.",
+        ),
+        category=_CAT_CARDS,
+        target=CapabilityTarget("settings", "anki"),
+        keywords=("sync", "ankiweb", "phone", "ankidroid", "ankimobile"),
     ),
     Capability(
         id="note-type-preset",
@@ -1305,12 +1582,28 @@ CAPABILITIES: tuple[Capability, ...] = (
         description=QT_TRANSLATE_NOOP(
             "Capabilities",
             "Draw a box where a video's on-screen dialogue appears and Anki Miner reads it into a timed .srt "
-            "that Video → Single can mine. Made for game longplays without commentary. Download the OCR engine "
-            "from the setup card on Utilities → Video OCR.",
+            "that Video → Single can mine. Made for game longplays without commentary. It also reads image "
+            "subtitles (Blu-ray .sup, DVD .idx/.sub, or an image track inside a video) without a box. Lines with "
+            "none of your mining language's letters are left out. Download the OCR engine from the setup card on "
+            "Utilities → Video OCR.",
         ),
         category=_CAT_TOOLS,
         target=CapabilityTarget("subtitles", "videoocr"),
-        keywords=("ocr", "hardsub", "burned-in", "hardcoded subtitles", "longplay", "game", "meikiocr", "srt"),
+        keywords=(
+            "ocr",
+            "hardsub",
+            "burned-in",
+            "hardcoded subtitles",
+            "longplay",
+            "game",
+            "meikiocr",
+            "srt",
+            "sup",
+            "pgs",
+            "vobsub",
+            "idx",
+            "image subtitles",
+        ),
         requires="video_ocr",
     ),
     Capability(
@@ -1319,11 +1612,37 @@ CAPABILITIES: tuple[Capability, ...] = (
         description=QT_TRANSLATE_NOOP(
             "Capabilities",
             "Transcribe an audiobook and time the book's own sentences to it, writing an .srt the "
-            "Audiobook tab, Reading → Subtitle Files or a reader can use.",
+            "Audiobook tab, Reading → Subtitle Files or a reader can use. A second run on the same audio "
+            "reuses the saved transcript instead of transcribing again.",
         ),
         category=_CAT_TOOLS,
         target=CapabilityTarget("subtitles", "booksync"),
         keywords=("audiobook", "epub", "sync", "align", "subplz", "immersion reading", "srt", "whisper"),
+    ),
+    Capability(
+        id="audiobook-sync-shelf",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Sync a shelf of audiobooks in one run"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "In Utilities → Audiobook Sync, choose Folder and pick a folder that holds one folder per book, each "
+            "with its EPUB (or text file) and its audio files. The books sync one after another, in name order.",
+        ),
+        category=_CAT_TOOLS,
+        target=CapabilityTarget("subtitles", "booksync"),
+        keywords=("audiobook", "series", "volumes", "several books", "queue", "batch", "folder", "shelf"),
+    ),
+    Capability(
+        id="audiobook-sync-report",
+        title=QT_TRANSLATE_NOOP("Capabilities", "See how well an audiobook synced"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "After Audiobook Sync, each book gets a line under the Book card: how many of its sentences got a "
+            "subtitle, how much of the narration matched the book, and a grade from A to D. Chapters read out of "
+            "book order are found too; sentences the narrator skipped never get a subtitle.",
+        ),
+        category=_CAT_TOOLS,
+        target=CapabilityTarget("subtitles", "booksync"),
+        keywords=("grade", "report", "quality", "coverage", "out of order", "foreword", "alignment"),
     ),
     Capability(
         id="readability-report",
@@ -1462,6 +1781,19 @@ CAPABILITIES: tuple[Capability, ...] = (
         keywords=("recover", "restore", "crash", "resume download", "unfinished queue", "power loss"),
     ),
     Capability(
+        id="restore-backup",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Restore an automatic backup"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Anki Miner backs up your known words, statistics, settings and profiles once a day when it starts, "
+            "and keeps the last 7 days. Settings → General → Restore a backup… puts one back the next time the "
+            "app starts.",
+        ),
+        category=_CAT_TOOLS,
+        target=CapabilityTarget("settings", "ui"),
+        keywords=("backup", "restore", "undo", "lost words", "recover", "rollback"),
+    ),
+    Capability(
         id="undo-run",
         title=QT_TRANSLATE_NOOP("Capabilities", "Undo a mining run"),
         description=QT_TRANSLATE_NOOP(
@@ -1470,6 +1802,17 @@ CAPABILITIES: tuple[Capability, ...] = (
         ),
         category=_CAT_TOOLS,
         keywords=("undo", "delete cards", "delete notes", "revert", "rollback", "mistake", "wrong deck"),
+    ),
+    Capability(
+        id="export-run-words",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Export a run's words"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Press View details on a run's result line, then Export words… to save the run's mined and "
+            "not-mined words, with the reason each was skipped, as a CSV file.",
+        ),
+        category=_CAT_TOOLS,
+        keywords=("export", "csv", "word list", "spreadsheet", "skipped words", "not mined"),
     ),
     Capability(
         id="keyboard-shortcuts",

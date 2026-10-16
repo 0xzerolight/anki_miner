@@ -228,6 +228,12 @@ def test_moved_capability_targets_track_the_anchor_that_owns_the_control(tab):
         ("i-plus-one", "sentences.sentence_rule_combo"),
         ("dedup", "sentences.sentence_rule_combo"),
         ("sentence-length", "sentences.max_sentence_chars_spinbox"),
+        ("best-sentence", "sentences.pick_best_sentence_checkbox"),
+        ("skip-opening-ending", "sentences.skip_opening_ending_checkbox"),
+        ("known-from-reviewed", "filtering.known_from_reviewed_cards_checkbox"),
+        ("sync-after-run", "anki.sync_anki_after_run_checkbox"),
+        ("sentence-audio", "media.loudness_checkbox"),
+        ("screenshots", "media.crop_manga_checkbox"),
     ):
         assert anchor_id in by_id, f"{cap_id}: anchor {anchor_id!r} no longer exists"
         namespace = by_id[anchor_id].stable_id.split(".", 1)[0]
