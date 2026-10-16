@@ -372,6 +372,7 @@ class TestSavePathRoundTrip:
             "max_frequency_rank",
             "frequency_keep_unranked",
             "use_known_words_db",
+            "known_from_reviewed_cards",
             "known_words_match_kana_variants",
             "excluded_decks",
             "excluded_wordsets",
