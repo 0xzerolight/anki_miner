@@ -1,5 +1,6 @@
 """Season-mode curation in BatchQueueWorkerThread: one curator per series item."""
 
+from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
@@ -78,11 +79,13 @@ def _make_processor(words_by_video: dict[Path, list[TokenizedWord]], stats=None)
     return proc
 
 
-def _run_worker(proc, curation_cb, pairs=None, tmp_path=None):
+def _run_worker(proc, curation_cb, pairs=None, tmp_path=None, config: AnkiMinerConfig | None = None):
     queue = BatchQueue()
     queue.add_item(Path("/tmp/video"), Path("/tmp/subs"), "Show")
     item = queue.get_all_items()[0]
-    worker = BatchQueueWorkerThread(queue, AnkiMinerConfig(), MagicMock(), curation_callback=curation_cb)
+    worker = BatchQueueWorkerThread(
+        queue, AnkiMinerConfig() if config is None else config, MagicMock(), curation_callback=curation_cb
+    )
     progress: list[tuple[int, int]] = []
     worker.item_pairs_progress.connect(lambda _id, done, total: progress.append((done, total)))
     with (
@@ -559,3 +562,32 @@ class TestSeasonHooks:
         _run_hook_worker(worker, proc)
 
         presenter.show_info.assert_any_call("Custom review message for 2")
+
+
+class TestSeasonBestSentence:
+    """OWNER-RULINGS C6: F-07's pick compares lines across the season's episodes."""
+
+    @staticmethod
+    def _cat(sentence: str, unknown: int) -> TokenizedWord:
+        word = _word("猫")
+        word.sentence = sentence
+        word.line_unknown_count = unknown
+        return word
+
+    def _pool(self, config: AnkiMinerConfig) -> list[TokenizedWord]:
+        words = {EP1: [self._cat("猫と犬と鳥と魚がいる部屋", 4)], EP2: [self._cat("猫がいる静かな部屋だよ", 1)]}
+        bridge = MagicMock(return_value=[])
+        _run_worker(_make_processor(words), bridge, config=config)
+        return bridge.call_args.args[0]
+
+    def test_a_clearer_line_in_a_later_episode_is_the_pick(self):
+        (cat,) = self._pool(AnkiMinerConfig())
+        assert (cat.sentence, cat.video_file) == ("猫がいる静かな部屋だよ", EP2)
+
+    def test_the_switch_off_keeps_the_first_episode(self):
+        (cat,) = self._pool(replace(AnkiMinerConfig(), pick_best_sentence=False))
+        assert cat.video_file == EP1
+
+    def test_a_bypass_run_keeps_the_first_episode(self):
+        (cat,) = self._pool(replace(AnkiMinerConfig(), bypass_optional_filters=True))
+        assert cat.video_file == EP1

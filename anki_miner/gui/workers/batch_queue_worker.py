@@ -25,6 +25,7 @@ from anki_miner.models.word import TokenizedWord
 from anki_miner.orchestration.episode_processor import EpisodeProcessor, require_usable_offline_provider
 from anki_miner.services.anki_service import AnkiService
 from anki_miner.services.resource_staleness import stale_resource_reimport_error
+from anki_miner.services.word_filter import best_sentence_key
 from anki_miner.services.word_pool import (
     CaptureCurationCallback,
     MinePassStats,
@@ -622,7 +623,19 @@ class BatchQueueWorkerThread(RunBoundaryControls, ProcessorOwningWorker):
                 continue
             prepass_ok.append((pair, pair_key))
 
-        pool = merge_pools(capture.pools, dedup_fold=get_profile(config_language(self.config)).dedup_fold)
+        profile = get_profile(config_language(self.config))
+        # F-07 across episodes (OWNER-RULINGS C6). A Deck Builder build ignores
+        # Sentences (bypass_optional_filters), so it keeps the first episode's line.
+        best_sentence = (
+            best_sentence_key(
+                spaced=profile.sentence_rules.space_aware,
+                max_duration=self.config.max_sentence_duration_seconds,
+                max_chars=self.config.max_sentence_chars,
+            )
+            if self.config.pick_best_sentence and not self.config.bypass_optional_filters
+            else None
+        )
+        pool = merge_pools(capture.pools, dedup_fold=profile.dedup_fold, best_sentence=best_sentence)
         if prepass_ok:
             selected = self._select_season_pool(pool, prepass_ok, episode_processor)
             if selected is None or self.check_cancelled():
