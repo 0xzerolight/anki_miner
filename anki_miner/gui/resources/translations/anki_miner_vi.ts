@@ -92,8 +92,60 @@
         <translation>Series đã khai thác</translation>
     </message>
     <message>
-        <source>Recent Sessions</source>
-        <translation>Phiên gần đây</translation>
+        <source>Known Words</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Words Anki Miner treats as known in the current mining language.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mining History</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>History period</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>All time</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Last 7 days</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Last 30 days</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Last 12 months</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>History grouping</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Each run</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>By day</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>By week</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>By month</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Export CSV…</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>No sessions yet — process an episode to see your history.</source>
@@ -124,6 +176,18 @@
         <translation>Thẻ</translation>
     </message>
     <message>
+        <source>Period</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Show in Anki</source>
+        <translation>Hiện trong Anki</translation>
+    </message>
+    <message>
+        <source>Delete this run's cards…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Series Difficulty Ranking</source>
         <translation>Xếp hạng độ khó của series</translation>
     </message>
@@ -152,6 +216,30 @@
         <translation>Độ khó</translation>
     </message>
     <message>
+        <source>Frequency Coverage</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Rank band</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Known</source>
+        <translation>Đã biết</translation>
+    </message>
+    <message>
+        <source>Not known</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Known %</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Show missing words</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Milestones</source>
         <translation>Cột mốc</translation>
     </message>
@@ -174,6 +262,96 @@
     <message>
         <source>Statistics could not be reset.</source>
         <translation>Không thể đặt lại thống kê.</translation>
+    </message>
+    <message>
+        <source>No runs in this period.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Export Mining History</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>CSV Files (*.csv);;All Files (*)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>History saved to %1.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The history could not be exported.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 (cards deleted: %2)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Select one run in the table.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>This run's cards were deleted: %1.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Anki Miner has no card list for this run: it was mined before this version, or it made no cards.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Anki Miner couldn't open this run's cards in Anki.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>None of this run's cards are in Anki any more.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Delete This Run's Cards</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cards this run added that are still in Anki: %1. Reviewed at least once: %2.
+
+Delete them from Anki? Their review history is deleted with them. This cannot be undone.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cards deleted from Anki: %1.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>This run's cards could not be deleted.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Known words could not be counted.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Words Anki Miner treats as known in %1.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Change since %1: %2</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Last counted on %1; Anki was not reachable.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Last counted on %1.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Coverage needs Anki running: it compares the list with your cards.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>How many of the most frequent words in %1 you already know.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>%1 mining sessions completed</source>
@@ -580,6 +758,10 @@
         <translation>Các tag cách nhau bằng dấu cách áp dụng cho mọi thẻ đã khai thác. Để trống nếu không có tag.</translation>
     </message>
     <message>
+        <source>{series}, {episode} and {volume} become each card's show, episode or book volume, for example mined::{series}::{episode}.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Refresh</source>
         <translation>Làm mới</translation>
     </message>
@@ -604,12 +786,24 @@
         <translation>Anki Miner không tìm thấy Anki tại vị trí mà trình cài đặt của Anki cài vào, nên không thể mở Anki.</translation>
     </message>
     <message>
+        <source>Sync Anki after mining</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>After a run that added cards, ask Anki to sync with AnkiWeb. If the sync fails, the Activity Log says so and the cards stay added.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>AnkiConnect URL</source>
         <translation>URL AnkiConnect</translation>
     </message>
     <message>
         <source>Default http://127.0.0.1:8765. Change if AnkiConnect uses a different port.</source>
         <translation>Mặc định http://127.0.0.1:8765. Thay đổi nếu AnkiConnect dùng cổng khác.</translation>
+    </message>
+    <message>
+        <source>If AnkiConnect asks for an API key, add it to the address: http://127.0.0.1:8765/?key=YOUR_KEY</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Fill in automatically</source>
@@ -1320,6 +1514,10 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <translation>Microsoft Edge (TTS tổng hợp)</translation>
     </message>
     <message>
+        <source>Wikimedia Commons (native recordings)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Custom JSON</source>
         <translation>JSON tùy chỉnh</translation>
     </message>
@@ -1884,8 +2082,8 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Đồng bộ một tệp âm thanh với sách.</translation>
     </message>
     <message>
-        <source>Every audio file in the folder, in file-name order, one .srt each.</source>
-        <translation>Mọi tệp âm thanh trong thư mục, theo thứ tự tên tệp, mỗi tệp cho ra một .srt.</translation>
+        <source>Every audio file in the folder, in file-name order, one .srt each. A folder of book folders (each with its EPUB and audio) syncs every book in turn.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>EPUB or Text File:</source>
@@ -1910,6 +2108,10 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     <message>
         <source>This field takes an .epub or .txt file.</source>
         <translation>Trường này nhận tệp .epub hoặc .txt.</translation>
+    </message>
+    <message>
+        <source>Sentences: how many of the book's sentences, from the first one found to the last, got a subtitle. Audio: how much of the narration matched the book. Grade: A from 90% on both, B from 75%, C from 50%, else D.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Output</source>
@@ -1972,12 +2174,24 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Thư mục đó không còn tồn tại.</translation>
     </message>
     <message>
-        <source>No audio files were found in that folder.</source>
-        <translation>Không tìm thấy tệp âm thanh nào trong thư mục đó.</translation>
+        <source>No audio files were found in that folder, and no book folders (each with its book and audio).</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>That folder could not be scanned.</source>
         <translation>Không thể quét thư mục đó.</translation>
+    </message>
+    <message>
+        <source>Skipped folder %1: no audio files</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Skipped folder %1: no .epub or .txt book</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Skipped folder %1: more than one book</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Output folder is not writable.</source>
@@ -1996,11 +2210,31 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Sách: %1</translation>
     </message>
     <message>
+        <source>Books: %1 — %2</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1: sentences %2%, audio %3% — grade %4</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Syncing file %1 of %2</source>
         <translation>Đang đồng bộ tệp %1 trên %2</translation>
     </message>
 </context><context>
     <name>BookSyncWorker</name>
+    <message>
+        <source>Book: %1</source>
+        <translation>Sách: %1</translation>
+    </message>
+    <message>
+        <source>%1 could not be loaded: %2</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Its book could not be loaded</source>
+        <translation type="unfinished" />
+    </message>
     <message>
         <source>Skipped, exists</source>
         <translation>Đã bỏ qua, đã tồn tại</translation>
@@ -2016,6 +2250,14 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     <message>
         <source>Aligning to the book…</source>
         <translation>Đang khớp thời gian với sách…</translation>
+    </message>
+    <message>
+        <source>Reusing the saved transcript</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Found sentence %1 again later in the audio; timed it out of book order</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>%1 sentences timed, %2 in between had no audio</source>
@@ -2096,16 +2338,16 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Xem lại từ trước khi khai thác</translation>
     </message>
     <message>
-        <source>Approve or reject each word, pick its sentence and scene, trim its audio, mark words known, and fix a mistranscribed sentence or swap the word to mine -- before any card is created.</source>
-        <translation>Chấp nhận hoặc từ chối từng từ, chọn câu và cảnh của từ đó, cắt âm thanh của từ, đánh dấu từ đã biết, và sửa câu bị phiên âm sai hoặc đổi từ cần khai thác -- trước khi bất kỳ thẻ nào được tạo.</translation>
+        <source>Approve or reject each word, pick its sentence and scene, trim its audio, mark words known, and fix a mistranscribed sentence or swap the word to mine -- before any card is created. When a word has entries in several dictionaries, choose which one the card's Definition uses.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Secondary-language subtitles</source>
         <translation>Phụ đề ngôn ngữ thứ hai</translation>
     </message>
     <message>
-        <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. On Video → Batch, point it at a folder of translation subtitles instead and they pair to the videos by episode number. Turn it on under Settings → Sentences.</source>
-        <translation>Tải thêm một tệp phụ đề bằng ngôn ngữ của bạn bên cạnh tệp phụ đề ngôn ngữ khai thác: phụ đề này hiển thị dưới dòng trong bản xem trước Word Curator và có thể được lưu vào trường Bản dịch. Ở Video → Hàng loạt, thay vào đó hãy trỏ nó tới một thư mục phụ đề bản dịch; chúng sẽ được ghép với video theo số tập. Bật tính năng này trong Cài đặt → Câu.</translation>
+        <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. Leave the file empty and Anki Miner picks a translation itself: a subtitle named for the video, or a text track inside it, in your interface language or else English. The Activity Log names the track it used. On Video → Batch, point it at a folder of translation subtitles instead and they pair to the videos by episode number. Turn it on under Settings → Sentences.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Build a deck by coverage %</source>
@@ -2140,6 +2382,14 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Khai thác từ vựng từ sách nói hoặc tệp âm thanh bằng bản chép lời của nó.</translation>
     </message>
     <message>
+        <source>Mine songs from .lrc lyrics</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Use a .lrc lyrics file wherever a subtitle file goes. Each line lasts until the next one starts. Pair a song with its lyrics on Audiobooks, condense it in Condense, or mine a music video on Video.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Mine from manga</source>
         <translation>Khai thác từ manga</translation>
     </message>
@@ -2152,16 +2402,24 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Khai thác từ tiểu thuyết</translation>
     </message>
     <message>
-        <source>Mine vocabulary from novels and other text (EPUB, Aozora, plain text).</source>
-        <translation>Khai thác từ vựng từ tiểu thuyết và văn bản khác (EPUB, Aozora, văn bản thuần túy).</translation>
+        <source>Mine vocabulary from novels and other text (EPUB, PDF, Aozora, plain text).</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Mine pasted text</source>
-        <translation>Khai thác văn bản đã dán</translation>
+        <source>Readings from a book's own furigana</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Paste text in your mining language and mine it into Anki cards.</source>
-        <translation>Dán văn bản bằng ngôn ngữ khai thác của bạn và khai thác nó thành thẻ Anki.</translation>
+        <source>When a Japanese EPUB prints furigana over a word, the card takes that reading instead of the parser's guess.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mine pasted text or a web article</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Paste text in your mining language, or fetch a web article by its address, and mine it into Anki cards. A fetched article's cards name the page and site as their source.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Mine subtitle files without video</source>
@@ -2184,8 +2442,8 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Tạo phụ đề từ âm thanh</translation>
     </message>
     <message>
-        <source>Create subtitles from audio with a local Whisper model -- as a standalone tool.</source>
-        <translation>Tạo phụ đề từ âm thanh bằng mô hình Whisper cục bộ — như một công cụ độc lập.</translation>
+        <source>Create subtitles from audio with a local Whisper model -- as a standalone tool. Long lines are split at sentence ends, and a second run on the same file reuses the saved transcript.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Re-time existing subtitles</source>
@@ -2242,6 +2500,38 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     <message>
         <source>See what you've mined over time with history and statistics.</source>
         <translation>Xem những gì đã khai thác theo thời gian với lịch sử và thống kê.</translation>
+    </message>
+    <message>
+        <source>Browse your whole mining history</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Analytics lists every run you have mined. Pick a period, group the runs by day, week or month, see the cards per period in a chart, and export the table as a CSV file.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Show or delete a past run's cards</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Select a run in Analytics → Mining History to open its cards in Anki's browser or to delete them. The confirmation says how many of its cards are still in Anki and how many you have reviewed. Runs mined before this version have no card list.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Track how many words you know</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The Known Words card on Analytics counts the words Anki Miner treats as known in the current mining language and shows how that number changed. It is counted while Anki is running, at most once every ten minutes.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>See how much of a frequency list you know</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Analytics → Frequency Coverage counts the words you know in ranks 1–1,000 up to 20,000 of your first frequency list with numeric ranks, and lists the missing words of each band. It needs Anki running.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Reset mining statistics</source>
@@ -2316,6 +2606,14 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Bỏ qua các từ đã có trong bộ sưu tập Anki hoặc đã được khai thác trước đó.</translation>
     </message>
     <message>
+        <source>Count a word as known only after its card has been reviewed</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Readability and the i+1 sentence rule then count a word as known only when its Anki card has been reviewed at least once. Mining still skips every word that already has a card.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Exclude specific Anki decks from 'known'</source>
         <translation>Loại trừ bộ thẻ Anki cụ thể khỏi 'đã biết'</translation>
     </message>
@@ -2330,6 +2628,30 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     <message>
         <source>Curate your own list of known words -- always applied, survives cache rebuilds, exportable as plain text.</source>
         <translation>Tự soạn danh sách từ đã biết của riêng bạn -- luôn được áp dụng, tồn tại qua các lần xây dựng lại bộ nhớ đệm, có thể xuất dưới dạng văn bản thuần túy.</translation>
+    </message>
+    <message>
+        <source>Browse every known word</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Manage Known Words lists every word this language counts as known, with where it came from (added by you, mined by Anki Miner, from Anki) and the date it was added. Search it, filter it by source, and remove words you added. Words from Anki come back on the next sync.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Import known words from Kindle, Lute or LWT</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>In Manage Known Words, Import… also reads a Kindle Vocabulary Builder file (vocab.db; words marked mastered) and Lute or LWT term exports (status 5 and 99).</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Export words to a CSV file</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Export words… saves the list you are looking at in Manage Known Words, or a finished run's mined and not-mined words with the reason each was skipped, as a CSV file.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Exclude kana-only words</source>
@@ -2360,8 +2682,24 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Mỗi câu một từ</translation>
     </message>
     <message>
-        <source>Mine at most one word from each example sentence, skipping the rest.</source>
-        <translation>Khai thác nhiều nhất một từ trong mỗi câu ví dụ, bỏ qua những từ còn lại.</translation>
+        <source>Mine at most one word from each example sentence. A word whose sentence is taken moves to another line it appears on, and is skipped only when every one of its lines is taken.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pick the clearest sentence</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>When a word appears on several lines, its card uses the line with the fewest unknown words and a comfortable length instead of the first one. The Word Curator still lists every line.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Skip openings, endings and signs</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Leave opening and ending songs, previews and on-screen signs out of mining, Condense and Readability: lines styled as songs or signs, and lines inside a video's opening, ending and preview chapters. On by default for new installs; turn it off in Settings → Sentences.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Strip junk from subtitles (regex)</source>
@@ -2428,12 +2766,12 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Thêm, sắp xếp lại và bật/tắt các từ điển dùng cho định nghĩa.</translation>
     </message>
     <message>
-        <source>Import a Yomitan dictionary</source>
-        <translation>Nhập từ điển Yomitan</translation>
+        <source>Import a dictionary file</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Add your own Yomitan-format dictionary zip as a definition source.</source>
-        <translation>Thêm tệp zip từ điển định dạng Yomitan của riêng bạn làm nguồn định nghĩa.</translation>
+        <source>Add a Yomitan zip, a StarDict dictionary (its archive or its .ifo file) or a CSV/TSV word list (term and definition, or term, reading and definition) as a definition source.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Keep dictionaries up to date</source>
@@ -2504,8 +2842,8 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Âm thanh phát âm từ</translation>
     </message>
     <message>
-        <source>Attach word audio to cards from audio packs, JPod101 (Japanese), Google text-to-speech, or Microsoft Edge text-to-speech (Cantonese, Hebrew, Persian, Slovenian).</source>
-        <translation>Đính kèm âm thanh từ vào thẻ từ gói âm thanh, JPod101 (tiếng Nhật), chuyển văn bản thành giọng nói của Google, hoặc của Microsoft Edge (tiếng Quảng Đông, tiếng Do Thái, tiếng Ba Tư, tiếng Slovenia).</translation>
+        <source>Attach word audio to cards from audio packs, JPod101 (Japanese), Google text-to-speech, or Microsoft Edge text-to-speech (every language). Wikimedia Commons plays recordings of real speakers from Wiktionary and Lingua Libre, tried before Google TTS in most languages.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Import local audio packs</source>
@@ -2520,8 +2858,8 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Âm thanh câu từ video</translation>
     </message>
     <message>
-        <source>Extract the spoken sentence as an audio clip; tune its format and bitrate.</source>
-        <translation>Trích xuất câu được nói thành đoạn clip âm thanh; tinh chỉnh định dạng và bitrate của nó.</translation>
+        <source>Extract the spoken sentence as an audio clip; tune its format and bitrate. Even out audio volume brings sentence clips and condensed audio to one loudness and fades each clip in and out.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Sentence audio for reading (TTS)</source>
@@ -2544,8 +2882,8 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Ảnh chụp màn hình trên thẻ</translation>
     </message>
     <message>
-        <source>Capture a still frame from the scene to put on the card.</source>
-        <translation>Chụp một khung hình tĩnh từ cảnh để đưa lên thẻ.</translation>
+        <source>Capture a still frame from the scene to put on the card. Crop manga pictures to the speech bubble shows the bubble and the art around it instead of the whole page.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Animated clips (GIF/WebP)</source>
@@ -2624,16 +2962,24 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Tự động gắn thẻ cho ghi chú đã khai thác</translation>
     </message>
     <message>
-        <source>Add tags to every note Anki Miner creates.</source>
-        <translation>Thêm thẻ nhãn vào mọi ghi chú mà Anki Miner tạo ra.</translation>
+        <source>Add tags to every note Anki Miner creates. Card tags can use {series}, {episode} and {volume}. Each card gets its own show, episode or book volume, for example mined::{series}::{episode} gives mined::Frieren::03.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Connect to Anki (AnkiConnect)</source>
         <translation>Kết nối với Anki (AnkiConnect)</translation>
     </message>
     <message>
-        <source>Set the AnkiConnect address; Refresh re-checks the connection to your running Anki.</source>
-        <translation>Đặt địa chỉ AnkiConnect; Làm mới sẽ kiểm tra lại kết nối tới Anki đang chạy.</translation>
+        <source>Set the AnkiConnect address; Refresh re-checks the connection to your running Anki. If AnkiConnect is set up with an API key, add it to the address: http://127.0.0.1:8765/?key=YOUR_KEY. Anki Miner sends it with every request and never writes it to the log.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Sync Anki after mining</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>After a run that added cards, Anki Miner asks Anki to sync with AnkiWeb. If the sync fails, the Activity Log says so and the cards stay added.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Fill in field mappings automatically</source>
@@ -2720,16 +3066,32 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Đọc phụ đề cứng trong video thành tệp .srt</translation>
     </message>
     <message>
-        <source>Draw a box where a video's on-screen dialogue appears and Anki Miner reads it into a timed .srt that Video → Single can mine. Made for game longplays without commentary. Download the OCR engine from the setup card on Utilities → Video OCR.</source>
-        <translation>Vẽ một khung tại vị trí lời thoại hiện trên màn hình của video, rồi Anki Miner sẽ đọc lời thoại đó thành tệp .srt có mốc thời gian để Video → Đơn lẻ có thể khai thác. Dành cho video longplay game không bình luận. Tải công cụ OCR từ mục thiết lập trong Tiện ích → Video OCR.</translation>
+        <source>Draw a box where a video's on-screen dialogue appears and Anki Miner reads it into a timed .srt that Video → Single can mine. Made for game longplays without commentary. It also reads image subtitles (Blu-ray .sup, DVD .idx/.sub, or an image track inside a video) without a box. Lines with none of your mining language's letters are left out. Download the OCR engine from the setup card on Utilities → Video OCR.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Sync an audiobook to its EPUB</source>
         <translation>Đồng bộ sách nói với EPUB của nó</translation>
     </message>
     <message>
-        <source>Transcribe an audiobook and time the book's own sentences to it, writing an .srt the Audiobook tab, Reading → Subtitle Files or a reader can use.</source>
-        <translation>Phiên âm sách nói rồi khớp thời gian các câu của sách với bản ghi, tạo tệp .srt mà tab Sách nói, Đọc → Tệp phụ đề, hoặc một trình đọc khác có thể dùng.</translation>
+        <source>Transcribe an audiobook and time the book's own sentences to it, writing an .srt the Audiobook tab, Reading → Subtitle Files or a reader can use. A second run on the same audio reuses the saved transcript instead of transcribing again.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Sync a shelf of audiobooks in one run</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>In Utilities → Audiobook Sync, choose Folder and pick a folder that holds one folder per book, each with its EPUB (or text file) and its audio files. The books sync one after another, in name order.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>See how well an audiobook synced</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>After Audiobook Sync, each book gets a line under the Book card: how many of its sentences got a subtitle, how much of the narration matched the book, and a grade from A to D. Chapters read out of book order are found too; sentences the narrator skipped never get a subtitle.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Check how much of a show, book or manga you can read</source>
@@ -2812,12 +3174,28 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Sau khi thoát đột ngột, Anki Miner đề nghị khôi phục hàng đợi chưa hoàn tất và tiếp tục các lượt tải bị gián đoạn ở lần khởi chạy tiếp theo.</translation>
     </message>
     <message>
+        <source>Restore an automatic backup</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Anki Miner backs up your known words, statistics, settings and profiles once a day when it starts, and keeps the last 7 days. Settings → General → Restore a backup… puts one back the next time the app starts.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Undo a mining run</source>
         <translation>Hoàn tác một lần khai thác</translation>
     </message>
     <message>
         <source>Delete the cards a run just created: press View details on the run's result line, then Undo.</source>
         <translation>Xóa các thẻ mà một lần chạy vừa tạo: nhấn Xem chi tiết trên dòng kết quả của lần chạy đó, rồi Hoàn tác.</translation>
+    </message>
+    <message>
+        <source>Export a run's words</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Press View details on a run's result line, then Export words… to save the run's mined and not-mined words, with the reason each was skipped, as a CSV file.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Keyboard shortcuts</source>
@@ -4188,12 +4566,12 @@ Thao tác này sẽ sửa %n ghi chú (%1) và gắn thẻ %2 cho chúng. Tiếp
         <translation>Từ điển này cho biết ngôn ngữ của nó là %1, không phải ngôn ngữ bạn đang khai thác.</translation>
     </message>
     <message>
-        <source>Choose Yomitan dictionary zips</source>
-        <translation>Chọn các tệp zip từ điển Yomitan</translation>
+        <source>Choose dictionary files</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Yomitan zip (*.zip)</source>
-        <translation>Zip Yomitan (*.zip)</translation>
+        <source>Dictionaries (*.zip *.ifo *.tar.gz *.tgz *.tar.bz2 *.tar.xz *.csv *.tsv)</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Dictionary %1 of %2: %3</source>
@@ -5025,6 +5403,12 @@ Không có tệp nào trên ổ đĩa bị xóa.</translation>
             <numerusform>Đã tìm thấy %n từ duy nhất</numerusform>
         </translation>
     </message>
+    <message numerus="yes">
+        <source>Skipping lines in %n opening, ending or preview chapter(s)</source>
+        <translation type="unfinished">
+            <numerusform />
+        </translation>
+    </message>
     <message>
         <source>Frequency data: %1/%2 words ranked</source>
         <translation>Dữ liệu tần suất: %1/%2 từ được xếp hạng</translation>
@@ -5068,6 +5452,10 @@ Không có tệp nào trên ổ đĩa bị xóa.</translation>
         <translation>Đã bỏ qua %1 từ không có trong từ điển ngoại tuyến của bạn: %2%3</translation>
     </message>
     <message>
+        <source>Only %1% of the first %2 words have an entry in your dictionaries. Is this file in the language you are mining?</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Frequency cutoff ignored — no ranked frequency source is loaded (Settings → Frequency).</source>
         <translation>Bỏ qua ngưỡng tần suất — không có nguồn tần suất đã xếp hạng nào được tải (Cài đặt → Tần suất).</translation>
     </message>
@@ -5084,12 +5472,12 @@ Không có tệp nào trên ổ đĩa bị xóa.</translation>
         <translation>Bộ lọc tập tên riêng: đã loại bỏ %1 từ</translation>
     </message>
     <message>
-        <source>Sentence deduplication: removed %1 duplicate-sentence words</source>
-        <translation>Loại trùng câu: đã loại bỏ %1 từ có câu trùng lặp</translation>
-    </message>
-    <message>
         <source>i+1 filter: kept %1/%2 words (%3%)</source>
         <translation>Bộ lọc i+1: đã giữ %1/%2 từ (%3%)</translation>
+    </message>
+    <message>
+        <source>Sentence deduplication: removed %1 duplicate-sentence words</source>
+        <translation>Loại trùng câu: đã loại bỏ %1 từ có câu trùng lặp</translation>
     </message>
     <message>
         <source>Sentence length filter: removed %1 words (cap: %2)</source>
@@ -5170,6 +5558,14 @@ Không có tệp nào trên ổ đĩa bị xóa.</translation>
     <message>
         <source>No words selected for card creation</source>
         <translation>Chưa chọn từ nào để tạo thẻ</translation>
+    </message>
+    <message>
+        <source>Translation subtitles picked automatically: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Translation subtitles picked automatically: embedded track %1</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Could not extract media for any word — no cards created</source>
@@ -5434,6 +5830,14 @@ Không có tệp nào trên ổ đĩa bị xóa.</translation>
     <message>
         <source>Known Words Database</source>
         <translation>CSDL từ đã biết</translation>
+    </message>
+    <message>
+        <source>Count a word as known only after its card has been reviewed</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Readability and the i+1 sentence rule count a word as known only when its Anki card has been reviewed at least once. Mining still skips every word that already has a card.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Keep words known after their cards are deleted</source>
@@ -6094,6 +6498,18 @@ Không có tệp chỉ mục nào bị xóa.</translation>
 </context><context>
     <name>KnownWordsManagerDialog</name>
     <message>
+        <source>Word</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Source</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Added</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Manage Known Words</source>
         <translation>Quản lý từ đã biết</translation>
     </message>
@@ -6102,8 +6518,8 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Từ đã biết cục bộ</translation>
     </message>
     <message>
-        <source>Words you added from the Word Curator. Ignored on every run and kept across cache rebuilds.</source>
-        <translation>Các từ bạn đã thêm từ Word Curator. Bị bỏ qua ở mỗi lần chạy và được giữ lại qua các lần xây dựng lại bộ nhớ đệm.</translation>
+        <source>Every word this language counts as known, and where it came from. Words you added from the Word Curator stay known on every run and across cache rebuilds.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Decks this language's known-words scan skips: %1. Change them in Settings → Word Filters.</source>
@@ -6114,8 +6530,24 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Mọi bộ thẻ đều được quét cho ngôn ngữ này, kể cả các bộ thẻ bằng ngôn ngữ khác dùng cùng loại chữ viết. Loại trừ chúng trong Cài đặt → Bộ lọc từ.</translation>
     </message>
     <message>
+        <source>Added by you</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mined by Anki Miner</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>From Anki</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Filter…</source>
         <translation>Lọc…</translation>
+    </message>
+    <message>
+        <source>All sources</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Rebuild Known Words DB</source>
@@ -6130,12 +6562,16 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Gỡ bỏ mục đã chọn</translation>
     </message>
     <message>
+        <source>Removes words you added. Words from Anki come back on the next run, and mined words leave with Undo.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Import…</source>
         <translation>Nhập…</translation>
     </message>
     <message>
-        <source>Export…</source>
-        <translation>Xuất…</translation>
+        <source>Export words…</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Reset User List</source>
@@ -6166,6 +6602,14 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>tệp xuất từ vựng Migaku (CSV)</translation>
     </message>
     <message>
+        <source>Kindle Vocabulary Builder</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Lute or LWT term export</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>plain word list</source>
         <translation>danh sách từ thuần túy</translation>
     </message>
@@ -6174,8 +6618,8 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Nhập từ đã biết</translation>
     </message>
     <message>
-        <source>Known word lists (*.csv *.txt *.json);;All Files (*)</source>
-        <translation>Danh sách từ đã biết (*.csv *.txt *.json);;Tất cả tệp (*)</translation>
+        <source>Known word lists (*.csv *.tsv *.txt *.json *.db);;All Files (*)</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Detected: %1 — every entry is imported.
@@ -6206,6 +6650,10 @@ Số từ sẽ thêm: %3. Tiếp tục?</translation>
         <translation>Đã phát hiện: %1 — nhưng không có mục nào trong tệp này đủ điều kiện là đã biết.</translation>
     </message>
     <message>
+        <source>This file has no words for %1. It contains: %2.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>That file is too large to import.</source>
         <translation>Tệp đó quá lớn để nhập.</translation>
     </message>
@@ -6218,8 +6666,8 @@ Số từ sẽ thêm: %3. Tiếp tục?</translation>
         <translation>Không thể đọc bảng mã văn bản của tệp đó.</translation>
     </message>
     <message>
-        <source>File format not recognized. Supported: jpdb review export (JSON), Migaku word export (JSON/CSV), AnkiMorphs known morphs (CSV), plain word lists (one word per line).</source>
-        <translation>Không nhận dạng được định dạng tệp. Hỗ trợ: tệp xuất ôn tập jpdb (JSON), tệp xuất từ vựng Migaku (JSON/CSV), hình vị đã biết của AnkiMorphs (CSV), danh sách từ thuần túy (mỗi dòng một từ).</translation>
+        <source>File format not recognized. Supported: jpdb review export (JSON), Migaku word export (JSON/CSV), AnkiMorphs known morphs (CSV), Kindle Vocabulary Builder (vocab.db), Lute or LWT term export (CSV/TSV), plain word lists (one word per line).</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>That file could not be imported.</source>
@@ -6238,6 +6686,10 @@ Số từ sẽ thêm: %3. Tiếp tục?</translation>
     <message>
         <source>Export Known Words</source>
         <translation>Xuất từ đã biết</translation>
+    </message>
+    <message>
+        <source>CSV files (*.csv);;Text files, one word per line (*.txt)</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>The known words list could not be exported.</source>
@@ -6984,6 +7436,10 @@ Tiếp tục?</translation>
         <translation>MP3: tương thích phổ quát. Opus: tệp nhỏ hơn với chất lượng tương đương (cần ffmpeg có libopus).</translation>
     </message>
     <message>
+        <source>Opus clips do not play in AnkiMobile on iPhone or iPad. Choose MP3 if you review there.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source> kbps</source>
         <translation> kbps</translation>
     </message>
@@ -7008,6 +7464,14 @@ Tiếp tục?</translation>
         <translation>Thời gian thêm trước và sau phụ đề.</translation>
     </message>
     <message>
+        <source>Even out audio volume</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Brings sentence clips and condensed audio to one volume and fades each clip in and out, so quiet and loud sources sound alike. Applies to new clips.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Text-to-speech</source>
         <translation>Chuyển văn bản thành giọng nói</translation>
     </message>
@@ -7026,6 +7490,14 @@ Tiếp tục?</translation>
     <message>
         <source>Measured from the subtitle start time.</source>
         <translation>Được tính từ thời điểm bắt đầu của phụ đề.</translation>
+    </message>
+    <message>
+        <source>Crop manga pictures to the speech bubble</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Manga cards show the speech bubble and the art around it instead of the whole page. A sentence with no bubble position keeps the whole page.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Enable animated screenshots</source>
@@ -7258,6 +7730,10 @@ Tiếp tục?</translation>
     <message>
         <source>Mining failed.</source>
         <translation>Khai thác thất bại.</translation>
+    </message>
+    <message>
+        <source>Anki didn't sync after this run. Your cards are added; sync from Anki, or see the log for why.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Anki Miner couldn't open these cards in Anki.</source>
@@ -9021,8 +9497,8 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Sách</translation>
     </message>
     <message>
-        <source>An .epub or .txt book, or a folder of books; each book is mined separately.</source>
-        <translation>Một cuốn sách .epub hoặc .txt, hoặc một thư mục sách; mỗi cuốn được khai thác riêng.</translation>
+        <source>An .epub, .txt or .pdf book, or a folder of books; each book is mined separately.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Mine</source>
@@ -9057,8 +9533,8 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Tệp hoặc thư mục đó không còn tồn tại.</translation>
     </message>
     <message>
-        <source>Choose an .epub or .txt book, or a folder of books.</source>
-        <translation>Hãy chọn một cuốn sách .epub hoặc .txt, hoặc một thư mục sách.</translation>
+        <source>Choose an .epub, .txt or .pdf book, or a folder of books.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Starting…</source>
@@ -9123,8 +9599,8 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Thêm tệp…</translation>
     </message>
     <message>
-        <source>Add subtitle files (.srt, .ass, .ssa, .vtt, .smi) to the list.</source>
-        <translation>Thêm tệp phụ đề (.srt, .ass, .ssa, .vtt, .smi) vào danh sách.</translation>
+        <source>Add subtitle files (.srt, .ass, .ssa, .vtt, .smi, .lrc) to the list.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Remove Selected</source>
@@ -9304,6 +9780,22 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Hiển thị cửa sổ chọn từ trước khi tạo thẻ.</translation>
     </message>
     <message>
+        <source>Web addresses to fetch, one per line (https://…)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Web addresses</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Fetch</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Put the article text of each web address in the box below, to check before mining.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Paste the text you want to mine. Cards from pasted text have no sentence audio from a recording.</source>
         <translation>Dán văn bản bạn muốn khai thác. Thẻ tạo từ văn bản dán vào không có âm thanh câu từ bản ghi.</translation>
     </message>
@@ -9348,12 +9840,72 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Hình ảnh</translation>
     </message>
     <message>
+        <source>Each line must be a web address that starts with http:// or https://.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Enter a web address first.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Fetch takes up to 10 web addresses at a time.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Fetching…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not fetch %1: %2</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>None of the pages could be fetched.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Fetched %1.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The pages could not be fetched.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The page could not be reached. Check the address and your connection.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The site did not send the page.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>This address is not a web page.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>This page is too large to read.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>This is not a web address.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No article text found on this page. Pages that draw their text with JavaScript cannot be read.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Paste some text first.</source>
         <translation>Hãy dán văn bản trước.</translation>
     </message>
     <message>
         <source>This card picture has no Picture field to land in. Map one in Settings → Cards &amp; Anki, or remove the picture.</source>
         <translation>Hình ảnh của thẻ này không có trường Hình ảnh để đặt vào. Hãy ánh xạ một trường trong Cài đặt → Thẻ &amp; Anki, hoặc gỡ hình ảnh.</translation>
+    </message>
+    <message>
+        <source>The fetched text was edited, so it is mined as one text without its page titles.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>That picture cannot be read. Pick another, or remove it to mine without one.</source>
@@ -10138,6 +10690,10 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Sao chép tóm tắt</translation>
     </message>
     <message>
+        <source>Export words…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Close</source>
         <translation>Đóng</translation>
     </message>
@@ -10146,6 +10702,22 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>
             <numerusform>Hoàn tác (%n thẻ)</numerusform>
         </translation>
+    </message>
+    <message>
+        <source>Export Words</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>CSV files (*.csv)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Words exported</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Export failed — try again</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Confirm Undo</source>
@@ -10348,6 +10920,14 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Thay thế</translation>
     </message>
     <message>
+        <source>Skip openings, endings and signs</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Leaves out song lyrics, previews and on-screen signs: lines whose subtitle style marks them as a song or a sign, and lines inside a video's opening, ending or preview chapters. Applies to mining, Condense and Readability.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Sentence options</source>
         <translation>Tùy chọn câu</translation>
     </message>
@@ -10360,8 +10940,8 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Mỗi câu một thẻ</translation>
     </message>
     <message>
-        <source>Mines at most one word per example sentence — the first one found in that sentence. Every other word sharing it is skipped. Whitelisted words are still mined.</source>
-        <translation>Khai thác nhiều nhất một từ cho mỗi câu ví dụ — từ đầu tiên tìm thấy trong câu đó. Mọi từ khác dùng chung câu đó đều bị bỏ qua. Từ trong danh sách trắng vẫn được khai thác.</translation>
+        <source>Mines at most one word per example sentence. A word whose sentence is already taken moves to another line it appears on, and is skipped only when every one of its lines is taken. Whitelisted words are still mined.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Only i+1 sentences (exactly one unknown word)</source>
@@ -10374,6 +10954,14 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     <message>
         <source>Sentence Rule</source>
         <translation>Quy tắc câu</translation>
+    </message>
+    <message>
+        <source>Pick the clearest sentence for each word</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>When a word appears on several lines, its card uses the line with the fewest unknown words and a comfortable length instead of the first one. The Word Curator still lists every line, and card order does not change.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source> s</source>
@@ -12428,6 +13016,18 @@ Tài nguyên đã cài đặt và chủ đề của bạn được giữ nguyên
         <translation>Khi bật, Anki Miner sẽ truy vấn GitHub tìm bản phát hành mới lúc khởi chạy.</translation>
     </message>
     <message>
+        <source>Restore a backup…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Backups</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Anki Miner saves your known words, statistics, settings and profiles once a day when it starts, and keeps the last 7 days.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Themes</source>
         <translation>Chủ đề</translation>
     </message>
@@ -12466,6 +13066,30 @@ Tài nguyên đã cài đặt và chủ đề của bạn được giữ nguyên
     <message>
         <source>The Anki Miner executable could not be located from this process.</source>
         <translation>Không thể xác định tệp thực thi Anki Miner từ tiến trình này.</translation>
+    </message>
+    <message>
+        <source>There is no backup yet. Anki Miner makes one each day when it starts.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Restore a Backup</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Restore the backup from:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Replace your known words, statistics, settings and profiles with the copies from %1? The restore runs the next time Anki Miner starts. Changes made after that backup are lost.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The restore could not be scheduled.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The backup from %1 will be restored when Anki Miner next starts.</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>UpdateBanner</name>
@@ -12632,6 +13256,14 @@ Tài nguyên đã cài đặt và chủ đề của bạn được giữ nguyên
         <translation>Đang đọc phụ đề trong tệp %1 trên %2</translation>
     </message>
     <message>
+        <source>The picture (burned-in text)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Image subtitle track %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>The OCR engine could not start on this computer. The details say why.</source>
         <translation>Không thể khởi động công cụ OCR trên máy tính này. Phần Chi tiết cho biết lý do.</translation>
     </message>
@@ -12668,8 +13300,16 @@ Tài nguyên đã cài đặt và chủ đề của bạn được giữ nguyên
         <translation>Tệp video:</translation>
     </message>
     <message>
-        <source>This field takes a video file.</source>
-        <translation>Trường này nhận tệp video.</translation>
+        <source>This field takes a video or an image subtitle file (.sup, .idx, .sub).</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Read from:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Read text drawn into the picture, or one of the video's image subtitle tracks.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Video Folder:</source>
@@ -12752,6 +13392,10 @@ Tài nguyên đã cài đặt và chủ đề của bạn được giữ nguyên
         <translation>Hãy chọn video trước, rồi đặt vùng trên một khung hình của video đó.</translation>
     </message>
     <message>
+        <source>Image subtitles are read over the whole frame, so they need no region.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Download OCR models</source>
         <translation>Tải mô hình OCR</translation>
     </message>
@@ -12790,6 +13434,10 @@ Tài nguyên đã cài đặt và chủ đề của bạn được giữ nguyên
     <message>
         <source>That video file no longer exists.</source>
         <translation>Tệp video đó không còn tồn tại.</translation>
+    </message>
+    <message>
+        <source>A DVD subtitle needs its .idx and .sub files in the same folder.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Choose a folder before reading subtitles.</source>
@@ -13072,6 +13720,18 @@ Sắp xếp theo cột này để duyệt hết một bản thu dài theo thứ 
     <message>
         <source>Frequency is looked up again for the edited word when the card is made.</source>
         <translation>Tần suất sẽ được tra cứu lại cho từ đã chỉnh sửa khi thẻ được tạo.</translation>
+    </message>
+    <message>
+        <source>Used on the card</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Back to the first match</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Use this dictionary on the card</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Sentences (%1)</source>
@@ -13508,12 +14168,22 @@ Sắp xếp theo cột này để duyệt hết một bản thu dài theo thứ 
         <translation>Loại nguồn:</translation>
     </message>
     <message>
+        <source>Wikimedia Commons (native recordings)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Microsoft Edge read-aloud (synthetic TTS)</source>
         <translation>Microsoft Edge đọc to (TTS tổng hợp)</translation>
     </message>
     <message>
         <source>URL template (use {term} and {reading}):</source>
         <translation>Mẫu URL (dùng {term} và {reading}):</translation>
+    </message>
+</context><context>
+    <name>_BarChart</name>
+    <message>
+        <source>Cards per period</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>_HealthRow</name>
@@ -13530,6 +14200,16 @@ Sắp xếp theo cột này để duyệt hết một bản thu dài theo thứ 
     <message>
         <source>Mining failed</source>
         <translation>Khai thác thất bại</translation>
+    </message>
+</context><context>
+    <name>_MissingWordsDialog</name>
+    <message>
+        <source>Missing Words</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Not known yet in ranks %1</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>app</name>

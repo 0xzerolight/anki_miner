@@ -92,8 +92,60 @@
         <translation>Udvundne serier</translation>
     </message>
     <message>
-        <source>Recent Sessions</source>
-        <translation>Seneste sessioner</translation>
+        <source>Known Words</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Words Anki Miner treats as known in the current mining language.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mining History</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>History period</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>All time</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Last 7 days</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Last 30 days</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Last 12 months</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>History grouping</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Each run</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>By day</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>By week</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>By month</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Export CSV…</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>No sessions yet — process an episode to see your history.</source>
@@ -124,6 +176,18 @@
         <translation>Kort</translation>
     </message>
     <message>
+        <source>Period</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Show in Anki</source>
+        <translation>Vis i Anki</translation>
+    </message>
+    <message>
+        <source>Delete this run's cards…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Series Difficulty Ranking</source>
         <translation>Sværhedsrangering af serier</translation>
     </message>
@@ -152,6 +216,30 @@
         <translation>Sværhed</translation>
     </message>
     <message>
+        <source>Frequency Coverage</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Rank band</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Known</source>
+        <translation>Kendt</translation>
+    </message>
+    <message>
+        <source>Not known</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Known %</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Show missing words</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Milestones</source>
         <translation>Milepæle</translation>
     </message>
@@ -174,6 +262,96 @@
     <message>
         <source>Statistics could not be reset.</source>
         <translation>Statistikken kunne ikke nulstilles.</translation>
+    </message>
+    <message>
+        <source>No runs in this period.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Export Mining History</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>CSV Files (*.csv);;All Files (*)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>History saved to %1.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The history could not be exported.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 (cards deleted: %2)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Select one run in the table.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>This run's cards were deleted: %1.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Anki Miner has no card list for this run: it was mined before this version, or it made no cards.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Anki Miner couldn't open this run's cards in Anki.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>None of this run's cards are in Anki any more.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Delete This Run's Cards</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cards this run added that are still in Anki: %1. Reviewed at least once: %2.
+
+Delete them from Anki? Their review history is deleted with them. This cannot be undone.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cards deleted from Anki: %1.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>This run's cards could not be deleted.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Known words could not be counted.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Words Anki Miner treats as known in %1.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Change since %1: %2</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Last counted on %1; Anki was not reachable.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Last counted on %1.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Coverage needs Anki running: it compares the list with your cards.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>How many of the most frequent words in %1 you already know.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>%1 mining sessions completed</source>
@@ -582,6 +760,10 @@
         <translation>Mellemrumsadskilte mærker, der tilføjes hvert udvundet kort. Lad feltet være tomt for ingen mærker.</translation>
     </message>
     <message>
+        <source>{series}, {episode} and {volume} become each card's show, episode or book volume, for example mined::{series}::{episode}.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Refresh</source>
         <translation>Opdater</translation>
     </message>
@@ -606,12 +788,24 @@
         <translation>Anki Miner kan ikke finde Anki dér, hvor installationsprogrammet placerer det, og kan derfor ikke åbne det.</translation>
     </message>
     <message>
+        <source>Sync Anki after mining</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>After a run that added cards, ask Anki to sync with AnkiWeb. If the sync fails, the Activity Log says so and the cards stay added.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>AnkiConnect URL</source>
         <translation>AnkiConnect-URL</translation>
     </message>
     <message>
         <source>Default http://127.0.0.1:8765. Change if AnkiConnect uses a different port.</source>
         <translation>Standard er http://127.0.0.1:8765. Skift, hvis AnkiConnect bruger en anden port.</translation>
+    </message>
+    <message>
+        <source>If AnkiConnect asks for an API key, add it to the address: http://127.0.0.1:8765/?key=YOUR_KEY</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Fill in automatically</source>
@@ -1322,6 +1516,10 @@ Understøttede formater: AJT (index.json + media/), NHK16 (entries.json + audio/
         <translation>Microsoft Edge (syntetisk TTS)</translation>
     </message>
     <message>
+        <source>Wikimedia Commons (native recordings)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Custom JSON</source>
         <translation>Brugerdefineret JSON</translation>
     </message>
@@ -1887,8 +2085,8 @@ Ingen indeksfiler slettes.</translation>
         <translation>Synkroniser én lydfil med bogen.</translation>
     </message>
     <message>
-        <source>Every audio file in the folder, in file-name order, one .srt each.</source>
-        <translation>Alle lydfiler i mappen i filnavnsrækkefølge, én .srt for hver.</translation>
+        <source>Every audio file in the folder, in file-name order, one .srt each. A folder of book folders (each with its EPUB and audio) syncs every book in turn.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>EPUB or Text File:</source>
@@ -1913,6 +2111,10 @@ Ingen indeksfiler slettes.</translation>
     <message>
         <source>This field takes an .epub or .txt file.</source>
         <translation>Dette felt kræver en .epub- eller .txt-fil.</translation>
+    </message>
+    <message>
+        <source>Sentences: how many of the book's sentences, from the first one found to the last, got a subtitle. Audio: how much of the narration matched the book. Grade: A from 90% on both, B from 75%, C from 50%, else D.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Output</source>
@@ -1975,12 +2177,24 @@ Ingen indeksfiler slettes.</translation>
         <translation>Mappen findes ikke længere.</translation>
     </message>
     <message>
-        <source>No audio files were found in that folder.</source>
-        <translation>Der blev ikke fundet nogen lydfiler i mappen.</translation>
+        <source>No audio files were found in that folder, and no book folders (each with its book and audio).</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>That folder could not be scanned.</source>
         <translation>Mappen kunne ikke scannes.</translation>
+    </message>
+    <message>
+        <source>Skipped folder %1: no audio files</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Skipped folder %1: no .epub or .txt book</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Skipped folder %1: more than one book</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Output folder is not writable.</source>
@@ -1999,11 +2213,31 @@ Ingen indeksfiler slettes.</translation>
         <translation>Bog: %1</translation>
     </message>
     <message>
+        <source>Books: %1 — %2</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1: sentences %2%, audio %3% — grade %4</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Syncing file %1 of %2</source>
         <translation>Synkroniserer fil %1 af %2</translation>
     </message>
 </context><context>
     <name>BookSyncWorker</name>
+    <message>
+        <source>Book: %1</source>
+        <translation>Bog: %1</translation>
+    </message>
+    <message>
+        <source>%1 could not be loaded: %2</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Its book could not be loaded</source>
+        <translation type="unfinished" />
+    </message>
     <message>
         <source>Skipped, exists</source>
         <translation>Sprunget over, findes allerede</translation>
@@ -2019,6 +2253,14 @@ Ingen indeksfiler slettes.</translation>
     <message>
         <source>Aligning to the book…</source>
         <translation>Synkroniserer med bogen…</translation>
+    </message>
+    <message>
+        <source>Reusing the saved transcript</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Found sentence %1 again later in the audio; timed it out of book order</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>%1 sentences timed, %2 in between had no audio</source>
@@ -2099,16 +2341,16 @@ Ingen indeksfiler slettes.</translation>
         <translation>Gennemse ord før udvinding</translation>
     </message>
     <message>
-        <source>Approve or reject each word, pick its sentence and scene, trim its audio, mark words known, and fix a mistranscribed sentence or swap the word to mine -- before any card is created.</source>
-        <translation>Godkend eller afvis hvert ord, vælg dets sætning og scene, beskær dets lyd, markér ord som kendte, og ret en fejltransskriberet sætning eller skift det ord, der skal udvindes -- før noget kort oprettes.</translation>
+        <source>Approve or reject each word, pick its sentence and scene, trim its audio, mark words known, and fix a mistranscribed sentence or swap the word to mine -- before any card is created. When a word has entries in several dictionaries, choose which one the card's Definition uses.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Secondary-language subtitles</source>
         <translation>Undertekster på sekundært sprog</translation>
     </message>
     <message>
-        <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. On Video → Batch, point it at a folder of translation subtitles instead and they pair to the videos by episode number. Turn it on under Settings → Sentences.</source>
-        <translation>Indlæs en ekstra undertekstfil på dit eget sprog ved siden af den på udvindingssproget: den vises under linjen i Ordudvælgerens eksempel og kan gemmes i et oversættelsesfelt. Under Video → Batch peger du den i stedet på en mappe med oversættelsesundertekster, som så parres med videoerne efter afsnitsnummer. Slå det til under Indstillinger → Sætninger.</translation>
+        <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. Leave the file empty and Anki Miner picks a translation itself: a subtitle named for the video, or a text track inside it, in your interface language or else English. The Activity Log names the track it used. On Video → Batch, point it at a folder of translation subtitles instead and they pair to the videos by episode number. Turn it on under Settings → Sentences.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Build a deck by coverage %</source>
@@ -2143,6 +2385,14 @@ Ingen indeksfiler slettes.</translation>
         <translation>Udvind ordforråd fra en lydbog eller lydfil ved hjælp af dens transskription.</translation>
     </message>
     <message>
+        <source>Mine songs from .lrc lyrics</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Use a .lrc lyrics file wherever a subtitle file goes. Each line lasts until the next one starts. Pair a song with its lyrics on Audiobooks, condense it in Condense, or mine a music video on Video.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Mine from manga</source>
         <translation>Udvind fra manga</translation>
     </message>
@@ -2155,16 +2405,24 @@ Ingen indeksfiler slettes.</translation>
         <translation>Udvind fra romaner</translation>
     </message>
     <message>
-        <source>Mine vocabulary from novels and other text (EPUB, Aozora, plain text).</source>
-        <translation>Udvind ordforråd fra romaner og anden tekst (EPUB, Aozora, almindelig tekst).</translation>
+        <source>Mine vocabulary from novels and other text (EPUB, PDF, Aozora, plain text).</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Mine pasted text</source>
-        <translation>Udvind indsat tekst</translation>
+        <source>Readings from a book's own furigana</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Paste text in your mining language and mine it into Anki cards.</source>
-        <translation>Indsæt tekst på dit udvindingssprog, og udvind den til Anki-kort.</translation>
+        <source>When a Japanese EPUB prints furigana over a word, the card takes that reading instead of the parser's guess.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mine pasted text or a web article</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Paste text in your mining language, or fetch a web article by its address, and mine it into Anki cards. A fetched article's cards name the page and site as their source.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Mine subtitle files without video</source>
@@ -2187,8 +2445,8 @@ Ingen indeksfiler slettes.</translation>
         <translation>Generér undertekster fra lyd</translation>
     </message>
     <message>
-        <source>Create subtitles from audio with a local Whisper model -- as a standalone tool.</source>
-        <translation>Opret undertekster fra lyd med en lokal Whisper-model -- som et selvstændigt værktøj.</translation>
+        <source>Create subtitles from audio with a local Whisper model -- as a standalone tool. Long lines are split at sentence ends, and a second run on the same file reuses the saved transcript.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Re-time existing subtitles</source>
@@ -2245,6 +2503,38 @@ Ingen indeksfiler slettes.</translation>
     <message>
         <source>See what you've mined over time with history and statistics.</source>
         <translation>Se, hvad du har udvundet over tid, med historik og statistik.</translation>
+    </message>
+    <message>
+        <source>Browse your whole mining history</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Analytics lists every run you have mined. Pick a period, group the runs by day, week or month, see the cards per period in a chart, and export the table as a CSV file.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Show or delete a past run's cards</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Select a run in Analytics → Mining History to open its cards in Anki's browser or to delete them. The confirmation says how many of its cards are still in Anki and how many you have reviewed. Runs mined before this version have no card list.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Track how many words you know</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The Known Words card on Analytics counts the words Anki Miner treats as known in the current mining language and shows how that number changed. It is counted while Anki is running, at most once every ten minutes.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>See how much of a frequency list you know</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Analytics → Frequency Coverage counts the words you know in ranks 1–1,000 up to 20,000 of your first frequency list with numeric ranks, and lists the missing words of each band. It needs Anki running.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Reset mining statistics</source>
@@ -2319,6 +2609,14 @@ Ingen indeksfiler slettes.</translation>
         <translation>Spring ord over, der allerede er i din Anki-samling eller tidligere er udvundet.</translation>
     </message>
     <message>
+        <source>Count a word as known only after its card has been reviewed</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Readability and the i+1 sentence rule then count a word as known only when its Anki card has been reviewed at least once. Mining still skips every word that already has a card.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Exclude specific Anki decks from 'known'</source>
         <translation>Udelad bestemte Anki-kortsæt fra 'kendte'</translation>
     </message>
@@ -2333,6 +2631,30 @@ Ingen indeksfiler slettes.</translation>
     <message>
         <source>Curate your own list of known words -- always applied, survives cache rebuilds, exportable as plain text.</source>
         <translation>Saml din egen liste over kendte ord -- anvendes altid, overlever genopbygning af cachen og kan eksporteres som almindelig tekst.</translation>
+    </message>
+    <message>
+        <source>Browse every known word</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Manage Known Words lists every word this language counts as known, with where it came from (added by you, mined by Anki Miner, from Anki) and the date it was added. Search it, filter it by source, and remove words you added. Words from Anki come back on the next sync.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Import known words from Kindle, Lute or LWT</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>In Manage Known Words, Import… also reads a Kindle Vocabulary Builder file (vocab.db; words marked mastered) and Lute or LWT term exports (status 5 and 99).</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Export words to a CSV file</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Export words… saves the list you are looking at in Manage Known Words, or a finished run's mined and not-mined words with the reason each was skipped, as a CSV file.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Exclude kana-only words</source>
@@ -2363,8 +2685,24 @@ Ingen indeksfiler slettes.</translation>
         <translation>Ét ord pr. sætning</translation>
     </message>
     <message>
-        <source>Mine at most one word from each example sentence, skipping the rest.</source>
-        <translation>Udvind højst ét ord fra hver eksempelsætning, og spring resten over.</translation>
+        <source>Mine at most one word from each example sentence. A word whose sentence is taken moves to another line it appears on, and is skipped only when every one of its lines is taken.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pick the clearest sentence</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>When a word appears on several lines, its card uses the line with the fewest unknown words and a comfortable length instead of the first one. The Word Curator still lists every line.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Skip openings, endings and signs</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Leave opening and ending songs, previews and on-screen signs out of mining, Condense and Readability: lines styled as songs or signs, and lines inside a video's opening, ending and preview chapters. On by default for new installs; turn it off in Settings → Sentences.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Strip junk from subtitles (regex)</source>
@@ -2431,12 +2769,12 @@ Ingen indeksfiler slettes.</translation>
         <translation>Tilføj, omsortér og aktivér/deaktivér de ordbøger, der bruges til definitioner.</translation>
     </message>
     <message>
-        <source>Import a Yomitan dictionary</source>
-        <translation>Importér en Yomitan-ordbog</translation>
+        <source>Import a dictionary file</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Add your own Yomitan-format dictionary zip as a definition source.</source>
-        <translation>Tilføj din egen ordbogs-zip i Yomitan-format som definitionskilde.</translation>
+        <source>Add a Yomitan zip, a StarDict dictionary (its archive or its .ifo file) or a CSV/TSV word list (term and definition, or term, reading and definition) as a definition source.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Keep dictionaries up to date</source>
@@ -2507,8 +2845,8 @@ Ingen indeksfiler slettes.</translation>
         <translation>Lyd med ordudtale</translation>
     </message>
     <message>
-        <source>Attach word audio to cards from audio packs, JPod101 (Japanese), Google text-to-speech, or Microsoft Edge text-to-speech (Cantonese, Hebrew, Persian, Slovenian).</source>
-        <translation>Føj ordlyd til kort fra lydpakker, JPod101 (japansk), Googles tekst-til-tale eller Microsoft Edges tekst-til-tale (kantonesisk, hebraisk, persisk, slovensk).</translation>
+        <source>Attach word audio to cards from audio packs, JPod101 (Japanese), Google text-to-speech, or Microsoft Edge text-to-speech (every language). Wikimedia Commons plays recordings of real speakers from Wiktionary and Lingua Libre, tried before Google TTS in most languages.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Import local audio packs</source>
@@ -2523,8 +2861,8 @@ Ingen indeksfiler slettes.</translation>
         <translation>Sætningslyd fra videoen</translation>
     </message>
     <message>
-        <source>Extract the spoken sentence as an audio clip; tune its format and bitrate.</source>
-        <translation>Udtræk den talte sætning som et lydklip; justér format og bithastighed.</translation>
+        <source>Extract the spoken sentence as an audio clip; tune its format and bitrate. Even out audio volume brings sentence clips and condensed audio to one loudness and fades each clip in and out.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Sentence audio for reading (TTS)</source>
@@ -2547,8 +2885,8 @@ Ingen indeksfiler slettes.</translation>
         <translation>Skærmbilleder på kort</translation>
     </message>
     <message>
-        <source>Capture a still frame from the scene to put on the card.</source>
-        <translation>Tag et stillbillede fra scenen og sæt det på kortet.</translation>
+        <source>Capture a still frame from the scene to put on the card. Crop manga pictures to the speech bubble shows the bubble and the art around it instead of the whole page.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Animated clips (GIF/WebP)</source>
@@ -2627,16 +2965,24 @@ Ingen indeksfiler slettes.</translation>
         <translation>Tilføj automatisk mærker til udvundne noter</translation>
     </message>
     <message>
-        <source>Add tags to every note Anki Miner creates.</source>
-        <translation>Tilføj mærker til hver note, Anki Miner opretter.</translation>
+        <source>Add tags to every note Anki Miner creates. Card tags can use {series}, {episode} and {volume}. Each card gets its own show, episode or book volume, for example mined::{series}::{episode} gives mined::Frieren::03.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Connect to Anki (AnkiConnect)</source>
         <translation>Forbind til Anki (AnkiConnect)</translation>
     </message>
     <message>
-        <source>Set the AnkiConnect address; Refresh re-checks the connection to your running Anki.</source>
-        <translation>Angiv AnkiConnect-adressen; Opdater kontrollerer forbindelsen til din kørende Anki igen.</translation>
+        <source>Set the AnkiConnect address; Refresh re-checks the connection to your running Anki. If AnkiConnect is set up with an API key, add it to the address: http://127.0.0.1:8765/?key=YOUR_KEY. Anki Miner sends it with every request and never writes it to the log.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Sync Anki after mining</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>After a run that added cards, Anki Miner asks Anki to sync with AnkiWeb. If the sync fails, the Activity Log says so and the cards stay added.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Fill in field mappings automatically</source>
@@ -2723,16 +3069,32 @@ Ingen indeksfiler slettes.</translation>
         <translation>Læs indbrændte undertekster fra en video til en .srt</translation>
     </message>
     <message>
-        <source>Draw a box where a video's on-screen dialogue appears and Anki Miner reads it into a timed .srt that Video → Single can mine. Made for game longplays without commentary. Download the OCR engine from the setup card on Utilities → Video OCR.</source>
-        <translation>Tegn en ramme, hvor videoens dialog vises på skærmen, så læser Anki Miner den ind i en tidsindstillet .srt, som Video → Enkelt kan udvinde. Lavet til longplays af spil uden kommentarer. Hent OCR-motoren fra opsætningskortet under Værktøjer → Video-OCR.</translation>
+        <source>Draw a box where a video's on-screen dialogue appears and Anki Miner reads it into a timed .srt that Video → Single can mine. Made for game longplays without commentary. It also reads image subtitles (Blu-ray .sup, DVD .idx/.sub, or an image track inside a video) without a box. Lines with none of your mining language's letters are left out. Download the OCR engine from the setup card on Utilities → Video OCR.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Sync an audiobook to its EPUB</source>
         <translation>Synkroniser en lydbog med dens EPUB</translation>
     </message>
     <message>
-        <source>Transcribe an audiobook and time the book's own sentences to it, writing an .srt the Audiobook tab, Reading → Subtitle Files or a reader can use.</source>
-        <translation>Transskribér en lydbog, og tidsindstil bogens egne sætninger efter den, så der skrives en .srt, som fanen Lydbøger, Læsning → Undertekstfiler eller en læser kan bruge.</translation>
+        <source>Transcribe an audiobook and time the book's own sentences to it, writing an .srt the Audiobook tab, Reading → Subtitle Files or a reader can use. A second run on the same audio reuses the saved transcript instead of transcribing again.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Sync a shelf of audiobooks in one run</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>In Utilities → Audiobook Sync, choose Folder and pick a folder that holds one folder per book, each with its EPUB (or text file) and its audio files. The books sync one after another, in name order.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>See how well an audiobook synced</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>After Audiobook Sync, each book gets a line under the Book card: how many of its sentences got a subtitle, how much of the narration matched the book, and a grade from A to D. Chapters read out of book order are found too; sentences the narrator skipped never get a subtitle.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Check how much of a show, book or manga you can read</source>
@@ -2815,12 +3177,28 @@ Ingen indeksfiler slettes.</translation>
         <translation>Efter en uventet lukning tilbyder Anki Miner ved næste start at gendanne ufærdige køer og genoptage afbrudte downloads.</translation>
     </message>
     <message>
+        <source>Restore an automatic backup</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Anki Miner backs up your known words, statistics, settings and profiles once a day when it starts, and keeps the last 7 days. Settings → General → Restore a backup… puts one back the next time the app starts.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Undo a mining run</source>
         <translation>Fortryd en udvindingskørsel</translation>
     </message>
     <message>
         <source>Delete the cards a run just created: press View details on the run's result line, then Undo.</source>
         <translation>Slet de kort, en kørsel lige har oprettet: tryk på Vis detaljer på kørslens resultatlinje og derefter på Fortryd.</translation>
+    </message>
+    <message>
+        <source>Export a run's words</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Press View details on a run's result line, then Export words… to save the run's mined and not-mined words, with the reason each was skipped, as a CSV file.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Keyboard shortcuts</source>
@@ -4213,12 +4591,12 @@ Dette ændrer %n noter (%1) og giver dem mærket %2. Vil du fortsætte?</numerus
         <translation>Ifølge ordbogen er dens sprog %1, ikke det sprog, du udvinder.</translation>
     </message>
     <message>
-        <source>Choose Yomitan dictionary zips</source>
-        <translation>Vælg Yomitan-ordbøger (zip)</translation>
+        <source>Choose dictionary files</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Yomitan zip (*.zip)</source>
-        <translation>Yomitan-zip (*.zip)</translation>
+        <source>Dictionaries (*.zip *.ifo *.tar.gz *.tgz *.tar.bz2 *.tar.xz *.csv *.tsv)</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Dictionary %1 of %2: %3</source>
@@ -5052,6 +5430,12 @@ Ingen filer på disken slettes.</translation>
             <numerusform>Fandt %n unikke ord</numerusform>
         </translation>
     </message>
+    <message numerus="yes">
+        <source>Skipping lines in %n opening, ending or preview chapter(s)</source>
+        <translation type="unfinished">
+            <numerusform />
+        </translation>
+    </message>
     <message>
         <source>Frequency data: %1/%2 words ranked</source>
         <translation>Frekvensdata: %1/%2 ord rangeret</translation>
@@ -5098,6 +5482,10 @@ Ingen filer på disken slettes.</translation>
         <translation>Sprang %1 ord over, der mangler i dine offlineordbøger: %2%3</translation>
     </message>
     <message>
+        <source>Only %1% of the first %2 words have an entry in your dictionaries. Is this file in the language you are mining?</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Frequency cutoff ignored — no ranked frequency source is loaded (Settings → Frequency).</source>
         <translation>Frekvensgrænse ignoreret — der er ikke indlæst nogen rangeret frekvenskilde (Indstillinger → Frekvens).</translation>
     </message>
@@ -5114,12 +5502,12 @@ Ingen filer på disken slettes.</translation>
         <translation>Navnelistefilter: fjernede %1 ord</translation>
     </message>
     <message>
-        <source>Sentence deduplication: removed %1 duplicate-sentence words</source>
-        <translation>Fjernelse af dubletsætninger: fjernede %1 ord med dublerede sætninger</translation>
-    </message>
-    <message>
         <source>i+1 filter: kept %1/%2 words (%3%)</source>
         <translation>i+1-filter: beholdt %1/%2 ord (%3%)</translation>
+    </message>
+    <message>
+        <source>Sentence deduplication: removed %1 duplicate-sentence words</source>
+        <translation>Fjernelse af dubletsætninger: fjernede %1 ord med dublerede sætninger</translation>
     </message>
     <message>
         <source>Sentence length filter: removed %1 words (cap: %2)</source>
@@ -5204,6 +5592,14 @@ Ingen filer på disken slettes.</translation>
     <message>
         <source>No words selected for card creation</source>
         <translation>Ingen ord valgt til oprettelse af kort</translation>
+    </message>
+    <message>
+        <source>Translation subtitles picked automatically: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Translation subtitles picked automatically: embedded track %1</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Could not extract media for any word — no cards created</source>
@@ -5470,6 +5866,14 @@ Ingen filer på disken slettes.</translation>
     <message>
         <source>Known Words Database</source>
         <translation>Database med kendte ord</translation>
+    </message>
+    <message>
+        <source>Count a word as known only after its card has been reviewed</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Readability and the i+1 sentence rule count a word as known only when its Anki card has been reviewed at least once. Mining still skips every word that already has a card.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Keep words known after their cards are deleted</source>
@@ -6130,6 +6534,18 @@ Ingen indeksfiler slettes.</translation>
 </context><context>
     <name>KnownWordsManagerDialog</name>
     <message>
+        <source>Word</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Source</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Added</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Manage Known Words</source>
         <translation>Administrer kendte ord</translation>
     </message>
@@ -6138,8 +6554,8 @@ Ingen indeksfiler slettes.</translation>
         <translation>Lokale kendte ord</translation>
     </message>
     <message>
-        <source>Words you added from the Word Curator. Ignored on every run and kept across cache rebuilds.</source>
-        <translation>Ord, du har tilføjet fra Ordudvælgeren. Ignoreres ved hver kørsel og bevares, når cachen genopbygges.</translation>
+        <source>Every word this language counts as known, and where it came from. Words you added from the Word Curator stay known on every run and across cache rebuilds.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Decks this language's known-words scan skips: %1. Change them in Settings → Word Filters.</source>
@@ -6150,8 +6566,24 @@ Ingen indeksfiler slettes.</translation>
         <translation>Alle kortsæt scannes for dette sprog, også kortsæt på et andet sprog skrevet med samme skriftsystem. Udelad dem under Indstillinger → Ordfiltre.</translation>
     </message>
     <message>
+        <source>Added by you</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mined by Anki Miner</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>From Anki</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Filter…</source>
         <translation>Filtrér…</translation>
+    </message>
+    <message>
+        <source>All sources</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Rebuild Known Words DB</source>
@@ -6166,12 +6598,16 @@ Ingen indeksfiler slettes.</translation>
         <translation>Fjern valgte</translation>
     </message>
     <message>
+        <source>Removes words you added. Words from Anki come back on the next run, and mined words leave with Undo.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Import…</source>
         <translation>Importér…</translation>
     </message>
     <message>
-        <source>Export…</source>
-        <translation>Eksportér…</translation>
+        <source>Export words…</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Reset User List</source>
@@ -6202,6 +6638,14 @@ Ingen indeksfiler slettes.</translation>
         <translation>Migaku-ordeksport (CSV)</translation>
     </message>
     <message>
+        <source>Kindle Vocabulary Builder</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Lute or LWT term export</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>plain word list</source>
         <translation>almindelig ordliste</translation>
     </message>
@@ -6210,8 +6654,8 @@ Ingen indeksfiler slettes.</translation>
         <translation>Importér kendte ord</translation>
     </message>
     <message>
-        <source>Known word lists (*.csv *.txt *.json);;All Files (*)</source>
-        <translation>Lister med kendte ord (*.csv *.txt *.json);;Alle filer (*)</translation>
+        <source>Known word lists (*.csv *.tsv *.txt *.json *.db);;All Files (*)</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Detected: %1 — every entry is imported.
@@ -6242,6 +6686,10 @@ Ord, der tilføjes: %3. Vil du fortsætte?</translation>
         <translation>Registreret: %1 — men ingen opslag i denne fil tæller som kendte.</translation>
     </message>
     <message>
+        <source>This file has no words for %1. It contains: %2.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>That file is too large to import.</source>
         <translation>Filen er for stor til at blive importeret.</translation>
     </message>
@@ -6254,8 +6702,8 @@ Ord, der tilføjes: %3. Vil du fortsætte?</translation>
         <translation>Filens tekstkodning kunne ikke læses.</translation>
     </message>
     <message>
-        <source>File format not recognized. Supported: jpdb review export (JSON), Migaku word export (JSON/CSV), AnkiMorphs known morphs (CSV), plain word lists (one word per line).</source>
-        <translation>Filformatet blev ikke genkendt. Understøttet: jpdb-eksport af gennemgange (JSON), Migaku-ordeksport (JSON/CSV), kendte morfer fra AnkiMorphs (CSV), almindelige ordlister (ét ord pr. linje).</translation>
+        <source>File format not recognized. Supported: jpdb review export (JSON), Migaku word export (JSON/CSV), AnkiMorphs known morphs (CSV), Kindle Vocabulary Builder (vocab.db), Lute or LWT term export (CSV/TSV), plain word lists (one word per line).</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>That file could not be imported.</source>
@@ -6274,6 +6722,10 @@ Ord, der tilføjes: %3. Vil du fortsætte?</translation>
     <message>
         <source>Export Known Words</source>
         <translation>Eksportér kendte ord</translation>
+    </message>
+    <message>
+        <source>CSV files (*.csv);;Text files, one word per line (*.txt)</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>The known words list could not be exported.</source>
@@ -7021,6 +7473,10 @@ Vil du fortsætte?</translation>
         <translation>MP3: virker overalt. Opus: mindre filer ved samme kvalitet (kræver ffmpeg med libopus).</translation>
     </message>
     <message>
+        <source>Opus clips do not play in AnkiMobile on iPhone or iPad. Choose MP3 if you review there.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source> kbps</source>
         <translation> kbps</translation>
     </message>
@@ -7045,6 +7501,14 @@ Vil du fortsætte?</translation>
         <translation>Ekstra tid før og efter underteksten.</translation>
     </message>
     <message>
+        <source>Even out audio volume</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Brings sentence clips and condensed audio to one volume and fades each clip in and out, so quiet and loud sources sound alike. Applies to new clips.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Text-to-speech</source>
         <translation>Tekst til tale</translation>
     </message>
@@ -7063,6 +7527,14 @@ Vil du fortsætte?</translation>
     <message>
         <source>Measured from the subtitle start time.</source>
         <translation>Målt fra undertekstens starttidspunkt.</translation>
+    </message>
+    <message>
+        <source>Crop manga pictures to the speech bubble</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Manga cards show the speech bubble and the art around it instead of the whole page. A sentence with no bubble position keeps the whole page.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Enable animated screenshots</source>
@@ -7295,6 +7767,10 @@ Vil du fortsætte?</translation>
     <message>
         <source>Mining failed.</source>
         <translation>Udvinding mislykkedes.</translation>
+    </message>
+    <message>
+        <source>Anki didn't sync after this run. Your cards are added; sync from Anki, or see the log for why.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Anki Miner couldn't open these cards in Anki.</source>
@@ -9063,8 +9539,8 @@ Ingen indeksfiler slettes.</translation>
         <translation>Bøger</translation>
     </message>
     <message>
-        <source>An .epub or .txt book, or a folder of books; each book is mined separately.</source>
-        <translation>En .epub- eller .txt-bog eller en mappe med bøger; hver bog udvindes for sig.</translation>
+        <source>An .epub, .txt or .pdf book, or a folder of books; each book is mined separately.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Mine</source>
@@ -9099,8 +9575,8 @@ Ingen indeksfiler slettes.</translation>
         <translation>Filen eller mappen findes ikke længere.</translation>
     </message>
     <message>
-        <source>Choose an .epub or .txt book, or a folder of books.</source>
-        <translation>Vælg en .epub- eller .txt-bog eller en mappe med bøger.</translation>
+        <source>Choose an .epub, .txt or .pdf book, or a folder of books.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Starting…</source>
@@ -9165,8 +9641,8 @@ Ingen indeksfiler slettes.</translation>
         <translation>Tilføj filer…</translation>
     </message>
     <message>
-        <source>Add subtitle files (.srt, .ass, .ssa, .vtt, .smi) to the list.</source>
-        <translation>Tilføj undertekstfiler (.srt, .ass, .ssa, .vtt, .smi) til listen.</translation>
+        <source>Add subtitle files (.srt, .ass, .ssa, .vtt, .smi, .lrc) to the list.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Remove Selected</source>
@@ -9346,6 +9822,22 @@ Ingen indeksfiler slettes.</translation>
         <translation>Vis ordvalgsvinduet, før der oprettes kort.</translation>
     </message>
     <message>
+        <source>Web addresses to fetch, one per line (https://…)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Web addresses</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Fetch</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Put the article text of each web address in the box below, to check before mining.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Paste the text you want to mine. Cards from pasted text have no sentence audio from a recording.</source>
         <translation>Indsæt den tekst, du vil udvinde. Kort fra indsat tekst har ingen sætningslyd fra en optagelse.</translation>
     </message>
@@ -9390,12 +9882,72 @@ Ingen indeksfiler slettes.</translation>
         <translation>Billeder</translation>
     </message>
     <message>
+        <source>Each line must be a web address that starts with http:// or https://.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Enter a web address first.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Fetch takes up to 10 web addresses at a time.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Fetching…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not fetch %1: %2</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>None of the pages could be fetched.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Fetched %1.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The pages could not be fetched.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The page could not be reached. Check the address and your connection.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The site did not send the page.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>This address is not a web page.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>This page is too large to read.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>This is not a web address.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No article text found on this page. Pages that draw their text with JavaScript cannot be read.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Paste some text first.</source>
         <translation>Indsæt først noget tekst.</translation>
     </message>
     <message>
         <source>This card picture has no Picture field to land in. Map one in Settings → Cards &amp; Anki, or remove the picture.</source>
         <translation>Kortbilledet har intet Picture-felt at havne i. Tilknyt et under Indstillinger → Kort og Anki, eller fjern billedet.</translation>
+    </message>
+    <message>
+        <source>The fetched text was edited, so it is mined as one text without its page titles.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>That picture cannot be read. Pick another, or remove it to mine without one.</source>
@@ -10181,6 +10733,10 @@ Ingen indeksfiler slettes.</translation>
         <translation>Kopiér oversigt</translation>
     </message>
     <message>
+        <source>Export words…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Close</source>
         <translation>Luk</translation>
     </message>
@@ -10190,6 +10746,22 @@ Ingen indeksfiler slettes.</translation>
             <numerusform>Fortryd (%n kort)</numerusform>
             <numerusform>Fortryd (%n kort)</numerusform>
         </translation>
+    </message>
+    <message>
+        <source>Export Words</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>CSV files (*.csv)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Words exported</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Export failed — try again</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Confirm Undo</source>
@@ -10393,6 +10965,14 @@ Ingen indeksfiler slettes.</translation>
         <translation>Erstatning</translation>
     </message>
     <message>
+        <source>Skip openings, endings and signs</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Leaves out song lyrics, previews and on-screen signs: lines whose subtitle style marks them as a song or a sign, and lines inside a video's opening, ending or preview chapters. Applies to mining, Condense and Readability.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Sentence options</source>
         <translation>Sætningsvalg</translation>
     </message>
@@ -10405,8 +10985,8 @@ Ingen indeksfiler slettes.</translation>
         <translation>Ét kort pr. sætning</translation>
     </message>
     <message>
-        <source>Mines at most one word per example sentence — the first one found in that sentence. Every other word sharing it is skipped. Whitelisted words are still mined.</source>
-        <translation>Udvinder højst ét ord pr. eksempelsætning — det første, der findes i sætningen. Alle andre ord i samme sætning springes over. Ord på tilladelseslisten udvindes stadig.</translation>
+        <source>Mines at most one word per example sentence. A word whose sentence is already taken moves to another line it appears on, and is skipped only when every one of its lines is taken. Whitelisted words are still mined.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Only i+1 sentences (exactly one unknown word)</source>
@@ -10419,6 +10999,14 @@ Ingen indeksfiler slettes.</translation>
     <message>
         <source>Sentence Rule</source>
         <translation>Sætningsregel</translation>
+    </message>
+    <message>
+        <source>Pick the clearest sentence for each word</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>When a word appears on several lines, its card uses the line with the fewest unknown words and a comfortable length instead of the first one. The Word Curator still lists every line, and card order does not change.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source> s</source>
@@ -12476,6 +13064,18 @@ Dine installerede ressourcer og dit tema bevares.</translation>
         <translation>Når det er slået til, spørger Anki Miner GitHub efter nye udgivelser ved opstart.</translation>
     </message>
     <message>
+        <source>Restore a backup…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Backups</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Anki Miner saves your known words, statistics, settings and profiles once a day when it starts, and keeps the last 7 days.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Themes</source>
         <translation>Temaer</translation>
     </message>
@@ -12514,6 +13114,30 @@ Dine installerede ressourcer og dit tema bevares.</translation>
     <message>
         <source>The Anki Miner executable could not be located from this process.</source>
         <translation>Anki Miners programfil kunne ikke findes fra denne proces.</translation>
+    </message>
+    <message>
+        <source>There is no backup yet. Anki Miner makes one each day when it starts.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Restore a Backup</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Restore the backup from:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Replace your known words, statistics, settings and profiles with the copies from %1? The restore runs the next time Anki Miner starts. Changes made after that backup are lost.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The restore could not be scheduled.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The backup from %1 will be restored when Anki Miner next starts.</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>UpdateBanner</name>
@@ -12680,6 +13304,14 @@ Dine installerede ressourcer og dit tema bevares.</translation>
         <translation>Læser undertekster i fil %1 af %2</translation>
     </message>
     <message>
+        <source>The picture (burned-in text)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Image subtitle track %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>The OCR engine could not start on this computer. The details say why.</source>
         <translation>OCR-motoren kunne ikke starte på denne computer. Detaljerne fortæller hvorfor.</translation>
     </message>
@@ -12716,8 +13348,16 @@ Dine installerede ressourcer og dit tema bevares.</translation>
         <translation>Videofil:</translation>
     </message>
     <message>
-        <source>This field takes a video file.</source>
-        <translation>Dette felt tager en videofil.</translation>
+        <source>This field takes a video or an image subtitle file (.sup, .idx, .sub).</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Read from:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Read text drawn into the picture, or one of the video's image subtitle tracks.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Video Folder:</source>
@@ -12800,6 +13440,10 @@ Dine installerede ressourcer og dit tema bevares.</translation>
         <translation>Vælg først en video, og angiv så området på et af dens billeder.</translation>
     </message>
     <message>
+        <source>Image subtitles are read over the whole frame, so they need no region.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Download OCR models</source>
         <translation>Hent OCR-modeller</translation>
     </message>
@@ -12838,6 +13482,10 @@ Dine installerede ressourcer og dit tema bevares.</translation>
     <message>
         <source>That video file no longer exists.</source>
         <translation>Videofilen findes ikke længere.</translation>
+    </message>
+    <message>
+        <source>A DVD subtitle needs its .idx and .sub files in the same folder.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Choose a folder before reading subtitles.</source>
@@ -13120,6 +13768,18 @@ Sortér efter det for at arbejde dig gennem en lang optagelse i rækkefølge —
     <message>
         <source>Frequency is looked up again for the edited word when the card is made.</source>
         <translation>Frekvensen slås op igen for det redigerede ord, når kortet oprettes.</translation>
+    </message>
+    <message>
+        <source>Used on the card</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Back to the first match</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Use this dictionary on the card</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Sentences (%1)</source>
@@ -13556,12 +14216,22 @@ Sortér efter det for at arbejde dig gennem en lang optagelse i rækkefølge —
         <translation>Kildetype:</translation>
     </message>
     <message>
+        <source>Wikimedia Commons (native recordings)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Microsoft Edge read-aloud (synthetic TTS)</source>
         <translation>Microsoft Edge-oplæsning (syntetisk TTS)</translation>
     </message>
     <message>
         <source>URL template (use {term} and {reading}):</source>
         <translation>URL-skabelon (brug {term} og {reading}):</translation>
+    </message>
+</context><context>
+    <name>_BarChart</name>
+    <message>
+        <source>Cards per period</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>_HealthRow</name>
@@ -13578,6 +14248,16 @@ Sortér efter det for at arbejde dig gennem en lang optagelse i rækkefølge —
     <message>
         <source>Mining failed</source>
         <translation>Udvinding mislykkedes</translation>
+    </message>
+</context><context>
+    <name>_MissingWordsDialog</name>
+    <message>
+        <source>Missing Words</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Not known yet in ranks %1</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>app</name>
