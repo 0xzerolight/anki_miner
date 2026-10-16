@@ -13,15 +13,13 @@ numpy-free: the Video OCR tab imports it at app startup.
 from __future__ import annotations
 
 import logging
-import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
 from anki_miner.services.video_ocr.errors import FrameSourceError
 from anki_miner.utils.audio_track_detector import get_video_size, list_subtitle_streams
 from anki_miner.utils.ffmpeg_resolver import resolve_ffprobe
-from anki_miner.utils.subprocess_log import log_command
-from anki_miner.utils.subprocess_utils import no_window_kwargs
+from anki_miner.utils.process_supervisor import SupervisedState, run_supervised
 
 logger = logging.getLogger(__name__)
 
@@ -82,21 +80,13 @@ def track_end_seconds(path: Path, sub_index: int, ffprobe_cmd: str) -> float | N
         "csv=p=0",
         str(path),
     ]
-    log_command(logger, "ffprobe", cmd, timeout_s=_PACKET_PROBE_TIMEOUT_S)
-    try:
-        done = subprocess.run(
-            cmd,
-            stdin=subprocess.DEVNULL,
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            timeout=_PACKET_PROBE_TIMEOUT_S,
-            check=False,
-            **no_window_kwargs(),
+    done = run_supervised(cmd, timeout_s=_PACKET_PROBE_TIMEOUT_S, op="ffprobe subtitle-packets")
+    if done.state is not SupervisedState.COMPLETED:
+        logger.warning(
+            "Video OCR: could not list the subtitle packets of %s: %s",
+            path.name,
+            done.error or done.state.value,
         )
-    except (subprocess.SubprocessError, OSError) as exc:
-        logger.warning("Video OCR: could not list the subtitle packets of %s: %s", path.name, exc)
         return None
     if done.returncode != 0:
         logger.warning(

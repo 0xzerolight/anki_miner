@@ -5,7 +5,7 @@ from __future__ import annotations
 import subprocess
 import sys
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -21,10 +21,11 @@ from anki_miner.services.video_ocr.bitmap_source import (
 from anki_miner.services.video_ocr.errors import FrameSourceError
 from anki_miner.services.video_ocr.region import FULL_FRAME, Region
 from anki_miner.utils.audio_track_detector import SubtitleStream
+from anki_miner.utils.process_supervisor import SupervisedResult, SupervisedState
 
 _LIST = "anki_miner.services.video_ocr.bitmap_source.list_subtitle_streams"
 _SIZE = "anki_miner.services.video_ocr.bitmap_source.get_video_size"
-_RUN = "anki_miner.services.video_ocr.bitmap_source.subprocess.run"
+_RUN = "anki_miner.services.video_ocr.bitmap_source.run_supervised"
 
 
 def _image(sub_index: int = 0, *, width: int | None = 1920, height: int | None = 1080) -> SubtitleStream:
@@ -46,12 +47,8 @@ def _text(sub_index: int = 0) -> SubtitleStream:
     )
 
 
-def _packets(stdout: str, returncode: int = 0) -> MagicMock:
-    done = MagicMock()
-    done.returncode = returncode
-    done.stdout = stdout
-    done.stderr = ""
-    return done
+def _packets(stdout: str, returncode: int = 0) -> SupervisedResult:
+    return SupervisedResult(SupervisedState.COMPLETED, returncode, stdout, "")
 
 
 def test_the_full_frame_region():
