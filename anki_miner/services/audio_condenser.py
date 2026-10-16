@@ -54,7 +54,7 @@ from anki_miner.utils.atomic_io import atomic_write_path
 from anki_miner.utils.audio_track_detector import (
     get_media_duration_seconds,
     list_subtitle_streams,
-    matches_language_tag,
+    primary_subtitle_key,
 )
 from anki_miner.utils.ffmpeg_resolver import resolve_ffmpeg, resolve_ffprobe
 from anki_miner.utils.file_pairing import find_sibling_subtitle, resolve_output_path
@@ -1215,24 +1215,18 @@ def _resolve_embedded_subtitle(
 def _pick_subtitle_stream(
     streams: list[SubtitleStream], subtitle_track_override: int | None, codes: frozenset[str]
 ) -> SubtitleStream | None:
-    """Choose a subtitle stream: override, then non-forced/mining-language/demux order.
+    """Choose a subtitle stream: override, then full dialogue in the mining language (MS-06).
 
     *codes* is the mining language's ``audio_track_codes`` and is required: the
     caller holds the config, so the language decision never lives here.
+    Untitled streams order exactly as before MS-06 (forced, language, index).
     """
     if subtitle_track_override is not None:
         return next((s for s in streams if s.sub_index == subtitle_track_override), None)
     text_streams = [s for s in streams if s.is_text]
     if not text_streams:
         return None
-    return min(
-        text_streams,
-        key=lambda stream: (
-            stream.is_forced,
-            not matches_language_tag(stream.language_tag, codes),
-            stream.sub_index,
-        ),
-    )
+    return min(text_streams, key=lambda stream: primary_subtitle_key(stream, codes))
 
 
 def _write_merged_subs(parts: Sequence[CondensedPart], out_audio: Path, config: AnkiMinerConfig) -> str | None:

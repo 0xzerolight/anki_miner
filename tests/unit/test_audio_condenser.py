@@ -1909,3 +1909,17 @@ def test_extract_embedded_subtitle_gives_each_call_its_own_file(tmp_path):
 
     assert season1 is not None and season2 is not None
     assert season1 != season2
+
+
+def test_a_signs_track_loses_to_the_full_dialogue_track():
+    """MS-06: Condense picks the full dialogue track, not a signs-and-songs track listed first."""
+    from anki_miner.services.audio_condenser import _pick_subtitle_stream
+    from anki_miner.utils.audio_track_detector import SubtitleStream
+
+    signs = SubtitleStream(
+        index=2, sub_index=0, codec_name="ass", language_tag="jpn", title="Signs & Songs", is_text=True
+    )
+    full = SubtitleStream(
+        index=3, sub_index=1, codec_name="ass", language_tag="jpn", title="Full Subtitles", is_text=True
+    )
+    assert _pick_subtitle_stream([signs, full], None, frozenset({"jpn", "ja"})) is full
