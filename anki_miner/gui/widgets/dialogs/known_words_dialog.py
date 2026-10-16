@@ -67,7 +67,9 @@ class KnownWordsTableModel(QAbstractTableModel):
 
     A model over a plain list, not one QTableWidgetItem per cell: a large
     collection caches about 100k words, and three items each would make the
-    dialog take seconds to open.
+    dialog take seconds to open. For the same reason the model sorts itself
+    with ``list.sort``: the proxy's own sort asks :meth:`data` for both sides
+    of every comparison, which froze the GUI for ~5 s at 100k rows.
     """
 
     WORD, SOURCE, ADDED = range(3)
@@ -84,13 +86,44 @@ class KnownWordsTableModel(QAbstractTableModel):
         self._style = style
         self._source_label = source_label
         self._word_font = content_cell_font(style())
+        self._sort_column = self.WORD
+        self._sort_order = Qt.SortOrder.AscendingOrder
 
     def set_rows(self, rows: list[KnownWordRow]) -> None:
-        """Replace every row (the dialog's refresh)."""
+        """Replace every row (the dialog's refresh), in the current sort order."""
         self.beginResetModel()
-        self._rows = list(rows)
+        self._rows = self._sorted(list(rows))
         self._word_font = content_cell_font(self._style())
         self.endResetModel()
+
+    def _sort_key(self, entry: KnownWordRow) -> str:
+        if self._sort_column == self.SOURCE:
+            return self._source_label(entry.source)
+        if self._sort_column == self.ADDED:
+            return entry.added_at
+        return entry.lemma
+
+    def _sorted(self, rows: list[KnownWordRow]) -> list[KnownWordRow]:
+        descending = self._sort_order == Qt.SortOrder.DescendingOrder
+        return sorted(rows, key=self._sort_key, reverse=descending)
+
+    def sort(self, column: int, order: Qt.SortOrder = Qt.SortOrder.AscendingOrder) -> None:
+        """Reorder the rows by *column*; selected rows stay selected."""
+        if column not in (self.WORD, self.SOURCE, self.ADDED):
+            return
+        self._sort_column, self._sort_order = column, order
+        self.layoutAboutToBeChanged.emit()
+        descending = order == Qt.SortOrder.DescendingOrder
+        order_of_rows = sorted(range(len(self._rows)), key=lambda i: self._sort_key(self._rows[i]), reverse=descending)
+        new_row = [0] * len(order_of_rows)
+        for position, old in enumerate(order_of_rows):
+            new_row[old] = position
+        self._rows = [self._rows[i] for i in order_of_rows]
+        persistent = self.persistentIndexList()
+        self.changePersistentIndexList(
+            persistent, [self.index(new_row[index.row()], index.column()) for index in persistent]
+        )
+        self.layoutChanged.emit()
 
     def row_at(self, row: int) -> KnownWordRow:
         """The source row behind a model row number."""
@@ -133,7 +166,11 @@ class KnownWordsTableModel(QAbstractTableModel):
 
 
 class KnownWordsFilter(QSortFilterProxyModel):
-    """The browser's search text and source filter over :class:`KnownWordsTableModel`."""
+    """The browser's search text and source filter over :class:`KnownWordsTableModel`.
+
+    Filters only: a header click sorts the source model (see its docstring),
+    and the proxy keeps the source's order.
+    """
 
     def __init__(self, parent: QObject) -> None:
         super().__init__(parent)
@@ -149,6 +186,11 @@ class KnownWordsFilter(QSortFilterProxyModel):
         """Show only rows from ``source`` ("user", "mined", "anki"); "" shows every source."""
         self._source = source
         self.invalidateFilter()
+
+    def sort(self, column: int, order: Qt.SortOrder = Qt.SortOrder.AscendingOrder) -> None:
+        model = self.sourceModel()
+        if model is not None:
+            model.sort(column, order)
 
     def filterAcceptsRow(self, source_row: int, _source_parent: QModelIndex) -> bool:
         model = self.sourceModel()

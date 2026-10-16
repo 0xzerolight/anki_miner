@@ -226,3 +226,65 @@ def test_the_save_picker_suggests_a_csv(qtbot, tmp_path, monkeypatch):
     assert seen["initial"].endswith("known_words.csv")
     assert "*.csv" in seen["filter"]
     assert "*.txt" in seen["filter"]
+
+
+def _lemmas(dlg: KnownWordsManagerDialog) -> list[str]:
+    return [row.lemma for row in dlg.visible_rows()]
+
+
+def test_a_header_click_sorts_by_that_column(qtbot, tmp_path):
+    dlg = _dialog(qtbot, tmp_path)
+    _show(dlg, "")
+
+    assert _lemmas(dlg) == sorted(_lemmas(dlg))
+    dlg.word_table.sortByColumn(0, Qt.SortOrder.DescendingOrder)
+    assert _lemmas(dlg) == sorted(_lemmas(dlg), reverse=True)
+
+    dlg.word_table.sortByColumn(1, Qt.SortOrder.AscendingOrder)
+    sources = [dlg._source_label(row.source) for row in dlg.visible_rows()]
+    assert sources == sorted(sources)
+
+
+def test_the_sort_survives_a_refresh_and_keeps_the_selection(qtbot, tmp_path):
+    dlg = _dialog(qtbot, tmp_path)
+    _show(dlg, "")
+    dlg.word_table.sortByColumn(0, Qt.SortOrder.DescendingOrder)
+    _select(dlg, "カレー")
+
+    dlg.word_table.sortByColumn(0, Qt.SortOrder.AscendingOrder)
+    assert [row.lemma for row in dlg._selected_rows()] == ["カレー"]
+
+    dlg.word_table.sortByColumn(0, Qt.SortOrder.DescendingOrder)
+    dlg._refresh()
+    assert _lemmas(dlg) == sorted(_lemmas(dlg), reverse=True)
+
+
+def test_showing_every_row_does_not_sort_through_the_python_model(qtbot, tmp_path, monkeypatch):
+    """A 100k-word collection froze the GUI for ~5 s: the proxy's C++ sort asked the
+    Python data() for both sides of every comparison (Z.2 WB2 I-2)."""
+    from anki_miner.gui.widgets.dialogs import known_words_dialog as module
+
+    db = KnownWordDB(tmp_path / "known_words.db")
+    db.initialize()
+    db.add_words({f"word{i:05d}" for i in range(3000)}, source="anki")
+    dlg = KnownWordsManagerDialog(db)
+    qtbot.addWidget(dlg)
+    calls = 0
+    original = module.KnownWordsTableModel.data
+
+    def counting(self, index, role=Qt.ItemDataRole.DisplayRole):
+        nonlocal calls
+        calls += 1
+        return original(self, index, role)
+
+    monkeypatch.setattr(module.KnownWordsTableModel, "data", counting)
+
+    _show(dlg, "")
+    dlg.word_table.sortByColumn(2, Qt.SortOrder.AscendingOrder)
+    dlg.search_input.setText("x")
+    dlg.search_input.setText("")
+
+    assert dlg._proxy.rowCount() == 3000
+    # The proxy sort made ~40 calls per row here; what is left is the header's
+    # ResizeToContents sample, which Qt caps at 1000 rows whatever the size.
+    assert calls < 10 * 3000
