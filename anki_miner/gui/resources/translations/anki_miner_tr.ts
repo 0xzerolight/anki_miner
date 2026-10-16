@@ -93,59 +93,59 @@
     </message>
     <message>
         <source>Known Words</source>
-        <translation type="unfinished" />
+        <translation>Bilinen Kelimeler</translation>
     </message>
     <message>
         <source>Words Anki Miner treats as known in the current mining language.</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner'ın geçerli toplama dilinde bilinen saydığı kelimeler.</translation>
     </message>
     <message>
         <source>Mining History</source>
-        <translation type="unfinished" />
+        <translation>Toplama Geçmişi</translation>
     </message>
     <message>
         <source>History period</source>
-        <translation type="unfinished" />
+        <translation>Geçmiş dönemi</translation>
     </message>
     <message>
         <source>All time</source>
-        <translation type="unfinished" />
+        <translation>Tüm zamanlar</translation>
     </message>
     <message>
         <source>Last 7 days</source>
-        <translation type="unfinished" />
+        <translation>Son 7 gün</translation>
     </message>
     <message>
         <source>Last 30 days</source>
-        <translation type="unfinished" />
+        <translation>Son 30 gün</translation>
     </message>
     <message>
         <source>Last 12 months</source>
-        <translation type="unfinished" />
+        <translation>Son 12 ay</translation>
     </message>
     <message>
         <source>History grouping</source>
-        <translation type="unfinished" />
+        <translation>Geçmiş gruplaması</translation>
     </message>
     <message>
         <source>Each run</source>
-        <translation type="unfinished" />
+        <translation>Her çalıştırma</translation>
     </message>
     <message>
         <source>By day</source>
-        <translation type="unfinished" />
+        <translation>Güne göre</translation>
     </message>
     <message>
         <source>By week</source>
-        <translation type="unfinished" />
+        <translation>Haftaya göre</translation>
     </message>
     <message>
         <source>By month</source>
-        <translation type="unfinished" />
+        <translation>Aya göre</translation>
     </message>
     <message>
         <source>Export CSV…</source>
-        <translation type="unfinished" />
+        <translation>CSV olarak dışa aktar…</translation>
     </message>
     <message>
         <source>No sessions yet — process an episode to see your history.</source>
@@ -177,7 +177,7 @@
     </message>
     <message>
         <source>Period</source>
-        <translation type="unfinished" />
+        <translation>Dönem</translation>
     </message>
     <message>
         <source>Show in Anki</source>
@@ -185,7 +185,7 @@
     </message>
     <message>
         <source>Delete this run's cards…</source>
-        <translation type="unfinished" />
+        <translation>Bu çalıştırmanın kartlarını sil…</translation>
     </message>
     <message>
         <source>Series Difficulty Ranking</source>
@@ -217,11 +217,11 @@
     </message>
     <message>
         <source>Frequency Coverage</source>
-        <translation type="unfinished" />
+        <translation>Sıklık Kapsamı</translation>
     </message>
     <message>
         <source>Rank band</source>
-        <translation type="unfinished" />
+        <translation>Sıra aralığı</translation>
     </message>
     <message>
         <source>Known</source>
@@ -229,15 +229,15 @@
     </message>
     <message>
         <source>Not known</source>
-        <translation type="unfinished" />
+        <translation>Bilinmeyen</translation>
     </message>
     <message>
         <source>Known %</source>
-        <translation type="unfinished" />
+        <translation>Bilinen %</translation>
     </message>
     <message>
         <source>Show missing words</source>
-        <translation type="unfinished" />
+        <translation>Eksik kelimeleri göster</translation>
     </message>
     <message>
         <source>Milestones</source>
@@ -265,93 +265,95 @@
     </message>
     <message>
         <source>No runs in this period.</source>
-        <translation type="unfinished" />
+        <translation>Bu dönemde çalıştırma yok.</translation>
     </message>
     <message>
         <source>Export Mining History</source>
-        <translation type="unfinished" />
+        <translation>Toplama Geçmişini Dışa Aktar</translation>
     </message>
     <message>
         <source>CSV Files (*.csv);;All Files (*)</source>
-        <translation type="unfinished" />
+        <translation>CSV dosyaları (*.csv);;Tüm dosyalar (*)</translation>
     </message>
     <message>
         <source>History saved to %1.</source>
-        <translation type="unfinished" />
+        <translation>Geçmiş %1 dosyasına kaydedildi.</translation>
     </message>
     <message>
         <source>The history could not be exported.</source>
-        <translation type="unfinished" />
+        <translation>Geçmiş dışa aktarılamadı.</translation>
     </message>
     <message>
         <source>%1 (cards deleted: %2)</source>
-        <translation type="unfinished" />
+        <translation>%1 (silinen kart: %2)</translation>
     </message>
     <message>
         <source>Select one run in the table.</source>
-        <translation type="unfinished" />
+        <translation>Tabloda bir çalıştırma seçin.</translation>
     </message>
     <message>
         <source>This run's cards were deleted: %1.</source>
-        <translation type="unfinished" />
+        <translation>Bu çalıştırmanın silinen kartları: %1.</translation>
     </message>
     <message>
         <source>Anki Miner has no card list for this run: it was mined before this version, or it made no cards.</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner'da bu çalıştırmanın kart listesi yok: bu sürümden önce toplanmış ya da hiç kart oluşturmamış.</translation>
     </message>
     <message>
         <source>Anki Miner couldn't open this run's cards in Anki.</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner bu çalıştırmanın kartlarını Anki'de açamadı.</translation>
     </message>
     <message>
         <source>None of this run's cards are in Anki any more.</source>
-        <translation type="unfinished" />
+        <translation>Bu çalıştırmanın kartlarından hiçbiri artık Anki'de değil.</translation>
     </message>
     <message>
         <source>Delete This Run's Cards</source>
-        <translation type="unfinished" />
+        <translation>Bu Çalıştırmanın Kartlarını Sil</translation>
     </message>
     <message>
         <source>Cards this run added that are still in Anki: %1. Reviewed at least once: %2.
 
 Delete them from Anki? Their review history is deleted with them. This cannot be undone.</source>
-        <translation type="unfinished" />
+        <translation>Bu çalıştırmanın eklediği ve hâlâ Anki'de olan kartlar: %1. En az bir kez tekrar edilen: %2.
+
+Bunlar Anki'den silinsin mi? Tekrar geçmişleri de onlarla birlikte silinir. Bu işlem geri alınamaz.</translation>
     </message>
     <message>
         <source>Cards deleted from Anki: %1.</source>
-        <translation type="unfinished" />
+        <translation>Anki'den silinen kartlar: %1.</translation>
     </message>
     <message>
         <source>This run's cards could not be deleted.</source>
-        <translation type="unfinished" />
+        <translation>Bu çalıştırmanın kartları silinemedi.</translation>
     </message>
     <message>
         <source>Known words could not be counted.</source>
-        <translation type="unfinished" />
+        <translation>Bilinen kelimeler sayılamadı.</translation>
     </message>
     <message>
         <source>Words Anki Miner treats as known in %1.</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner'ın %1 dilinde bilinen saydığı kelimeler.</translation>
     </message>
     <message>
         <source>Change since %1: %2</source>
-        <translation type="unfinished" />
+        <translation>%1 tarihinden bu yana değişim: %2</translation>
     </message>
     <message>
         <source>Last counted on %1; Anki was not reachable.</source>
-        <translation type="unfinished" />
+        <translation>Son sayım: %1; Anki'ye ulaşılamadı.</translation>
     </message>
     <message>
         <source>Last counted on %1.</source>
-        <translation type="unfinished" />
+        <translation>Son sayım: %1.</translation>
     </message>
     <message>
         <source>Coverage needs Anki running: it compares the list with your cards.</source>
-        <translation type="unfinished" />
+        <translation>Kapsam için Anki'nin çalışıyor olması gerekir: listeyi kartlarınızla karşılaştırır.</translation>
     </message>
     <message>
         <source>How many of the most frequent words in %1 you already know.</source>
-        <translation type="unfinished" />
+        <translation>%1 listesindeki en sık kelimelerden kaçını zaten bildiğiniz.</translation>
     </message>
     <message>
         <source>%1 mining sessions completed</source>
@@ -759,7 +761,7 @@ Delete them from Anki? Their review history is deleted with them. This cannot be
     </message>
     <message>
         <source>{series}, {episode} and {volume} become each card's show, episode or book volume, for example mined::{series}::{episode}.</source>
-        <translation type="unfinished" />
+        <translation>{series}, {episode} ve {volume} her kartın dizisine, bölümüne veya kitap cildine dönüşür; örneğin mined::{series}::{episode}.</translation>
     </message>
     <message>
         <source>Refresh</source>
@@ -787,11 +789,11 @@ Delete them from Anki? Their review history is deleted with them. This cannot be
     </message>
     <message>
         <source>Sync Anki after mining</source>
-        <translation type="unfinished" />
+        <translation>Toplamadan sonra Anki'yi eşitle</translation>
     </message>
     <message>
         <source>After a run that added cards, ask Anki to sync with AnkiWeb. If the sync fails, the Activity Log says so and the cards stay added.</source>
-        <translation type="unfinished" />
+        <translation>Kart ekleyen bir çalıştırmadan sonra Anki'den AnkiWeb ile eşitlemesini iste. Eşitleme başarısız olursa Etkinlik Günlüğü bunu bildirir ve kartlar eklenmiş olarak kalır.</translation>
     </message>
     <message>
         <source>AnkiConnect URL</source>
@@ -803,7 +805,7 @@ Delete them from Anki? Their review history is deleted with them. This cannot be
     </message>
     <message>
         <source>If AnkiConnect asks for an API key, add it to the address: http://127.0.0.1:8765/?key=YOUR_KEY</source>
-        <translation type="unfinished" />
+        <translation>AnkiConnect bir API anahtarı isterse adrese ekleyin: http://127.0.0.1:8765/?key=YOUR_KEY</translation>
     </message>
     <message>
         <source>Fill in automatically</source>
@@ -1515,7 +1517,7 @@ Desteklenen biçimler: AJT (index.json + media/), NHK16 (entries.json + audio/),
     </message>
     <message>
         <source>Wikimedia Commons (native recordings)</source>
-        <translation type="unfinished" />
+        <translation>Wikimedia Commons (ana dili konuşanların kayıtları)</translation>
     </message>
     <message>
         <source>Custom JSON</source>
@@ -2083,7 +2085,7 @@ Hiçbir dizin dosyası silinmez.</translation>
     </message>
     <message>
         <source>Every audio file in the folder, in file-name order, one .srt each. A folder of book folders (each with its EPUB and audio) syncs every book in turn.</source>
-        <translation type="unfinished" />
+        <translation>Klasördeki her ses dosyası, dosya adı sırasıyla, her biri için bir .srt. Kitap klasörlerinden oluşan bir klasör (her birinde EPUB'ı ve sesiyle) her kitabı sırayla eşitler.</translation>
     </message>
     <message>
         <source>EPUB or Text File:</source>
@@ -2111,7 +2113,7 @@ Hiçbir dizin dosyası silinmez.</translation>
     </message>
     <message>
         <source>Sentences: how many of the book's sentences, from the first one found to the last, got a subtitle. Audio: how much of the narration matched the book. Grade: A from 90% on both, B from 75%, C from 50%, else D.</source>
-        <translation type="unfinished" />
+        <translation>Cümleler: kitabın bulunan ilk cümlesinden sonuncusuna kadar kaç cümlenin altyazı aldığı. Ses: anlatımın ne kadarının kitapla eşleştiği. Not: ikisinde de yüzde 90 ve üzeri A, yüzde 75 ve üzeri B, yüzde 50 ve üzeri C, aksi halde D.</translation>
     </message>
     <message>
         <source>Output</source>
@@ -2175,7 +2177,7 @@ Hiçbir dizin dosyası silinmez.</translation>
     </message>
     <message>
         <source>No audio files were found in that folder, and no book folders (each with its book and audio).</source>
-        <translation type="unfinished" />
+        <translation>O klasörde ne ses dosyası ne de kitap klasörü (her birinde kitabı ve sesiyle) bulundu.</translation>
     </message>
     <message>
         <source>That folder could not be scanned.</source>
@@ -2183,15 +2185,15 @@ Hiçbir dizin dosyası silinmez.</translation>
     </message>
     <message>
         <source>Skipped folder %1: no audio files</source>
-        <translation type="unfinished" />
+        <translation>%1 klasörü atlandı: ses dosyası yok</translation>
     </message>
     <message>
         <source>Skipped folder %1: no .epub or .txt book</source>
-        <translation type="unfinished" />
+        <translation>%1 klasörü atlandı: .epub veya .txt kitap yok</translation>
     </message>
     <message>
         <source>Skipped folder %1: more than one book</source>
-        <translation type="unfinished" />
+        <translation>%1 klasörü atlandı: birden fazla kitap var</translation>
     </message>
     <message>
         <source>Output folder is not writable.</source>
@@ -2211,11 +2213,11 @@ Hiçbir dizin dosyası silinmez.</translation>
     </message>
     <message>
         <source>Books: %1 — %2</source>
-        <translation type="unfinished" />
+        <translation>Kitaplar: %1 — %2</translation>
     </message>
     <message>
         <source>%1: sentences %2%, audio %3% — grade %4</source>
-        <translation type="unfinished" />
+        <translation>%1: cümleler %2%, ses %3% — not %4</translation>
     </message>
     <message>
         <source>Syncing file %1 of %2</source>
@@ -2229,11 +2231,11 @@ Hiçbir dizin dosyası silinmez.</translation>
     </message>
     <message>
         <source>%1 could not be loaded: %2</source>
-        <translation type="unfinished" />
+        <translation>%1 yüklenemedi: %2</translation>
     </message>
     <message>
         <source>Its book could not be loaded</source>
-        <translation type="unfinished" />
+        <translation>Kitabı yüklenemedi</translation>
     </message>
     <message>
         <source>Skipped, exists</source>
@@ -2253,11 +2255,11 @@ Hiçbir dizin dosyası silinmez.</translation>
     </message>
     <message>
         <source>Reusing the saved transcript</source>
-        <translation type="unfinished" />
+        <translation>Kaydedilmiş transkript yeniden kullanılıyor</translation>
     </message>
     <message>
         <source>Found sentence %1 again later in the audio; timed it out of book order</source>
-        <translation type="unfinished" />
+        <translation>%1. cümle seste daha sonra yeniden bulundu; kitap sırası dışında zamanlandı</translation>
     </message>
     <message>
         <source>%1 sentences timed, %2 in between had no audio</source>
@@ -2339,7 +2341,7 @@ Hiçbir dizin dosyası silinmez.</translation>
     </message>
     <message>
         <source>Approve or reject each word, pick its sentence and scene, trim its audio, mark words known, and fix a mistranscribed sentence or swap the word to mine -- before any card is created. When a word has entries in several dictionaries, choose which one the card's Definition uses.</source>
-        <translation type="unfinished" />
+        <translation>Herhangi bir kart oluşturulmadan önce her kelimeyi onaylayın veya reddedin, cümlesini ve sahnesini seçin, sesini kırpın, kelimeleri bilinen olarak işaretleyin ve yanlış yazıya dökülmüş bir cümleyi düzeltin ya da toplanacak kelimeyi değiştirin. Bir kelimenin birden fazla sözlükte girdisi varsa kartın Tanım alanının hangisini kullanacağını seçin.</translation>
     </message>
     <message>
         <source>Secondary-language subtitles</source>
@@ -2347,7 +2349,7 @@ Hiçbir dizin dosyası silinmez.</translation>
     </message>
     <message>
         <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. Leave the file empty and Anki Miner picks a translation itself: a subtitle named for the video, or a text track inside it, in your interface language or else English. The Activity Log names the track it used. On Video → Batch, point it at a folder of translation subtitles instead and they pair to the videos by episode number. Turn it on under Settings → Sentences.</source>
-        <translation type="unfinished" />
+        <translation>Toplama dilindeki altyazının yanına kendi dilinizde ikinci bir altyazı dosyası yükleyin: Kelime Düzenleyici önizlemesinde satırın altında görünür ve bir Çeviri alanına kaydedilebilir. Dosyayı boş bırakırsanız Anki Miner çeviriyi kendisi seçer: arayüz dilinizde, yoksa İngilizce olarak, videoyla aynı adı taşıyan bir altyazı ya da videonun içindeki bir metin parçası. Etkinlik Günlüğü kullanılan parçanın adını verir. Video → Toplu'da bunun yerine bir çeviri altyazıları klasörü gösterin; altyazılar videolarla bölüm numarasına göre eşleşir. Ayarlar → Cümleler altından açın.</translation>
     </message>
     <message>
         <source>Build a deck by coverage %</source>
@@ -2383,11 +2385,11 @@ Hiçbir dizin dosyası silinmez.</translation>
     </message>
     <message>
         <source>Mine songs from .lrc lyrics</source>
-        <translation type="unfinished" />
+        <translation>Şarkıları .lrc şarkı sözlerinden toplayın</translation>
     </message>
     <message>
         <source>Use a .lrc lyrics file wherever a subtitle file goes. Each line lasts until the next one starts. Pair a song with its lyrics on Audiobooks, condense it in Condense, or mine a music video on Video.</source>
-        <translation type="unfinished" />
+        <translation>Altyazı dosyası kullanılan her yerde bir .lrc şarkı sözü dosyası kullanın. Her satır bir sonraki başlayana kadar sürer. Bir şarkıyı Sesli Kitaplar'da sözleriyle eşleştirin, Yoğunlaştır'da yoğunlaştırın ya da Video'da bir müzik videosundan toplayın.</translation>
     </message>
     <message>
         <source>Mine from manga</source>
@@ -2403,23 +2405,23 @@ Hiçbir dizin dosyası silinmez.</translation>
     </message>
     <message>
         <source>Mine vocabulary from novels and other text (EPUB, PDF, Aozora, plain text).</source>
-        <translation type="unfinished" />
+        <translation>Romanlardan ve diğer metinlerden (EPUB, PDF, Aozora, düz metin) kelime toplayın.</translation>
     </message>
     <message>
         <source>Readings from a book's own furigana</source>
-        <translation type="unfinished" />
+        <translation>Kitabın kendi furiganasından okunuşlar</translation>
     </message>
     <message>
         <source>When a Japanese EPUB prints furigana over a word, the card takes that reading instead of the parser's guess.</source>
-        <translation type="unfinished" />
+        <translation>Japonca bir EPUB bir kelimenin üzerinde furigana gösterdiğinde kart, ayrıştırıcının tahmini yerine o okunuşu alır.</translation>
     </message>
     <message>
         <source>Mine pasted text or a web article</source>
-        <translation type="unfinished" />
+        <translation>Yapıştırılan metinden veya bir web makalesinden toplayın</translation>
     </message>
     <message>
         <source>Paste text in your mining language, or fetch a web article by its address, and mine it into Anki cards. A fetched article's cards name the page and site as their source.</source>
-        <translation type="unfinished" />
+        <translation>Toplama dilinizde metin yapıştırın ya da bir web makalesini adresinden getirin ve Anki kartlarına toplayın. Getirilen bir makalenin kartları kaynak olarak sayfayı ve siteyi gösterir.</translation>
     </message>
     <message>
         <source>Mine subtitle files without video</source>
@@ -2443,7 +2445,7 @@ Hiçbir dizin dosyası silinmez.</translation>
     </message>
     <message>
         <source>Create subtitles from audio with a local Whisper model -- as a standalone tool. Long lines are split at sentence ends, and a second run on the same file reuses the saved transcript.</source>
-        <translation type="unfinished" />
+        <translation>Yerel bir Whisper modeliyle sesten altyazı oluşturun — bağımsız bir araç olarak. Uzun satırlar cümle sonlarından bölünür ve aynı dosyada ikinci çalıştırma kaydedilmiş transkripti yeniden kullanır.</translation>
     </message>
     <message>
         <source>Re-time existing subtitles</source>
@@ -2503,35 +2505,35 @@ Hiçbir dizin dosyası silinmez.</translation>
     </message>
     <message>
         <source>Browse your whole mining history</source>
-        <translation type="unfinished" />
+        <translation>Tüm toplama geçmişinize göz atın</translation>
     </message>
     <message>
         <source>Analytics lists every run you have mined. Pick a period, group the runs by day, week or month, see the cards per period in a chart, and export the table as a CSV file.</source>
-        <translation type="unfinished" />
+        <translation>Analiz, yaptığınız her toplama çalıştırmasını listeler. Bir dönem seçin, çalıştırmaları güne, haftaya veya aya göre gruplayın, dönem başına kartları bir grafikte görün ve tabloyu CSV dosyası olarak dışa aktarın.</translation>
     </message>
     <message>
         <source>Show or delete a past run's cards</source>
-        <translation type="unfinished" />
+        <translation>Geçmiş bir çalıştırmanın kartlarını gösterin veya silin</translation>
     </message>
     <message>
         <source>Select a run in Analytics → Mining History to open its cards in Anki's browser or to delete them. The confirmation says how many of its cards are still in Anki and how many you have reviewed. Runs mined before this version have no card list.</source>
-        <translation type="unfinished" />
+        <translation>Kartlarını Anki'nin tarayıcısında açmak veya silmek için Analiz → Toplama Geçmişi'nde bir çalıştırma seçin. Onay penceresi kartlarından kaçının hâlâ Anki'de olduğunu ve kaçını tekrar ettiğinizi söyler. Bu sürümden önce toplanan çalıştırmaların kart listesi yoktur.</translation>
     </message>
     <message>
         <source>Track how many words you know</source>
-        <translation type="unfinished" />
+        <translation>Kaç kelime bildiğinizi izleyin</translation>
     </message>
     <message>
         <source>The Known Words card on Analytics counts the words Anki Miner treats as known in the current mining language and shows how that number changed. It is counted while Anki is running, at most once every ten minutes.</source>
-        <translation type="unfinished" />
+        <translation>Analiz'deki Bilinen Kelimeler kartı, Anki Miner'ın geçerli toplama dilinde bilinen saydığı kelimeleri sayar ve bu sayının nasıl değiştiğini gösterir. Sayım Anki çalışırken, en fazla on dakikada bir yapılır.</translation>
     </message>
     <message>
         <source>See how much of a frequency list you know</source>
-        <translation type="unfinished" />
+        <translation>Bir sıklık listesinin ne kadarını bildiğinizi görün</translation>
     </message>
     <message>
         <source>Analytics → Frequency Coverage counts the words you know in ranks 1–1,000 up to 20,000 of your first frequency list with numeric ranks, and lists the missing words of each band. It needs Anki running.</source>
-        <translation type="unfinished" />
+        <translation>Analiz → Sıklık Kapsamı, sayısal sıraları olan ilk sıklık listenizin 1–1.000 ile 20.000'e kadarki sıralarında bildiğiniz kelimeleri sayar ve her aralığın eksik kelimelerini listeler. Anki'nin çalışıyor olması gerekir.</translation>
     </message>
     <message>
         <source>Reset mining statistics</source>
@@ -2607,11 +2609,11 @@ Hiçbir dizin dosyası silinmez.</translation>
     </message>
     <message>
         <source>Count a word as known only after its card has been reviewed</source>
-        <translation type="unfinished" />
+        <translation>Bir kelimeyi yalnızca kartı tekrar edildikten sonra bilinen say</translation>
     </message>
     <message>
         <source>Readability and the i+1 sentence rule then count a word as known only when its Anki card has been reviewed at least once. Mining still skips every word that already has a card.</source>
-        <translation type="unfinished" />
+        <translation>Bu durumda Okunabilirlik ve i+1 cümle kuralı, bir kelimeyi yalnızca Anki kartı en az bir kez tekrar edildiğinde bilinen sayar. Toplama, kartı olan her kelimeyi yine atlar.</translation>
     </message>
     <message>
         <source>Exclude specific Anki decks from 'known'</source>
@@ -2631,27 +2633,27 @@ Hiçbir dizin dosyası silinmez.</translation>
     </message>
     <message>
         <source>Browse every known word</source>
-        <translation type="unfinished" />
+        <translation>Bilinen tüm kelimelere göz atın</translation>
     </message>
     <message>
         <source>Manage Known Words lists every word this language counts as known, with where it came from (added by you, mined by Anki Miner, from Anki) and the date it was added. Search it, filter it by source, and remove words you added. Words from Anki come back on the next sync.</source>
-        <translation type="unfinished" />
+        <translation>Bilinen Kelimeleri Yönet, bu dilin bilinen saydığı her kelimeyi nereden geldiğiyle (sizin eklediğiniz, Anki Miner'ın topladığı, Anki'den gelen) ve eklendiği tarihle listeler. Listede arama yapın, kaynağa göre filtreleyin ve eklediğiniz kelimeleri kaldırın. Anki'den gelen kelimeler bir sonraki eşitlemede geri gelir.</translation>
     </message>
     <message>
         <source>Import known words from Kindle, Lute or LWT</source>
-        <translation type="unfinished" />
+        <translation>Bilinen kelimeleri Kindle, Lute veya LWT'den içe aktarın</translation>
     </message>
     <message>
         <source>In Manage Known Words, Import… also reads a Kindle Vocabulary Builder file (vocab.db; words marked mastered) and Lute or LWT term exports (status 5 and 99).</source>
-        <translation type="unfinished" />
+        <translation>Bilinen Kelimeleri Yönet'te İçe aktar… ayrıca bir Kindle Vocabulary Builder dosyasını (vocab.db; öğrenildi olarak işaretlenen kelimeler) ve Lute veya LWT terim dışa aktarımlarını (durum 5 ve 99) okur.</translation>
     </message>
     <message>
         <source>Export words to a CSV file</source>
-        <translation type="unfinished" />
+        <translation>Kelimeleri CSV dosyasına aktarın</translation>
     </message>
     <message>
         <source>Export words… saves the list you are looking at in Manage Known Words, or a finished run's mined and not-mined words with the reason each was skipped, as a CSV file.</source>
-        <translation type="unfinished" />
+        <translation>Kelimeleri dışa aktar…, Bilinen Kelimeleri Yönet'te baktığınız listeyi ya da biten bir çalıştırmanın toplanan ve toplanmayan kelimelerini her birinin atlanma nedeniyle birlikte CSV dosyası olarak kaydeder.</translation>
     </message>
     <message>
         <source>Exclude kana-only words</source>
@@ -2683,23 +2685,23 @@ Hiçbir dizin dosyası silinmez.</translation>
     </message>
     <message>
         <source>Mine at most one word from each example sentence. A word whose sentence is taken moves to another line it appears on, and is skipped only when every one of its lines is taken.</source>
-        <translation type="unfinished" />
+        <translation>Her örnek cümleden en fazla bir kelime toplayın. Cümlesi alınmış bir kelime geçtiği başka bir satıra kayar ve yalnızca tüm satırları alınmışsa atlanır.</translation>
     </message>
     <message>
         <source>Pick the clearest sentence</source>
-        <translation type="unfinished" />
+        <translation>En anlaşılır cümleyi seç</translation>
     </message>
     <message>
         <source>When a word appears on several lines, its card uses the line with the fewest unknown words and a comfortable length instead of the first one. The Word Curator still lists every line.</source>
-        <translation type="unfinished" />
+        <translation>Bir kelime birkaç satırda geçtiğinde kartı, ilk satır yerine en az bilinmeyen kelimeyi içeren ve rahat uzunluktaki satırı kullanır. Kelime Düzenleyici yine her satırı listeler.</translation>
     </message>
     <message>
         <source>Skip openings, endings and signs</source>
-        <translation type="unfinished" />
+        <translation>Açılışları, kapanışları ve tabelaları atla</translation>
     </message>
     <message>
         <source>Leave opening and ending songs, previews and on-screen signs out of mining, Condense and Readability: lines styled as songs or signs, and lines inside a video's opening, ending and preview chapters. On by default for new installs; turn it off in Settings → Sentences.</source>
-        <translation type="unfinished" />
+        <translation>Açılış ve kapanış şarkılarını, fragmanları ve ekrandaki tabelaları toplamanın, Yoğunlaştır'ın ve Okunabilirlik'in dışında tutun: şarkı veya tabela biçemindeki satırlar ile bir videonun açılış, kapanış ve fragman bölümlerindeki satırlar. Yeni kurulumlarda varsayılan olarak açıktır; Ayarlar → Cümleler'den kapatın.</translation>
     </message>
     <message>
         <source>Strip junk from subtitles (regex)</source>
@@ -2767,11 +2769,11 @@ Hiçbir dizin dosyası silinmez.</translation>
     </message>
     <message>
         <source>Import a dictionary file</source>
-        <translation type="unfinished" />
+        <translation>Bir sözlük dosyasını içe aktarın</translation>
     </message>
     <message>
         <source>Add a Yomitan zip, a StarDict dictionary (its archive or its .ifo file) or a CSV/TSV word list (term and definition, or term, reading and definition) as a definition source.</source>
-        <translation type="unfinished" />
+        <translation>Bir Yomitan zip dosyasını, bir StarDict sözlüğünü (arşivini veya .ifo dosyasını) ya da bir CSV/TSV kelime listesini (terim ve tanım ya da terim, okunuş ve tanım) tanım kaynağı olarak ekleyin.</translation>
     </message>
     <message>
         <source>Keep dictionaries up to date</source>
@@ -2843,7 +2845,7 @@ Hiçbir dizin dosyası silinmez.</translation>
     </message>
     <message>
         <source>Attach word audio to cards from audio packs, JPod101 (Japanese), Google text-to-speech, or Microsoft Edge text-to-speech (every language). Wikimedia Commons plays recordings of real speakers from Wiktionary and Lingua Libre, tried before Google TTS in most languages.</source>
-        <translation type="unfinished" />
+        <translation>Kartlara ses paketlerinden, JPod101'den (Japonca), Google metin okumadan veya Microsoft Edge metin okumadan (her dil) kelime sesi ekleyin. Wikimedia Commons, Wiktionary ve Lingua Libre'den gerçek konuşmacıların kayıtlarını çalar ve çoğu dilde Google TTS'ten önce denenir.</translation>
     </message>
     <message>
         <source>Import local audio packs</source>
@@ -2859,7 +2861,7 @@ Hiçbir dizin dosyası silinmez.</translation>
     </message>
     <message>
         <source>Extract the spoken sentence as an audio clip; tune its format and bitrate. Even out audio volume brings sentence clips and condensed audio to one loudness and fades each clip in and out.</source>
-        <translation type="unfinished" />
+        <translation>Söylenen cümleyi bir ses klibi olarak çıkarın; biçimini ve bit hızını ayarlayın. Ses düzeyini eşitle, cümle kliplerini ve yoğun sesi tek bir ses yüksekliğine getirir ve her klibe giriş ve çıkış geçişi uygular.</translation>
     </message>
     <message>
         <source>Sentence audio for reading (TTS)</source>
@@ -2883,7 +2885,7 @@ Hiçbir dizin dosyası silinmez.</translation>
     </message>
     <message>
         <source>Capture a still frame from the scene to put on the card. Crop manga pictures to the speech bubble shows the bubble and the art around it instead of the whole page.</source>
-        <translation type="unfinished" />
+        <translation>Karta koymak için sahneden bir durağan kare yakalayın. Manga resimlerini konuşma balonuna kırp, sayfanın tamamı yerine balonu ve çevresindeki çizimi gösterir.</translation>
     </message>
     <message>
         <source>Animated clips (GIF/WebP)</source>
@@ -2963,7 +2965,7 @@ Hiçbir dizin dosyası silinmez.</translation>
     </message>
     <message>
         <source>Add tags to every note Anki Miner creates. Card tags can use {series}, {episode} and {volume}. Each card gets its own show, episode or book volume, for example mined::{series}::{episode} gives mined::Frieren::03.</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner'ın oluşturduğu her nota etiket ekleyin. Kart etiketleri {series}, {episode} ve {volume} kullanabilir. Her kart kendi dizisini, bölümünü veya kitap cildini alır; örneğin mined::{series}::{episode}, mined::Frieren::03 olur.</translation>
     </message>
     <message>
         <source>Connect to Anki (AnkiConnect)</source>
@@ -2971,15 +2973,15 @@ Hiçbir dizin dosyası silinmez.</translation>
     </message>
     <message>
         <source>Set the AnkiConnect address; Refresh re-checks the connection to your running Anki. If AnkiConnect is set up with an API key, add it to the address: http://127.0.0.1:8765/?key=YOUR_KEY. Anki Miner sends it with every request and never writes it to the log.</source>
-        <translation type="unfinished" />
+        <translation>AnkiConnect adresini ayarlayın; Yenile, çalışan Anki'nizle bağlantıyı yeniden denetler. AnkiConnect bir API anahtarıyla kurulduysa anahtarı adrese ekleyin: http://127.0.0.1:8765/?key=YOUR_KEY. Anki Miner anahtarı her istekle gönderir ve asla günlüğe yazmaz.</translation>
     </message>
     <message>
         <source>Sync Anki after mining</source>
-        <translation type="unfinished" />
+        <translation>Toplamadan sonra Anki'yi eşitle</translation>
     </message>
     <message>
         <source>After a run that added cards, Anki Miner asks Anki to sync with AnkiWeb. If the sync fails, the Activity Log says so and the cards stay added.</source>
-        <translation type="unfinished" />
+        <translation>Kart ekleyen bir çalıştırmadan sonra Anki Miner, Anki'den AnkiWeb ile eşitlemesini ister. Eşitleme başarısız olursa Etkinlik Günlüğü bunu bildirir ve kartlar eklenmiş olarak kalır.</translation>
     </message>
     <message>
         <source>Fill in field mappings automatically</source>
@@ -3067,7 +3069,7 @@ Hiçbir dizin dosyası silinmez.</translation>
     </message>
     <message>
         <source>Draw a box where a video's on-screen dialogue appears and Anki Miner reads it into a timed .srt that Video → Single can mine. Made for game longplays without commentary. It also reads image subtitles (Blu-ray .sup, DVD .idx/.sub, or an image track inside a video) without a box. Lines with none of your mining language's letters are left out. Download the OCR engine from the setup card on Utilities → Video OCR.</source>
-        <translation type="unfinished" />
+        <translation>Bir videonun ekrandaki diyaloğunun göründüğü yere bir kutu çizin; Anki Miner onu Video → Tekli'nin toplayabileceği zamanlanmış bir .srt dosyasına okur. Yorumsuz oyun oynanışı videoları için yapılmıştır. Görüntü altyazılarını (Blu-ray .sup, DVD .idx/.sub ya da videonun içindeki bir görüntü parçası) kutu olmadan da okur. Toplama dilinizin harflerinden hiçbirini içermeyen satırlar dışarıda bırakılır. OCR motorunu Yardımcılar → Video OCR'daki kurulum kartından indirin.</translation>
     </message>
     <message>
         <source>Sync an audiobook to its EPUB</source>
@@ -3075,23 +3077,23 @@ Hiçbir dizin dosyası silinmez.</translation>
     </message>
     <message>
         <source>Transcribe an audiobook and time the book's own sentences to it, writing an .srt the Audiobook tab, Reading → Subtitle Files or a reader can use. A second run on the same audio reuses the saved transcript instead of transcribing again.</source>
-        <translation type="unfinished" />
+        <translation>Bir sesli kitabı yazıya dökün ve kitabın kendi cümlelerini ona göre zamanlayarak Sesli Kitaplar sekmesinin, Okuma → Altyazı Dosyaları'nın veya bir okuyucunun kullanabileceği bir .srt yazın. Aynı ses üzerinde ikinci çalıştırma, yeniden yazıya dökmek yerine kaydedilmiş transkripti kullanır.</translation>
     </message>
     <message>
         <source>Sync a shelf of audiobooks in one run</source>
-        <translation type="unfinished" />
+        <translation>Bir raf dolusu sesli kitabı tek çalıştırmada eşitleyin</translation>
     </message>
     <message>
         <source>In Utilities → Audiobook Sync, choose Folder and pick a folder that holds one folder per book, each with its EPUB (or text file) and its audio files. The books sync one after another, in name order.</source>
-        <translation type="unfinished" />
+        <translation>Yardımcılar → Kitap Eşitleme'de Klasör'ü seçin ve her kitap için bir klasör içeren, her birinde EPUB'ı (veya metin dosyası) ve ses dosyaları bulunan bir klasör seçin. Kitaplar ad sırasıyla birbiri ardına eşitlenir.</translation>
     </message>
     <message>
         <source>See how well an audiobook synced</source>
-        <translation type="unfinished" />
+        <translation>Bir sesli kitabın ne kadar iyi eşitlendiğini görün</translation>
     </message>
     <message>
         <source>After Audiobook Sync, each book gets a line under the Book card: how many of its sentences got a subtitle, how much of the narration matched the book, and a grade from A to D. Chapters read out of book order are found too; sentences the narrator skipped never get a subtitle.</source>
-        <translation type="unfinished" />
+        <translation>Kitap Eşitleme'den sonra her kitap, Kitap kartının altında bir satır alır: cümlelerinden kaçının altyazı aldığı, anlatımın ne kadarının kitapla eşleştiği ve A'dan D'ye bir not. Kitap sırası dışında okunan bölümler de bulunur; anlatıcının atladığı cümleler hiçbir zaman altyazı almaz.</translation>
     </message>
     <message>
         <source>Check how much of a show, book or manga you can read</source>
@@ -3175,11 +3177,11 @@ Hiçbir dizin dosyası silinmez.</translation>
     </message>
     <message>
         <source>Restore an automatic backup</source>
-        <translation type="unfinished" />
+        <translation>Otomatik bir yedeği geri yükleyin</translation>
     </message>
     <message>
         <source>Anki Miner backs up your known words, statistics, settings and profiles once a day when it starts, and keeps the last 7 days. Settings → General → Restore a backup… puts one back the next time the app starts.</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner bilinen kelimelerinizi, istatistiklerinizi, ayarlarınızı ve profillerinizi günde bir kez, açılırken yedekler ve son 7 günü saklar. Ayarlar → Genel → Yedeği geri yükle… bir yedeği uygulama bir sonraki açılışında geri yükler.</translation>
     </message>
     <message>
         <source>Undo a mining run</source>
@@ -3191,11 +3193,11 @@ Hiçbir dizin dosyası silinmez.</translation>
     </message>
     <message>
         <source>Export a run's words</source>
-        <translation type="unfinished" />
+        <translation>Bir çalıştırmanın kelimelerini dışa aktarın</translation>
     </message>
     <message>
         <source>Press View details on a run's result line, then Export words… to save the run's mined and not-mined words, with the reason each was skipped, as a CSV file.</source>
-        <translation type="unfinished" />
+        <translation>Bir çalıştırmanın toplanan ve toplanmayan kelimelerini, her birinin atlanma nedeniyle birlikte CSV dosyası olarak kaydetmek için çalıştırmanın sonuç satırında Ayrıntıları görüntüle'ye, ardından Kelimeleri dışa aktar…'a basın.</translation>
     </message>
     <message>
         <source>Keyboard shortcuts</source>
@@ -4567,11 +4569,11 @@ Bu işlem %n notu (%1) değiştirecek ve onları %2 ile etiketleyecek. Devam edi
     </message>
     <message>
         <source>Choose dictionary files</source>
-        <translation type="unfinished" />
+        <translation>Sözlük dosyalarını seçin</translation>
     </message>
     <message>
         <source>Dictionaries (*.zip *.ifo *.tar.gz *.tgz *.tar.bz2 *.tar.xz *.csv *.tsv)</source>
-        <translation type="unfinished" />
+        <translation>Sözlükler (*.zip *.ifo *.tar.gz *.tgz *.tar.bz2 *.tar.xz *.csv *.tsv)</translation>
     </message>
     <message>
         <source>Dictionary %1 of %2: %3</source>
@@ -5405,8 +5407,8 @@ Diskteki hiçbir dosya silinmez.</translation>
     </message>
     <message numerus="yes">
         <source>Skipping lines in %n opening, ending or preview chapter(s)</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>%n açılış, kapanış veya fragman bölümündeki satırlar atlanıyor</numerusform>
         </translation>
     </message>
     <message>
@@ -5453,7 +5455,7 @@ Diskteki hiçbir dosya silinmez.</translation>
     </message>
     <message>
         <source>Only %1% of the first %2 words have an entry in your dictionaries. Is this file in the language you are mining?</source>
-        <translation type="unfinished" />
+        <translation>İlk %2 kelimenin yalnızca %1% kadarının sözlüklerinizde girdisi var. Bu dosya topladığınız dilde mi?</translation>
     </message>
     <message>
         <source>Frequency cutoff ignored — no ranked frequency source is loaded (Settings → Frequency).</source>
@@ -5561,11 +5563,11 @@ Diskteki hiçbir dosya silinmez.</translation>
     </message>
     <message>
         <source>Translation subtitles picked automatically: %1</source>
-        <translation type="unfinished" />
+        <translation>Çeviri altyazısı otomatik seçildi: %1</translation>
     </message>
     <message>
         <source>Translation subtitles picked automatically: embedded track %1</source>
-        <translation type="unfinished" />
+        <translation>Çeviri altyazısı otomatik seçildi: gömülü parça %1</translation>
     </message>
     <message>
         <source>Could not extract media for any word — no cards created</source>
@@ -5833,11 +5835,11 @@ Diskteki hiçbir dosya silinmez.</translation>
     </message>
     <message>
         <source>Count a word as known only after its card has been reviewed</source>
-        <translation type="unfinished" />
+        <translation>Bir kelimeyi yalnızca kartı tekrar edildikten sonra bilinen say</translation>
     </message>
     <message>
         <source>Readability and the i+1 sentence rule count a word as known only when its Anki card has been reviewed at least once. Mining still skips every word that already has a card.</source>
-        <translation type="unfinished" />
+        <translation>Okunabilirlik ve i+1 cümle kuralı, bir kelimeyi yalnızca Anki kartı en az bir kez tekrar edildiğinde bilinen sayar. Toplama, kartı olan her kelimeyi yine atlar.</translation>
     </message>
     <message>
         <source>Keep words known after their cards are deleted</source>
@@ -6499,15 +6501,15 @@ Hiçbir dizin dosyası silinmez.</translation>
     <name>KnownWordsManagerDialog</name>
     <message>
         <source>Word</source>
-        <translation type="unfinished" />
+        <translation>Kelime</translation>
     </message>
     <message>
         <source>Source</source>
-        <translation type="unfinished" />
+        <translation>Kaynak</translation>
     </message>
     <message>
         <source>Added</source>
-        <translation type="unfinished" />
+        <translation>Eklenme</translation>
     </message>
     <message>
         <source>Manage Known Words</source>
@@ -6519,7 +6521,7 @@ Hiçbir dizin dosyası silinmez.</translation>
     </message>
     <message>
         <source>Every word this language counts as known, and where it came from. Words you added from the Word Curator stay known on every run and across cache rebuilds.</source>
-        <translation type="unfinished" />
+        <translation>Bu dilin bilinen saydığı her kelime ve nereden geldiği. Kelime Düzenleyici'den eklediğiniz kelimeler her çalıştırmada ve önbellek yeniden oluşturulduğunda bilinen olarak kalır.</translation>
     </message>
     <message>
         <source>Decks this language's known-words scan skips: %1. Change them in Settings → Word Filters.</source>
@@ -6531,15 +6533,15 @@ Hiçbir dizin dosyası silinmez.</translation>
     </message>
     <message>
         <source>Added by you</source>
-        <translation type="unfinished" />
+        <translation>Sizin eklediğiniz</translation>
     </message>
     <message>
         <source>Mined by Anki Miner</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner'ın topladığı</translation>
     </message>
     <message>
         <source>From Anki</source>
-        <translation type="unfinished" />
+        <translation>Anki'den</translation>
     </message>
     <message>
         <source>Filter…</source>
@@ -6547,7 +6549,7 @@ Hiçbir dizin dosyası silinmez.</translation>
     </message>
     <message>
         <source>All sources</source>
-        <translation type="unfinished" />
+        <translation>Tüm kaynaklar</translation>
     </message>
     <message>
         <source>Rebuild Known Words DB</source>
@@ -6563,7 +6565,7 @@ Hiçbir dizin dosyası silinmez.</translation>
     </message>
     <message>
         <source>Removes words you added. Words from Anki come back on the next run, and mined words leave with Undo.</source>
-        <translation type="unfinished" />
+        <translation>Eklediğiniz kelimeleri kaldırır. Anki'den gelen kelimeler bir sonraki çalıştırmada geri gelir; toplanan kelimeler Geri al ile çıkar.</translation>
     </message>
     <message>
         <source>Import…</source>
@@ -6571,7 +6573,7 @@ Hiçbir dizin dosyası silinmez.</translation>
     </message>
     <message>
         <source>Export words…</source>
-        <translation type="unfinished" />
+        <translation>Kelimeleri dışa aktar…</translation>
     </message>
     <message>
         <source>Reset User List</source>
@@ -6603,11 +6605,11 @@ Hiçbir dizin dosyası silinmez.</translation>
     </message>
     <message>
         <source>Kindle Vocabulary Builder</source>
-        <translation type="unfinished" />
+        <translation>Kindle Vocabulary Builder</translation>
     </message>
     <message>
         <source>Lute or LWT term export</source>
-        <translation type="unfinished" />
+        <translation>Lute veya LWT terim dışa aktarımı</translation>
     </message>
     <message>
         <source>plain word list</source>
@@ -6619,7 +6621,7 @@ Hiçbir dizin dosyası silinmez.</translation>
     </message>
     <message>
         <source>Known word lists (*.csv *.tsv *.txt *.json *.db);;All Files (*)</source>
-        <translation type="unfinished" />
+        <translation>Bilinen kelime listeleri (*.csv *.tsv *.txt *.json *.db);;Tüm dosyalar (*)</translation>
     </message>
     <message>
         <source>Detected: %1 — every entry is imported.
@@ -6651,7 +6653,7 @@ Eklenecek kelimeler: %3. Devam edilsin mi?</translation>
     </message>
     <message>
         <source>This file has no words for %1. It contains: %2.</source>
-        <translation type="unfinished" />
+        <translation>Bu dosyada %1 için kelime yok. İçerdikleri: %2.</translation>
     </message>
     <message>
         <source>That file is too large to import.</source>
@@ -6667,7 +6669,7 @@ Eklenecek kelimeler: %3. Devam edilsin mi?</translation>
     </message>
     <message>
         <source>File format not recognized. Supported: jpdb review export (JSON), Migaku word export (JSON/CSV), AnkiMorphs known morphs (CSV), Kindle Vocabulary Builder (vocab.db), Lute or LWT term export (CSV/TSV), plain word lists (one word per line).</source>
-        <translation type="unfinished" />
+        <translation>Dosya biçimi tanınmadı. Desteklenenler: jpdb tekrar dışa aktarımı (JSON), Migaku kelime dışa aktarımı (JSON/CSV), AnkiMorphs bilinen morfemler (CSV), Kindle Vocabulary Builder (vocab.db), Lute veya LWT terim dışa aktarımı (CSV/TSV), düz kelime listeleri (her satırda bir kelime).</translation>
     </message>
     <message>
         <source>That file could not be imported.</source>
@@ -6689,7 +6691,7 @@ Eklenecek kelimeler: %3. Devam edilsin mi?</translation>
     </message>
     <message>
         <source>CSV files (*.csv);;Text files, one word per line (*.txt)</source>
-        <translation type="unfinished" />
+        <translation>CSV dosyaları (*.csv);;Her satırda bir kelime olan metin dosyaları (*.txt)</translation>
     </message>
     <message>
         <source>The known words list could not be exported.</source>
@@ -7437,7 +7439,7 @@ Devam edilsin mi?</translation>
     </message>
     <message>
         <source>Opus clips do not play in AnkiMobile on iPhone or iPad. Choose MP3 if you review there.</source>
-        <translation type="unfinished" />
+        <translation>Opus klipleri iPhone veya iPad'deki AnkiMobile'da çalmaz. Orada tekrar yapıyorsanız MP3'ü seçin.</translation>
     </message>
     <message>
         <source> kbps</source>
@@ -7465,11 +7467,11 @@ Devam edilsin mi?</translation>
     </message>
     <message>
         <source>Even out audio volume</source>
-        <translation type="unfinished" />
+        <translation>Ses düzeyini eşitle</translation>
     </message>
     <message>
         <source>Brings sentence clips and condensed audio to one volume and fades each clip in and out, so quiet and loud sources sound alike. Applies to new clips.</source>
-        <translation type="unfinished" />
+        <translation>Cümle kliplerini ve yoğun sesi tek bir ses düzeyine getirir ve her klibe giriş ve çıkış geçişi uygular; böylece sessiz ve yüksek kaynaklar aynı duyulur. Yeni kliplere uygulanır.</translation>
     </message>
     <message>
         <source>Text-to-speech</source>
@@ -7493,11 +7495,11 @@ Devam edilsin mi?</translation>
     </message>
     <message>
         <source>Crop manga pictures to the speech bubble</source>
-        <translation type="unfinished" />
+        <translation>Manga resimlerini konuşma balonuna kırp</translation>
     </message>
     <message>
         <source>Manga cards show the speech bubble and the art around it instead of the whole page. A sentence with no bubble position keeps the whole page.</source>
-        <translation type="unfinished" />
+        <translation>Manga kartları sayfanın tamamı yerine konuşma balonunu ve çevresindeki çizimi gösterir. Balon konumu olmayan bir cümle sayfanın tamamını korur.</translation>
     </message>
     <message>
         <source>Enable animated screenshots</source>
@@ -7733,7 +7735,7 @@ Devam edilsin mi?</translation>
     </message>
     <message>
         <source>Anki didn't sync after this run. Your cards are added; sync from Anki, or see the log for why.</source>
-        <translation type="unfinished" />
+        <translation>Anki bu çalıştırmadan sonra eşitlenmedi. Kartlarınız eklendi; Anki'den eşitleyin ya da nedenini görmek için günlüğe bakın.</translation>
     </message>
     <message>
         <source>Anki Miner couldn't open these cards in Anki.</source>
@@ -9498,7 +9500,7 @@ Hiçbir dizin dosyası silinmez.</translation>
     </message>
     <message>
         <source>An .epub, .txt or .pdf book, or a folder of books; each book is mined separately.</source>
-        <translation type="unfinished" />
+        <translation>Bir .epub, .txt veya .pdf kitap ya da kitaplardan oluşan bir klasör; her kitap ayrı ayrı toplanır.</translation>
     </message>
     <message>
         <source>Mine</source>
@@ -9534,7 +9536,7 @@ Hiçbir dizin dosyası silinmez.</translation>
     </message>
     <message>
         <source>Choose an .epub, .txt or .pdf book, or a folder of books.</source>
-        <translation type="unfinished" />
+        <translation>Bir .epub, .txt veya .pdf kitap ya da kitaplardan oluşan bir klasör seçin.</translation>
     </message>
     <message>
         <source>Starting…</source>
@@ -9600,7 +9602,7 @@ Hiçbir dizin dosyası silinmez.</translation>
     </message>
     <message>
         <source>Add subtitle files (.srt, .ass, .ssa, .vtt, .smi, .lrc) to the list.</source>
-        <translation type="unfinished" />
+        <translation>Listeye altyazı dosyaları (.srt, .ass, .ssa, .vtt, .smi, .lrc) ekleyin.</translation>
     </message>
     <message>
         <source>Remove Selected</source>
@@ -9781,19 +9783,19 @@ Hiçbir dizin dosyası silinmez.</translation>
     </message>
     <message>
         <source>Web addresses to fetch, one per line (https://…)</source>
-        <translation type="unfinished" />
+        <translation>Getirilecek web adresleri, her satırda bir tane (https://…)</translation>
     </message>
     <message>
         <source>Web addresses</source>
-        <translation type="unfinished" />
+        <translation>Web adresleri</translation>
     </message>
     <message>
         <source>Fetch</source>
-        <translation type="unfinished" />
+        <translation>Getir</translation>
     </message>
     <message>
         <source>Put the article text of each web address in the box below, to check before mining.</source>
-        <translation type="unfinished" />
+        <translation>Toplamadan önce kontrol etmek için her web adresinin makale metnini aşağıdaki kutuya koyar.</translation>
     </message>
     <message>
         <source>Paste the text you want to mine. Cards from pasted text have no sentence audio from a recording.</source>
@@ -9841,59 +9843,59 @@ Hiçbir dizin dosyası silinmez.</translation>
     </message>
     <message>
         <source>Each line must be a web address that starts with http:// or https://.</source>
-        <translation type="unfinished" />
+        <translation>Her satır http:// veya https:// ile başlayan bir web adresi olmalıdır.</translation>
     </message>
     <message>
         <source>Enter a web address first.</source>
-        <translation type="unfinished" />
+        <translation>Önce bir web adresi girin.</translation>
     </message>
     <message>
         <source>Fetch takes up to 10 web addresses at a time.</source>
-        <translation type="unfinished" />
+        <translation>Getir aynı anda en fazla 10 web adresi alır.</translation>
     </message>
     <message>
         <source>Fetching…</source>
-        <translation type="unfinished" />
+        <translation>Getiriliyor…</translation>
     </message>
     <message>
         <source>Could not fetch %1: %2</source>
-        <translation type="unfinished" />
+        <translation>%1 getirilemedi: %2</translation>
     </message>
     <message>
         <source>None of the pages could be fetched.</source>
-        <translation type="unfinished" />
+        <translation>Sayfaların hiçbiri getirilemedi.</translation>
     </message>
     <message>
         <source>Fetched %1.</source>
-        <translation type="unfinished" />
+        <translation>Getirildi: %1.</translation>
     </message>
     <message>
         <source>The pages could not be fetched.</source>
-        <translation type="unfinished" />
+        <translation>Sayfalar getirilemedi.</translation>
     </message>
     <message>
         <source>The page could not be reached. Check the address and your connection.</source>
-        <translation type="unfinished" />
+        <translation>Sayfaya ulaşılamadı. Adresi ve bağlantınızı kontrol edin.</translation>
     </message>
     <message>
         <source>The site did not send the page.</source>
-        <translation type="unfinished" />
+        <translation>Site sayfayı göndermedi.</translation>
     </message>
     <message>
         <source>This address is not a web page.</source>
-        <translation type="unfinished" />
+        <translation>Bu adres bir web sayfası değil.</translation>
     </message>
     <message>
         <source>This page is too large to read.</source>
-        <translation type="unfinished" />
+        <translation>Bu sayfa okunamayacak kadar büyük.</translation>
     </message>
     <message>
         <source>This is not a web address.</source>
-        <translation type="unfinished" />
+        <translation>Bu bir web adresi değil.</translation>
     </message>
     <message>
         <source>No article text found on this page. Pages that draw their text with JavaScript cannot be read.</source>
-        <translation type="unfinished" />
+        <translation>Bu sayfada makale metni bulunamadı. Metnini JavaScript ile çizen sayfalar okunamaz.</translation>
     </message>
     <message>
         <source>Paste some text first.</source>
@@ -9905,7 +9907,7 @@ Hiçbir dizin dosyası silinmez.</translation>
     </message>
     <message>
         <source>The fetched text was edited, so it is mined as one text without its page titles.</source>
-        <translation type="unfinished" />
+        <translation>Getirilen metin düzenlendiği için sayfa başlıkları olmadan tek bir metin olarak toplanır.</translation>
     </message>
     <message>
         <source>That picture cannot be read. Pick another, or remove it to mine without one.</source>
@@ -10691,7 +10693,7 @@ Hiçbir dizin dosyası silinmez.</translation>
     </message>
     <message>
         <source>Export words…</source>
-        <translation type="unfinished" />
+        <translation>Kelimeleri dışa aktar…</translation>
     </message>
     <message>
         <source>Close</source>
@@ -10705,19 +10707,19 @@ Hiçbir dizin dosyası silinmez.</translation>
     </message>
     <message>
         <source>Export Words</source>
-        <translation type="unfinished" />
+        <translation>Kelimeleri Dışa Aktar</translation>
     </message>
     <message>
         <source>CSV files (*.csv)</source>
-        <translation type="unfinished" />
+        <translation>CSV dosyaları (*.csv)</translation>
     </message>
     <message>
         <source>Words exported</source>
-        <translation type="unfinished" />
+        <translation>Kelimeler dışa aktarıldı</translation>
     </message>
     <message>
         <source>Export failed — try again</source>
-        <translation type="unfinished" />
+        <translation>Dışa aktarma başarısız — yeniden deneyin</translation>
     </message>
     <message>
         <source>Confirm Undo</source>
@@ -10921,11 +10923,11 @@ Hiçbir dizin dosyası silinmez.</translation>
     </message>
     <message>
         <source>Skip openings, endings and signs</source>
-        <translation type="unfinished" />
+        <translation>Açılışları, kapanışları ve tabelaları atla</translation>
     </message>
     <message>
         <source>Leaves out song lyrics, previews and on-screen signs: lines whose subtitle style marks them as a song or a sign, and lines inside a video's opening, ending or preview chapters. Applies to mining, Condense and Readability.</source>
-        <translation type="unfinished" />
+        <translation>Şarkı sözlerini, fragmanları ve ekrandaki tabelaları dışarıda bırakır: altyazı biçemi onları şarkı veya tabela olarak işaretleyen satırlar ile bir videonun açılış, kapanış veya fragman bölümlerindeki satırlar. Toplamaya, Yoğunlaştır'a ve Okunabilirlik'e uygulanır.</translation>
     </message>
     <message>
         <source>Sentence options</source>
@@ -10941,7 +10943,7 @@ Hiçbir dizin dosyası silinmez.</translation>
     </message>
     <message>
         <source>Mines at most one word per example sentence. A word whose sentence is already taken moves to another line it appears on, and is skipped only when every one of its lines is taken. Whitelisted words are still mined.</source>
-        <translation type="unfinished" />
+        <translation>Her örnek cümleden en fazla bir kelime toplar. Cümlesi zaten alınmış bir kelime geçtiği başka bir satıra kayar ve yalnızca tüm satırları alınmışsa atlanır. İzin listesindeki kelimeler yine toplanır.</translation>
     </message>
     <message>
         <source>Only i+1 sentences (exactly one unknown word)</source>
@@ -10957,11 +10959,11 @@ Hiçbir dizin dosyası silinmez.</translation>
     </message>
     <message>
         <source>Pick the clearest sentence for each word</source>
-        <translation type="unfinished" />
+        <translation>Her kelime için en anlaşılır cümleyi seç</translation>
     </message>
     <message>
         <source>When a word appears on several lines, its card uses the line with the fewest unknown words and a comfortable length instead of the first one. The Word Curator still lists every line, and card order does not change.</source>
-        <translation type="unfinished" />
+        <translation>Bir kelime birkaç satırda geçtiğinde kartı, ilk satır yerine en az bilinmeyen kelimeyi içeren ve rahat uzunluktaki satırı kullanır. Kelime Düzenleyici yine her satırı listeler ve kart sırası değişmez.</translation>
     </message>
     <message>
         <source> s</source>
@@ -13017,15 +13019,15 @@ Yüklü kaynaklarınız ve temanız korunur.</translation>
     </message>
     <message>
         <source>Restore a backup…</source>
-        <translation type="unfinished" />
+        <translation>Yedeği geri yükle…</translation>
     </message>
     <message>
         <source>Backups</source>
-        <translation type="unfinished" />
+        <translation>Yedekler</translation>
     </message>
     <message>
         <source>Anki Miner saves your known words, statistics, settings and profiles once a day when it starts, and keeps the last 7 days.</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner bilinen kelimelerinizi, istatistiklerinizi, ayarlarınızı ve profillerinizi günde bir kez, açılırken kaydeder ve son 7 günü saklar.</translation>
     </message>
     <message>
         <source>Themes</source>
@@ -13069,27 +13071,27 @@ Yüklü kaynaklarınız ve temanız korunur.</translation>
     </message>
     <message>
         <source>There is no backup yet. Anki Miner makes one each day when it starts.</source>
-        <translation type="unfinished" />
+        <translation>Henüz yedek yok. Anki Miner her gün açılırken bir yedek alır.</translation>
     </message>
     <message>
         <source>Restore a Backup</source>
-        <translation type="unfinished" />
+        <translation>Yedeği Geri Yükle</translation>
     </message>
     <message>
         <source>Restore the backup from:</source>
-        <translation type="unfinished" />
+        <translation>Şu tarihteki yedeği geri yükle:</translation>
     </message>
     <message>
         <source>Replace your known words, statistics, settings and profiles with the copies from %1? The restore runs the next time Anki Miner starts. Changes made after that backup are lost.</source>
-        <translation type="unfinished" />
+        <translation>Bilinen kelimeleriniz, istatistikleriniz, ayarlarınız ve profilleriniz %1 tarihli kopyalarla değiştirilsin mi? Geri yükleme Anki Miner bir sonraki açıldığında çalışır. O yedekten sonra yapılan değişiklikler kaybolur.</translation>
     </message>
     <message>
         <source>The restore could not be scheduled.</source>
-        <translation type="unfinished" />
+        <translation>Geri yükleme zamanlanamadı.</translation>
     </message>
     <message>
         <source>The backup from %1 will be restored when Anki Miner next starts.</source>
-        <translation type="unfinished" />
+        <translation>%1 tarihli yedek, Anki Miner bir sonraki açıldığında geri yüklenecek.</translation>
     </message>
 </context><context>
     <name>UpdateBanner</name>
@@ -13257,11 +13259,11 @@ Yüklü kaynaklarınız ve temanız korunur.</translation>
     </message>
     <message>
         <source>The picture (burned-in text)</source>
-        <translation type="unfinished" />
+        <translation>Görüntü (gömülü metin)</translation>
     </message>
     <message>
         <source>Image subtitle track %1</source>
-        <translation type="unfinished" />
+        <translation>Görüntü altyazı parçası %1</translation>
     </message>
     <message>
         <source>The OCR engine could not start on this computer. The details say why.</source>
@@ -13301,15 +13303,15 @@ Yüklü kaynaklarınız ve temanız korunur.</translation>
     </message>
     <message>
         <source>This field takes a video or an image subtitle file (.sup, .idx, .sub).</source>
-        <translation type="unfinished" />
+        <translation>Bu alan bir video veya görüntü altyazı dosyası (.sup, .idx, .sub) alır.</translation>
     </message>
     <message>
         <source>Read from:</source>
-        <translation type="unfinished" />
+        <translation>Okunacak kaynak:</translation>
     </message>
     <message>
         <source>Read text drawn into the picture, or one of the video's image subtitle tracks.</source>
-        <translation type="unfinished" />
+        <translation>Görüntüye çizilmiş metni ya da videonun görüntü altyazı parçalarından birini okuyun.</translation>
     </message>
     <message>
         <source>Video Folder:</source>
@@ -13393,7 +13395,7 @@ Yüklü kaynaklarınız ve temanız korunur.</translation>
     </message>
     <message>
         <source>Image subtitles are read over the whole frame, so they need no region.</source>
-        <translation type="unfinished" />
+        <translation>Görüntü altyazıları karenin tamamında okunur, bu yüzden bölge gerekmez.</translation>
     </message>
     <message>
         <source>Download OCR models</source>
@@ -13437,7 +13439,7 @@ Yüklü kaynaklarınız ve temanız korunur.</translation>
     </message>
     <message>
         <source>A DVD subtitle needs its .idx and .sub files in the same folder.</source>
-        <translation type="unfinished" />
+        <translation>Bir DVD altyazısının .idx ve .sub dosyalarının aynı klasörde olması gerekir.</translation>
     </message>
     <message>
         <source>Choose a folder before reading subtitles.</source>
@@ -13723,15 +13725,15 @@ Uzun bir kaydı sırayla ilerlemek için buna göre sıralayın — ardından ka
     </message>
     <message>
         <source>Used on the card</source>
-        <translation type="unfinished" />
+        <translation>Kartta kullanılıyor</translation>
     </message>
     <message>
         <source>Back to the first match</source>
-        <translation type="unfinished" />
+        <translation>İlk eşleşmeye dön</translation>
     </message>
     <message>
         <source>Use this dictionary on the card</source>
-        <translation type="unfinished" />
+        <translation>Kartta bu sözlüğü kullan</translation>
     </message>
     <message>
         <source>Sentences (%1)</source>
@@ -14169,7 +14171,7 @@ Uzun bir kaydı sırayla ilerlemek için buna göre sıralayın — ardından ka
     </message>
     <message>
         <source>Wikimedia Commons (native recordings)</source>
-        <translation type="unfinished" />
+        <translation>Wikimedia Commons (ana dili konuşanların kayıtları)</translation>
     </message>
     <message>
         <source>Microsoft Edge read-aloud (synthetic TTS)</source>
@@ -14183,7 +14185,7 @@ Uzun bir kaydı sırayla ilerlemek için buna göre sıralayın — ardından ka
     <name>_BarChart</name>
     <message>
         <source>Cards per period</source>
-        <translation type="unfinished" />
+        <translation>Dönem başına kartlar</translation>
     </message>
 </context><context>
     <name>_HealthRow</name>
@@ -14205,11 +14207,11 @@ Uzun bir kaydı sırayla ilerlemek için buna göre sıralayın — ardından ka
     <name>_MissingWordsDialog</name>
     <message>
         <source>Missing Words</source>
-        <translation type="unfinished" />
+        <translation>Eksik Kelimeler</translation>
     </message>
     <message>
         <source>Not known yet in ranks %1</source>
-        <translation type="unfinished" />
+        <translation>%1 sıralarında henüz bilinmeyenler</translation>
     </message>
 </context><context>
     <name>app</name>

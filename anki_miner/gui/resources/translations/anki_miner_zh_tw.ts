@@ -93,59 +93,59 @@
     </message>
     <message>
         <source>Known Words</source>
-        <translation type="unfinished" />
+        <translation>已知單字</translation>
     </message>
     <message>
         <source>Words Anki Miner treats as known in the current mining language.</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner 在目前採集語言中視為已知的單字。</translation>
     </message>
     <message>
         <source>Mining History</source>
-        <translation type="unfinished" />
+        <translation>採集紀錄</translation>
     </message>
     <message>
         <source>History period</source>
-        <translation type="unfinished" />
+        <translation>紀錄期間</translation>
     </message>
     <message>
         <source>All time</source>
-        <translation type="unfinished" />
+        <translation>全部時間</translation>
     </message>
     <message>
         <source>Last 7 days</source>
-        <translation type="unfinished" />
+        <translation>最近 7 天</translation>
     </message>
     <message>
         <source>Last 30 days</source>
-        <translation type="unfinished" />
+        <translation>最近 30 天</translation>
     </message>
     <message>
         <source>Last 12 months</source>
-        <translation type="unfinished" />
+        <translation>最近 12 個月</translation>
     </message>
     <message>
         <source>History grouping</source>
-        <translation type="unfinished" />
+        <translation>紀錄分組</translation>
     </message>
     <message>
         <source>Each run</source>
-        <translation type="unfinished" />
+        <translation>每次執行</translation>
     </message>
     <message>
         <source>By day</source>
-        <translation type="unfinished" />
+        <translation>按日</translation>
     </message>
     <message>
         <source>By week</source>
-        <translation type="unfinished" />
+        <translation>按週</translation>
     </message>
     <message>
         <source>By month</source>
-        <translation type="unfinished" />
+        <translation>按月</translation>
     </message>
     <message>
         <source>Export CSV…</source>
-        <translation type="unfinished" />
+        <translation>匯出 CSV…</translation>
     </message>
     <message>
         <source>No sessions yet — process an episode to see your history.</source>
@@ -177,7 +177,7 @@
     </message>
     <message>
         <source>Period</source>
-        <translation type="unfinished" />
+        <translation>期間</translation>
     </message>
     <message>
         <source>Show in Anki</source>
@@ -185,7 +185,7 @@
     </message>
     <message>
         <source>Delete this run's cards…</source>
-        <translation type="unfinished" />
+        <translation>刪除此次執行的卡片…</translation>
     </message>
     <message>
         <source>Series Difficulty Ranking</source>
@@ -217,11 +217,11 @@
     </message>
     <message>
         <source>Frequency Coverage</source>
-        <translation type="unfinished" />
+        <translation>頻率涵蓋率</translation>
     </message>
     <message>
         <source>Rank band</source>
-        <translation type="unfinished" />
+        <translation>排名區間</translation>
     </message>
     <message>
         <source>Known</source>
@@ -229,15 +229,15 @@
     </message>
     <message>
         <source>Not known</source>
-        <translation type="unfinished" />
+        <translation>未知</translation>
     </message>
     <message>
         <source>Known %</source>
-        <translation type="unfinished" />
+        <translation>已知 %</translation>
     </message>
     <message>
         <source>Show missing words</source>
-        <translation type="unfinished" />
+        <translation>顯示缺少的單字</translation>
     </message>
     <message>
         <source>Milestones</source>
@@ -265,93 +265,95 @@
     </message>
     <message>
         <source>No runs in this period.</source>
-        <translation type="unfinished" />
+        <translation>此期間沒有執行紀錄。</translation>
     </message>
     <message>
         <source>Export Mining History</source>
-        <translation type="unfinished" />
+        <translation>匯出採集紀錄</translation>
     </message>
     <message>
         <source>CSV Files (*.csv);;All Files (*)</source>
-        <translation type="unfinished" />
+        <translation>CSV 檔案 (*.csv);;所有檔案 (*)</translation>
     </message>
     <message>
         <source>History saved to %1.</source>
-        <translation type="unfinished" />
+        <translation>紀錄已儲存至 %1。</translation>
     </message>
     <message>
         <source>The history could not be exported.</source>
-        <translation type="unfinished" />
+        <translation>無法匯出紀錄。</translation>
     </message>
     <message>
         <source>%1 (cards deleted: %2)</source>
-        <translation type="unfinished" />
+        <translation>%1（已刪除卡片：%2）</translation>
     </message>
     <message>
         <source>Select one run in the table.</source>
-        <translation type="unfinished" />
+        <translation>請在表格中選取一次執行。</translation>
     </message>
     <message>
         <source>This run's cards were deleted: %1.</source>
-        <translation type="unfinished" />
+        <translation>此次執行的卡片已刪除：%1。</translation>
     </message>
     <message>
         <source>Anki Miner has no card list for this run: it was mined before this version, or it made no cards.</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner 沒有此次執行的卡片清單：它是在此版本之前採集的，或者沒有產生任何卡片。</translation>
     </message>
     <message>
         <source>Anki Miner couldn't open this run's cards in Anki.</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner 無法在 Anki 中開啟此次執行的卡片。</translation>
     </message>
     <message>
         <source>None of this run's cards are in Anki any more.</source>
-        <translation type="unfinished" />
+        <translation>此次執行的卡片都已不在 Anki 中。</translation>
     </message>
     <message>
         <source>Delete This Run's Cards</source>
-        <translation type="unfinished" />
+        <translation>刪除此次執行的卡片</translation>
     </message>
     <message>
         <source>Cards this run added that are still in Anki: %1. Reviewed at least once: %2.
 
 Delete them from Anki? Their review history is deleted with them. This cannot be undone.</source>
-        <translation type="unfinished" />
+        <translation>此次執行新增且仍在 Anki 中的卡片：%1。至少複習過一次的：%2。
+
+要從 Anki 刪除這些卡片嗎？它們的複習紀錄會一併刪除。此操作無法復原。</translation>
     </message>
     <message>
         <source>Cards deleted from Anki: %1.</source>
-        <translation type="unfinished" />
+        <translation>已從 Anki 刪除的卡片：%1。</translation>
     </message>
     <message>
         <source>This run's cards could not be deleted.</source>
-        <translation type="unfinished" />
+        <translation>無法刪除此次執行的卡片。</translation>
     </message>
     <message>
         <source>Known words could not be counted.</source>
-        <translation type="unfinished" />
+        <translation>無法計算已知單字數量。</translation>
     </message>
     <message>
         <source>Words Anki Miner treats as known in %1.</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner 在%1中視為已知的單字。</translation>
     </message>
     <message>
         <source>Change since %1: %2</source>
-        <translation type="unfinished" />
+        <translation>自 %1 以來的變化：%2</translation>
     </message>
     <message>
         <source>Last counted on %1; Anki was not reachable.</source>
-        <translation type="unfinished" />
+        <translation>上次計算於 %1；當時無法連線至 Anki。</translation>
     </message>
     <message>
         <source>Last counted on %1.</source>
-        <translation type="unfinished" />
+        <translation>上次計算於 %1。</translation>
     </message>
     <message>
         <source>Coverage needs Anki running: it compares the list with your cards.</source>
-        <translation type="unfinished" />
+        <translation>涵蓋率需要 Anki 正在執行：它會將清單與您的卡片比對。</translation>
     </message>
     <message>
         <source>How many of the most frequent words in %1 you already know.</source>
-        <translation type="unfinished" />
+        <translation>%1 中最常用的單字裡，您已經認識多少。</translation>
     </message>
     <message>
         <source>%1 mining sessions completed</source>
@@ -759,7 +761,7 @@ Delete them from Anki? Their review history is deleted with them. This cannot be
     </message>
     <message>
         <source>{series}, {episode} and {volume} become each card's show, episode or book volume, for example mined::{series}::{episode}.</source>
-        <translation type="unfinished" />
+        <translation>{series}、{episode} 與 {volume} 會替換為每張卡片對應的作品名稱、集數或書籍卷數，例如 mined::{series}::{episode}。</translation>
     </message>
     <message>
         <source>Refresh</source>
@@ -787,11 +789,11 @@ Delete them from Anki? Their review history is deleted with them. This cannot be
     </message>
     <message>
         <source>Sync Anki after mining</source>
-        <translation type="unfinished" />
+        <translation>採集後同步 Anki</translation>
     </message>
     <message>
         <source>After a run that added cards, ask Anki to sync with AnkiWeb. If the sync fails, the Activity Log says so and the cards stay added.</source>
-        <translation type="unfinished" />
+        <translation>在新增了卡片的執行結束後，要求 Anki 與 AnkiWeb 同步。若同步失敗，活動記錄會註明，卡片仍會保留。</translation>
     </message>
     <message>
         <source>AnkiConnect URL</source>
@@ -803,7 +805,7 @@ Delete them from Anki? Their review history is deleted with them. This cannot be
     </message>
     <message>
         <source>If AnkiConnect asks for an API key, add it to the address: http://127.0.0.1:8765/?key=YOUR_KEY</source>
-        <translation type="unfinished" />
+        <translation>若 AnkiConnect 要求 API 金鑰，請將它加入位址：http://127.0.0.1:8765/?key=YOUR_KEY</translation>
     </message>
     <message>
         <source>Fill in automatically</source>
@@ -1515,7 +1517,7 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
     </message>
     <message>
         <source>Wikimedia Commons (native recordings)</source>
-        <translation type="unfinished" />
+        <translation>Wikimedia Commons（母語人士錄音）</translation>
     </message>
     <message>
         <source>Custom JSON</source>
@@ -2083,7 +2085,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Every audio file in the folder, in file-name order, one .srt each. A folder of book folders (each with its EPUB and audio) syncs every book in turn.</source>
-        <translation type="unfinished" />
+        <translation>資料夾中的每個音訊檔案會依檔名順序處理，各產生一個 .srt。若是由多個書籍資料夾組成的資料夾（每個都有自己的 EPUB 與音訊），會依序同步每本書。</translation>
     </message>
     <message>
         <source>EPUB or Text File:</source>
@@ -2111,7 +2113,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Sentences: how many of the book's sentences, from the first one found to the last, got a subtitle. Audio: how much of the narration matched the book. Grade: A from 90% on both, B from 75%, C from 50%, else D.</source>
-        <translation type="unfinished" />
+        <translation>句子：從找到的第一句到最後一句之間，書中有多少句子取得了字幕。音訊：朗讀中有多少與書相符。等級：兩項皆達 90% 為 A，75% 為 B，50% 為 C，否則為 D。</translation>
     </message>
     <message>
         <source>Output</source>
@@ -2175,7 +2177,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>No audio files were found in that folder, and no book folders (each with its book and audio).</source>
-        <translation type="unfinished" />
+        <translation>該資料夾中既找不到音訊檔案，也找不到書籍資料夾（每個都包含書與音訊）。</translation>
     </message>
     <message>
         <source>That folder could not be scanned.</source>
@@ -2183,15 +2185,15 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Skipped folder %1: no audio files</source>
-        <translation type="unfinished" />
+        <translation>已略過資料夾 %1：沒有音訊檔案</translation>
     </message>
     <message>
         <source>Skipped folder %1: no .epub or .txt book</source>
-        <translation type="unfinished" />
+        <translation>已略過資料夾 %1：沒有 .epub 或 .txt 書籍</translation>
     </message>
     <message>
         <source>Skipped folder %1: more than one book</source>
-        <translation type="unfinished" />
+        <translation>已略過資料夾 %1：包含多本書</translation>
     </message>
     <message>
         <source>Output folder is not writable.</source>
@@ -2211,11 +2213,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Books: %1 — %2</source>
-        <translation type="unfinished" />
+        <translation>書籍：%1 — %2</translation>
     </message>
     <message>
         <source>%1: sentences %2%, audio %3% — grade %4</source>
-        <translation type="unfinished" />
+        <translation>%1：句子 %2%，音訊 %3% — 等級 %4</translation>
     </message>
     <message>
         <source>Syncing file %1 of %2</source>
@@ -2229,11 +2231,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>%1 could not be loaded: %2</source>
-        <translation type="unfinished" />
+        <translation>無法載入 %1：%2</translation>
     </message>
     <message>
         <source>Its book could not be loaded</source>
-        <translation type="unfinished" />
+        <translation>無法載入對應的書</translation>
     </message>
     <message>
         <source>Skipped, exists</source>
@@ -2253,11 +2255,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Reusing the saved transcript</source>
-        <translation type="unfinished" />
+        <translation>正在重複使用已儲存的逐字稿</translation>
     </message>
     <message>
         <source>Found sentence %1 again later in the audio; timed it out of book order</source>
-        <translation type="unfinished" />
+        <translation>在音訊後段再次找到第 %1 句；已不依書中順序為其計時</translation>
     </message>
     <message>
         <source>%1 sentences timed, %2 in between had no audio</source>
@@ -2339,7 +2341,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Approve or reject each word, pick its sentence and scene, trim its audio, mark words known, and fix a mistranscribed sentence or swap the word to mine -- before any card is created. When a word has entries in several dictionaries, choose which one the card's Definition uses.</source>
-        <translation type="unfinished" />
+        <translation>在建立任何卡片之前，逐一核准或拒絕單字、選擇其例句與場景、修剪音訊、將單字標為已知，並修正轉錄錯誤的句子或更換要採集的單字。當一個單字在多部字典中都有條目時，可選擇卡片的釋義使用哪一部。</translation>
     </message>
     <message>
         <source>Secondary-language subtitles</source>
@@ -2347,7 +2349,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. Leave the file empty and Anki Miner picks a translation itself: a subtitle named for the video, or a text track inside it, in your interface language or else English. The Activity Log names the track it used. On Video → Batch, point it at a folder of translation subtitles instead and they pair to the videos by episode number. Turn it on under Settings → Sentences.</source>
-        <translation type="unfinished" />
+        <translation>在採集語言字幕之外，再載入一個您母語的字幕檔案：它會顯示在單字整理工具預覽中該行的下方，並可儲存至翻譯欄位。若留空，Anki Miner 會自行挑選翻譯：與影片同名的字幕，或影片內的文字軌，優先使用您的介面語言，否則使用英文。活動記錄會寫明所用的軌道。在影片 → 批次中，可改為指定一個翻譯字幕資料夾，字幕會依集數與影片配對。在設定 → 句子中開啟。</translation>
     </message>
     <message>
         <source>Build a deck by coverage %</source>
@@ -2383,11 +2385,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Mine songs from .lrc lyrics</source>
-        <translation type="unfinished" />
+        <translation>從 .lrc 歌詞採集歌曲</translation>
     </message>
     <message>
         <source>Use a .lrc lyrics file wherever a subtitle file goes. Each line lasts until the next one starts. Pair a song with its lyrics on Audiobooks, condense it in Condense, or mine a music video on Video.</source>
-        <translation type="unfinished" />
+        <translation>凡是可以使用字幕檔案的地方，都能使用 .lrc 歌詞檔案。每一行會持續到下一行開始。可在有聲書中將歌曲與歌詞配對、在濃縮中濃縮歌曲，或在影片中採集音樂影片。</translation>
     </message>
     <message>
         <source>Mine from manga</source>
@@ -2403,23 +2405,23 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Mine vocabulary from novels and other text (EPUB, PDF, Aozora, plain text).</source>
-        <translation type="unfinished" />
+        <translation>從小說與其他文字（EPUB、PDF、青空文庫、純文字）中採集詞彙。</translation>
     </message>
     <message>
         <source>Readings from a book's own furigana</source>
-        <translation type="unfinished" />
+        <translation>使用書中自帶的振假名作為讀音</translation>
     </message>
     <message>
         <source>When a Japanese EPUB prints furigana over a word, the card takes that reading instead of the parser's guess.</source>
-        <translation type="unfinished" />
+        <translation>當日文 EPUB 在單字上方標有振假名時，卡片會採用該讀音，而不是解析器的推測。</translation>
     </message>
     <message>
         <source>Mine pasted text or a web article</source>
-        <translation type="unfinished" />
+        <translation>從貼上的文字或網頁文章採集</translation>
     </message>
     <message>
         <source>Paste text in your mining language, or fetch a web article by its address, and mine it into Anki cards. A fetched article's cards name the page and site as their source.</source>
-        <translation type="unfinished" />
+        <translation>貼上採集語言的文字，或依網址抓取網頁文章，再將其採集為 Anki 卡片。抓取的文章所產生的卡片會將頁面與網站標為來源。</translation>
     </message>
     <message>
         <source>Mine subtitle files without video</source>
@@ -2443,7 +2445,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Create subtitles from audio with a local Whisper model -- as a standalone tool. Long lines are split at sentence ends, and a second run on the same file reuses the saved transcript.</source>
-        <translation type="unfinished" />
+        <translation>作為獨立工具，使用本機 Whisper 模型從音訊產生字幕。過長的行會在句尾拆分，對同一檔案再次執行時會重複使用已儲存的逐字稿。</translation>
     </message>
     <message>
         <source>Re-time existing subtitles</source>
@@ -2503,35 +2505,35 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Browse your whole mining history</source>
-        <translation type="unfinished" />
+        <translation>瀏覽完整的採集紀錄</translation>
     </message>
     <message>
         <source>Analytics lists every run you have mined. Pick a period, group the runs by day, week or month, see the cards per period in a chart, and export the table as a CSV file.</source>
-        <translation type="unfinished" />
+        <translation>分析頁會列出您的每一次採集執行。可選擇期間、按日、週或月將執行分組、在圖表中查看各期間的卡片數，並將表格匯出為 CSV 檔案。</translation>
     </message>
     <message>
         <source>Show or delete a past run's cards</source>
-        <translation type="unfinished" />
+        <translation>顯示或刪除過去執行的卡片</translation>
     </message>
     <message>
         <source>Select a run in Analytics → Mining History to open its cards in Anki's browser or to delete them. The confirmation says how many of its cards are still in Anki and how many you have reviewed. Runs mined before this version have no card list.</source>
-        <translation type="unfinished" />
+        <translation>在分析 → 採集紀錄中選取一次執行，即可在 Anki 瀏覽器中開啟其卡片，或刪除這些卡片。確認視窗會說明其中有多少卡片仍在 Anki 中、您複習過多少。在此版本之前採集的執行沒有卡片清單。</translation>
     </message>
     <message>
         <source>Track how many words you know</source>
-        <translation type="unfinished" />
+        <translation>追蹤您認識多少單字</translation>
     </message>
     <message>
         <source>The Known Words card on Analytics counts the words Anki Miner treats as known in the current mining language and shows how that number changed. It is counted while Anki is running, at most once every ten minutes.</source>
-        <translation type="unfinished" />
+        <translation>分析頁上的已知單字卡片會計算 Anki Miner 在目前採集語言中視為已知的單字，並顯示該數字的變化。計算會在 Anki 執行時進行，最多每十分鐘一次。</translation>
     </message>
     <message>
         <source>See how much of a frequency list you know</source>
-        <translation type="unfinished" />
+        <translation>查看您掌握了頻率清單的多少</translation>
     </message>
     <message>
         <source>Analytics → Frequency Coverage counts the words you know in ranks 1–1,000 up to 20,000 of your first frequency list with numeric ranks, and lists the missing words of each band. It needs Anki running.</source>
-        <translation type="unfinished" />
+        <translation>分析 → 頻率涵蓋率會在您第一個帶數字排名的頻率清單中，計算排名 1–1,000 直到 20,000 各區間內您認識的單字，並列出每個區間缺少的單字。需要 Anki 正在執行。</translation>
     </message>
     <message>
         <source>Reset mining statistics</source>
@@ -2607,11 +2609,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Count a word as known only after its card has been reviewed</source>
-        <translation type="unfinished" />
+        <translation>僅在卡片複習過後才將單字視為已知</translation>
     </message>
     <message>
         <source>Readability and the i+1 sentence rule then count a word as known only when its Anki card has been reviewed at least once. Mining still skips every word that already has a card.</source>
-        <translation type="unfinished" />
+        <translation>開啟後，可讀性與 i+1 句子規則只會在單字的 Anki 卡片至少複習過一次時才將其視為已知。採集時仍會略過所有已有卡片的單字。</translation>
     </message>
     <message>
         <source>Exclude specific Anki decks from 'known'</source>
@@ -2631,27 +2633,27 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Browse every known word</source>
-        <translation type="unfinished" />
+        <translation>瀏覽所有已知單字</translation>
     </message>
     <message>
         <source>Manage Known Words lists every word this language counts as known, with where it came from (added by you, mined by Anki Miner, from Anki) and the date it was added. Search it, filter it by source, and remove words you added. Words from Anki come back on the next sync.</source>
-        <translation type="unfinished" />
+        <translation>管理已知單字會列出此語言視為已知的每個單字，以及其來源（由您新增、由 Anki Miner 採集、來自 Anki）與新增日期。可以搜尋、依來源篩選，並移除您新增的單字。來自 Anki 的單字會在下次同步時重新出現。</translation>
     </message>
     <message>
         <source>Import known words from Kindle, Lute or LWT</source>
-        <translation type="unfinished" />
+        <translation>從 Kindle、Lute 或 LWT 匯入已知單字</translation>
     </message>
     <message>
         <source>In Manage Known Words, Import… also reads a Kindle Vocabulary Builder file (vocab.db; words marked mastered) and Lute or LWT term exports (status 5 and 99).</source>
-        <translation type="unfinished" />
+        <translation>在管理已知單字中，匯入… 也能讀取 Kindle 單字提示（Vocabulary Builder）檔案（vocab.db；標為已熟記的單字），以及 Lute 或 LWT 的詞條匯出（狀態 5 與 99）。</translation>
     </message>
     <message>
         <source>Export words to a CSV file</source>
-        <translation type="unfinished" />
+        <translation>將單字匯出為 CSV 檔案</translation>
     </message>
     <message>
         <source>Export words… saves the list you are looking at in Manage Known Words, or a finished run's mined and not-mined words with the reason each was skipped, as a CSV file.</source>
-        <translation type="unfinished" />
+        <translation>匯出單字… 會將您在管理已知單字中正在檢視的清單，或某次已完成執行中已採集與未採集的單字（附上各單字被略過的原因），儲存為 CSV 檔案。</translation>
     </message>
     <message>
         <source>Exclude kana-only words</source>
@@ -2683,23 +2685,23 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Mine at most one word from each example sentence. A word whose sentence is taken moves to another line it appears on, and is skipped only when every one of its lines is taken.</source>
-        <translation type="unfinished" />
+        <translation>每個例句最多只採集一個單字。若某個單字的例句已被佔用，它會改用它出現的另一行；只有當它出現的所有行都已被佔用時才會略過。</translation>
     </message>
     <message>
         <source>Pick the clearest sentence</source>
-        <translation type="unfinished" />
+        <translation>挑選最清楚的例句</translation>
     </message>
     <message>
         <source>When a word appears on several lines, its card uses the line with the fewest unknown words and a comfortable length instead of the first one. The Word Curator still lists every line.</source>
-        <translation type="unfinished" />
+        <translation>當一個單字出現在多行中時，卡片會使用生字最少、長度適中的那一行，而不是第一行。單字整理工具仍會列出所有行。</translation>
     </message>
     <message>
         <source>Skip openings, endings and signs</source>
-        <translation type="unfinished" />
+        <translation>略過片頭、片尾與畫面文字</translation>
     </message>
     <message>
         <source>Leave opening and ending songs, previews and on-screen signs out of mining, Condense and Readability: lines styled as songs or signs, and lines inside a video's opening, ending and preview chapters. On by default for new installs; turn it off in Settings → Sentences.</source>
-        <translation type="unfinished" />
+        <translation>將片頭曲、片尾曲、預告與畫面文字排除在採集、濃縮與可讀性之外：包括樣式標為歌曲或畫面文字的行，以及影片片頭、片尾與預告章節內的行。新安裝時預設開啟；可在設定 → 句子中關閉。</translation>
     </message>
     <message>
         <source>Strip junk from subtitles (regex)</source>
@@ -2767,11 +2769,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Import a dictionary file</source>
-        <translation type="unfinished" />
+        <translation>匯入字典檔案</translation>
     </message>
     <message>
         <source>Add a Yomitan zip, a StarDict dictionary (its archive or its .ifo file) or a CSV/TSV word list (term and definition, or term, reading and definition) as a definition source.</source>
-        <translation type="unfinished" />
+        <translation>將 Yomitan zip、StarDict 字典（其壓縮檔或 .ifo 檔案）或 CSV/TSV 單字清單（詞條與釋義，或詞條、讀音與釋義）新增為釋義來源。</translation>
     </message>
     <message>
         <source>Keep dictionaries up to date</source>
@@ -2843,7 +2845,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Attach word audio to cards from audio packs, JPod101 (Japanese), Google text-to-speech, or Microsoft Edge text-to-speech (every language). Wikimedia Commons plays recordings of real speakers from Wiktionary and Lingua Libre, tried before Google TTS in most languages.</source>
-        <translation type="unfinished" />
+        <translation>從音訊包、JPod101（日文）、Google 文字轉語音或 Microsoft Edge 文字轉語音（所有語言）為卡片附加單字發音。Wikimedia Commons 提供來自 Wiktionary 與 Lingua Libre 的真人錄音，在大多數語言中會先於 Google TTS 嘗試。</translation>
     </message>
     <message>
         <source>Import local audio packs</source>
@@ -2859,7 +2861,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Extract the spoken sentence as an audio clip; tune its format and bitrate. Even out audio volume brings sentence clips and condensed audio to one loudness and fades each clip in and out.</source>
-        <translation type="unfinished" />
+        <translation>將說出的句子擷取為音訊片段，並可調整其格式與位元率。「統一音量」會讓句子片段與濃縮音訊的響度一致，並為每個片段加上淡入淡出。</translation>
     </message>
     <message>
         <source>Sentence audio for reading (TTS)</source>
@@ -2883,7 +2885,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Capture a still frame from the scene to put on the card. Crop manga pictures to the speech bubble shows the bubble and the art around it instead of the whole page.</source>
-        <translation type="unfinished" />
+        <translation>從場景擷取一張靜態畫面放到卡片上。「將漫畫圖片裁切至對話框」會顯示對話框及其周圍的畫面，而不是整頁。</translation>
     </message>
     <message>
         <source>Animated clips (GIF/WebP)</source>
@@ -2963,7 +2965,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Add tags to every note Anki Miner creates. Card tags can use {series}, {episode} and {volume}. Each card gets its own show, episode or book volume, for example mined::{series}::{episode} gives mined::Frieren::03.</source>
-        <translation type="unfinished" />
+        <translation>為 Anki Miner 建立的每則筆記加上標籤。卡片標籤可使用 {series}、{episode} 與 {volume}，每張卡片會填入各自的作品名稱、集數或書籍卷數，例如 mined::{series}::{episode} 會得到 mined::Frieren::03。</translation>
     </message>
     <message>
         <source>Connect to Anki (AnkiConnect)</source>
@@ -2971,15 +2973,15 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Set the AnkiConnect address; Refresh re-checks the connection to your running Anki. If AnkiConnect is set up with an API key, add it to the address: http://127.0.0.1:8765/?key=YOUR_KEY. Anki Miner sends it with every request and never writes it to the log.</source>
-        <translation type="unfinished" />
+        <translation>設定 AnkiConnect 位址；「重新整理」會重新檢查與執行中 Anki 的連線。若 AnkiConnect 設有 API 金鑰，請將它加入位址：http://127.0.0.1:8765/?key=YOUR_KEY。Anki Miner 會在每次請求時傳送它，且絕不會寫入記錄。</translation>
     </message>
     <message>
         <source>Sync Anki after mining</source>
-        <translation type="unfinished" />
+        <translation>採集後同步 Anki</translation>
     </message>
     <message>
         <source>After a run that added cards, Anki Miner asks Anki to sync with AnkiWeb. If the sync fails, the Activity Log says so and the cards stay added.</source>
-        <translation type="unfinished" />
+        <translation>在新增了卡片的執行結束後，Anki Miner 會要求 Anki 與 AnkiWeb 同步。若同步失敗，活動記錄會註明，卡片仍會保留。</translation>
     </message>
     <message>
         <source>Fill in field mappings automatically</source>
@@ -3067,7 +3069,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Draw a box where a video's on-screen dialogue appears and Anki Miner reads it into a timed .srt that Video → Single can mine. Made for game longplays without commentary. It also reads image subtitles (Blu-ray .sup, DVD .idx/.sub, or an image track inside a video) without a box. Lines with none of your mining language's letters are left out. Download the OCR engine from the setup card on Utilities → Video OCR.</source>
-        <translation type="unfinished" />
+        <translation>在影片畫面中出現對白的位置畫一個框，Anki Miner 會將其辨識為帶時間軸的 .srt，供影片 → 單一採集。專為無旁白的遊戲完整實況設計。它也能在不畫框的情況下辨識圖像字幕（藍光 .sup、DVD .idx/.sub，或影片內的圖像軌）。不含任何採集語言文字的行會被排除。請在實用工具 → 影片 OCR 的設定卡片中下載 OCR 引擎。</translation>
     </message>
     <message>
         <source>Sync an audiobook to its EPUB</source>
@@ -3075,23 +3077,23 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Transcribe an audiobook and time the book's own sentences to it, writing an .srt the Audiobook tab, Reading → Subtitle Files or a reader can use. A second run on the same audio reuses the saved transcript instead of transcribing again.</source>
-        <translation type="unfinished" />
+        <translation>轉錄有聲書，並將書中原有的句子與其對齊計時，產生可供有聲書分頁、閱讀 → 字幕檔案或閱讀器使用的 .srt。對同一音訊再次執行時會重複使用已儲存的逐字稿，不會重新轉錄。</translation>
     </message>
     <message>
         <source>Sync a shelf of audiobooks in one run</source>
-        <translation type="unfinished" />
+        <translation>一次執行同步整排有聲書</translation>
     </message>
     <message>
         <source>In Utilities → Audiobook Sync, choose Folder and pick a folder that holds one folder per book, each with its EPUB (or text file) and its audio files. The books sync one after another, in name order.</source>
-        <translation type="unfinished" />
+        <translation>在實用工具 → 有聲書同步中選擇「資料夾」，再選取一個每本書各有一個子資料夾的資料夾，每個子資料夾包含該書的 EPUB（或文字檔）及其音訊檔案。這些書會依名稱順序逐一同步。</translation>
     </message>
     <message>
         <source>See how well an audiobook synced</source>
-        <translation type="unfinished" />
+        <translation>查看有聲書的同步成效</translation>
     </message>
     <message>
         <source>After Audiobook Sync, each book gets a line under the Book card: how many of its sentences got a subtitle, how much of the narration matched the book, and a grade from A to D. Chapters read out of book order are found too; sentences the narrator skipped never get a subtitle.</source>
-        <translation type="unfinished" />
+        <translation>有聲書同步完成後，每本書都會在書籍卡片下方顯示一行：有多少句子取得了字幕、朗讀中有多少與書相符，以及 A 到 D 的等級。未依書中順序朗讀的章節也能找到；朗讀者略過的句子不會取得字幕。</translation>
     </message>
     <message>
         <source>Check how much of a show, book or manga you can read</source>
@@ -3175,11 +3177,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Restore an automatic backup</source>
-        <translation type="unfinished" />
+        <translation>還原自動備份</translation>
     </message>
     <message>
         <source>Anki Miner backs up your known words, statistics, settings and profiles once a day when it starts, and keeps the last 7 days. Settings → General → Restore a backup… puts one back the next time the app starts.</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner 每天啟動時會備份一次您的已知單字、統計資料、設定與設定檔，並保留最近 7 天的備份。設定 → 一般 → 還原備份… 會在下次啟動應用程式時還原其中一份備份。</translation>
     </message>
     <message>
         <source>Undo a mining run</source>
@@ -3191,11 +3193,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Export a run's words</source>
-        <translation type="unfinished" />
+        <translation>匯出一次執行的單字</translation>
     </message>
     <message>
         <source>Press View details on a run's result line, then Export words… to save the run's mined and not-mined words, with the reason each was skipped, as a CSV file.</source>
-        <translation type="unfinished" />
+        <translation>在某次執行的結果列按「檢視詳細資料」，再按「匯出單字…」，即可將該次執行已採集與未採集的單字（附上各單字被略過的原因）儲存為 CSV 檔案。</translation>
     </message>
     <message>
         <source>Keyboard shortcuts</source>
@@ -4567,11 +4569,11 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
     </message>
     <message>
         <source>Choose dictionary files</source>
-        <translation type="unfinished" />
+        <translation>選擇字典檔案</translation>
     </message>
     <message>
         <source>Dictionaries (*.zip *.ifo *.tar.gz *.tgz *.tar.bz2 *.tar.xz *.csv *.tsv)</source>
-        <translation type="unfinished" />
+        <translation>字典 (*.zip *.ifo *.tar.gz *.tgz *.tar.bz2 *.tar.xz *.csv *.tsv)</translation>
     </message>
     <message>
         <source>Dictionary %1 of %2: %3</source>
@@ -5405,8 +5407,8 @@ No files on disk are deleted.</source>
     </message>
     <message numerus="yes">
         <source>Skipping lines in %n opening, ending or preview chapter(s)</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>正在略過 %n 個片頭、片尾或預告章節中的行</numerusform>
         </translation>
     </message>
     <message>
@@ -5453,7 +5455,7 @@ No files on disk are deleted.</source>
     </message>
     <message>
         <source>Only %1% of the first %2 words have an entry in your dictionaries. Is this file in the language you are mining?</source>
-        <translation type="unfinished" />
+        <translation>前 %2 個單字中只有 %1% 在您的字典中有條目。這個檔案是您正在採集的語言嗎？</translation>
     </message>
     <message>
         <source>Frequency cutoff ignored — no ranked frequency source is loaded (Settings → Frequency).</source>
@@ -5561,11 +5563,11 @@ No files on disk are deleted.</source>
     </message>
     <message>
         <source>Translation subtitles picked automatically: %1</source>
-        <translation type="unfinished" />
+        <translation>已自動選取翻譯字幕：%1</translation>
     </message>
     <message>
         <source>Translation subtitles picked automatically: embedded track %1</source>
-        <translation type="unfinished" />
+        <translation>已自動選取翻譯字幕：內嵌軌道 %1</translation>
     </message>
     <message>
         <source>Could not extract media for any word — no cards created</source>
@@ -5833,11 +5835,11 @@ No files on disk are deleted.</source>
     </message>
     <message>
         <source>Count a word as known only after its card has been reviewed</source>
-        <translation type="unfinished" />
+        <translation>僅在卡片複習過後才將單字視為已知</translation>
     </message>
     <message>
         <source>Readability and the i+1 sentence rule count a word as known only when its Anki card has been reviewed at least once. Mining still skips every word that already has a card.</source>
-        <translation type="unfinished" />
+        <translation>可讀性與 i+1 句子規則只會在單字的 Anki 卡片至少複習過一次時才將其視為已知。採集時仍會略過所有已有卡片的單字。</translation>
     </message>
     <message>
         <source>Keep words known after their cards are deleted</source>
@@ -6499,15 +6501,15 @@ No index files are deleted.</source>
     <name>KnownWordsManagerDialog</name>
     <message>
         <source>Word</source>
-        <translation type="unfinished" />
+        <translation>單字</translation>
     </message>
     <message>
         <source>Source</source>
-        <translation type="unfinished" />
+        <translation>來源</translation>
     </message>
     <message>
         <source>Added</source>
-        <translation type="unfinished" />
+        <translation>新增日期</translation>
     </message>
     <message>
         <source>Manage Known Words</source>
@@ -6519,7 +6521,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Every word this language counts as known, and where it came from. Words you added from the Word Curator stay known on every run and across cache rebuilds.</source>
-        <translation type="unfinished" />
+        <translation>此語言視為已知的所有單字及其來源。您從單字整理工具新增的單字在每次執行中以及快取重建後都會保持已知。</translation>
     </message>
     <message>
         <source>Decks this language's known-words scan skips: %1. Change them in Settings → Word Filters.</source>
@@ -6531,15 +6533,15 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Added by you</source>
-        <translation type="unfinished" />
+        <translation>由您新增</translation>
     </message>
     <message>
         <source>Mined by Anki Miner</source>
-        <translation type="unfinished" />
+        <translation>由 Anki Miner 採集</translation>
     </message>
     <message>
         <source>From Anki</source>
-        <translation type="unfinished" />
+        <translation>來自 Anki</translation>
     </message>
     <message>
         <source>Filter…</source>
@@ -6547,7 +6549,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>All sources</source>
-        <translation type="unfinished" />
+        <translation>所有來源</translation>
     </message>
     <message>
         <source>Rebuild Known Words DB</source>
@@ -6563,7 +6565,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Removes words you added. Words from Anki come back on the next run, and mined words leave with Undo.</source>
-        <translation type="unfinished" />
+        <translation>移除您新增的單字。來自 Anki 的單字會在下次執行時重新出現，採集得到的單字則需透過復原移除。</translation>
     </message>
     <message>
         <source>Import…</source>
@@ -6571,7 +6573,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Export words…</source>
-        <translation type="unfinished" />
+        <translation>匯出單字…</translation>
     </message>
     <message>
         <source>Reset User List</source>
@@ -6603,11 +6605,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Kindle Vocabulary Builder</source>
-        <translation type="unfinished" />
+        <translation>Kindle 單字提示（Vocabulary Builder）</translation>
     </message>
     <message>
         <source>Lute or LWT term export</source>
-        <translation type="unfinished" />
+        <translation>Lute 或 LWT 詞條匯出</translation>
     </message>
     <message>
         <source>plain word list</source>
@@ -6619,7 +6621,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Known word lists (*.csv *.tsv *.txt *.json *.db);;All Files (*)</source>
-        <translation type="unfinished" />
+        <translation>已知單字清單 (*.csv *.tsv *.txt *.json *.db);;所有檔案 (*)</translation>
     </message>
     <message>
         <source>Detected: %1 — every entry is imported.
@@ -6651,7 +6653,7 @@ Words to add: %3. Continue?</source>
     </message>
     <message>
         <source>This file has no words for %1. It contains: %2.</source>
-        <translation type="unfinished" />
+        <translation>此檔案中沒有%1的單字。它包含：%2。</translation>
     </message>
     <message>
         <source>That file is too large to import.</source>
@@ -6667,7 +6669,7 @@ Words to add: %3. Continue?</source>
     </message>
     <message>
         <source>File format not recognized. Supported: jpdb review export (JSON), Migaku word export (JSON/CSV), AnkiMorphs known morphs (CSV), Kindle Vocabulary Builder (vocab.db), Lute or LWT term export (CSV/TSV), plain word lists (one word per line).</source>
-        <translation type="unfinished" />
+        <translation>無法辨識檔案格式。支援：jpdb 複習匯出（JSON）、Migaku 單字匯出（JSON/CSV）、AnkiMorphs 已知詞素（CSV）、Kindle 單字提示（vocab.db）、Lute 或 LWT 詞條匯出（CSV/TSV）、純單字清單（每行一個單字）。</translation>
     </message>
     <message>
         <source>That file could not be imported.</source>
@@ -6689,7 +6691,7 @@ Words to add: %3. Continue?</source>
     </message>
     <message>
         <source>CSV files (*.csv);;Text files, one word per line (*.txt)</source>
-        <translation type="unfinished" />
+        <translation>CSV 檔案 (*.csv);;文字檔，每行一個單字 (*.txt)</translation>
     </message>
     <message>
         <source>The known words list could not be exported.</source>
@@ -7437,7 +7439,7 @@ Continue?</source>
     </message>
     <message>
         <source>Opus clips do not play in AnkiMobile on iPhone or iPad. Choose MP3 if you review there.</source>
-        <translation type="unfinished" />
+        <translation>Opus 片段無法在 iPhone 或 iPad 上的 AnkiMobile 中播放。若您在那裡複習，請選擇 MP3。</translation>
     </message>
     <message>
         <source> kbps</source>
@@ -7465,11 +7467,11 @@ Continue?</source>
     </message>
     <message>
         <source>Even out audio volume</source>
-        <translation type="unfinished" />
+        <translation>統一音量</translation>
     </message>
     <message>
         <source>Brings sentence clips and condensed audio to one volume and fades each clip in and out, so quiet and loud sources sound alike. Applies to new clips.</source>
-        <translation type="unfinished" />
+        <translation>讓句子片段與濃縮音訊的音量一致，並為每個片段加上淡入淡出，使安靜與大聲的來源聽起來相近。適用於新的片段。</translation>
     </message>
     <message>
         <source>Text-to-speech</source>
@@ -7493,11 +7495,11 @@ Continue?</source>
     </message>
     <message>
         <source>Crop manga pictures to the speech bubble</source>
-        <translation type="unfinished" />
+        <translation>將漫畫圖片裁切至對話框</translation>
     </message>
     <message>
         <source>Manga cards show the speech bubble and the art around it instead of the whole page. A sentence with no bubble position keeps the whole page.</source>
-        <translation type="unfinished" />
+        <translation>漫畫卡片會顯示對話框及其周圍的畫面，而不是整頁。沒有對話框位置的句子仍保留整頁。</translation>
     </message>
     <message>
         <source>Enable animated screenshots</source>
@@ -7733,7 +7735,7 @@ Continue?</source>
     </message>
     <message>
         <source>Anki didn't sync after this run. Your cards are added; sync from Anki, or see the log for why.</source>
-        <translation type="unfinished" />
+        <translation>此次執行後 Anki 未能同步。您的卡片已新增；請從 Anki 同步，或查看記錄了解原因。</translation>
     </message>
     <message>
         <source>Anki Miner couldn't open these cards in Anki.</source>
@@ -9498,7 +9500,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>An .epub, .txt or .pdf book, or a folder of books; each book is mined separately.</source>
-        <translation type="unfinished" />
+        <translation>一本 .epub、.txt 或 .pdf 書籍，或一個書籍資料夾；每本書會分別採集。</translation>
     </message>
     <message>
         <source>Mine</source>
@@ -9534,7 +9536,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Choose an .epub, .txt or .pdf book, or a folder of books.</source>
-        <translation type="unfinished" />
+        <translation>請選擇一本 .epub、.txt 或 .pdf 書籍，或一個書籍資料夾。</translation>
     </message>
     <message>
         <source>Starting…</source>
@@ -9600,7 +9602,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Add subtitle files (.srt, .ass, .ssa, .vtt, .smi, .lrc) to the list.</source>
-        <translation type="unfinished" />
+        <translation>將字幕檔案（.srt、.ass、.ssa、.vtt、.smi、.lrc）加入清單。</translation>
     </message>
     <message>
         <source>Remove Selected</source>
@@ -9781,19 +9783,19 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Web addresses to fetch, one per line (https://…)</source>
-        <translation type="unfinished" />
+        <translation>要抓取的網址，每行一個（https://…）</translation>
     </message>
     <message>
         <source>Web addresses</source>
-        <translation type="unfinished" />
+        <translation>網址</translation>
     </message>
     <message>
         <source>Fetch</source>
-        <translation type="unfinished" />
+        <translation>抓取</translation>
     </message>
     <message>
         <source>Put the article text of each web address in the box below, to check before mining.</source>
-        <translation type="unfinished" />
+        <translation>將每個網址的文章文字放入下方的方塊，以便在採集前檢查。</translation>
     </message>
     <message>
         <source>Paste the text you want to mine. Cards from pasted text have no sentence audio from a recording.</source>
@@ -9841,59 +9843,59 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Each line must be a web address that starts with http:// or https://.</source>
-        <translation type="unfinished" />
+        <translation>每一行都必須是以 http:// 或 https:// 開頭的網址。</translation>
     </message>
     <message>
         <source>Enter a web address first.</source>
-        <translation type="unfinished" />
+        <translation>請先輸入網址。</translation>
     </message>
     <message>
         <source>Fetch takes up to 10 web addresses at a time.</source>
-        <translation type="unfinished" />
+        <translation>抓取一次最多處理 10 個網址。</translation>
     </message>
     <message>
         <source>Fetching…</source>
-        <translation type="unfinished" />
+        <translation>正在抓取…</translation>
     </message>
     <message>
         <source>Could not fetch %1: %2</source>
-        <translation type="unfinished" />
+        <translation>無法抓取 %1：%2</translation>
     </message>
     <message>
         <source>None of the pages could be fetched.</source>
-        <translation type="unfinished" />
+        <translation>所有頁面都無法抓取。</translation>
     </message>
     <message>
         <source>Fetched %1.</source>
-        <translation type="unfinished" />
+        <translation>已抓取 %1。</translation>
     </message>
     <message>
         <source>The pages could not be fetched.</source>
-        <translation type="unfinished" />
+        <translation>無法抓取這些頁面。</translation>
     </message>
     <message>
         <source>The page could not be reached. Check the address and your connection.</source>
-        <translation type="unfinished" />
+        <translation>無法連上該頁面。請檢查網址與網路連線。</translation>
     </message>
     <message>
         <source>The site did not send the page.</source>
-        <translation type="unfinished" />
+        <translation>該網站沒有傳回頁面。</translation>
     </message>
     <message>
         <source>This address is not a web page.</source>
-        <translation type="unfinished" />
+        <translation>此位址不是網頁。</translation>
     </message>
     <message>
         <source>This page is too large to read.</source>
-        <translation type="unfinished" />
+        <translation>此頁面太大，無法讀取。</translation>
     </message>
     <message>
         <source>This is not a web address.</source>
-        <translation type="unfinished" />
+        <translation>這不是網址。</translation>
     </message>
     <message>
         <source>No article text found on this page. Pages that draw their text with JavaScript cannot be read.</source>
-        <translation type="unfinished" />
+        <translation>此頁面上找不到文章文字。以 JavaScript 繪製文字的頁面無法讀取。</translation>
     </message>
     <message>
         <source>Paste some text first.</source>
@@ -9905,7 +9907,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>The fetched text was edited, so it is mined as one text without its page titles.</source>
-        <translation type="unfinished" />
+        <translation>抓取的文字已經過編輯，因此會作為一段文字採集，不含頁面標題。</translation>
     </message>
     <message>
         <source>That picture cannot be read. Pick another, or remove it to mine without one.</source>
@@ -10691,7 +10693,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Export words…</source>
-        <translation type="unfinished" />
+        <translation>匯出單字…</translation>
     </message>
     <message>
         <source>Close</source>
@@ -10705,19 +10707,19 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Export Words</source>
-        <translation type="unfinished" />
+        <translation>匯出單字</translation>
     </message>
     <message>
         <source>CSV files (*.csv)</source>
-        <translation type="unfinished" />
+        <translation>CSV 檔案 (*.csv)</translation>
     </message>
     <message>
         <source>Words exported</source>
-        <translation type="unfinished" />
+        <translation>單字已匯出</translation>
     </message>
     <message>
         <source>Export failed — try again</source>
-        <translation type="unfinished" />
+        <translation>匯出失敗——請再試一次</translation>
     </message>
     <message>
         <source>Confirm Undo</source>
@@ -10921,11 +10923,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Skip openings, endings and signs</source>
-        <translation type="unfinished" />
+        <translation>略過片頭、片尾與畫面文字</translation>
     </message>
     <message>
         <source>Leaves out song lyrics, previews and on-screen signs: lines whose subtitle style marks them as a song or a sign, and lines inside a video's opening, ending or preview chapters. Applies to mining, Condense and Readability.</source>
-        <translation type="unfinished" />
+        <translation>排除歌詞、預告與畫面文字：包括字幕樣式標為歌曲或畫面文字的行，以及影片片頭、片尾或預告章節內的行。適用於採集、濃縮與可讀性。</translation>
     </message>
     <message>
         <source>Sentence options</source>
@@ -10941,7 +10943,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Mines at most one word per example sentence. A word whose sentence is already taken moves to another line it appears on, and is skipped only when every one of its lines is taken. Whitelisted words are still mined.</source>
-        <translation type="unfinished" />
+        <translation>每個例句最多只採集一個單字。若某個單字的例句已被佔用，它會改用它出現的另一行；只有當它出現的所有行都已被佔用時才會略過。白名單中的單字仍會採集。</translation>
     </message>
     <message>
         <source>Only i+1 sentences (exactly one unknown word)</source>
@@ -10957,11 +10959,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Pick the clearest sentence for each word</source>
-        <translation type="unfinished" />
+        <translation>為每個單字挑選最清楚的例句</translation>
     </message>
     <message>
         <source>When a word appears on several lines, its card uses the line with the fewest unknown words and a comfortable length instead of the first one. The Word Curator still lists every line, and card order does not change.</source>
-        <translation type="unfinished" />
+        <translation>當一個單字出現在多行中時，卡片會使用生字最少、長度適中的那一行，而不是第一行。單字整理工具仍會列出所有行，卡片順序也不會改變。</translation>
     </message>
     <message>
         <source> s</source>
@@ -13017,15 +13019,15 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>Restore a backup…</source>
-        <translation type="unfinished" />
+        <translation>還原備份…</translation>
     </message>
     <message>
         <source>Backups</source>
-        <translation type="unfinished" />
+        <translation>備份</translation>
     </message>
     <message>
         <source>Anki Miner saves your known words, statistics, settings and profiles once a day when it starts, and keeps the last 7 days.</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner 每天啟動時會儲存一次您的已知單字、統計資料、設定與設定檔，並保留最近 7 天的備份。</translation>
     </message>
     <message>
         <source>Themes</source>
@@ -13069,27 +13071,27 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>There is no backup yet. Anki Miner makes one each day when it starts.</source>
-        <translation type="unfinished" />
+        <translation>目前還沒有備份。Anki Miner 每天啟動時會建立一份。</translation>
     </message>
     <message>
         <source>Restore a Backup</source>
-        <translation type="unfinished" />
+        <translation>還原備份</translation>
     </message>
     <message>
         <source>Restore the backup from:</source>
-        <translation type="unfinished" />
+        <translation>還原此日期的備份：</translation>
     </message>
     <message>
         <source>Replace your known words, statistics, settings and profiles with the copies from %1? The restore runs the next time Anki Miner starts. Changes made after that backup are lost.</source>
-        <translation type="unfinished" />
+        <translation>要以 %1 的副本取代您的已知單字、統計資料、設定與設定檔嗎？還原會在 Anki Miner 下次啟動時進行。該備份之後所做的變更將會遺失。</translation>
     </message>
     <message>
         <source>The restore could not be scheduled.</source>
-        <translation type="unfinished" />
+        <translation>無法排定還原。</translation>
     </message>
     <message>
         <source>The backup from %1 will be restored when Anki Miner next starts.</source>
-        <translation type="unfinished" />
+        <translation>%1 的備份將在 Anki Miner 下次啟動時還原。</translation>
     </message>
 </context><context>
     <name>UpdateBanner</name>
@@ -13257,11 +13259,11 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>The picture (burned-in text)</source>
-        <translation type="unfinished" />
+        <translation>畫面（內嵌硬字幕）</translation>
     </message>
     <message>
         <source>Image subtitle track %1</source>
-        <translation type="unfinished" />
+        <translation>圖像字幕軌 %1</translation>
     </message>
     <message>
         <source>The OCR engine could not start on this computer. The details say why.</source>
@@ -13301,15 +13303,15 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>This field takes a video or an image subtitle file (.sup, .idx, .sub).</source>
-        <translation type="unfinished" />
+        <translation>此欄可填入影片或圖像字幕檔案（.sup、.idx、.sub）。</translation>
     </message>
     <message>
         <source>Read from:</source>
-        <translation type="unfinished" />
+        <translation>辨識來源：</translation>
     </message>
     <message>
         <source>Read text drawn into the picture, or one of the video's image subtitle tracks.</source>
-        <translation type="unfinished" />
+        <translation>辨識畫面中的文字，或影片中的某條圖像字幕軌。</translation>
     </message>
     <message>
         <source>Video Folder:</source>
@@ -13393,7 +13395,7 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>Image subtitles are read over the whole frame, so they need no region.</source>
-        <translation type="unfinished" />
+        <translation>圖像字幕會在整個畫面上辨識，因此不需要選取區域。</translation>
     </message>
     <message>
         <source>Download OCR models</source>
@@ -13437,7 +13439,7 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>A DVD subtitle needs its .idx and .sub files in the same folder.</source>
-        <translation type="unfinished" />
+        <translation>DVD 字幕需要其 .idx 與 .sub 檔案位於同一資料夾中。</translation>
     </message>
     <message>
         <source>Choose a folder before reading subtitles.</source>
@@ -13723,15 +13725,15 @@ Sort by it to work through a long recording in order — then highlight the rows
     </message>
     <message>
         <source>Used on the card</source>
-        <translation type="unfinished" />
+        <translation>卡片使用此條目</translation>
     </message>
     <message>
         <source>Back to the first match</source>
-        <translation type="unfinished" />
+        <translation>回到第一個相符項目</translation>
     </message>
     <message>
         <source>Use this dictionary on the card</source>
-        <translation type="unfinished" />
+        <translation>卡片使用此字典</translation>
     </message>
     <message>
         <source>Sentences (%1)</source>
@@ -14169,7 +14171,7 @@ Sort by it to work through a long recording in order — then highlight the rows
     </message>
     <message>
         <source>Wikimedia Commons (native recordings)</source>
-        <translation type="unfinished" />
+        <translation>Wikimedia Commons（母語人士錄音）</translation>
     </message>
     <message>
         <source>Microsoft Edge read-aloud (synthetic TTS)</source>
@@ -14183,7 +14185,7 @@ Sort by it to work through a long recording in order — then highlight the rows
     <name>_BarChart</name>
     <message>
         <source>Cards per period</source>
-        <translation type="unfinished" />
+        <translation>各期間的卡片數</translation>
     </message>
 </context><context>
     <name>_HealthRow</name>
@@ -14205,11 +14207,11 @@ Sort by it to work through a long recording in order — then highlight the rows
     <name>_MissingWordsDialog</name>
     <message>
         <source>Missing Words</source>
-        <translation type="unfinished" />
+        <translation>缺少的單字</translation>
     </message>
     <message>
         <source>Not known yet in ranks %1</source>
-        <translation type="unfinished" />
+        <translation>排名 %1 中尚未認識的單字</translation>
     </message>
 </context><context>
     <name>app</name>

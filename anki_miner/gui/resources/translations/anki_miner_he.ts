@@ -93,59 +93,59 @@
     </message>
     <message>
         <source>Known Words</source>
-        <translation type="unfinished" />
+        <translation>מילים מוכרות</translation>
     </message>
     <message>
         <source>Words Anki Miner treats as known in the current mining language.</source>
-        <translation type="unfinished" />
+        <translation>מילים ש-Anki Miner מתייחס אליהן כמוכרות בשפת הכרייה הנוכחית.</translation>
     </message>
     <message>
         <source>Mining History</source>
-        <translation type="unfinished" />
+        <translation>היסטוריית כרייה</translation>
     </message>
     <message>
         <source>History period</source>
-        <translation type="unfinished" />
+        <translation>תקופת ההיסטוריה</translation>
     </message>
     <message>
         <source>All time</source>
-        <translation type="unfinished" />
+        <translation>כל הזמן</translation>
     </message>
     <message>
         <source>Last 7 days</source>
-        <translation type="unfinished" />
+        <translation>7 הימים האחרונים</translation>
     </message>
     <message>
         <source>Last 30 days</source>
-        <translation type="unfinished" />
+        <translation>30 הימים האחרונים</translation>
     </message>
     <message>
         <source>Last 12 months</source>
-        <translation type="unfinished" />
+        <translation>12 החודשים האחרונים</translation>
     </message>
     <message>
         <source>History grouping</source>
-        <translation type="unfinished" />
+        <translation>קיבוץ ההיסטוריה</translation>
     </message>
     <message>
         <source>Each run</source>
-        <translation type="unfinished" />
+        <translation>כל הרצה בנפרד</translation>
     </message>
     <message>
         <source>By day</source>
-        <translation type="unfinished" />
+        <translation>לפי יום</translation>
     </message>
     <message>
         <source>By week</source>
-        <translation type="unfinished" />
+        <translation>לפי שבוע</translation>
     </message>
     <message>
         <source>By month</source>
-        <translation type="unfinished" />
+        <translation>לפי חודש</translation>
     </message>
     <message>
         <source>Export CSV…</source>
-        <translation type="unfinished" />
+        <translation>לייצא CSV…</translation>
     </message>
     <message>
         <source>No sessions yet — process an episode to see your history.</source>
@@ -177,7 +177,7 @@
     </message>
     <message>
         <source>Period</source>
-        <translation type="unfinished" />
+        <translation>תקופה</translation>
     </message>
     <message>
         <source>Show in Anki</source>
@@ -185,7 +185,7 @@
     </message>
     <message>
         <source>Delete this run's cards…</source>
-        <translation type="unfinished" />
+        <translation>למחוק את הכרטיסים של הרצה זו…</translation>
     </message>
     <message>
         <source>Series Difficulty Ranking</source>
@@ -217,11 +217,11 @@
     </message>
     <message>
         <source>Frequency Coverage</source>
-        <translation type="unfinished" />
+        <translation>כיסוי תדירות</translation>
     </message>
     <message>
         <source>Rank band</source>
-        <translation type="unfinished" />
+        <translation>טווח דירוג</translation>
     </message>
     <message>
         <source>Known</source>
@@ -229,15 +229,15 @@
     </message>
     <message>
         <source>Not known</source>
-        <translation type="unfinished" />
+        <translation>לא מוכרות</translation>
     </message>
     <message>
         <source>Known %</source>
-        <translation type="unfinished" />
+        <translation>מוכרות %</translation>
     </message>
     <message>
         <source>Show missing words</source>
-        <translation type="unfinished" />
+        <translation>להציג מילים חסרות</translation>
     </message>
     <message>
         <source>Milestones</source>
@@ -265,93 +265,95 @@
     </message>
     <message>
         <source>No runs in this period.</source>
-        <translation type="unfinished" />
+        <translation>אין הרצות בתקופה זו.</translation>
     </message>
     <message>
         <source>Export Mining History</source>
-        <translation type="unfinished" />
+        <translation>ייצוא היסטוריית הכרייה</translation>
     </message>
     <message>
         <source>CSV Files (*.csv);;All Files (*)</source>
-        <translation type="unfinished" />
+        <translation>קובצי CSV (*.csv);;כל הקבצים (*)</translation>
     </message>
     <message>
         <source>History saved to %1.</source>
-        <translation type="unfinished" />
+        <translation>ההיסטוריה נשמרה ב-⁨%1⁩.</translation>
     </message>
     <message>
         <source>The history could not be exported.</source>
-        <translation type="unfinished" />
+        <translation>לא ניתן היה לייצא את ההיסטוריה.</translation>
     </message>
     <message>
         <source>%1 (cards deleted: %2)</source>
-        <translation type="unfinished" />
+        <translation>‏⁨%1⁩ (כרטיסים שנמחקו: ⁨%2⁩)</translation>
     </message>
     <message>
         <source>Select one run in the table.</source>
-        <translation type="unfinished" />
+        <translation>יש לבחור הרצה אחת בטבלה.</translation>
     </message>
     <message>
         <source>This run's cards were deleted: %1.</source>
-        <translation type="unfinished" />
+        <translation>כרטיסים של הרצה זו שנמחקו: ⁨%1⁩.</translation>
     </message>
     <message>
         <source>Anki Miner has no card list for this run: it was mined before this version, or it made no cards.</source>
-        <translation type="unfinished" />
+        <translation>ל-Anki Miner אין רשימת כרטיסים להרצה זו: היא נכרתה לפני הגרסה הזו, או שלא נוצרו בה כרטיסים.</translation>
     </message>
     <message>
         <source>Anki Miner couldn't open this run's cards in Anki.</source>
-        <translation type="unfinished" />
+        <translation>‏Anki Miner לא הצליח לפתוח ב-Anki את הכרטיסים של הרצה זו.</translation>
     </message>
     <message>
         <source>None of this run's cards are in Anki any more.</source>
-        <translation type="unfinished" />
+        <translation>אף אחד מהכרטיסים של הרצה זו כבר לא נמצא ב-Anki.</translation>
     </message>
     <message>
         <source>Delete This Run's Cards</source>
-        <translation type="unfinished" />
+        <translation>מחיקת הכרטיסים של הרצה זו</translation>
     </message>
     <message>
         <source>Cards this run added that are still in Anki: %1. Reviewed at least once: %2.
 
 Delete them from Anki? Their review history is deleted with them. This cannot be undone.</source>
-        <translation type="unfinished" />
+        <translation>כרטיסים שהרצה זו הוסיפה ועדיין נמצאים ב-Anki: ⁨%1⁩. נסקרו לפחות פעם אחת: ⁨%2⁩.
+
+למחוק אותם מ-Anki? היסטוריית החזרות שלהם תימחק יחד איתם. לא ניתן לבטל פעולה זו.</translation>
     </message>
     <message>
         <source>Cards deleted from Anki: %1.</source>
-        <translation type="unfinished" />
+        <translation>כרטיסים שנמחקו מ-Anki: ⁨%1⁩.</translation>
     </message>
     <message>
         <source>This run's cards could not be deleted.</source>
-        <translation type="unfinished" />
+        <translation>לא ניתן היה למחוק את הכרטיסים של הרצה זו.</translation>
     </message>
     <message>
         <source>Known words could not be counted.</source>
-        <translation type="unfinished" />
+        <translation>לא ניתן היה לספור את המילים המוכרות.</translation>
     </message>
     <message>
         <source>Words Anki Miner treats as known in %1.</source>
-        <translation type="unfinished" />
+        <translation>מילים ש-Anki Miner מתייחס אליהן כמוכרות ב-⁨%1⁩.</translation>
     </message>
     <message>
         <source>Change since %1: %2</source>
-        <translation type="unfinished" />
+        <translation>שינוי מאז ⁨%1⁩: ⁨%2⁩</translation>
     </message>
     <message>
         <source>Last counted on %1; Anki was not reachable.</source>
-        <translation type="unfinished" />
+        <translation>נספר לאחרונה ב-⁨%1⁩; לא ניתן היה להתחבר ל-Anki.</translation>
     </message>
     <message>
         <source>Last counted on %1.</source>
-        <translation type="unfinished" />
+        <translation>נספר לאחרונה ב-⁨%1⁩.</translation>
     </message>
     <message>
         <source>Coverage needs Anki running: it compares the list with your cards.</source>
-        <translation type="unfinished" />
+        <translation>הכיסוי דורש ש-Anki יפעל: הוא משווה את הרשימה לכרטיסים שלך.</translation>
     </message>
     <message>
         <source>How many of the most frequent words in %1 you already know.</source>
-        <translation type="unfinished" />
+        <translation>כמה מהמילים הנפוצות ביותר ב-⁨%1⁩ כבר מוכרות לך.</translation>
     </message>
     <message>
         <source>%1 mining sessions completed</source>
@@ -761,7 +763,7 @@ Delete them from Anki? Their review history is deleted with them. This cannot be
     </message>
     <message>
         <source>{series}, {episode} and {volume} become each card's show, episode or book volume, for example mined::{series}::{episode}.</source>
-        <translation type="unfinished" />
+        <translation>‏{series}, {episode} ו-{volume} הופכים לסדרה, לפרק או לכרך הספר של כל כרטיס, לדוגמה ⁨mined::{series}::{episode}⁩.</translation>
     </message>
     <message>
         <source>Refresh</source>
@@ -789,11 +791,11 @@ Delete them from Anki? Their review history is deleted with them. This cannot be
     </message>
     <message>
         <source>Sync Anki after mining</source>
-        <translation type="unfinished" />
+        <translation>סנכרון Anki אחרי כרייה</translation>
     </message>
     <message>
         <source>After a run that added cards, ask Anki to sync with AnkiWeb. If the sync fails, the Activity Log says so and the cards stay added.</source>
-        <translation type="unfinished" />
+        <translation>אחרי הרצה שהוסיפה כרטיסים, נשלחת ל-Anki בקשה לסנכרן עם AnkiWeb. אם הסנכרון נכשל, יומן הפעילות מציין זאת והכרטיסים נשארים.</translation>
     </message>
     <message>
         <source>AnkiConnect URL</source>
@@ -805,7 +807,7 @@ Delete them from Anki? Their review history is deleted with them. This cannot be
     </message>
     <message>
         <source>If AnkiConnect asks for an API key, add it to the address: http://127.0.0.1:8765/?key=YOUR_KEY</source>
-        <translation type="unfinished" />
+        <translation>אם AnkiConnect מבקש מפתח API, יש להוסיף אותו לכתובת: http://127.0.0.1:8765/?key=YOUR_KEY</translation>
     </message>
     <message>
         <source>Fill in automatically</source>
@@ -1517,7 +1519,7 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
     </message>
     <message>
         <source>Wikimedia Commons (native recordings)</source>
-        <translation type="unfinished" />
+        <translation>‏Wikimedia Commons (הקלטות של דוברים ילידים)</translation>
     </message>
     <message>
         <source>Custom JSON</source>
@@ -2086,7 +2088,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Every audio file in the folder, in file-name order, one .srt each. A folder of book folders (each with its EPUB and audio) syncs every book in turn.</source>
-        <translation type="unfinished" />
+        <translation>כל קובצי השמע בתיקייה, לפי סדר שמות הקבצים, קובץ .srt אחד לכל קובץ. תיקייה של תיקיות ספרים (כל אחת עם ה-EPUB והשמע שלה) מסנכרנת כל ספר בתורו.</translation>
     </message>
     <message>
         <source>EPUB or Text File:</source>
@@ -2114,7 +2116,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Sentences: how many of the book's sentences, from the first one found to the last, got a subtitle. Audio: how much of the narration matched the book. Grade: A from 90% on both, B from 75%, C from 50%, else D.</source>
-        <translation type="unfinished" />
+        <translation>משפטים: כמה ממשפטי הספר, מהמשפט הראשון שנמצא ועד האחרון, קיבלו כתובית. שמע: כמה מההקראה תאמה לספר. ציון: A מ-90% בשניהם, B מ-75%, C מ-50%, אחרת D.</translation>
     </message>
     <message>
         <source>Output</source>
@@ -2178,7 +2180,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>No audio files were found in that folder, and no book folders (each with its book and audio).</source>
-        <translation type="unfinished" />
+        <translation>לא נמצאו קובצי שמע בתיקייה הזו, וגם לא תיקיות ספרים (כל אחת עם הספר והשמע שלה).</translation>
     </message>
     <message>
         <source>That folder could not be scanned.</source>
@@ -2186,15 +2188,15 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Skipped folder %1: no audio files</source>
-        <translation type="unfinished" />
+        <translation>דילוג על התיקייה ⁨%1⁩: אין קובצי שמע</translation>
     </message>
     <message>
         <source>Skipped folder %1: no .epub or .txt book</source>
-        <translation type="unfinished" />
+        <translation>דילוג על התיקייה ⁨%1⁩: אין ספר .epub או .txt</translation>
     </message>
     <message>
         <source>Skipped folder %1: more than one book</source>
-        <translation type="unfinished" />
+        <translation>דילוג על התיקייה ⁨%1⁩: יותר מספר אחד</translation>
     </message>
     <message>
         <source>Output folder is not writable.</source>
@@ -2214,11 +2216,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Books: %1 — %2</source>
-        <translation type="unfinished" />
+        <translation>ספרים: ⁨%1⁩ — ⁨%2⁩</translation>
     </message>
     <message>
         <source>%1: sentences %2%, audio %3% — grade %4</source>
-        <translation type="unfinished" />
+        <translation>‏⁨%1⁩: משפטים ⁨%2⁩%, שמע ⁨%3⁩% — ציון ⁨%4⁩</translation>
     </message>
     <message>
         <source>Syncing file %1 of %2</source>
@@ -2232,11 +2234,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>%1 could not be loaded: %2</source>
-        <translation type="unfinished" />
+        <translation>לא ניתן היה לטעון את ⁨%1⁩: ⁨%2⁩</translation>
     </message>
     <message>
         <source>Its book could not be loaded</source>
-        <translation type="unfinished" />
+        <translation>לא ניתן היה לטעון את הספר שלו</translation>
     </message>
     <message>
         <source>Skipped, exists</source>
@@ -2256,11 +2258,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Reusing the saved transcript</source>
-        <translation type="unfinished" />
+        <translation>נעשה שימוש חוזר בתמליל השמור</translation>
     </message>
     <message>
         <source>Found sentence %1 again later in the audio; timed it out of book order</source>
-        <translation type="unfinished" />
+        <translation>המשפט ⁨%1⁩ נמצא שוב בהמשך השמע; התזמון שלו נקבע שלא לפי סדר הספר</translation>
     </message>
     <message>
         <source>%1 sentences timed, %2 in between had no audio</source>
@@ -2342,7 +2344,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Approve or reject each word, pick its sentence and scene, trim its audio, mark words known, and fix a mistranscribed sentence or swap the word to mine -- before any card is created. When a word has entries in several dictionaries, choose which one the card's Definition uses.</source>
-        <translation type="unfinished" />
+        <translation>אישור או דחייה של כל מילה, בחירת המשפט והסצנה שלה, קיצוץ השמע שלה, סימון מילים כמוכרות, ותיקון משפט שתומלל בטעות או החלפת המילה לכרייה -- לפני שנוצר כרטיס כלשהו. כשלמילה יש ערכים בכמה מילונים, אפשר לבחור באיזה מהם ישתמש שדה ההגדרה של הכרטיס.</translation>
     </message>
     <message>
         <source>Secondary-language subtitles</source>
@@ -2350,7 +2352,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. Leave the file empty and Anki Miner picks a translation itself: a subtitle named for the video, or a text track inside it, in your interface language or else English. The Activity Log names the track it used. On Video → Batch, point it at a folder of translation subtitles instead and they pair to the videos by episode number. Turn it on under Settings → Sentences.</source>
-        <translation type="unfinished" />
+        <translation>טעינת קובץ כתוביות שני בשפה שלך לצד הקובץ בשפת הכרייה: הוא מוצג מתחת לשורה בתצוגה המקדימה של בורר המילים ואפשר לשמור אותו בשדה תרגום. אם משאירים את הקובץ ריק, Anki Miner בוחר תרגום בעצמו: כתוביות שנקראות על שם הסרטון, או רצועת טקסט בתוכו, בשפת הממשק שלך או אחרת באנגלית. יומן הפעילות מציין באיזו רצועה נעשה שימוש. בלשונית וידאו → אצווה, יש להפנות אותו לתיקייה של כתוביות תרגום במקום זאת, והן יותאמו לסרטונים לפי מספר הפרק. אפשר להפעיל זאת תחת הגדרות → משפטים.</translation>
     </message>
     <message>
         <source>Build a deck by coverage %</source>
@@ -2386,11 +2388,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Mine songs from .lrc lyrics</source>
-        <translation type="unfinished" />
+        <translation>כריית שירים ממילות שיר בקובצי .lrc</translation>
     </message>
     <message>
         <source>Use a .lrc lyrics file wherever a subtitle file goes. Each line lasts until the next one starts. Pair a song with its lyrics on Audiobooks, condense it in Condense, or mine a music video on Video.</source>
-        <translation type="unfinished" />
+        <translation>אפשר להשתמש בקובץ מילות שיר .lrc בכל מקום שבו נדרש קובץ כתוביות. כל שורה נמשכת עד שהשורה הבאה מתחילה. אפשר להתאים שיר למילים שלו בלשונית ספרי שמע, לדחוס אותו בלשונית דחיסה, או לכרות קליפ מוזיקלי בלשונית וידאו.</translation>
     </message>
     <message>
         <source>Mine from manga</source>
@@ -2406,23 +2408,23 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Mine vocabulary from novels and other text (EPUB, PDF, Aozora, plain text).</source>
-        <translation type="unfinished" />
+        <translation>כריית אוצר מילים מרומנים ומטקסטים אחרים (EPUB, PDF, Aozora, טקסט פשוט).</translation>
     </message>
     <message>
         <source>Readings from a book's own furigana</source>
-        <translation type="unfinished" />
+        <translation>קריאות מהפוריגנה של הספר עצמו</translation>
     </message>
     <message>
         <source>When a Japanese EPUB prints furigana over a word, the card takes that reading instead of the parser's guess.</source>
-        <translation type="unfinished" />
+        <translation>כשקובץ EPUB יפני מציג פוריגנה מעל מילה, הכרטיס מקבל את הקריאה הזו במקום הניחוש של המנתח.</translation>
     </message>
     <message>
         <source>Mine pasted text or a web article</source>
-        <translation type="unfinished" />
+        <translation>כריית טקסט מודבק או מאמר מהרשת</translation>
     </message>
     <message>
         <source>Paste text in your mining language, or fetch a web article by its address, and mine it into Anki cards. A fetched article's cards name the page and site as their source.</source>
-        <translation type="unfinished" />
+        <translation>הדבקת טקסט בשפת הכרייה שלך, או הבאת מאמר מהרשת לפי הכתובת שלו, וכרייתו לכרטיסי Anki. הכרטיסים של מאמר שהובא מציינים את הדף ואת האתר כמקור שלהם.</translation>
     </message>
     <message>
         <source>Mine subtitle files without video</source>
@@ -2446,7 +2448,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Create subtitles from audio with a local Whisper model -- as a standalone tool. Long lines are split at sentence ends, and a second run on the same file reuses the saved transcript.</source>
-        <translation type="unfinished" />
+        <translation>יצירת כתוביות משמע בעזרת מודל Whisper מקומי -- ככלי עצמאי. שורות ארוכות מפוצלות בסופי משפטים, והרצה שנייה על אותו קובץ משתמשת שוב בתמליל השמור.</translation>
     </message>
     <message>
         <source>Re-time existing subtitles</source>
@@ -2506,35 +2508,35 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Browse your whole mining history</source>
-        <translation type="unfinished" />
+        <translation>עיון בכל היסטוריית הכרייה שלך</translation>
     </message>
     <message>
         <source>Analytics lists every run you have mined. Pick a period, group the runs by day, week or month, see the cards per period in a chart, and export the table as a CSV file.</source>
-        <translation type="unfinished" />
+        <translation>הלשונית ניתוח מציגה כל הרצת כרייה שביצעת. אפשר לבחור תקופה, לקבץ את ההרצות לפי יום, שבוע או חודש, לראות בתרשים את הכרטיסים לכל תקופה, ולייצא את הטבלה כקובץ CSV.</translation>
     </message>
     <message>
         <source>Show or delete a past run's cards</source>
-        <translation type="unfinished" />
+        <translation>הצגה או מחיקה של הכרטיסים מהרצה קודמת</translation>
     </message>
     <message>
         <source>Select a run in Analytics → Mining History to open its cards in Anki's browser or to delete them. The confirmation says how many of its cards are still in Anki and how many you have reviewed. Runs mined before this version have no card list.</source>
-        <translation type="unfinished" />
+        <translation>יש לבחור הרצה בניתוח → היסטוריית כרייה כדי לפתוח את הכרטיסים שלה בדפדפן של Anki או כדי למחוק אותם. חלון האישור מציין כמה מהכרטיסים שלה עדיין נמצאים ב-Anki וכמה מהם כבר סקרת. להרצות שנכרו לפני הגרסה הזו אין רשימת כרטיסים.</translation>
     </message>
     <message>
         <source>Track how many words you know</source>
-        <translation type="unfinished" />
+        <translation>מעקב אחר מספר המילים המוכרות לך</translation>
     </message>
     <message>
         <source>The Known Words card on Analytics counts the words Anki Miner treats as known in the current mining language and shows how that number changed. It is counted while Anki is running, at most once every ten minutes.</source>
-        <translation type="unfinished" />
+        <translation>הכרטיס מילים מוכרות בלשונית ניתוח סופר את המילים ש-Anki Miner מתייחס אליהן כמוכרות בשפת הכרייה הנוכחית ומראה איך המספר הזה השתנה. הספירה מתבצעת כש-Anki פועל, לכל היותר פעם בעשר דקות.</translation>
     </message>
     <message>
         <source>See how much of a frequency list you know</source>
-        <translation type="unfinished" />
+        <translation>כמה מרשימת תדירות מוכר לך</translation>
     </message>
     <message>
         <source>Analytics → Frequency Coverage counts the words you know in ranks 1–1,000 up to 20,000 of your first frequency list with numeric ranks, and lists the missing words of each band. It needs Anki running.</source>
-        <translation type="unfinished" />
+        <translation>ניתוח → כיסוי תדירות סופר את המילים המוכרות לך בדירוגים 1–1,000 ועד 20,000 ברשימת התדירות הראשונה שלך שיש בה דירוגים מספריים, ומציג את המילים החסרות בכל טווח. נדרש ש-Anki יפעל.</translation>
     </message>
     <message>
         <source>Reset mining statistics</source>
@@ -2610,11 +2612,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Count a word as known only after its card has been reviewed</source>
-        <translation type="unfinished" />
+        <translation>ספירת מילה כמוכרת רק אחרי שהכרטיס שלה נסקר</translation>
     </message>
     <message>
         <source>Readability and the i+1 sentence rule then count a word as known only when its Anki card has been reviewed at least once. Mining still skips every word that already has a card.</source>
-        <translation type="unfinished" />
+        <translation>רמת קושי וכלל משפטי i+1 סופרים אז מילה כמוכרת רק כשכרטיס ה-Anki שלה נסקר לפחות פעם אחת. הכרייה עדיין מדלגת על כל מילה שכבר יש לה כרטיס.</translation>
     </message>
     <message>
         <source>Exclude specific Anki decks from 'known'</source>
@@ -2634,27 +2636,27 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Browse every known word</source>
-        <translation type="unfinished" />
+        <translation>עיון בכל המילים המוכרות</translation>
     </message>
     <message>
         <source>Manage Known Words lists every word this language counts as known, with where it came from (added by you, mined by Anki Miner, from Anki) and the date it was added. Search it, filter it by source, and remove words you added. Words from Anki come back on the next sync.</source>
-        <translation type="unfinished" />
+        <translation>החלון ניהול מילים מוכרות מציג כל מילה שהשפה הזו סופרת כמוכרת, עם המקור שלה (נוספה על ידך, נכרתה על ידי Anki Miner, מ-Anki) ותאריך ההוספה. אפשר לחפש בה, לסנן לפי מקור ולהסיר מילים שהוספת. מילים מ-Anki חוזרות בסנכרון הבא.</translation>
     </message>
     <message>
         <source>Import known words from Kindle, Lute or LWT</source>
-        <translation type="unfinished" />
+        <translation>ייבוא מילים מוכרות מ-Kindle, ‏Lute או LWT</translation>
     </message>
     <message>
         <source>In Manage Known Words, Import… also reads a Kindle Vocabulary Builder file (vocab.db; words marked mastered) and Lute or LWT term exports (status 5 and 99).</source>
-        <translation type="unfinished" />
+        <translation>בניהול מילים מוכרות, לייבא… קורא גם קובץ Kindle Vocabulary Builder ‏(vocab.db; מילים שסומנו כנלמדו) וקובצי ייצוא מונחים מ-Lute או LWT (סטטוס 5 ו-99).</translation>
     </message>
     <message>
         <source>Export words to a CSV file</source>
-        <translation type="unfinished" />
+        <translation>ייצוא מילים לקובץ CSV</translation>
     </message>
     <message>
         <source>Export words… saves the list you are looking at in Manage Known Words, or a finished run's mined and not-mined words with the reason each was skipped, as a CSV file.</source>
-        <translation type="unfinished" />
+        <translation>לייצא מילים… שומר כקובץ CSV את הרשימה שמוצגת לך בניהול מילים מוכרות, או את המילים שנכרו ושלא נכרו בהרצה שהסתיימה, עם הסיבה לדילוג על כל אחת.</translation>
     </message>
     <message>
         <source>Exclude kana-only words</source>
@@ -2686,23 +2688,23 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Mine at most one word from each example sentence. A word whose sentence is taken moves to another line it appears on, and is skipped only when every one of its lines is taken.</source>
-        <translation type="unfinished" />
+        <translation>כריית מילה אחת לכל היותר מכל משפט דוגמה. מילה שהמשפט שלה כבר תפוס עוברת לשורה אחרת שבה היא מופיעה, ומדלגים עליה רק כשכל השורות שלה תפוסות.</translation>
     </message>
     <message>
         <source>Pick the clearest sentence</source>
-        <translation type="unfinished" />
+        <translation>בחירת המשפט הברור ביותר</translation>
     </message>
     <message>
         <source>When a word appears on several lines, its card uses the line with the fewest unknown words and a comfortable length instead of the first one. The Word Curator still lists every line.</source>
-        <translation type="unfinished" />
+        <translation>כשמילה מופיעה בכמה שורות, הכרטיס שלה משתמש בשורה עם הכי מעט מילים לא מוכרות ובאורך נוח, במקום בשורה הראשונה. בורר המילים עדיין מציג את כל השורות.</translation>
     </message>
     <message>
         <source>Skip openings, endings and signs</source>
-        <translation type="unfinished" />
+        <translation>דילוג על פתיחים, סיומים ושלטים</translation>
     </message>
     <message>
         <source>Leave opening and ending songs, previews and on-screen signs out of mining, Condense and Readability: lines styled as songs or signs, and lines inside a video's opening, ending and preview chapters. On by default for new installs; turn it off in Settings → Sentences.</source>
-        <translation type="unfinished" />
+        <translation>השמטת שירי פתיחה וסיום, תצוגות מקדימות ושלטים על המסך מכרייה, מדחיסה ומרמת קושי: שורות שמעוצבות כשירים או כשלטים, ושורות בתוך פרקי הפתיחה, הסיום והתצוגה המקדימה של סרטון. מופעל כברירת מחדל בהתקנות חדשות; אפשר לכבות זאת בהגדרות → משפטים.</translation>
     </message>
     <message>
         <source>Strip junk from subtitles (regex)</source>
@@ -2770,11 +2772,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Import a dictionary file</source>
-        <translation type="unfinished" />
+        <translation>ייבוא קובץ מילון</translation>
     </message>
     <message>
         <source>Add a Yomitan zip, a StarDict dictionary (its archive or its .ifo file) or a CSV/TSV word list (term and definition, or term, reading and definition) as a definition source.</source>
-        <translation type="unfinished" />
+        <translation>הוספת קובץ zip של Yomitan, מילון StarDict (הארכיון שלו או קובץ ה-.ifo שלו) או רשימת מילים CSV/TSV (מונח והגדרה, או מונח, קריאה והגדרה) כמקור הגדרות.</translation>
     </message>
     <message>
         <source>Keep dictionaries up to date</source>
@@ -2846,7 +2848,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Attach word audio to cards from audio packs, JPod101 (Japanese), Google text-to-speech, or Microsoft Edge text-to-speech (every language). Wikimedia Commons plays recordings of real speakers from Wiktionary and Lingua Libre, tried before Google TTS in most languages.</source>
-        <translation type="unfinished" />
+        <translation>צירוף שמע מילים לכרטיסים מחבילות שמע, מ-JPod101 (יפנית), מהמרת טקסט לדיבור של Google או מהמרת טקסט לדיבור של Microsoft Edge (כל השפות). ‏Wikimedia Commons משמיע הקלטות של דוברים אמיתיים מ-Wiktionary ומ-Lingua Libre, ונבדק לפני Google TTS ברוב השפות.</translation>
     </message>
     <message>
         <source>Import local audio packs</source>
@@ -2862,7 +2864,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Extract the spoken sentence as an audio clip; tune its format and bitrate. Even out audio volume brings sentence clips and condensed audio to one loudness and fades each clip in and out.</source>
-        <translation type="unfinished" />
+        <translation>חילוץ המשפט המדובר כקטע שמע; כוונון הפורמט וקצב הסיביות שלו. השוואת עוצמת השמע מביאה את קטעי המשפטים ואת השמע הדחוס לעוצמה אחידה ומוסיפה לכל קטע הדרגת כניסה ויציאה.</translation>
     </message>
     <message>
         <source>Sentence audio for reading (TTS)</source>
@@ -2886,7 +2888,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Capture a still frame from the scene to put on the card. Crop manga pictures to the speech bubble shows the bubble and the art around it instead of the whole page.</source>
-        <translation type="unfinished" />
+        <translation>לכידת תמונת סטילס מהסצנה לשימוש בכרטיס. חיתוך תמונות מנגה לבועת הדיבור מציג את הבועה ואת הציור שסביבה במקום העמוד כולו.</translation>
     </message>
     <message>
         <source>Animated clips (GIF/WebP)</source>
@@ -2966,7 +2968,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Add tags to every note Anki Miner creates. Card tags can use {series}, {episode} and {volume}. Each card gets its own show, episode or book volume, for example mined::{series}::{episode} gives mined::Frieren::03.</source>
-        <translation type="unfinished" />
+        <translation>הוספת תגיות לכל פתק ש-Anki Miner יוצר. תגיות כרטיס יכולות להשתמש ב-{series}, ‏{episode} ו-{volume}. כל כרטיס מקבל את הסדרה, הפרק או כרך הספר שלו, לדוגמה ⁨mined::{series}::{episode}⁩ נותן ⁨mined::Frieren::03⁩.</translation>
     </message>
     <message>
         <source>Connect to Anki (AnkiConnect)</source>
@@ -2974,15 +2976,15 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Set the AnkiConnect address; Refresh re-checks the connection to your running Anki. If AnkiConnect is set up with an API key, add it to the address: http://127.0.0.1:8765/?key=YOUR_KEY. Anki Miner sends it with every request and never writes it to the log.</source>
-        <translation type="unfinished" />
+        <translation>הגדרת הכתובת של AnkiConnect; לרענן בודק מחדש את החיבור ל-Anki הפועל שלך. אם AnkiConnect מוגדר עם מפתח API, יש להוסיף אותו לכתובת: http://127.0.0.1:8765/?key=YOUR_KEY. ‏Anki Miner שולח אותו עם כל בקשה ולעולם לא כותב אותו ליומן.</translation>
     </message>
     <message>
         <source>Sync Anki after mining</source>
-        <translation type="unfinished" />
+        <translation>סנכרון Anki אחרי כרייה</translation>
     </message>
     <message>
         <source>After a run that added cards, Anki Miner asks Anki to sync with AnkiWeb. If the sync fails, the Activity Log says so and the cards stay added.</source>
-        <translation type="unfinished" />
+        <translation>אחרי הרצה שהוסיפה כרטיסים, Anki Miner מבקש מ-Anki לסנכרן עם AnkiWeb. אם הסנכרון נכשל, יומן הפעילות מציין זאת והכרטיסים נשארים.</translation>
     </message>
     <message>
         <source>Fill in field mappings automatically</source>
@@ -3070,7 +3072,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Draw a box where a video's on-screen dialogue appears and Anki Miner reads it into a timed .srt that Video → Single can mine. Made for game longplays without commentary. It also reads image subtitles (Blu-ray .sup, DVD .idx/.sub, or an image track inside a video) without a box. Lines with none of your mining language's letters are left out. Download the OCR engine from the setup card on Utilities → Video OCR.</source>
-        <translation type="unfinished" />
+        <translation>מסמנים מסגרת במקום שבו הדיאלוג מופיע על המסך בסרטון, ו-Anki Miner קורא אותו לקובץ .srt מתוזמן שאפשר לכרות בלשונית וידאו → יחיד. מיועד להקלטות משחק מלאות ללא פרשנות. הוא קורא גם כתוביות תמונה (‏.sup של Blu-ray, ‏.idx/.sub של DVD, או רצועת תמונה בתוך סרטון) ללא מסגרת. שורות שאין בהן אף אות של שפת הכרייה שלך מושמטות. את מנוע ה-OCR מורידים מכרטיס ההגדרה בעזרים → ‏OCR לווידאו.</translation>
     </message>
     <message>
         <source>Sync an audiobook to its EPUB</source>
@@ -3078,23 +3080,23 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Transcribe an audiobook and time the book's own sentences to it, writing an .srt the Audiobook tab, Reading → Subtitle Files or a reader can use. A second run on the same audio reuses the saved transcript instead of transcribing again.</source>
-        <translation type="unfinished" />
+        <translation>תמלול ספר שמע ותזמון משפטי הספר עצמו אליו, ויצירת קובץ .srt שהלשונית ספר שמע, קריאה → קובצי כתוביות או אפליקציית קריאה יכולים להשתמש בו. הרצה שנייה על אותו שמע משתמשת שוב בתמליל השמור במקום לתמלל מחדש.</translation>
     </message>
     <message>
         <source>Sync a shelf of audiobooks in one run</source>
-        <translation type="unfinished" />
+        <translation>סנכרון מדף שלם של ספרי שמע בהרצה אחת</translation>
     </message>
     <message>
         <source>In Utilities → Audiobook Sync, choose Folder and pick a folder that holds one folder per book, each with its EPUB (or text file) and its audio files. The books sync one after another, in name order.</source>
-        <translation type="unfinished" />
+        <translation>בעזרים → סנכרון ספרים, יש לבחור באפשרות תיקייה ולבחור תיקייה שמכילה תיקייה אחת לכל ספר, כל אחת עם ה-EPUB שלה (או קובץ טקסט) וקובצי השמע שלה. הספרים מסונכרנים בזה אחר זה, לפי סדר השמות.</translation>
     </message>
     <message>
         <source>See how well an audiobook synced</source>
-        <translation type="unfinished" />
+        <translation>עד כמה ספר שמע סונכרן היטב</translation>
     </message>
     <message>
         <source>After Audiobook Sync, each book gets a line under the Book card: how many of its sentences got a subtitle, how much of the narration matched the book, and a grade from A to D. Chapters read out of book order are found too; sentences the narrator skipped never get a subtitle.</source>
-        <translation type="unfinished" />
+        <translation>אחרי סנכרון ספרים, כל ספר מקבל שורה מתחת לכרטיס ספר: כמה ממשפטיו קיבלו כתובית, כמה מההקראה תאמה לספר, וציון מ-A עד D. גם פרקים שהוקראו שלא לפי סדר הספר נמצאים; משפטים שהקריין דילג עליהם לא מקבלים כתובית אף פעם.</translation>
     </message>
     <message>
         <source>Check how much of a show, book or manga you can read</source>
@@ -3178,11 +3180,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Restore an automatic backup</source>
-        <translation type="unfinished" />
+        <translation>שחזור גיבוי אוטומטי</translation>
     </message>
     <message>
         <source>Anki Miner backs up your known words, statistics, settings and profiles once a day when it starts, and keeps the last 7 days. Settings → General → Restore a backup… puts one back the next time the app starts.</source>
-        <translation type="unfinished" />
+        <translation>‏Anki Miner מגבה את המילים המוכרות, הסטטיסטיקות, ההגדרות והפרופילים שלך פעם ביום כשהוא מופעל, ומחזיק את 7 הימים האחרונים. הגדרות → כללי → לשחזר גיבוי… משחזר אחד מהם בפעם הבאה שהאפליקציה מופעלת.</translation>
     </message>
     <message>
         <source>Undo a mining run</source>
@@ -3194,11 +3196,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Export a run's words</source>
-        <translation type="unfinished" />
+        <translation>ייצוא המילים של הרצה</translation>
     </message>
     <message>
         <source>Press View details on a run's result line, then Export words… to save the run's mined and not-mined words, with the reason each was skipped, as a CSV file.</source>
-        <translation type="unfinished" />
+        <translation>יש ללחוץ על להציג פרטים בשורת התוצאה של הרצה, ואז על לייצא מילים… כדי לשמור כקובץ CSV את המילים שנכרו ושלא נכרו בהרצה, עם הסיבה לדילוג על כל אחת.</translation>
     </message>
     <message>
         <source>Keyboard shortcuts</source>
@@ -4592,11 +4594,11 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
     </message>
     <message>
         <source>Choose dictionary files</source>
-        <translation type="unfinished" />
+        <translation>בחירת קובצי מילון</translation>
     </message>
     <message>
         <source>Dictionaries (*.zip *.ifo *.tar.gz *.tgz *.tar.bz2 *.tar.xz *.csv *.tsv)</source>
-        <translation type="unfinished" />
+        <translation>מילונים (*.zip *.ifo *.tar.gz *.tgz *.tar.bz2 *.tar.xz *.csv *.tsv)</translation>
     </message>
     <message>
         <source>Dictionary %1 of %2: %3</source>
@@ -5432,8 +5434,9 @@ No files on disk are deleted.</source>
     </message>
     <message numerus="yes">
         <source>Skipping lines in %n opening, ending or preview chapter(s)</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>מדלג על שורות בפרק פתיחה, סיום או תצוגה מקדימה אחד (⁨%n⁩)</numerusform>
+            <numerusform>מדלג על שורות ב-⁨%n⁩ פרקי פתיחה, סיום או תצוגה מקדימה</numerusform>
         </translation>
     </message>
     <message>
@@ -5483,7 +5486,7 @@ No files on disk are deleted.</source>
     </message>
     <message>
         <source>Only %1% of the first %2 words have an entry in your dictionaries. Is this file in the language you are mining?</source>
-        <translation type="unfinished" />
+        <translation>רק ל-⁨%1⁩% מתוך ⁨%2⁩ המילים הראשונות יש ערך במילונים שלך. האם הקובץ הזה בשפת הכרייה שלך?</translation>
     </message>
     <message>
         <source>Frequency cutoff ignored — no ranked frequency source is loaded (Settings → Frequency).</source>
@@ -5595,11 +5598,11 @@ No files on disk are deleted.</source>
     </message>
     <message>
         <source>Translation subtitles picked automatically: %1</source>
-        <translation type="unfinished" />
+        <translation>כתוביות תרגום נבחרו אוטומטית: ⁨%1⁩</translation>
     </message>
     <message>
         <source>Translation subtitles picked automatically: embedded track %1</source>
-        <translation type="unfinished" />
+        <translation>כתוביות תרגום נבחרו אוטומטית: רצועה מוטמעת ⁨%1⁩</translation>
     </message>
     <message>
         <source>Could not extract media for any word — no cards created</source>
@@ -5869,11 +5872,11 @@ No files on disk are deleted.</source>
     </message>
     <message>
         <source>Count a word as known only after its card has been reviewed</source>
-        <translation type="unfinished" />
+        <translation>ספירת מילה כמוכרת רק אחרי שהכרטיס שלה נסקר</translation>
     </message>
     <message>
         <source>Readability and the i+1 sentence rule count a word as known only when its Anki card has been reviewed at least once. Mining still skips every word that already has a card.</source>
-        <translation type="unfinished" />
+        <translation>רמת קושי וכלל משפטי i+1 סופרים מילה כמוכרת רק כשכרטיס ה-Anki שלה נסקר לפחות פעם אחת. הכרייה עדיין מדלגת על כל מילה שכבר יש לה כרטיס.</translation>
     </message>
     <message>
         <source>Keep words known after their cards are deleted</source>
@@ -6535,15 +6538,15 @@ No index files are deleted.</source>
     <name>KnownWordsManagerDialog</name>
     <message>
         <source>Word</source>
-        <translation type="unfinished" />
+        <translation>מילה</translation>
     </message>
     <message>
         <source>Source</source>
-        <translation type="unfinished" />
+        <translation>מקור</translation>
     </message>
     <message>
         <source>Added</source>
-        <translation type="unfinished" />
+        <translation>תאריך הוספה</translation>
     </message>
     <message>
         <source>Manage Known Words</source>
@@ -6555,7 +6558,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Every word this language counts as known, and where it came from. Words you added from the Word Curator stay known on every run and across cache rebuilds.</source>
-        <translation type="unfinished" />
+        <translation>כל מילה שהשפה הזו סופרת כמוכרת, ומאיפה היא הגיעה. מילים שהוספת מבורר המילים נשארות מוכרות בכל הרצה וגם אחרי בנייה מחדש של המטמון.</translation>
     </message>
     <message>
         <source>Decks this language's known-words scan skips: %1. Change them in Settings → Word Filters.</source>
@@ -6567,15 +6570,15 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Added by you</source>
-        <translation type="unfinished" />
+        <translation>נוספה על ידך</translation>
     </message>
     <message>
         <source>Mined by Anki Miner</source>
-        <translation type="unfinished" />
+        <translation>נכרתה על ידי Anki Miner</translation>
     </message>
     <message>
         <source>From Anki</source>
-        <translation type="unfinished" />
+        <translation>מ-Anki</translation>
     </message>
     <message>
         <source>Filter…</source>
@@ -6583,7 +6586,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>All sources</source>
-        <translation type="unfinished" />
+        <translation>כל המקורות</translation>
     </message>
     <message>
         <source>Rebuild Known Words DB</source>
@@ -6599,7 +6602,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Removes words you added. Words from Anki come back on the next run, and mined words leave with Undo.</source>
-        <translation type="unfinished" />
+        <translation>מסיר מילים שהוספת. מילים מ-Anki חוזרות בהרצה הבאה, ומילים שנכרו מוסרות באמצעות ביטול.</translation>
     </message>
     <message>
         <source>Import…</source>
@@ -6607,7 +6610,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Export words…</source>
-        <translation type="unfinished" />
+        <translation>לייצא מילים…</translation>
     </message>
     <message>
         <source>Reset User List</source>
@@ -6639,11 +6642,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Kindle Vocabulary Builder</source>
-        <translation type="unfinished" />
+        <translation>‏Kindle Vocabulary Builder</translation>
     </message>
     <message>
         <source>Lute or LWT term export</source>
-        <translation type="unfinished" />
+        <translation>ייצוא מונחים מ-Lute או LWT</translation>
     </message>
     <message>
         <source>plain word list</source>
@@ -6655,7 +6658,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Known word lists (*.csv *.tsv *.txt *.json *.db);;All Files (*)</source>
-        <translation type="unfinished" />
+        <translation>רשימות מילים מוכרות (*.csv *.tsv *.txt *.json *.db);;כל הקבצים (*)</translation>
     </message>
     <message>
         <source>Detected: %1 — every entry is imported.
@@ -6687,7 +6690,7 @@ Words to add: %3. Continue?</source>
     </message>
     <message>
         <source>This file has no words for %1. It contains: %2.</source>
-        <translation type="unfinished" />
+        <translation>בקובץ הזה אין מילים עבור ⁨%1⁩. הוא מכיל: ⁨%2⁩.</translation>
     </message>
     <message>
         <source>That file is too large to import.</source>
@@ -6703,7 +6706,7 @@ Words to add: %3. Continue?</source>
     </message>
     <message>
         <source>File format not recognized. Supported: jpdb review export (JSON), Migaku word export (JSON/CSV), AnkiMorphs known morphs (CSV), Kindle Vocabulary Builder (vocab.db), Lute or LWT term export (CSV/TSV), plain word lists (one word per line).</source>
-        <translation type="unfinished" />
+        <translation>פורמט הקובץ לא זוהה. נתמכים: ייצוא חזרות של jpdb ‏(JSON), ייצוא מילים של Migaku ‏(JSON/CSV), מורפמות מוכרות של AnkiMorphs ‏(CSV), Kindle Vocabulary Builder ‏(vocab.db), ייצוא מונחים מ-Lute או LWT ‏(CSV/TSV), רשימות מילים פשוטות (מילה אחת בכל שורה).</translation>
     </message>
     <message>
         <source>That file could not be imported.</source>
@@ -6725,7 +6728,7 @@ Words to add: %3. Continue?</source>
     </message>
     <message>
         <source>CSV files (*.csv);;Text files, one word per line (*.txt)</source>
-        <translation type="unfinished" />
+        <translation>קובצי CSV (*.csv);;קובצי טקסט, מילה אחת בכל שורה (*.txt)</translation>
     </message>
     <message>
         <source>The known words list could not be exported.</source>
@@ -7474,7 +7477,7 @@ Continue?</source>
     </message>
     <message>
         <source>Opus clips do not play in AnkiMobile on iPhone or iPad. Choose MP3 if you review there.</source>
-        <translation type="unfinished" />
+        <translation>קטעי Opus לא מתנגנים ב-AnkiMobile ב-iPhone או ב-iPad. אם החזרות שלך נעשות שם, יש לבחור MP3.</translation>
     </message>
     <message>
         <source> kbps</source>
@@ -7502,11 +7505,11 @@ Continue?</source>
     </message>
     <message>
         <source>Even out audio volume</source>
-        <translation type="unfinished" />
+        <translation>השוואת עוצמת השמע</translation>
     </message>
     <message>
         <source>Brings sentence clips and condensed audio to one volume and fades each clip in and out, so quiet and loud sources sound alike. Applies to new clips.</source>
-        <translation type="unfinished" />
+        <translation>מביא את קטעי המשפטים ואת השמע הדחוס לעוצמה אחידה ומוסיף לכל קטע הדרגת כניסה ויציאה, כך שמקורות שקטים ורועשים נשמעים דומה. חל על קטעים חדשים.</translation>
     </message>
     <message>
         <source>Text-to-speech</source>
@@ -7530,11 +7533,11 @@ Continue?</source>
     </message>
     <message>
         <source>Crop manga pictures to the speech bubble</source>
-        <translation type="unfinished" />
+        <translation>חיתוך תמונות מנגה לבועת הדיבור</translation>
     </message>
     <message>
         <source>Manga cards show the speech bubble and the art around it instead of the whole page. A sentence with no bubble position keeps the whole page.</source>
-        <translation type="unfinished" />
+        <translation>כרטיסי מנגה מציגים את בועת הדיבור ואת הציור שסביבה במקום העמוד כולו. משפט ללא מיקום בועה שומר על העמוד כולו.</translation>
     </message>
     <message>
         <source>Enable animated screenshots</source>
@@ -7770,7 +7773,7 @@ Continue?</source>
     </message>
     <message>
         <source>Anki didn't sync after this run. Your cards are added; sync from Anki, or see the log for why.</source>
-        <translation type="unfinished" />
+        <translation>‏Anki לא סונכרן אחרי ההרצה הזו. הכרטיסים שלך נוספו; אפשר לסנכרן מתוך Anki, או לעיין ביומן כדי לדעת למה.</translation>
     </message>
     <message>
         <source>Anki Miner couldn't open these cards in Anki.</source>
@@ -9540,7 +9543,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>An .epub, .txt or .pdf book, or a folder of books; each book is mined separately.</source>
-        <translation type="unfinished" />
+        <translation>ספר .epub, .txt או .pdf, או תיקיית ספרים; כל ספר נכרה בנפרד.</translation>
     </message>
     <message>
         <source>Mine</source>
@@ -9576,7 +9579,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Choose an .epub, .txt or .pdf book, or a folder of books.</source>
-        <translation type="unfinished" />
+        <translation>יש לבחור ספר .epub, .txt או .pdf, או תיקיית ספרים.</translation>
     </message>
     <message>
         <source>Starting…</source>
@@ -9642,7 +9645,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Add subtitle files (.srt, .ass, .ssa, .vtt, .smi, .lrc) to the list.</source>
-        <translation type="unfinished" />
+        <translation>הוספת קובצי כתוביות (.srt, .ass, .ssa, .vtt, .smi, .lrc) לרשימה.</translation>
     </message>
     <message>
         <source>Remove Selected</source>
@@ -9823,19 +9826,19 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Web addresses to fetch, one per line (https://…)</source>
-        <translation type="unfinished" />
+        <translation>כתובות אינטרנט להבאה, אחת בכל שורה (https://…)</translation>
     </message>
     <message>
         <source>Web addresses</source>
-        <translation type="unfinished" />
+        <translation>כתובות אינטרנט</translation>
     </message>
     <message>
         <source>Fetch</source>
-        <translation type="unfinished" />
+        <translation>להביא</translation>
     </message>
     <message>
         <source>Put the article text of each web address in the box below, to check before mining.</source>
-        <translation type="unfinished" />
+        <translation>הכנסת טקסט המאמר מכל כתובת אינטרנט לתיבה שלמטה, לבדיקה לפני הכרייה.</translation>
     </message>
     <message>
         <source>Paste the text you want to mine. Cards from pasted text have no sentence audio from a recording.</source>
@@ -9883,59 +9886,59 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Each line must be a web address that starts with http:// or https://.</source>
-        <translation type="unfinished" />
+        <translation>כל שורה חייבת להיות כתובת אינטרנט שמתחילה ב-http:// או ב-https://.</translation>
     </message>
     <message>
         <source>Enter a web address first.</source>
-        <translation type="unfinished" />
+        <translation>יש להזין קודם כתובת אינטרנט.</translation>
     </message>
     <message>
         <source>Fetch takes up to 10 web addresses at a time.</source>
-        <translation type="unfinished" />
+        <translation>להביא מקבל עד 10 כתובות אינטרנט בכל פעם.</translation>
     </message>
     <message>
         <source>Fetching…</source>
-        <translation type="unfinished" />
+        <translation>מביא…</translation>
     </message>
     <message>
         <source>Could not fetch %1: %2</source>
-        <translation type="unfinished" />
+        <translation>לא ניתן היה להביא את ⁨%1⁩: ⁨%2⁩</translation>
     </message>
     <message>
         <source>None of the pages could be fetched.</source>
-        <translation type="unfinished" />
+        <translation>לא ניתן היה להביא אף אחד מהדפים.</translation>
     </message>
     <message>
         <source>Fetched %1.</source>
-        <translation type="unfinished" />
+        <translation>הובא: ⁨%1⁩.</translation>
     </message>
     <message>
         <source>The pages could not be fetched.</source>
-        <translation type="unfinished" />
+        <translation>לא ניתן היה להביא את הדפים.</translation>
     </message>
     <message>
         <source>The page could not be reached. Check the address and your connection.</source>
-        <translation type="unfinished" />
+        <translation>לא ניתן היה להגיע לדף. יש לבדוק את הכתובת ואת החיבור שלך.</translation>
     </message>
     <message>
         <source>The site did not send the page.</source>
-        <translation type="unfinished" />
+        <translation>האתר לא שלח את הדף.</translation>
     </message>
     <message>
         <source>This address is not a web page.</source>
-        <translation type="unfinished" />
+        <translation>הכתובת הזו אינה דף אינטרנט.</translation>
     </message>
     <message>
         <source>This page is too large to read.</source>
-        <translation type="unfinished" />
+        <translation>הדף הזה גדול מכדי לקרוא אותו.</translation>
     </message>
     <message>
         <source>This is not a web address.</source>
-        <translation type="unfinished" />
+        <translation>זו אינה כתובת אינטרנט.</translation>
     </message>
     <message>
         <source>No article text found on this page. Pages that draw their text with JavaScript cannot be read.</source>
-        <translation type="unfinished" />
+        <translation>לא נמצא טקסט מאמר בדף הזה. לא ניתן לקרוא דפים שמציגים את הטקסט שלהם באמצעות JavaScript.</translation>
     </message>
     <message>
         <source>Paste some text first.</source>
@@ -9947,7 +9950,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>The fetched text was edited, so it is mined as one text without its page titles.</source>
-        <translation type="unfinished" />
+        <translation>הטקסט שהובא נערך, ולכן הוא נכרה כטקסט אחד ללא כותרות הדפים שלו.</translation>
     </message>
     <message>
         <source>That picture cannot be read. Pick another, or remove it to mine without one.</source>
@@ -10734,7 +10737,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Export words…</source>
-        <translation type="unfinished" />
+        <translation>לייצא מילים…</translation>
     </message>
     <message>
         <source>Close</source>
@@ -10749,19 +10752,19 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Export Words</source>
-        <translation type="unfinished" />
+        <translation>ייצוא מילים</translation>
     </message>
     <message>
         <source>CSV files (*.csv)</source>
-        <translation type="unfinished" />
+        <translation>קובצי CSV (*.csv)</translation>
     </message>
     <message>
         <source>Words exported</source>
-        <translation type="unfinished" />
+        <translation>המילים יוצאו</translation>
     </message>
     <message>
         <source>Export failed — try again</source>
-        <translation type="unfinished" />
+        <translation>הייצוא נכשל — יש לנסות שוב</translation>
     </message>
     <message>
         <source>Confirm Undo</source>
@@ -10966,11 +10969,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Skip openings, endings and signs</source>
-        <translation type="unfinished" />
+        <translation>דילוג על פתיחים, סיומים ושלטים</translation>
     </message>
     <message>
         <source>Leaves out song lyrics, previews and on-screen signs: lines whose subtitle style marks them as a song or a sign, and lines inside a video's opening, ending or preview chapters. Applies to mining, Condense and Readability.</source>
-        <translation type="unfinished" />
+        <translation>משמיט מילות שירים, תצוגות מקדימות ושלטים על המסך: שורות שסגנון הכתוביות שלהן מסמן אותן כשיר או כשלט, ושורות בתוך פרקי הפתיחה, הסיום או התצוגה המקדימה של סרטון. חל על כרייה, דחיסה ורמת קושי.</translation>
     </message>
     <message>
         <source>Sentence options</source>
@@ -10986,7 +10989,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Mines at most one word per example sentence. A word whose sentence is already taken moves to another line it appears on, and is skipped only when every one of its lines is taken. Whitelisted words are still mined.</source>
-        <translation type="unfinished" />
+        <translation>כורה מילה אחת לכל היותר בכל משפט דוגמה. מילה שהמשפט שלה כבר תפוס עוברת לשורה אחרת שבה היא מופיעה, ומדלגים עליה רק כשכל השורות שלה תפוסות. מילים מהרשימה הלבנה עדיין נכרות.</translation>
     </message>
     <message>
         <source>Only i+1 sentences (exactly one unknown word)</source>
@@ -11002,11 +11005,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Pick the clearest sentence for each word</source>
-        <translation type="unfinished" />
+        <translation>בחירת המשפט הברור ביותר לכל מילה</translation>
     </message>
     <message>
         <source>When a word appears on several lines, its card uses the line with the fewest unknown words and a comfortable length instead of the first one. The Word Curator still lists every line, and card order does not change.</source>
-        <translation type="unfinished" />
+        <translation>כשמילה מופיעה בכמה שורות, הכרטיס שלה משתמש בשורה עם הכי מעט מילים לא מוכרות ובאורך נוח, במקום בשורה הראשונה. בורר המילים עדיין מציג את כל השורות, וסדר הכרטיסים לא משתנה.</translation>
     </message>
     <message>
         <source> s</source>
@@ -13065,15 +13068,15 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>Restore a backup…</source>
-        <translation type="unfinished" />
+        <translation>לשחזר גיבוי…</translation>
     </message>
     <message>
         <source>Backups</source>
-        <translation type="unfinished" />
+        <translation>גיבויים</translation>
     </message>
     <message>
         <source>Anki Miner saves your known words, statistics, settings and profiles once a day when it starts, and keeps the last 7 days.</source>
-        <translation type="unfinished" />
+        <translation>‏Anki Miner שומר את המילים המוכרות, הסטטיסטיקות, ההגדרות והפרופילים שלך פעם ביום כשהוא מופעל, ומחזיק את 7 הימים האחרונים.</translation>
     </message>
     <message>
         <source>Themes</source>
@@ -13117,27 +13120,27 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>There is no backup yet. Anki Miner makes one each day when it starts.</source>
-        <translation type="unfinished" />
+        <translation>עדיין אין גיבוי. Anki Miner יוצר גיבוי בכל יום כשהוא מופעל.</translation>
     </message>
     <message>
         <source>Restore a Backup</source>
-        <translation type="unfinished" />
+        <translation>שחזור גיבוי</translation>
     </message>
     <message>
         <source>Restore the backup from:</source>
-        <translation type="unfinished" />
+        <translation>לשחזר את הגיבוי מתאריך:</translation>
     </message>
     <message>
         <source>Replace your known words, statistics, settings and profiles with the copies from %1? The restore runs the next time Anki Miner starts. Changes made after that backup are lost.</source>
-        <translation type="unfinished" />
+        <translation>להחליף את המילים המוכרות, הסטטיסטיקות, ההגדרות והפרופילים שלך בעותקים מ-⁨%1⁩? השחזור יתבצע בפעם הבאה ש-Anki Miner יופעל. שינויים שנעשו אחרי הגיבוי הזה יאבדו.</translation>
     </message>
     <message>
         <source>The restore could not be scheduled.</source>
-        <translation type="unfinished" />
+        <translation>לא ניתן היה לתזמן את השחזור.</translation>
     </message>
     <message>
         <source>The backup from %1 will be restored when Anki Miner next starts.</source>
-        <translation type="unfinished" />
+        <translation>הגיבוי מ-⁨%1⁩ ישוחזר בפעם הבאה ש-Anki Miner יופעל.</translation>
     </message>
 </context><context>
     <name>UpdateBanner</name>
@@ -13305,11 +13308,11 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>The picture (burned-in text)</source>
-        <translation type="unfinished" />
+        <translation>התמונה (טקסט צרוב)</translation>
     </message>
     <message>
         <source>Image subtitle track %1</source>
-        <translation type="unfinished" />
+        <translation>רצועת כתוביות תמונה ⁨%1⁩</translation>
     </message>
     <message>
         <source>The OCR engine could not start on this computer. The details say why.</source>
@@ -13349,15 +13352,15 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>This field takes a video or an image subtitle file (.sup, .idx, .sub).</source>
-        <translation type="unfinished" />
+        <translation>השדה הזה מקבל סרטון או קובץ כתוביות תמונה (.sup, .idx, .sub).</translation>
     </message>
     <message>
         <source>Read from:</source>
-        <translation type="unfinished" />
+        <translation>לקרוא מתוך:</translation>
     </message>
     <message>
         <source>Read text drawn into the picture, or one of the video's image subtitle tracks.</source>
-        <translation type="unfinished" />
+        <translation>קריאת טקסט שמצויר בתוך התמונה, או אחת מרצועות כתוביות התמונה של הסרטון.</translation>
     </message>
     <message>
         <source>Video Folder:</source>
@@ -13441,7 +13444,7 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>Image subtitles are read over the whole frame, so they need no region.</source>
-        <translation type="unfinished" />
+        <translation>כתוביות תמונה נקראות על פני כל הפריים, ולכן אין צורך באזור.</translation>
     </message>
     <message>
         <source>Download OCR models</source>
@@ -13485,7 +13488,7 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>A DVD subtitle needs its .idx and .sub files in the same folder.</source>
-        <translation type="unfinished" />
+        <translation>כתוביות DVD צריכות את קובצי ה-.idx וה-.sub שלהן באותה תיקייה.</translation>
     </message>
     <message>
         <source>Choose a folder before reading subtitles.</source>
@@ -13771,15 +13774,15 @@ Sort by it to work through a long recording in order — then highlight the rows
     </message>
     <message>
         <source>Used on the card</source>
-        <translation type="unfinished" />
+        <translation>בשימוש בכרטיס</translation>
     </message>
     <message>
         <source>Back to the first match</source>
-        <translation type="unfinished" />
+        <translation>חזרה להתאמה הראשונה</translation>
     </message>
     <message>
         <source>Use this dictionary on the card</source>
-        <translation type="unfinished" />
+        <translation>להשתמש במילון הזה בכרטיס</translation>
     </message>
     <message>
         <source>Sentences (%1)</source>
@@ -14217,7 +14220,7 @@ Sort by it to work through a long recording in order — then highlight the rows
     </message>
     <message>
         <source>Wikimedia Commons (native recordings)</source>
-        <translation type="unfinished" />
+        <translation>‏Wikimedia Commons (הקלטות של דוברים ילידים)</translation>
     </message>
     <message>
         <source>Microsoft Edge read-aloud (synthetic TTS)</source>
@@ -14231,7 +14234,7 @@ Sort by it to work through a long recording in order — then highlight the rows
     <name>_BarChart</name>
     <message>
         <source>Cards per period</source>
-        <translation type="unfinished" />
+        <translation>כרטיסים לכל תקופה</translation>
     </message>
 </context><context>
     <name>_HealthRow</name>
@@ -14253,11 +14256,11 @@ Sort by it to work through a long recording in order — then highlight the rows
     <name>_MissingWordsDialog</name>
     <message>
         <source>Missing Words</source>
-        <translation type="unfinished" />
+        <translation>מילים חסרות</translation>
     </message>
     <message>
         <source>Not known yet in ranks %1</source>
-        <translation type="unfinished" />
+        <translation>עדיין לא מוכרות בדירוגים ⁨%1⁩</translation>
     </message>
 </context><context>
     <name>app</name>

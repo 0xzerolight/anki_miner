@@ -93,59 +93,59 @@
     </message>
     <message>
         <source>Known Words</source>
-        <translation type="unfinished" />
+        <translation>Parole conosciute</translation>
     </message>
     <message>
         <source>Words Anki Miner treats as known in the current mining language.</source>
-        <translation type="unfinished" />
+        <translation>Parole che Anki Miner considera conosciute nella lingua di mining attuale.</translation>
     </message>
     <message>
         <source>Mining History</source>
-        <translation type="unfinished" />
+        <translation>Cronologia del mining</translation>
     </message>
     <message>
         <source>History period</source>
-        <translation type="unfinished" />
+        <translation>Periodo della cronologia</translation>
     </message>
     <message>
         <source>All time</source>
-        <translation type="unfinished" />
+        <translation>Da sempre</translation>
     </message>
     <message>
         <source>Last 7 days</source>
-        <translation type="unfinished" />
+        <translation>Ultimi 7 giorni</translation>
     </message>
     <message>
         <source>Last 30 days</source>
-        <translation type="unfinished" />
+        <translation>Ultimi 30 giorni</translation>
     </message>
     <message>
         <source>Last 12 months</source>
-        <translation type="unfinished" />
+        <translation>Ultimi 12 mesi</translation>
     </message>
     <message>
         <source>History grouping</source>
-        <translation type="unfinished" />
+        <translation>Raggruppamento della cronologia</translation>
     </message>
     <message>
         <source>Each run</source>
-        <translation type="unfinished" />
+        <translation>Ogni esecuzione</translation>
     </message>
     <message>
         <source>By day</source>
-        <translation type="unfinished" />
+        <translation>Per giorno</translation>
     </message>
     <message>
         <source>By week</source>
-        <translation type="unfinished" />
+        <translation>Per settimana</translation>
     </message>
     <message>
         <source>By month</source>
-        <translation type="unfinished" />
+        <translation>Per mese</translation>
     </message>
     <message>
         <source>Export CSV…</source>
-        <translation type="unfinished" />
+        <translation>Esporta CSV…</translation>
     </message>
     <message>
         <source>No sessions yet — process an episode to see your history.</source>
@@ -177,7 +177,7 @@
     </message>
     <message>
         <source>Period</source>
-        <translation type="unfinished" />
+        <translation>Periodo</translation>
     </message>
     <message>
         <source>Show in Anki</source>
@@ -185,7 +185,7 @@
     </message>
     <message>
         <source>Delete this run's cards…</source>
-        <translation type="unfinished" />
+        <translation>Elimina le carte di questa esecuzione…</translation>
     </message>
     <message>
         <source>Series Difficulty Ranking</source>
@@ -217,11 +217,11 @@
     </message>
     <message>
         <source>Frequency Coverage</source>
-        <translation type="unfinished" />
+        <translation>Copertura di frequenza</translation>
     </message>
     <message>
         <source>Rank band</source>
-        <translation type="unfinished" />
+        <translation>Fascia di rango</translation>
     </message>
     <message>
         <source>Known</source>
@@ -229,15 +229,15 @@
     </message>
     <message>
         <source>Not known</source>
-        <translation type="unfinished" />
+        <translation>Non conosciute</translation>
     </message>
     <message>
         <source>Known %</source>
-        <translation type="unfinished" />
+        <translation>% conosciute</translation>
     </message>
     <message>
         <source>Show missing words</source>
-        <translation type="unfinished" />
+        <translation>Mostra parole mancanti</translation>
     </message>
     <message>
         <source>Milestones</source>
@@ -265,93 +265,95 @@
     </message>
     <message>
         <source>No runs in this period.</source>
-        <translation type="unfinished" />
+        <translation>Nessuna esecuzione in questo periodo.</translation>
     </message>
     <message>
         <source>Export Mining History</source>
-        <translation type="unfinished" />
+        <translation>Esporta la cronologia del mining</translation>
     </message>
     <message>
         <source>CSV Files (*.csv);;All Files (*)</source>
-        <translation type="unfinished" />
+        <translation>File CSV (*.csv);;Tutti i file (*)</translation>
     </message>
     <message>
         <source>History saved to %1.</source>
-        <translation type="unfinished" />
+        <translation>Cronologia salvata in %1.</translation>
     </message>
     <message>
         <source>The history could not be exported.</source>
-        <translation type="unfinished" />
+        <translation>Impossibile esportare la cronologia.</translation>
     </message>
     <message>
         <source>%1 (cards deleted: %2)</source>
-        <translation type="unfinished" />
+        <translation>%1 (carte eliminate: %2)</translation>
     </message>
     <message>
         <source>Select one run in the table.</source>
-        <translation type="unfinished" />
+        <translation>Seleziona una sola esecuzione nella tabella.</translation>
     </message>
     <message>
         <source>This run's cards were deleted: %1.</source>
-        <translation type="unfinished" />
+        <translation>Carte di questa esecuzione già eliminate: %1.</translation>
     </message>
     <message>
         <source>Anki Miner has no card list for this run: it was mined before this version, or it made no cards.</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner non ha un elenco di carte per questa esecuzione: è stata estratta prima di questa versione oppure non ha creato carte.</translation>
     </message>
     <message>
         <source>Anki Miner couldn't open this run's cards in Anki.</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner non è riuscito ad aprire in Anki le carte di questa esecuzione.</translation>
     </message>
     <message>
         <source>None of this run's cards are in Anki any more.</source>
-        <translation type="unfinished" />
+        <translation>Nessuna delle carte di questa esecuzione è ancora in Anki.</translation>
     </message>
     <message>
         <source>Delete This Run's Cards</source>
-        <translation type="unfinished" />
+        <translation>Elimina le carte di questa esecuzione</translation>
     </message>
     <message>
         <source>Cards this run added that are still in Anki: %1. Reviewed at least once: %2.
 
 Delete them from Anki? Their review history is deleted with them. This cannot be undone.</source>
-        <translation type="unfinished" />
+        <translation>Carte aggiunte da questa esecuzione ancora presenti in Anki: %1. Ripassate almeno una volta: %2.
+
+Eliminarle da Anki? Insieme a loro viene eliminata anche la cronologia dei ripassi. L'operazione non può essere annullata.</translation>
     </message>
     <message>
         <source>Cards deleted from Anki: %1.</source>
-        <translation type="unfinished" />
+        <translation>Carte eliminate da Anki: %1.</translation>
     </message>
     <message>
         <source>This run's cards could not be deleted.</source>
-        <translation type="unfinished" />
+        <translation>Impossibile eliminare le carte di questa esecuzione.</translation>
     </message>
     <message>
         <source>Known words could not be counted.</source>
-        <translation type="unfinished" />
+        <translation>Impossibile contare le parole conosciute.</translation>
     </message>
     <message>
         <source>Words Anki Miner treats as known in %1.</source>
-        <translation type="unfinished" />
+        <translation>Parole che Anki Miner considera conosciute in %1.</translation>
     </message>
     <message>
         <source>Change since %1: %2</source>
-        <translation type="unfinished" />
+        <translation>Variazione dal %1: %2</translation>
     </message>
     <message>
         <source>Last counted on %1; Anki was not reachable.</source>
-        <translation type="unfinished" />
+        <translation>Ultimo conteggio il %1; Anki non era raggiungibile.</translation>
     </message>
     <message>
         <source>Last counted on %1.</source>
-        <translation type="unfinished" />
+        <translation>Ultimo conteggio il %1.</translation>
     </message>
     <message>
         <source>Coverage needs Anki running: it compares the list with your cards.</source>
-        <translation type="unfinished" />
+        <translation>La copertura richiede Anki in esecuzione: confronta l'elenco con le tue carte.</translation>
     </message>
     <message>
         <source>How many of the most frequent words in %1 you already know.</source>
-        <translation type="unfinished" />
+        <translation>Quante delle parole più frequenti in %1 conosci già.</translation>
     </message>
     <message>
         <source>%1 mining sessions completed</source>
@@ -761,7 +763,7 @@ Delete them from Anki? Their review history is deleted with them. This cannot be
     </message>
     <message>
         <source>{series}, {episode} and {volume} become each card's show, episode or book volume, for example mined::{series}::{episode}.</source>
-        <translation type="unfinished" />
+        <translation>{series}, {episode} e {volume} diventano la serie, l'episodio o il volume del libro di ciascuna carta, ad esempio mined::{series}::{episode}.</translation>
     </message>
     <message>
         <source>Refresh</source>
@@ -789,11 +791,11 @@ Delete them from Anki? Their review history is deleted with them. This cannot be
     </message>
     <message>
         <source>Sync Anki after mining</source>
-        <translation type="unfinished" />
+        <translation>Sincronizza Anki dopo il mining</translation>
     </message>
     <message>
         <source>After a run that added cards, ask Anki to sync with AnkiWeb. If the sync fails, the Activity Log says so and the cards stay added.</source>
-        <translation type="unfinished" />
+        <translation>Dopo un'esecuzione che ha aggiunto carte, chiede ad Anki di sincronizzarsi con AnkiWeb. Se la sincronizzazione non riesce, il Registro attività lo segnala e le carte restano aggiunte.</translation>
     </message>
     <message>
         <source>AnkiConnect URL</source>
@@ -805,7 +807,7 @@ Delete them from Anki? Their review history is deleted with them. This cannot be
     </message>
     <message>
         <source>If AnkiConnect asks for an API key, add it to the address: http://127.0.0.1:8765/?key=YOUR_KEY</source>
-        <translation type="unfinished" />
+        <translation>Se AnkiConnect richiede una chiave API, aggiungila all'indirizzo: http://127.0.0.1:8765/?key=YOUR_KEY</translation>
     </message>
     <message>
         <source>Fill in automatically</source>
@@ -1517,7 +1519,7 @@ Formati supportati: AJT (index.json + media/), NHK16 (entries.json + audio/), Fo
     </message>
     <message>
         <source>Wikimedia Commons (native recordings)</source>
-        <translation type="unfinished" />
+        <translation>Wikimedia Commons (registrazioni di madrelingua)</translation>
     </message>
     <message>
         <source>Custom JSON</source>
@@ -2086,7 +2088,7 @@ Nessun file indice viene eliminato.</translation>
     </message>
     <message>
         <source>Every audio file in the folder, in file-name order, one .srt each. A folder of book folders (each with its EPUB and audio) syncs every book in turn.</source>
-        <translation type="unfinished" />
+        <translation>Ogni file audio della cartella, in ordine di nome, con un .srt ciascuno. Una cartella di cartelle di libri (ognuna con il suo EPUB e il suo audio) sincronizza un libro dopo l'altro.</translation>
     </message>
     <message>
         <source>EPUB or Text File:</source>
@@ -2114,7 +2116,7 @@ Nessun file indice viene eliminato.</translation>
     </message>
     <message>
         <source>Sentences: how many of the book's sentences, from the first one found to the last, got a subtitle. Audio: how much of the narration matched the book. Grade: A from 90% on both, B from 75%, C from 50%, else D.</source>
-        <translation type="unfinished" />
+        <translation>Frasi: quante frasi del libro, dalla prima trovata all'ultima, hanno ricevuto un sottotitolo. Audio: quanta parte della narrazione corrisponde al libro. Voto: A dal 90% su entrambi, B dal 75%, C dal 50%, altrimenti D.</translation>
     </message>
     <message>
         <source>Output</source>
@@ -2178,7 +2180,7 @@ Nessun file indice viene eliminato.</translation>
     </message>
     <message>
         <source>No audio files were found in that folder, and no book folders (each with its book and audio).</source>
-        <translation type="unfinished" />
+        <translation>In quella cartella non sono stati trovati file audio, né cartelle di libri (ognuna con il suo libro e il suo audio).</translation>
     </message>
     <message>
         <source>That folder could not be scanned.</source>
@@ -2186,15 +2188,15 @@ Nessun file indice viene eliminato.</translation>
     </message>
     <message>
         <source>Skipped folder %1: no audio files</source>
-        <translation type="unfinished" />
+        <translation>Cartella %1 saltata: nessun file audio</translation>
     </message>
     <message>
         <source>Skipped folder %1: no .epub or .txt book</source>
-        <translation type="unfinished" />
+        <translation>Cartella %1 saltata: nessun libro .epub o .txt</translation>
     </message>
     <message>
         <source>Skipped folder %1: more than one book</source>
-        <translation type="unfinished" />
+        <translation>Cartella %1 saltata: più di un libro</translation>
     </message>
     <message>
         <source>Output folder is not writable.</source>
@@ -2214,11 +2216,11 @@ Nessun file indice viene eliminato.</translation>
     </message>
     <message>
         <source>Books: %1 — %2</source>
-        <translation type="unfinished" />
+        <translation>Libri: %1 — %2</translation>
     </message>
     <message>
         <source>%1: sentences %2%, audio %3% — grade %4</source>
-        <translation type="unfinished" />
+        <translation>%1: frasi %2%, audio %3% — voto %4</translation>
     </message>
     <message>
         <source>Syncing file %1 of %2</source>
@@ -2232,11 +2234,11 @@ Nessun file indice viene eliminato.</translation>
     </message>
     <message>
         <source>%1 could not be loaded: %2</source>
-        <translation type="unfinished" />
+        <translation>Impossibile caricare %1: %2</translation>
     </message>
     <message>
         <source>Its book could not be loaded</source>
-        <translation type="unfinished" />
+        <translation>Impossibile caricare il libro corrispondente</translation>
     </message>
     <message>
         <source>Skipped, exists</source>
@@ -2256,11 +2258,11 @@ Nessun file indice viene eliminato.</translation>
     </message>
     <message>
         <source>Reusing the saved transcript</source>
-        <translation type="unfinished" />
+        <translation>Riutilizzo della trascrizione salvata</translation>
     </message>
     <message>
         <source>Found sentence %1 again later in the audio; timed it out of book order</source>
-        <translation type="unfinished" />
+        <translation>Frase %1 ritrovata più avanti nell'audio; temporizzata fuori dall'ordine del libro</translation>
     </message>
     <message>
         <source>%1 sentences timed, %2 in between had no audio</source>
@@ -2342,7 +2344,7 @@ Nessun file indice viene eliminato.</translation>
     </message>
     <message>
         <source>Approve or reject each word, pick its sentence and scene, trim its audio, mark words known, and fix a mistranscribed sentence or swap the word to mine -- before any card is created. When a word has entries in several dictionaries, choose which one the card's Definition uses.</source>
-        <translation type="unfinished" />
+        <translation>Approva o rifiuta ogni parola, scegline la frase e la scena, taglia il suo audio, segna parole come conosciute e correggi una frase trascritta male o cambia la parola da estrarre -- prima che venga creata qualsiasi carta. Quando una parola ha voci in più dizionari, scegli quale usa la Definizione della carta.</translation>
     </message>
     <message>
         <source>Secondary-language subtitles</source>
@@ -2350,7 +2352,7 @@ Nessun file indice viene eliminato.</translation>
     </message>
     <message>
         <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. Leave the file empty and Anki Miner picks a translation itself: a subtitle named for the video, or a text track inside it, in your interface language or else English. The Activity Log names the track it used. On Video → Batch, point it at a folder of translation subtitles instead and they pair to the videos by episode number. Turn it on under Settings → Sentences.</source>
-        <translation type="unfinished" />
+        <translation>Carica un secondo file di sottotitoli nella tua lingua accanto a quello nella lingua di mining: compare sotto la riga nell'anteprima del Curatore di parole e può essere salvato in un campo Traduzione. Lascia vuoto il file e Anki Miner sceglie da solo una traduzione: un sottotitolo con il nome del video, o una traccia di testo al suo interno, nella lingua dell'interfaccia o altrimenti in inglese. Il Registro attività indica la traccia usata. In Video → Batch, indica invece una cartella di sottotitoli di traduzione: vengono abbinati ai video in base al numero dell'episodio. Attivalo in Impostazioni → Frasi.</translation>
     </message>
     <message>
         <source>Build a deck by coverage %</source>
@@ -2386,11 +2388,11 @@ Nessun file indice viene eliminato.</translation>
     </message>
     <message>
         <source>Mine songs from .lrc lyrics</source>
-        <translation type="unfinished" />
+        <translation>Estrai canzoni dai testi .lrc</translation>
     </message>
     <message>
         <source>Use a .lrc lyrics file wherever a subtitle file goes. Each line lasts until the next one starts. Pair a song with its lyrics on Audiobooks, condense it in Condense, or mine a music video on Video.</source>
-        <translation type="unfinished" />
+        <translation>Usa un file di testi .lrc ovunque si possa usare un file di sottotitoli. Ogni riga dura finché non inizia la successiva. Abbina una canzone al suo testo in Audiolibri, condensala in Condensa o estrai un video musicale in Video.</translation>
     </message>
     <message>
         <source>Mine from manga</source>
@@ -2406,23 +2408,23 @@ Nessun file indice viene eliminato.</translation>
     </message>
     <message>
         <source>Mine vocabulary from novels and other text (EPUB, PDF, Aozora, plain text).</source>
-        <translation type="unfinished" />
+        <translation>Estrai vocaboli da romanzi e altri testi (EPUB, PDF, Aozora, testo semplice).</translation>
     </message>
     <message>
         <source>Readings from a book's own furigana</source>
-        <translation type="unfinished" />
+        <translation>Letture dai furigana del libro stesso</translation>
     </message>
     <message>
         <source>When a Japanese EPUB prints furigana over a word, the card takes that reading instead of the parser's guess.</source>
-        <translation type="unfinished" />
+        <translation>Quando un EPUB giapponese riporta i furigana sopra una parola, la carta usa quella lettura invece dell'ipotesi del parser.</translation>
     </message>
     <message>
         <source>Mine pasted text or a web article</source>
-        <translation type="unfinished" />
+        <translation>Estrai da un testo incollato o da un articolo web</translation>
     </message>
     <message>
         <source>Paste text in your mining language, or fetch a web article by its address, and mine it into Anki cards. A fetched article's cards name the page and site as their source.</source>
-        <translation type="unfinished" />
+        <translation>Incolla un testo nella tua lingua di mining, oppure scarica un articolo web dal suo indirizzo, ed estrailo in carte Anki. Le carte di un articolo scaricato indicano come fonte la pagina e il sito.</translation>
     </message>
     <message>
         <source>Mine subtitle files without video</source>
@@ -2446,7 +2448,7 @@ Nessun file indice viene eliminato.</translation>
     </message>
     <message>
         <source>Create subtitles from audio with a local Whisper model -- as a standalone tool. Long lines are split at sentence ends, and a second run on the same file reuses the saved transcript.</source>
-        <translation type="unfinished" />
+        <translation>Crea sottotitoli dall'audio con un modello Whisper locale -- come strumento a sé. Le righe lunghe vengono divise a fine frase e una seconda esecuzione sullo stesso file riutilizza la trascrizione salvata.</translation>
     </message>
     <message>
         <source>Re-time existing subtitles</source>
@@ -2506,35 +2508,35 @@ Nessun file indice viene eliminato.</translation>
     </message>
     <message>
         <source>Browse your whole mining history</source>
-        <translation type="unfinished" />
+        <translation>Sfoglia tutta la cronologia del mining</translation>
     </message>
     <message>
         <source>Analytics lists every run you have mined. Pick a period, group the runs by day, week or month, see the cards per period in a chart, and export the table as a CSV file.</source>
-        <translation type="unfinished" />
+        <translation>Analisi elenca ogni esecuzione di mining che hai fatto. Scegli un periodo, raggruppa le esecuzioni per giorno, settimana o mese, guarda le carte per periodo in un grafico ed esporta la tabella come file CSV.</translation>
     </message>
     <message>
         <source>Show or delete a past run's cards</source>
-        <translation type="unfinished" />
+        <translation>Mostra o elimina le carte di un'esecuzione passata</translation>
     </message>
     <message>
         <source>Select a run in Analytics → Mining History to open its cards in Anki's browser or to delete them. The confirmation says how many of its cards are still in Anki and how many you have reviewed. Runs mined before this version have no card list.</source>
-        <translation type="unfinished" />
+        <translation>Seleziona un'esecuzione in Analisi → Cronologia del mining per aprirne le carte nel browser di Anki o per eliminarle. La conferma indica quante delle sue carte sono ancora in Anki e quante ne hai ripassate. Le esecuzioni precedenti a questa versione non hanno un elenco di carte.</translation>
     </message>
     <message>
         <source>Track how many words you know</source>
-        <translation type="unfinished" />
+        <translation>Tieni traccia di quante parole conosci</translation>
     </message>
     <message>
         <source>The Known Words card on Analytics counts the words Anki Miner treats as known in the current mining language and shows how that number changed. It is counted while Anki is running, at most once every ten minutes.</source>
-        <translation type="unfinished" />
+        <translation>Il riquadro Parole conosciute in Analisi conta le parole che Anki Miner considera conosciute nella lingua di mining attuale e mostra come è cambiato quel numero. Il conteggio avviene mentre Anki è in esecuzione, al massimo una volta ogni dieci minuti.</translation>
     </message>
     <message>
         <source>See how much of a frequency list you know</source>
-        <translation type="unfinished" />
+        <translation>Scopri quanta parte di un elenco di frequenza conosci</translation>
     </message>
     <message>
         <source>Analytics → Frequency Coverage counts the words you know in ranks 1–1,000 up to 20,000 of your first frequency list with numeric ranks, and lists the missing words of each band. It needs Anki running.</source>
-        <translation type="unfinished" />
+        <translation>Analisi → Copertura di frequenza conta le parole che conosci nei ranghi da 1–1.000 fino a 20.000 del tuo primo elenco di frequenza con ranghi numerici ed elenca le parole mancanti di ogni fascia. Richiede Anki in esecuzione.</translation>
     </message>
     <message>
         <source>Reset mining statistics</source>
@@ -2610,11 +2612,11 @@ Nessun file indice viene eliminato.</translation>
     </message>
     <message>
         <source>Count a word as known only after its card has been reviewed</source>
-        <translation type="unfinished" />
+        <translation>Considera conosciuta una parola solo dopo il ripasso della sua carta</translation>
     </message>
     <message>
         <source>Readability and the i+1 sentence rule then count a word as known only when its Anki card has been reviewed at least once. Mining still skips every word that already has a card.</source>
-        <translation type="unfinished" />
+        <translation>Leggibilità e la regola delle frasi i+1 considerano allora conosciuta una parola solo quando la sua carta Anki è stata ripassata almeno una volta. Il mining salta comunque ogni parola che ha già una carta.</translation>
     </message>
     <message>
         <source>Exclude specific Anki decks from 'known'</source>
@@ -2634,27 +2636,27 @@ Nessun file indice viene eliminato.</translation>
     </message>
     <message>
         <source>Browse every known word</source>
-        <translation type="unfinished" />
+        <translation>Sfoglia tutte le parole conosciute</translation>
     </message>
     <message>
         <source>Manage Known Words lists every word this language counts as known, with where it came from (added by you, mined by Anki Miner, from Anki) and the date it was added. Search it, filter it by source, and remove words you added. Words from Anki come back on the next sync.</source>
-        <translation type="unfinished" />
+        <translation>Gestisci parole conosciute elenca ogni parola che questa lingua considera conosciuta, con la sua provenienza (aggiunta da te, estratta da Anki Miner, da Anki) e la data in cui è stata aggiunta. Puoi cercare nell'elenco, filtrarlo per fonte e rimuovere le parole che hai aggiunto. Le parole da Anki tornano alla sincronizzazione successiva.</translation>
     </message>
     <message>
         <source>Import known words from Kindle, Lute or LWT</source>
-        <translation type="unfinished" />
+        <translation>Importa parole conosciute da Kindle, Lute o LWT</translation>
     </message>
     <message>
         <source>In Manage Known Words, Import… also reads a Kindle Vocabulary Builder file (vocab.db; words marked mastered) and Lute or LWT term exports (status 5 and 99).</source>
-        <translation type="unfinished" />
+        <translation>In Gestisci parole conosciute, Importa… legge anche un file di Kindle Vocabulary Builder (vocab.db; parole segnate come apprese) e le esportazioni di termini di Lute o LWT (stato 5 e 99).</translation>
     </message>
     <message>
         <source>Export words to a CSV file</source>
-        <translation type="unfinished" />
+        <translation>Esporta parole in un file CSV</translation>
     </message>
     <message>
         <source>Export words… saves the list you are looking at in Manage Known Words, or a finished run's mined and not-mined words with the reason each was skipped, as a CSV file.</source>
-        <translation type="unfinished" />
+        <translation>Esporta parole… salva come file CSV l'elenco che stai guardando in Gestisci parole conosciute, oppure le parole estratte e non estratte di un'esecuzione conclusa, con il motivo per cui ognuna è stata saltata.</translation>
     </message>
     <message>
         <source>Exclude kana-only words</source>
@@ -2686,23 +2688,23 @@ Nessun file indice viene eliminato.</translation>
     </message>
     <message>
         <source>Mine at most one word from each example sentence. A word whose sentence is taken moves to another line it appears on, and is skipped only when every one of its lines is taken.</source>
-        <translation type="unfinished" />
+        <translation>Estrai al massimo una parola da ogni frase di esempio. Una parola la cui frase è già occupata passa a un'altra riga in cui compare, e viene saltata solo quando tutte le sue righe sono occupate.</translation>
     </message>
     <message>
         <source>Pick the clearest sentence</source>
-        <translation type="unfinished" />
+        <translation>Scegli la frase più chiara</translation>
     </message>
     <message>
         <source>When a word appears on several lines, its card uses the line with the fewest unknown words and a comfortable length instead of the first one. The Word Curator still lists every line.</source>
-        <translation type="unfinished" />
+        <translation>Quando una parola compare su più righe, la sua carta usa la riga con meno parole sconosciute e una lunghezza comoda invece della prima. Il Curatore di parole elenca comunque ogni riga.</translation>
     </message>
     <message>
         <source>Skip openings, endings and signs</source>
-        <translation type="unfinished" />
+        <translation>Salta sigle iniziali, finali e cartelli</translation>
     </message>
     <message>
         <source>Leave opening and ending songs, previews and on-screen signs out of mining, Condense and Readability: lines styled as songs or signs, and lines inside a video's opening, ending and preview chapters. On by default for new installs; turn it off in Settings → Sentences.</source>
-        <translation type="unfinished" />
+        <translation>Esclude dal mining, da Condensa e da Leggibilità le sigle iniziali e finali, le anteprime e i cartelli a schermo: righe con stile da canzone o da cartello, e righe dentro i capitoli di apertura, chiusura e anteprima di un video. Attivo per impostazione predefinita nelle nuove installazioni; disattivalo in Impostazioni → Frasi.</translation>
     </message>
     <message>
         <source>Strip junk from subtitles (regex)</source>
@@ -2770,11 +2772,11 @@ Nessun file indice viene eliminato.</translation>
     </message>
     <message>
         <source>Import a dictionary file</source>
-        <translation type="unfinished" />
+        <translation>Importa un file di dizionario</translation>
     </message>
     <message>
         <source>Add a Yomitan zip, a StarDict dictionary (its archive or its .ifo file) or a CSV/TSV word list (term and definition, or term, reading and definition) as a definition source.</source>
-        <translation type="unfinished" />
+        <translation>Aggiungi come fonte di definizioni uno zip di Yomitan, un dizionario StarDict (il suo archivio o il suo file .ifo) o un elenco di parole CSV/TSV (termine e definizione, oppure termine, lettura e definizione).</translation>
     </message>
     <message>
         <source>Keep dictionaries up to date</source>
@@ -2846,7 +2848,7 @@ Nessun file indice viene eliminato.</translation>
     </message>
     <message>
         <source>Attach word audio to cards from audio packs, JPod101 (Japanese), Google text-to-speech, or Microsoft Edge text-to-speech (every language). Wikimedia Commons plays recordings of real speakers from Wiktionary and Lingua Libre, tried before Google TTS in most languages.</source>
-        <translation type="unfinished" />
+        <translation>Allega alle carte l'audio delle parole da pacchetti audio, JPod101 (giapponese), sintesi vocale di Google o sintesi vocale di Microsoft Edge (tutte le lingue). Wikimedia Commons riproduce registrazioni di parlanti reali da Wiktionary e Lingua Libre, provate prima di Google TTS nella maggior parte delle lingue.</translation>
     </message>
     <message>
         <source>Import local audio packs</source>
@@ -2862,7 +2864,7 @@ Nessun file indice viene eliminato.</translation>
     </message>
     <message>
         <source>Extract the spoken sentence as an audio clip; tune its format and bitrate. Even out audio volume brings sentence clips and condensed audio to one loudness and fades each clip in and out.</source>
-        <translation type="unfinished" />
+        <translation>Estrai la frase pronunciata come clip audio; regolane formato e bitrate. Uniforma il volume dell'audio porta le clip delle frasi e l'audio condensato a un unico volume e applica a ogni clip una dissolvenza in entrata e in uscita.</translation>
     </message>
     <message>
         <source>Sentence audio for reading (TTS)</source>
@@ -2886,7 +2888,7 @@ Nessun file indice viene eliminato.</translation>
     </message>
     <message>
         <source>Capture a still frame from the scene to put on the card. Crop manga pictures to the speech bubble shows the bubble and the art around it instead of the whole page.</source>
-        <translation type="unfinished" />
+        <translation>Cattura un fotogramma della scena da mettere sulla carta. Ritaglia le immagini manga sul fumetto mostra il fumetto e il disegno intorno invece dell'intera pagina.</translation>
     </message>
     <message>
         <source>Animated clips (GIF/WebP)</source>
@@ -2966,7 +2968,7 @@ Nessun file indice viene eliminato.</translation>
     </message>
     <message>
         <source>Add tags to every note Anki Miner creates. Card tags can use {series}, {episode} and {volume}. Each card gets its own show, episode or book volume, for example mined::{series}::{episode} gives mined::Frieren::03.</source>
-        <translation type="unfinished" />
+        <translation>Aggiunge tag a ogni nota creata da Anki Miner. I tag delle carte possono usare {series}, {episode} e {volume}. Ogni carta riceve la propria serie, il proprio episodio o volume del libro: ad esempio mined::{series}::{episode} diventa mined::Frieren::03.</translation>
     </message>
     <message>
         <source>Connect to Anki (AnkiConnect)</source>
@@ -2974,15 +2976,15 @@ Nessun file indice viene eliminato.</translation>
     </message>
     <message>
         <source>Set the AnkiConnect address; Refresh re-checks the connection to your running Anki. If AnkiConnect is set up with an API key, add it to the address: http://127.0.0.1:8765/?key=YOUR_KEY. Anki Miner sends it with every request and never writes it to the log.</source>
-        <translation type="unfinished" />
+        <translation>Imposta l'indirizzo di AnkiConnect; Aggiorna ricontrolla la connessione ad Anki in esecuzione. Se AnkiConnect è configurato con una chiave API, aggiungila all'indirizzo: http://127.0.0.1:8765/?key=YOUR_KEY. Anki Miner la invia con ogni richiesta e non la scrive mai nel registro.</translation>
     </message>
     <message>
         <source>Sync Anki after mining</source>
-        <translation type="unfinished" />
+        <translation>Sincronizza Anki dopo il mining</translation>
     </message>
     <message>
         <source>After a run that added cards, Anki Miner asks Anki to sync with AnkiWeb. If the sync fails, the Activity Log says so and the cards stay added.</source>
-        <translation type="unfinished" />
+        <translation>Dopo un'esecuzione che ha aggiunto carte, Anki Miner chiede ad Anki di sincronizzarsi con AnkiWeb. Se la sincronizzazione non riesce, il Registro attività lo segnala e le carte restano aggiunte.</translation>
     </message>
     <message>
         <source>Fill in field mappings automatically</source>
@@ -3070,7 +3072,7 @@ Nessun file indice viene eliminato.</translation>
     </message>
     <message>
         <source>Draw a box where a video's on-screen dialogue appears and Anki Miner reads it into a timed .srt that Video → Single can mine. Made for game longplays without commentary. It also reads image subtitles (Blu-ray .sup, DVD .idx/.sub, or an image track inside a video) without a box. Lines with none of your mining language's letters are left out. Download the OCR engine from the setup card on Utilities → Video OCR.</source>
-        <translation type="unfinished" />
+        <translation>Disegna un riquadro dove compaiono i dialoghi a schermo di un video e Anki Miner li legge in un .srt temporizzato che Video → Singolo può estrarre. Pensato per i longplay di videogiochi senza commento. Legge anche i sottotitoli in immagine (Blu-ray .sup, DVD .idx/.sub o una traccia di immagini dentro un video) senza riquadro. Le righe senza nessuna lettera della tua lingua di mining vengono escluse. Scarica il motore OCR dal riquadro di configurazione in Utilità → OCR video.</translation>
     </message>
     <message>
         <source>Sync an audiobook to its EPUB</source>
@@ -3078,23 +3080,23 @@ Nessun file indice viene eliminato.</translation>
     </message>
     <message>
         <source>Transcribe an audiobook and time the book's own sentences to it, writing an .srt the Audiobook tab, Reading → Subtitle Files or a reader can use. A second run on the same audio reuses the saved transcript instead of transcribing again.</source>
-        <translation type="unfinished" />
+        <translation>Trascrivi un audiolibro e allinea ad esso i tempi delle frasi del libro stesso, scrivendo un .srt che la scheda Audiolibri, Lettura → File dei sottotitoli o un lettore possono usare. Una seconda esecuzione sullo stesso audio riutilizza la trascrizione salvata invece di trascrivere di nuovo.</translation>
     </message>
     <message>
         <source>Sync a shelf of audiobooks in one run</source>
-        <translation type="unfinished" />
+        <translation>Sincronizza uno scaffale di audiolibri in un'unica esecuzione</translation>
     </message>
     <message>
         <source>In Utilities → Audiobook Sync, choose Folder and pick a folder that holds one folder per book, each with its EPUB (or text file) and its audio files. The books sync one after another, in name order.</source>
-        <translation type="unfinished" />
+        <translation>In Utilità → Sincro audiolibro, scegli Cartella e seleziona una cartella che contiene una cartella per libro, ognuna con il suo EPUB (o file di testo) e i suoi file audio. I libri si sincronizzano uno dopo l'altro, in ordine di nome.</translation>
     </message>
     <message>
         <source>See how well an audiobook synced</source>
-        <translation type="unfinished" />
+        <translation>Verifica quanto bene si è sincronizzato un audiolibro</translation>
     </message>
     <message>
         <source>After Audiobook Sync, each book gets a line under the Book card: how many of its sentences got a subtitle, how much of the narration matched the book, and a grade from A to D. Chapters read out of book order are found too; sentences the narrator skipped never get a subtitle.</source>
-        <translation type="unfinished" />
+        <translation>Dopo Sincro audiolibro, ogni libro riceve una riga sotto il riquadro Libro: quante delle sue frasi hanno ricevuto un sottotitolo, quanta parte della narrazione corrisponde al libro e un voto da A a D. Vengono trovati anche i capitoli letti fuori dall'ordine del libro; le frasi saltate dal narratore non ricevono mai un sottotitolo.</translation>
     </message>
     <message>
         <source>Check how much of a show, book or manga you can read</source>
@@ -3178,11 +3180,11 @@ Nessun file indice viene eliminato.</translation>
     </message>
     <message>
         <source>Restore an automatic backup</source>
-        <translation type="unfinished" />
+        <translation>Ripristina un backup automatico</translation>
     </message>
     <message>
         <source>Anki Miner backs up your known words, statistics, settings and profiles once a day when it starts, and keeps the last 7 days. Settings → General → Restore a backup… puts one back the next time the app starts.</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner esegue il backup di parole conosciute, statistiche, impostazioni e profili una volta al giorno all'avvio e conserva gli ultimi 7 giorni. Impostazioni → Generale → Ripristina un backup… ne ripristina uno al successivo avvio dell'app.</translation>
     </message>
     <message>
         <source>Undo a mining run</source>
@@ -3194,11 +3196,11 @@ Nessun file indice viene eliminato.</translation>
     </message>
     <message>
         <source>Export a run's words</source>
-        <translation type="unfinished" />
+        <translation>Esporta le parole di un'esecuzione</translation>
     </message>
     <message>
         <source>Press View details on a run's result line, then Export words… to save the run's mined and not-mined words, with the reason each was skipped, as a CSV file.</source>
-        <translation type="unfinished" />
+        <translation>Premi Visualizza dettagli sulla riga del risultato di un'esecuzione, poi Esporta parole… per salvare come file CSV le parole estratte e non estratte dell'esecuzione, con il motivo per cui ognuna è stata saltata.</translation>
     </message>
     <message>
         <source>Keyboard shortcuts</source>
@@ -4592,11 +4594,11 @@ Verranno modificate %n note (%1) e verrà loro assegnato il tag %2. Continuare?<
     </message>
     <message>
         <source>Choose dictionary files</source>
-        <translation type="unfinished" />
+        <translation>Scegli i file di dizionario</translation>
     </message>
     <message>
         <source>Dictionaries (*.zip *.ifo *.tar.gz *.tgz *.tar.bz2 *.tar.xz *.csv *.tsv)</source>
-        <translation type="unfinished" />
+        <translation>Dizionari (*.zip *.ifo *.tar.gz *.tgz *.tar.bz2 *.tar.xz *.csv *.tsv)</translation>
     </message>
     <message>
         <source>Dictionary %1 of %2: %3</source>
@@ -5432,8 +5434,9 @@ Nessun file sul disco viene eliminato.</translation>
     </message>
     <message numerus="yes">
         <source>Skipping lines in %n opening, ending or preview chapter(s)</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>Salto delle righe in %n capitolo di apertura, chiusura o anteprima</numerusform>
+            <numerusform>Salto delle righe in %n capitoli di apertura, chiusura o anteprima</numerusform>
         </translation>
     </message>
     <message>
@@ -5483,7 +5486,7 @@ Nessun file sul disco viene eliminato.</translation>
     </message>
     <message>
         <source>Only %1% of the first %2 words have an entry in your dictionaries. Is this file in the language you are mining?</source>
-        <translation type="unfinished" />
+        <translation>Solo il %1% delle prime %2 parole ha una voce nei tuoi dizionari. Questo file è nella lingua da cui stai estraendo?</translation>
     </message>
     <message>
         <source>Frequency cutoff ignored — no ranked frequency source is loaded (Settings → Frequency).</source>
@@ -5595,11 +5598,11 @@ Nessun file sul disco viene eliminato.</translation>
     </message>
     <message>
         <source>Translation subtitles picked automatically: %1</source>
-        <translation type="unfinished" />
+        <translation>Sottotitoli di traduzione scelti automaticamente: %1</translation>
     </message>
     <message>
         <source>Translation subtitles picked automatically: embedded track %1</source>
-        <translation type="unfinished" />
+        <translation>Sottotitoli di traduzione scelti automaticamente: traccia incorporata %1</translation>
     </message>
     <message>
         <source>Could not extract media for any word — no cards created</source>
@@ -5869,11 +5872,11 @@ Nessun file sul disco viene eliminato.</translation>
     </message>
     <message>
         <source>Count a word as known only after its card has been reviewed</source>
-        <translation type="unfinished" />
+        <translation>Considera conosciuta una parola solo dopo il ripasso della sua carta</translation>
     </message>
     <message>
         <source>Readability and the i+1 sentence rule count a word as known only when its Anki card has been reviewed at least once. Mining still skips every word that already has a card.</source>
-        <translation type="unfinished" />
+        <translation>Leggibilità e la regola delle frasi i+1 considerano conosciuta una parola solo quando la sua carta Anki è stata ripassata almeno una volta. Il mining salta comunque ogni parola che ha già una carta.</translation>
     </message>
     <message>
         <source>Keep words known after their cards are deleted</source>
@@ -6535,15 +6538,15 @@ Nessun file indice viene eliminato.</translation>
     <name>KnownWordsManagerDialog</name>
     <message>
         <source>Word</source>
-        <translation type="unfinished" />
+        <translation>Parola</translation>
     </message>
     <message>
         <source>Source</source>
-        <translation type="unfinished" />
+        <translation>Fonte</translation>
     </message>
     <message>
         <source>Added</source>
-        <translation type="unfinished" />
+        <translation>Aggiunta il</translation>
     </message>
     <message>
         <source>Manage Known Words</source>
@@ -6555,7 +6558,7 @@ Nessun file indice viene eliminato.</translation>
     </message>
     <message>
         <source>Every word this language counts as known, and where it came from. Words you added from the Word Curator stay known on every run and across cache rebuilds.</source>
-        <translation type="unfinished" />
+        <translation>Ogni parola che questa lingua considera conosciuta, e la sua provenienza. Le parole che hai aggiunto dal Curatore di parole restano conosciute a ogni esecuzione e anche quando la cache viene ricostruita.</translation>
     </message>
     <message>
         <source>Decks this language's known-words scan skips: %1. Change them in Settings → Word Filters.</source>
@@ -6567,15 +6570,15 @@ Nessun file indice viene eliminato.</translation>
     </message>
     <message>
         <source>Added by you</source>
-        <translation type="unfinished" />
+        <translation>Aggiunta da te</translation>
     </message>
     <message>
         <source>Mined by Anki Miner</source>
-        <translation type="unfinished" />
+        <translation>Estratta da Anki Miner</translation>
     </message>
     <message>
         <source>From Anki</source>
-        <translation type="unfinished" />
+        <translation>Da Anki</translation>
     </message>
     <message>
         <source>Filter…</source>
@@ -6583,7 +6586,7 @@ Nessun file indice viene eliminato.</translation>
     </message>
     <message>
         <source>All sources</source>
-        <translation type="unfinished" />
+        <translation>Tutte le fonti</translation>
     </message>
     <message>
         <source>Rebuild Known Words DB</source>
@@ -6599,7 +6602,7 @@ Nessun file indice viene eliminato.</translation>
     </message>
     <message>
         <source>Removes words you added. Words from Anki come back on the next run, and mined words leave with Undo.</source>
-        <translation type="unfinished" />
+        <translation>Rimuove le parole che hai aggiunto. Le parole da Anki tornano all'esecuzione successiva e le parole estratte si tolgono con Annulla.</translation>
     </message>
     <message>
         <source>Import…</source>
@@ -6607,7 +6610,7 @@ Nessun file indice viene eliminato.</translation>
     </message>
     <message>
         <source>Export words…</source>
-        <translation type="unfinished" />
+        <translation>Esporta parole…</translation>
     </message>
     <message>
         <source>Reset User List</source>
@@ -6639,11 +6642,11 @@ Nessun file indice viene eliminato.</translation>
     </message>
     <message>
         <source>Kindle Vocabulary Builder</source>
-        <translation type="unfinished" />
+        <translation>Kindle Vocabulary Builder</translation>
     </message>
     <message>
         <source>Lute or LWT term export</source>
-        <translation type="unfinished" />
+        <translation>Esportazione di termini di Lute o LWT</translation>
     </message>
     <message>
         <source>plain word list</source>
@@ -6655,7 +6658,7 @@ Nessun file indice viene eliminato.</translation>
     </message>
     <message>
         <source>Known word lists (*.csv *.tsv *.txt *.json *.db);;All Files (*)</source>
-        <translation type="unfinished" />
+        <translation>Elenchi di parole conosciute (*.csv *.tsv *.txt *.json *.db);;Tutti i file (*)</translation>
     </message>
     <message>
         <source>Detected: %1 — every entry is imported.
@@ -6687,7 +6690,7 @@ Parole da aggiungere: %3. Continuare?</translation>
     </message>
     <message>
         <source>This file has no words for %1. It contains: %2.</source>
-        <translation type="unfinished" />
+        <translation>Questo file non contiene parole per %1. Contiene: %2.</translation>
     </message>
     <message>
         <source>That file is too large to import.</source>
@@ -6703,7 +6706,7 @@ Parole da aggiungere: %3. Continuare?</translation>
     </message>
     <message>
         <source>File format not recognized. Supported: jpdb review export (JSON), Migaku word export (JSON/CSV), AnkiMorphs known morphs (CSV), Kindle Vocabulary Builder (vocab.db), Lute or LWT term export (CSV/TSV), plain word lists (one word per line).</source>
-        <translation type="unfinished" />
+        <translation>Formato di file non riconosciuto. Supportati: esportazione delle revisioni di jpdb (JSON), esportazione di parole di Migaku (JSON/CSV), morfemi conosciuti di AnkiMorphs (CSV), Kindle Vocabulary Builder (vocab.db), esportazione di termini di Lute o LWT (CSV/TSV), semplici elenchi di parole (una parola per riga).</translation>
     </message>
     <message>
         <source>That file could not be imported.</source>
@@ -6725,7 +6728,7 @@ Parole da aggiungere: %3. Continuare?</translation>
     </message>
     <message>
         <source>CSV files (*.csv);;Text files, one word per line (*.txt)</source>
-        <translation type="unfinished" />
+        <translation>File CSV (*.csv);;File di testo, una parola per riga (*.txt)</translation>
     </message>
     <message>
         <source>The known words list could not be exported.</source>
@@ -7474,7 +7477,7 @@ Continuare?</translation>
     </message>
     <message>
         <source>Opus clips do not play in AnkiMobile on iPhone or iPad. Choose MP3 if you review there.</source>
-        <translation type="unfinished" />
+        <translation>Le clip Opus non vengono riprodotte in AnkiMobile su iPhone o iPad. Scegli MP3 se ripassi lì.</translation>
     </message>
     <message>
         <source> kbps</source>
@@ -7502,11 +7505,11 @@ Continuare?</translation>
     </message>
     <message>
         <source>Even out audio volume</source>
-        <translation type="unfinished" />
+        <translation>Uniforma il volume dell'audio</translation>
     </message>
     <message>
         <source>Brings sentence clips and condensed audio to one volume and fades each clip in and out, so quiet and loud sources sound alike. Applies to new clips.</source>
-        <translation type="unfinished" />
+        <translation>Porta le clip delle frasi e l'audio condensato a un unico volume e applica a ogni clip una dissolvenza in entrata e in uscita, così le sorgenti basse e quelle forti suonano allo stesso modo. Vale per le nuove clip.</translation>
     </message>
     <message>
         <source>Text-to-speech</source>
@@ -7530,11 +7533,11 @@ Continuare?</translation>
     </message>
     <message>
         <source>Crop manga pictures to the speech bubble</source>
-        <translation type="unfinished" />
+        <translation>Ritaglia le immagini manga sul fumetto</translation>
     </message>
     <message>
         <source>Manga cards show the speech bubble and the art around it instead of the whole page. A sentence with no bubble position keeps the whole page.</source>
-        <translation type="unfinished" />
+        <translation>Le carte manga mostrano il fumetto e il disegno intorno invece dell'intera pagina. Una frase senza posizione del fumetto mantiene l'intera pagina.</translation>
     </message>
     <message>
         <source>Enable animated screenshots</source>
@@ -7770,7 +7773,7 @@ Continuare?</translation>
     </message>
     <message>
         <source>Anki didn't sync after this run. Your cards are added; sync from Anki, or see the log for why.</source>
-        <translation type="unfinished" />
+        <translation>Anki non si è sincronizzato dopo questa esecuzione. Le tue carte sono state aggiunte; sincronizza da Anki o consulta il registro per il motivo.</translation>
     </message>
     <message>
         <source>Anki Miner couldn't open these cards in Anki.</source>
@@ -9540,7 +9543,7 @@ Nessun file indice viene eliminato.</translation>
     </message>
     <message>
         <source>An .epub, .txt or .pdf book, or a folder of books; each book is mined separately.</source>
-        <translation type="unfinished" />
+        <translation>Un libro .epub, .txt o .pdf, oppure una cartella di libri; ogni libro viene estratto separatamente.</translation>
     </message>
     <message>
         <source>Mine</source>
@@ -9576,7 +9579,7 @@ Nessun file indice viene eliminato.</translation>
     </message>
     <message>
         <source>Choose an .epub, .txt or .pdf book, or a folder of books.</source>
-        <translation type="unfinished" />
+        <translation>Scegli un libro .epub, .txt o .pdf, oppure una cartella di libri.</translation>
     </message>
     <message>
         <source>Starting…</source>
@@ -9642,7 +9645,7 @@ Nessun file indice viene eliminato.</translation>
     </message>
     <message>
         <source>Add subtitle files (.srt, .ass, .ssa, .vtt, .smi, .lrc) to the list.</source>
-        <translation type="unfinished" />
+        <translation>Aggiungi file di sottotitoli (.srt, .ass, .ssa, .vtt, .smi, .lrc) all'elenco.</translation>
     </message>
     <message>
         <source>Remove Selected</source>
@@ -9823,19 +9826,19 @@ Nessun file indice viene eliminato.</translation>
     </message>
     <message>
         <source>Web addresses to fetch, one per line (https://…)</source>
-        <translation type="unfinished" />
+        <translation>Indirizzi web da scaricare, uno per riga (https://…)</translation>
     </message>
     <message>
         <source>Web addresses</source>
-        <translation type="unfinished" />
+        <translation>Indirizzi web</translation>
     </message>
     <message>
         <source>Fetch</source>
-        <translation type="unfinished" />
+        <translation>Scarica</translation>
     </message>
     <message>
         <source>Put the article text of each web address in the box below, to check before mining.</source>
-        <translation type="unfinished" />
+        <translation>Inserisce il testo dell'articolo di ogni indirizzo web nella casella qui sotto, da controllare prima del mining.</translation>
     </message>
     <message>
         <source>Paste the text you want to mine. Cards from pasted text have no sentence audio from a recording.</source>
@@ -9883,59 +9886,59 @@ Nessun file indice viene eliminato.</translation>
     </message>
     <message>
         <source>Each line must be a web address that starts with http:// or https://.</source>
-        <translation type="unfinished" />
+        <translation>Ogni riga deve essere un indirizzo web che inizia con http:// o https://.</translation>
     </message>
     <message>
         <source>Enter a web address first.</source>
-        <translation type="unfinished" />
+        <translation>Inserisci prima un indirizzo web.</translation>
     </message>
     <message>
         <source>Fetch takes up to 10 web addresses at a time.</source>
-        <translation type="unfinished" />
+        <translation>Scarica accetta fino a 10 indirizzi web alla volta.</translation>
     </message>
     <message>
         <source>Fetching…</source>
-        <translation type="unfinished" />
+        <translation>Download in corso…</translation>
     </message>
     <message>
         <source>Could not fetch %1: %2</source>
-        <translation type="unfinished" />
+        <translation>Impossibile scaricare %1: %2</translation>
     </message>
     <message>
         <source>None of the pages could be fetched.</source>
-        <translation type="unfinished" />
+        <translation>Non è stato possibile scaricare nessuna delle pagine.</translation>
     </message>
     <message>
         <source>Fetched %1.</source>
-        <translation type="unfinished" />
+        <translation>Scaricato: %1.</translation>
     </message>
     <message>
         <source>The pages could not be fetched.</source>
-        <translation type="unfinished" />
+        <translation>Impossibile scaricare le pagine.</translation>
     </message>
     <message>
         <source>The page could not be reached. Check the address and your connection.</source>
-        <translation type="unfinished" />
+        <translation>Impossibile raggiungere la pagina. Controlla l'indirizzo e la connessione.</translation>
     </message>
     <message>
         <source>The site did not send the page.</source>
-        <translation type="unfinished" />
+        <translation>Il sito non ha inviato la pagina.</translation>
     </message>
     <message>
         <source>This address is not a web page.</source>
-        <translation type="unfinished" />
+        <translation>Questo indirizzo non è una pagina web.</translation>
     </message>
     <message>
         <source>This page is too large to read.</source>
-        <translation type="unfinished" />
+        <translation>Questa pagina è troppo grande per essere letta.</translation>
     </message>
     <message>
         <source>This is not a web address.</source>
-        <translation type="unfinished" />
+        <translation>Questo non è un indirizzo web.</translation>
     </message>
     <message>
         <source>No article text found on this page. Pages that draw their text with JavaScript cannot be read.</source>
-        <translation type="unfinished" />
+        <translation>Nessun testo di articolo trovato in questa pagina. Le pagine che generano il testo con JavaScript non possono essere lette.</translation>
     </message>
     <message>
         <source>Paste some text first.</source>
@@ -9947,7 +9950,7 @@ Nessun file indice viene eliminato.</translation>
     </message>
     <message>
         <source>The fetched text was edited, so it is mined as one text without its page titles.</source>
-        <translation type="unfinished" />
+        <translation>Il testo scaricato è stato modificato, quindi viene estratto come un unico testo senza i titoli delle pagine.</translation>
     </message>
     <message>
         <source>That picture cannot be read. Pick another, or remove it to mine without one.</source>
@@ -10734,7 +10737,7 @@ Nessun file indice viene eliminato.</translation>
     </message>
     <message>
         <source>Export words…</source>
-        <translation type="unfinished" />
+        <translation>Esporta parole…</translation>
     </message>
     <message>
         <source>Close</source>
@@ -10749,19 +10752,19 @@ Nessun file indice viene eliminato.</translation>
     </message>
     <message>
         <source>Export Words</source>
-        <translation type="unfinished" />
+        <translation>Esporta parole</translation>
     </message>
     <message>
         <source>CSV files (*.csv)</source>
-        <translation type="unfinished" />
+        <translation>File CSV (*.csv)</translation>
     </message>
     <message>
         <source>Words exported</source>
-        <translation type="unfinished" />
+        <translation>Parole esportate</translation>
     </message>
     <message>
         <source>Export failed — try again</source>
-        <translation type="unfinished" />
+        <translation>Esportazione non riuscita — riprova</translation>
     </message>
     <message>
         <source>Confirm Undo</source>
@@ -10966,11 +10969,11 @@ Nessun file indice viene eliminato.</translation>
     </message>
     <message>
         <source>Skip openings, endings and signs</source>
-        <translation type="unfinished" />
+        <translation>Salta sigle iniziali, finali e cartelli</translation>
     </message>
     <message>
         <source>Leaves out song lyrics, previews and on-screen signs: lines whose subtitle style marks them as a song or a sign, and lines inside a video's opening, ending or preview chapters. Applies to mining, Condense and Readability.</source>
-        <translation type="unfinished" />
+        <translation>Esclude testi delle canzoni, anteprime e cartelli a schermo: righe il cui stile di sottotitolo le indica come canzone o cartello, e righe dentro i capitoli di apertura, chiusura o anteprima di un video. Vale per il mining, Condensa e Leggibilità.</translation>
     </message>
     <message>
         <source>Sentence options</source>
@@ -10986,7 +10989,7 @@ Nessun file indice viene eliminato.</translation>
     </message>
     <message>
         <source>Mines at most one word per example sentence. A word whose sentence is already taken moves to another line it appears on, and is skipped only when every one of its lines is taken. Whitelisted words are still mined.</source>
-        <translation type="unfinished" />
+        <translation>Estrae al massimo una parola per frase di esempio. Una parola la cui frase è già occupata passa a un'altra riga in cui compare, e viene saltata solo quando tutte le sue righe sono occupate. Le parole in whitelist vengono comunque estratte.</translation>
     </message>
     <message>
         <source>Only i+1 sentences (exactly one unknown word)</source>
@@ -11002,11 +11005,11 @@ Nessun file indice viene eliminato.</translation>
     </message>
     <message>
         <source>Pick the clearest sentence for each word</source>
-        <translation type="unfinished" />
+        <translation>Scegli la frase più chiara per ogni parola</translation>
     </message>
     <message>
         <source>When a word appears on several lines, its card uses the line with the fewest unknown words and a comfortable length instead of the first one. The Word Curator still lists every line, and card order does not change.</source>
-        <translation type="unfinished" />
+        <translation>Quando una parola compare su più righe, la sua carta usa la riga con meno parole sconosciute e una lunghezza comoda invece della prima. Il Curatore di parole elenca comunque ogni riga e l'ordine delle carte non cambia.</translation>
     </message>
     <message>
         <source> s</source>
@@ -13065,15 +13068,15 @@ Le tue risorse installate e il tuo tema vengono mantenuti.</translation>
     </message>
     <message>
         <source>Restore a backup…</source>
-        <translation type="unfinished" />
+        <translation>Ripristina un backup…</translation>
     </message>
     <message>
         <source>Backups</source>
-        <translation type="unfinished" />
+        <translation>Backup</translation>
     </message>
     <message>
         <source>Anki Miner saves your known words, statistics, settings and profiles once a day when it starts, and keeps the last 7 days.</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner salva parole conosciute, statistiche, impostazioni e profili una volta al giorno all'avvio e conserva gli ultimi 7 giorni.</translation>
     </message>
     <message>
         <source>Themes</source>
@@ -13117,27 +13120,27 @@ Le tue risorse installate e il tuo tema vengono mantenuti.</translation>
     </message>
     <message>
         <source>There is no backup yet. Anki Miner makes one each day when it starts.</source>
-        <translation type="unfinished" />
+        <translation>Non c'è ancora nessun backup. Anki Miner ne crea uno ogni giorno all'avvio.</translation>
     </message>
     <message>
         <source>Restore a Backup</source>
-        <translation type="unfinished" />
+        <translation>Ripristino di un backup</translation>
     </message>
     <message>
         <source>Restore the backup from:</source>
-        <translation type="unfinished" />
+        <translation>Ripristina il backup del:</translation>
     </message>
     <message>
         <source>Replace your known words, statistics, settings and profiles with the copies from %1? The restore runs the next time Anki Miner starts. Changes made after that backup are lost.</source>
-        <translation type="unfinished" />
+        <translation>Sostituire parole conosciute, statistiche, impostazioni e profili con le copie del %1? Il ripristino avviene al prossimo avvio di Anki Miner. Le modifiche fatte dopo quel backup andranno perse.</translation>
     </message>
     <message>
         <source>The restore could not be scheduled.</source>
-        <translation type="unfinished" />
+        <translation>Impossibile pianificare il ripristino.</translation>
     </message>
     <message>
         <source>The backup from %1 will be restored when Anki Miner next starts.</source>
-        <translation type="unfinished" />
+        <translation>Il backup del %1 verrà ripristinato al prossimo avvio di Anki Miner.</translation>
     </message>
 </context><context>
     <name>UpdateBanner</name>
@@ -13305,11 +13308,11 @@ Le tue risorse installate e il tuo tema vengono mantenuti.</translation>
     </message>
     <message>
         <source>The picture (burned-in text)</source>
-        <translation type="unfinished" />
+        <translation>L'immagine (testo impresso)</translation>
     </message>
     <message>
         <source>Image subtitle track %1</source>
-        <translation type="unfinished" />
+        <translation>Traccia di sottotitoli in immagine %1</translation>
     </message>
     <message>
         <source>The OCR engine could not start on this computer. The details say why.</source>
@@ -13349,15 +13352,15 @@ Le tue risorse installate e il tuo tema vengono mantenuti.</translation>
     </message>
     <message>
         <source>This field takes a video or an image subtitle file (.sup, .idx, .sub).</source>
-        <translation type="unfinished" />
+        <translation>Questo campo accetta un video o un file di sottotitoli in immagine (.sup, .idx, .sub).</translation>
     </message>
     <message>
         <source>Read from:</source>
-        <translation type="unfinished" />
+        <translation>Leggi da:</translation>
     </message>
     <message>
         <source>Read text drawn into the picture, or one of the video's image subtitle tracks.</source>
-        <translation type="unfinished" />
+        <translation>Leggi il testo impresso nell'immagine, oppure una delle tracce di sottotitoli in immagine del video.</translation>
     </message>
     <message>
         <source>Video Folder:</source>
@@ -13441,7 +13444,7 @@ Le tue risorse installate e il tuo tema vengono mantenuti.</translation>
     </message>
     <message>
         <source>Image subtitles are read over the whole frame, so they need no region.</source>
-        <translation type="unfinished" />
+        <translation>I sottotitoli in immagine vengono letti sull'intero fotogramma, quindi non serve una regione.</translation>
     </message>
     <message>
         <source>Download OCR models</source>
@@ -13485,7 +13488,7 @@ Le tue risorse installate e il tuo tema vengono mantenuti.</translation>
     </message>
     <message>
         <source>A DVD subtitle needs its .idx and .sub files in the same folder.</source>
-        <translation type="unfinished" />
+        <translation>Un sottotitolo DVD richiede i suoi file .idx e .sub nella stessa cartella.</translation>
     </message>
     <message>
         <source>Choose a folder before reading subtitles.</source>
@@ -13771,15 +13774,15 @@ Ordina in base a questa colonna per affrontare in ordine una registrazione lunga
     </message>
     <message>
         <source>Used on the card</source>
-        <translation type="unfinished" />
+        <translation>Usato sulla carta</translation>
     </message>
     <message>
         <source>Back to the first match</source>
-        <translation type="unfinished" />
+        <translation>Torna alla prima corrispondenza</translation>
     </message>
     <message>
         <source>Use this dictionary on the card</source>
-        <translation type="unfinished" />
+        <translation>Usa questo dizionario sulla carta</translation>
     </message>
     <message>
         <source>Sentences (%1)</source>
@@ -14217,7 +14220,7 @@ Ordina in base a questa colonna per affrontare in ordine una registrazione lunga
     </message>
     <message>
         <source>Wikimedia Commons (native recordings)</source>
-        <translation type="unfinished" />
+        <translation>Wikimedia Commons (registrazioni di madrelingua)</translation>
     </message>
     <message>
         <source>Microsoft Edge read-aloud (synthetic TTS)</source>
@@ -14231,7 +14234,7 @@ Ordina in base a questa colonna per affrontare in ordine una registrazione lunga
     <name>_BarChart</name>
     <message>
         <source>Cards per period</source>
-        <translation type="unfinished" />
+        <translation>Carte per periodo</translation>
     </message>
 </context><context>
     <name>_HealthRow</name>
@@ -14253,11 +14256,11 @@ Ordina in base a questa colonna per affrontare in ordine una registrazione lunga
     <name>_MissingWordsDialog</name>
     <message>
         <source>Missing Words</source>
-        <translation type="unfinished" />
+        <translation>Parole mancanti</translation>
     </message>
     <message>
         <source>Not known yet in ranks %1</source>
-        <translation type="unfinished" />
+        <translation>Non ancora conosciute nei ranghi %1</translation>
     </message>
 </context><context>
     <name>app</name>

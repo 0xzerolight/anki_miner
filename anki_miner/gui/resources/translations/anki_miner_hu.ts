@@ -93,59 +93,59 @@
     </message>
     <message>
         <source>Known Words</source>
-        <translation type="unfinished" />
+        <translation>Ismert szavak</translation>
     </message>
     <message>
         <source>Words Anki Miner treats as known in the current mining language.</source>
-        <translation type="unfinished" />
+        <translation>Az Anki Miner által ismertnek tekintett szavak az aktuális gyűjtési nyelven.</translation>
     </message>
     <message>
         <source>Mining History</source>
-        <translation type="unfinished" />
+        <translation>Gyűjtési előzmények</translation>
     </message>
     <message>
         <source>History period</source>
-        <translation type="unfinished" />
+        <translation>Előzmények időszaka</translation>
     </message>
     <message>
         <source>All time</source>
-        <translation type="unfinished" />
+        <translation>Teljes időszak</translation>
     </message>
     <message>
         <source>Last 7 days</source>
-        <translation type="unfinished" />
+        <translation>Utolsó 7 nap</translation>
     </message>
     <message>
         <source>Last 30 days</source>
-        <translation type="unfinished" />
+        <translation>Utolsó 30 nap</translation>
     </message>
     <message>
         <source>Last 12 months</source>
-        <translation type="unfinished" />
+        <translation>Utolsó 12 hónap</translation>
     </message>
     <message>
         <source>History grouping</source>
-        <translation type="unfinished" />
+        <translation>Előzmények csoportosítása</translation>
     </message>
     <message>
         <source>Each run</source>
-        <translation type="unfinished" />
+        <translation>Futtatásonként</translation>
     </message>
     <message>
         <source>By day</source>
-        <translation type="unfinished" />
+        <translation>Naponta</translation>
     </message>
     <message>
         <source>By week</source>
-        <translation type="unfinished" />
+        <translation>Hetente</translation>
     </message>
     <message>
         <source>By month</source>
-        <translation type="unfinished" />
+        <translation>Havonta</translation>
     </message>
     <message>
         <source>Export CSV…</source>
-        <translation type="unfinished" />
+        <translation>CSV exportálása…</translation>
     </message>
     <message>
         <source>No sessions yet — process an episode to see your history.</source>
@@ -177,7 +177,7 @@
     </message>
     <message>
         <source>Period</source>
-        <translation type="unfinished" />
+        <translation>Időszak</translation>
     </message>
     <message>
         <source>Show in Anki</source>
@@ -185,7 +185,7 @@
     </message>
     <message>
         <source>Delete this run's cards…</source>
-        <translation type="unfinished" />
+        <translation>A futtatás kártyáinak törlése…</translation>
     </message>
     <message>
         <source>Series Difficulty Ranking</source>
@@ -217,11 +217,11 @@
     </message>
     <message>
         <source>Frequency Coverage</source>
-        <translation type="unfinished" />
+        <translation>Gyakorisági lefedettség</translation>
     </message>
     <message>
         <source>Rank band</source>
-        <translation type="unfinished" />
+        <translation>Rangsáv</translation>
     </message>
     <message>
         <source>Known</source>
@@ -229,15 +229,15 @@
     </message>
     <message>
         <source>Not known</source>
-        <translation type="unfinished" />
+        <translation>Nem ismert</translation>
     </message>
     <message>
         <source>Known %</source>
-        <translation type="unfinished" />
+        <translation>Ismert %</translation>
     </message>
     <message>
         <source>Show missing words</source>
-        <translation type="unfinished" />
+        <translation>Hiányzó szavak megjelenítése</translation>
     </message>
     <message>
         <source>Milestones</source>
@@ -265,93 +265,95 @@
     </message>
     <message>
         <source>No runs in this period.</source>
-        <translation type="unfinished" />
+        <translation>Ebben az időszakban nincs futtatás.</translation>
     </message>
     <message>
         <source>Export Mining History</source>
-        <translation type="unfinished" />
+        <translation>Gyűjtési előzmények exportálása</translation>
     </message>
     <message>
         <source>CSV Files (*.csv);;All Files (*)</source>
-        <translation type="unfinished" />
+        <translation>CSV-fájlok (*.csv);;Minden fájl (*)</translation>
     </message>
     <message>
         <source>History saved to %1.</source>
-        <translation type="unfinished" />
+        <translation>Az előzmények mentve ide: %1.</translation>
     </message>
     <message>
         <source>The history could not be exported.</source>
-        <translation type="unfinished" />
+        <translation>Az előzményeket nem sikerült exportálni.</translation>
     </message>
     <message>
         <source>%1 (cards deleted: %2)</source>
-        <translation type="unfinished" />
+        <translation>%1 (törölt kártyák: %2)</translation>
     </message>
     <message>
         <source>Select one run in the table.</source>
-        <translation type="unfinished" />
+        <translation>Jelöljön ki egy futtatást a táblázatban.</translation>
     </message>
     <message>
         <source>This run's cards were deleted: %1.</source>
-        <translation type="unfinished" />
+        <translation>A futtatás törölt kártyái: %1.</translation>
     </message>
     <message>
         <source>Anki Miner has no card list for this run: it was mined before this version, or it made no cards.</source>
-        <translation type="unfinished" />
+        <translation>Az Anki Minernek nincs kártyalistája ehhez a futtatáshoz: ennél a verziónál korábban futott, vagy nem készült vele kártya.</translation>
     </message>
     <message>
         <source>Anki Miner couldn't open this run's cards in Anki.</source>
-        <translation type="unfinished" />
+        <translation>Az Anki Miner nem tudta megnyitni a futtatás kártyáit az Ankiban.</translation>
     </message>
     <message>
         <source>None of this run's cards are in Anki any more.</source>
-        <translation type="unfinished" />
+        <translation>A futtatás egyik kártyája sincs már az Ankiban.</translation>
     </message>
     <message>
         <source>Delete This Run's Cards</source>
-        <translation type="unfinished" />
+        <translation>A futtatás kártyáinak törlése</translation>
     </message>
     <message>
         <source>Cards this run added that are still in Anki: %1. Reviewed at least once: %2.
 
 Delete them from Anki? Their review history is deleted with them. This cannot be undone.</source>
-        <translation type="unfinished" />
+        <translation>A futtatás által hozzáadott, még az Ankiban lévő kártyák: %1. Legalább egyszer ismételve: %2.
+
+Törli őket az Ankiból? Az ismétlési előzményeik is törlődnek. Ez nem vonható vissza.</translation>
     </message>
     <message>
         <source>Cards deleted from Anki: %1.</source>
-        <translation type="unfinished" />
+        <translation>Az Ankiból törölt kártyák: %1.</translation>
     </message>
     <message>
         <source>This run's cards could not be deleted.</source>
-        <translation type="unfinished" />
+        <translation>A futtatás kártyáit nem sikerült törölni.</translation>
     </message>
     <message>
         <source>Known words could not be counted.</source>
-        <translation type="unfinished" />
+        <translation>Az ismert szavakat nem sikerült megszámolni.</translation>
     </message>
     <message>
         <source>Words Anki Miner treats as known in %1.</source>
-        <translation type="unfinished" />
+        <translation>Az Anki Miner által ismertnek tekintett szavak ezen a nyelven: %1.</translation>
     </message>
     <message>
         <source>Change since %1: %2</source>
-        <translation type="unfinished" />
+        <translation>Változás ezóta: %1: %2</translation>
     </message>
     <message>
         <source>Last counted on %1; Anki was not reachable.</source>
-        <translation type="unfinished" />
+        <translation>Utolsó számlálás: %1; az Anki nem volt elérhető.</translation>
     </message>
     <message>
         <source>Last counted on %1.</source>
-        <translation type="unfinished" />
+        <translation>Utolsó számlálás: %1.</translation>
     </message>
     <message>
         <source>Coverage needs Anki running: it compares the list with your cards.</source>
-        <translation type="unfinished" />
+        <translation>A lefedettséghez futnia kell az Ankinak: összeveti a listát az Ön kártyáival.</translation>
     </message>
     <message>
         <source>How many of the most frequent words in %1 you already know.</source>
-        <translation type="unfinished" />
+        <translation>A(z) %1 lista leggyakoribb szavai közül hányat ismer már.</translation>
     </message>
     <message>
         <source>%1 mining sessions completed</source>
@@ -759,7 +761,7 @@ Delete them from Anki? Their review history is deleted with them. This cannot be
     </message>
     <message>
         <source>{series}, {episode} and {volume} become each card's show, episode or book volume, for example mined::{series}::{episode}.</source>
-        <translation type="unfinished" />
+        <translation>A {series}, {episode} és {volume} helyére minden kártyán annak sorozata, epizódja vagy könyvkötete kerül, például mined::{series}::{episode}.</translation>
     </message>
     <message>
         <source>Refresh</source>
@@ -787,11 +789,11 @@ Delete them from Anki? Their review history is deleted with them. This cannot be
     </message>
     <message>
         <source>Sync Anki after mining</source>
-        <translation type="unfinished" />
+        <translation>Anki szinkronizálása gyűjtés után</translation>
     </message>
     <message>
         <source>After a run that added cards, ask Anki to sync with AnkiWeb. If the sync fails, the Activity Log says so and the cards stay added.</source>
-        <translation type="unfinished" />
+        <translation>Ha egy futtatás kártyákat adott hozzá, megkéri az Ankit, hogy szinkronizáljon az AnkiWebbel. Ha a szinkronizálás sikertelen, a Tevékenységnapló jelzi, a kártyák pedig hozzáadva maradnak.</translation>
     </message>
     <message>
         <source>AnkiConnect URL</source>
@@ -803,7 +805,7 @@ Delete them from Anki? Their review history is deleted with them. This cannot be
     </message>
     <message>
         <source>If AnkiConnect asks for an API key, add it to the address: http://127.0.0.1:8765/?key=YOUR_KEY</source>
-        <translation type="unfinished" />
+        <translation>Ha az AnkiConnect API-kulcsot kér, írja a címhez: http://127.0.0.1:8765/?key=YOUR_KEY</translation>
     </message>
     <message>
         <source>Fill in automatically</source>
@@ -1515,7 +1517,7 @@ Támogatott formátumok: AJT (index.json + media/), NHK16 (entries.json + audio/
     </message>
     <message>
         <source>Wikimedia Commons (native recordings)</source>
-        <translation type="unfinished" />
+        <translation>Wikimedia Commons (anyanyelvi felvételek)</translation>
     </message>
     <message>
         <source>Custom JSON</source>
@@ -2083,7 +2085,7 @@ Indexfájl nem törlődik.</translation>
     </message>
     <message>
         <source>Every audio file in the folder, in file-name order, one .srt each. A folder of book folders (each with its EPUB and audio) syncs every book in turn.</source>
-        <translation type="unfinished" />
+        <translation>A mappa minden hangfájlja, fájlnév szerinti sorrendben, mindegyikhez egy .srt. Könyvmappákat tartalmazó mappa esetén (mindegyikben a könyv EPUB-ja és hangja) minden könyv sorban szinkronizálódik.</translation>
     </message>
     <message>
         <source>EPUB or Text File:</source>
@@ -2111,7 +2113,7 @@ Indexfájl nem törlődik.</translation>
     </message>
     <message>
         <source>Sentences: how many of the book's sentences, from the first one found to the last, got a subtitle. Audio: how much of the narration matched the book. Grade: A from 90% on both, B from 75%, C from 50%, else D.</source>
-        <translation type="unfinished" />
+        <translation>Mondatok: a könyv mondatai közül, az elsőként megtalálttól az utolsóig, hány kapott feliratot. Hang: a narráció mekkora része egyezett a könyvvel. Osztályzat: A, ha mindkettő legalább 90%, B 75%-tól, C 50%-tól, egyébként D.</translation>
     </message>
     <message>
         <source>Output</source>
@@ -2175,7 +2177,7 @@ Indexfájl nem törlődik.</translation>
     </message>
     <message>
         <source>No audio files were found in that folder, and no book folders (each with its book and audio).</source>
-        <translation type="unfinished" />
+        <translation>A mappában nem található hangfájl, és könyvmappa sem (mindegyikben a könyvvel és a hangjával).</translation>
     </message>
     <message>
         <source>That folder could not be scanned.</source>
@@ -2183,15 +2185,15 @@ Indexfájl nem törlődik.</translation>
     </message>
     <message>
         <source>Skipped folder %1: no audio files</source>
-        <translation type="unfinished" />
+        <translation>Kihagyott mappa (%1): nincs hangfájl</translation>
     </message>
     <message>
         <source>Skipped folder %1: no .epub or .txt book</source>
-        <translation type="unfinished" />
+        <translation>Kihagyott mappa (%1): nincs .epub vagy .txt könyv</translation>
     </message>
     <message>
         <source>Skipped folder %1: more than one book</source>
-        <translation type="unfinished" />
+        <translation>Kihagyott mappa (%1): egynél több könyv</translation>
     </message>
     <message>
         <source>Output folder is not writable.</source>
@@ -2211,11 +2213,11 @@ Indexfájl nem törlődik.</translation>
     </message>
     <message>
         <source>Books: %1 — %2</source>
-        <translation type="unfinished" />
+        <translation>Könyvek: %1 — %2</translation>
     </message>
     <message>
         <source>%1: sentences %2%, audio %3% — grade %4</source>
-        <translation type="unfinished" />
+        <translation>%1: mondatok %2%, hang %3% — osztályzat: %4</translation>
     </message>
     <message>
         <source>Syncing file %1 of %2</source>
@@ -2229,11 +2231,11 @@ Indexfájl nem törlődik.</translation>
     </message>
     <message>
         <source>%1 could not be loaded: %2</source>
-        <translation type="unfinished" />
+        <translation>Nem sikerült betölteni (%1): %2</translation>
     </message>
     <message>
         <source>Its book could not be loaded</source>
-        <translation type="unfinished" />
+        <translation>A hozzá tartozó könyvet nem sikerült betölteni</translation>
     </message>
     <message>
         <source>Skipped, exists</source>
@@ -2253,11 +2255,11 @@ Indexfájl nem törlődik.</translation>
     </message>
     <message>
         <source>Reusing the saved transcript</source>
-        <translation type="unfinished" />
+        <translation>A mentett átirat újrafelhasználása</translation>
     </message>
     <message>
         <source>Found sentence %1 again later in the audio; timed it out of book order</source>
-        <translation type="unfinished" />
+        <translation>%1. mondat: később újra megtalálva a hangban; a könyv sorrendjén kívül időzítve</translation>
     </message>
     <message>
         <source>%1 sentences timed, %2 in between had no audio</source>
@@ -2339,7 +2341,7 @@ Indexfájl nem törlődik.</translation>
     </message>
     <message>
         <source>Approve or reject each word, pick its sentence and scene, trim its audio, mark words known, and fix a mistranscribed sentence or swap the word to mine -- before any card is created. When a word has entries in several dictionaries, choose which one the card's Definition uses.</source>
-        <translation type="unfinished" />
+        <translation>Hagyjon jóvá vagy utasítson el minden szót, válassza ki a mondatát és a jelenetét, vágja meg a hangját, jelöljön szavakat ismertként, javítson ki egy rosszul átírt mondatot, vagy cserélje le a gyűjtendő szót -- mielőtt bármilyen kártya elkészülne. Ha egy szónak több szótárban is van szócikke, válassza ki, melyiket használja a kártya Definíció mezője.</translation>
     </message>
     <message>
         <source>Secondary-language subtitles</source>
@@ -2347,7 +2349,7 @@ Indexfájl nem törlődik.</translation>
     </message>
     <message>
         <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. Leave the file empty and Anki Miner picks a translation itself: a subtitle named for the video, or a text track inside it, in your interface language or else English. The Activity Log names the track it used. On Video → Batch, point it at a folder of translation subtitles instead and they pair to the videos by episode number. Turn it on under Settings → Sentences.</source>
-        <translation type="unfinished" />
+        <translation>Töltsön be egy második, saját nyelvű feliratfájlt a gyűjtési nyelvű mellé: a Szóválogató előnézetében a sor alatt jelenik meg, és Fordítás mezőbe menthető. Ha üresen hagyja a fájlt, az Anki Miner maga választ fordítást: a videóról elnevezett feliratot vagy a benne lévő szöveges sávot, a felület nyelvén, ennek hiányában angolul. A Tevékenységnapló megnevezi a használt sávot. A Videó → Kötegelt lapon ehelyett fordítási feliratok mappáját adja meg, és ezek epizódszám szerint párosulnak a videókhoz. Bekapcsolás: Beállítások → Mondatok.</translation>
     </message>
     <message>
         <source>Build a deck by coverage %</source>
@@ -2383,11 +2385,11 @@ Indexfájl nem törlődik.</translation>
     </message>
     <message>
         <source>Mine songs from .lrc lyrics</source>
-        <translation type="unfinished" />
+        <translation>Gyűjtés dalokból .lrc dalszövegekkel</translation>
     </message>
     <message>
         <source>Use a .lrc lyrics file wherever a subtitle file goes. Each line lasts until the next one starts. Pair a song with its lyrics on Audiobooks, condense it in Condense, or mine a music video on Video.</source>
-        <translation type="unfinished" />
+        <translation>Használjon .lrc dalszövegfájlt bárhol, ahol feliratfájl adható meg. Minden sor a következő kezdetéig tart. Párosítson egy dalt a szövegével a Hangoskönyv lapon, sűrítse a Sűrítés lapon, vagy gyűjtsön egy videoklipből a Videó lapon.</translation>
     </message>
     <message>
         <source>Mine from manga</source>
@@ -2403,23 +2405,23 @@ Indexfájl nem törlődik.</translation>
     </message>
     <message>
         <source>Mine vocabulary from novels and other text (EPUB, PDF, Aozora, plain text).</source>
-        <translation type="unfinished" />
+        <translation>Szókincsgyűjtés regényekből és más szövegekből (EPUB, PDF, Aozora, egyszerű szöveg).</translation>
     </message>
     <message>
         <source>Readings from a book's own furigana</source>
-        <translation type="unfinished" />
+        <translation>Olvasatok a könyv saját furiganájából</translation>
     </message>
     <message>
         <source>When a Japanese EPUB prints furigana over a word, the card takes that reading instead of the parser's guess.</source>
-        <translation type="unfinished" />
+        <translation>Ha egy japán EPUB furiganát nyomtat egy szó fölé, a kártya azt az olvasatot veszi át az elemző becslése helyett.</translation>
     </message>
     <message>
         <source>Mine pasted text or a web article</source>
-        <translation type="unfinished" />
+        <translation>Gyűjtés beillesztett szövegből vagy webes cikkből</translation>
     </message>
     <message>
         <source>Paste text in your mining language, or fetch a web article by its address, and mine it into Anki cards. A fetched article's cards name the page and site as their source.</source>
-        <translation type="unfinished" />
+        <translation>Illesszen be szöveget a gyűjtési nyelven, vagy töltsön le egy webes cikket a címe alapján, és gyűjtsön belőle Anki-kártyákat. A letöltött cikk kártyái forrásként az oldalt és a webhelyet nevezik meg.</translation>
     </message>
     <message>
         <source>Mine subtitle files without video</source>
@@ -2443,7 +2445,7 @@ Indexfájl nem törlődik.</translation>
     </message>
     <message>
         <source>Create subtitles from audio with a local Whisper model -- as a standalone tool. Long lines are split at sentence ends, and a second run on the same file reuses the saved transcript.</source>
-        <translation type="unfinished" />
+        <translation>Feliratok készítése hangból helyi Whisper-modellel -- önálló eszközként. A hosszú sorok mondatvégeknél kettéválnak, és ugyanazon a fájlon a második futtatás a mentett átiratot használja fel újra.</translation>
     </message>
     <message>
         <source>Re-time existing subtitles</source>
@@ -2503,35 +2505,35 @@ Indexfájl nem törlődik.</translation>
     </message>
     <message>
         <source>Browse your whole mining history</source>
-        <translation type="unfinished" />
+        <translation>A teljes gyűjtési előzmények böngészése</translation>
     </message>
     <message>
         <source>Analytics lists every run you have mined. Pick a period, group the runs by day, week or month, see the cards per period in a chart, and export the table as a CSV file.</source>
-        <translation type="unfinished" />
+        <translation>A Statisztika lap minden gyűjtési futtatást listáz. Válasszon időszakot, csoportosítsa a futtatásokat nap, hét vagy hónap szerint, nézze meg az időszakonkénti kártyákat diagramon, és exportálja a táblázatot CSV-fájlba.</translation>
     </message>
     <message>
         <source>Show or delete a past run's cards</source>
-        <translation type="unfinished" />
+        <translation>Egy korábbi futtatás kártyáinak megjelenítése vagy törlése</translation>
     </message>
     <message>
         <source>Select a run in Analytics → Mining History to open its cards in Anki's browser or to delete them. The confirmation says how many of its cards are still in Anki and how many you have reviewed. Runs mined before this version have no card list.</source>
-        <translation type="unfinished" />
+        <translation>Jelöljön ki egy futtatást a Statisztika → Gyűjtési előzmények részen, hogy megnyissa a kártyáit az Anki böngészőjében, vagy törölje őket. A megerősítés jelzi, hány kártyája van még az Ankiban, és hányat ismételt már. Az ennél a verziónál korábbi futtatásoknak nincs kártyalistájuk.</translation>
     </message>
     <message>
         <source>Track how many words you know</source>
-        <translation type="unfinished" />
+        <translation>Kövesse nyomon, hány szót ismer</translation>
     </message>
     <message>
         <source>The Known Words card on Analytics counts the words Anki Miner treats as known in the current mining language and shows how that number changed. It is counted while Anki is running, at most once every ten minutes.</source>
-        <translation type="unfinished" />
+        <translation>A Statisztika lap Ismert szavak kártyája megszámolja az Anki Miner által az aktuális gyűjtési nyelven ismertnek tekintett szavakat, és megmutatja, hogyan változott ez a szám. A számlálás akkor történik, amikor fut az Anki, legfeljebb tízpercenként egyszer.</translation>
     </message>
     <message>
         <source>See how much of a frequency list you know</source>
-        <translation type="unfinished" />
+        <translation>Nézze meg, mennyit ismer egy gyakorisági listából</translation>
     </message>
     <message>
         <source>Analytics → Frequency Coverage counts the words you know in ranks 1–1,000 up to 20,000 of your first frequency list with numeric ranks, and lists the missing words of each band. It needs Anki running.</source>
-        <translation type="unfinished" />
+        <translation>A Statisztika → Gyakorisági lefedettség megszámolja, hány szót ismer az első, számszerű rangokat tartalmazó gyakorisági listájának 1–1000-es sávjától a 20 000-es rangig, és sávonként listázza a hiányzó szavakat. Futó Ankit igényel.</translation>
     </message>
     <message>
         <source>Reset mining statistics</source>
@@ -2607,11 +2609,11 @@ Indexfájl nem törlődik.</translation>
     </message>
     <message>
         <source>Count a word as known only after its card has been reviewed</source>
-        <translation type="unfinished" />
+        <translation>Egy szó csak a kártyája ismétlése után számít ismertnek</translation>
     </message>
     <message>
         <source>Readability and the i+1 sentence rule then count a word as known only when its Anki card has been reviewed at least once. Mining still skips every word that already has a card.</source>
-        <translation type="unfinished" />
+        <translation>Az Olvashatóság és az i+1 mondatszabály ekkor csak akkor tekint egy szót ismertnek, ha az Anki-kártyáját legalább egyszer már ismételték. A gyűjtés továbbra is kihagy minden szót, amelynek már van kártyája.</translation>
     </message>
     <message>
         <source>Exclude specific Anki decks from 'known'</source>
@@ -2631,27 +2633,27 @@ Indexfájl nem törlődik.</translation>
     </message>
     <message>
         <source>Browse every known word</source>
-        <translation type="unfinished" />
+        <translation>Az összes ismert szó böngészése</translation>
     </message>
     <message>
         <source>Manage Known Words lists every word this language counts as known, with where it came from (added by you, mined by Anki Miner, from Anki) and the date it was added. Search it, filter it by source, and remove words you added. Words from Anki come back on the next sync.</source>
-        <translation type="unfinished" />
+        <translation>Az Ismert szavak kezelése felsorol minden szót, amelyet ez a nyelv ismertnek tekint, a származásával (Ön adta hozzá, az Anki Miner gyűjtötte, az Ankiból) és a hozzáadás dátumával. Kereshet benne, forrás szerint szűrheti, és eltávolíthatja az Ön által hozzáadott szavakat. Az Ankiból származó szavak a következő szinkronizáláskor visszakerülnek.</translation>
     </message>
     <message>
         <source>Import known words from Kindle, Lute or LWT</source>
-        <translation type="unfinished" />
+        <translation>Ismert szavak importálása Kindle, Lute vagy LWT alkalmazásból</translation>
     </message>
     <message>
         <source>In Manage Known Words, Import… also reads a Kindle Vocabulary Builder file (vocab.db; words marked mastered) and Lute or LWT term exports (status 5 and 99).</source>
-        <translation type="unfinished" />
+        <translation>Az Ismert szavak kezelése ablakban az Importálás… Kindle Vocabulary Builder fájlt (vocab.db; a megtanultként jelölt szavak) és Lute vagy LWT kifejezésexportot (5-ös és 99-es állapot) is beolvas.</translation>
     </message>
     <message>
         <source>Export words to a CSV file</source>
-        <translation type="unfinished" />
+        <translation>Szavak exportálása CSV-fájlba</translation>
     </message>
     <message>
         <source>Export words… saves the list you are looking at in Manage Known Words, or a finished run's mined and not-mined words with the reason each was skipped, as a CSV file.</source>
-        <translation type="unfinished" />
+        <translation>A Szavak exportálása… CSV-fájlba menti az Ismert szavak kezelése ablakban látott listát, vagy egy befejezett futtatás gyűjtött és nem gyűjtött szavait, mindegyiknél a kihagyás okával.</translation>
     </message>
     <message>
         <source>Exclude kana-only words</source>
@@ -2683,23 +2685,23 @@ Indexfájl nem törlődik.</translation>
     </message>
     <message>
         <source>Mine at most one word from each example sentence. A word whose sentence is taken moves to another line it appears on, and is skipped only when every one of its lines is taken.</source>
-        <translation type="unfinished" />
+        <translation>Minden példamondatból legfeljebb egy szó gyűjtése. Az a szó, amelynek mondata már foglalt, egy másik sorra kerül, ahol előfordul, és csak akkor marad ki, ha minden sora foglalt.</translation>
     </message>
     <message>
         <source>Pick the clearest sentence</source>
-        <translation type="unfinished" />
+        <translation>A legérthetőbb mondat kiválasztása</translation>
     </message>
     <message>
         <source>When a word appears on several lines, its card uses the line with the fewest unknown words and a comfortable length instead of the first one. The Word Curator still lists every line.</source>
-        <translation type="unfinished" />
+        <translation>Ha egy szó több sorban is előfordul, a kártyája az első helyett azt a sort használja, amelyben a legkevesebb ismeretlen szó van, és kényelmes a hossza. A Szóválogató továbbra is minden sort felsorol.</translation>
     </message>
     <message>
         <source>Skip openings, endings and signs</source>
-        <translation type="unfinished" />
+        <translation>Nyitó- és záródalok és kiírások kihagyása</translation>
     </message>
     <message>
         <source>Leave opening and ending songs, previews and on-screen signs out of mining, Condense and Readability: lines styled as songs or signs, and lines inside a video's opening, ending and preview chapters. On by default for new installs; turn it off in Settings → Sentences.</source>
-        <translation type="unfinished" />
+        <translation>A nyitó- és záródalok, előzetesek és képernyős kiírások kihagyása a gyűjtésből, a Sűrítésből és az Olvashatóságból: a dalként vagy kiírásként formázott sorok, valamint a videó nyitó-, záró- és előzetesfejezeteibe eső sorok. Új telepítéseken alapértelmezetten be van kapcsolva; kikapcsolás: Beállítások → Mondatok.</translation>
     </message>
     <message>
         <source>Strip junk from subtitles (regex)</source>
@@ -2767,11 +2769,11 @@ Indexfájl nem törlődik.</translation>
     </message>
     <message>
         <source>Import a dictionary file</source>
-        <translation type="unfinished" />
+        <translation>Szótárfájl importálása</translation>
     </message>
     <message>
         <source>Add a Yomitan zip, a StarDict dictionary (its archive or its .ifo file) or a CSV/TSV word list (term and definition, or term, reading and definition) as a definition source.</source>
-        <translation type="unfinished" />
+        <translation>Yomitan zip, StarDict szótár (az archívuma vagy az .ifo fájlja) vagy CSV/TSV szólista (kifejezés és definíció, vagy kifejezés, olvasat és definíció) hozzáadása definícióforrásként.</translation>
     </message>
     <message>
         <source>Keep dictionaries up to date</source>
@@ -2843,7 +2845,7 @@ Indexfájl nem törlődik.</translation>
     </message>
     <message>
         <source>Attach word audio to cards from audio packs, JPod101 (Japanese), Google text-to-speech, or Microsoft Edge text-to-speech (every language). Wikimedia Commons plays recordings of real speakers from Wiktionary and Lingua Libre, tried before Google TTS in most languages.</source>
-        <translation type="unfinished" />
+        <translation>Szókiejtés csatolása a kártyákhoz hangcsomagokból, a JPod101-ről (japán), a Google szövegfelolvasójával vagy a Microsoft Edge szövegfelolvasójával (minden nyelv). A Wikimedia Commons valódi beszélők felvételeit játssza le a Wiktionaryből és a Lingua Libréből; a legtöbb nyelven a Google TTS előtt kerül sorra.</translation>
     </message>
     <message>
         <source>Import local audio packs</source>
@@ -2859,7 +2861,7 @@ Indexfájl nem törlődik.</translation>
     </message>
     <message>
         <source>Extract the spoken sentence as an audio clip; tune its format and bitrate. Even out audio volume brings sentence clips and condensed audio to one loudness and fades each clip in and out.</source>
-        <translation type="unfinished" />
+        <translation>A kimondott mondat kivágása hangklipként; a formátum és a bitráta beállítható. A Hangerő kiegyenlítése a mondatklipeket és a sűrített hangot egységes hangosságra hozza, és minden klipet be- és kiúsztat.</translation>
     </message>
     <message>
         <source>Sentence audio for reading (TTS)</source>
@@ -2883,7 +2885,7 @@ Indexfájl nem törlődik.</translation>
     </message>
     <message>
         <source>Capture a still frame from the scene to put on the card. Crop manga pictures to the speech bubble shows the bubble and the art around it instead of the whole page.</source>
-        <translation type="unfinished" />
+        <translation>Állókép rögzítése a jelenetből a kártyára. A Mangaképek kivágása a szövegbuborékra a teljes oldal helyett a buborékot és a körülötte lévő rajzot mutatja.</translation>
     </message>
     <message>
         <source>Animated clips (GIF/WebP)</source>
@@ -2963,7 +2965,7 @@ Indexfájl nem törlődik.</translation>
     </message>
     <message>
         <source>Add tags to every note Anki Miner creates. Card tags can use {series}, {episode} and {volume}. Each card gets its own show, episode or book volume, for example mined::{series}::{episode} gives mined::Frieren::03.</source>
-        <translation type="unfinished" />
+        <translation>Címkék hozzáadása az Anki Miner által létrehozott minden jegyzethez. A kártyacímkék használhatják a {series}, {episode} és {volume} elemeket. Minden kártya a saját sorozatát, epizódját vagy könyvkötetét kapja, például a mined::{series}::{episode} eredménye mined::Frieren::03.</translation>
     </message>
     <message>
         <source>Connect to Anki (AnkiConnect)</source>
@@ -2971,15 +2973,15 @@ Indexfájl nem törlődik.</translation>
     </message>
     <message>
         <source>Set the AnkiConnect address; Refresh re-checks the connection to your running Anki. If AnkiConnect is set up with an API key, add it to the address: http://127.0.0.1:8765/?key=YOUR_KEY. Anki Miner sends it with every request and never writes it to the log.</source>
-        <translation type="unfinished" />
+        <translation>Az AnkiConnect címének megadása; a Frissítés újra ellenőrzi a kapcsolatot a futó Ankival. Ha az AnkiConnect API-kulccsal van beállítva, írja a címhez: http://127.0.0.1:8765/?key=YOUR_KEY. Az Anki Miner minden kéréssel elküldi, és sosem írja a naplóba.</translation>
     </message>
     <message>
         <source>Sync Anki after mining</source>
-        <translation type="unfinished" />
+        <translation>Anki szinkronizálása gyűjtés után</translation>
     </message>
     <message>
         <source>After a run that added cards, Anki Miner asks Anki to sync with AnkiWeb. If the sync fails, the Activity Log says so and the cards stay added.</source>
-        <translation type="unfinished" />
+        <translation>Ha egy futtatás kártyákat adott hozzá, az Anki Miner megkéri az Ankit, hogy szinkronizáljon az AnkiWebbel. Ha a szinkronizálás sikertelen, a Tevékenységnapló jelzi, a kártyák pedig hozzáadva maradnak.</translation>
     </message>
     <message>
         <source>Fill in field mappings automatically</source>
@@ -3067,7 +3069,7 @@ Indexfájl nem törlődik.</translation>
     </message>
     <message>
         <source>Draw a box where a video's on-screen dialogue appears and Anki Miner reads it into a timed .srt that Video → Single can mine. Made for game longplays without commentary. It also reads image subtitles (Blu-ray .sup, DVD .idx/.sub, or an image track inside a video) without a box. Lines with none of your mining language's letters are left out. Download the OCR engine from the setup card on Utilities → Video OCR.</source>
-        <translation type="unfinished" />
+        <translation>Rajzoljon keretet oda, ahol a videó képernyőn megjelenő párbeszéde látható, és az Anki Miner időzített .srt fájlba olvassa, amelyből a Videó → Egyedi lap gyűjthet. Kommentár nélküli játékvégigjátszásokhoz készült. Képalapú feliratokat (Blu-ray .sup, DVD .idx/.sub vagy videóba ágyazott képsáv) keret nélkül is beolvas. A gyűjtési nyelv egyetlen betűjét sem tartalmazó sorok kimaradnak. Az OCR-motort a Segédeszközök → Videó-OCR beállítókártyájáról töltheti le.</translation>
     </message>
     <message>
         <source>Sync an audiobook to its EPUB</source>
@@ -3075,23 +3077,23 @@ Indexfájl nem törlődik.</translation>
     </message>
     <message>
         <source>Transcribe an audiobook and time the book's own sentences to it, writing an .srt the Audiobook tab, Reading → Subtitle Files or a reader can use. A second run on the same audio reuses the saved transcript instead of transcribing again.</source>
-        <translation type="unfinished" />
+        <translation>Hangoskönyv átírása és a könyv saját mondatainak hozzáidőzítése egy .srt fájlba, amelyet a Hangoskönyv lap, az Olvasás → Feliratfájlok vagy egy olvasóprogram használhat. Ugyanazon a hangon a második futtatás újbóli átírás helyett a mentett átiratot használja.</translation>
     </message>
     <message>
         <source>Sync a shelf of audiobooks in one run</source>
-        <translation type="unfinished" />
+        <translation>Egy egész polcnyi hangoskönyv szinkronizálása egy futtatásban</translation>
     </message>
     <message>
         <source>In Utilities → Audiobook Sync, choose Folder and pick a folder that holds one folder per book, each with its EPUB (or text file) and its audio files. The books sync one after another, in name order.</source>
-        <translation type="unfinished" />
+        <translation>A Segédeszközök → Könyvszinkron lapon válassza a Mappa lehetőséget, és jelöljön ki egy mappát, amely könyvenként egy mappát tartalmaz, mindegyikben a könyv EPUB-jával (vagy szövegfájljával) és hangfájljaival. A könyvek egymás után, név szerinti sorrendben szinkronizálódnak.</translation>
     </message>
     <message>
         <source>See how well an audiobook synced</source>
-        <translation type="unfinished" />
+        <translation>Nézze meg, mennyire sikerült egy hangoskönyv szinkronizálása</translation>
     </message>
     <message>
         <source>After Audiobook Sync, each book gets a line under the Book card: how many of its sentences got a subtitle, how much of the narration matched the book, and a grade from A to D. Chapters read out of book order are found too; sentences the narrator skipped never get a subtitle.</source>
-        <translation type="unfinished" />
+        <translation>A Könyvszinkron után minden könyv kap egy sort a Könyv kártya alatt: mondatai közül hány kapott feliratot, a narráció mekkora része egyezett a könyvvel, valamint egy A és D közötti osztályzatot. A könyv sorrendjétől eltérően felolvasott fejezeteket is megtalálja; a narrátor által kihagyott mondatok sosem kapnak feliratot.</translation>
     </message>
     <message>
         <source>Check how much of a show, book or manga you can read</source>
@@ -3175,11 +3177,11 @@ Indexfájl nem törlődik.</translation>
     </message>
     <message>
         <source>Restore an automatic backup</source>
-        <translation type="unfinished" />
+        <translation>Automatikus biztonsági mentés visszaállítása</translation>
     </message>
     <message>
         <source>Anki Miner backs up your known words, statistics, settings and profiles once a day when it starts, and keeps the last 7 days. Settings → General → Restore a backup… puts one back the next time the app starts.</source>
-        <translation type="unfinished" />
+        <translation>Az Anki Miner naponta egyszer, indításkor biztonsági mentést készít az ismert szavakról, a statisztikáról, a beállításokról és a profilokról, és az utolsó 7 napét megőrzi. A Beállítások → Általános → Biztonsági mentés visszaállítása… az alkalmazás következő indításakor visszaállít egyet.</translation>
     </message>
     <message>
         <source>Undo a mining run</source>
@@ -3191,11 +3193,11 @@ Indexfájl nem törlődik.</translation>
     </message>
     <message>
         <source>Export a run's words</source>
-        <translation type="unfinished" />
+        <translation>Egy futtatás szavainak exportálása</translation>
     </message>
     <message>
         <source>Press View details on a run's result line, then Export words… to save the run's mined and not-mined words, with the reason each was skipped, as a CSV file.</source>
-        <translation type="unfinished" />
+        <translation>Nyomja meg a Részletek gombot egy futtatás eredménysorában, majd a Szavak exportálása… gombot, hogy CSV-fájlba mentse a futtatás gyűjtött és nem gyűjtött szavait, mindegyiknél a kihagyás okával.</translation>
     </message>
     <message>
         <source>Keyboard shortcuts</source>
@@ -4567,11 +4569,11 @@ Ez %n jegyzetet módosít (%1), és ezzel a címkével látja el őket: %2. Foly
     </message>
     <message>
         <source>Choose dictionary files</source>
-        <translation type="unfinished" />
+        <translation>Szótárfájlok kiválasztása</translation>
     </message>
     <message>
         <source>Dictionaries (*.zip *.ifo *.tar.gz *.tgz *.tar.bz2 *.tar.xz *.csv *.tsv)</source>
-        <translation type="unfinished" />
+        <translation>Szótárak (*.zip *.ifo *.tar.gz *.tgz *.tar.bz2 *.tar.xz *.csv *.tsv)</translation>
     </message>
     <message>
         <source>Dictionary %1 of %2: %3</source>
@@ -5405,8 +5407,8 @@ A lemezről nem törlődik fájl.</translation>
     </message>
     <message numerus="yes">
         <source>Skipping lines in %n opening, ending or preview chapter(s)</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>Sorok kihagyása %n nyitó-, záró- vagy előzetesfejezetben</numerusform>
         </translation>
     </message>
     <message>
@@ -5453,7 +5455,7 @@ A lemezről nem törlődik fájl.</translation>
     </message>
     <message>
         <source>Only %1% of the first %2 words have an entry in your dictionaries. Is this file in the language you are mining?</source>
-        <translation type="unfinished" />
+        <translation>Az első %2 szónak csak %1%-a szerepel a szótáraiban. Biztosan azon a nyelven van ez a fájl, amelyből gyűjt?</translation>
     </message>
     <message>
         <source>Frequency cutoff ignored — no ranked frequency source is loaded (Settings → Frequency).</source>
@@ -5561,11 +5563,11 @@ A lemezről nem törlődik fájl.</translation>
     </message>
     <message>
         <source>Translation subtitles picked automatically: %1</source>
-        <translation type="unfinished" />
+        <translation>Automatikusan választott fordítási felirat: %1</translation>
     </message>
     <message>
         <source>Translation subtitles picked automatically: embedded track %1</source>
-        <translation type="unfinished" />
+        <translation>Automatikusan választott fordítási felirat: beágyazott sáv %1</translation>
     </message>
     <message>
         <source>Could not extract media for any word — no cards created</source>
@@ -5833,11 +5835,11 @@ A lemezről nem törlődik fájl.</translation>
     </message>
     <message>
         <source>Count a word as known only after its card has been reviewed</source>
-        <translation type="unfinished" />
+        <translation>Egy szó csak a kártyája ismétlése után számít ismertnek</translation>
     </message>
     <message>
         <source>Readability and the i+1 sentence rule count a word as known only when its Anki card has been reviewed at least once. Mining still skips every word that already has a card.</source>
-        <translation type="unfinished" />
+        <translation>Az Olvashatóság és az i+1 mondatszabály csak akkor tekint egy szót ismertnek, ha az Anki-kártyáját legalább egyszer már ismételték. A gyűjtés továbbra is kihagy minden szót, amelynek már van kártyája.</translation>
     </message>
     <message>
         <source>Keep words known after their cards are deleted</source>
@@ -6499,15 +6501,15 @@ Indexfájl nem törlődik.</translation>
     <name>KnownWordsManagerDialog</name>
     <message>
         <source>Word</source>
-        <translation type="unfinished" />
+        <translation>Szó</translation>
     </message>
     <message>
         <source>Source</source>
-        <translation type="unfinished" />
+        <translation>Forrás</translation>
     </message>
     <message>
         <source>Added</source>
-        <translation type="unfinished" />
+        <translation>Hozzáadva</translation>
     </message>
     <message>
         <source>Manage Known Words</source>
@@ -6519,7 +6521,7 @@ Indexfájl nem törlődik.</translation>
     </message>
     <message>
         <source>Every word this language counts as known, and where it came from. Words you added from the Word Curator stay known on every run and across cache rebuilds.</source>
-        <translation type="unfinished" />
+        <translation>Minden szó, amelyet ez a nyelv ismertnek tekint, és hogy honnan származik. A Szóválogatóban Ön által hozzáadott szavak minden futtatásban és a gyorsítótár újraépítése után is ismertek maradnak.</translation>
     </message>
     <message>
         <source>Decks this language's known-words scan skips: %1. Change them in Settings → Word Filters.</source>
@@ -6531,15 +6533,15 @@ Indexfájl nem törlődik.</translation>
     </message>
     <message>
         <source>Added by you</source>
-        <translation type="unfinished" />
+        <translation>Ön adta hozzá</translation>
     </message>
     <message>
         <source>Mined by Anki Miner</source>
-        <translation type="unfinished" />
+        <translation>Az Anki Miner gyűjtötte</translation>
     </message>
     <message>
         <source>From Anki</source>
-        <translation type="unfinished" />
+        <translation>Az Ankiból</translation>
     </message>
     <message>
         <source>Filter…</source>
@@ -6547,7 +6549,7 @@ Indexfájl nem törlődik.</translation>
     </message>
     <message>
         <source>All sources</source>
-        <translation type="unfinished" />
+        <translation>Minden forrás</translation>
     </message>
     <message>
         <source>Rebuild Known Words DB</source>
@@ -6563,7 +6565,7 @@ Indexfájl nem törlődik.</translation>
     </message>
     <message>
         <source>Removes words you added. Words from Anki come back on the next run, and mined words leave with Undo.</source>
-        <translation type="unfinished" />
+        <translation>Eltávolítja az Ön által hozzáadott szavakat. Az Ankiból származó szavak a következő futtatáskor visszakerülnek, a gyűjtött szavak pedig a Visszavonással tűnnek el.</translation>
     </message>
     <message>
         <source>Import…</source>
@@ -6571,7 +6573,7 @@ Indexfájl nem törlődik.</translation>
     </message>
     <message>
         <source>Export words…</source>
-        <translation type="unfinished" />
+        <translation>Szavak exportálása…</translation>
     </message>
     <message>
         <source>Reset User List</source>
@@ -6603,11 +6605,11 @@ Indexfájl nem törlődik.</translation>
     </message>
     <message>
         <source>Kindle Vocabulary Builder</source>
-        <translation type="unfinished" />
+        <translation>Kindle Vocabulary Builder</translation>
     </message>
     <message>
         <source>Lute or LWT term export</source>
-        <translation type="unfinished" />
+        <translation>Lute vagy LWT kifejezésexport</translation>
     </message>
     <message>
         <source>plain word list</source>
@@ -6619,7 +6621,7 @@ Indexfájl nem törlődik.</translation>
     </message>
     <message>
         <source>Known word lists (*.csv *.tsv *.txt *.json *.db);;All Files (*)</source>
-        <translation type="unfinished" />
+        <translation>Ismertszó-listák (*.csv *.tsv *.txt *.json *.db);;Minden fájl (*)</translation>
     </message>
     <message>
         <source>Detected: %1 — every entry is imported.
@@ -6651,7 +6653,7 @@ Hozzáadandó szavak: %3. Folytatja?</translation>
     </message>
     <message>
         <source>This file has no words for %1. It contains: %2.</source>
-        <translation type="unfinished" />
+        <translation>Ebben a fájlban nincsenek szavak ehhez a nyelvhez: %1. Ezeket tartalmazza: %2.</translation>
     </message>
     <message>
         <source>That file is too large to import.</source>
@@ -6667,7 +6669,7 @@ Hozzáadandó szavak: %3. Folytatja?</translation>
     </message>
     <message>
         <source>File format not recognized. Supported: jpdb review export (JSON), Migaku word export (JSON/CSV), AnkiMorphs known morphs (CSV), Kindle Vocabulary Builder (vocab.db), Lute or LWT term export (CSV/TSV), plain word lists (one word per line).</source>
-        <translation type="unfinished" />
+        <translation>Ismeretlen fájlformátum. Támogatott: jpdb ismétlésexport (JSON), Migaku szóexport (JSON/CSV), AnkiMorphs ismert morfémák (CSV), Kindle Vocabulary Builder (vocab.db), Lute vagy LWT kifejezésexport (CSV/TSV), egyszerű szólisták (soronként egy szó).</translation>
     </message>
     <message>
         <source>That file could not be imported.</source>
@@ -6689,7 +6691,7 @@ Hozzáadandó szavak: %3. Folytatja?</translation>
     </message>
     <message>
         <source>CSV files (*.csv);;Text files, one word per line (*.txt)</source>
-        <translation type="unfinished" />
+        <translation>CSV-fájlok (*.csv);;Szövegfájlok, soronként egy szó (*.txt)</translation>
     </message>
     <message>
         <source>The known words list could not be exported.</source>
@@ -7437,7 +7439,7 @@ Folytatja?</translation>
     </message>
     <message>
         <source>Opus clips do not play in AnkiMobile on iPhone or iPad. Choose MP3 if you review there.</source>
-        <translation type="unfinished" />
+        <translation>Az Opus klipek nem játszhatók le az AnkiMobile-ban iPhone-on vagy iPaden. Ha ott ismétel, válassza az MP3-at.</translation>
     </message>
     <message>
         <source> kbps</source>
@@ -7465,11 +7467,11 @@ Folytatja?</translation>
     </message>
     <message>
         <source>Even out audio volume</source>
-        <translation type="unfinished" />
+        <translation>Hangerő kiegyenlítése</translation>
     </message>
     <message>
         <source>Brings sentence clips and condensed audio to one volume and fades each clip in and out, so quiet and loud sources sound alike. Applies to new clips.</source>
-        <translation type="unfinished" />
+        <translation>A mondatklipeket és a sűrített hangot egységes hangerőre hozza, és minden klipet be- és kiúsztat, így a halk és a hangos források egyformán szólnak. Az új klipekre vonatkozik.</translation>
     </message>
     <message>
         <source>Text-to-speech</source>
@@ -7493,11 +7495,11 @@ Folytatja?</translation>
     </message>
     <message>
         <source>Crop manga pictures to the speech bubble</source>
-        <translation type="unfinished" />
+        <translation>Mangaképek kivágása a szövegbuborékra</translation>
     </message>
     <message>
         <source>Manga cards show the speech bubble and the art around it instead of the whole page. A sentence with no bubble position keeps the whole page.</source>
-        <translation type="unfinished" />
+        <translation>A mangakártyák a teljes oldal helyett a szövegbuborékot és a körülötte lévő rajzot mutatják. A buborékpozíció nélküli mondat a teljes oldalt megtartja.</translation>
     </message>
     <message>
         <source>Enable animated screenshots</source>
@@ -7733,7 +7735,7 @@ Folytatja?</translation>
     </message>
     <message>
         <source>Anki didn't sync after this run. Your cards are added; sync from Anki, or see the log for why.</source>
-        <translation type="unfinished" />
+        <translation>Az Anki nem szinkronizált a futtatás után. A kártyák hozzá lettek adva; szinkronizáljon az Ankiból, vagy az okért nézze meg a naplót.</translation>
     </message>
     <message>
         <source>Anki Miner couldn't open these cards in Anki.</source>
@@ -9498,7 +9500,7 @@ Indexfájl nem törlődik.</translation>
     </message>
     <message>
         <source>An .epub, .txt or .pdf book, or a folder of books; each book is mined separately.</source>
-        <translation type="unfinished" />
+        <translation>Egy .epub, .txt vagy .pdf könyv, vagy könyvek mappája; a gyűjtés könyvenként külön történik.</translation>
     </message>
     <message>
         <source>Mine</source>
@@ -9534,7 +9536,7 @@ Indexfájl nem törlődik.</translation>
     </message>
     <message>
         <source>Choose an .epub, .txt or .pdf book, or a folder of books.</source>
-        <translation type="unfinished" />
+        <translation>Válasszon egy .epub, .txt vagy .pdf könyvet, vagy könyvek mappáját.</translation>
     </message>
     <message>
         <source>Starting…</source>
@@ -9600,7 +9602,7 @@ Indexfájl nem törlődik.</translation>
     </message>
     <message>
         <source>Add subtitle files (.srt, .ass, .ssa, .vtt, .smi, .lrc) to the list.</source>
-        <translation type="unfinished" />
+        <translation>Feliratfájlok (.srt, .ass, .ssa, .vtt, .smi, .lrc) hozzáadása a listához.</translation>
     </message>
     <message>
         <source>Remove Selected</source>
@@ -9781,19 +9783,19 @@ Indexfájl nem törlődik.</translation>
     </message>
     <message>
         <source>Web addresses to fetch, one per line (https://…)</source>
-        <translation type="unfinished" />
+        <translation>Letöltendő webcímek, soronként egy (https://…)</translation>
     </message>
     <message>
         <source>Web addresses</source>
-        <translation type="unfinished" />
+        <translation>Webcímek</translation>
     </message>
     <message>
         <source>Fetch</source>
-        <translation type="unfinished" />
+        <translation>Letöltés</translation>
     </message>
     <message>
         <source>Put the article text of each web address in the box below, to check before mining.</source>
-        <translation type="unfinished" />
+        <translation>Az egyes webcímek cikkszövegét az alábbi mezőbe teszi, hogy gyűjtés előtt ellenőrizhesse.</translation>
     </message>
     <message>
         <source>Paste the text you want to mine. Cards from pasted text have no sentence audio from a recording.</source>
@@ -9841,59 +9843,59 @@ Indexfájl nem törlődik.</translation>
     </message>
     <message>
         <source>Each line must be a web address that starts with http:// or https://.</source>
-        <translation type="unfinished" />
+        <translation>Minden sornak http:// vagy https:// kezdetű webcímnek kell lennie.</translation>
     </message>
     <message>
         <source>Enter a web address first.</source>
-        <translation type="unfinished" />
+        <translation>Előbb adjon meg egy webcímet.</translation>
     </message>
     <message>
         <source>Fetch takes up to 10 web addresses at a time.</source>
-        <translation type="unfinished" />
+        <translation>A Letöltés egyszerre legfeljebb 10 webcímet fogad.</translation>
     </message>
     <message>
         <source>Fetching…</source>
-        <translation type="unfinished" />
+        <translation>Letöltés…</translation>
     </message>
     <message>
         <source>Could not fetch %1: %2</source>
-        <translation type="unfinished" />
+        <translation>Nem sikerült letölteni (%1): %2</translation>
     </message>
     <message>
         <source>None of the pages could be fetched.</source>
-        <translation type="unfinished" />
+        <translation>Egyik oldalt sem sikerült letölteni.</translation>
     </message>
     <message>
         <source>Fetched %1.</source>
-        <translation type="unfinished" />
+        <translation>Letöltve: %1.</translation>
     </message>
     <message>
         <source>The pages could not be fetched.</source>
-        <translation type="unfinished" />
+        <translation>Az oldalakat nem sikerült letölteni.</translation>
     </message>
     <message>
         <source>The page could not be reached. Check the address and your connection.</source>
-        <translation type="unfinished" />
+        <translation>Az oldal nem érhető el. Ellenőrizze a címet és a kapcsolatot.</translation>
     </message>
     <message>
         <source>The site did not send the page.</source>
-        <translation type="unfinished" />
+        <translation>A webhely nem küldte el az oldalt.</translation>
     </message>
     <message>
         <source>This address is not a web page.</source>
-        <translation type="unfinished" />
+        <translation>Ez a cím nem weboldal.</translation>
     </message>
     <message>
         <source>This page is too large to read.</source>
-        <translation type="unfinished" />
+        <translation>Ez az oldal túl nagy a beolvasáshoz.</translation>
     </message>
     <message>
         <source>This is not a web address.</source>
-        <translation type="unfinished" />
+        <translation>Ez nem webcím.</translation>
     </message>
     <message>
         <source>No article text found on this page. Pages that draw their text with JavaScript cannot be read.</source>
-        <translation type="unfinished" />
+        <translation>Az oldalon nem található cikkszöveg. A szövegüket JavaScripttel megjelenítő oldalak nem olvashatók be.</translation>
     </message>
     <message>
         <source>Paste some text first.</source>
@@ -9905,7 +9907,7 @@ Indexfájl nem törlődik.</translation>
     </message>
     <message>
         <source>The fetched text was edited, so it is mined as one text without its page titles.</source>
-        <translation type="unfinished" />
+        <translation>A letöltött szöveget szerkesztették, ezért a gyűjtés egyetlen szövegként, az oldalcímek nélkül történik.</translation>
     </message>
     <message>
         <source>That picture cannot be read. Pick another, or remove it to mine without one.</source>
@@ -10691,7 +10693,7 @@ Indexfájl nem törlődik.</translation>
     </message>
     <message>
         <source>Export words…</source>
-        <translation type="unfinished" />
+        <translation>Szavak exportálása…</translation>
     </message>
     <message>
         <source>Close</source>
@@ -10705,19 +10707,19 @@ Indexfájl nem törlődik.</translation>
     </message>
     <message>
         <source>Export Words</source>
-        <translation type="unfinished" />
+        <translation>Szavak exportálása</translation>
     </message>
     <message>
         <source>CSV files (*.csv)</source>
-        <translation type="unfinished" />
+        <translation>CSV-fájlok (*.csv)</translation>
     </message>
     <message>
         <source>Words exported</source>
-        <translation type="unfinished" />
+        <translation>Szavak exportálva</translation>
     </message>
     <message>
         <source>Export failed — try again</source>
-        <translation type="unfinished" />
+        <translation>Az exportálás sikertelen — próbálja újra</translation>
     </message>
     <message>
         <source>Confirm Undo</source>
@@ -10921,11 +10923,11 @@ Indexfájl nem törlődik.</translation>
     </message>
     <message>
         <source>Skip openings, endings and signs</source>
-        <translation type="unfinished" />
+        <translation>Nyitó- és záródalok és kiírások kihagyása</translation>
     </message>
     <message>
         <source>Leaves out song lyrics, previews and on-screen signs: lines whose subtitle style marks them as a song or a sign, and lines inside a video's opening, ending or preview chapters. Applies to mining, Condense and Readability.</source>
-        <translation type="unfinished" />
+        <translation>Kihagyja a dalszövegeket, előzeteseket és képernyős kiírásokat: azokat a sorokat, amelyeket a feliratstílus dalként vagy kiírásként jelöl, valamint a videó nyitó-, záró- vagy előzetesfejezeteibe eső sorokat. A gyűjtésre, a Sűrítésre és az Olvashatóságra vonatkozik.</translation>
     </message>
     <message>
         <source>Sentence options</source>
@@ -10941,7 +10943,7 @@ Indexfájl nem törlődik.</translation>
     </message>
     <message>
         <source>Mines at most one word per example sentence. A word whose sentence is already taken moves to another line it appears on, and is skipped only when every one of its lines is taken. Whitelisted words are still mined.</source>
-        <translation type="unfinished" />
+        <translation>Példamondatonként legfeljebb egy szót gyűjt. Az a szó, amelynek mondata már foglalt, egy másik sorra kerül, ahol előfordul, és csak akkor marad ki, ha minden sora foglalt. A fehérlistás szavakat továbbra is gyűjti.</translation>
     </message>
     <message>
         <source>Only i+1 sentences (exactly one unknown word)</source>
@@ -10957,11 +10959,11 @@ Indexfájl nem törlődik.</translation>
     </message>
     <message>
         <source>Pick the clearest sentence for each word</source>
-        <translation type="unfinished" />
+        <translation>A legérthetőbb mondat kiválasztása minden szóhoz</translation>
     </message>
     <message>
         <source>When a word appears on several lines, its card uses the line with the fewest unknown words and a comfortable length instead of the first one. The Word Curator still lists every line, and card order does not change.</source>
-        <translation type="unfinished" />
+        <translation>Ha egy szó több sorban is előfordul, a kártyája az első helyett azt a sort használja, amelyben a legkevesebb ismeretlen szó van, és kényelmes a hossza. A Szóválogató továbbra is minden sort felsorol, és a kártyák sorrendje nem változik.</translation>
     </message>
     <message>
         <source> s</source>
@@ -13017,15 +13019,15 @@ A telepített erőforrások és a téma megmarad.</translation>
     </message>
     <message>
         <source>Restore a backup…</source>
-        <translation type="unfinished" />
+        <translation>Biztonsági mentés visszaállítása…</translation>
     </message>
     <message>
         <source>Backups</source>
-        <translation type="unfinished" />
+        <translation>Biztonsági mentések</translation>
     </message>
     <message>
         <source>Anki Miner saves your known words, statistics, settings and profiles once a day when it starts, and keeps the last 7 days.</source>
-        <translation type="unfinished" />
+        <translation>Az Anki Miner naponta egyszer, indításkor elmenti az ismert szavakat, a statisztikát, a beállításokat és a profilokat, és az utolsó 7 napét megőrzi.</translation>
     </message>
     <message>
         <source>Themes</source>
@@ -13069,27 +13071,27 @@ A telepített erőforrások és a téma megmarad.</translation>
     </message>
     <message>
         <source>There is no backup yet. Anki Miner makes one each day when it starts.</source>
-        <translation type="unfinished" />
+        <translation>Még nincs biztonsági mentés. Az Anki Miner naponta készít egyet indításkor.</translation>
     </message>
     <message>
         <source>Restore a Backup</source>
-        <translation type="unfinished" />
+        <translation>Biztonsági mentés visszaállítása</translation>
     </message>
     <message>
         <source>Restore the backup from:</source>
-        <translation type="unfinished" />
+        <translation>A visszaállítandó biztonsági mentés dátuma:</translation>
     </message>
     <message>
         <source>Replace your known words, statistics, settings and profiles with the copies from %1? The restore runs the next time Anki Miner starts. Changes made after that backup are lost.</source>
-        <translation type="unfinished" />
+        <translation>Lecseréli az ismert szavakat, a statisztikát, a beállításokat és a profilokat erre a mentésre: %1? A visszaállítás az Anki Miner következő indításakor történik. Az azóta végzett módosítások elvesznek.</translation>
     </message>
     <message>
         <source>The restore could not be scheduled.</source>
-        <translation type="unfinished" />
+        <translation>A visszaállítást nem sikerült ütemezni.</translation>
     </message>
     <message>
         <source>The backup from %1 will be restored when Anki Miner next starts.</source>
-        <translation type="unfinished" />
+        <translation>A biztonsági mentés (%1) az Anki Miner következő indításakor lesz visszaállítva.</translation>
     </message>
 </context><context>
     <name>UpdateBanner</name>
@@ -13257,11 +13259,11 @@ A telepített erőforrások és a téma megmarad.</translation>
     </message>
     <message>
         <source>The picture (burned-in text)</source>
-        <translation type="unfinished" />
+        <translation>A kép (beégetett szöveg)</translation>
     </message>
     <message>
         <source>Image subtitle track %1</source>
-        <translation type="unfinished" />
+        <translation>%1. képalapú feliratsáv</translation>
     </message>
     <message>
         <source>The OCR engine could not start on this computer. The details say why.</source>
@@ -13301,15 +13303,15 @@ A telepített erőforrások és a téma megmarad.</translation>
     </message>
     <message>
         <source>This field takes a video or an image subtitle file (.sup, .idx, .sub).</source>
-        <translation type="unfinished" />
+        <translation>Ez a mező videót vagy képalapú feliratfájlt (.sup, .idx, .sub) fogad.</translation>
     </message>
     <message>
         <source>Read from:</source>
-        <translation type="unfinished" />
+        <translation>Olvasás innen:</translation>
     </message>
     <message>
         <source>Read text drawn into the picture, or one of the video's image subtitle tracks.</source>
-        <translation type="unfinished" />
+        <translation>A képbe rajzolt szöveg vagy a videó egyik képalapú feliratsávjának beolvasása.</translation>
     </message>
     <message>
         <source>Video Folder:</source>
@@ -13393,7 +13395,7 @@ A telepített erőforrások és a téma megmarad.</translation>
     </message>
     <message>
         <source>Image subtitles are read over the whole frame, so they need no region.</source>
-        <translation type="unfinished" />
+        <translation>A képalapú feliratok beolvasása a teljes képkockán történik, ezért nem kell hozzájuk terület.</translation>
     </message>
     <message>
         <source>Download OCR models</source>
@@ -13437,7 +13439,7 @@ A telepített erőforrások és a téma megmarad.</translation>
     </message>
     <message>
         <source>A DVD subtitle needs its .idx and .sub files in the same folder.</source>
-        <translation type="unfinished" />
+        <translation>A DVD-feliratnak az .idx és a .sub fájljára is szüksége van ugyanabban a mappában.</translation>
     </message>
     <message>
         <source>Choose a folder before reading subtitles.</source>
@@ -13723,15 +13725,15 @@ Ez alapján rendezve sorban haladhat végig egy hosszú felvételen — majd jel
     </message>
     <message>
         <source>Used on the card</source>
-        <translation type="unfinished" />
+        <translation>A kártyán használva</translation>
     </message>
     <message>
         <source>Back to the first match</source>
-        <translation type="unfinished" />
+        <translation>Vissza az első találathoz</translation>
     </message>
     <message>
         <source>Use this dictionary on the card</source>
-        <translation type="unfinished" />
+        <translation>Ez a szótár legyen a kártyán</translation>
     </message>
     <message>
         <source>Sentences (%1)</source>
@@ -14169,7 +14171,7 @@ Ez alapján rendezve sorban haladhat végig egy hosszú felvételen — majd jel
     </message>
     <message>
         <source>Wikimedia Commons (native recordings)</source>
-        <translation type="unfinished" />
+        <translation>Wikimedia Commons (anyanyelvi felvételek)</translation>
     </message>
     <message>
         <source>Microsoft Edge read-aloud (synthetic TTS)</source>
@@ -14183,7 +14185,7 @@ Ez alapján rendezve sorban haladhat végig egy hosszú felvételen — majd jel
     <name>_BarChart</name>
     <message>
         <source>Cards per period</source>
-        <translation type="unfinished" />
+        <translation>Kártyák időszakonként</translation>
     </message>
 </context><context>
     <name>_HealthRow</name>
@@ -14205,11 +14207,11 @@ Ez alapján rendezve sorban haladhat végig egy hosszú felvételen — majd jel
     <name>_MissingWordsDialog</name>
     <message>
         <source>Missing Words</source>
-        <translation type="unfinished" />
+        <translation>Hiányzó szavak</translation>
     </message>
     <message>
         <source>Not known yet in ranks %1</source>
-        <translation type="unfinished" />
+        <translation>Még nem ismert szavak ezekben a rangokban: %1</translation>
     </message>
 </context><context>
     <name>app</name>

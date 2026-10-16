@@ -93,59 +93,59 @@
     </message>
     <message>
         <source>Known Words</source>
-        <translation type="unfinished" />
+        <translation>Bekende woorden</translation>
     </message>
     <message>
         <source>Words Anki Miner treats as known in the current mining language.</source>
-        <translation type="unfinished" />
+        <translation>Woorden die Anki Miner in de huidige miningtaal als bekend beschouwt.</translation>
     </message>
     <message>
         <source>Mining History</source>
-        <translation type="unfinished" />
+        <translation>Mininggeschiedenis</translation>
     </message>
     <message>
         <source>History period</source>
-        <translation type="unfinished" />
+        <translation>Periode van de geschiedenis</translation>
     </message>
     <message>
         <source>All time</source>
-        <translation type="unfinished" />
+        <translation>Altijd</translation>
     </message>
     <message>
         <source>Last 7 days</source>
-        <translation type="unfinished" />
+        <translation>Afgelopen 7 dagen</translation>
     </message>
     <message>
         <source>Last 30 days</source>
-        <translation type="unfinished" />
+        <translation>Afgelopen 30 dagen</translation>
     </message>
     <message>
         <source>Last 12 months</source>
-        <translation type="unfinished" />
+        <translation>Afgelopen 12 maanden</translation>
     </message>
     <message>
         <source>History grouping</source>
-        <translation type="unfinished" />
+        <translation>Groepering van de geschiedenis</translation>
     </message>
     <message>
         <source>Each run</source>
-        <translation type="unfinished" />
+        <translation>Per run</translation>
     </message>
     <message>
         <source>By day</source>
-        <translation type="unfinished" />
+        <translation>Per dag</translation>
     </message>
     <message>
         <source>By week</source>
-        <translation type="unfinished" />
+        <translation>Per week</translation>
     </message>
     <message>
         <source>By month</source>
-        <translation type="unfinished" />
+        <translation>Per maand</translation>
     </message>
     <message>
         <source>Export CSV…</source>
-        <translation type="unfinished" />
+        <translation>CSV exporteren…</translation>
     </message>
     <message>
         <source>No sessions yet — process an episode to see your history.</source>
@@ -177,7 +177,7 @@
     </message>
     <message>
         <source>Period</source>
-        <translation type="unfinished" />
+        <translation>Periode</translation>
     </message>
     <message>
         <source>Show in Anki</source>
@@ -185,7 +185,7 @@
     </message>
     <message>
         <source>Delete this run's cards…</source>
-        <translation type="unfinished" />
+        <translation>Kaarten van deze run verwijderen…</translation>
     </message>
     <message>
         <source>Series Difficulty Ranking</source>
@@ -217,11 +217,11 @@
     </message>
     <message>
         <source>Frequency Coverage</source>
-        <translation type="unfinished" />
+        <translation>Frequentiedekking</translation>
     </message>
     <message>
         <source>Rank band</source>
-        <translation type="unfinished" />
+        <translation>Rangbereik</translation>
     </message>
     <message>
         <source>Known</source>
@@ -229,15 +229,15 @@
     </message>
     <message>
         <source>Not known</source>
-        <translation type="unfinished" />
+        <translation>Niet bekend</translation>
     </message>
     <message>
         <source>Known %</source>
-        <translation type="unfinished" />
+        <translation>Bekend %</translation>
     </message>
     <message>
         <source>Show missing words</source>
-        <translation type="unfinished" />
+        <translation>Ontbrekende woorden tonen</translation>
     </message>
     <message>
         <source>Milestones</source>
@@ -265,93 +265,95 @@
     </message>
     <message>
         <source>No runs in this period.</source>
-        <translation type="unfinished" />
+        <translation>Geen runs in deze periode.</translation>
     </message>
     <message>
         <source>Export Mining History</source>
-        <translation type="unfinished" />
+        <translation>Mininggeschiedenis exporteren</translation>
     </message>
     <message>
         <source>CSV Files (*.csv);;All Files (*)</source>
-        <translation type="unfinished" />
+        <translation>CSV-bestanden (*.csv);;Alle bestanden (*)</translation>
     </message>
     <message>
         <source>History saved to %1.</source>
-        <translation type="unfinished" />
+        <translation>Geschiedenis opgeslagen in %1.</translation>
     </message>
     <message>
         <source>The history could not be exported.</source>
-        <translation type="unfinished" />
+        <translation>De geschiedenis kon niet worden geëxporteerd.</translation>
     </message>
     <message>
         <source>%1 (cards deleted: %2)</source>
-        <translation type="unfinished" />
+        <translation>%1 (kaarten verwijderd: %2)</translation>
     </message>
     <message>
         <source>Select one run in the table.</source>
-        <translation type="unfinished" />
+        <translation>Selecteer één run in de tabel.</translation>
     </message>
     <message>
         <source>This run's cards were deleted: %1.</source>
-        <translation type="unfinished" />
+        <translation>Verwijderde kaarten van deze run: %1.</translation>
     </message>
     <message>
         <source>Anki Miner has no card list for this run: it was mined before this version, or it made no cards.</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner heeft geen kaartenlijst voor deze run: hij is vóór deze versie gemined of heeft geen kaarten gemaakt.</translation>
     </message>
     <message>
         <source>Anki Miner couldn't open this run's cards in Anki.</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner kon de kaarten van deze run niet in Anki openen.</translation>
     </message>
     <message>
         <source>None of this run's cards are in Anki any more.</source>
-        <translation type="unfinished" />
+        <translation>Geen van de kaarten van deze run staat nog in Anki.</translation>
     </message>
     <message>
         <source>Delete This Run's Cards</source>
-        <translation type="unfinished" />
+        <translation>Kaarten van deze run verwijderen</translation>
     </message>
     <message>
         <source>Cards this run added that are still in Anki: %1. Reviewed at least once: %2.
 
 Delete them from Anki? Their review history is deleted with them. This cannot be undone.</source>
-        <translation type="unfinished" />
+        <translation>Door deze run toegevoegde kaarten die nog in Anki staan: %1. Minstens één keer herhaald: %2.
+
+Deze kaarten uit Anki verwijderen? Hun herhalingsgeschiedenis wordt mee verwijderd. Dit kan niet ongedaan worden gemaakt.</translation>
     </message>
     <message>
         <source>Cards deleted from Anki: %1.</source>
-        <translation type="unfinished" />
+        <translation>Uit Anki verwijderde kaarten: %1.</translation>
     </message>
     <message>
         <source>This run's cards could not be deleted.</source>
-        <translation type="unfinished" />
+        <translation>De kaarten van deze run konden niet worden verwijderd.</translation>
     </message>
     <message>
         <source>Known words could not be counted.</source>
-        <translation type="unfinished" />
+        <translation>De bekende woorden konden niet worden geteld.</translation>
     </message>
     <message>
         <source>Words Anki Miner treats as known in %1.</source>
-        <translation type="unfinished" />
+        <translation>Woorden die Anki Miner in %1 als bekend beschouwt.</translation>
     </message>
     <message>
         <source>Change since %1: %2</source>
-        <translation type="unfinished" />
+        <translation>Verandering sinds %1: %2</translation>
     </message>
     <message>
         <source>Last counted on %1; Anki was not reachable.</source>
-        <translation type="unfinished" />
+        <translation>Laatst geteld op %1; Anki was niet bereikbaar.</translation>
     </message>
     <message>
         <source>Last counted on %1.</source>
-        <translation type="unfinished" />
+        <translation>Laatst geteld op %1.</translation>
     </message>
     <message>
         <source>Coverage needs Anki running: it compares the list with your cards.</source>
-        <translation type="unfinished" />
+        <translation>Voor de dekking moet Anki draaien: de lijst wordt met je kaarten vergeleken.</translation>
     </message>
     <message>
         <source>How many of the most frequent words in %1 you already know.</source>
-        <translation type="unfinished" />
+        <translation>Hoeveel van de meest frequente woorden in %1 je al kent.</translation>
     </message>
     <message>
         <source>%1 mining sessions completed</source>
@@ -761,7 +763,7 @@ Delete them from Anki? Their review history is deleted with them. This cannot be
     </message>
     <message>
         <source>{series}, {episode} and {volume} become each card's show, episode or book volume, for example mined::{series}::{episode}.</source>
-        <translation type="unfinished" />
+        <translation>{series}, {episode} en {volume} worden de serie, aflevering of het boekdeel van elke kaart, bijvoorbeeld mined::{series}::{episode}.</translation>
     </message>
     <message>
         <source>Refresh</source>
@@ -789,11 +791,11 @@ Delete them from Anki? Their review history is deleted with them. This cannot be
     </message>
     <message>
         <source>Sync Anki after mining</source>
-        <translation type="unfinished" />
+        <translation>Anki synchroniseren na het minen</translation>
     </message>
     <message>
         <source>After a run that added cards, ask Anki to sync with AnkiWeb. If the sync fails, the Activity Log says so and the cards stay added.</source>
-        <translation type="unfinished" />
+        <translation>Na een run die kaarten heeft toegevoegd, Anki vragen te synchroniseren met AnkiWeb. Als de synchronisatie mislukt, meldt het Activiteitenlogboek dat en blijven de kaarten toegevoegd.</translation>
     </message>
     <message>
         <source>AnkiConnect URL</source>
@@ -805,7 +807,7 @@ Delete them from Anki? Their review history is deleted with them. This cannot be
     </message>
     <message>
         <source>If AnkiConnect asks for an API key, add it to the address: http://127.0.0.1:8765/?key=YOUR_KEY</source>
-        <translation type="unfinished" />
+        <translation>Als AnkiConnect om een API-sleutel vraagt, voeg die dan toe aan het adres: http://127.0.0.1:8765/?key=YOUR_KEY</translation>
     </message>
     <message>
         <source>Fill in automatically</source>
@@ -1517,7 +1519,7 @@ Ondersteunde formaten: AJT (index.json + media/), NHK16 (entries.json + audio/),
     </message>
     <message>
         <source>Wikimedia Commons (native recordings)</source>
-        <translation type="unfinished" />
+        <translation>Wikimedia Commons (opnamen van moedertaalsprekers)</translation>
     </message>
     <message>
         <source>Custom JSON</source>
@@ -2086,7 +2088,7 @@ Er worden geen indexbestanden gewist.</translation>
     </message>
     <message>
         <source>Every audio file in the folder, in file-name order, one .srt each. A folder of book folders (each with its EPUB and audio) syncs every book in turn.</source>
-        <translation type="unfinished" />
+        <translation>Elk audiobestand in de map, op volgorde van bestandsnaam, met elk een eigen .srt. Een map met boekmappen (elk met een EPUB en audio) synchroniseert alle boeken na elkaar.</translation>
     </message>
     <message>
         <source>EPUB or Text File:</source>
@@ -2114,7 +2116,7 @@ Er worden geen indexbestanden gewist.</translation>
     </message>
     <message>
         <source>Sentences: how many of the book's sentences, from the first one found to the last, got a subtitle. Audio: how much of the narration matched the book. Grade: A from 90% on both, B from 75%, C from 50%, else D.</source>
-        <translation type="unfinished" />
+        <translation>Zinnen: hoeveel zinnen van het boek, van de eerst gevonden tot de laatste, een ondertitel kregen. Audio: hoeveel van de voordracht overeenkwam met het boek. Cijfer: A vanaf 90% op beide, B vanaf 75%, C vanaf 50%, anders D.</translation>
     </message>
     <message>
         <source>Output</source>
@@ -2178,7 +2180,7 @@ Er worden geen indexbestanden gewist.</translation>
     </message>
     <message>
         <source>No audio files were found in that folder, and no book folders (each with its book and audio).</source>
-        <translation type="unfinished" />
+        <translation>In die map zijn geen audiobestanden gevonden, en ook geen boekmappen (elk met een boek en audio).</translation>
     </message>
     <message>
         <source>That folder could not be scanned.</source>
@@ -2186,15 +2188,15 @@ Er worden geen indexbestanden gewist.</translation>
     </message>
     <message>
         <source>Skipped folder %1: no audio files</source>
-        <translation type="unfinished" />
+        <translation>Map %1 overgeslagen: geen audiobestanden</translation>
     </message>
     <message>
         <source>Skipped folder %1: no .epub or .txt book</source>
-        <translation type="unfinished" />
+        <translation>Map %1 overgeslagen: geen .epub- of .txt-boek</translation>
     </message>
     <message>
         <source>Skipped folder %1: more than one book</source>
-        <translation type="unfinished" />
+        <translation>Map %1 overgeslagen: meer dan één boek</translation>
     </message>
     <message>
         <source>Output folder is not writable.</source>
@@ -2214,11 +2216,11 @@ Er worden geen indexbestanden gewist.</translation>
     </message>
     <message>
         <source>Books: %1 — %2</source>
-        <translation type="unfinished" />
+        <translation>Boeken: %1 — %2</translation>
     </message>
     <message>
         <source>%1: sentences %2%, audio %3% — grade %4</source>
-        <translation type="unfinished" />
+        <translation>%1: zinnen %2%, audio %3% — cijfer %4</translation>
     </message>
     <message>
         <source>Syncing file %1 of %2</source>
@@ -2232,11 +2234,11 @@ Er worden geen indexbestanden gewist.</translation>
     </message>
     <message>
         <source>%1 could not be loaded: %2</source>
-        <translation type="unfinished" />
+        <translation>%1 kon niet worden geladen: %2</translation>
     </message>
     <message>
         <source>Its book could not be loaded</source>
-        <translation type="unfinished" />
+        <translation>Het bijbehorende boek kon niet worden geladen</translation>
     </message>
     <message>
         <source>Skipped, exists</source>
@@ -2256,11 +2258,11 @@ Er worden geen indexbestanden gewist.</translation>
     </message>
     <message>
         <source>Reusing the saved transcript</source>
-        <translation type="unfinished" />
+        <translation>Opgeslagen transcript wordt hergebruikt</translation>
     </message>
     <message>
         <source>Found sentence %1 again later in the audio; timed it out of book order</source>
-        <translation type="unfinished" />
+        <translation>Zin %1 later in de audio opnieuw gevonden; buiten de volgorde van het boek getimed</translation>
     </message>
     <message>
         <source>%1 sentences timed, %2 in between had no audio</source>
@@ -2342,7 +2344,7 @@ Er worden geen indexbestanden gewist.</translation>
     </message>
     <message>
         <source>Approve or reject each word, pick its sentence and scene, trim its audio, mark words known, and fix a mistranscribed sentence or swap the word to mine -- before any card is created. When a word has entries in several dictionaries, choose which one the card's Definition uses.</source>
-        <translation type="unfinished" />
+        <translation>Elk woord goedkeuren of afwijzen, de zin en scène kiezen, de audio inkorten, woorden als bekend markeren en een verkeerd getranscribeerde zin corrigeren of het te minen woord vervangen -- voordat er een kaart wordt gemaakt. Heeft een woord vermeldingen in meerdere woordenboeken, kies dan welke de Definitie van de kaart gebruikt.</translation>
     </message>
     <message>
         <source>Secondary-language subtitles</source>
@@ -2350,7 +2352,7 @@ Er worden geen indexbestanden gewist.</translation>
     </message>
     <message>
         <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. Leave the file empty and Anki Miner picks a translation itself: a subtitle named for the video, or a text track inside it, in your interface language or else English. The Activity Log names the track it used. On Video → Batch, point it at a folder of translation subtitles instead and they pair to the videos by episode number. Turn it on under Settings → Sentences.</source>
-        <translation type="unfinished" />
+        <translation>Een tweede ondertitelbestand in je eigen taal laden naast dat in de miningtaal: het verschijnt onder de regel in het voorbeeld van de Woordcurator en kan in een vertalingsveld worden opgeslagen. Laat je het bestand leeg, dan kiest Anki Miner zelf een vertaling: een ondertitel met de naam van de video of een teksttrack daarin, in je interfacetaal of anders in het Engels. Het Activiteitenlogboek noemt de gebruikte track. Kies bij Video → Batch in plaats daarvan een map met vertaalde ondertitels; die worden op afleveringsnummer aan de video's gekoppeld. Zet dit aan onder Instellingen → Zinnen.</translation>
     </message>
     <message>
         <source>Build a deck by coverage %</source>
@@ -2386,11 +2388,11 @@ Er worden geen indexbestanden gewist.</translation>
     </message>
     <message>
         <source>Mine songs from .lrc lyrics</source>
-        <translation type="unfinished" />
+        <translation>Liedjes minen uit .lrc-songteksten</translation>
     </message>
     <message>
         <source>Use a .lrc lyrics file wherever a subtitle file goes. Each line lasts until the next one starts. Pair a song with its lyrics on Audiobooks, condense it in Condense, or mine a music video on Video.</source>
-        <translation type="unfinished" />
+        <translation>Gebruik een .lrc-songtekstbestand overal waar een ondertitelbestand kan. Elke regel duurt tot de volgende begint. Koppel een liedje aan de songtekst bij Luisterboeken, condenseer het bij Condenseren of mine een muziekvideo bij Video.</translation>
     </message>
     <message>
         <source>Mine from manga</source>
@@ -2406,23 +2408,23 @@ Er worden geen indexbestanden gewist.</translation>
     </message>
     <message>
         <source>Mine vocabulary from novels and other text (EPUB, PDF, Aozora, plain text).</source>
-        <translation type="unfinished" />
+        <translation>Woordenschat minen uit romans en andere teksten (EPUB, PDF, Aozora, platte tekst).</translation>
     </message>
     <message>
         <source>Readings from a book's own furigana</source>
-        <translation type="unfinished" />
+        <translation>Lezingen uit de eigen furigana van een boek</translation>
     </message>
     <message>
         <source>When a Japanese EPUB prints furigana over a word, the card takes that reading instead of the parser's guess.</source>
-        <translation type="unfinished" />
+        <translation>Als een Japanse EPUB furigana boven een woord toont, neemt de kaart die lezing over in plaats van de gok van de parser.</translation>
     </message>
     <message>
         <source>Mine pasted text or a web article</source>
-        <translation type="unfinished" />
+        <translation>Geplakte tekst of een webartikel minen</translation>
     </message>
     <message>
         <source>Paste text in your mining language, or fetch a web article by its address, and mine it into Anki cards. A fetched article's cards name the page and site as their source.</source>
-        <translation type="unfinished" />
+        <translation>Plak tekst in je miningtaal of haal een webartikel op via het adres, en mine het tot Anki-kaarten. De kaarten van een opgehaald artikel noemen de pagina en de site als bron.</translation>
     </message>
     <message>
         <source>Mine subtitle files without video</source>
@@ -2446,7 +2448,7 @@ Er worden geen indexbestanden gewist.</translation>
     </message>
     <message>
         <source>Create subtitles from audio with a local Whisper model -- as a standalone tool. Long lines are split at sentence ends, and a second run on the same file reuses the saved transcript.</source>
-        <translation type="unfinished" />
+        <translation>Ondertitels maken uit audio met een lokaal Whisper-model -- als zelfstandig hulpmiddel. Lange regels worden aan het einde van zinnen gesplitst, en een tweede run op hetzelfde bestand hergebruikt het opgeslagen transcript.</translation>
     </message>
     <message>
         <source>Re-time existing subtitles</source>
@@ -2506,35 +2508,35 @@ Er worden geen indexbestanden gewist.</translation>
     </message>
     <message>
         <source>Browse your whole mining history</source>
-        <translation type="unfinished" />
+        <translation>Je hele mininggeschiedenis bekijken</translation>
     </message>
     <message>
         <source>Analytics lists every run you have mined. Pick a period, group the runs by day, week or month, see the cards per period in a chart, and export the table as a CSV file.</source>
-        <translation type="unfinished" />
+        <translation>Statistieken toont elke run die je hebt gemined. Kies een periode, groepeer de runs per dag, week of maand, bekijk de kaarten per periode in een grafiek en exporteer de tabel als CSV-bestand.</translation>
     </message>
     <message>
         <source>Show or delete a past run's cards</source>
-        <translation type="unfinished" />
+        <translation>De kaarten van een eerdere run tonen of verwijderen</translation>
     </message>
     <message>
         <source>Select a run in Analytics → Mining History to open its cards in Anki's browser or to delete them. The confirmation says how many of its cards are still in Anki and how many you have reviewed. Runs mined before this version have no card list.</source>
-        <translation type="unfinished" />
+        <translation>Selecteer een run in Statistieken → Mininggeschiedenis om de kaarten ervan te openen in de browser van Anki of ze te verwijderen. De bevestiging vermeldt hoeveel van de kaarten nog in Anki staan en hoeveel je hebt herhaald. Runs die vóór deze versie zijn gemined, hebben geen kaartenlijst.</translation>
     </message>
     <message>
         <source>Track how many words you know</source>
-        <translation type="unfinished" />
+        <translation>Bijhouden hoeveel woorden je kent</translation>
     </message>
     <message>
         <source>The Known Words card on Analytics counts the words Anki Miner treats as known in the current mining language and shows how that number changed. It is counted while Anki is running, at most once every ten minutes.</source>
-        <translation type="unfinished" />
+        <translation>De kaart Bekende woorden bij Statistieken telt de woorden die Anki Miner in de huidige miningtaal als bekend beschouwt en toont hoe dat aantal is veranderd. Er wordt geteld terwijl Anki draait, hooguit eens per tien minuten.</translation>
     </message>
     <message>
         <source>See how much of a frequency list you know</source>
-        <translation type="unfinished" />
+        <translation>Zien hoeveel van een frequentielijst je kent</translation>
     </message>
     <message>
         <source>Analytics → Frequency Coverage counts the words you know in ranks 1–1,000 up to 20,000 of your first frequency list with numeric ranks, and lists the missing words of each band. It needs Anki running.</source>
-        <translation type="unfinished" />
+        <translation>Statistieken → Frequentiedekking telt de woorden die je kent in de rangen 1–1.000 tot en met 20.000 van je eerste frequentielijst met numerieke rangen, en toont de ontbrekende woorden van elk bereik. Anki moet daarvoor draaien.</translation>
     </message>
     <message>
         <source>Reset mining statistics</source>
@@ -2610,11 +2612,11 @@ Er worden geen indexbestanden gewist.</translation>
     </message>
     <message>
         <source>Count a word as known only after its card has been reviewed</source>
-        <translation type="unfinished" />
+        <translation>Een woord pas als bekend tellen nadat de kaart is herhaald</translation>
     </message>
     <message>
         <source>Readability and the i+1 sentence rule then count a word as known only when its Anki card has been reviewed at least once. Mining still skips every word that already has a card.</source>
-        <translation type="unfinished" />
+        <translation>Leesbaarheid en de i+1-zinsregel tellen een woord dan pas als bekend wanneer de Anki-kaart ervan minstens één keer is herhaald. Bij het minen wordt nog steeds elk woord overgeslagen dat al een kaart heeft.</translation>
     </message>
     <message>
         <source>Exclude specific Anki decks from 'known'</source>
@@ -2634,27 +2636,27 @@ Er worden geen indexbestanden gewist.</translation>
     </message>
     <message>
         <source>Browse every known word</source>
-        <translation type="unfinished" />
+        <translation>Alle bekende woorden bekijken</translation>
     </message>
     <message>
         <source>Manage Known Words lists every word this language counts as known, with where it came from (added by you, mined by Anki Miner, from Anki) and the date it was added. Search it, filter it by source, and remove words you added. Words from Anki come back on the next sync.</source>
-        <translation type="unfinished" />
+        <translation>Bekende woorden beheren toont elk woord dat deze taal als bekend telt, met de herkomst (door jou toegevoegd, gemined door Anki Miner, uit Anki) en de datum waarop het is toegevoegd. Doorzoek de lijst, filter op bron en verwijder woorden die je zelf hebt toegevoegd. Woorden uit Anki komen bij de volgende synchronisatie terug.</translation>
     </message>
     <message>
         <source>Import known words from Kindle, Lute or LWT</source>
-        <translation type="unfinished" />
+        <translation>Bekende woorden importeren uit Kindle, Lute of LWT</translation>
     </message>
     <message>
         <source>In Manage Known Words, Import… also reads a Kindle Vocabulary Builder file (vocab.db; words marked mastered) and Lute or LWT term exports (status 5 and 99).</source>
-        <translation type="unfinished" />
+        <translation>In Bekende woorden beheren leest Importeren… ook een bestand van Kindle Vocabulary Builder (vocab.db; woorden gemarkeerd als beheerst) en termexports van Lute of LWT (status 5 en 99).</translation>
     </message>
     <message>
         <source>Export words to a CSV file</source>
-        <translation type="unfinished" />
+        <translation>Woorden exporteren naar een CSV-bestand</translation>
     </message>
     <message>
         <source>Export words… saves the list you are looking at in Manage Known Words, or a finished run's mined and not-mined words with the reason each was skipped, as a CSV file.</source>
-        <translation type="unfinished" />
+        <translation>Woorden exporteren… slaat de lijst die je in Bekende woorden beheren bekijkt, of de geminede en niet-geminede woorden van een voltooide run met de reden waarom elk woord is overgeslagen, op als CSV-bestand.</translation>
     </message>
     <message>
         <source>Exclude kana-only words</source>
@@ -2686,23 +2688,23 @@ Er worden geen indexbestanden gewist.</translation>
     </message>
     <message>
         <source>Mine at most one word from each example sentence. A word whose sentence is taken moves to another line it appears on, and is skipped only when every one of its lines is taken.</source>
-        <translation type="unfinished" />
+        <translation>Hooguit één woord per voorbeeldzin minen. Een woord waarvan de zin al bezet is, schuift door naar een andere regel waarin het voorkomt, en wordt alleen overgeslagen als al zijn regels bezet zijn.</translation>
     </message>
     <message>
         <source>Pick the clearest sentence</source>
-        <translation type="unfinished" />
+        <translation>De duidelijkste zin kiezen</translation>
     </message>
     <message>
         <source>When a word appears on several lines, its card uses the line with the fewest unknown words and a comfortable length instead of the first one. The Word Curator still lists every line.</source>
-        <translation type="unfinished" />
+        <translation>Als een woord in meerdere regels voorkomt, gebruikt de kaart niet de eerste regel maar de regel met de minste onbekende woorden en een prettige lengte. De Woordcurator toont nog steeds elke regel.</translation>
     </message>
     <message>
         <source>Skip openings, endings and signs</source>
-        <translation type="unfinished" />
+        <translation>Openings, endings en borden overslaan</translation>
     </message>
     <message>
         <source>Leave opening and ending songs, previews and on-screen signs out of mining, Condense and Readability: lines styled as songs or signs, and lines inside a video's opening, ending and preview chapters. On by default for new installs; turn it off in Settings → Sentences.</source>
-        <translation type="unfinished" />
+        <translation>Opening- en endingliedjes, previews en borden in beeld buiten mining, Condenseren en Leesbaarheid houden: regels die als liedje of bord zijn opgemaakt, en regels in de opening-, ending- en previewhoofdstukken van een video. Standaard aan bij nieuwe installaties; zet het uit in Instellingen → Zinnen.</translation>
     </message>
     <message>
         <source>Strip junk from subtitles (regex)</source>
@@ -2770,11 +2772,11 @@ Er worden geen indexbestanden gewist.</translation>
     </message>
     <message>
         <source>Import a dictionary file</source>
-        <translation type="unfinished" />
+        <translation>Een woordenboekbestand importeren</translation>
     </message>
     <message>
         <source>Add a Yomitan zip, a StarDict dictionary (its archive or its .ifo file) or a CSV/TSV word list (term and definition, or term, reading and definition) as a definition source.</source>
-        <translation type="unfinished" />
+        <translation>Een Yomitan-zip, een StarDict-woordenboek (het archief of het .ifo-bestand) of een CSV/TSV-woordenlijst (term en definitie, of term, lezing en definitie) toevoegen als definitiebron.</translation>
     </message>
     <message>
         <source>Keep dictionaries up to date</source>
@@ -2846,7 +2848,7 @@ Er worden geen indexbestanden gewist.</translation>
     </message>
     <message>
         <source>Attach word audio to cards from audio packs, JPod101 (Japanese), Google text-to-speech, or Microsoft Edge text-to-speech (every language). Wikimedia Commons plays recordings of real speakers from Wiktionary and Lingua Libre, tried before Google TTS in most languages.</source>
-        <translation type="unfinished" />
+        <translation>Woordaudio aan kaarten toevoegen uit audiopakketten, JPod101 (Japans), Google-tekst-naar-spraak of Microsoft Edge-tekst-naar-spraak (alle talen). Wikimedia Commons speelt opnamen van echte sprekers uit Wiktionary en Lingua Libre af en wordt in de meeste talen vóór Google TTS geprobeerd.</translation>
     </message>
     <message>
         <source>Import local audio packs</source>
@@ -2862,7 +2864,7 @@ Er worden geen indexbestanden gewist.</translation>
     </message>
     <message>
         <source>Extract the spoken sentence as an audio clip; tune its format and bitrate. Even out audio volume brings sentence clips and condensed audio to one loudness and fades each clip in and out.</source>
-        <translation type="unfinished" />
+        <translation>De gesproken zin als audiofragment extraheren; formaat en bitrate afstellen. Audiovolume gelijktrekken brengt zinsfragmenten en gecondenseerde audio op één luidheid en laat elk fragment in- en uitfaden.</translation>
     </message>
     <message>
         <source>Sentence audio for reading (TTS)</source>
@@ -2886,7 +2888,7 @@ Er worden geen indexbestanden gewist.</translation>
     </message>
     <message>
         <source>Capture a still frame from the scene to put on the card. Crop manga pictures to the speech bubble shows the bubble and the art around it instead of the whole page.</source>
-        <translation type="unfinished" />
+        <translation>Een stilstaand beeld van de scène vastleggen voor op de kaart. Mangaplaatjes bijsnijden tot de tekstballon toont de ballon en de tekening eromheen in plaats van de hele pagina.</translation>
     </message>
     <message>
         <source>Animated clips (GIF/WebP)</source>
@@ -2966,7 +2968,7 @@ Er worden geen indexbestanden gewist.</translation>
     </message>
     <message>
         <source>Add tags to every note Anki Miner creates. Card tags can use {series}, {episode} and {volume}. Each card gets its own show, episode or book volume, for example mined::{series}::{episode} gives mined::Frieren::03.</source>
-        <translation type="unfinished" />
+        <translation>Tags toevoegen aan elke notitie die Anki Miner maakt. Kaarttags kunnen {series}, {episode} en {volume} gebruiken. Elke kaart krijgt zijn eigen serie, aflevering of boekdeel, bijvoorbeeld mined::{series}::{episode} geeft mined::Frieren::03.</translation>
     </message>
     <message>
         <source>Connect to Anki (AnkiConnect)</source>
@@ -2974,15 +2976,15 @@ Er worden geen indexbestanden gewist.</translation>
     </message>
     <message>
         <source>Set the AnkiConnect address; Refresh re-checks the connection to your running Anki. If AnkiConnect is set up with an API key, add it to the address: http://127.0.0.1:8765/?key=YOUR_KEY. Anki Miner sends it with every request and never writes it to the log.</source>
-        <translation type="unfinished" />
+        <translation>Het AnkiConnect-adres instellen; Vernieuwen controleert opnieuw de verbinding met je actieve Anki. Is AnkiConnect ingesteld met een API-sleutel, voeg die dan toe aan het adres: http://127.0.0.1:8765/?key=YOUR_KEY. Anki Miner stuurt hem mee met elk verzoek en schrijft hem nooit naar het logboek.</translation>
     </message>
     <message>
         <source>Sync Anki after mining</source>
-        <translation type="unfinished" />
+        <translation>Anki synchroniseren na het minen</translation>
     </message>
     <message>
         <source>After a run that added cards, Anki Miner asks Anki to sync with AnkiWeb. If the sync fails, the Activity Log says so and the cards stay added.</source>
-        <translation type="unfinished" />
+        <translation>Na een run die kaarten heeft toegevoegd, vraagt Anki Miner Anki te synchroniseren met AnkiWeb. Als de synchronisatie mislukt, meldt het Activiteitenlogboek dat en blijven de kaarten toegevoegd.</translation>
     </message>
     <message>
         <source>Fill in field mappings automatically</source>
@@ -3070,7 +3072,7 @@ Er worden geen indexbestanden gewist.</translation>
     </message>
     <message>
         <source>Draw a box where a video's on-screen dialogue appears and Anki Miner reads it into a timed .srt that Video → Single can mine. Made for game longplays without commentary. It also reads image subtitles (Blu-ray .sup, DVD .idx/.sub, or an image track inside a video) without a box. Lines with none of your mining language's letters are left out. Download the OCR engine from the setup card on Utilities → Video OCR.</source>
-        <translation type="unfinished" />
+        <translation>Teken een kader waar de dialoog van een video in beeld verschijnt, en Anki Miner leest die in tot een getimede .srt die Video → Enkel kan minen. Gemaakt voor longplays van games zonder commentaar. Ondertitels als afbeelding (Blu-ray .sup, DVD .idx/.sub of een beeldtrack in een video) leest het ook zonder kader. Regels zonder letters van je miningtaal worden weggelaten. Download de OCR-engine via de configuratiekaart op Hulpmiddelen → Video-OCR.</translation>
     </message>
     <message>
         <source>Sync an audiobook to its EPUB</source>
@@ -3078,23 +3080,23 @@ Er worden geen indexbestanden gewist.</translation>
     </message>
     <message>
         <source>Transcribe an audiobook and time the book's own sentences to it, writing an .srt the Audiobook tab, Reading → Subtitle Files or a reader can use. A second run on the same audio reuses the saved transcript instead of transcribing again.</source>
-        <translation type="unfinished" />
+        <translation>Een luisterboek transcriberen en de zinnen van het boek zelf erop timen, met als resultaat een .srt die het tabblad Luisterboeken, Lezen → Ondertitels of een e-reader kan gebruiken. Een tweede run op dezelfde audio hergebruikt het opgeslagen transcript in plaats van opnieuw te transcriberen.</translation>
     </message>
     <message>
         <source>Sync a shelf of audiobooks in one run</source>
-        <translation type="unfinished" />
+        <translation>Een hele plank luisterboeken in één run synchroniseren</translation>
     </message>
     <message>
         <source>In Utilities → Audiobook Sync, choose Folder and pick a folder that holds one folder per book, each with its EPUB (or text file) and its audio files. The books sync one after another, in name order.</source>
-        <translation type="unfinished" />
+        <translation>Kies in Hulpmiddelen → Boeksync de optie Map en selecteer een map met één map per boek, elk met de EPUB (of het tekstbestand) en de audiobestanden. De boeken worden na elkaar gesynchroniseerd, op volgorde van naam.</translation>
     </message>
     <message>
         <source>See how well an audiobook synced</source>
-        <translation type="unfinished" />
+        <translation>Zien hoe goed een luisterboek is gesynchroniseerd</translation>
     </message>
     <message>
         <source>After Audiobook Sync, each book gets a line under the Book card: how many of its sentences got a subtitle, how much of the narration matched the book, and a grade from A to D. Chapters read out of book order are found too; sentences the narrator skipped never get a subtitle.</source>
-        <translation type="unfinished" />
+        <translation>Na Boeksync krijgt elk boek een regel onder de kaart Boek: hoeveel zinnen een ondertitel kregen, hoeveel van de voordracht overeenkwam met het boek, en een cijfer van A tot D. Hoofdstukken die buiten de volgorde van het boek worden voorgelezen, worden ook gevonden; zinnen die de verteller heeft overgeslagen, krijgen nooit een ondertitel.</translation>
     </message>
     <message>
         <source>Check how much of a show, book or manga you can read</source>
@@ -3178,11 +3180,11 @@ Er worden geen indexbestanden gewist.</translation>
     </message>
     <message>
         <source>Restore an automatic backup</source>
-        <translation type="unfinished" />
+        <translation>Een automatische back-up terugzetten</translation>
     </message>
     <message>
         <source>Anki Miner backs up your known words, statistics, settings and profiles once a day when it starts, and keeps the last 7 days. Settings → General → Restore a backup… puts one back the next time the app starts.</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner maakt eens per dag bij het opstarten een back-up van je bekende woorden, statistieken, instellingen en profielen, en bewaart de laatste 7 dagen. Instellingen → Algemeen → Back-up terugzetten… zet er een terug bij de volgende start van de app.</translation>
     </message>
     <message>
         <source>Undo a mining run</source>
@@ -3194,11 +3196,11 @@ Er worden geen indexbestanden gewist.</translation>
     </message>
     <message>
         <source>Export a run's words</source>
-        <translation type="unfinished" />
+        <translation>De woorden van een run exporteren</translation>
     </message>
     <message>
         <source>Press View details on a run's result line, then Export words… to save the run's mined and not-mined words, with the reason each was skipped, as a CSV file.</source>
-        <translation type="unfinished" />
+        <translation>Klik op Details bekijken in de resultaatregel van een run en daarna op Woorden exporteren… om de geminede en niet-geminede woorden van de run, met de reden waarom elk woord is overgeslagen, op te slaan als CSV-bestand.</translation>
     </message>
     <message>
         <source>Keyboard shortcuts</source>
@@ -4592,11 +4594,11 @@ Hiermee worden %n notities gewijzigd (%1) en getagd met %2. Doorgaan?</numerusfo
     </message>
     <message>
         <source>Choose dictionary files</source>
-        <translation type="unfinished" />
+        <translation>Woordenboekbestanden kiezen</translation>
     </message>
     <message>
         <source>Dictionaries (*.zip *.ifo *.tar.gz *.tgz *.tar.bz2 *.tar.xz *.csv *.tsv)</source>
-        <translation type="unfinished" />
+        <translation>Woordenboeken (*.zip *.ifo *.tar.gz *.tgz *.tar.bz2 *.tar.xz *.csv *.tsv)</translation>
     </message>
     <message>
         <source>Dictionary %1 of %2: %3</source>
@@ -5432,8 +5434,9 @@ Er worden geen bestanden van de schijf gewist.</translation>
     </message>
     <message numerus="yes">
         <source>Skipping lines in %n opening, ending or preview chapter(s)</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>Regels in %n opening-, ending- of previewhoofdstuk worden overgeslagen</numerusform>
+            <numerusform>Regels in %n opening-, ending- of previewhoofdstukken worden overgeslagen</numerusform>
         </translation>
     </message>
     <message>
@@ -5483,7 +5486,7 @@ Er worden geen bestanden van de schijf gewist.</translation>
     </message>
     <message>
         <source>Only %1% of the first %2 words have an entry in your dictionaries. Is this file in the language you are mining?</source>
-        <translation type="unfinished" />
+        <translation>Slechts %1% van de eerste %2 woorden heeft een vermelding in je woordenboeken. Is dit bestand in de taal die je aan het minen bent?</translation>
     </message>
     <message>
         <source>Frequency cutoff ignored — no ranked frequency source is loaded (Settings → Frequency).</source>
@@ -5595,11 +5598,11 @@ Er worden geen bestanden van de schijf gewist.</translation>
     </message>
     <message>
         <source>Translation subtitles picked automatically: %1</source>
-        <translation type="unfinished" />
+        <translation>Vertaalde ondertitels automatisch gekozen: %1</translation>
     </message>
     <message>
         <source>Translation subtitles picked automatically: embedded track %1</source>
-        <translation type="unfinished" />
+        <translation>Vertaalde ondertitels automatisch gekozen: ingesloten track %1</translation>
     </message>
     <message>
         <source>Could not extract media for any word — no cards created</source>
@@ -5869,11 +5872,11 @@ Er worden geen bestanden van de schijf gewist.</translation>
     </message>
     <message>
         <source>Count a word as known only after its card has been reviewed</source>
-        <translation type="unfinished" />
+        <translation>Een woord pas als bekend tellen nadat de kaart is herhaald</translation>
     </message>
     <message>
         <source>Readability and the i+1 sentence rule count a word as known only when its Anki card has been reviewed at least once. Mining still skips every word that already has a card.</source>
-        <translation type="unfinished" />
+        <translation>Leesbaarheid en de i+1-zinsregel tellen een woord pas als bekend wanneer de Anki-kaart ervan minstens één keer is herhaald. Bij het minen wordt nog steeds elk woord overgeslagen dat al een kaart heeft.</translation>
     </message>
     <message>
         <source>Keep words known after their cards are deleted</source>
@@ -6535,15 +6538,15 @@ Er worden geen indexbestanden verwijderd.</translation>
     <name>KnownWordsManagerDialog</name>
     <message>
         <source>Word</source>
-        <translation type="unfinished" />
+        <translation>Woord</translation>
     </message>
     <message>
         <source>Source</source>
-        <translation type="unfinished" />
+        <translation>Bron</translation>
     </message>
     <message>
         <source>Added</source>
-        <translation type="unfinished" />
+        <translation>Toegevoegd</translation>
     </message>
     <message>
         <source>Manage Known Words</source>
@@ -6555,7 +6558,7 @@ Er worden geen indexbestanden verwijderd.</translation>
     </message>
     <message>
         <source>Every word this language counts as known, and where it came from. Words you added from the Word Curator stay known on every run and across cache rebuilds.</source>
-        <translation type="unfinished" />
+        <translation>Elk woord dat deze taal als bekend telt, en waar het vandaan komt. Woorden die je vanuit de Woordcurator hebt toegevoegd, blijven bij elke run en na het opnieuw opbouwen van de cache bekend.</translation>
     </message>
     <message>
         <source>Decks this language's known-words scan skips: %1. Change them in Settings → Word Filters.</source>
@@ -6567,15 +6570,15 @@ Er worden geen indexbestanden verwijderd.</translation>
     </message>
     <message>
         <source>Added by you</source>
-        <translation type="unfinished" />
+        <translation>Door jou toegevoegd</translation>
     </message>
     <message>
         <source>Mined by Anki Miner</source>
-        <translation type="unfinished" />
+        <translation>Gemined door Anki Miner</translation>
     </message>
     <message>
         <source>From Anki</source>
-        <translation type="unfinished" />
+        <translation>Uit Anki</translation>
     </message>
     <message>
         <source>Filter…</source>
@@ -6583,7 +6586,7 @@ Er worden geen indexbestanden verwijderd.</translation>
     </message>
     <message>
         <source>All sources</source>
-        <translation type="unfinished" />
+        <translation>Alle bronnen</translation>
     </message>
     <message>
         <source>Rebuild Known Words DB</source>
@@ -6599,7 +6602,7 @@ Er worden geen indexbestanden verwijderd.</translation>
     </message>
     <message>
         <source>Removes words you added. Words from Anki come back on the next run, and mined words leave with Undo.</source>
-        <translation type="unfinished" />
+        <translation>Verwijdert woorden die je zelf hebt toegevoegd. Woorden uit Anki komen bij de volgende run terug, en geminede woorden verdwijnen met Ongedaan maken.</translation>
     </message>
     <message>
         <source>Import…</source>
@@ -6607,7 +6610,7 @@ Er worden geen indexbestanden verwijderd.</translation>
     </message>
     <message>
         <source>Export words…</source>
-        <translation type="unfinished" />
+        <translation>Woorden exporteren…</translation>
     </message>
     <message>
         <source>Reset User List</source>
@@ -6639,11 +6642,11 @@ Er worden geen indexbestanden verwijderd.</translation>
     </message>
     <message>
         <source>Kindle Vocabulary Builder</source>
-        <translation type="unfinished" />
+        <translation>Kindle Vocabulary Builder</translation>
     </message>
     <message>
         <source>Lute or LWT term export</source>
-        <translation type="unfinished" />
+        <translation>Termexport van Lute of LWT</translation>
     </message>
     <message>
         <source>plain word list</source>
@@ -6655,7 +6658,7 @@ Er worden geen indexbestanden verwijderd.</translation>
     </message>
     <message>
         <source>Known word lists (*.csv *.tsv *.txt *.json *.db);;All Files (*)</source>
-        <translation type="unfinished" />
+        <translation>Lijsten met bekende woorden (*.csv *.tsv *.txt *.json *.db);;Alle bestanden (*)</translation>
     </message>
     <message>
         <source>Detected: %1 — every entry is imported.
@@ -6687,7 +6690,7 @@ Woorden om toe te voegen: %3. Doorgaan?</translation>
     </message>
     <message>
         <source>This file has no words for %1. It contains: %2.</source>
-        <translation type="unfinished" />
+        <translation>Dit bestand bevat geen woorden voor %1. Het bevat: %2.</translation>
     </message>
     <message>
         <source>That file is too large to import.</source>
@@ -6703,7 +6706,7 @@ Woorden om toe te voegen: %3. Doorgaan?</translation>
     </message>
     <message>
         <source>File format not recognized. Supported: jpdb review export (JSON), Migaku word export (JSON/CSV), AnkiMorphs known morphs (CSV), Kindle Vocabulary Builder (vocab.db), Lute or LWT term export (CSV/TSV), plain word lists (one word per line).</source>
-        <translation type="unfinished" />
+        <translation>Bestandsformaat niet herkend. Ondersteund: jpdb-reviewexport (JSON), Migaku-woordexport (JSON/CSV), bekende morfen van AnkiMorphs (CSV), Kindle Vocabulary Builder (vocab.db), termexport van Lute of LWT (CSV/TSV), gewone woordenlijsten (één woord per regel).</translation>
     </message>
     <message>
         <source>That file could not be imported.</source>
@@ -6725,7 +6728,7 @@ Woorden om toe te voegen: %3. Doorgaan?</translation>
     </message>
     <message>
         <source>CSV files (*.csv);;Text files, one word per line (*.txt)</source>
-        <translation type="unfinished" />
+        <translation>CSV-bestanden (*.csv);;Tekstbestanden, één woord per regel (*.txt)</translation>
     </message>
     <message>
         <source>The known words list could not be exported.</source>
@@ -7474,7 +7477,7 @@ Doorgaan?</translation>
     </message>
     <message>
         <source>Opus clips do not play in AnkiMobile on iPhone or iPad. Choose MP3 if you review there.</source>
-        <translation type="unfinished" />
+        <translation>Opus-fragmenten spelen niet af in AnkiMobile op iPhone of iPad. Kies MP3 als je daar herhaalt.</translation>
     </message>
     <message>
         <source> kbps</source>
@@ -7502,11 +7505,11 @@ Doorgaan?</translation>
     </message>
     <message>
         <source>Even out audio volume</source>
-        <translation type="unfinished" />
+        <translation>Audiovolume gelijktrekken</translation>
     </message>
     <message>
         <source>Brings sentence clips and condensed audio to one volume and fades each clip in and out, so quiet and loud sources sound alike. Applies to new clips.</source>
-        <translation type="unfinished" />
+        <translation>Brengt zinsfragmenten en gecondenseerde audio op één volume en laat elk fragment in- en uitfaden, zodat zachte en harde bronnen gelijk klinken. Geldt voor nieuwe fragmenten.</translation>
     </message>
     <message>
         <source>Text-to-speech</source>
@@ -7530,11 +7533,11 @@ Doorgaan?</translation>
     </message>
     <message>
         <source>Crop manga pictures to the speech bubble</source>
-        <translation type="unfinished" />
+        <translation>Mangaplaatjes bijsnijden tot de tekstballon</translation>
     </message>
     <message>
         <source>Manga cards show the speech bubble and the art around it instead of the whole page. A sentence with no bubble position keeps the whole page.</source>
-        <translation type="unfinished" />
+        <translation>Mangakaarten tonen de tekstballon en de tekening eromheen in plaats van de hele pagina. Een zin zonder ballonpositie houdt de hele pagina.</translation>
     </message>
     <message>
         <source>Enable animated screenshots</source>
@@ -7770,7 +7773,7 @@ Doorgaan?</translation>
     </message>
     <message>
         <source>Anki didn't sync after this run. Your cards are added; sync from Anki, or see the log for why.</source>
-        <translation type="unfinished" />
+        <translation>Anki heeft na deze run niet gesynchroniseerd. Je kaarten zijn toegevoegd; synchroniseer vanuit Anki of kijk in het logboek waarom.</translation>
     </message>
     <message>
         <source>Anki Miner couldn't open these cards in Anki.</source>
@@ -9540,7 +9543,7 @@ Er worden geen indexbestanden verwijderd.</translation>
     </message>
     <message>
         <source>An .epub, .txt or .pdf book, or a folder of books; each book is mined separately.</source>
-        <translation type="unfinished" />
+        <translation>Een .epub-, .txt- of .pdf-boek, of een map met boeken; elk boek wordt apart gemined.</translation>
     </message>
     <message>
         <source>Mine</source>
@@ -9576,7 +9579,7 @@ Er worden geen indexbestanden verwijderd.</translation>
     </message>
     <message>
         <source>Choose an .epub, .txt or .pdf book, or a folder of books.</source>
-        <translation type="unfinished" />
+        <translation>Kies een .epub-, .txt- of .pdf-boek, of een map met boeken.</translation>
     </message>
     <message>
         <source>Starting…</source>
@@ -9642,7 +9645,7 @@ Er worden geen indexbestanden verwijderd.</translation>
     </message>
     <message>
         <source>Add subtitle files (.srt, .ass, .ssa, .vtt, .smi, .lrc) to the list.</source>
-        <translation type="unfinished" />
+        <translation>Ondertitelbestanden (.srt, .ass, .ssa, .vtt, .smi, .lrc) aan de lijst toevoegen.</translation>
     </message>
     <message>
         <source>Remove Selected</source>
@@ -9823,19 +9826,19 @@ Er worden geen indexbestanden verwijderd.</translation>
     </message>
     <message>
         <source>Web addresses to fetch, one per line (https://…)</source>
-        <translation type="unfinished" />
+        <translation>Op te halen webadressen, één per regel (https://…)</translation>
     </message>
     <message>
         <source>Web addresses</source>
-        <translation type="unfinished" />
+        <translation>Webadressen</translation>
     </message>
     <message>
         <source>Fetch</source>
-        <translation type="unfinished" />
+        <translation>Ophalen</translation>
     </message>
     <message>
         <source>Put the article text of each web address in the box below, to check before mining.</source>
-        <translation type="unfinished" />
+        <translation>De artikeltekst van elk webadres in het vak hieronder zetten, om die vóór het minen te controleren.</translation>
     </message>
     <message>
         <source>Paste the text you want to mine. Cards from pasted text have no sentence audio from a recording.</source>
@@ -9883,59 +9886,59 @@ Er worden geen indexbestanden verwijderd.</translation>
     </message>
     <message>
         <source>Each line must be a web address that starts with http:// or https://.</source>
-        <translation type="unfinished" />
+        <translation>Elke regel moet een webadres zijn dat begint met http:// of https://.</translation>
     </message>
     <message>
         <source>Enter a web address first.</source>
-        <translation type="unfinished" />
+        <translation>Voer eerst een webadres in.</translation>
     </message>
     <message>
         <source>Fetch takes up to 10 web addresses at a time.</source>
-        <translation type="unfinished" />
+        <translation>Ophalen verwerkt maximaal 10 webadressen tegelijk.</translation>
     </message>
     <message>
         <source>Fetching…</source>
-        <translation type="unfinished" />
+        <translation>Ophalen…</translation>
     </message>
     <message>
         <source>Could not fetch %1: %2</source>
-        <translation type="unfinished" />
+        <translation>Kon %1 niet ophalen: %2</translation>
     </message>
     <message>
         <source>None of the pages could be fetched.</source>
-        <translation type="unfinished" />
+        <translation>Geen van de pagina's kon worden opgehaald.</translation>
     </message>
     <message>
         <source>Fetched %1.</source>
-        <translation type="unfinished" />
+        <translation>%1 opgehaald.</translation>
     </message>
     <message>
         <source>The pages could not be fetched.</source>
-        <translation type="unfinished" />
+        <translation>De pagina's konden niet worden opgehaald.</translation>
     </message>
     <message>
         <source>The page could not be reached. Check the address and your connection.</source>
-        <translation type="unfinished" />
+        <translation>De pagina was niet bereikbaar. Controleer het adres en je verbinding.</translation>
     </message>
     <message>
         <source>The site did not send the page.</source>
-        <translation type="unfinished" />
+        <translation>De site heeft de pagina niet verstuurd.</translation>
     </message>
     <message>
         <source>This address is not a web page.</source>
-        <translation type="unfinished" />
+        <translation>Dit adres is geen webpagina.</translation>
     </message>
     <message>
         <source>This page is too large to read.</source>
-        <translation type="unfinished" />
+        <translation>Deze pagina is te groot om te lezen.</translation>
     </message>
     <message>
         <source>This is not a web address.</source>
-        <translation type="unfinished" />
+        <translation>Dit is geen webadres.</translation>
     </message>
     <message>
         <source>No article text found on this page. Pages that draw their text with JavaScript cannot be read.</source>
-        <translation type="unfinished" />
+        <translation>Geen artikeltekst gevonden op deze pagina. Pagina's die hun tekst met JavaScript opbouwen, kunnen niet worden gelezen.</translation>
     </message>
     <message>
         <source>Paste some text first.</source>
@@ -9947,7 +9950,7 @@ Er worden geen indexbestanden verwijderd.</translation>
     </message>
     <message>
         <source>The fetched text was edited, so it is mined as one text without its page titles.</source>
-        <translation type="unfinished" />
+        <translation>De opgehaalde tekst is bewerkt en wordt daarom als één tekst zonder paginatitels gemined.</translation>
     </message>
     <message>
         <source>That picture cannot be read. Pick another, or remove it to mine without one.</source>
@@ -10734,7 +10737,7 @@ Er worden geen indexbestanden verwijderd.</translation>
     </message>
     <message>
         <source>Export words…</source>
-        <translation type="unfinished" />
+        <translation>Woorden exporteren…</translation>
     </message>
     <message>
         <source>Close</source>
@@ -10749,19 +10752,19 @@ Er worden geen indexbestanden verwijderd.</translation>
     </message>
     <message>
         <source>Export Words</source>
-        <translation type="unfinished" />
+        <translation>Woorden exporteren</translation>
     </message>
     <message>
         <source>CSV files (*.csv)</source>
-        <translation type="unfinished" />
+        <translation>CSV-bestanden (*.csv)</translation>
     </message>
     <message>
         <source>Words exported</source>
-        <translation type="unfinished" />
+        <translation>Woorden geëxporteerd</translation>
     </message>
     <message>
         <source>Export failed — try again</source>
-        <translation type="unfinished" />
+        <translation>Exporteren mislukt — probeer het opnieuw</translation>
     </message>
     <message>
         <source>Confirm Undo</source>
@@ -10966,11 +10969,11 @@ Er worden geen indexbestanden verwijderd.</translation>
     </message>
     <message>
         <source>Skip openings, endings and signs</source>
-        <translation type="unfinished" />
+        <translation>Openings, endings en borden overslaan</translation>
     </message>
     <message>
         <source>Leaves out song lyrics, previews and on-screen signs: lines whose subtitle style marks them as a song or a sign, and lines inside a video's opening, ending or preview chapters. Applies to mining, Condense and Readability.</source>
-        <translation type="unfinished" />
+        <translation>Laat songteksten, previews en borden in beeld weg: regels die door hun ondertitelstijl als liedje of bord zijn gemarkeerd, en regels in de opening-, ending- of previewhoofdstukken van een video. Geldt voor mining, Condenseren en Leesbaarheid.</translation>
     </message>
     <message>
         <source>Sentence options</source>
@@ -10986,7 +10989,7 @@ Er worden geen indexbestanden verwijderd.</translation>
     </message>
     <message>
         <source>Mines at most one word per example sentence. A word whose sentence is already taken moves to another line it appears on, and is skipped only when every one of its lines is taken. Whitelisted words are still mined.</source>
-        <translation type="unfinished" />
+        <translation>Mint hooguit één woord per voorbeeldzin. Een woord waarvan de zin al bezet is, schuift door naar een andere regel waarin het voorkomt, en wordt alleen overgeslagen als al zijn regels bezet zijn. Woorden op de whitelist worden toch gemined.</translation>
     </message>
     <message>
         <source>Only i+1 sentences (exactly one unknown word)</source>
@@ -11002,11 +11005,11 @@ Er worden geen indexbestanden verwijderd.</translation>
     </message>
     <message>
         <source>Pick the clearest sentence for each word</source>
-        <translation type="unfinished" />
+        <translation>Voor elk woord de duidelijkste zin kiezen</translation>
     </message>
     <message>
         <source>When a word appears on several lines, its card uses the line with the fewest unknown words and a comfortable length instead of the first one. The Word Curator still lists every line, and card order does not change.</source>
-        <translation type="unfinished" />
+        <translation>Als een woord in meerdere regels voorkomt, gebruikt de kaart niet de eerste regel maar de regel met de minste onbekende woorden en een prettige lengte. De Woordcurator toont nog steeds elke regel, en de volgorde van de kaarten verandert niet.</translation>
     </message>
     <message>
         <source> s</source>
@@ -13065,15 +13068,15 @@ Je geïnstalleerde bronnen en je thema blijven behouden.</translation>
     </message>
     <message>
         <source>Restore a backup…</source>
-        <translation type="unfinished" />
+        <translation>Back-up terugzetten…</translation>
     </message>
     <message>
         <source>Backups</source>
-        <translation type="unfinished" />
+        <translation>Back-ups</translation>
     </message>
     <message>
         <source>Anki Miner saves your known words, statistics, settings and profiles once a day when it starts, and keeps the last 7 days.</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner bewaart eens per dag bij het opstarten je bekende woorden, statistieken, instellingen en profielen, en houdt de laatste 7 dagen bij.</translation>
     </message>
     <message>
         <source>Themes</source>
@@ -13117,27 +13120,27 @@ Je geïnstalleerde bronnen en je thema blijven behouden.</translation>
     </message>
     <message>
         <source>There is no backup yet. Anki Miner makes one each day when it starts.</source>
-        <translation type="unfinished" />
+        <translation>Er is nog geen back-up. Anki Miner maakt er elke dag een bij het opstarten.</translation>
     </message>
     <message>
         <source>Restore a Backup</source>
-        <translation type="unfinished" />
+        <translation>Back-up terugzetten</translation>
     </message>
     <message>
         <source>Restore the backup from:</source>
-        <translation type="unfinished" />
+        <translation>De back-up terugzetten van:</translation>
     </message>
     <message>
         <source>Replace your known words, statistics, settings and profiles with the copies from %1? The restore runs the next time Anki Miner starts. Changes made after that backup are lost.</source>
-        <translation type="unfinished" />
+        <translation>Je bekende woorden, statistieken, instellingen en profielen vervangen door de kopieën van %1? Het terugzetten gebeurt de volgende keer dat Anki Miner start. Wijzigingen die na die back-up zijn gemaakt, gaan verloren.</translation>
     </message>
     <message>
         <source>The restore could not be scheduled.</source>
-        <translation type="unfinished" />
+        <translation>Het terugzetten kon niet worden ingepland.</translation>
     </message>
     <message>
         <source>The backup from %1 will be restored when Anki Miner next starts.</source>
-        <translation type="unfinished" />
+        <translation>De back-up van %1 wordt teruggezet wanneer Anki Miner de volgende keer start.</translation>
     </message>
 </context><context>
     <name>UpdateBanner</name>
@@ -13305,11 +13308,11 @@ Je geïnstalleerde bronnen en je thema blijven behouden.</translation>
     </message>
     <message>
         <source>The picture (burned-in text)</source>
-        <translation type="unfinished" />
+        <translation>Het beeld (ingebrande tekst)</translation>
     </message>
     <message>
         <source>Image subtitle track %1</source>
-        <translation type="unfinished" />
+        <translation>Beeldondertiteltrack %1</translation>
     </message>
     <message>
         <source>The OCR engine could not start on this computer. The details say why.</source>
@@ -13349,15 +13352,15 @@ Je geïnstalleerde bronnen en je thema blijven behouden.</translation>
     </message>
     <message>
         <source>This field takes a video or an image subtitle file (.sup, .idx, .sub).</source>
-        <translation type="unfinished" />
+        <translation>Dit veld accepteert een video of een beeldondertitelbestand (.sup, .idx, .sub).</translation>
     </message>
     <message>
         <source>Read from:</source>
-        <translation type="unfinished" />
+        <translation>Lezen uit:</translation>
     </message>
     <message>
         <source>Read text drawn into the picture, or one of the video's image subtitle tracks.</source>
-        <translation type="unfinished" />
+        <translation>Tekst lezen die in het beeld staat, of een van de beeldondertiteltracks van de video.</translation>
     </message>
     <message>
         <source>Video Folder:</source>
@@ -13441,7 +13444,7 @@ Je geïnstalleerde bronnen en je thema blijven behouden.</translation>
     </message>
     <message>
         <source>Image subtitles are read over the whole frame, so they need no region.</source>
-        <translation type="unfinished" />
+        <translation>Beeldondertitels worden over het hele beeld gelezen en hebben dus geen gebied nodig.</translation>
     </message>
     <message>
         <source>Download OCR models</source>
@@ -13485,7 +13488,7 @@ Je geïnstalleerde bronnen en je thema blijven behouden.</translation>
     </message>
     <message>
         <source>A DVD subtitle needs its .idx and .sub files in the same folder.</source>
-        <translation type="unfinished" />
+        <translation>Een dvd-ondertitel heeft de bijbehorende .idx- en .sub-bestanden in dezelfde map nodig.</translation>
     </message>
     <message>
         <source>Choose a folder before reading subtitles.</source>
@@ -13771,15 +13774,15 @@ Sorteer erop om een lange opname op volgorde door te werken — markeer dan de r
     </message>
     <message>
         <source>Used on the card</source>
-        <translation type="unfinished" />
+        <translation>Gebruikt op de kaart</translation>
     </message>
     <message>
         <source>Back to the first match</source>
-        <translation type="unfinished" />
+        <translation>Terug naar de eerste treffer</translation>
     </message>
     <message>
         <source>Use this dictionary on the card</source>
-        <translation type="unfinished" />
+        <translation>Dit woordenboek op de kaart gebruiken</translation>
     </message>
     <message>
         <source>Sentences (%1)</source>
@@ -14217,7 +14220,7 @@ Sorteer erop om een lange opname op volgorde door te werken — markeer dan de r
     </message>
     <message>
         <source>Wikimedia Commons (native recordings)</source>
-        <translation type="unfinished" />
+        <translation>Wikimedia Commons (opnamen van moedertaalsprekers)</translation>
     </message>
     <message>
         <source>Microsoft Edge read-aloud (synthetic TTS)</source>
@@ -14231,7 +14234,7 @@ Sorteer erop om een lange opname op volgorde door te werken — markeer dan de r
     <name>_BarChart</name>
     <message>
         <source>Cards per period</source>
-        <translation type="unfinished" />
+        <translation>Kaarten per periode</translation>
     </message>
 </context><context>
     <name>_HealthRow</name>
@@ -14253,11 +14256,11 @@ Sorteer erop om een lange opname op volgorde door te werken — markeer dan de r
     <name>_MissingWordsDialog</name>
     <message>
         <source>Missing Words</source>
-        <translation type="unfinished" />
+        <translation>Ontbrekende woorden</translation>
     </message>
     <message>
         <source>Not known yet in ranks %1</source>
-        <translation type="unfinished" />
+        <translation>Nog niet bekend in rangen %1</translation>
     </message>
 </context><context>
     <name>app</name>

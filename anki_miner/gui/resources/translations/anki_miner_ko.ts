@@ -93,59 +93,59 @@
     </message>
     <message>
         <source>Known Words</source>
-        <translation type="unfinished" />
+        <translation>아는 단어</translation>
     </message>
     <message>
         <source>Words Anki Miner treats as known in the current mining language.</source>
-        <translation type="unfinished" />
+        <translation>현재 마이닝 언어에서 Anki Miner가 아는 단어로 취급하는 단어입니다.</translation>
     </message>
     <message>
         <source>Mining History</source>
-        <translation type="unfinished" />
+        <translation>마이닝 기록</translation>
     </message>
     <message>
         <source>History period</source>
-        <translation type="unfinished" />
+        <translation>기록 기간</translation>
     </message>
     <message>
         <source>All time</source>
-        <translation type="unfinished" />
+        <translation>전체 기간</translation>
     </message>
     <message>
         <source>Last 7 days</source>
-        <translation type="unfinished" />
+        <translation>최근 7일</translation>
     </message>
     <message>
         <source>Last 30 days</source>
-        <translation type="unfinished" />
+        <translation>최근 30일</translation>
     </message>
     <message>
         <source>Last 12 months</source>
-        <translation type="unfinished" />
+        <translation>최근 12개월</translation>
     </message>
     <message>
         <source>History grouping</source>
-        <translation type="unfinished" />
+        <translation>기록 그룹화</translation>
     </message>
     <message>
         <source>Each run</source>
-        <translation type="unfinished" />
+        <translation>실행별</translation>
     </message>
     <message>
         <source>By day</source>
-        <translation type="unfinished" />
+        <translation>일별</translation>
     </message>
     <message>
         <source>By week</source>
-        <translation type="unfinished" />
+        <translation>주별</translation>
     </message>
     <message>
         <source>By month</source>
-        <translation type="unfinished" />
+        <translation>월별</translation>
     </message>
     <message>
         <source>Export CSV…</source>
-        <translation type="unfinished" />
+        <translation>CSV 내보내기…</translation>
     </message>
     <message>
         <source>No sessions yet — process an episode to see your history.</source>
@@ -177,7 +177,7 @@
     </message>
     <message>
         <source>Period</source>
-        <translation type="unfinished" />
+        <translation>기간</translation>
     </message>
     <message>
         <source>Show in Anki</source>
@@ -185,7 +185,7 @@
     </message>
     <message>
         <source>Delete this run's cards…</source>
-        <translation type="unfinished" />
+        <translation>이 실행의 카드 삭제…</translation>
     </message>
     <message>
         <source>Series Difficulty Ranking</source>
@@ -217,11 +217,11 @@
     </message>
     <message>
         <source>Frequency Coverage</source>
-        <translation type="unfinished" />
+        <translation>빈도 커버리지</translation>
     </message>
     <message>
         <source>Rank band</source>
-        <translation type="unfinished" />
+        <translation>순위 구간</translation>
     </message>
     <message>
         <source>Known</source>
@@ -229,15 +229,15 @@
     </message>
     <message>
         <source>Not known</source>
-        <translation type="unfinished" />
+        <translation>모름</translation>
     </message>
     <message>
         <source>Known %</source>
-        <translation type="unfinished" />
+        <translation>아는 단어 %</translation>
     </message>
     <message>
         <source>Show missing words</source>
-        <translation type="unfinished" />
+        <translation>모르는 단어 보기</translation>
     </message>
     <message>
         <source>Milestones</source>
@@ -265,93 +265,95 @@
     </message>
     <message>
         <source>No runs in this period.</source>
-        <translation type="unfinished" />
+        <translation>이 기간에는 실행이 없습니다.</translation>
     </message>
     <message>
         <source>Export Mining History</source>
-        <translation type="unfinished" />
+        <translation>마이닝 기록 내보내기</translation>
     </message>
     <message>
         <source>CSV Files (*.csv);;All Files (*)</source>
-        <translation type="unfinished" />
+        <translation>CSV 파일 (*.csv);;모든 파일 (*)</translation>
     </message>
     <message>
         <source>History saved to %1.</source>
-        <translation type="unfinished" />
+        <translation>기록을 %1에 저장했습니다.</translation>
     </message>
     <message>
         <source>The history could not be exported.</source>
-        <translation type="unfinished" />
+        <translation>기록을 내보낼 수 없습니다.</translation>
     </message>
     <message>
         <source>%1 (cards deleted: %2)</source>
-        <translation type="unfinished" />
+        <translation>%1 (삭제된 카드: %2)</translation>
     </message>
     <message>
         <source>Select one run in the table.</source>
-        <translation type="unfinished" />
+        <translation>표에서 실행을 하나 선택하세요.</translation>
     </message>
     <message>
         <source>This run's cards were deleted: %1.</source>
-        <translation type="unfinished" />
+        <translation>이 실행의 카드가 삭제되었습니다: %1.</translation>
     </message>
     <message>
         <source>Anki Miner has no card list for this run: it was mined before this version, or it made no cards.</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner에 이 실행의 카드 목록이 없습니다. 이 버전 이전에 마이닝했거나 카드를 만들지 않은 실행입니다.</translation>
     </message>
     <message>
         <source>Anki Miner couldn't open this run's cards in Anki.</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner가 이 실행의 카드를 Anki에서 열 수 없습니다.</translation>
     </message>
     <message>
         <source>None of this run's cards are in Anki any more.</source>
-        <translation type="unfinished" />
+        <translation>이 실행의 카드가 더 이상 Anki에 없습니다.</translation>
     </message>
     <message>
         <source>Delete This Run's Cards</source>
-        <translation type="unfinished" />
+        <translation>이 실행의 카드 삭제</translation>
     </message>
     <message>
         <source>Cards this run added that are still in Anki: %1. Reviewed at least once: %2.
 
 Delete them from Anki? Their review history is deleted with them. This cannot be undone.</source>
-        <translation type="unfinished" />
+        <translation>이 실행으로 추가되어 아직 Anki에 있는 카드: %1. 한 번 이상 복습한 카드: %2.
+
+Anki에서 삭제하시겠습니까? 복습 기록도 함께 삭제됩니다. 이 작업은 되돌릴 수 없습니다.</translation>
     </message>
     <message>
         <source>Cards deleted from Anki: %1.</source>
-        <translation type="unfinished" />
+        <translation>Anki에서 삭제한 카드: %1.</translation>
     </message>
     <message>
         <source>This run's cards could not be deleted.</source>
-        <translation type="unfinished" />
+        <translation>이 실행의 카드를 삭제할 수 없습니다.</translation>
     </message>
     <message>
         <source>Known words could not be counted.</source>
-        <translation type="unfinished" />
+        <translation>아는 단어를 셀 수 없습니다.</translation>
     </message>
     <message>
         <source>Words Anki Miner treats as known in %1.</source>
-        <translation type="unfinished" />
+        <translation>%1에서 Anki Miner가 아는 단어로 취급하는 단어입니다.</translation>
     </message>
     <message>
         <source>Change since %1: %2</source>
-        <translation type="unfinished" />
+        <translation>%1 이후 변화: %2</translation>
     </message>
     <message>
         <source>Last counted on %1; Anki was not reachable.</source>
-        <translation type="unfinished" />
+        <translation>마지막 집계: %1. Anki에 연결할 수 없었습니다.</translation>
     </message>
     <message>
         <source>Last counted on %1.</source>
-        <translation type="unfinished" />
+        <translation>마지막 집계: %1.</translation>
     </message>
     <message>
         <source>Coverage needs Anki running: it compares the list with your cards.</source>
-        <translation type="unfinished" />
+        <translation>커버리지를 계산하려면 Anki가 실행 중이어야 합니다. 목록을 내 카드와 비교하기 때문입니다.</translation>
     </message>
     <message>
         <source>How many of the most frequent words in %1 you already know.</source>
-        <translation type="unfinished" />
+        <translation>%1에서 가장 자주 쓰이는 단어 중 이미 아는 단어 수입니다.</translation>
     </message>
     <message>
         <source>%1 mining sessions completed</source>
@@ -759,7 +761,7 @@ Delete them from Anki? Their review history is deleted with them. This cannot be
     </message>
     <message>
         <source>{series}, {episode} and {volume} become each card's show, episode or book volume, for example mined::{series}::{episode}.</source>
-        <translation type="unfinished" />
+        <translation>{series}, {episode}, {volume}은 각 카드의 작품, 에피소드, 책 권수로 바뀝니다. 예: mined::{series}::{episode}</translation>
     </message>
     <message>
         <source>Refresh</source>
@@ -787,11 +789,11 @@ Delete them from Anki? Their review history is deleted with them. This cannot be
     </message>
     <message>
         <source>Sync Anki after mining</source>
-        <translation type="unfinished" />
+        <translation>마이닝 후 Anki 동기화</translation>
     </message>
     <message>
         <source>After a run that added cards, ask Anki to sync with AnkiWeb. If the sync fails, the Activity Log says so and the cards stay added.</source>
-        <translation type="unfinished" />
+        <translation>카드를 추가한 실행 후 Anki에 AnkiWeb 동기화를 요청합니다. 동기화에 실패하면 활동 로그에 표시되며 카드는 추가된 상태로 남습니다.</translation>
     </message>
     <message>
         <source>AnkiConnect URL</source>
@@ -803,7 +805,7 @@ Delete them from Anki? Their review history is deleted with them. This cannot be
     </message>
     <message>
         <source>If AnkiConnect asks for an API key, add it to the address: http://127.0.0.1:8765/?key=YOUR_KEY</source>
-        <translation type="unfinished" />
+        <translation>AnkiConnect가 API 키를 요구하면 주소에 추가하세요: http://127.0.0.1:8765/?key=YOUR_KEY</translation>
     </message>
     <message>
         <source>Fill in automatically</source>
@@ -1515,7 +1517,7 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
     </message>
     <message>
         <source>Wikimedia Commons (native recordings)</source>
-        <translation type="unfinished" />
+        <translation>Wikimedia Commons (원어민 녹음)</translation>
     </message>
     <message>
         <source>Custom JSON</source>
@@ -2083,7 +2085,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Every audio file in the folder, in file-name order, one .srt each. A folder of book folders (each with its EPUB and audio) syncs every book in turn.</source>
-        <translation type="unfinished" />
+        <translation>폴더의 모든 오디오 파일을 파일 이름 순서대로 각각 .srt 하나로 만듭니다. 책 폴더(각각 EPUB과 오디오 포함)를 담은 폴더를 고르면 모든 책을 차례로 싱크합니다.</translation>
     </message>
     <message>
         <source>EPUB or Text File:</source>
@@ -2111,7 +2113,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Sentences: how many of the book's sentences, from the first one found to the last, got a subtitle. Audio: how much of the narration matched the book. Grade: A from 90% on both, B from 75%, C from 50%, else D.</source>
-        <translation type="unfinished" />
+        <translation>문장: 처음 찾은 문장부터 마지막 문장까지 책의 문장 중 자막이 붙은 비율. 오디오: 내레이션 중 책과 일치한 비율. 등급: 둘 다 90% 이상이면 A, 75% 이상이면 B, 50% 이상이면 C, 그 외는 D.</translation>
     </message>
     <message>
         <source>Output</source>
@@ -2175,7 +2177,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>No audio files were found in that folder, and no book folders (each with its book and audio).</source>
-        <translation type="unfinished" />
+        <translation>해당 폴더에서 오디오 파일도, 책 폴더(각각 책과 오디오 포함)도 찾지 못했습니다.</translation>
     </message>
     <message>
         <source>That folder could not be scanned.</source>
@@ -2183,15 +2185,15 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Skipped folder %1: no audio files</source>
-        <translation type="unfinished" />
+        <translation>폴더 %1 건너뜀: 오디오 파일 없음</translation>
     </message>
     <message>
         <source>Skipped folder %1: no .epub or .txt book</source>
-        <translation type="unfinished" />
+        <translation>폴더 %1 건너뜀: .epub 또는 .txt 책 없음</translation>
     </message>
     <message>
         <source>Skipped folder %1: more than one book</source>
-        <translation type="unfinished" />
+        <translation>폴더 %1 건너뜀: 책이 두 권 이상임</translation>
     </message>
     <message>
         <source>Output folder is not writable.</source>
@@ -2211,11 +2213,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Books: %1 — %2</source>
-        <translation type="unfinished" />
+        <translation>책: %1 — %2</translation>
     </message>
     <message>
         <source>%1: sentences %2%, audio %3% — grade %4</source>
-        <translation type="unfinished" />
+        <translation>%1: 문장 %2%, 오디오 %3% — 등급 %4</translation>
     </message>
     <message>
         <source>Syncing file %1 of %2</source>
@@ -2229,11 +2231,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>%1 could not be loaded: %2</source>
-        <translation type="unfinished" />
+        <translation>%1을(를) 불러올 수 없습니다: %2</translation>
     </message>
     <message>
         <source>Its book could not be loaded</source>
-        <translation type="unfinished" />
+        <translation>해당 책을 불러올 수 없습니다</translation>
     </message>
     <message>
         <source>Skipped, exists</source>
@@ -2253,11 +2255,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Reusing the saved transcript</source>
-        <translation type="unfinished" />
+        <translation>저장된 전사본 재사용 중</translation>
     </message>
     <message>
         <source>Found sentence %1 again later in the audio; timed it out of book order</source>
-        <translation type="unfinished" />
+        <translation>문장 %1을(를) 오디오 뒷부분에서 다시 찾았습니다. 책 순서와 다르게 타이밍을 맞췄습니다</translation>
     </message>
     <message>
         <source>%1 sentences timed, %2 in between had no audio</source>
@@ -2339,7 +2341,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Approve or reject each word, pick its sentence and scene, trim its audio, mark words known, and fix a mistranscribed sentence or swap the word to mine -- before any card is created. When a word has entries in several dictionaries, choose which one the card's Definition uses.</source>
-        <translation type="unfinished" />
+        <translation>카드를 만들기 전에 각 단어를 승인하거나 거부하고, 문장과 장면을 고르고, 오디오를 다듬고, 단어를 아는 단어로 표시하고, 잘못 전사된 문장을 고치거나 마이닝할 단어를 바꿀 수 있습니다. 한 단어가 여러 사전에 항목이 있으면 카드의 정의에 쓸 사전을 고를 수 있습니다.</translation>
     </message>
     <message>
         <source>Secondary-language subtitles</source>
@@ -2347,7 +2349,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. Leave the file empty and Anki Miner picks a translation itself: a subtitle named for the video, or a text track inside it, in your interface language or else English. The Activity Log names the track it used. On Video → Batch, point it at a folder of translation subtitles instead and they pair to the videos by episode number. Turn it on under Settings → Sentences.</source>
-        <translation type="unfinished" />
+        <translation>마이닝 언어 자막 옆에 내 언어로 된 두 번째 자막 파일을 불러옵니다. 단어 큐레이터 미리 보기에서 줄 아래에 표시되며 번역 필드에 저장할 수 있습니다. 파일을 비워 두면 Anki Miner가 직접 번역을 고릅니다. 동영상 이름과 같은 자막이나 동영상 안의 텍스트 트랙 중 인터페이스 언어로 된 것, 없으면 영어로 된 것입니다. 사용한 트랙은 활동 로그에 표시됩니다. 동영상 → 일괄에서는 대신 번역 자막 폴더를 지정하면 에피소드 번호로 동영상과 짝지어집니다. 설정 → 문장에서 켭니다.</translation>
     </message>
     <message>
         <source>Build a deck by coverage %</source>
@@ -2383,11 +2385,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Mine songs from .lrc lyrics</source>
-        <translation type="unfinished" />
+        <translation>.lrc 가사로 노래 마이닝</translation>
     </message>
     <message>
         <source>Use a .lrc lyrics file wherever a subtitle file goes. Each line lasts until the next one starts. Pair a song with its lyrics on Audiobooks, condense it in Condense, or mine a music video on Video.</source>
-        <translation type="unfinished" />
+        <translation>자막 파일을 쓰는 곳이라면 어디서든 .lrc 가사 파일을 쓸 수 있습니다. 각 줄은 다음 줄이 시작될 때까지 이어집니다. 오디오북에서 노래와 가사를 짝짓거나, 압축에서 압축하거나, 동영상에서 뮤직비디오를 마이닝하세요.</translation>
     </message>
     <message>
         <source>Mine from manga</source>
@@ -2403,23 +2405,23 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Mine vocabulary from novels and other text (EPUB, PDF, Aozora, plain text).</source>
-        <translation type="unfinished" />
+        <translation>소설 등 텍스트(EPUB, PDF, 아오조라 문고, 일반 텍스트)에서 어휘를 마이닝합니다.</translation>
     </message>
     <message>
         <source>Readings from a book's own furigana</source>
-        <translation type="unfinished" />
+        <translation>책에 달린 후리가나에서 읽는 법 가져오기</translation>
     </message>
     <message>
         <source>When a Japanese EPUB prints furigana over a word, the card takes that reading instead of the parser's guess.</source>
-        <translation type="unfinished" />
+        <translation>일본어 EPUB에서 단어 위에 후리가나가 달려 있으면 카드는 파서의 추측 대신 그 읽는 법을 사용합니다.</translation>
     </message>
     <message>
         <source>Mine pasted text or a web article</source>
-        <translation type="unfinished" />
+        <translation>붙여 넣은 텍스트나 웹 기사 마이닝</translation>
     </message>
     <message>
         <source>Paste text in your mining language, or fetch a web article by its address, and mine it into Anki cards. A fetched article's cards name the page and site as their source.</source>
-        <translation type="unfinished" />
+        <translation>마이닝 언어로 된 텍스트를 붙여 넣거나 주소로 웹 기사를 받아와 Anki 카드로 마이닝합니다. 받아온 기사의 카드에는 출처로 페이지와 사이트 이름이 들어갑니다.</translation>
     </message>
     <message>
         <source>Mine subtitle files without video</source>
@@ -2443,7 +2445,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Create subtitles from audio with a local Whisper model -- as a standalone tool. Long lines are split at sentence ends, and a second run on the same file reuses the saved transcript.</source>
-        <translation type="unfinished" />
+        <translation>로컬 Whisper 모델로 오디오에서 자막을 만드는 독립 도구입니다. 긴 줄은 문장 끝에서 나뉘며, 같은 파일을 다시 실행하면 저장된 전사본을 재사용합니다.</translation>
     </message>
     <message>
         <source>Re-time existing subtitles</source>
@@ -2503,35 +2505,35 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Browse your whole mining history</source>
-        <translation type="unfinished" />
+        <translation>전체 마이닝 기록 둘러보기</translation>
     </message>
     <message>
         <source>Analytics lists every run you have mined. Pick a period, group the runs by day, week or month, see the cards per period in a chart, and export the table as a CSV file.</source>
-        <translation type="unfinished" />
+        <translation>분석에 지금까지 마이닝한 모든 실행이 표시됩니다. 기간을 고르고, 실행을 일·주·월별로 묶고, 기간별 카드 수를 차트로 보고, 표를 CSV 파일로 내보낼 수 있습니다.</translation>
     </message>
     <message>
         <source>Show or delete a past run's cards</source>
-        <translation type="unfinished" />
+        <translation>지난 실행의 카드 보기 또는 삭제</translation>
     </message>
     <message>
         <source>Select a run in Analytics → Mining History to open its cards in Anki's browser or to delete them. The confirmation says how many of its cards are still in Anki and how many you have reviewed. Runs mined before this version have no card list.</source>
-        <translation type="unfinished" />
+        <translation>분석 → 마이닝 기록에서 실행을 선택하면 해당 카드를 Anki 탐색기에서 열거나 삭제할 수 있습니다. 확인 창에는 그중 아직 Anki에 있는 카드 수와 복습한 카드 수가 표시됩니다. 이 버전 이전에 마이닝한 실행에는 카드 목록이 없습니다.</translation>
     </message>
     <message>
         <source>Track how many words you know</source>
-        <translation type="unfinished" />
+        <translation>아는 단어 수 추적</translation>
     </message>
     <message>
         <source>The Known Words card on Analytics counts the words Anki Miner treats as known in the current mining language and shows how that number changed. It is counted while Anki is running, at most once every ten minutes.</source>
-        <translation type="unfinished" />
+        <translation>분석의 아는 단어 카드는 현재 마이닝 언어에서 Anki Miner가 아는 단어로 취급하는 단어를 세고 그 수의 변화를 보여 줍니다. Anki가 실행 중일 때 최대 10분에 한 번 집계합니다.</translation>
     </message>
     <message>
         <source>See how much of a frequency list you know</source>
-        <translation type="unfinished" />
+        <translation>빈도 목록 중 아는 비율 확인</translation>
     </message>
     <message>
         <source>Analytics → Frequency Coverage counts the words you know in ranks 1–1,000 up to 20,000 of your first frequency list with numeric ranks, and lists the missing words of each band. It needs Anki running.</source>
-        <translation type="unfinished" />
+        <translation>분석 → 빈도 커버리지는 숫자 순위가 있는 첫 번째 빈도 목록의 순위 1–1,000부터 20,000까지에서 아는 단어를 세고, 구간별로 모르는 단어를 보여 줍니다. Anki가 실행 중이어야 합니다.</translation>
     </message>
     <message>
         <source>Reset mining statistics</source>
@@ -2607,11 +2609,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Count a word as known only after its card has been reviewed</source>
-        <translation type="unfinished" />
+        <translation>카드를 복습한 후에만 단어를 아는 단어로 계산</translation>
     </message>
     <message>
         <source>Readability and the i+1 sentence rule then count a word as known only when its Anki card has been reviewed at least once. Mining still skips every word that already has a card.</source>
-        <translation type="unfinished" />
+        <translation>이 옵션을 켜면 난이도와 i+1 문장 규칙은 Anki 카드를 한 번 이상 복습한 단어만 아는 단어로 계산합니다. 마이닝은 여전히 이미 카드가 있는 단어를 모두 건너뜁니다.</translation>
     </message>
     <message>
         <source>Exclude specific Anki decks from 'known'</source>
@@ -2631,27 +2633,27 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Browse every known word</source>
-        <translation type="unfinished" />
+        <translation>모든 아는 단어 둘러보기</translation>
     </message>
     <message>
         <source>Manage Known Words lists every word this language counts as known, with where it came from (added by you, mined by Anki Miner, from Anki) and the date it was added. Search it, filter it by source, and remove words you added. Words from Anki come back on the next sync.</source>
-        <translation type="unfinished" />
+        <translation>아는 단어 관리에는 이 언어에서 아는 단어로 계산하는 모든 단어가 출처(직접 추가, Anki Miner로 마이닝, Anki에서)와 추가 날짜와 함께 표시됩니다. 검색하고, 출처로 거르고, 직접 추가한 단어를 제거할 수 있습니다. Anki에서 온 단어는 다음 동기화 때 돌아옵니다.</translation>
     </message>
     <message>
         <source>Import known words from Kindle, Lute or LWT</source>
-        <translation type="unfinished" />
+        <translation>Kindle, Lute, LWT에서 아는 단어 가져오기</translation>
     </message>
     <message>
         <source>In Manage Known Words, Import… also reads a Kindle Vocabulary Builder file (vocab.db; words marked mastered) and Lute or LWT term exports (status 5 and 99).</source>
-        <translation type="unfinished" />
+        <translation>아는 단어 관리의 가져오기…는 Kindle Vocabulary Builder 파일(vocab.db, 숙지로 표시된 단어)과 Lute 또는 LWT 용어 내보내기(상태 5와 99)도 읽습니다.</translation>
     </message>
     <message>
         <source>Export words to a CSV file</source>
-        <translation type="unfinished" />
+        <translation>단어를 CSV 파일로 내보내기</translation>
     </message>
     <message>
         <source>Export words… saves the list you are looking at in Manage Known Words, or a finished run's mined and not-mined words with the reason each was skipped, as a CSV file.</source>
-        <translation type="unfinished" />
+        <translation>단어 내보내기…는 아는 단어 관리에서 보고 있는 목록, 또는 완료된 실행의 마이닝한 단어와 마이닝하지 않은 단어(각각 건너뛴 이유 포함)를 CSV 파일로 저장합니다.</translation>
     </message>
     <message>
         <source>Exclude kana-only words</source>
@@ -2683,23 +2685,23 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Mine at most one word from each example sentence. A word whose sentence is taken moves to another line it appears on, and is skipped only when every one of its lines is taken.</source>
-        <translation type="unfinished" />
+        <translation>예문 하나에서 최대 한 단어만 마이닝합니다. 문장이 이미 사용된 단어는 그 단어가 나오는 다른 줄로 옮겨지며, 모든 줄이 사용된 경우에만 건너뜁니다.</translation>
     </message>
     <message>
         <source>Pick the clearest sentence</source>
-        <translation type="unfinished" />
+        <translation>가장 명확한 문장 고르기</translation>
     </message>
     <message>
         <source>When a word appears on several lines, its card uses the line with the fewest unknown words and a comfortable length instead of the first one. The Word Curator still lists every line.</source>
-        <translation type="unfinished" />
+        <translation>단어가 여러 줄에 나오면 카드는 첫 번째 줄 대신 모르는 단어가 가장 적고 길이가 적당한 줄을 사용합니다. 단어 큐레이터에는 여전히 모든 줄이 표시됩니다.</translation>
     </message>
     <message>
         <source>Skip openings, endings and signs</source>
-        <translation type="unfinished" />
+        <translation>오프닝, 엔딩, 화면 문자 건너뛰기</translation>
     </message>
     <message>
         <source>Leave opening and ending songs, previews and on-screen signs out of mining, Condense and Readability: lines styled as songs or signs, and lines inside a video's opening, ending and preview chapters. On by default for new installs; turn it off in Settings → Sentences.</source>
-        <translation type="unfinished" />
+        <translation>오프닝·엔딩 곡, 예고편, 화면 문자를 마이닝, 압축, 난이도에서 제외합니다. 노래나 화면 문자로 스타일이 지정된 줄과 동영상의 오프닝, 엔딩, 예고편 챕터 안의 줄이 대상입니다. 새로 설치하면 기본으로 켜져 있으며, 설정 → 문장에서 끌 수 있습니다.</translation>
     </message>
     <message>
         <source>Strip junk from subtitles (regex)</source>
@@ -2767,11 +2769,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Import a dictionary file</source>
-        <translation type="unfinished" />
+        <translation>사전 파일 가져오기</translation>
     </message>
     <message>
         <source>Add a Yomitan zip, a StarDict dictionary (its archive or its .ifo file) or a CSV/TSV word list (term and definition, or term, reading and definition) as a definition source.</source>
-        <translation type="unfinished" />
+        <translation>Yomitan zip, StarDict 사전(아카이브 또는 .ifo 파일), CSV/TSV 단어 목록(단어와 정의, 또는 단어, 읽는 법, 정의)을 정의 소스로 추가합니다.</translation>
     </message>
     <message>
         <source>Keep dictionaries up to date</source>
@@ -2843,7 +2845,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Attach word audio to cards from audio packs, JPod101 (Japanese), Google text-to-speech, or Microsoft Edge text-to-speech (every language). Wikimedia Commons plays recordings of real speakers from Wiktionary and Lingua Libre, tried before Google TTS in most languages.</source>
-        <translation type="unfinished" />
+        <translation>오디오 팩, JPod101(일본어), Google 텍스트 음성 변환, Microsoft Edge 텍스트 음성 변환(모든 언어)에서 단어 오디오를 카드에 붙입니다. Wikimedia Commons는 Wiktionary와 Lingua Libre의 실제 화자 녹음을 재생하며, 대부분의 언어에서 Google TTS보다 먼저 시도합니다.</translation>
     </message>
     <message>
         <source>Import local audio packs</source>
@@ -2859,7 +2861,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Extract the spoken sentence as an audio clip; tune its format and bitrate. Even out audio volume brings sentence clips and condensed audio to one loudness and fades each clip in and out.</source>
-        <translation type="unfinished" />
+        <translation>말한 문장을 오디오 클립으로 추출하고 형식과 비트레이트를 조정합니다. 오디오 볼륨 고르게 맞추기는 문장 클립과 압축 오디오를 같은 음량으로 맞추고 각 클립에 페이드 인·아웃을 적용합니다.</translation>
     </message>
     <message>
         <source>Sentence audio for reading (TTS)</source>
@@ -2883,7 +2885,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Capture a still frame from the scene to put on the card. Crop manga pictures to the speech bubble shows the bubble and the art around it instead of the whole page.</source>
-        <translation type="unfinished" />
+        <translation>장면에서 정지 화면을 캡처해 카드에 넣습니다. 만화 그림을 말풍선에 맞춰 자르기를 켜면 페이지 전체 대신 말풍선과 그 주변 그림을 보여 줍니다.</translation>
     </message>
     <message>
         <source>Animated clips (GIF/WebP)</source>
@@ -2963,7 +2965,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Add tags to every note Anki Miner creates. Card tags can use {series}, {episode} and {volume}. Each card gets its own show, episode or book volume, for example mined::{series}::{episode} gives mined::Frieren::03.</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner가 만드는 모든 노트에 태그를 추가합니다. 카드 태그에는 {series}, {episode}, {volume}을 쓸 수 있습니다. 각 카드마다 해당 작품, 에피소드, 책 권수가 들어갑니다. 예를 들어 mined::{series}::{episode}는 mined::Frieren::03이 됩니다.</translation>
     </message>
     <message>
         <source>Connect to Anki (AnkiConnect)</source>
@@ -2971,15 +2973,15 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Set the AnkiConnect address; Refresh re-checks the connection to your running Anki. If AnkiConnect is set up with an API key, add it to the address: http://127.0.0.1:8765/?key=YOUR_KEY. Anki Miner sends it with every request and never writes it to the log.</source>
-        <translation type="unfinished" />
+        <translation>AnkiConnect 주소를 설정합니다. 새로 고침은 실행 중인 Anki와의 연결을 다시 확인합니다. AnkiConnect에 API 키가 설정되어 있으면 주소에 추가하세요: http://127.0.0.1:8765/?key=YOUR_KEY. Anki Miner는 모든 요청에 키를 보내며 로그에는 절대 기록하지 않습니다.</translation>
     </message>
     <message>
         <source>Sync Anki after mining</source>
-        <translation type="unfinished" />
+        <translation>마이닝 후 Anki 동기화</translation>
     </message>
     <message>
         <source>After a run that added cards, Anki Miner asks Anki to sync with AnkiWeb. If the sync fails, the Activity Log says so and the cards stay added.</source>
-        <translation type="unfinished" />
+        <translation>카드를 추가한 실행 후 Anki Miner가 Anki에 AnkiWeb 동기화를 요청합니다. 동기화에 실패하면 활동 로그에 표시되며 카드는 추가된 상태로 남습니다.</translation>
     </message>
     <message>
         <source>Fill in field mappings automatically</source>
@@ -3067,7 +3069,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Draw a box where a video's on-screen dialogue appears and Anki Miner reads it into a timed .srt that Video → Single can mine. Made for game longplays without commentary. It also reads image subtitles (Blu-ray .sup, DVD .idx/.sub, or an image track inside a video) without a box. Lines with none of your mining language's letters are left out. Download the OCR engine from the setup card on Utilities → Video OCR.</source>
-        <translation type="unfinished" />
+        <translation>동영상에서 화면 대사가 나오는 곳에 상자를 그리면 Anki Miner가 이를 읽어 동영상 → 단일에서 마이닝할 수 있는 타이밍 있는 .srt로 만듭니다. 해설 없는 게임 플레이 영상용입니다. 이미지 자막(Blu-ray .sup, DVD .idx/.sub, 동영상 안의 이미지 트랙)도 상자 없이 읽습니다. 마이닝 언어의 문자가 하나도 없는 줄은 제외됩니다. OCR 엔진은 유틸리티 → 동영상 OCR의 설정 카드에서 다운로드하세요.</translation>
     </message>
     <message>
         <source>Sync an audiobook to its EPUB</source>
@@ -3075,23 +3077,23 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Transcribe an audiobook and time the book's own sentences to it, writing an .srt the Audiobook tab, Reading → Subtitle Files or a reader can use. A second run on the same audio reuses the saved transcript instead of transcribing again.</source>
-        <translation type="unfinished" />
+        <translation>오디오북을 전사하고 책의 문장에 타이밍을 맞춰 오디오북 탭, 읽기 → 자막 파일 또는 리더에서 쓸 수 있는 .srt를 만듭니다. 같은 오디오를 다시 실행하면 다시 전사하지 않고 저장된 전사본을 재사용합니다.</translation>
     </message>
     <message>
         <source>Sync a shelf of audiobooks in one run</source>
-        <translation type="unfinished" />
+        <translation>오디오북 여러 권을 한 번에 싱크</translation>
     </message>
     <message>
         <source>In Utilities → Audiobook Sync, choose Folder and pick a folder that holds one folder per book, each with its EPUB (or text file) and its audio files. The books sync one after another, in name order.</source>
-        <translation type="unfinished" />
+        <translation>유틸리티 → 오디오북 싱크에서 폴더를 선택하고, 책마다 폴더 하나(각각 EPUB 또는 텍스트 파일과 오디오 파일 포함)가 들어 있는 폴더를 고르세요. 책은 이름 순서대로 하나씩 싱크됩니다.</translation>
     </message>
     <message>
         <source>See how well an audiobook synced</source>
-        <translation type="unfinished" />
+        <translation>오디오북 싱크 품질 확인</translation>
     </message>
     <message>
         <source>After Audiobook Sync, each book gets a line under the Book card: how many of its sentences got a subtitle, how much of the narration matched the book, and a grade from A to D. Chapters read out of book order are found too; sentences the narrator skipped never get a subtitle.</source>
-        <translation type="unfinished" />
+        <translation>오디오북 싱크 후 책 카드 아래에 책마다 한 줄이 표시됩니다. 자막이 붙은 문장 수, 내레이션 중 책과 일치한 비율, A~D 등급입니다. 책 순서와 다르게 낭독된 챕터도 찾아내며, 내레이터가 건너뛴 문장에는 자막이 붙지 않습니다.</translation>
     </message>
     <message>
         <source>Check how much of a show, book or manga you can read</source>
@@ -3175,11 +3177,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Restore an automatic backup</source>
-        <translation type="unfinished" />
+        <translation>자동 백업 복원</translation>
     </message>
     <message>
         <source>Anki Miner backs up your known words, statistics, settings and profiles once a day when it starts, and keeps the last 7 days. Settings → General → Restore a backup… puts one back the next time the app starts.</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner는 시작할 때 하루에 한 번 아는 단어, 통계, 설정, 프로필을 백업하고 최근 7일 치를 보관합니다. 설정 → 일반 → 백업 복원…으로 고른 백업은 다음에 앱을 시작할 때 복원됩니다.</translation>
     </message>
     <message>
         <source>Undo a mining run</source>
@@ -3191,11 +3193,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Export a run's words</source>
-        <translation type="unfinished" />
+        <translation>실행의 단어 내보내기</translation>
     </message>
     <message>
         <source>Press View details on a run's result line, then Export words… to save the run's mined and not-mined words, with the reason each was skipped, as a CSV file.</source>
-        <translation type="unfinished" />
+        <translation>실행 결과 줄에서 자세히 보기를 누른 다음 단어 내보내기…를 누르면 실행의 마이닝한 단어와 마이닝하지 않은 단어를 각각 건너뛴 이유와 함께 CSV 파일로 저장합니다.</translation>
     </message>
     <message>
         <source>Keyboard shortcuts</source>
@@ -4567,11 +4569,11 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
     </message>
     <message>
         <source>Choose dictionary files</source>
-        <translation type="unfinished" />
+        <translation>사전 파일 선택</translation>
     </message>
     <message>
         <source>Dictionaries (*.zip *.ifo *.tar.gz *.tgz *.tar.bz2 *.tar.xz *.csv *.tsv)</source>
-        <translation type="unfinished" />
+        <translation>사전 (*.zip *.ifo *.tar.gz *.tgz *.tar.bz2 *.tar.xz *.csv *.tsv)</translation>
     </message>
     <message>
         <source>Dictionary %1 of %2: %3</source>
@@ -5405,8 +5407,8 @@ No files on disk are deleted.</source>
     </message>
     <message numerus="yes">
         <source>Skipping lines in %n opening, ending or preview chapter(s)</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>오프닝, 엔딩, 예고편 챕터 %n개 안의 줄을 건너뛰는 중</numerusform>
         </translation>
     </message>
     <message>
@@ -5453,7 +5455,7 @@ No files on disk are deleted.</source>
     </message>
     <message>
         <source>Only %1% of the first %2 words have an entry in your dictionaries. Is this file in the language you are mining?</source>
-        <translation type="unfinished" />
+        <translation>처음 %2개 단어 중 사전에 항목이 있는 단어는 %1%뿐입니다. 이 파일이 마이닝 중인 언어로 되어 있나요?</translation>
     </message>
     <message>
         <source>Frequency cutoff ignored — no ranked frequency source is loaded (Settings → Frequency).</source>
@@ -5561,11 +5563,11 @@ No files on disk are deleted.</source>
     </message>
     <message>
         <source>Translation subtitles picked automatically: %1</source>
-        <translation type="unfinished" />
+        <translation>번역 자막 자동 선택: %1</translation>
     </message>
     <message>
         <source>Translation subtitles picked automatically: embedded track %1</source>
-        <translation type="unfinished" />
+        <translation>번역 자막 자동 선택: 내장 트랙 %1</translation>
     </message>
     <message>
         <source>Could not extract media for any word — no cards created</source>
@@ -5833,11 +5835,11 @@ No files on disk are deleted.</source>
     </message>
     <message>
         <source>Count a word as known only after its card has been reviewed</source>
-        <translation type="unfinished" />
+        <translation>카드를 복습한 후에만 단어를 아는 단어로 계산</translation>
     </message>
     <message>
         <source>Readability and the i+1 sentence rule count a word as known only when its Anki card has been reviewed at least once. Mining still skips every word that already has a card.</source>
-        <translation type="unfinished" />
+        <translation>난이도와 i+1 문장 규칙은 Anki 카드를 한 번 이상 복습한 단어만 아는 단어로 계산합니다. 마이닝은 여전히 이미 카드가 있는 단어를 모두 건너뜁니다.</translation>
     </message>
     <message>
         <source>Keep words known after their cards are deleted</source>
@@ -6499,15 +6501,15 @@ No index files are deleted.</source>
     <name>KnownWordsManagerDialog</name>
     <message>
         <source>Word</source>
-        <translation type="unfinished" />
+        <translation>단어</translation>
     </message>
     <message>
         <source>Source</source>
-        <translation type="unfinished" />
+        <translation>출처</translation>
     </message>
     <message>
         <source>Added</source>
-        <translation type="unfinished" />
+        <translation>추가한 날짜</translation>
     </message>
     <message>
         <source>Manage Known Words</source>
@@ -6519,7 +6521,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Every word this language counts as known, and where it came from. Words you added from the Word Curator stay known on every run and across cache rebuilds.</source>
-        <translation type="unfinished" />
+        <translation>이 언어에서 아는 단어로 계산하는 모든 단어와 그 출처입니다. 단어 큐레이터에서 추가한 단어는 모든 실행에서, 그리고 캐시를 다시 만들어도 아는 단어로 유지됩니다.</translation>
     </message>
     <message>
         <source>Decks this language's known-words scan skips: %1. Change them in Settings → Word Filters.</source>
@@ -6531,15 +6533,15 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Added by you</source>
-        <translation type="unfinished" />
+        <translation>직접 추가</translation>
     </message>
     <message>
         <source>Mined by Anki Miner</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner로 마이닝</translation>
     </message>
     <message>
         <source>From Anki</source>
-        <translation type="unfinished" />
+        <translation>Anki에서</translation>
     </message>
     <message>
         <source>Filter…</source>
@@ -6547,7 +6549,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>All sources</source>
-        <translation type="unfinished" />
+        <translation>모든 출처</translation>
     </message>
     <message>
         <source>Rebuild Known Words DB</source>
@@ -6563,7 +6565,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Removes words you added. Words from Anki come back on the next run, and mined words leave with Undo.</source>
-        <translation type="unfinished" />
+        <translation>직접 추가한 단어를 제거합니다. Anki에서 온 단어는 다음 실행 때 돌아오며, 마이닝한 단어는 실행 취소로 제거됩니다.</translation>
     </message>
     <message>
         <source>Import…</source>
@@ -6571,7 +6573,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Export words…</source>
-        <translation type="unfinished" />
+        <translation>단어 내보내기…</translation>
     </message>
     <message>
         <source>Reset User List</source>
@@ -6603,11 +6605,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Kindle Vocabulary Builder</source>
-        <translation type="unfinished" />
+        <translation>Kindle Vocabulary Builder</translation>
     </message>
     <message>
         <source>Lute or LWT term export</source>
-        <translation type="unfinished" />
+        <translation>Lute 또는 LWT 용어 내보내기</translation>
     </message>
     <message>
         <source>plain word list</source>
@@ -6619,7 +6621,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Known word lists (*.csv *.tsv *.txt *.json *.db);;All Files (*)</source>
-        <translation type="unfinished" />
+        <translation>아는 단어 목록 (*.csv *.tsv *.txt *.json *.db);;모든 파일 (*)</translation>
     </message>
     <message>
         <source>Detected: %1 — every entry is imported.
@@ -6651,7 +6653,7 @@ Words to add: %3. Continue?</source>
     </message>
     <message>
         <source>This file has no words for %1. It contains: %2.</source>
-        <translation type="unfinished" />
+        <translation>이 파일에는 %1 단어가 없습니다. 포함된 언어: %2.</translation>
     </message>
     <message>
         <source>That file is too large to import.</source>
@@ -6667,7 +6669,7 @@ Words to add: %3. Continue?</source>
     </message>
     <message>
         <source>File format not recognized. Supported: jpdb review export (JSON), Migaku word export (JSON/CSV), AnkiMorphs known morphs (CSV), Kindle Vocabulary Builder (vocab.db), Lute or LWT term export (CSV/TSV), plain word lists (one word per line).</source>
-        <translation type="unfinished" />
+        <translation>파일 형식을 인식할 수 없습니다. 지원 형식: jpdb 복습 내보내기(JSON), Migaku 단어 내보내기(JSON/CSV), AnkiMorphs 아는 형태소(CSV), Kindle Vocabulary Builder(vocab.db), Lute 또는 LWT 용어 내보내기(CSV/TSV), 일반 단어 목록(한 줄에 한 단어).</translation>
     </message>
     <message>
         <source>That file could not be imported.</source>
@@ -6689,7 +6691,7 @@ Words to add: %3. Continue?</source>
     </message>
     <message>
         <source>CSV files (*.csv);;Text files, one word per line (*.txt)</source>
-        <translation type="unfinished" />
+        <translation>CSV 파일 (*.csv);;텍스트 파일, 한 줄에 한 단어 (*.txt)</translation>
     </message>
     <message>
         <source>The known words list could not be exported.</source>
@@ -7437,7 +7439,7 @@ Continue?</source>
     </message>
     <message>
         <source>Opus clips do not play in AnkiMobile on iPhone or iPad. Choose MP3 if you review there.</source>
-        <translation type="unfinished" />
+        <translation>Opus 클립은 iPhone이나 iPad의 AnkiMobile에서 재생되지 않습니다. 그곳에서 복습한다면 MP3를 선택하세요.</translation>
     </message>
     <message>
         <source> kbps</source>
@@ -7465,11 +7467,11 @@ Continue?</source>
     </message>
     <message>
         <source>Even out audio volume</source>
-        <translation type="unfinished" />
+        <translation>오디오 볼륨 고르게 맞추기</translation>
     </message>
     <message>
         <source>Brings sentence clips and condensed audio to one volume and fades each clip in and out, so quiet and loud sources sound alike. Applies to new clips.</source>
-        <translation type="unfinished" />
+        <translation>문장 클립과 압축 오디오를 같은 볼륨으로 맞추고 각 클립에 페이드 인·아웃을 적용해 조용한 소스와 큰 소스가 비슷하게 들리도록 합니다. 새 클립에 적용됩니다.</translation>
     </message>
     <message>
         <source>Text-to-speech</source>
@@ -7493,11 +7495,11 @@ Continue?</source>
     </message>
     <message>
         <source>Crop manga pictures to the speech bubble</source>
-        <translation type="unfinished" />
+        <translation>만화 그림을 말풍선에 맞춰 자르기</translation>
     </message>
     <message>
         <source>Manga cards show the speech bubble and the art around it instead of the whole page. A sentence with no bubble position keeps the whole page.</source>
-        <translation type="unfinished" />
+        <translation>만화 카드에 페이지 전체 대신 말풍선과 그 주변 그림이 표시됩니다. 말풍선 위치가 없는 문장은 페이지 전체를 유지합니다.</translation>
     </message>
     <message>
         <source>Enable animated screenshots</source>
@@ -7733,7 +7735,7 @@ Continue?</source>
     </message>
     <message>
         <source>Anki didn't sync after this run. Your cards are added; sync from Anki, or see the log for why.</source>
-        <translation type="unfinished" />
+        <translation>이번 실행 후 Anki가 동기화되지 않았습니다. 카드는 추가되었습니다. Anki에서 동기화하거나 로그에서 이유를 확인하세요.</translation>
     </message>
     <message>
         <source>Anki Miner couldn't open these cards in Anki.</source>
@@ -9498,7 +9500,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>An .epub, .txt or .pdf book, or a folder of books; each book is mined separately.</source>
-        <translation type="unfinished" />
+        <translation>.epub, .txt, .pdf 책 또는 책 폴더입니다. 책마다 따로 마이닝합니다.</translation>
     </message>
     <message>
         <source>Mine</source>
@@ -9534,7 +9536,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Choose an .epub, .txt or .pdf book, or a folder of books.</source>
-        <translation type="unfinished" />
+        <translation>.epub, .txt, .pdf 책 또는 책 폴더를 선택하세요.</translation>
     </message>
     <message>
         <source>Starting…</source>
@@ -9600,7 +9602,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Add subtitle files (.srt, .ass, .ssa, .vtt, .smi, .lrc) to the list.</source>
-        <translation type="unfinished" />
+        <translation>자막 파일(.srt, .ass, .ssa, .vtt, .smi, .lrc)을 목록에 추가합니다.</translation>
     </message>
     <message>
         <source>Remove Selected</source>
@@ -9781,19 +9783,19 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Web addresses to fetch, one per line (https://…)</source>
-        <translation type="unfinished" />
+        <translation>받아올 웹 주소, 한 줄에 하나씩 (https://…)</translation>
     </message>
     <message>
         <source>Web addresses</source>
-        <translation type="unfinished" />
+        <translation>웹 주소</translation>
     </message>
     <message>
         <source>Fetch</source>
-        <translation type="unfinished" />
+        <translation>받아오기</translation>
     </message>
     <message>
         <source>Put the article text of each web address in the box below, to check before mining.</source>
-        <translation type="unfinished" />
+        <translation>각 웹 주소의 기사 본문을 아래 상자에 넣어 마이닝 전에 확인할 수 있게 합니다.</translation>
     </message>
     <message>
         <source>Paste the text you want to mine. Cards from pasted text have no sentence audio from a recording.</source>
@@ -9841,59 +9843,59 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Each line must be a web address that starts with http:// or https://.</source>
-        <translation type="unfinished" />
+        <translation>각 줄은 http:// 또는 https://로 시작하는 웹 주소여야 합니다.</translation>
     </message>
     <message>
         <source>Enter a web address first.</source>
-        <translation type="unfinished" />
+        <translation>먼저 웹 주소를 입력하세요.</translation>
     </message>
     <message>
         <source>Fetch takes up to 10 web addresses at a time.</source>
-        <translation type="unfinished" />
+        <translation>받아오기는 한 번에 웹 주소를 10개까지 처리합니다.</translation>
     </message>
     <message>
         <source>Fetching…</source>
-        <translation type="unfinished" />
+        <translation>받아오는 중…</translation>
     </message>
     <message>
         <source>Could not fetch %1: %2</source>
-        <translation type="unfinished" />
+        <translation>%1을(를) 받아올 수 없습니다: %2</translation>
     </message>
     <message>
         <source>None of the pages could be fetched.</source>
-        <translation type="unfinished" />
+        <translation>어떤 페이지도 받아올 수 없습니다.</translation>
     </message>
     <message>
         <source>Fetched %1.</source>
-        <translation type="unfinished" />
+        <translation>%1을(를) 받아왔습니다.</translation>
     </message>
     <message>
         <source>The pages could not be fetched.</source>
-        <translation type="unfinished" />
+        <translation>페이지를 받아올 수 없습니다.</translation>
     </message>
     <message>
         <source>The page could not be reached. Check the address and your connection.</source>
-        <translation type="unfinished" />
+        <translation>페이지에 연결할 수 없습니다. 주소와 인터넷 연결을 확인하세요.</translation>
     </message>
     <message>
         <source>The site did not send the page.</source>
-        <translation type="unfinished" />
+        <translation>사이트가 페이지를 보내지 않았습니다.</translation>
     </message>
     <message>
         <source>This address is not a web page.</source>
-        <translation type="unfinished" />
+        <translation>이 주소는 웹 페이지가 아닙니다.</translation>
     </message>
     <message>
         <source>This page is too large to read.</source>
-        <translation type="unfinished" />
+        <translation>이 페이지는 너무 커서 읽을 수 없습니다.</translation>
     </message>
     <message>
         <source>This is not a web address.</source>
-        <translation type="unfinished" />
+        <translation>웹 주소가 아닙니다.</translation>
     </message>
     <message>
         <source>No article text found on this page. Pages that draw their text with JavaScript cannot be read.</source>
-        <translation type="unfinished" />
+        <translation>이 페이지에서 기사 본문을 찾지 못했습니다. JavaScript로 텍스트를 그리는 페이지는 읽을 수 없습니다.</translation>
     </message>
     <message>
         <source>Paste some text first.</source>
@@ -9905,7 +9907,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>The fetched text was edited, so it is mined as one text without its page titles.</source>
-        <translation type="unfinished" />
+        <translation>받아온 텍스트가 편집되어 페이지 제목 없이 하나의 텍스트로 마이닝됩니다.</translation>
     </message>
     <message>
         <source>That picture cannot be read. Pick another, or remove it to mine without one.</source>
@@ -10691,7 +10693,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Export words…</source>
-        <translation type="unfinished" />
+        <translation>단어 내보내기…</translation>
     </message>
     <message>
         <source>Close</source>
@@ -10705,19 +10707,19 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Export Words</source>
-        <translation type="unfinished" />
+        <translation>단어 내보내기</translation>
     </message>
     <message>
         <source>CSV files (*.csv)</source>
-        <translation type="unfinished" />
+        <translation>CSV 파일 (*.csv)</translation>
     </message>
     <message>
         <source>Words exported</source>
-        <translation type="unfinished" />
+        <translation>단어를 내보냈습니다</translation>
     </message>
     <message>
         <source>Export failed — try again</source>
-        <translation type="unfinished" />
+        <translation>내보내기 실패 — 다시 시도하세요</translation>
     </message>
     <message>
         <source>Confirm Undo</source>
@@ -10921,11 +10923,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Skip openings, endings and signs</source>
-        <translation type="unfinished" />
+        <translation>오프닝, 엔딩, 화면 문자 건너뛰기</translation>
     </message>
     <message>
         <source>Leaves out song lyrics, previews and on-screen signs: lines whose subtitle style marks them as a song or a sign, and lines inside a video's opening, ending or preview chapters. Applies to mining, Condense and Readability.</source>
-        <translation type="unfinished" />
+        <translation>노래 가사, 예고편, 화면 문자를 제외합니다. 자막 스타일상 노래나 화면 문자로 표시된 줄과 동영상의 오프닝, 엔딩, 예고편 챕터 안의 줄이 대상입니다. 마이닝, 압축, 난이도에 적용됩니다.</translation>
     </message>
     <message>
         <source>Sentence options</source>
@@ -10941,7 +10943,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Mines at most one word per example sentence. A word whose sentence is already taken moves to another line it appears on, and is skipped only when every one of its lines is taken. Whitelisted words are still mined.</source>
-        <translation type="unfinished" />
+        <translation>예문 하나당 최대 한 단어만 마이닝합니다. 문장이 이미 사용된 단어는 그 단어가 나오는 다른 줄로 옮겨지며, 모든 줄이 사용된 경우에만 건너뜁니다. 화이트리스트 단어는 계속 마이닝됩니다.</translation>
     </message>
     <message>
         <source>Only i+1 sentences (exactly one unknown word)</source>
@@ -10957,11 +10959,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Pick the clearest sentence for each word</source>
-        <translation type="unfinished" />
+        <translation>단어마다 가장 명확한 문장 고르기</translation>
     </message>
     <message>
         <source>When a word appears on several lines, its card uses the line with the fewest unknown words and a comfortable length instead of the first one. The Word Curator still lists every line, and card order does not change.</source>
-        <translation type="unfinished" />
+        <translation>단어가 여러 줄에 나오면 카드는 첫 번째 줄 대신 모르는 단어가 가장 적고 길이가 적당한 줄을 사용합니다. 단어 큐레이터에는 여전히 모든 줄이 표시되며 카드 순서도 바뀌지 않습니다.</translation>
     </message>
     <message>
         <source> s</source>
@@ -13017,15 +13019,15 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>Restore a backup…</source>
-        <translation type="unfinished" />
+        <translation>백업 복원…</translation>
     </message>
     <message>
         <source>Backups</source>
-        <translation type="unfinished" />
+        <translation>백업</translation>
     </message>
     <message>
         <source>Anki Miner saves your known words, statistics, settings and profiles once a day when it starts, and keeps the last 7 days.</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner는 시작할 때 하루에 한 번 아는 단어, 통계, 설정, 프로필을 저장하고 최근 7일 치를 보관합니다.</translation>
     </message>
     <message>
         <source>Themes</source>
@@ -13069,27 +13071,27 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>There is no backup yet. Anki Miner makes one each day when it starts.</source>
-        <translation type="unfinished" />
+        <translation>아직 백업이 없습니다. Anki Miner는 매일 시작할 때 백업을 하나 만듭니다.</translation>
     </message>
     <message>
         <source>Restore a Backup</source>
-        <translation type="unfinished" />
+        <translation>백업에서 복원</translation>
     </message>
     <message>
         <source>Restore the backup from:</source>
-        <translation type="unfinished" />
+        <translation>복원할 백업 날짜:</translation>
     </message>
     <message>
         <source>Replace your known words, statistics, settings and profiles with the copies from %1? The restore runs the next time Anki Miner starts. Changes made after that backup are lost.</source>
-        <translation type="unfinished" />
+        <translation>아는 단어, 통계, 설정, 프로필을 %1의 사본으로 바꾸시겠습니까? 복원은 다음에 Anki Miner를 시작할 때 실행됩니다. 그 백업 이후의 변경 사항은 사라집니다.</translation>
     </message>
     <message>
         <source>The restore could not be scheduled.</source>
-        <translation type="unfinished" />
+        <translation>복원을 예약할 수 없습니다.</translation>
     </message>
     <message>
         <source>The backup from %1 will be restored when Anki Miner next starts.</source>
-        <translation type="unfinished" />
+        <translation>%1 백업은 다음에 Anki Miner를 시작할 때 복원됩니다.</translation>
     </message>
 </context><context>
     <name>UpdateBanner</name>
@@ -13257,11 +13259,11 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>The picture (burned-in text)</source>
-        <translation type="unfinished" />
+        <translation>영상 화면(입혀진 텍스트)</translation>
     </message>
     <message>
         <source>Image subtitle track %1</source>
-        <translation type="unfinished" />
+        <translation>이미지 자막 트랙 %1</translation>
     </message>
     <message>
         <source>The OCR engine could not start on this computer. The details say why.</source>
@@ -13301,15 +13303,15 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>This field takes a video or an image subtitle file (.sup, .idx, .sub).</source>
-        <translation type="unfinished" />
+        <translation>이 필드에는 동영상 또는 이미지 자막 파일(.sup, .idx, .sub)을 넣습니다.</translation>
     </message>
     <message>
         <source>Read from:</source>
-        <translation type="unfinished" />
+        <translation>읽을 대상:</translation>
     </message>
     <message>
         <source>Read text drawn into the picture, or one of the video's image subtitle tracks.</source>
-        <translation type="unfinished" />
+        <translation>화면에 그려진 텍스트 또는 동영상의 이미지 자막 트랙 중 하나를 읽습니다.</translation>
     </message>
     <message>
         <source>Video Folder:</source>
@@ -13393,7 +13395,7 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>Image subtitles are read over the whole frame, so they need no region.</source>
-        <translation type="unfinished" />
+        <translation>이미지 자막은 프레임 전체에서 읽으므로 영역이 필요 없습니다.</translation>
     </message>
     <message>
         <source>Download OCR models</source>
@@ -13437,7 +13439,7 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>A DVD subtitle needs its .idx and .sub files in the same folder.</source>
-        <translation type="unfinished" />
+        <translation>DVD 자막은 .idx와 .sub 파일이 같은 폴더에 있어야 합니다.</translation>
     </message>
     <message>
         <source>Choose a folder before reading subtitles.</source>
@@ -13723,15 +13725,15 @@ Sort by it to work through a long recording in order — then highlight the rows
     </message>
     <message>
         <source>Used on the card</source>
-        <translation type="unfinished" />
+        <translation>카드에 사용됨</translation>
     </message>
     <message>
         <source>Back to the first match</source>
-        <translation type="unfinished" />
+        <translation>첫 번째 일치로 돌아가기</translation>
     </message>
     <message>
         <source>Use this dictionary on the card</source>
-        <translation type="unfinished" />
+        <translation>이 사전을 카드에 사용</translation>
     </message>
     <message>
         <source>Sentences (%1)</source>
@@ -14169,7 +14171,7 @@ Sort by it to work through a long recording in order — then highlight the rows
     </message>
     <message>
         <source>Wikimedia Commons (native recordings)</source>
-        <translation type="unfinished" />
+        <translation>Wikimedia Commons (원어민 녹음)</translation>
     </message>
     <message>
         <source>Microsoft Edge read-aloud (synthetic TTS)</source>
@@ -14183,7 +14185,7 @@ Sort by it to work through a long recording in order — then highlight the rows
     <name>_BarChart</name>
     <message>
         <source>Cards per period</source>
-        <translation type="unfinished" />
+        <translation>기간별 카드 수</translation>
     </message>
 </context><context>
     <name>_HealthRow</name>
@@ -14205,11 +14207,11 @@ Sort by it to work through a long recording in order — then highlight the rows
     <name>_MissingWordsDialog</name>
     <message>
         <source>Missing Words</source>
-        <translation type="unfinished" />
+        <translation>빠진 단어</translation>
     </message>
     <message>
         <source>Not known yet in ranks %1</source>
-        <translation type="unfinished" />
+        <translation>순위 %1에서 아직 모르는 단어</translation>
     </message>
 </context><context>
     <name>app</name>

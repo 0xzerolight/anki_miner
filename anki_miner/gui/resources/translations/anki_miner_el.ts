@@ -93,59 +93,59 @@
     </message>
     <message>
         <source>Known Words</source>
-        <translation type="unfinished" />
+        <translation>Γνωστές λέξεις</translation>
     </message>
     <message>
         <source>Words Anki Miner treats as known in the current mining language.</source>
-        <translation type="unfinished" />
+        <translation>Λέξεις που το Anki Miner θεωρεί γνωστές στην τρέχουσα γλώσσα εξόρυξης.</translation>
     </message>
     <message>
         <source>Mining History</source>
-        <translation type="unfinished" />
+        <translation>Ιστορικό εξόρυξης</translation>
     </message>
     <message>
         <source>History period</source>
-        <translation type="unfinished" />
+        <translation>Περίοδος ιστορικού</translation>
     </message>
     <message>
         <source>All time</source>
-        <translation type="unfinished" />
+        <translation>Όλο το διάστημα</translation>
     </message>
     <message>
         <source>Last 7 days</source>
-        <translation type="unfinished" />
+        <translation>Τελευταίες 7 ημέρες</translation>
     </message>
     <message>
         <source>Last 30 days</source>
-        <translation type="unfinished" />
+        <translation>Τελευταίες 30 ημέρες</translation>
     </message>
     <message>
         <source>Last 12 months</source>
-        <translation type="unfinished" />
+        <translation>Τελευταίοι 12 μήνες</translation>
     </message>
     <message>
         <source>History grouping</source>
-        <translation type="unfinished" />
+        <translation>Ομαδοποίηση ιστορικού</translation>
     </message>
     <message>
         <source>Each run</source>
-        <translation type="unfinished" />
+        <translation>Κάθε εκτέλεση</translation>
     </message>
     <message>
         <source>By day</source>
-        <translation type="unfinished" />
+        <translation>Ανά ημέρα</translation>
     </message>
     <message>
         <source>By week</source>
-        <translation type="unfinished" />
+        <translation>Ανά εβδομάδα</translation>
     </message>
     <message>
         <source>By month</source>
-        <translation type="unfinished" />
+        <translation>Ανά μήνα</translation>
     </message>
     <message>
         <source>Export CSV…</source>
-        <translation type="unfinished" />
+        <translation>Εξαγωγή CSV…</translation>
     </message>
     <message>
         <source>No sessions yet — process an episode to see your history.</source>
@@ -177,7 +177,7 @@
     </message>
     <message>
         <source>Period</source>
-        <translation type="unfinished" />
+        <translation>Περίοδος</translation>
     </message>
     <message>
         <source>Show in Anki</source>
@@ -185,7 +185,7 @@
     </message>
     <message>
         <source>Delete this run's cards…</source>
-        <translation type="unfinished" />
+        <translation>Διαγραφή των καρτών αυτής της εκτέλεσης…</translation>
     </message>
     <message>
         <source>Series Difficulty Ranking</source>
@@ -217,11 +217,11 @@
     </message>
     <message>
         <source>Frequency Coverage</source>
-        <translation type="unfinished" />
+        <translation>Κάλυψη συχνότητας</translation>
     </message>
     <message>
         <source>Rank band</source>
-        <translation type="unfinished" />
+        <translation>Εύρος κατάταξης</translation>
     </message>
     <message>
         <source>Known</source>
@@ -229,15 +229,15 @@
     </message>
     <message>
         <source>Not known</source>
-        <translation type="unfinished" />
+        <translation>Άγνωστες</translation>
     </message>
     <message>
         <source>Known %</source>
-        <translation type="unfinished" />
+        <translation>% γνωστών</translation>
     </message>
     <message>
         <source>Show missing words</source>
-        <translation type="unfinished" />
+        <translation>Εμφάνιση λέξεων που λείπουν</translation>
     </message>
     <message>
         <source>Milestones</source>
@@ -265,93 +265,95 @@
     </message>
     <message>
         <source>No runs in this period.</source>
-        <translation type="unfinished" />
+        <translation>Καμία εκτέλεση σε αυτή την περίοδο.</translation>
     </message>
     <message>
         <source>Export Mining History</source>
-        <translation type="unfinished" />
+        <translation>Εξαγωγή ιστορικού εξόρυξης</translation>
     </message>
     <message>
         <source>CSV Files (*.csv);;All Files (*)</source>
-        <translation type="unfinished" />
+        <translation>Αρχεία CSV (*.csv);;Όλα τα αρχεία (*)</translation>
     </message>
     <message>
         <source>History saved to %1.</source>
-        <translation type="unfinished" />
+        <translation>Το ιστορικό αποθηκεύτηκε στο %1.</translation>
     </message>
     <message>
         <source>The history could not be exported.</source>
-        <translation type="unfinished" />
+        <translation>Δεν ήταν δυνατή η εξαγωγή του ιστορικού.</translation>
     </message>
     <message>
         <source>%1 (cards deleted: %2)</source>
-        <translation type="unfinished" />
+        <translation>%1 (διαγραμμένες κάρτες: %2)</translation>
     </message>
     <message>
         <source>Select one run in the table.</source>
-        <translation type="unfinished" />
+        <translation>Επιλέξτε μία εκτέλεση στον πίνακα.</translation>
     </message>
     <message>
         <source>This run's cards were deleted: %1.</source>
-        <translation type="unfinished" />
+        <translation>Οι κάρτες αυτής της εκτέλεσης διαγράφηκαν: %1.</translation>
     </message>
     <message>
         <source>Anki Miner has no card list for this run: it was mined before this version, or it made no cards.</source>
-        <translation type="unfinished" />
+        <translation>Το Anki Miner δεν έχει λίστα καρτών για αυτή την εκτέλεση: έγινε πριν από αυτή την έκδοση ή δεν δημιούργησε κάρτες.</translation>
     </message>
     <message>
         <source>Anki Miner couldn't open this run's cards in Anki.</source>
-        <translation type="unfinished" />
+        <translation>Το Anki Miner δεν μπόρεσε να ανοίξει τις κάρτες αυτής της εκτέλεσης στο Anki.</translation>
     </message>
     <message>
         <source>None of this run's cards are in Anki any more.</source>
-        <translation type="unfinished" />
+        <translation>Καμία από τις κάρτες αυτής της εκτέλεσης δεν υπάρχει πια στο Anki.</translation>
     </message>
     <message>
         <source>Delete This Run's Cards</source>
-        <translation type="unfinished" />
+        <translation>Διαγραφή των καρτών αυτής της εκτέλεσης</translation>
     </message>
     <message>
         <source>Cards this run added that are still in Anki: %1. Reviewed at least once: %2.
 
 Delete them from Anki? Their review history is deleted with them. This cannot be undone.</source>
-        <translation type="unfinished" />
+        <translation>Κάρτες που πρόσθεσε αυτή η εκτέλεση και υπάρχουν ακόμη στο Anki: %1. Επαναλήφθηκαν τουλάχιστον μία φορά: %2.
+
+Να διαγραφούν από το Anki; Το ιστορικό επαναλήψεών τους διαγράφεται μαζί τους. Η ενέργεια δεν αναιρείται.</translation>
     </message>
     <message>
         <source>Cards deleted from Anki: %1.</source>
-        <translation type="unfinished" />
+        <translation>Κάρτες που διαγράφηκαν από το Anki: %1.</translation>
     </message>
     <message>
         <source>This run's cards could not be deleted.</source>
-        <translation type="unfinished" />
+        <translation>Δεν ήταν δυνατή η διαγραφή των καρτών αυτής της εκτέλεσης.</translation>
     </message>
     <message>
         <source>Known words could not be counted.</source>
-        <translation type="unfinished" />
+        <translation>Δεν ήταν δυνατή η καταμέτρηση των γνωστών λέξεων.</translation>
     </message>
     <message>
         <source>Words Anki Miner treats as known in %1.</source>
-        <translation type="unfinished" />
+        <translation>Λέξεις που το Anki Miner θεωρεί γνωστές στη γλώσσα %1.</translation>
     </message>
     <message>
         <source>Change since %1: %2</source>
-        <translation type="unfinished" />
+        <translation>Μεταβολή από %1: %2</translation>
     </message>
     <message>
         <source>Last counted on %1; Anki was not reachable.</source>
-        <translation type="unfinished" />
+        <translation>Τελευταία καταμέτρηση στις %1· το Anki δεν ήταν προσβάσιμο.</translation>
     </message>
     <message>
         <source>Last counted on %1.</source>
-        <translation type="unfinished" />
+        <translation>Τελευταία καταμέτρηση στις %1.</translation>
     </message>
     <message>
         <source>Coverage needs Anki running: it compares the list with your cards.</source>
-        <translation type="unfinished" />
+        <translation>Η κάλυψη χρειάζεται το Anki σε λειτουργία: συγκρίνει τη λίστα με τις κάρτες σας.</translation>
     </message>
     <message>
         <source>How many of the most frequent words in %1 you already know.</source>
-        <translation type="unfinished" />
+        <translation>Πόσες από τις πιο συχνές λέξεις της λίστας %1 γνωρίζετε ήδη.</translation>
     </message>
     <message>
         <source>%1 mining sessions completed</source>
@@ -761,7 +763,7 @@ Delete them from Anki? Their review history is deleted with them. This cannot be
     </message>
     <message>
         <source>{series}, {episode} and {volume} become each card's show, episode or book volume, for example mined::{series}::{episode}.</source>
-        <translation type="unfinished" />
+        <translation>Τα {series}, {episode} και {volume} γίνονται η σειρά, το επεισόδιο ή ο τόμος βιβλίου κάθε κάρτας, για παράδειγμα mined::{series}::{episode}.</translation>
     </message>
     <message>
         <source>Refresh</source>
@@ -789,11 +791,11 @@ Delete them from Anki? Their review history is deleted with them. This cannot be
     </message>
     <message>
         <source>Sync Anki after mining</source>
-        <translation type="unfinished" />
+        <translation>Συγχρονισμός του Anki μετά την εξόρυξη</translation>
     </message>
     <message>
         <source>After a run that added cards, ask Anki to sync with AnkiWeb. If the sync fails, the Activity Log says so and the cards stay added.</source>
-        <translation type="unfinished" />
+        <translation>Μετά από μια εκτέλεση που πρόσθεσε κάρτες, ζητά από το Anki να συγχρονιστεί με το AnkiWeb. Αν ο συγχρονισμός αποτύχει, το Αρχείο δραστηριότητας το αναφέρει και οι κάρτες παραμένουν.</translation>
     </message>
     <message>
         <source>AnkiConnect URL</source>
@@ -805,7 +807,7 @@ Delete them from Anki? Their review history is deleted with them. This cannot be
     </message>
     <message>
         <source>If AnkiConnect asks for an API key, add it to the address: http://127.0.0.1:8765/?key=YOUR_KEY</source>
-        <translation type="unfinished" />
+        <translation>Αν το AnkiConnect ζητά κλειδί API, προσθέστε το στη διεύθυνση: http://127.0.0.1:8765/?key=YOUR_KEY</translation>
     </message>
     <message>
         <source>Fill in automatically</source>
@@ -1517,7 +1519,7 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
     </message>
     <message>
         <source>Wikimedia Commons (native recordings)</source>
-        <translation type="unfinished" />
+        <translation>Wikimedia Commons (ηχογραφήσεις φυσικών ομιλητών)</translation>
     </message>
     <message>
         <source>Custom JSON</source>
@@ -2086,7 +2088,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Every audio file in the folder, in file-name order, one .srt each. A folder of book folders (each with its EPUB and audio) syncs every book in turn.</source>
-        <translation type="unfinished" />
+        <translation>Κάθε αρχείο ήχου του φακέλου, με σειρά ονόματος αρχείου, ένα .srt για το καθένα. Ένας φάκελος με φακέλους βιβλίων (καθένας με το EPUB και τον ήχο του) συγχρονίζει κάθε βιβλίο με τη σειρά.</translation>
     </message>
     <message>
         <source>EPUB or Text File:</source>
@@ -2114,7 +2116,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Sentences: how many of the book's sentences, from the first one found to the last, got a subtitle. Audio: how much of the narration matched the book. Grade: A from 90% on both, B from 75%, C from 50%, else D.</source>
-        <translation type="unfinished" />
+        <translation>Προτάσεις: πόσες από τις προτάσεις του βιβλίου, από την πρώτη που βρέθηκε ως την τελευταία, πήραν υπότιτλο. Ήχος: πόση από την αφήγηση αντιστοιχίστηκε στο βιβλίο. Βαθμός: A από 90% και στα δύο, B από 75%, C από 50%, αλλιώς D.</translation>
     </message>
     <message>
         <source>Output</source>
@@ -2178,7 +2180,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>No audio files were found in that folder, and no book folders (each with its book and audio).</source>
-        <translation type="unfinished" />
+        <translation>Δεν βρέθηκαν αρχεία ήχου σε αυτόν τον φάκελο, ούτε φάκελοι βιβλίων (καθένας με το βιβλίο και τον ήχο του).</translation>
     </message>
     <message>
         <source>That folder could not be scanned.</source>
@@ -2186,15 +2188,15 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Skipped folder %1: no audio files</source>
-        <translation type="unfinished" />
+        <translation>Παραλείφθηκε ο φάκελος %1: δεν υπάρχουν αρχεία ήχου</translation>
     </message>
     <message>
         <source>Skipped folder %1: no .epub or .txt book</source>
-        <translation type="unfinished" />
+        <translation>Παραλείφθηκε ο φάκελος %1: δεν υπάρχει βιβλίο .epub ή .txt</translation>
     </message>
     <message>
         <source>Skipped folder %1: more than one book</source>
-        <translation type="unfinished" />
+        <translation>Παραλείφθηκε ο φάκελος %1: περισσότερα από ένα βιβλία</translation>
     </message>
     <message>
         <source>Output folder is not writable.</source>
@@ -2214,11 +2216,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Books: %1 — %2</source>
-        <translation type="unfinished" />
+        <translation>Βιβλία: %1 — %2</translation>
     </message>
     <message>
         <source>%1: sentences %2%, audio %3% — grade %4</source>
-        <translation type="unfinished" />
+        <translation>%1: προτάσεις %2%, ήχος %3% — βαθμός %4</translation>
     </message>
     <message>
         <source>Syncing file %1 of %2</source>
@@ -2232,11 +2234,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>%1 could not be loaded: %2</source>
-        <translation type="unfinished" />
+        <translation>Δεν ήταν δυνατή η φόρτωση του %1: %2</translation>
     </message>
     <message>
         <source>Its book could not be loaded</source>
-        <translation type="unfinished" />
+        <translation>Δεν ήταν δυνατή η φόρτωση του βιβλίου του</translation>
     </message>
     <message>
         <source>Skipped, exists</source>
@@ -2256,11 +2258,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Reusing the saved transcript</source>
-        <translation type="unfinished" />
+        <translation>Επαναχρησιμοποίηση της αποθηκευμένης μεταγραφής</translation>
     </message>
     <message>
         <source>Found sentence %1 again later in the audio; timed it out of book order</source>
-        <translation type="unfinished" />
+        <translation>Η πρόταση %1 βρέθηκε ξανά αργότερα στον ήχο· συγχρονίστηκε εκτός σειράς βιβλίου</translation>
     </message>
     <message>
         <source>%1 sentences timed, %2 in between had no audio</source>
@@ -2342,7 +2344,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Approve or reject each word, pick its sentence and scene, trim its audio, mark words known, and fix a mistranscribed sentence or swap the word to mine -- before any card is created. When a word has entries in several dictionaries, choose which one the card's Definition uses.</source>
-        <translation type="unfinished" />
+        <translation>Εγκρίνετε ή απορρίψτε κάθε λέξη, επιλέξτε την πρόταση και τη σκηνή της, περικόψτε τον ήχο της, σημειώστε λέξεις ως γνωστές και διορθώστε μια λανθασμένα μεταγραμμένη πρόταση ή αλλάξτε τη λέξη προς εξόρυξη -- πριν δημιουργηθεί οποιαδήποτε κάρτα. Όταν μια λέξη έχει λήμματα σε πολλά λεξικά, επιλέξτε ποιο χρησιμοποιεί ο Ορισμός της κάρτας.</translation>
     </message>
     <message>
         <source>Secondary-language subtitles</source>
@@ -2350,7 +2352,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. Leave the file empty and Anki Miner picks a translation itself: a subtitle named for the video, or a text track inside it, in your interface language or else English. The Activity Log names the track it used. On Video → Batch, point it at a folder of translation subtitles instead and they pair to the videos by episode number. Turn it on under Settings → Sentences.</source>
-        <translation type="unfinished" />
+        <translation>Φορτώστε ένα δεύτερο αρχείο υποτίτλων στη δική σας γλώσσα δίπλα σε αυτό της γλώσσας εξόρυξης: εμφανίζεται κάτω από τη γραμμή στην προεπισκόπηση του Επιμελητή λέξεων και μπορεί να αποθηκευτεί σε πεδίο Μετάφραση. Αφήστε το αρχείο κενό και το Anki Miner επιλέγει μόνο του μια μετάφραση: έναν υπότιτλο με το όνομα του βίντεο ή ένα κομμάτι κειμένου μέσα σε αυτό, στη γλώσσα του περιβάλλοντος εργασίας ή αλλιώς στα αγγλικά. Το Αρχείο δραστηριότητας αναφέρει το κομμάτι που χρησιμοποίησε. Στο Βίντεο → Μαζικά, ορίστε αντί γι' αυτό έναν φάκελο με υπότιτλους μετάφρασης, και αυτοί αντιστοιχίζονται στα βίντεο βάσει αριθμού επεισοδίου. Ενεργοποιήστε το στις Ρυθμίσεις → Προτάσεις.</translation>
     </message>
     <message>
         <source>Build a deck by coverage %</source>
@@ -2386,11 +2388,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Mine songs from .lrc lyrics</source>
-        <translation type="unfinished" />
+        <translation>Εξόρυξη από τραγούδια με στίχους .lrc</translation>
     </message>
     <message>
         <source>Use a .lrc lyrics file wherever a subtitle file goes. Each line lasts until the next one starts. Pair a song with its lyrics on Audiobooks, condense it in Condense, or mine a music video on Video.</source>
-        <translation type="unfinished" />
+        <translation>Χρησιμοποιήστε ένα αρχείο στίχων .lrc όπου μπαίνει αρχείο υποτίτλων. Κάθε γραμμή διαρκεί μέχρι να αρχίσει η επόμενη. Αντιστοιχίστε ένα τραγούδι με τους στίχους του στα Ηχοβιβλία, συμπυκνώστε το στη Συμπύκνωση ή κάντε εξόρυξη από ένα μουσικό βίντεο στο Βίντεο.</translation>
     </message>
     <message>
         <source>Mine from manga</source>
@@ -2406,23 +2408,23 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Mine vocabulary from novels and other text (EPUB, PDF, Aozora, plain text).</source>
-        <translation type="unfinished" />
+        <translation>Εξόρυξη λεξιλογίου από μυθιστορήματα και άλλα κείμενα (EPUB, PDF, Aozora, απλό κείμενο).</translation>
     </message>
     <message>
         <source>Readings from a book's own furigana</source>
-        <translation type="unfinished" />
+        <translation>Αναγνώσεις από τα furigana του ίδιου του βιβλίου</translation>
     </message>
     <message>
         <source>When a Japanese EPUB prints furigana over a word, the card takes that reading instead of the parser's guess.</source>
-        <translation type="unfinished" />
+        <translation>Όταν ένα ιαπωνικό EPUB τυπώνει furigana πάνω από μια λέξη, η κάρτα παίρνει αυτή την ανάγνωση αντί για την εκτίμηση του αναλυτή.</translation>
     </message>
     <message>
         <source>Mine pasted text or a web article</source>
-        <translation type="unfinished" />
+        <translation>Εξόρυξη από επικολλημένο κείμενο ή διαδικτυακό άρθρο</translation>
     </message>
     <message>
         <source>Paste text in your mining language, or fetch a web article by its address, and mine it into Anki cards. A fetched article's cards name the page and site as their source.</source>
-        <translation type="unfinished" />
+        <translation>Επικολλήστε κείμενο στη γλώσσα εξόρυξης ή λάβετε ένα διαδικτυακό άρθρο από τη διεύθυνσή του και μετατρέψτε το σε κάρτες Anki με εξόρυξη. Οι κάρτες ενός άρθρου που λήφθηκε αναφέρουν ως πηγή τη σελίδα και τον ιστότοπο.</translation>
     </message>
     <message>
         <source>Mine subtitle files without video</source>
@@ -2446,7 +2448,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Create subtitles from audio with a local Whisper model -- as a standalone tool. Long lines are split at sentence ends, and a second run on the same file reuses the saved transcript.</source>
-        <translation type="unfinished" />
+        <translation>Δημιουργία υποτίτλων από ήχο με τοπικό μοντέλο Whisper -- ως αυτόνομο εργαλείο. Οι μεγάλες γραμμές χωρίζονται στα τέλη προτάσεων και μια δεύτερη εκτέλεση στο ίδιο αρχείο επαναχρησιμοποιεί την αποθηκευμένη μεταγραφή.</translation>
     </message>
     <message>
         <source>Re-time existing subtitles</source>
@@ -2506,35 +2508,35 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Browse your whole mining history</source>
-        <translation type="unfinished" />
+        <translation>Περιήγηση σε όλο το ιστορικό εξόρυξης</translation>
     </message>
     <message>
         <source>Analytics lists every run you have mined. Pick a period, group the runs by day, week or month, see the cards per period in a chart, and export the table as a CSV file.</source>
-        <translation type="unfinished" />
+        <translation>Τα Στατιστικά απαριθμούν κάθε εκτέλεση εξόρυξης. Επιλέξτε περίοδο, ομαδοποιήστε τις εκτελέσεις ανά ημέρα, εβδομάδα ή μήνα, δείτε τις κάρτες ανά περίοδο σε γράφημα και εξαγάγετε τον πίνακα ως αρχείο CSV.</translation>
     </message>
     <message>
         <source>Show or delete a past run's cards</source>
-        <translation type="unfinished" />
+        <translation>Εμφάνιση ή διαγραφή των καρτών μιας παλαιότερης εκτέλεσης</translation>
     </message>
     <message>
         <source>Select a run in Analytics → Mining History to open its cards in Anki's browser or to delete them. The confirmation says how many of its cards are still in Anki and how many you have reviewed. Runs mined before this version have no card list.</source>
-        <translation type="unfinished" />
+        <translation>Επιλέξτε μια εκτέλεση στα Στατιστικά → Ιστορικό εξόρυξης για να ανοίξετε τις κάρτες της στο πρόγραμμα περιήγησης του Anki ή για να τις διαγράψετε. Η επιβεβαίωση αναφέρει πόσες από τις κάρτες της υπάρχουν ακόμη στο Anki και πόσες έχετε επαναλάβει. Οι εκτελέσεις πριν από αυτή την έκδοση δεν έχουν λίστα καρτών.</translation>
     </message>
     <message>
         <source>Track how many words you know</source>
-        <translation type="unfinished" />
+        <translation>Παρακολουθήστε πόσες λέξεις γνωρίζετε</translation>
     </message>
     <message>
         <source>The Known Words card on Analytics counts the words Anki Miner treats as known in the current mining language and shows how that number changed. It is counted while Anki is running, at most once every ten minutes.</source>
-        <translation type="unfinished" />
+        <translation>Η κάρτα Γνωστές λέξεις στα Στατιστικά μετρά τις λέξεις που το Anki Miner θεωρεί γνωστές στην τρέχουσα γλώσσα εξόρυξης και δείχνει πώς άλλαξε αυτός ο αριθμός. Η καταμέτρηση γίνεται όσο το Anki εκτελείται, το πολύ μία φορά κάθε δέκα λεπτά.</translation>
     </message>
     <message>
         <source>See how much of a frequency list you know</source>
-        <translation type="unfinished" />
+        <translation>Δείτε πόσο από μια λίστα συχνότητας γνωρίζετε</translation>
     </message>
     <message>
         <source>Analytics → Frequency Coverage counts the words you know in ranks 1–1,000 up to 20,000 of your first frequency list with numeric ranks, and lists the missing words of each band. It needs Anki running.</source>
-        <translation type="unfinished" />
+        <translation>Τα Στατιστικά → Κάλυψη συχνότητας μετρούν τις λέξεις που γνωρίζετε στις θέσεις κατάταξης 1–1.000 έως 20.000 της πρώτης λίστας συχνότητας με αριθμητική κατάταξη και απαριθμούν τις λέξεις που λείπουν από κάθε εύρος. Χρειάζεται το Anki σε λειτουργία.</translation>
     </message>
     <message>
         <source>Reset mining statistics</source>
@@ -2610,11 +2612,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Count a word as known only after its card has been reviewed</source>
-        <translation type="unfinished" />
+        <translation>Μια λέξη μετράει ως γνωστή μόνο αφού επαναληφθεί η κάρτα της</translation>
     </message>
     <message>
         <source>Readability and the i+1 sentence rule then count a word as known only when its Anki card has been reviewed at least once. Mining still skips every word that already has a card.</source>
-        <translation type="unfinished" />
+        <translation>Η Αναγνωσιμότητα και ο κανόνας προτάσεων i+1 μετρούν τότε μια λέξη ως γνωστή μόνο όταν η κάρτα της στο Anki έχει επαναληφθεί τουλάχιστον μία φορά. Η εξόρυξη εξακολουθεί να παραλείπει κάθε λέξη που έχει ήδη κάρτα.</translation>
     </message>
     <message>
         <source>Exclude specific Anki decks from 'known'</source>
@@ -2634,27 +2636,27 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Browse every known word</source>
-        <translation type="unfinished" />
+        <translation>Περιήγηση σε όλες τις γνωστές λέξεις</translation>
     </message>
     <message>
         <source>Manage Known Words lists every word this language counts as known, with where it came from (added by you, mined by Anki Miner, from Anki) and the date it was added. Search it, filter it by source, and remove words you added. Words from Anki come back on the next sync.</source>
-        <translation type="unfinished" />
+        <translation>Η Διαχείριση γνωστών λέξεων απαριθμεί κάθε λέξη που αυτή η γλώσσα μετρά ως γνωστή, με την προέλευσή της (προστέθηκε από εσάς, εξόρυξη από το Anki Miner, από το Anki) και την ημερομηνία προσθήκης. Κάντε αναζήτηση, φιλτράρετε κατά πηγή και αφαιρέστε λέξεις που προσθέσατε. Οι λέξεις από το Anki επιστρέφουν στον επόμενο συγχρονισμό.</translation>
     </message>
     <message>
         <source>Import known words from Kindle, Lute or LWT</source>
-        <translation type="unfinished" />
+        <translation>Εισαγωγή γνωστών λέξεων από Kindle, Lute ή LWT</translation>
     </message>
     <message>
         <source>In Manage Known Words, Import… also reads a Kindle Vocabulary Builder file (vocab.db; words marked mastered) and Lute or LWT term exports (status 5 and 99).</source>
-        <translation type="unfinished" />
+        <translation>Στη Διαχείριση γνωστών λέξεων, η Εισαγωγή… διαβάζει επίσης αρχείο Kindle Vocabulary Builder (vocab.db· λέξεις σημειωμένες ως κατακτημένες) και εξαγωγές όρων Lute ή LWT (κατάσταση 5 και 99).</translation>
     </message>
     <message>
         <source>Export words to a CSV file</source>
-        <translation type="unfinished" />
+        <translation>Εξαγωγή λέξεων σε αρχείο CSV</translation>
     </message>
     <message>
         <source>Export words… saves the list you are looking at in Manage Known Words, or a finished run's mined and not-mined words with the reason each was skipped, as a CSV file.</source>
-        <translation type="unfinished" />
+        <translation>Η Εξαγωγή λέξεων… αποθηκεύει ως αρχείο CSV τη λίστα που βλέπετε στη Διαχείριση γνωστών λέξεων ή τις λέξεις μιας ολοκληρωμένης εκτέλεσης που εξορύχθηκαν και δεν εξορύχθηκαν, με τον λόγο παράλειψης της καθεμιάς.</translation>
     </message>
     <message>
         <source>Exclude kana-only words</source>
@@ -2686,23 +2688,23 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Mine at most one word from each example sentence. A word whose sentence is taken moves to another line it appears on, and is skipped only when every one of its lines is taken.</source>
-        <translation type="unfinished" />
+        <translation>Εξόρυξη το πολύ μίας λέξης από κάθε παράδειγμα πρότασης. Μια λέξη της οποίας η πρόταση είναι πιασμένη μεταφέρεται σε άλλη γραμμή όπου εμφανίζεται και παραλείπεται μόνο όταν όλες οι γραμμές της είναι πιασμένες.</translation>
     </message>
     <message>
         <source>Pick the clearest sentence</source>
-        <translation type="unfinished" />
+        <translation>Επιλογή της πιο ξεκάθαρης πρότασης</translation>
     </message>
     <message>
         <source>When a word appears on several lines, its card uses the line with the fewest unknown words and a comfortable length instead of the first one. The Word Curator still lists every line.</source>
-        <translation type="unfinished" />
+        <translation>Όταν μια λέξη εμφανίζεται σε πολλές γραμμές, η κάρτα της χρησιμοποιεί τη γραμμή με τις λιγότερες άγνωστες λέξεις και άνετο μήκος αντί για την πρώτη. Ο Επιμελητής λέξεων εξακολουθεί να δείχνει όλες τις γραμμές.</translation>
     </message>
     <message>
         <source>Skip openings, endings and signs</source>
-        <translation type="unfinished" />
+        <translation>Παράλειψη τραγουδιών αρχής/τέλους και επιγραφών</translation>
     </message>
     <message>
         <source>Leave opening and ending songs, previews and on-screen signs out of mining, Condense and Readability: lines styled as songs or signs, and lines inside a video's opening, ending and preview chapters. On by default for new installs; turn it off in Settings → Sentences.</source>
-        <translation type="unfinished" />
+        <translation>Εξαιρέστε από την εξόρυξη, τη Συμπύκνωση και την Αναγνωσιμότητα τα τραγούδια αρχής και τέλους, τις προεπισκοπήσεις και τις επιγραφές στην οθόνη: γραμμές με στυλ τραγουδιού ή επιγραφής και γραμμές μέσα στα κεφάλαια αρχής, τέλους και προεπισκόπησης ενός βίντεο. Ενεργό από προεπιλογή στις νέες εγκαταστάσεις· απενεργοποιήστε το στις Ρυθμίσεις → Προτάσεις.</translation>
     </message>
     <message>
         <source>Strip junk from subtitles (regex)</source>
@@ -2770,11 +2772,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Import a dictionary file</source>
-        <translation type="unfinished" />
+        <translation>Εισαγωγή αρχείου λεξικού</translation>
     </message>
     <message>
         <source>Add a Yomitan zip, a StarDict dictionary (its archive or its .ifo file) or a CSV/TSV word list (term and definition, or term, reading and definition) as a definition source.</source>
-        <translation type="unfinished" />
+        <translation>Προσθέστε ως πηγή ορισμών ένα zip του Yomitan, ένα λεξικό StarDict (το συμπιεσμένο αρχείο του ή το αρχείο .ifo) ή μια λίστα λέξεων CSV/TSV (όρος και ορισμός ή όρος, ανάγνωση και ορισμός).</translation>
     </message>
     <message>
         <source>Keep dictionaries up to date</source>
@@ -2846,7 +2848,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Attach word audio to cards from audio packs, JPod101 (Japanese), Google text-to-speech, or Microsoft Edge text-to-speech (every language). Wikimedia Commons plays recordings of real speakers from Wiktionary and Lingua Libre, tried before Google TTS in most languages.</source>
-        <translation type="unfinished" />
+        <translation>Προσθέστε στις κάρτες ήχο λέξεων από πακέτα ήχου, το JPod101 (ιαπωνικά), τη σύνθεση φωνής Google ή τη σύνθεση φωνής Microsoft Edge (όλες οι γλώσσες). Το Wikimedia Commons αναπαράγει ηχογραφήσεις πραγματικών ομιλητών από το Wiktionary και το Lingua Libre και δοκιμάζεται πριν από το Google TTS στις περισσότερες γλώσσες.</translation>
     </message>
     <message>
         <source>Import local audio packs</source>
@@ -2862,7 +2864,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Extract the spoken sentence as an audio clip; tune its format and bitrate. Even out audio volume brings sentence clips and condensed audio to one loudness and fades each clip in and out.</source>
-        <translation type="unfinished" />
+        <translation>Εξαγωγή της εκφωνημένης πρότασης ως κλιπ ήχου· ρυθμίστε τη μορφή και τον ρυθμό bit. Η Εξισορρόπηση έντασης ήχου φέρνει τα κλιπ προτάσεων και τον συμπυκνωμένο ήχο σε ενιαία ένταση και εφαρμόζει σταδιακή αύξηση και μείωση της έντασης σε κάθε κλιπ.</translation>
     </message>
     <message>
         <source>Sentence audio for reading (TTS)</source>
@@ -2886,7 +2888,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Capture a still frame from the scene to put on the card. Crop manga pictures to the speech bubble shows the bubble and the art around it instead of the whole page.</source>
-        <translation type="unfinished" />
+        <translation>Λήψη ενός στατικού καρέ από τη σκηνή για την κάρτα. Η Περικοπή εικόνων manga στο συννεφάκι ομιλίας δείχνει το συννεφάκι και το σχέδιο γύρω του αντί για ολόκληρη τη σελίδα.</translation>
     </message>
     <message>
         <source>Animated clips (GIF/WebP)</source>
@@ -2966,7 +2968,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Add tags to every note Anki Miner creates. Card tags can use {series}, {episode} and {volume}. Each card gets its own show, episode or book volume, for example mined::{series}::{episode} gives mined::Frieren::03.</source>
-        <translation type="unfinished" />
+        <translation>Προσθέστε ετικέτες σε κάθε σημείωση που δημιουργεί το Anki Miner. Οι ετικέτες καρτών μπορούν να χρησιμοποιούν τα {series}, {episode} και {volume}. Κάθε κάρτα παίρνει τη δική της σειρά, επεισόδιο ή τόμο βιβλίου, για παράδειγμα το mined::{series}::{episode} δίνει mined::Frieren::03.</translation>
     </message>
     <message>
         <source>Connect to Anki (AnkiConnect)</source>
@@ -2974,15 +2976,15 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Set the AnkiConnect address; Refresh re-checks the connection to your running Anki. If AnkiConnect is set up with an API key, add it to the address: http://127.0.0.1:8765/?key=YOUR_KEY. Anki Miner sends it with every request and never writes it to the log.</source>
-        <translation type="unfinished" />
+        <translation>Ορίστε τη διεύθυνση του AnkiConnect· η Ανανέωση ελέγχει ξανά τη σύνδεση με το Anki που εκτελείται. Αν το AnkiConnect έχει ρυθμιστεί με κλειδί API, προσθέστε το στη διεύθυνση: http://127.0.0.1:8765/?key=YOUR_KEY. Το Anki Miner το στέλνει με κάθε αίτημα και δεν το γράφει ποτέ στο αρχείο καταγραφής.</translation>
     </message>
     <message>
         <source>Sync Anki after mining</source>
-        <translation type="unfinished" />
+        <translation>Συγχρονισμός του Anki μετά την εξόρυξη</translation>
     </message>
     <message>
         <source>After a run that added cards, Anki Miner asks Anki to sync with AnkiWeb. If the sync fails, the Activity Log says so and the cards stay added.</source>
-        <translation type="unfinished" />
+        <translation>Μετά από μια εκτέλεση που πρόσθεσε κάρτες, το Anki Miner ζητά από το Anki να συγχρονιστεί με το AnkiWeb. Αν ο συγχρονισμός αποτύχει, το Αρχείο δραστηριότητας το αναφέρει και οι κάρτες παραμένουν.</translation>
     </message>
     <message>
         <source>Fill in field mappings automatically</source>
@@ -3070,7 +3072,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Draw a box where a video's on-screen dialogue appears and Anki Miner reads it into a timed .srt that Video → Single can mine. Made for game longplays without commentary. It also reads image subtitles (Blu-ray .sup, DVD .idx/.sub, or an image track inside a video) without a box. Lines with none of your mining language's letters are left out. Download the OCR engine from the setup card on Utilities → Video OCR.</source>
-        <translation type="unfinished" />
+        <translation>Σχεδιάστε ένα πλαίσιο εκεί όπου εμφανίζεται ο διάλογος στην οθόνη ενός βίντεο και το Anki Miner τον διαβάζει σε ένα χρονισμένο .srt από το οποίο μπορεί να γίνει εξόρυξη στο Βίντεο → Μεμονωμένο. Φτιαγμένο για longplay παιχνιδιών χωρίς σχολιασμό. Διαβάζει επίσης υπότιτλους εικόνας (Blu-ray .sup, DVD .idx/.sub ή κομμάτι εικόνας μέσα σε βίντεο) χωρίς πλαίσιο. Οι γραμμές χωρίς κανένα γράμμα της γλώσσας εξόρυξης παραλείπονται. Κατεβάστε τη μηχανή OCR από την κάρτα ρύθμισης στα Βοηθήματα → OCR βίντεο.</translation>
     </message>
     <message>
         <source>Sync an audiobook to its EPUB</source>
@@ -3078,23 +3080,23 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Transcribe an audiobook and time the book's own sentences to it, writing an .srt the Audiobook tab, Reading → Subtitle Files or a reader can use. A second run on the same audio reuses the saved transcript instead of transcribing again.</source>
-        <translation type="unfinished" />
+        <translation>Μεταγράψτε ένα ηχοβιβλίο και συγχρονίστε σε αυτό τις προτάσεις του ίδιου του βιβλίου, γράφοντας ένα .srt που μπορούν να χρησιμοποιήσουν η καρτέλα Ηχοβιβλία, η Ανάγνωση → Αρχεία υποτίτλων ή ένα πρόγραμμα ανάγνωσης. Μια δεύτερη εκτέλεση στον ίδιο ήχο επαναχρησιμοποιεί την αποθηκευμένη μεταγραφή αντί να μεταγράψει ξανά.</translation>
     </message>
     <message>
         <source>Sync a shelf of audiobooks in one run</source>
-        <translation type="unfinished" />
+        <translation>Συγχρονισμός ενός ραφιού ηχοβιβλίων σε μία εκτέλεση</translation>
     </message>
     <message>
         <source>In Utilities → Audiobook Sync, choose Folder and pick a folder that holds one folder per book, each with its EPUB (or text file) and its audio files. The books sync one after another, in name order.</source>
-        <translation type="unfinished" />
+        <translation>Στα Βοηθήματα → Συγχρονισμός, επιλέξτε Φάκελος και διαλέξτε έναν φάκελο που περιέχει έναν φάκελο ανά βιβλίο, καθένας με το EPUB του (ή αρχείο κειμένου) και τα αρχεία ήχου του. Τα βιβλία συγχρονίζονται το ένα μετά το άλλο, με σειρά ονόματος.</translation>
     </message>
     <message>
         <source>See how well an audiobook synced</source>
-        <translation type="unfinished" />
+        <translation>Δείτε πόσο καλά συγχρονίστηκε ένα ηχοβιβλίο</translation>
     </message>
     <message>
         <source>After Audiobook Sync, each book gets a line under the Book card: how many of its sentences got a subtitle, how much of the narration matched the book, and a grade from A to D. Chapters read out of book order are found too; sentences the narrator skipped never get a subtitle.</source>
-        <translation type="unfinished" />
+        <translation>Μετά τον Συγχρονισμό ηχοβιβλίου, κάθε βιβλίο παίρνει μια γραμμή κάτω από την κάρτα Βιβλίο: πόσες από τις προτάσεις του πήραν υπότιτλο, πόση από την αφήγηση αντιστοιχίστηκε στο βιβλίο και έναν βαθμό από A έως D. Εντοπίζονται και κεφάλαια που διαβάστηκαν εκτός σειράς βιβλίου· οι προτάσεις που παρέλειψε ο αφηγητής δεν παίρνουν ποτέ υπότιτλο.</translation>
     </message>
     <message>
         <source>Check how much of a show, book or manga you can read</source>
@@ -3178,11 +3180,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Restore an automatic backup</source>
-        <translation type="unfinished" />
+        <translation>Επαναφορά αυτόματου αντιγράφου ασφαλείας</translation>
     </message>
     <message>
         <source>Anki Miner backs up your known words, statistics, settings and profiles once a day when it starts, and keeps the last 7 days. Settings → General → Restore a backup… puts one back the next time the app starts.</source>
-        <translation type="unfinished" />
+        <translation>Το Anki Miner δημιουργεί αντίγραφο ασφαλείας των γνωστών λέξεων, των στατιστικών, των ρυθμίσεων και των προφίλ σας μία φορά την ημέρα κατά την εκκίνηση και κρατά τις τελευταίες 7 ημέρες. Το Ρυθμίσεις → Γενικά → Επαναφορά αντιγράφου ασφαλείας… επαναφέρει ένα στην επόμενη εκκίνηση της εφαρμογής.</translation>
     </message>
     <message>
         <source>Undo a mining run</source>
@@ -3194,11 +3196,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Export a run's words</source>
-        <translation type="unfinished" />
+        <translation>Εξαγωγή των λέξεων μιας εκτέλεσης</translation>
     </message>
     <message>
         <source>Press View details on a run's result line, then Export words… to save the run's mined and not-mined words, with the reason each was skipped, as a CSV file.</source>
-        <translation type="unfinished" />
+        <translation>Πατήστε Προβολή λεπτομερειών στη γραμμή αποτελέσματος μιας εκτέλεσης και μετά Εξαγωγή λέξεων… για να αποθηκεύσετε ως αρχείο CSV τις λέξεις της εκτέλεσης που εξορύχθηκαν και δεν εξορύχθηκαν, με τον λόγο παράλειψης της καθεμιάς.</translation>
     </message>
     <message>
         <source>Keyboard shortcuts</source>
@@ -4592,11 +4594,11 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
     </message>
     <message>
         <source>Choose dictionary files</source>
-        <translation type="unfinished" />
+        <translation>Επιλογή αρχείων λεξικού</translation>
     </message>
     <message>
         <source>Dictionaries (*.zip *.ifo *.tar.gz *.tgz *.tar.bz2 *.tar.xz *.csv *.tsv)</source>
-        <translation type="unfinished" />
+        <translation>Λεξικά (*.zip *.ifo *.tar.gz *.tgz *.tar.bz2 *.tar.xz *.csv *.tsv)</translation>
     </message>
     <message>
         <source>Dictionary %1 of %2: %3</source>
@@ -5432,8 +5434,9 @@ No files on disk are deleted.</source>
     </message>
     <message numerus="yes">
         <source>Skipping lines in %n opening, ending or preview chapter(s)</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>Παράλειψη γραμμών σε %n κεφάλαιο αρχής, τέλους ή προεπισκόπησης</numerusform>
+            <numerusform>Παράλειψη γραμμών σε %n κεφάλαια αρχής, τέλους ή προεπισκόπησης</numerusform>
         </translation>
     </message>
     <message>
@@ -5483,7 +5486,7 @@ No files on disk are deleted.</source>
     </message>
     <message>
         <source>Only %1% of the first %2 words have an entry in your dictionaries. Is this file in the language you are mining?</source>
-        <translation type="unfinished" />
+        <translation>Μόνο το %1% των πρώτων %2 λέξεων έχει λήμμα στα λεξικά σας. Είναι αυτό το αρχείο στη γλώσσα από την οποία κάνετε εξόρυξη;</translation>
     </message>
     <message>
         <source>Frequency cutoff ignored — no ranked frequency source is loaded (Settings → Frequency).</source>
@@ -5595,11 +5598,11 @@ No files on disk are deleted.</source>
     </message>
     <message>
         <source>Translation subtitles picked automatically: %1</source>
-        <translation type="unfinished" />
+        <translation>Υπότιτλοι μετάφρασης που επιλέχθηκαν αυτόματα: %1</translation>
     </message>
     <message>
         <source>Translation subtitles picked automatically: embedded track %1</source>
-        <translation type="unfinished" />
+        <translation>Υπότιτλοι μετάφρασης που επιλέχθηκαν αυτόματα: ενσωματωμένο κομμάτι %1</translation>
     </message>
     <message>
         <source>Could not extract media for any word — no cards created</source>
@@ -5869,11 +5872,11 @@ No files on disk are deleted.</source>
     </message>
     <message>
         <source>Count a word as known only after its card has been reviewed</source>
-        <translation type="unfinished" />
+        <translation>Μια λέξη μετράει ως γνωστή μόνο αφού επαναληφθεί η κάρτα της</translation>
     </message>
     <message>
         <source>Readability and the i+1 sentence rule count a word as known only when its Anki card has been reviewed at least once. Mining still skips every word that already has a card.</source>
-        <translation type="unfinished" />
+        <translation>Η Αναγνωσιμότητα και ο κανόνας προτάσεων i+1 μετρούν μια λέξη ως γνωστή μόνο όταν η κάρτα της στο Anki έχει επαναληφθεί τουλάχιστον μία φορά. Η εξόρυξη εξακολουθεί να παραλείπει κάθε λέξη που έχει ήδη κάρτα.</translation>
     </message>
     <message>
         <source>Keep words known after their cards are deleted</source>
@@ -6535,15 +6538,15 @@ No index files are deleted.</source>
     <name>KnownWordsManagerDialog</name>
     <message>
         <source>Word</source>
-        <translation type="unfinished" />
+        <translation>Λέξη</translation>
     </message>
     <message>
         <source>Source</source>
-        <translation type="unfinished" />
+        <translation>Πηγή</translation>
     </message>
     <message>
         <source>Added</source>
-        <translation type="unfinished" />
+        <translation>Προσθήκη</translation>
     </message>
     <message>
         <source>Manage Known Words</source>
@@ -6555,7 +6558,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Every word this language counts as known, and where it came from. Words you added from the Word Curator stay known on every run and across cache rebuilds.</source>
-        <translation type="unfinished" />
+        <translation>Κάθε λέξη που αυτή η γλώσσα μετρά ως γνωστή και από πού προήλθε. Οι λέξεις που προσθέσατε από τον Επιμελητή λέξεων μένουν γνωστές σε κάθε εκτέλεση και μετά από ανακατασκευές της κρυφής μνήμης.</translation>
     </message>
     <message>
         <source>Decks this language's known-words scan skips: %1. Change them in Settings → Word Filters.</source>
@@ -6567,15 +6570,15 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Added by you</source>
-        <translation type="unfinished" />
+        <translation>Προστέθηκε από εσάς</translation>
     </message>
     <message>
         <source>Mined by Anki Miner</source>
-        <translation type="unfinished" />
+        <translation>Εξόρυξη από το Anki Miner</translation>
     </message>
     <message>
         <source>From Anki</source>
-        <translation type="unfinished" />
+        <translation>Από το Anki</translation>
     </message>
     <message>
         <source>Filter…</source>
@@ -6583,7 +6586,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>All sources</source>
-        <translation type="unfinished" />
+        <translation>Όλες οι πηγές</translation>
     </message>
     <message>
         <source>Rebuild Known Words DB</source>
@@ -6599,7 +6602,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Removes words you added. Words from Anki come back on the next run, and mined words leave with Undo.</source>
-        <translation type="unfinished" />
+        <translation>Αφαιρεί λέξεις που προσθέσατε. Οι λέξεις από το Anki επιστρέφουν στην επόμενη εκτέλεση και οι λέξεις εξόρυξης αφαιρούνται με την Αναίρεση.</translation>
     </message>
     <message>
         <source>Import…</source>
@@ -6607,7 +6610,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Export words…</source>
-        <translation type="unfinished" />
+        <translation>Εξαγωγή λέξεων…</translation>
     </message>
     <message>
         <source>Reset User List</source>
@@ -6639,11 +6642,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Kindle Vocabulary Builder</source>
-        <translation type="unfinished" />
+        <translation>Kindle Vocabulary Builder</translation>
     </message>
     <message>
         <source>Lute or LWT term export</source>
-        <translation type="unfinished" />
+        <translation>Εξαγωγή όρων Lute ή LWT</translation>
     </message>
     <message>
         <source>plain word list</source>
@@ -6655,7 +6658,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Known word lists (*.csv *.tsv *.txt *.json *.db);;All Files (*)</source>
-        <translation type="unfinished" />
+        <translation>Λίστες γνωστών λέξεων (*.csv *.tsv *.txt *.json *.db);;Όλα τα αρχεία (*)</translation>
     </message>
     <message>
         <source>Detected: %1 — every entry is imported.
@@ -6687,7 +6690,7 @@ Words to add: %3. Continue?</source>
     </message>
     <message>
         <source>This file has no words for %1. It contains: %2.</source>
-        <translation type="unfinished" />
+        <translation>Αυτό το αρχείο δεν έχει λέξεις για τη γλώσσα %1. Περιέχει: %2.</translation>
     </message>
     <message>
         <source>That file is too large to import.</source>
@@ -6703,7 +6706,7 @@ Words to add: %3. Continue?</source>
     </message>
     <message>
         <source>File format not recognized. Supported: jpdb review export (JSON), Migaku word export (JSON/CSV), AnkiMorphs known morphs (CSV), Kindle Vocabulary Builder (vocab.db), Lute or LWT term export (CSV/TSV), plain word lists (one word per line).</source>
-        <translation type="unfinished" />
+        <translation>Η μορφή αρχείου δεν αναγνωρίστηκε. Υποστηρίζονται: εξαγωγή επαναλήψεων jpdb (JSON), εξαγωγή λέξεων Migaku (JSON/CSV), γνωστά μορφήματα AnkiMorphs (CSV), Kindle Vocabulary Builder (vocab.db), εξαγωγή όρων Lute ή LWT (CSV/TSV), απλές λίστες λέξεων (μία λέξη ανά γραμμή).</translation>
     </message>
     <message>
         <source>That file could not be imported.</source>
@@ -6725,7 +6728,7 @@ Words to add: %3. Continue?</source>
     </message>
     <message>
         <source>CSV files (*.csv);;Text files, one word per line (*.txt)</source>
-        <translation type="unfinished" />
+        <translation>Αρχεία CSV (*.csv);;Αρχεία κειμένου, μία λέξη ανά γραμμή (*.txt)</translation>
     </message>
     <message>
         <source>The known words list could not be exported.</source>
@@ -7474,7 +7477,7 @@ Continue?</source>
     </message>
     <message>
         <source>Opus clips do not play in AnkiMobile on iPhone or iPad. Choose MP3 if you review there.</source>
-        <translation type="unfinished" />
+        <translation>Τα κλιπ Opus δεν αναπαράγονται στο AnkiMobile σε iPhone ή iPad. Επιλέξτε MP3 αν κάνετε επαναλήψεις εκεί.</translation>
     </message>
     <message>
         <source> kbps</source>
@@ -7502,11 +7505,11 @@ Continue?</source>
     </message>
     <message>
         <source>Even out audio volume</source>
-        <translation type="unfinished" />
+        <translation>Εξισορρόπηση έντασης ήχου</translation>
     </message>
     <message>
         <source>Brings sentence clips and condensed audio to one volume and fades each clip in and out, so quiet and loud sources sound alike. Applies to new clips.</source>
-        <translation type="unfinished" />
+        <translation>Φέρνει τα κλιπ προτάσεων και τον συμπυκνωμένο ήχο σε ενιαία ένταση και εφαρμόζει σταδιακή αύξηση και μείωση της έντασης σε κάθε κλιπ, ώστε οι ήσυχες και οι δυνατές πηγές να ακούγονται παρόμοια. Ισχύει για νέα κλιπ.</translation>
     </message>
     <message>
         <source>Text-to-speech</source>
@@ -7530,11 +7533,11 @@ Continue?</source>
     </message>
     <message>
         <source>Crop manga pictures to the speech bubble</source>
-        <translation type="unfinished" />
+        <translation>Περικοπή εικόνων manga στο συννεφάκι ομιλίας</translation>
     </message>
     <message>
         <source>Manga cards show the speech bubble and the art around it instead of the whole page. A sentence with no bubble position keeps the whole page.</source>
-        <translation type="unfinished" />
+        <translation>Οι κάρτες manga δείχνουν το συννεφάκι ομιλίας και το σχέδιο γύρω του αντί για ολόκληρη τη σελίδα. Μια πρόταση χωρίς θέση συννεφακιού κρατά ολόκληρη τη σελίδα.</translation>
     </message>
     <message>
         <source>Enable animated screenshots</source>
@@ -7770,7 +7773,7 @@ Continue?</source>
     </message>
     <message>
         <source>Anki didn't sync after this run. Your cards are added; sync from Anki, or see the log for why.</source>
-        <translation type="unfinished" />
+        <translation>Το Anki δεν συγχρονίστηκε μετά από αυτή την εκτέλεση. Οι κάρτες σας προστέθηκαν· συγχρονίστε από το Anki ή δείτε το αρχείο καταγραφής για την αιτία.</translation>
     </message>
     <message>
         <source>Anki Miner couldn't open these cards in Anki.</source>
@@ -9540,7 +9543,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>An .epub, .txt or .pdf book, or a folder of books; each book is mined separately.</source>
-        <translation type="unfinished" />
+        <translation>Ένα βιβλίο .epub, .txt ή .pdf ή ένας φάκελος βιβλίων· η εξόρυξη γίνεται χωριστά για κάθε βιβλίο.</translation>
     </message>
     <message>
         <source>Mine</source>
@@ -9576,7 +9579,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Choose an .epub, .txt or .pdf book, or a folder of books.</source>
-        <translation type="unfinished" />
+        <translation>Επιλέξτε ένα βιβλίο .epub, .txt ή .pdf ή έναν φάκελο βιβλίων.</translation>
     </message>
     <message>
         <source>Starting…</source>
@@ -9642,7 +9645,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Add subtitle files (.srt, .ass, .ssa, .vtt, .smi, .lrc) to the list.</source>
-        <translation type="unfinished" />
+        <translation>Προσθήκη αρχείων υποτίτλων (.srt, .ass, .ssa, .vtt, .smi, .lrc) στη λίστα.</translation>
     </message>
     <message>
         <source>Remove Selected</source>
@@ -9823,19 +9826,19 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Web addresses to fetch, one per line (https://…)</source>
-        <translation type="unfinished" />
+        <translation>Διευθύνσεις web για λήψη, μία ανά γραμμή (https://…)</translation>
     </message>
     <message>
         <source>Web addresses</source>
-        <translation type="unfinished" />
+        <translation>Διευθύνσεις web</translation>
     </message>
     <message>
         <source>Fetch</source>
-        <translation type="unfinished" />
+        <translation>Λήψη</translation>
     </message>
     <message>
         <source>Put the article text of each web address in the box below, to check before mining.</source>
-        <translation type="unfinished" />
+        <translation>Τοποθετεί το κείμενο του άρθρου κάθε διεύθυνσης web στο παρακάτω πλαίσιο, για έλεγχο πριν από την εξόρυξη.</translation>
     </message>
     <message>
         <source>Paste the text you want to mine. Cards from pasted text have no sentence audio from a recording.</source>
@@ -9883,59 +9886,59 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Each line must be a web address that starts with http:// or https://.</source>
-        <translation type="unfinished" />
+        <translation>Κάθε γραμμή πρέπει να είναι μια διεύθυνση web που αρχίζει με http:// ή https://.</translation>
     </message>
     <message>
         <source>Enter a web address first.</source>
-        <translation type="unfinished" />
+        <translation>Εισαγάγετε πρώτα μια διεύθυνση web.</translation>
     </message>
     <message>
         <source>Fetch takes up to 10 web addresses at a time.</source>
-        <translation type="unfinished" />
+        <translation>Η Λήψη δέχεται έως 10 διευθύνσεις web κάθε φορά.</translation>
     </message>
     <message>
         <source>Fetching…</source>
-        <translation type="unfinished" />
+        <translation>Λήψη…</translation>
     </message>
     <message>
         <source>Could not fetch %1: %2</source>
-        <translation type="unfinished" />
+        <translation>Δεν ήταν δυνατή η λήψη του %1: %2</translation>
     </message>
     <message>
         <source>None of the pages could be fetched.</source>
-        <translation type="unfinished" />
+        <translation>Δεν ήταν δυνατή η λήψη καμίας σελίδας.</translation>
     </message>
     <message>
         <source>Fetched %1.</source>
-        <translation type="unfinished" />
+        <translation>Λήφθηκε: %1.</translation>
     </message>
     <message>
         <source>The pages could not be fetched.</source>
-        <translation type="unfinished" />
+        <translation>Δεν ήταν δυνατή η λήψη των σελίδων.</translation>
     </message>
     <message>
         <source>The page could not be reached. Check the address and your connection.</source>
-        <translation type="unfinished" />
+        <translation>Η σελίδα δεν ήταν προσβάσιμη. Ελέγξτε τη διεύθυνση και τη σύνδεσή σας.</translation>
     </message>
     <message>
         <source>The site did not send the page.</source>
-        <translation type="unfinished" />
+        <translation>Ο ιστότοπος δεν έστειλε τη σελίδα.</translation>
     </message>
     <message>
         <source>This address is not a web page.</source>
-        <translation type="unfinished" />
+        <translation>Αυτή η διεύθυνση δεν είναι ιστοσελίδα.</translation>
     </message>
     <message>
         <source>This page is too large to read.</source>
-        <translation type="unfinished" />
+        <translation>Αυτή η σελίδα είναι πολύ μεγάλη για ανάγνωση.</translation>
     </message>
     <message>
         <source>This is not a web address.</source>
-        <translation type="unfinished" />
+        <translation>Αυτή δεν είναι διεύθυνση web.</translation>
     </message>
     <message>
         <source>No article text found on this page. Pages that draw their text with JavaScript cannot be read.</source>
-        <translation type="unfinished" />
+        <translation>Δεν βρέθηκε κείμενο άρθρου σε αυτή τη σελίδα. Οι σελίδες που σχεδιάζουν το κείμενό τους με JavaScript δεν μπορούν να διαβαστούν.</translation>
     </message>
     <message>
         <source>Paste some text first.</source>
@@ -9947,7 +9950,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>The fetched text was edited, so it is mined as one text without its page titles.</source>
-        <translation type="unfinished" />
+        <translation>Το κείμενο που λήφθηκε τροποποιήθηκε, οπότε η εξόρυξη γίνεται σε αυτό ως ενιαίο κείμενο χωρίς τους τίτλους των σελίδων του.</translation>
     </message>
     <message>
         <source>That picture cannot be read. Pick another, or remove it to mine without one.</source>
@@ -10734,7 +10737,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Export words…</source>
-        <translation type="unfinished" />
+        <translation>Εξαγωγή λέξεων…</translation>
     </message>
     <message>
         <source>Close</source>
@@ -10749,19 +10752,19 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Export Words</source>
-        <translation type="unfinished" />
+        <translation>Εξαγωγή λέξεων</translation>
     </message>
     <message>
         <source>CSV files (*.csv)</source>
-        <translation type="unfinished" />
+        <translation>Αρχεία CSV (*.csv)</translation>
     </message>
     <message>
         <source>Words exported</source>
-        <translation type="unfinished" />
+        <translation>Οι λέξεις εξήχθησαν</translation>
     </message>
     <message>
         <source>Export failed — try again</source>
-        <translation type="unfinished" />
+        <translation>Η εξαγωγή απέτυχε — δοκιμάστε ξανά</translation>
     </message>
     <message>
         <source>Confirm Undo</source>
@@ -10966,11 +10969,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Skip openings, endings and signs</source>
-        <translation type="unfinished" />
+        <translation>Παράλειψη τραγουδιών αρχής/τέλους και επιγραφών</translation>
     </message>
     <message>
         <source>Leaves out song lyrics, previews and on-screen signs: lines whose subtitle style marks them as a song or a sign, and lines inside a video's opening, ending or preview chapters. Applies to mining, Condense and Readability.</source>
-        <translation type="unfinished" />
+        <translation>Εξαιρεί στίχους τραγουδιών, προεπισκοπήσεις και επιγραφές στην οθόνη: γραμμές που το στυλ υποτίτλων τις σημειώνει ως τραγούδι ή επιγραφή και γραμμές μέσα στα κεφάλαια αρχής, τέλους ή προεπισκόπησης ενός βίντεο. Ισχύει για την εξόρυξη, τη Συμπύκνωση και την Αναγνωσιμότητα.</translation>
     </message>
     <message>
         <source>Sentence options</source>
@@ -10986,7 +10989,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Mines at most one word per example sentence. A word whose sentence is already taken moves to another line it appears on, and is skipped only when every one of its lines is taken. Whitelisted words are still mined.</source>
-        <translation type="unfinished" />
+        <translation>Εξορύσσει το πολύ μία λέξη ανά παράδειγμα πρότασης. Μια λέξη της οποίας η πρόταση είναι ήδη πιασμένη μεταφέρεται σε άλλη γραμμή όπου εμφανίζεται και παραλείπεται μόνο όταν όλες οι γραμμές της είναι πιασμένες. Οι λέξεις της λευκής λίστας εξορύσσονται κανονικά.</translation>
     </message>
     <message>
         <source>Only i+1 sentences (exactly one unknown word)</source>
@@ -11002,11 +11005,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Pick the clearest sentence for each word</source>
-        <translation type="unfinished" />
+        <translation>Επιλογή της πιο ξεκάθαρης πρότασης για κάθε λέξη</translation>
     </message>
     <message>
         <source>When a word appears on several lines, its card uses the line with the fewest unknown words and a comfortable length instead of the first one. The Word Curator still lists every line, and card order does not change.</source>
-        <translation type="unfinished" />
+        <translation>Όταν μια λέξη εμφανίζεται σε πολλές γραμμές, η κάρτα της χρησιμοποιεί τη γραμμή με τις λιγότερες άγνωστες λέξεις και άνετο μήκος αντί για την πρώτη. Ο Επιμελητής λέξεων εξακολουθεί να δείχνει όλες τις γραμμές και η σειρά των καρτών δεν αλλάζει.</translation>
     </message>
     <message>
         <source> s</source>
@@ -13065,15 +13068,15 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>Restore a backup…</source>
-        <translation type="unfinished" />
+        <translation>Επαναφορά αντιγράφου ασφαλείας…</translation>
     </message>
     <message>
         <source>Backups</source>
-        <translation type="unfinished" />
+        <translation>Αντίγραφα ασφαλείας</translation>
     </message>
     <message>
         <source>Anki Miner saves your known words, statistics, settings and profiles once a day when it starts, and keeps the last 7 days.</source>
-        <translation type="unfinished" />
+        <translation>Το Anki Miner αποθηκεύει τις γνωστές λέξεις, τα στατιστικά, τις ρυθμίσεις και τα προφίλ σας μία φορά την ημέρα κατά την εκκίνηση και κρατά τις τελευταίες 7 ημέρες.</translation>
     </message>
     <message>
         <source>Themes</source>
@@ -13117,27 +13120,27 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>There is no backup yet. Anki Miner makes one each day when it starts.</source>
-        <translation type="unfinished" />
+        <translation>Δεν υπάρχει ακόμη αντίγραφο ασφαλείας. Το Anki Miner δημιουργεί ένα κάθε ημέρα κατά την εκκίνηση.</translation>
     </message>
     <message>
         <source>Restore a Backup</source>
-        <translation type="unfinished" />
+        <translation>Επαναφορά αντιγράφου ασφαλείας</translation>
     </message>
     <message>
         <source>Restore the backup from:</source>
-        <translation type="unfinished" />
+        <translation>Επαναφορά του αντιγράφου ασφαλείας από:</translation>
     </message>
     <message>
         <source>Replace your known words, statistics, settings and profiles with the copies from %1? The restore runs the next time Anki Miner starts. Changes made after that backup are lost.</source>
-        <translation type="unfinished" />
+        <translation>Να αντικατασταθούν οι γνωστές λέξεις, τα στατιστικά, οι ρυθμίσεις και τα προφίλ σας με τα αντίγραφα από %1; Η επαναφορά γίνεται στην επόμενη εκκίνηση του Anki Miner. Οι αλλαγές μετά από εκείνο το αντίγραφο ασφαλείας χάνονται.</translation>
     </message>
     <message>
         <source>The restore could not be scheduled.</source>
-        <translation type="unfinished" />
+        <translation>Δεν ήταν δυνατός ο προγραμματισμός της επαναφοράς.</translation>
     </message>
     <message>
         <source>The backup from %1 will be restored when Anki Miner next starts.</source>
-        <translation type="unfinished" />
+        <translation>Το αντίγραφο ασφαλείας από %1 θα επαναφερθεί στην επόμενη εκκίνηση του Anki Miner.</translation>
     </message>
 </context><context>
     <name>UpdateBanner</name>
@@ -13305,11 +13308,11 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>The picture (burned-in text)</source>
-        <translation type="unfinished" />
+        <translation>Η εικόνα (ενσωματωμένο κείμενο)</translation>
     </message>
     <message>
         <source>Image subtitle track %1</source>
-        <translation type="unfinished" />
+        <translation>Κομμάτι υποτίτλων εικόνας %1</translation>
     </message>
     <message>
         <source>The OCR engine could not start on this computer. The details say why.</source>
@@ -13349,15 +13352,15 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>This field takes a video or an image subtitle file (.sup, .idx, .sub).</source>
-        <translation type="unfinished" />
+        <translation>Αυτό το πεδίο δέχεται ένα βίντεο ή ένα αρχείο υποτίτλων εικόνας (.sup, .idx, .sub).</translation>
     </message>
     <message>
         <source>Read from:</source>
-        <translation type="unfinished" />
+        <translation>Ανάγνωση από:</translation>
     </message>
     <message>
         <source>Read text drawn into the picture, or one of the video's image subtitle tracks.</source>
-        <translation type="unfinished" />
+        <translation>Ανάγνωση του κειμένου που είναι σχεδιασμένο στην εικόνα ή ενός από τα κομμάτια υποτίτλων εικόνας του βίντεο.</translation>
     </message>
     <message>
         <source>Video Folder:</source>
@@ -13441,7 +13444,7 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>Image subtitles are read over the whole frame, so they need no region.</source>
-        <translation type="unfinished" />
+        <translation>Οι υπότιτλοι εικόνας διαβάζονται σε όλο το καρέ, οπότε δεν χρειάζονται περιοχή.</translation>
     </message>
     <message>
         <source>Download OCR models</source>
@@ -13485,7 +13488,7 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>A DVD subtitle needs its .idx and .sub files in the same folder.</source>
-        <translation type="unfinished" />
+        <translation>Ένας υπότιτλος DVD χρειάζεται τα αρχεία .idx και .sub του στον ίδιο φάκελο.</translation>
     </message>
     <message>
         <source>Choose a folder before reading subtitles.</source>
@@ -13771,15 +13774,15 @@ Sort by it to work through a long recording in order — then highlight the rows
     </message>
     <message>
         <source>Used on the card</source>
-        <translation type="unfinished" />
+        <translation>Χρησιμοποιείται στην κάρτα</translation>
     </message>
     <message>
         <source>Back to the first match</source>
-        <translation type="unfinished" />
+        <translation>Πίσω στην πρώτη αντιστοιχία</translation>
     </message>
     <message>
         <source>Use this dictionary on the card</source>
-        <translation type="unfinished" />
+        <translation>Χρήση αυτού του λεξικού στην κάρτα</translation>
     </message>
     <message>
         <source>Sentences (%1)</source>
@@ -14217,7 +14220,7 @@ Sort by it to work through a long recording in order — then highlight the rows
     </message>
     <message>
         <source>Wikimedia Commons (native recordings)</source>
-        <translation type="unfinished" />
+        <translation>Wikimedia Commons (ηχογραφήσεις φυσικών ομιλητών)</translation>
     </message>
     <message>
         <source>Microsoft Edge read-aloud (synthetic TTS)</source>
@@ -14231,7 +14234,7 @@ Sort by it to work through a long recording in order — then highlight the rows
     <name>_BarChart</name>
     <message>
         <source>Cards per period</source>
-        <translation type="unfinished" />
+        <translation>Κάρτες ανά περίοδο</translation>
     </message>
 </context><context>
     <name>_HealthRow</name>
@@ -14253,11 +14256,11 @@ Sort by it to work through a long recording in order — then highlight the rows
     <name>_MissingWordsDialog</name>
     <message>
         <source>Missing Words</source>
-        <translation type="unfinished" />
+        <translation>Λέξεις που λείπουν</translation>
     </message>
     <message>
         <source>Not known yet in ranks %1</source>
-        <translation type="unfinished" />
+        <translation>Ακόμη άγνωστες στις θέσεις κατάταξης %1</translation>
     </message>
 </context><context>
     <name>app</name>

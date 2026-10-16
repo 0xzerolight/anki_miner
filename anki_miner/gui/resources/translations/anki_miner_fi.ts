@@ -93,59 +93,59 @@
     </message>
     <message>
         <source>Known Words</source>
-        <translation type="unfinished" />
+        <translation>Tunnetut sanat</translation>
     </message>
     <message>
         <source>Words Anki Miner treats as known in the current mining language.</source>
-        <translation type="unfinished" />
+        <translation>Sanat, jotka Anki Miner laskee tunnetuiksi nykyisessä louhintakielessä.</translation>
     </message>
     <message>
         <source>Mining History</source>
-        <translation type="unfinished" />
+        <translation>Louhintahistoria</translation>
     </message>
     <message>
         <source>History period</source>
-        <translation type="unfinished" />
+        <translation>Historian aikaväli</translation>
     </message>
     <message>
         <source>All time</source>
-        <translation type="unfinished" />
+        <translation>Koko ajalta</translation>
     </message>
     <message>
         <source>Last 7 days</source>
-        <translation type="unfinished" />
+        <translation>Viimeiset 7 päivää</translation>
     </message>
     <message>
         <source>Last 30 days</source>
-        <translation type="unfinished" />
+        <translation>Viimeiset 30 päivää</translation>
     </message>
     <message>
         <source>Last 12 months</source>
-        <translation type="unfinished" />
+        <translation>Viimeiset 12 kuukautta</translation>
     </message>
     <message>
         <source>History grouping</source>
-        <translation type="unfinished" />
+        <translation>Historian ryhmittely</translation>
     </message>
     <message>
         <source>Each run</source>
-        <translation type="unfinished" />
+        <translation>Jokainen ajo</translation>
     </message>
     <message>
         <source>By day</source>
-        <translation type="unfinished" />
+        <translation>Päivittäin</translation>
     </message>
     <message>
         <source>By week</source>
-        <translation type="unfinished" />
+        <translation>Viikoittain</translation>
     </message>
     <message>
         <source>By month</source>
-        <translation type="unfinished" />
+        <translation>Kuukausittain</translation>
     </message>
     <message>
         <source>Export CSV…</source>
-        <translation type="unfinished" />
+        <translation>Vie CSV…</translation>
     </message>
     <message>
         <source>No sessions yet — process an episode to see your history.</source>
@@ -177,7 +177,7 @@
     </message>
     <message>
         <source>Period</source>
-        <translation type="unfinished" />
+        <translation>Jakso</translation>
     </message>
     <message>
         <source>Show in Anki</source>
@@ -185,7 +185,7 @@
     </message>
     <message>
         <source>Delete this run's cards…</source>
-        <translation type="unfinished" />
+        <translation>Poista tämän ajon kortit…</translation>
     </message>
     <message>
         <source>Series Difficulty Ranking</source>
@@ -217,11 +217,11 @@
     </message>
     <message>
         <source>Frequency Coverage</source>
-        <translation type="unfinished" />
+        <translation>Yleisyyskattavuus</translation>
     </message>
     <message>
         <source>Rank band</source>
-        <translation type="unfinished" />
+        <translation>Sijaväli</translation>
     </message>
     <message>
         <source>Known</source>
@@ -229,15 +229,15 @@
     </message>
     <message>
         <source>Not known</source>
-        <translation type="unfinished" />
+        <translation>Tuntemattomat</translation>
     </message>
     <message>
         <source>Known %</source>
-        <translation type="unfinished" />
+        <translation>Tunnettuja %</translation>
     </message>
     <message>
         <source>Show missing words</source>
-        <translation type="unfinished" />
+        <translation>Näytä puuttuvat sanat</translation>
     </message>
     <message>
         <source>Milestones</source>
@@ -265,93 +265,95 @@
     </message>
     <message>
         <source>No runs in this period.</source>
-        <translation type="unfinished" />
+        <translation>Tällä aikavälillä ei ole ajoja.</translation>
     </message>
     <message>
         <source>Export Mining History</source>
-        <translation type="unfinished" />
+        <translation>Vie louhintahistoria</translation>
     </message>
     <message>
         <source>CSV Files (*.csv);;All Files (*)</source>
-        <translation type="unfinished" />
+        <translation>CSV-tiedostot (*.csv);;Kaikki tiedostot (*)</translation>
     </message>
     <message>
         <source>History saved to %1.</source>
-        <translation type="unfinished" />
+        <translation>Historia tallennettiin tiedostoon %1.</translation>
     </message>
     <message>
         <source>The history could not be exported.</source>
-        <translation type="unfinished" />
+        <translation>Historiaa ei voitu viedä.</translation>
     </message>
     <message>
         <source>%1 (cards deleted: %2)</source>
-        <translation type="unfinished" />
+        <translation>%1 (poistettuja kortteja: %2)</translation>
     </message>
     <message>
         <source>Select one run in the table.</source>
-        <translation type="unfinished" />
+        <translation>Valitse taulukosta yksi ajo.</translation>
     </message>
     <message>
         <source>This run's cards were deleted: %1.</source>
-        <translation type="unfinished" />
+        <translation>Tämän ajon poistettuja kortteja: %1.</translation>
     </message>
     <message>
         <source>Anki Miner has no card list for this run: it was mined before this version, or it made no cards.</source>
-        <translation type="unfinished" />
+        <translation>Anki Minerilla ei ole tämän ajon korttiluetteloa: ajo tehtiin ennen tätä versiota, tai se ei luonut kortteja.</translation>
     </message>
     <message>
         <source>Anki Miner couldn't open this run's cards in Anki.</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner ei voinut avata tämän ajon kortteja Ankissa.</translation>
     </message>
     <message>
         <source>None of this run's cards are in Anki any more.</source>
-        <translation type="unfinished" />
+        <translation>Yksikään tämän ajon korteista ei ole enää Ankissa.</translation>
     </message>
     <message>
         <source>Delete This Run's Cards</source>
-        <translation type="unfinished" />
+        <translation>Poista tämän ajon kortit</translation>
     </message>
     <message>
         <source>Cards this run added that are still in Anki: %1. Reviewed at least once: %2.
 
 Delete them from Anki? Their review history is deleted with them. This cannot be undone.</source>
-        <translation type="unfinished" />
+        <translation>Tämän ajon lisäämiä kortteja, jotka ovat yhä Ankissa: %1. Kerrattu vähintään kerran: %2.
+
+Poistetaanko ne Ankista? Niiden kertaushistoria poistetaan samalla. Toimintoa ei voi kumota.</translation>
     </message>
     <message>
         <source>Cards deleted from Anki: %1.</source>
-        <translation type="unfinished" />
+        <translation>Ankista poistettuja kortteja: %1.</translation>
     </message>
     <message>
         <source>This run's cards could not be deleted.</source>
-        <translation type="unfinished" />
+        <translation>Tämän ajon kortteja ei voitu poistaa.</translation>
     </message>
     <message>
         <source>Known words could not be counted.</source>
-        <translation type="unfinished" />
+        <translation>Tunnettuja sanoja ei voitu laskea.</translation>
     </message>
     <message>
         <source>Words Anki Miner treats as known in %1.</source>
-        <translation type="unfinished" />
+        <translation>Sanat, jotka Anki Miner laskee tunnetuiksi kielessä %1.</translation>
     </message>
     <message>
         <source>Change since %1: %2</source>
-        <translation type="unfinished" />
+        <translation>Muutos %1 alkaen: %2</translation>
     </message>
     <message>
         <source>Last counted on %1; Anki was not reachable.</source>
-        <translation type="unfinished" />
+        <translation>Laskettu viimeksi %1; Ankiin ei saatu yhteyttä.</translation>
     </message>
     <message>
         <source>Last counted on %1.</source>
-        <translation type="unfinished" />
+        <translation>Laskettu viimeksi %1.</translation>
     </message>
     <message>
         <source>Coverage needs Anki running: it compares the list with your cards.</source>
-        <translation type="unfinished" />
+        <translation>Kattavuus vaatii, että Anki on käynnissä: se vertaa luetteloa kortteihisi.</translation>
     </message>
     <message>
         <source>How many of the most frequent words in %1 you already know.</source>
-        <translation type="unfinished" />
+        <translation>Kuinka monta luettelon %1 yleisimmistä sanoista jo osaat.</translation>
     </message>
     <message>
         <source>%1 mining sessions completed</source>
@@ -761,7 +763,7 @@ Delete them from Anki? Their review history is deleted with them. This cannot be
     </message>
     <message>
         <source>{series}, {episode} and {volume} become each card's show, episode or book volume, for example mined::{series}::{episode}.</source>
-        <translation type="unfinished" />
+        <translation>{series}, {episode} ja {volume} korvautuvat kunkin kortin sarjalla, jaksolla tai kirjan osalla, esimerkiksi mined::{series}::{episode}.</translation>
     </message>
     <message>
         <source>Refresh</source>
@@ -789,11 +791,11 @@ Delete them from Anki? Their review history is deleted with them. This cannot be
     </message>
     <message>
         <source>Sync Anki after mining</source>
-        <translation type="unfinished" />
+        <translation>Synkronoi Anki louhinnan jälkeen</translation>
     </message>
     <message>
         <source>After a run that added cards, ask Anki to sync with AnkiWeb. If the sync fails, the Activity Log says so and the cards stay added.</source>
-        <translation type="unfinished" />
+        <translation>Pyydä Ankia synkronoimaan AnkiWebin kanssa ajon jälkeen, jos ajo lisäsi kortteja. Jos synkronointi epäonnistuu, siitä kerrotaan tapahtumalokissa, ja kortit pysyvät lisättyinä.</translation>
     </message>
     <message>
         <source>AnkiConnect URL</source>
@@ -805,7 +807,7 @@ Delete them from Anki? Their review history is deleted with them. This cannot be
     </message>
     <message>
         <source>If AnkiConnect asks for an API key, add it to the address: http://127.0.0.1:8765/?key=YOUR_KEY</source>
-        <translation type="unfinished" />
+        <translation>Jos AnkiConnect pyytää API-avainta, lisää se osoitteeseen: http://127.0.0.1:8765/?key=YOUR_KEY</translation>
     </message>
     <message>
         <source>Fill in automatically</source>
@@ -1517,7 +1519,7 @@ Tuetut muodot: AJT (index.json + media/), NHK16 (entries.json + audio/), Forvo (
     </message>
     <message>
         <source>Wikimedia Commons (native recordings)</source>
-        <translation type="unfinished" />
+        <translation>Wikimedia Commons (syntyperäisten puhujien äänitteet)</translation>
     </message>
     <message>
         <source>Custom JSON</source>
@@ -2086,7 +2088,7 @@ Indeksitiedostoja ei poisteta.</translation>
     </message>
     <message>
         <source>Every audio file in the folder, in file-name order, one .srt each. A folder of book folders (each with its EPUB and audio) syncs every book in turn.</source>
-        <translation type="unfinished" />
+        <translation>Kansion kaikki äänitiedostot tiedostonimen mukaisessa järjestyksessä, kustakin yksi .srt. Kirjakansioista koostuva kansio (jokaisessa oma EPUB ja ääni) synkronoi kirjat vuorotellen.</translation>
     </message>
     <message>
         <source>EPUB or Text File:</source>
@@ -2114,7 +2116,7 @@ Indeksitiedostoja ei poisteta.</translation>
     </message>
     <message>
         <source>Sentences: how many of the book's sentences, from the first one found to the last, got a subtitle. Audio: how much of the narration matched the book. Grade: A from 90% on both, B from 75%, C from 50%, else D.</source>
-        <translation type="unfinished" />
+        <translation>Lauseet: kuinka moni kirjan lauseista ensimmäisestä löydetystä viimeiseen sai tekstityksen. Ääni: kuinka suuri osa luennasta vastasi kirjaa. Arvosana: A, kun molemmat ovat vähintään 90 %, B vähintään 75 %, C vähintään 50 %, muuten D.</translation>
     </message>
     <message>
         <source>Output</source>
@@ -2178,7 +2180,7 @@ Indeksitiedostoja ei poisteta.</translation>
     </message>
     <message>
         <source>No audio files were found in that folder, and no book folders (each with its book and audio).</source>
-        <translation type="unfinished" />
+        <translation>Kansiosta ei löytynyt äänitiedostoja eikä kirjakansioita (joissa kussakin on kirja ja ääni).</translation>
     </message>
     <message>
         <source>That folder could not be scanned.</source>
@@ -2186,15 +2188,15 @@ Indeksitiedostoja ei poisteta.</translation>
     </message>
     <message>
         <source>Skipped folder %1: no audio files</source>
-        <translation type="unfinished" />
+        <translation>Ohitettiin kansio %1: ei äänitiedostoja</translation>
     </message>
     <message>
         <source>Skipped folder %1: no .epub or .txt book</source>
-        <translation type="unfinished" />
+        <translation>Ohitettiin kansio %1: ei .epub- tai .txt-kirjaa</translation>
     </message>
     <message>
         <source>Skipped folder %1: more than one book</source>
-        <translation type="unfinished" />
+        <translation>Ohitettiin kansio %1: useampi kuin yksi kirja</translation>
     </message>
     <message>
         <source>Output folder is not writable.</source>
@@ -2214,11 +2216,11 @@ Indeksitiedostoja ei poisteta.</translation>
     </message>
     <message>
         <source>Books: %1 — %2</source>
-        <translation type="unfinished" />
+        <translation>Kirjat: %1 — %2</translation>
     </message>
     <message>
         <source>%1: sentences %2%, audio %3% — grade %4</source>
-        <translation type="unfinished" />
+        <translation>%1: lauseet %2 %, ääni %3 % — arvosana %4</translation>
     </message>
     <message>
         <source>Syncing file %1 of %2</source>
@@ -2232,11 +2234,11 @@ Indeksitiedostoja ei poisteta.</translation>
     </message>
     <message>
         <source>%1 could not be loaded: %2</source>
-        <translation type="unfinished" />
+        <translation>Kohdetta %1 ei voitu ladata: %2</translation>
     </message>
     <message>
         <source>Its book could not be loaded</source>
-        <translation type="unfinished" />
+        <translation>Sen kirjaa ei voitu ladata</translation>
     </message>
     <message>
         <source>Skipped, exists</source>
@@ -2256,11 +2258,11 @@ Indeksitiedostoja ei poisteta.</translation>
     </message>
     <message>
         <source>Reusing the saved transcript</source>
-        <translation type="unfinished" />
+        <translation>Käytetään tallennettua litterointia uudelleen</translation>
     </message>
     <message>
         <source>Found sentence %1 again later in the audio; timed it out of book order</source>
-        <translation type="unfinished" />
+        <translation>Lause %1 löytyi uudelleen myöhemmin äänestä; ajoitettiin se kirjan järjestyksestä poiketen</translation>
     </message>
     <message>
         <source>%1 sentences timed, %2 in between had no audio</source>
@@ -2342,7 +2344,7 @@ Indeksitiedostoja ei poisteta.</translation>
     </message>
     <message>
         <source>Approve or reject each word, pick its sentence and scene, trim its audio, mark words known, and fix a mistranscribed sentence or swap the word to mine -- before any card is created. When a word has entries in several dictionaries, choose which one the card's Definition uses.</source>
-        <translation type="unfinished" />
+        <translation>Hyväksy tai hylkää jokainen sana, valitse sen lause ja kohtaus, rajaa sen ääni, merkitse sanoja tunnetuiksi ja korjaa väärin litteroitu lause tai vaihda louhittava sana -- ennen kuin yhtään korttia luodaan. Kun sanalla on hakusanoja useassa sanakirjassa, valitse, mitä niistä kortin määritelmä käyttää.</translation>
     </message>
     <message>
         <source>Secondary-language subtitles</source>
@@ -2350,7 +2352,7 @@ Indeksitiedostoja ei poisteta.</translation>
     </message>
     <message>
         <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. Leave the file empty and Anki Miner picks a translation itself: a subtitle named for the video, or a text track inside it, in your interface language or else English. The Activity Log names the track it used. On Video → Batch, point it at a folder of translation subtitles instead and they pair to the videos by episode number. Turn it on under Settings → Sentences.</source>
-        <translation type="unfinished" />
+        <translation>Lataa louhintakielisen tekstityksen rinnalle toinen tekstitystiedosto omalla kielelläsi: se näkyy repliikin alla Sanakuraattorin esikatselussa, ja sen voi tallentaa käännöskenttään. Jätä tiedosto tyhjäksi, niin Anki Miner valitsee käännöksen itse: videon mukaan nimetyn tekstityksen tai videon sisäisen tekstiraidan käyttöliittymäsi kielellä tai muuten englanniksi. Tapahtumaloki kertoo, mitä raitaa käytettiin. Kohdassa Video → Erä osoita sen sijaan kansio, jossa on käännöstekstityksiä, niin ne yhdistetään videoihin jaksonumeron mukaan. Ota se käyttöön kohdassa Asetukset → Lauseet.</translation>
     </message>
     <message>
         <source>Build a deck by coverage %</source>
@@ -2386,11 +2388,11 @@ Indeksitiedostoja ei poisteta.</translation>
     </message>
     <message>
         <source>Mine songs from .lrc lyrics</source>
-        <translation type="unfinished" />
+        <translation>Louhi kappaleita .lrc-sanoituksista</translation>
     </message>
     <message>
         <source>Use a .lrc lyrics file wherever a subtitle file goes. Each line lasts until the next one starts. Pair a song with its lyrics on Audiobooks, condense it in Condense, or mine a music video on Video.</source>
-        <translation type="unfinished" />
+        <translation>Käytä .lrc-sanoitustiedostoa missä tahansa, missä käy tekstitystiedosto. Jokainen rivi kestää, kunnes seuraava alkaa. Yhdistä kappale sanoitukseensa välilehdellä Äänikirjat, tiivistä se välilehdellä Tiivistys tai louhi musiikkivideo välilehdellä Video.</translation>
     </message>
     <message>
         <source>Mine from manga</source>
@@ -2406,23 +2408,23 @@ Indeksitiedostoja ei poisteta.</translation>
     </message>
     <message>
         <source>Mine vocabulary from novels and other text (EPUB, PDF, Aozora, plain text).</source>
-        <translation type="unfinished" />
+        <translation>Louhi sanastoa romaaneista ja muusta tekstistä (EPUB, PDF, Aozora, pelkkä teksti).</translation>
     </message>
     <message>
         <source>Readings from a book's own furigana</source>
-        <translation type="unfinished" />
+        <translation>Lukutavat kirjan omista furiganoista</translation>
     </message>
     <message>
         <source>When a Japanese EPUB prints furigana over a word, the card takes that reading instead of the parser's guess.</source>
-        <translation type="unfinished" />
+        <translation>Kun japanilaisessa EPUBissa sanan yläpuolella on furigana, kortti käyttää sitä lukutapaa jäsentimen arvauksen sijaan.</translation>
     </message>
     <message>
         <source>Mine pasted text or a web article</source>
-        <translation type="unfinished" />
+        <translation>Louhi liitettyä tekstiä tai verkkoartikkeli</translation>
     </message>
     <message>
         <source>Paste text in your mining language, or fetch a web article by its address, and mine it into Anki cards. A fetched article's cards name the page and site as their source.</source>
-        <translation type="unfinished" />
+        <translation>Liitä tekstiä louhintakielelläsi tai hae verkkoartikkeli sen osoitteella ja louhi se Anki-korteiksi. Haetun artikkelin korteissa lähteeksi merkitään sivu ja sivusto.</translation>
     </message>
     <message>
         <source>Mine subtitle files without video</source>
@@ -2446,7 +2448,7 @@ Indeksitiedostoja ei poisteta.</translation>
     </message>
     <message>
         <source>Create subtitles from audio with a local Whisper model -- as a standalone tool. Long lines are split at sentence ends, and a second run on the same file reuses the saved transcript.</source>
-        <translation type="unfinished" />
+        <translation>Luo tekstitykset äänestä paikallisella Whisper-mallilla -- erillisenä työkaluna. Pitkät rivit jaetaan lauseiden lopuista, ja toinen ajo samalle tiedostolle käyttää tallennettua litterointia uudelleen.</translation>
     </message>
     <message>
         <source>Re-time existing subtitles</source>
@@ -2506,35 +2508,35 @@ Indeksitiedostoja ei poisteta.</translation>
     </message>
     <message>
         <source>Browse your whole mining history</source>
-        <translation type="unfinished" />
+        <translation>Selaa koko louhintahistoriaasi</translation>
     </message>
     <message>
         <source>Analytics lists every run you have mined. Pick a period, group the runs by day, week or month, see the cards per period in a chart, and export the table as a CSV file.</source>
-        <translation type="unfinished" />
+        <translation>Analytiikka luettelee kaikki tekemäsi louhinta-ajot. Valitse aikaväli, ryhmittele ajot päivän, viikon tai kuukauden mukaan, katso kortit jaksoittain kaaviosta ja vie taulukko CSV-tiedostona.</translation>
     </message>
     <message>
         <source>Show or delete a past run's cards</source>
-        <translation type="unfinished" />
+        <translation>Näytä tai poista aiemman ajon kortit</translation>
     </message>
     <message>
         <source>Select a run in Analytics → Mining History to open its cards in Anki's browser or to delete them. The confirmation says how many of its cards are still in Anki and how many you have reviewed. Runs mined before this version have no card list.</source>
-        <translation type="unfinished" />
+        <translation>Valitse ajo kohdassa Analytiikka → Louhintahistoria avataksesi sen kortit Ankin selaimessa tai poistaaksesi ne. Vahvistus kertoo, kuinka moni sen korteista on yhä Ankissa ja kuinka monta olet kerrannut. Ennen tätä versiota tehdyillä ajoilla ei ole korttiluetteloa.</translation>
     </message>
     <message>
         <source>Track how many words you know</source>
-        <translation type="unfinished" />
+        <translation>Seuraa, kuinka monta sanaa osaat</translation>
     </message>
     <message>
         <source>The Known Words card on Analytics counts the words Anki Miner treats as known in the current mining language and shows how that number changed. It is counted while Anki is running, at most once every ten minutes.</source>
-        <translation type="unfinished" />
+        <translation>Analytiikan Tunnetut sanat -kortti laskee sanat, jotka Anki Miner laskee tunnetuiksi nykyisessä louhintakielessä, ja näyttää, miten määrä on muuttunut. Laskenta tehdään Ankin ollessa käynnissä, enintään kerran kymmenessä minuutissa.</translation>
     </message>
     <message>
         <source>See how much of a frequency list you know</source>
-        <translation type="unfinished" />
+        <translation>Katso, kuinka suuren osan yleisyysluettelosta osaat</translation>
     </message>
     <message>
         <source>Analytics → Frequency Coverage counts the words you know in ranks 1–1,000 up to 20,000 of your first frequency list with numeric ranks, and lists the missing words of each band. It needs Anki running.</source>
-        <translation type="unfinished" />
+        <translation>Analytiikka → Yleisyyskattavuus laskee osaamasi sanat sijoilta 1–1 000 aina 20 000:een asti ensimmäisestä yleisyysluettelostasi, jossa on numeeriset sijat, ja luettelee kunkin välin puuttuvat sanat. Se vaatii, että Anki on käynnissä.</translation>
     </message>
     <message>
         <source>Reset mining statistics</source>
@@ -2610,11 +2612,11 @@ Indeksitiedostoja ei poisteta.</translation>
     </message>
     <message>
         <source>Count a word as known only after its card has been reviewed</source>
-        <translation type="unfinished" />
+        <translation>Laske sana tunnetuksi vasta, kun sen kortti on kerrattu</translation>
     </message>
     <message>
         <source>Readability and the i+1 sentence rule then count a word as known only when its Anki card has been reviewed at least once. Mining still skips every word that already has a card.</source>
-        <translation type="unfinished" />
+        <translation>Luettavuus ja i+1-lausesääntö laskevat silloin sanan tunnetuksi vasta, kun sen Anki-kortti on kerrattu vähintään kerran. Louhinta ohittaa edelleen jokaisen sanan, jolla on jo kortti.</translation>
     </message>
     <message>
         <source>Exclude specific Anki decks from 'known'</source>
@@ -2634,27 +2636,27 @@ Indeksitiedostoja ei poisteta.</translation>
     </message>
     <message>
         <source>Browse every known word</source>
-        <translation type="unfinished" />
+        <translation>Selaa kaikkia tunnettuja sanoja</translation>
     </message>
     <message>
         <source>Manage Known Words lists every word this language counts as known, with where it came from (added by you, mined by Anki Miner, from Anki) and the date it was added. Search it, filter it by source, and remove words you added. Words from Anki come back on the next sync.</source>
-        <translation type="unfinished" />
+        <translation>Hallitse tunnettuja sanoja luettelee kaikki sanat, jotka tämä kieli laskee tunnetuiksi, sekä niiden alkuperän (sinun lisäämäsi, Anki Minerin louhimat, Ankista) ja lisäyspäivän. Hae luettelosta, suodata sitä lähteen mukaan ja poista lisäämiäsi sanoja. Ankista tulleet sanat palaavat seuraavassa synkronoinnissa.</translation>
     </message>
     <message>
         <source>Import known words from Kindle, Lute or LWT</source>
-        <translation type="unfinished" />
+        <translation>Tuo tunnettuja sanoja Kindlestä, Lutesta tai LWT:stä</translation>
     </message>
     <message>
         <source>In Manage Known Words, Import… also reads a Kindle Vocabulary Builder file (vocab.db; words marked mastered) and Lute or LWT term exports (status 5 and 99).</source>
-        <translation type="unfinished" />
+        <translation>Hallitse tunnettuja sanoja -ikkunassa Tuo… lukee myös Kindle Vocabulary Builder -tiedoston (vocab.db; opituiksi merkityt sanat) sekä Luten tai LWT:n termivientejä (tila 5 ja 99).</translation>
     </message>
     <message>
         <source>Export words to a CSV file</source>
-        <translation type="unfinished" />
+        <translation>Vie sanat CSV-tiedostoon</translation>
     </message>
     <message>
         <source>Export words… saves the list you are looking at in Manage Known Words, or a finished run's mined and not-mined words with the reason each was skipped, as a CSV file.</source>
-        <translation type="unfinished" />
+        <translation>Vie sanat… tallentaa CSV-tiedostona luettelon, jota katselet Hallitse tunnettuja sanoja -ikkunassa, tai valmiin ajon louhitut ja louhimatta jääneet sanat sekä kunkin ohituksen syyn.</translation>
     </message>
     <message>
         <source>Exclude kana-only words</source>
@@ -2686,23 +2688,23 @@ Indeksitiedostoja ei poisteta.</translation>
     </message>
     <message>
         <source>Mine at most one word from each example sentence. A word whose sentence is taken moves to another line it appears on, and is skipped only when every one of its lines is taken.</source>
-        <translation type="unfinished" />
+        <translation>Louhi kustakin esimerkkilauseesta enintään yksi sana. Sana, jonka lause on jo varattu, siirtyy toiselle rivelle, jolla se esiintyy, ja ohitetaan vasta, kun kaikki sen rivit ovat varattuja.</translation>
     </message>
     <message>
         <source>Pick the clearest sentence</source>
-        <translation type="unfinished" />
+        <translation>Valitse selkein lause</translation>
     </message>
     <message>
         <source>When a word appears on several lines, its card uses the line with the fewest unknown words and a comfortable length instead of the first one. The Word Curator still lists every line.</source>
-        <translation type="unfinished" />
+        <translation>Kun sana esiintyy usealla rivillä, sen kortti käyttää ensimmäisen rivin sijaan riviä, jolla on vähiten tuntemattomia sanoja ja sopiva pituus. Sanakuraattori luettelee edelleen kaikki rivit.</translation>
     </message>
     <message>
         <source>Skip openings, endings and signs</source>
-        <translation type="unfinished" />
+        <translation>Ohita alkutunnarit, lopputunnarit ja kyltit</translation>
     </message>
     <message>
         <source>Leave opening and ending songs, previews and on-screen signs out of mining, Condense and Readability: lines styled as songs or signs, and lines inside a video's opening, ending and preview chapters. On by default for new installs; turn it off in Settings → Sentences.</source>
-        <translation type="unfinished" />
+        <translation>Jätä alku- ja lopputunnarit, ennakkokatsaukset ja kuvassa näkyvät kyltit pois louhinnasta, Tiivistyksestä ja Luettavuudesta: kappaleiksi tai kylteiksi muotoillut rivit sekä rivit videon alku-, loppu- ja ennakkokatsauslukujen sisällä. Oletuksena käytössä uusissa asennuksissa; poista se käytöstä kohdassa Asetukset → Lauseet.</translation>
     </message>
     <message>
         <source>Strip junk from subtitles (regex)</source>
@@ -2770,11 +2772,11 @@ Indeksitiedostoja ei poisteta.</translation>
     </message>
     <message>
         <source>Import a dictionary file</source>
-        <translation type="unfinished" />
+        <translation>Tuo sanakirjatiedosto</translation>
     </message>
     <message>
         <source>Add a Yomitan zip, a StarDict dictionary (its archive or its .ifo file) or a CSV/TSV word list (term and definition, or term, reading and definition) as a definition source.</source>
-        <translation type="unfinished" />
+        <translation>Lisää määritelmälähteeksi Yomitan-zip, StarDict-sanakirja (sen arkisto tai .ifo-tiedosto) tai CSV/TSV-sanalista (termi ja määritelmä tai termi, lukutapa ja määritelmä).</translation>
     </message>
     <message>
         <source>Keep dictionaries up to date</source>
@@ -2846,7 +2848,7 @@ Indeksitiedostoja ei poisteta.</translation>
     </message>
     <message>
         <source>Attach word audio to cards from audio packs, JPod101 (Japanese), Google text-to-speech, or Microsoft Edge text-to-speech (every language). Wikimedia Commons plays recordings of real speakers from Wiktionary and Lingua Libre, tried before Google TTS in most languages.</source>
-        <translation type="unfinished" />
+        <translation>Liitä kortteihin sanojen ääni äänipaketeista, JPod101:stä (japani), Googlen puhesynteesistä tai Microsoft Edgen puhesynteesistä (kaikki kielet). Wikimedia Commons toistaa oikeiden puhujien äänitteitä Wiktionarysta ja Lingua Libresta, ja sitä kokeillaan useimmissa kielissä ennen Google TTS:ää.</translation>
     </message>
     <message>
         <source>Import local audio packs</source>
@@ -2862,7 +2864,7 @@ Indeksitiedostoja ei poisteta.</translation>
     </message>
     <message>
         <source>Extract the spoken sentence as an audio clip; tune its format and bitrate. Even out audio volume brings sentence clips and condensed audio to one loudness and fades each clip in and out.</source>
-        <translation type="unfinished" />
+        <translation>Pura puhuttu lause äänileikkeeksi; säädä sen muotoa ja bittinopeutta. Tasaa äänenvoimakkuus tuo lauseleikkeet ja tiivistetyn äänen samaan voimakkuuteen ja häivyttää jokaisen leikkeen sisään ja ulos.</translation>
     </message>
     <message>
         <source>Sentence audio for reading (TTS)</source>
@@ -2886,7 +2888,7 @@ Indeksitiedostoja ei poisteta.</translation>
     </message>
     <message>
         <source>Capture a still frame from the scene to put on the card. Crop manga pictures to the speech bubble shows the bubble and the art around it instead of the whole page.</source>
-        <translation type="unfinished" />
+        <translation>Ota kohtauksesta pysäytyskuva korttiin. Rajaa mangakuvat puhekuplaan näyttää koko sivun sijaan kuplan ja sitä ympäröivän piirroksen.</translation>
     </message>
     <message>
         <source>Animated clips (GIF/WebP)</source>
@@ -2966,7 +2968,7 @@ Indeksitiedostoja ei poisteta.</translation>
     </message>
     <message>
         <source>Add tags to every note Anki Miner creates. Card tags can use {series}, {episode} and {volume}. Each card gets its own show, episode or book volume, for example mined::{series}::{episode} gives mined::Frieren::03.</source>
-        <translation type="unfinished" />
+        <translation>Lisää tunnisteita jokaiseen Anki Minerin luomaan muistiinpanoon. Korttitunnisteissa voi käyttää merkintöjä {series}, {episode} ja {volume}. Kukin kortti saa oman sarjansa, jaksonsa tai kirjan osansa, esimerkiksi mined::{series}::{episode} tuottaa mined::Frieren::03.</translation>
     </message>
     <message>
         <source>Connect to Anki (AnkiConnect)</source>
@@ -2974,15 +2976,15 @@ Indeksitiedostoja ei poisteta.</translation>
     </message>
     <message>
         <source>Set the AnkiConnect address; Refresh re-checks the connection to your running Anki. If AnkiConnect is set up with an API key, add it to the address: http://127.0.0.1:8765/?key=YOUR_KEY. Anki Miner sends it with every request and never writes it to the log.</source>
-        <translation type="unfinished" />
+        <translation>Aseta AnkiConnect-osoite; Päivitä tarkistaa yhteyden käynnissä olevaan Ankiin uudelleen. Jos AnkiConnect on määritetty käyttämään API-avainta, lisää se osoitteeseen: http://127.0.0.1:8765/?key=YOUR_KEY. Anki Miner lähettää sen jokaisen pyynnön mukana eikä koskaan kirjoita sitä lokiin.</translation>
     </message>
     <message>
         <source>Sync Anki after mining</source>
-        <translation type="unfinished" />
+        <translation>Synkronoi Anki louhinnan jälkeen</translation>
     </message>
     <message>
         <source>After a run that added cards, Anki Miner asks Anki to sync with AnkiWeb. If the sync fails, the Activity Log says so and the cards stay added.</source>
-        <translation type="unfinished" />
+        <translation>Kun ajo on lisännyt kortteja, Anki Miner pyytää Ankia synkronoimaan AnkiWebin kanssa. Jos synkronointi epäonnistuu, siitä kerrotaan tapahtumalokissa, ja kortit pysyvät lisättyinä.</translation>
     </message>
     <message>
         <source>Fill in field mappings automatically</source>
@@ -3070,7 +3072,7 @@ Indeksitiedostoja ei poisteta.</translation>
     </message>
     <message>
         <source>Draw a box where a video's on-screen dialogue appears and Anki Miner reads it into a timed .srt that Video → Single can mine. Made for game longplays without commentary. It also reads image subtitles (Blu-ray .sup, DVD .idx/.sub, or an image track inside a video) without a box. Lines with none of your mining language's letters are left out. Download the OCR engine from the setup card on Utilities → Video OCR.</source>
-        <translation type="unfinished" />
+        <translation>Piirrä laatikko kohtaan, jossa videon dialogi näkyy kuvassa, niin Anki Miner lukee sen ajoitetuksi .srt-tiedostoksi, jota Video → Yksittäinen voi louhia. Tehty pelien läpipeluuvideoille ilman kommentointia. Se lukee myös kuvatekstitykset (Blu-ray .sup, DVD .idx/.sub tai videon sisäinen kuvaraita) ilman laatikkoa. Rivit, joilla ei ole yhtään louhintakielesi kirjainta, jätetään pois. Lataa OCR-moottori asetuskortista kohdassa Apuvälineet → Video-OCR.</translation>
     </message>
     <message>
         <source>Sync an audiobook to its EPUB</source>
@@ -3078,23 +3080,23 @@ Indeksitiedostoja ei poisteta.</translation>
     </message>
     <message>
         <source>Transcribe an audiobook and time the book's own sentences to it, writing an .srt the Audiobook tab, Reading → Subtitle Files or a reader can use. A second run on the same audio reuses the saved transcript instead of transcribing again.</source>
-        <translation type="unfinished" />
+        <translation>Litteroi äänikirja ja ajoita kirjan omat lauseet sen mukaan, jolloin syntyy .srt-tiedosto, jota Äänikirjat-välilehti, Lukeminen → Tekstitykset tai lukuohjelma voi käyttää. Toinen ajo samalle äänelle käyttää tallennettua litterointia uudelleen sen sijaan, että litteroisi uudestaan.</translation>
     </message>
     <message>
         <source>Sync a shelf of audiobooks in one run</source>
-        <translation type="unfinished" />
+        <translation>Synkronoi kokonainen hyllyllinen äänikirjoja yhdellä ajolla</translation>
     </message>
     <message>
         <source>In Utilities → Audiobook Sync, choose Folder and pick a folder that holds one folder per book, each with its EPUB (or text file) and its audio files. The books sync one after another, in name order.</source>
-        <translation type="unfinished" />
+        <translation>Valitse kohdassa Apuvälineet → Synkronointi Kansio ja valitse kansio, jossa on yksi kansio kirjaa kohden, kussakin kirjan EPUB (tai tekstitiedosto) ja äänitiedostot. Kirjat synkronoidaan peräkkäin nimen mukaisessa järjestyksessä.</translation>
     </message>
     <message>
         <source>See how well an audiobook synced</source>
-        <translation type="unfinished" />
+        <translation>Katso, kuinka hyvin äänikirja synkronoitui</translation>
     </message>
     <message>
         <source>After Audiobook Sync, each book gets a line under the Book card: how many of its sentences got a subtitle, how much of the narration matched the book, and a grade from A to D. Chapters read out of book order are found too; sentences the narrator skipped never get a subtitle.</source>
-        <translation type="unfinished" />
+        <translation>Äänikirjan synkronoinnin jälkeen kukin kirja saa rivin Kirja-kortin alle: kuinka moni sen lauseista sai tekstityksen, kuinka suuri osa luennasta vastasi kirjaa ja arvosanan A:sta D:hen. Myös kirjan järjestyksestä poiketen luetut luvut löydetään; lukijan ohittamat lauseet eivät koskaan saa tekstitystä.</translation>
     </message>
     <message>
         <source>Check how much of a show, book or manga you can read</source>
@@ -3178,11 +3180,11 @@ Indeksitiedostoja ei poisteta.</translation>
     </message>
     <message>
         <source>Restore an automatic backup</source>
-        <translation type="unfinished" />
+        <translation>Palauta automaattinen varmuuskopio</translation>
     </message>
     <message>
         <source>Anki Miner backs up your known words, statistics, settings and profiles once a day when it starts, and keeps the last 7 days. Settings → General → Restore a backup… puts one back the next time the app starts.</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner varmuuskopioi tunnetut sanasi, tilastosi, asetuksesi ja profiilisi kerran päivässä käynnistyessään ja säilyttää viimeiset 7 päivää. Asetukset → Yleiset → Palauta varmuuskopio… palauttaa yhden niistä, kun sovellus käynnistyy seuraavan kerran.</translation>
     </message>
     <message>
         <source>Undo a mining run</source>
@@ -3194,11 +3196,11 @@ Indeksitiedostoja ei poisteta.</translation>
     </message>
     <message>
         <source>Export a run's words</source>
-        <translation type="unfinished" />
+        <translation>Vie ajon sanat</translation>
     </message>
     <message>
         <source>Press View details on a run's result line, then Export words… to save the run's mined and not-mined words, with the reason each was skipped, as a CSV file.</source>
-        <translation type="unfinished" />
+        <translation>Paina ajon tulosrivillä Näytä tiedot ja sitten Vie sanat… tallentaaksesi ajon louhitut ja louhimatta jääneet sanat sekä kunkin ohituksen syyn CSV-tiedostona.</translation>
     </message>
     <message>
         <source>Keyboard shortcuts</source>
@@ -4592,11 +4594,11 @@ Tämä muuttaa %n muistiinpanoa (%1) ja lisää niihin tunnisteen %2. Jatketaank
     </message>
     <message>
         <source>Choose dictionary files</source>
-        <translation type="unfinished" />
+        <translation>Valitse sanakirjatiedostot</translation>
     </message>
     <message>
         <source>Dictionaries (*.zip *.ifo *.tar.gz *.tgz *.tar.bz2 *.tar.xz *.csv *.tsv)</source>
-        <translation type="unfinished" />
+        <translation>Sanakirjat (*.zip *.ifo *.tar.gz *.tgz *.tar.bz2 *.tar.xz *.csv *.tsv)</translation>
     </message>
     <message>
         <source>Dictionary %1 of %2: %3</source>
@@ -5432,8 +5434,9 @@ Levyltä ei poisteta tiedostoja.</translation>
     </message>
     <message numerus="yes">
         <source>Skipping lines in %n opening, ending or preview chapter(s)</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>Ohitetaan rivit %n alku-, loppu- tai ennakkokatsausluvussa</numerusform>
+            <numerusform>Ohitetaan rivit %n alku-, loppu- tai ennakkokatsausluvussa</numerusform>
         </translation>
     </message>
     <message>
@@ -5483,7 +5486,7 @@ Levyltä ei poisteta tiedostoja.</translation>
     </message>
     <message>
         <source>Only %1% of the first %2 words have an entry in your dictionaries. Is this file in the language you are mining?</source>
-        <translation type="unfinished" />
+        <translation>Vain %1 % ensimmäisistä %2 sanasta löytyy sanakirjoistasi. Onko tämä tiedosto louhimallasi kielellä?</translation>
     </message>
     <message>
         <source>Frequency cutoff ignored — no ranked frequency source is loaded (Settings → Frequency).</source>
@@ -5595,11 +5598,11 @@ Levyltä ei poisteta tiedostoja.</translation>
     </message>
     <message>
         <source>Translation subtitles picked automatically: %1</source>
-        <translation type="unfinished" />
+        <translation>Käännöstekstitys valittiin automaattisesti: %1</translation>
     </message>
     <message>
         <source>Translation subtitles picked automatically: embedded track %1</source>
-        <translation type="unfinished" />
+        <translation>Käännöstekstitys valittiin automaattisesti: upotettu raita %1</translation>
     </message>
     <message>
         <source>Could not extract media for any word — no cards created</source>
@@ -5869,11 +5872,11 @@ Levyltä ei poisteta tiedostoja.</translation>
     </message>
     <message>
         <source>Count a word as known only after its card has been reviewed</source>
-        <translation type="unfinished" />
+        <translation>Laske sana tunnetuksi vasta, kun sen kortti on kerrattu</translation>
     </message>
     <message>
         <source>Readability and the i+1 sentence rule count a word as known only when its Anki card has been reviewed at least once. Mining still skips every word that already has a card.</source>
-        <translation type="unfinished" />
+        <translation>Luettavuus ja i+1-lausesääntö laskevat sanan tunnetuksi vasta, kun sen Anki-kortti on kerrattu vähintään kerran. Louhinta ohittaa edelleen jokaisen sanan, jolla on jo kortti.</translation>
     </message>
     <message>
         <source>Keep words known after their cards are deleted</source>
@@ -6535,15 +6538,15 @@ Indeksitiedostoja ei poisteta.</translation>
     <name>KnownWordsManagerDialog</name>
     <message>
         <source>Word</source>
-        <translation type="unfinished" />
+        <translation>Sana</translation>
     </message>
     <message>
         <source>Source</source>
-        <translation type="unfinished" />
+        <translation>Lähde</translation>
     </message>
     <message>
         <source>Added</source>
-        <translation type="unfinished" />
+        <translation>Lisätty</translation>
     </message>
     <message>
         <source>Manage Known Words</source>
@@ -6555,7 +6558,7 @@ Indeksitiedostoja ei poisteta.</translation>
     </message>
     <message>
         <source>Every word this language counts as known, and where it came from. Words you added from the Word Curator stay known on every run and across cache rebuilds.</source>
-        <translation type="unfinished" />
+        <translation>Kaikki sanat, jotka tämä kieli laskee tunnetuiksi, ja niiden alkuperä. Sanakuraattorista lisäämäsi sanat pysyvät tunnettuina jokaisella ajolla ja välimuistin uudelleenrakennusten yli.</translation>
     </message>
     <message>
         <source>Decks this language's known-words scan skips: %1. Change them in Settings → Word Filters.</source>
@@ -6567,15 +6570,15 @@ Indeksitiedostoja ei poisteta.</translation>
     </message>
     <message>
         <source>Added by you</source>
-        <translation type="unfinished" />
+        <translation>Sinun lisäämäsi</translation>
     </message>
     <message>
         <source>Mined by Anki Miner</source>
-        <translation type="unfinished" />
+        <translation>Anki Minerin louhima</translation>
     </message>
     <message>
         <source>From Anki</source>
-        <translation type="unfinished" />
+        <translation>Ankista</translation>
     </message>
     <message>
         <source>Filter…</source>
@@ -6583,7 +6586,7 @@ Indeksitiedostoja ei poisteta.</translation>
     </message>
     <message>
         <source>All sources</source>
-        <translation type="unfinished" />
+        <translation>Kaikki lähteet</translation>
     </message>
     <message>
         <source>Rebuild Known Words DB</source>
@@ -6599,7 +6602,7 @@ Indeksitiedostoja ei poisteta.</translation>
     </message>
     <message>
         <source>Removes words you added. Words from Anki come back on the next run, and mined words leave with Undo.</source>
-        <translation type="unfinished" />
+        <translation>Poistaa lisäämäsi sanat. Ankista tulleet sanat palaavat seuraavalla ajolla, ja louhitut sanat poistuvat Kumoa-toiminnolla.</translation>
     </message>
     <message>
         <source>Import…</source>
@@ -6607,7 +6610,7 @@ Indeksitiedostoja ei poisteta.</translation>
     </message>
     <message>
         <source>Export words…</source>
-        <translation type="unfinished" />
+        <translation>Vie sanat…</translation>
     </message>
     <message>
         <source>Reset User List</source>
@@ -6639,11 +6642,11 @@ Indeksitiedostoja ei poisteta.</translation>
     </message>
     <message>
         <source>Kindle Vocabulary Builder</source>
-        <translation type="unfinished" />
+        <translation>Kindle Vocabulary Builder</translation>
     </message>
     <message>
         <source>Lute or LWT term export</source>
-        <translation type="unfinished" />
+        <translation>Luten tai LWT:n termivienti</translation>
     </message>
     <message>
         <source>plain word list</source>
@@ -6655,7 +6658,7 @@ Indeksitiedostoja ei poisteta.</translation>
     </message>
     <message>
         <source>Known word lists (*.csv *.tsv *.txt *.json *.db);;All Files (*)</source>
-        <translation type="unfinished" />
+        <translation>Tunnettujen sanojen luettelot (*.csv *.tsv *.txt *.json *.db);;Kaikki tiedostot (*)</translation>
     </message>
     <message>
         <source>Detected: %1 — every entry is imported.
@@ -6687,7 +6690,7 @@ Lisättäviä sanoja: %3. Jatketaanko?</translation>
     </message>
     <message>
         <source>This file has no words for %1. It contains: %2.</source>
-        <translation type="unfinished" />
+        <translation>Tiedostossa ei ole sanoja kielelle %1. Se sisältää: %2.</translation>
     </message>
     <message>
         <source>That file is too large to import.</source>
@@ -6703,7 +6706,7 @@ Lisättäviä sanoja: %3. Jatketaanko?</translation>
     </message>
     <message>
         <source>File format not recognized. Supported: jpdb review export (JSON), Migaku word export (JSON/CSV), AnkiMorphs known morphs (CSV), Kindle Vocabulary Builder (vocab.db), Lute or LWT term export (CSV/TSV), plain word lists (one word per line).</source>
-        <translation type="unfinished" />
+        <translation>Tiedostomuotoa ei tunnistettu. Tuetut: jpdb-kertausvienti (JSON), Migaku-sanavienti (JSON/CSV), AnkiMorphsin tunnetut morfit (CSV), Kindle Vocabulary Builder (vocab.db), Luten tai LWT:n termivienti (CSV/TSV), tavalliset sanalistat (yksi sana riviä kohden).</translation>
     </message>
     <message>
         <source>That file could not be imported.</source>
@@ -6725,7 +6728,7 @@ Lisättäviä sanoja: %3. Jatketaanko?</translation>
     </message>
     <message>
         <source>CSV files (*.csv);;Text files, one word per line (*.txt)</source>
-        <translation type="unfinished" />
+        <translation>CSV-tiedostot (*.csv);;Tekstitiedostot, yksi sana riviä kohden (*.txt)</translation>
     </message>
     <message>
         <source>The known words list could not be exported.</source>
@@ -7474,7 +7477,7 @@ Jatketaanko?</translation>
     </message>
     <message>
         <source>Opus clips do not play in AnkiMobile on iPhone or iPad. Choose MP3 if you review there.</source>
-        <translation type="unfinished" />
+        <translation>Opus-leikkeet eivät toistu AnkiMobilessa iPhonella tai iPadilla. Valitse MP3, jos kertaat niillä.</translation>
     </message>
     <message>
         <source> kbps</source>
@@ -7502,11 +7505,11 @@ Jatketaanko?</translation>
     </message>
     <message>
         <source>Even out audio volume</source>
-        <translation type="unfinished" />
+        <translation>Tasaa äänenvoimakkuus</translation>
     </message>
     <message>
         <source>Brings sentence clips and condensed audio to one volume and fades each clip in and out, so quiet and loud sources sound alike. Applies to new clips.</source>
-        <translation type="unfinished" />
+        <translation>Tuo lauseleikkeet ja tiivistetyn äänen samaan äänenvoimakkuuteen ja häivyttää jokaisen leikkeen sisään ja ulos, jotta hiljaiset ja kovaääniset lähteet kuulostavat samalta. Koskee uusia leikkeitä.</translation>
     </message>
     <message>
         <source>Text-to-speech</source>
@@ -7530,11 +7533,11 @@ Jatketaanko?</translation>
     </message>
     <message>
         <source>Crop manga pictures to the speech bubble</source>
-        <translation type="unfinished" />
+        <translation>Rajaa mangakuvat puhekuplaan</translation>
     </message>
     <message>
         <source>Manga cards show the speech bubble and the art around it instead of the whole page. A sentence with no bubble position keeps the whole page.</source>
-        <translation type="unfinished" />
+        <translation>Mangakorteissa näkyy koko sivun sijaan puhekupla ja sitä ympäröivä piirros. Lause, jolla ei ole kuplan sijaintia, säilyttää koko sivun.</translation>
     </message>
     <message>
         <source>Enable animated screenshots</source>
@@ -7770,7 +7773,7 @@ Jatketaanko?</translation>
     </message>
     <message>
         <source>Anki didn't sync after this run. Your cards are added; sync from Anki, or see the log for why.</source>
-        <translation type="unfinished" />
+        <translation>Anki ei synkronoinut tämän ajon jälkeen. Korttisi on lisätty; synkronoi Ankista tai katso syy lokista.</translation>
     </message>
     <message>
         <source>Anki Miner couldn't open these cards in Anki.</source>
@@ -9540,7 +9543,7 @@ Indeksitiedostoja ei poisteta.</translation>
     </message>
     <message>
         <source>An .epub, .txt or .pdf book, or a folder of books; each book is mined separately.</source>
-        <translation type="unfinished" />
+        <translation>.epub-, .txt- tai .pdf-kirja tai kirjoja sisältävä kansio; jokainen kirja louhitaan erikseen.</translation>
     </message>
     <message>
         <source>Mine</source>
@@ -9576,7 +9579,7 @@ Indeksitiedostoja ei poisteta.</translation>
     </message>
     <message>
         <source>Choose an .epub, .txt or .pdf book, or a folder of books.</source>
-        <translation type="unfinished" />
+        <translation>Valitse .epub-, .txt- tai .pdf-kirja tai kirjoja sisältävä kansio.</translation>
     </message>
     <message>
         <source>Starting…</source>
@@ -9642,7 +9645,7 @@ Indeksitiedostoja ei poisteta.</translation>
     </message>
     <message>
         <source>Add subtitle files (.srt, .ass, .ssa, .vtt, .smi, .lrc) to the list.</source>
-        <translation type="unfinished" />
+        <translation>Lisää tekstitystiedostoja (.srt, .ass, .ssa, .vtt, .smi, .lrc) luetteloon.</translation>
     </message>
     <message>
         <source>Remove Selected</source>
@@ -9823,19 +9826,19 @@ Indeksitiedostoja ei poisteta.</translation>
     </message>
     <message>
         <source>Web addresses to fetch, one per line (https://…)</source>
-        <translation type="unfinished" />
+        <translation>Haettavat verkko-osoitteet, yksi riviä kohden (https://…)</translation>
     </message>
     <message>
         <source>Web addresses</source>
-        <translation type="unfinished" />
+        <translation>Verkko-osoitteet</translation>
     </message>
     <message>
         <source>Fetch</source>
-        <translation type="unfinished" />
+        <translation>Hae</translation>
     </message>
     <message>
         <source>Put the article text of each web address in the box below, to check before mining.</source>
-        <translation type="unfinished" />
+        <translation>Tuo kunkin verkko-osoitteen artikkeliteksti alla olevaan ruutuun tarkistettavaksi ennen louhintaa.</translation>
     </message>
     <message>
         <source>Paste the text you want to mine. Cards from pasted text have no sentence audio from a recording.</source>
@@ -9883,59 +9886,59 @@ Indeksitiedostoja ei poisteta.</translation>
     </message>
     <message>
         <source>Each line must be a web address that starts with http:// or https://.</source>
-        <translation type="unfinished" />
+        <translation>Jokaisen rivin on oltava verkko-osoite, joka alkaa http:// tai https://.</translation>
     </message>
     <message>
         <source>Enter a web address first.</source>
-        <translation type="unfinished" />
+        <translation>Anna ensin verkko-osoite.</translation>
     </message>
     <message>
         <source>Fetch takes up to 10 web addresses at a time.</source>
-        <translation type="unfinished" />
+        <translation>Hae ottaa kerralla enintään 10 verkko-osoitetta.</translation>
     </message>
     <message>
         <source>Fetching…</source>
-        <translation type="unfinished" />
+        <translation>Haetaan…</translation>
     </message>
     <message>
         <source>Could not fetch %1: %2</source>
-        <translation type="unfinished" />
+        <translation>Osoitetta %1 ei voitu hakea: %2</translation>
     </message>
     <message>
         <source>None of the pages could be fetched.</source>
-        <translation type="unfinished" />
+        <translation>Yhtään sivua ei voitu hakea.</translation>
     </message>
     <message>
         <source>Fetched %1.</source>
-        <translation type="unfinished" />
+        <translation>Haettiin %1.</translation>
     </message>
     <message>
         <source>The pages could not be fetched.</source>
-        <translation type="unfinished" />
+        <translation>Sivuja ei voitu hakea.</translation>
     </message>
     <message>
         <source>The page could not be reached. Check the address and your connection.</source>
-        <translation type="unfinished" />
+        <translation>Sivulle ei saatu yhteyttä. Tarkista osoite ja verkkoyhteytesi.</translation>
     </message>
     <message>
         <source>The site did not send the page.</source>
-        <translation type="unfinished" />
+        <translation>Sivusto ei lähettänyt sivua.</translation>
     </message>
     <message>
         <source>This address is not a web page.</source>
-        <translation type="unfinished" />
+        <translation>Tämä osoite ei ole verkkosivu.</translation>
     </message>
     <message>
         <source>This page is too large to read.</source>
-        <translation type="unfinished" />
+        <translation>Tämä sivu on liian suuri luettavaksi.</translation>
     </message>
     <message>
         <source>This is not a web address.</source>
-        <translation type="unfinished" />
+        <translation>Tämä ei ole verkko-osoite.</translation>
     </message>
     <message>
         <source>No article text found on this page. Pages that draw their text with JavaScript cannot be read.</source>
-        <translation type="unfinished" />
+        <translation>Sivulta ei löytynyt artikkelitekstiä. Sivuja, jotka piirtävät tekstinsä JavaScriptillä, ei voi lukea.</translation>
     </message>
     <message>
         <source>Paste some text first.</source>
@@ -9947,7 +9950,7 @@ Indeksitiedostoja ei poisteta.</translation>
     </message>
     <message>
         <source>The fetched text was edited, so it is mined as one text without its page titles.</source>
-        <translation type="unfinished" />
+        <translation>Haettua tekstiä on muokattu, joten se louhitaan yhtenä tekstinä ilman sivujen otsikoita.</translation>
     </message>
     <message>
         <source>That picture cannot be read. Pick another, or remove it to mine without one.</source>
@@ -10734,7 +10737,7 @@ Indeksitiedostoja ei poisteta.</translation>
     </message>
     <message>
         <source>Export words…</source>
-        <translation type="unfinished" />
+        <translation>Vie sanat…</translation>
     </message>
     <message>
         <source>Close</source>
@@ -10749,19 +10752,19 @@ Indeksitiedostoja ei poisteta.</translation>
     </message>
     <message>
         <source>Export Words</source>
-        <translation type="unfinished" />
+        <translation>Vie sanat</translation>
     </message>
     <message>
         <source>CSV files (*.csv)</source>
-        <translation type="unfinished" />
+        <translation>CSV-tiedostot (*.csv)</translation>
     </message>
     <message>
         <source>Words exported</source>
-        <translation type="unfinished" />
+        <translation>Sanat viety</translation>
     </message>
     <message>
         <source>Export failed — try again</source>
-        <translation type="unfinished" />
+        <translation>Vienti epäonnistui — yritä uudelleen</translation>
     </message>
     <message>
         <source>Confirm Undo</source>
@@ -10966,11 +10969,11 @@ Indeksitiedostoja ei poisteta.</translation>
     </message>
     <message>
         <source>Skip openings, endings and signs</source>
-        <translation type="unfinished" />
+        <translation>Ohita alkutunnarit, lopputunnarit ja kyltit</translation>
     </message>
     <message>
         <source>Leaves out song lyrics, previews and on-screen signs: lines whose subtitle style marks them as a song or a sign, and lines inside a video's opening, ending or preview chapters. Applies to mining, Condense and Readability.</source>
-        <translation type="unfinished" />
+        <translation>Jättää pois laulujen sanat, ennakkokatsaukset ja kuvassa näkyvät kyltit: rivit, joiden tekstitystyyli merkitsee ne kappaleeksi tai kyltiksi, sekä rivit videon alku-, loppu- tai ennakkokatsauslukujen sisällä. Koskee louhintaa, Tiivistystä ja Luettavuutta.</translation>
     </message>
     <message>
         <source>Sentence options</source>
@@ -10986,7 +10989,7 @@ Indeksitiedostoja ei poisteta.</translation>
     </message>
     <message>
         <source>Mines at most one word per example sentence. A word whose sentence is already taken moves to another line it appears on, and is skipped only when every one of its lines is taken. Whitelisted words are still mined.</source>
-        <translation type="unfinished" />
+        <translation>Louhii enintään yhden sanan esimerkkilausetta kohden. Sana, jonka lause on jo varattu, siirtyy toiselle rivelle, jolla se esiintyy, ja ohitetaan vasta, kun kaikki sen rivit ovat varattuja. Sallittujen luettelon sanat louhitaan silti.</translation>
     </message>
     <message>
         <source>Only i+1 sentences (exactly one unknown word)</source>
@@ -11002,11 +11005,11 @@ Indeksitiedostoja ei poisteta.</translation>
     </message>
     <message>
         <source>Pick the clearest sentence for each word</source>
-        <translation type="unfinished" />
+        <translation>Valitse jokaiselle sanalle selkein lause</translation>
     </message>
     <message>
         <source>When a word appears on several lines, its card uses the line with the fewest unknown words and a comfortable length instead of the first one. The Word Curator still lists every line, and card order does not change.</source>
-        <translation type="unfinished" />
+        <translation>Kun sana esiintyy usealla rivillä, sen kortti käyttää ensimmäisen rivin sijaan riviä, jolla on vähiten tuntemattomia sanoja ja sopiva pituus. Sanakuraattori luettelee edelleen kaikki rivit, eikä korttien järjestys muutu.</translation>
     </message>
     <message>
         <source> s</source>
@@ -13065,15 +13068,15 @@ Asennetut resurssit ja teema säilytetään.</translation>
     </message>
     <message>
         <source>Restore a backup…</source>
-        <translation type="unfinished" />
+        <translation>Palauta varmuuskopio…</translation>
     </message>
     <message>
         <source>Backups</source>
-        <translation type="unfinished" />
+        <translation>Varmuuskopiot</translation>
     </message>
     <message>
         <source>Anki Miner saves your known words, statistics, settings and profiles once a day when it starts, and keeps the last 7 days.</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner tallentaa tunnetut sanasi, tilastosi, asetuksesi ja profiilisi kerran päivässä käynnistyessään ja säilyttää viimeiset 7 päivää.</translation>
     </message>
     <message>
         <source>Themes</source>
@@ -13117,27 +13120,27 @@ Asennetut resurssit ja teema säilytetään.</translation>
     </message>
     <message>
         <source>There is no backup yet. Anki Miner makes one each day when it starts.</source>
-        <translation type="unfinished" />
+        <translation>Varmuuskopiota ei ole vielä. Anki Miner tekee sellaisen joka päivä käynnistyessään.</translation>
     </message>
     <message>
         <source>Restore a Backup</source>
-        <translation type="unfinished" />
+        <translation>Varmuuskopion palautus</translation>
     </message>
     <message>
         <source>Restore the backup from:</source>
-        <translation type="unfinished" />
+        <translation>Palauta varmuuskopio päivältä:</translation>
     </message>
     <message>
         <source>Replace your known words, statistics, settings and profiles with the copies from %1? The restore runs the next time Anki Miner starts. Changes made after that backup are lost.</source>
-        <translation type="unfinished" />
+        <translation>Korvataanko tunnetut sanasi, tilastosi, asetuksesi ja profiilisi kopioilla päivältä %1? Palautus tehdään, kun Anki Miner käynnistyy seuraavan kerran. Varmuuskopion jälkeen tehdyt muutokset menetetään.</translation>
     </message>
     <message>
         <source>The restore could not be scheduled.</source>
-        <translation type="unfinished" />
+        <translation>Palautusta ei voitu ajoittaa.</translation>
     </message>
     <message>
         <source>The backup from %1 will be restored when Anki Miner next starts.</source>
-        <translation type="unfinished" />
+        <translation>Varmuuskopio päivältä %1 palautetaan, kun Anki Miner käynnistyy seuraavan kerran.</translation>
     </message>
 </context><context>
     <name>UpdateBanner</name>
@@ -13305,11 +13308,11 @@ Asennetut resurssit ja teema säilytetään.</translation>
     </message>
     <message>
         <source>The picture (burned-in text)</source>
-        <translation type="unfinished" />
+        <translation>Kuva (kuvaan poltettu teksti)</translation>
     </message>
     <message>
         <source>Image subtitle track %1</source>
-        <translation type="unfinished" />
+        <translation>Kuvatekstitysraita %1</translation>
     </message>
     <message>
         <source>The OCR engine could not start on this computer. The details say why.</source>
@@ -13349,15 +13352,15 @@ Asennetut resurssit ja teema säilytetään.</translation>
     </message>
     <message>
         <source>This field takes a video or an image subtitle file (.sup, .idx, .sub).</source>
-        <translation type="unfinished" />
+        <translation>Tähän kenttään käy video tai kuvatekstitystiedosto (.sup, .idx, .sub).</translation>
     </message>
     <message>
         <source>Read from:</source>
-        <translation type="unfinished" />
+        <translation>Lue lähteestä:</translation>
     </message>
     <message>
         <source>Read text drawn into the picture, or one of the video's image subtitle tracks.</source>
-        <translation type="unfinished" />
+        <translation>Lue kuvaan piirretty teksti tai jokin videon kuvatekstitysraidoista.</translation>
     </message>
     <message>
         <source>Video Folder:</source>
@@ -13441,7 +13444,7 @@ Asennetut resurssit ja teema säilytetään.</translation>
     </message>
     <message>
         <source>Image subtitles are read over the whole frame, so they need no region.</source>
-        <translation type="unfinished" />
+        <translation>Kuvatekstitykset luetaan koko kuva-alalta, joten ne eivät tarvitse aluetta.</translation>
     </message>
     <message>
         <source>Download OCR models</source>
@@ -13485,7 +13488,7 @@ Asennetut resurssit ja teema säilytetään.</translation>
     </message>
     <message>
         <source>A DVD subtitle needs its .idx and .sub files in the same folder.</source>
-        <translation type="unfinished" />
+        <translation>DVD-tekstitys tarvitsee .idx- ja .sub-tiedostonsa samaan kansioon.</translation>
     </message>
     <message>
         <source>Choose a folder before reading subtitles.</source>
@@ -13771,15 +13774,15 @@ Lajittele sen mukaan käydäksesi pitkän tallenteen läpi järjestyksessä — 
     </message>
     <message>
         <source>Used on the card</source>
-        <translation type="unfinished" />
+        <translation>Käytössä kortilla</translation>
     </message>
     <message>
         <source>Back to the first match</source>
-        <translation type="unfinished" />
+        <translation>Takaisin ensimmäiseen osumaan</translation>
     </message>
     <message>
         <source>Use this dictionary on the card</source>
-        <translation type="unfinished" />
+        <translation>Käytä tätä sanakirjaa kortilla</translation>
     </message>
     <message>
         <source>Sentences (%1)</source>
@@ -14217,7 +14220,7 @@ Lajittele sen mukaan käydäksesi pitkän tallenteen läpi järjestyksessä — 
     </message>
     <message>
         <source>Wikimedia Commons (native recordings)</source>
-        <translation type="unfinished" />
+        <translation>Wikimedia Commons (syntyperäisten puhujien äänitteet)</translation>
     </message>
     <message>
         <source>Microsoft Edge read-aloud (synthetic TTS)</source>
@@ -14231,7 +14234,7 @@ Lajittele sen mukaan käydäksesi pitkän tallenteen läpi järjestyksessä — 
     <name>_BarChart</name>
     <message>
         <source>Cards per period</source>
-        <translation type="unfinished" />
+        <translation>Kortit jaksoittain</translation>
     </message>
 </context><context>
     <name>_HealthRow</name>
@@ -14253,11 +14256,11 @@ Lajittele sen mukaan käydäksesi pitkän tallenteen läpi järjestyksessä — 
     <name>_MissingWordsDialog</name>
     <message>
         <source>Missing Words</source>
-        <translation type="unfinished" />
+        <translation>Puuttuvat sanat</translation>
     </message>
     <message>
         <source>Not known yet in ranks %1</source>
-        <translation type="unfinished" />
+        <translation>Vielä tuntemattomat sijoilla %1</translation>
     </message>
 </context><context>
     <name>app</name>

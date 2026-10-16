@@ -93,59 +93,59 @@
     </message>
     <message>
         <source>Known Words</source>
-        <translation type="unfinished" />
+        <translation>Kata yang Dikenal</translation>
     </message>
     <message>
         <source>Words Anki Miner treats as known in the current mining language.</source>
-        <translation type="unfinished" />
+        <translation>Kata yang dianggap dikenal oleh Anki Miner dalam bahasa mining saat ini.</translation>
     </message>
     <message>
         <source>Mining History</source>
-        <translation type="unfinished" />
+        <translation>Riwayat Mining</translation>
     </message>
     <message>
         <source>History period</source>
-        <translation type="unfinished" />
+        <translation>Periode riwayat</translation>
     </message>
     <message>
         <source>All time</source>
-        <translation type="unfinished" />
+        <translation>Sepanjang waktu</translation>
     </message>
     <message>
         <source>Last 7 days</source>
-        <translation type="unfinished" />
+        <translation>7 hari terakhir</translation>
     </message>
     <message>
         <source>Last 30 days</source>
-        <translation type="unfinished" />
+        <translation>30 hari terakhir</translation>
     </message>
     <message>
         <source>Last 12 months</source>
-        <translation type="unfinished" />
+        <translation>12 bulan terakhir</translation>
     </message>
     <message>
         <source>History grouping</source>
-        <translation type="unfinished" />
+        <translation>Pengelompokan riwayat</translation>
     </message>
     <message>
         <source>Each run</source>
-        <translation type="unfinished" />
+        <translation>Setiap proses</translation>
     </message>
     <message>
         <source>By day</source>
-        <translation type="unfinished" />
+        <translation>Per hari</translation>
     </message>
     <message>
         <source>By week</source>
-        <translation type="unfinished" />
+        <translation>Per minggu</translation>
     </message>
     <message>
         <source>By month</source>
-        <translation type="unfinished" />
+        <translation>Per bulan</translation>
     </message>
     <message>
         <source>Export CSV…</source>
-        <translation type="unfinished" />
+        <translation>Ekspor CSV…</translation>
     </message>
     <message>
         <source>No sessions yet — process an episode to see your history.</source>
@@ -177,7 +177,7 @@
     </message>
     <message>
         <source>Period</source>
-        <translation type="unfinished" />
+        <translation>Periode</translation>
     </message>
     <message>
         <source>Show in Anki</source>
@@ -185,7 +185,7 @@
     </message>
     <message>
         <source>Delete this run's cards…</source>
-        <translation type="unfinished" />
+        <translation>Hapus kartu dari proses ini…</translation>
     </message>
     <message>
         <source>Series Difficulty Ranking</source>
@@ -217,11 +217,11 @@
     </message>
     <message>
         <source>Frequency Coverage</source>
-        <translation type="unfinished" />
+        <translation>Cakupan Frekuensi</translation>
     </message>
     <message>
         <source>Rank band</source>
-        <translation type="unfinished" />
+        <translation>Rentang peringkat</translation>
     </message>
     <message>
         <source>Known</source>
@@ -229,15 +229,15 @@
     </message>
     <message>
         <source>Not known</source>
-        <translation type="unfinished" />
+        <translation>Belum dikenal</translation>
     </message>
     <message>
         <source>Known %</source>
-        <translation type="unfinished" />
+        <translation>Dikenal %</translation>
     </message>
     <message>
         <source>Show missing words</source>
-        <translation type="unfinished" />
+        <translation>Tampilkan kata yang belum dikenal</translation>
     </message>
     <message>
         <source>Milestones</source>
@@ -265,93 +265,95 @@
     </message>
     <message>
         <source>No runs in this period.</source>
-        <translation type="unfinished" />
+        <translation>Tidak ada proses dalam periode ini.</translation>
     </message>
     <message>
         <source>Export Mining History</source>
-        <translation type="unfinished" />
+        <translation>Ekspor Riwayat Mining</translation>
     </message>
     <message>
         <source>CSV Files (*.csv);;All Files (*)</source>
-        <translation type="unfinished" />
+        <translation>Berkas CSV (*.csv);;Semua Berkas (*)</translation>
     </message>
     <message>
         <source>History saved to %1.</source>
-        <translation type="unfinished" />
+        <translation>Riwayat disimpan ke %1.</translation>
     </message>
     <message>
         <source>The history could not be exported.</source>
-        <translation type="unfinished" />
+        <translation>Riwayat tidak dapat diekspor.</translation>
     </message>
     <message>
         <source>%1 (cards deleted: %2)</source>
-        <translation type="unfinished" />
+        <translation>%1 (kartu dihapus: %2)</translation>
     </message>
     <message>
         <source>Select one run in the table.</source>
-        <translation type="unfinished" />
+        <translation>Pilih satu proses di tabel.</translation>
     </message>
     <message>
         <source>This run's cards were deleted: %1.</source>
-        <translation type="unfinished" />
+        <translation>Kartu dari proses ini yang telah dihapus: %1.</translation>
     </message>
     <message>
         <source>Anki Miner has no card list for this run: it was mined before this version, or it made no cards.</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner tidak memiliki daftar kartu untuk proses ini: proses ini dijalankan sebelum versi ini, atau tidak menghasilkan kartu.</translation>
     </message>
     <message>
         <source>Anki Miner couldn't open this run's cards in Anki.</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner tidak dapat membuka kartu dari proses ini di Anki.</translation>
     </message>
     <message>
         <source>None of this run's cards are in Anki any more.</source>
-        <translation type="unfinished" />
+        <translation>Tidak ada lagi kartu dari proses ini di Anki.</translation>
     </message>
     <message>
         <source>Delete This Run's Cards</source>
-        <translation type="unfinished" />
+        <translation>Hapus Kartu dari Proses Ini</translation>
     </message>
     <message>
         <source>Cards this run added that are still in Anki: %1. Reviewed at least once: %2.
 
 Delete them from Anki? Their review history is deleted with them. This cannot be undone.</source>
-        <translation type="unfinished" />
+        <translation>Kartu yang ditambahkan proses ini dan masih ada di Anki: %1. Sudah diulas setidaknya sekali: %2.
+
+Hapus kartu-kartu ini dari Anki? Riwayat ulasannya ikut terhapus. Tindakan ini tidak dapat dibatalkan.</translation>
     </message>
     <message>
         <source>Cards deleted from Anki: %1.</source>
-        <translation type="unfinished" />
+        <translation>Kartu yang dihapus dari Anki: %1.</translation>
     </message>
     <message>
         <source>This run's cards could not be deleted.</source>
-        <translation type="unfinished" />
+        <translation>Kartu dari proses ini tidak dapat dihapus.</translation>
     </message>
     <message>
         <source>Known words could not be counted.</source>
-        <translation type="unfinished" />
+        <translation>Kata yang dikenal tidak dapat dihitung.</translation>
     </message>
     <message>
         <source>Words Anki Miner treats as known in %1.</source>
-        <translation type="unfinished" />
+        <translation>Kata yang dianggap dikenal oleh Anki Miner dalam %1.</translation>
     </message>
     <message>
         <source>Change since %1: %2</source>
-        <translation type="unfinished" />
+        <translation>Perubahan sejak %1: %2</translation>
     </message>
     <message>
         <source>Last counted on %1; Anki was not reachable.</source>
-        <translation type="unfinished" />
+        <translation>Terakhir dihitung pada %1; Anki tidak dapat dijangkau.</translation>
     </message>
     <message>
         <source>Last counted on %1.</source>
-        <translation type="unfinished" />
+        <translation>Terakhir dihitung pada %1.</translation>
     </message>
     <message>
         <source>Coverage needs Anki running: it compares the list with your cards.</source>
-        <translation type="unfinished" />
+        <translation>Cakupan memerlukan Anki yang sedang berjalan: cakupan membandingkan daftar dengan kartu Anda.</translation>
     </message>
     <message>
         <source>How many of the most frequent words in %1 you already know.</source>
-        <translation type="unfinished" />
+        <translation>Berapa banyak kata paling sering dalam %1 yang sudah Anda kenal.</translation>
     </message>
     <message>
         <source>%1 mining sessions completed</source>
@@ -759,7 +761,7 @@ Delete them from Anki? Their review history is deleted with them. This cannot be
     </message>
     <message>
         <source>{series}, {episode} and {volume} become each card's show, episode or book volume, for example mined::{series}::{episode}.</source>
-        <translation type="unfinished" />
+        <translation>{series}, {episode}, dan {volume} menjadi acara, episode, atau volume buku dari setiap kartu, misalnya mined::{series}::{episode}.</translation>
     </message>
     <message>
         <source>Refresh</source>
@@ -787,11 +789,11 @@ Delete them from Anki? Their review history is deleted with them. This cannot be
     </message>
     <message>
         <source>Sync Anki after mining</source>
-        <translation type="unfinished" />
+        <translation>Sinkronkan Anki setelah mining</translation>
     </message>
     <message>
         <source>After a run that added cards, ask Anki to sync with AnkiWeb. If the sync fails, the Activity Log says so and the cards stay added.</source>
-        <translation type="unfinished" />
+        <translation>Setelah proses yang menambahkan kartu, minta Anki melakukan sinkronisasi dengan AnkiWeb. Jika sinkronisasi gagal, Log Aktivitas mencatatnya dan kartu tetap ditambahkan.</translation>
     </message>
     <message>
         <source>AnkiConnect URL</source>
@@ -803,7 +805,7 @@ Delete them from Anki? Their review history is deleted with them. This cannot be
     </message>
     <message>
         <source>If AnkiConnect asks for an API key, add it to the address: http://127.0.0.1:8765/?key=YOUR_KEY</source>
-        <translation type="unfinished" />
+        <translation>Jika AnkiConnect meminta kunci API, tambahkan ke alamat: http://127.0.0.1:8765/?key=YOUR_KEY</translation>
     </message>
     <message>
         <source>Fill in automatically</source>
@@ -1515,7 +1517,7 @@ Format yang didukung: AJT (index.json + media/), NHK16 (entries.json + audio/), 
     </message>
     <message>
         <source>Wikimedia Commons (native recordings)</source>
-        <translation type="unfinished" />
+        <translation>Wikimedia Commons (rekaman penutur asli)</translation>
     </message>
     <message>
         <source>Custom JSON</source>
@@ -2083,7 +2085,7 @@ Tidak ada berkas indeks yang dihapus.</translation>
     </message>
     <message>
         <source>Every audio file in the folder, in file-name order, one .srt each. A folder of book folders (each with its EPUB and audio) syncs every book in turn.</source>
-        <translation type="unfinished" />
+        <translation>Setiap berkas audio di folder, menurut urutan nama berkas, masing-masing satu .srt. Folder berisi folder buku (masing-masing dengan EPUB dan audionya) menyinkronkan setiap buku secara bergiliran.</translation>
     </message>
     <message>
         <source>EPUB or Text File:</source>
@@ -2111,7 +2113,7 @@ Tidak ada berkas indeks yang dihapus.</translation>
     </message>
     <message>
         <source>Sentences: how many of the book's sentences, from the first one found to the last, got a subtitle. Audio: how much of the narration matched the book. Grade: A from 90% on both, B from 75%, C from 50%, else D.</source>
-        <translation type="unfinished" />
+        <translation>Kalimat: berapa banyak kalimat buku, dari yang pertama ditemukan hingga yang terakhir, yang mendapat subtitel. Audio: berapa banyak narasi yang cocok dengan buku. Nilai: A mulai 90% pada keduanya, B mulai 75%, C mulai 50%, selain itu D.</translation>
     </message>
     <message>
         <source>Output</source>
@@ -2175,7 +2177,7 @@ Tidak ada berkas indeks yang dihapus.</translation>
     </message>
     <message>
         <source>No audio files were found in that folder, and no book folders (each with its book and audio).</source>
-        <translation type="unfinished" />
+        <translation>Tidak ada berkas audio di folder itu, dan tidak ada folder buku (masing-masing dengan buku dan audionya).</translation>
     </message>
     <message>
         <source>That folder could not be scanned.</source>
@@ -2183,15 +2185,15 @@ Tidak ada berkas indeks yang dihapus.</translation>
     </message>
     <message>
         <source>Skipped folder %1: no audio files</source>
-        <translation type="unfinished" />
+        <translation>Folder %1 dilewati: tidak ada berkas audio</translation>
     </message>
     <message>
         <source>Skipped folder %1: no .epub or .txt book</source>
-        <translation type="unfinished" />
+        <translation>Folder %1 dilewati: tidak ada buku .epub atau .txt</translation>
     </message>
     <message>
         <source>Skipped folder %1: more than one book</source>
-        <translation type="unfinished" />
+        <translation>Folder %1 dilewati: lebih dari satu buku</translation>
     </message>
     <message>
         <source>Output folder is not writable.</source>
@@ -2211,11 +2213,11 @@ Tidak ada berkas indeks yang dihapus.</translation>
     </message>
     <message>
         <source>Books: %1 — %2</source>
-        <translation type="unfinished" />
+        <translation>Buku: %1 — %2</translation>
     </message>
     <message>
         <source>%1: sentences %2%, audio %3% — grade %4</source>
-        <translation type="unfinished" />
+        <translation>%1: kalimat %2%, audio %3% — nilai %4</translation>
     </message>
     <message>
         <source>Syncing file %1 of %2</source>
@@ -2229,11 +2231,11 @@ Tidak ada berkas indeks yang dihapus.</translation>
     </message>
     <message>
         <source>%1 could not be loaded: %2</source>
-        <translation type="unfinished" />
+        <translation>%1 tidak dapat dimuat: %2</translation>
     </message>
     <message>
         <source>Its book could not be loaded</source>
-        <translation type="unfinished" />
+        <translation>Bukunya tidak dapat dimuat</translation>
     </message>
     <message>
         <source>Skipped, exists</source>
@@ -2253,11 +2255,11 @@ Tidak ada berkas indeks yang dihapus.</translation>
     </message>
     <message>
         <source>Reusing the saved transcript</source>
-        <translation type="unfinished" />
+        <translation>Memakai ulang transkrip yang tersimpan</translation>
     </message>
     <message>
         <source>Found sentence %1 again later in the audio; timed it out of book order</source>
-        <translation type="unfinished" />
+        <translation>Kalimat %1 ditemukan lagi di bagian audio selanjutnya; waktunya ditentukan di luar urutan buku</translation>
     </message>
     <message>
         <source>%1 sentences timed, %2 in between had no audio</source>
@@ -2339,7 +2341,7 @@ Tidak ada berkas indeks yang dihapus.</translation>
     </message>
     <message>
         <source>Approve or reject each word, pick its sentence and scene, trim its audio, mark words known, and fix a mistranscribed sentence or swap the word to mine -- before any card is created. When a word has entries in several dictionaries, choose which one the card's Definition uses.</source>
-        <translation type="unfinished" />
+        <translation>Setujui atau tolak setiap kata, pilih kalimat dan adegannya, pangkas audionya, tandai kata sebagai dikenal, dan perbaiki kalimat yang salah ditranskripsi atau ganti kata yang akan di-mining -- sebelum kartu apa pun dibuat. Jika suatu kata memiliki entri di beberapa kamus, pilih kamus mana yang dipakai untuk Definisi kartu.</translation>
     </message>
     <message>
         <source>Secondary-language subtitles</source>
@@ -2347,7 +2349,7 @@ Tidak ada berkas indeks yang dihapus.</translation>
     </message>
     <message>
         <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. Leave the file empty and Anki Miner picks a translation itself: a subtitle named for the video, or a text track inside it, in your interface language or else English. The Activity Log names the track it used. On Video → Batch, point it at a folder of translation subtitles instead and they pair to the videos by episode number. Turn it on under Settings → Sentences.</source>
-        <translation type="unfinished" />
+        <translation>Muat berkas subtitel kedua dalam bahasa Anda di samping subtitel bahasa mining: subtitel ini tampil di bawah baris dalam pratinjau Word Curator dan dapat disimpan ke bidang Terjemahan. Biarkan berkas kosong dan Anki Miner akan memilih terjemahan sendiri: subtitel yang dinamai sesuai video, atau trek teks di dalamnya, dalam bahasa antarmuka Anda atau jika tidak ada, bahasa Inggris. Log Aktivitas menyebutkan trek yang dipakai. Di Video → Batch, arahkan ke folder subtitel terjemahan dan subtitel akan dipasangkan ke video menurut nomor episode. Aktifkan di Pengaturan → Kalimat.</translation>
     </message>
     <message>
         <source>Build a deck by coverage %</source>
@@ -2383,11 +2385,11 @@ Tidak ada berkas indeks yang dihapus.</translation>
     </message>
     <message>
         <source>Mine songs from .lrc lyrics</source>
-        <translation type="unfinished" />
+        <translation>Mining lagu dari lirik .lrc</translation>
     </message>
     <message>
         <source>Use a .lrc lyrics file wherever a subtitle file goes. Each line lasts until the next one starts. Pair a song with its lyrics on Audiobooks, condense it in Condense, or mine a music video on Video.</source>
-        <translation type="unfinished" />
+        <translation>Gunakan berkas lirik .lrc di mana pun berkas subtitel bisa dipakai. Setiap baris berlangsung sampai baris berikutnya dimulai. Pasangkan lagu dengan liriknya di Buku Audio, padatkan di Padatkan, atau mining video musik di Video.</translation>
     </message>
     <message>
         <source>Mine from manga</source>
@@ -2403,23 +2405,23 @@ Tidak ada berkas indeks yang dihapus.</translation>
     </message>
     <message>
         <source>Mine vocabulary from novels and other text (EPUB, PDF, Aozora, plain text).</source>
-        <translation type="unfinished" />
+        <translation>Mining kosakata dari novel dan teks lain (EPUB, PDF, Aozora, teks biasa).</translation>
     </message>
     <message>
         <source>Readings from a book's own furigana</source>
-        <translation type="unfinished" />
+        <translation>Cara baca dari furigana buku itu sendiri</translation>
     </message>
     <message>
         <source>When a Japanese EPUB prints furigana over a word, the card takes that reading instead of the parser's guess.</source>
-        <translation type="unfinished" />
+        <translation>Jika EPUB berbahasa Jepang mencetak furigana di atas suatu kata, kartu memakai cara baca itu alih-alih tebakan parser.</translation>
     </message>
     <message>
         <source>Mine pasted text or a web article</source>
-        <translation type="unfinished" />
+        <translation>Mining teks yang ditempel atau artikel web</translation>
     </message>
     <message>
         <source>Paste text in your mining language, or fetch a web article by its address, and mine it into Anki cards. A fetched article's cards name the page and site as their source.</source>
-        <translation type="unfinished" />
+        <translation>Tempel teks dalam bahasa mining Anda, atau ambil artikel web melalui alamatnya, lalu mining menjadi kartu Anki. Kartu dari artikel yang diambil mencantumkan halaman dan situsnya sebagai sumber.</translation>
     </message>
     <message>
         <source>Mine subtitle files without video</source>
@@ -2443,7 +2445,7 @@ Tidak ada berkas indeks yang dihapus.</translation>
     </message>
     <message>
         <source>Create subtitles from audio with a local Whisper model -- as a standalone tool. Long lines are split at sentence ends, and a second run on the same file reuses the saved transcript.</source>
-        <translation type="unfinished" />
+        <translation>Buat subtitel dari audio dengan model Whisper lokal -- sebagai alat mandiri. Baris panjang dipecah di akhir kalimat, dan proses kedua pada berkas yang sama memakai ulang transkrip yang tersimpan.</translation>
     </message>
     <message>
         <source>Re-time existing subtitles</source>
@@ -2503,35 +2505,35 @@ Tidak ada berkas indeks yang dihapus.</translation>
     </message>
     <message>
         <source>Browse your whole mining history</source>
-        <translation type="unfinished" />
+        <translation>Jelajahi seluruh riwayat mining Anda</translation>
     </message>
     <message>
         <source>Analytics lists every run you have mined. Pick a period, group the runs by day, week or month, see the cards per period in a chart, and export the table as a CSV file.</source>
-        <translation type="unfinished" />
+        <translation>Analitik mencantumkan setiap proses mining yang telah Anda jalankan. Pilih periode, kelompokkan proses per hari, minggu, atau bulan, lihat kartu per periode dalam diagram, dan ekspor tabel sebagai berkas CSV.</translation>
     </message>
     <message>
         <source>Show or delete a past run's cards</source>
-        <translation type="unfinished" />
+        <translation>Tampilkan atau hapus kartu dari proses sebelumnya</translation>
     </message>
     <message>
         <source>Select a run in Analytics → Mining History to open its cards in Anki's browser or to delete them. The confirmation says how many of its cards are still in Anki and how many you have reviewed. Runs mined before this version have no card list.</source>
-        <translation type="unfinished" />
+        <translation>Pilih proses di Analitik → Riwayat Mining untuk membuka kartunya di peramban Anki atau untuk menghapusnya. Konfirmasi menyebutkan berapa banyak kartunya yang masih ada di Anki dan berapa yang sudah Anda ulas. Proses yang dijalankan sebelum versi ini tidak memiliki daftar kartu.</translation>
     </message>
     <message>
         <source>Track how many words you know</source>
-        <translation type="unfinished" />
+        <translation>Pantau berapa banyak kata yang Anda kenal</translation>
     </message>
     <message>
         <source>The Known Words card on Analytics counts the words Anki Miner treats as known in the current mining language and shows how that number changed. It is counted while Anki is running, at most once every ten minutes.</source>
-        <translation type="unfinished" />
+        <translation>Kartu Kata yang Dikenal di Analitik menghitung kata yang dianggap dikenal oleh Anki Miner dalam bahasa mining saat ini dan menunjukkan perubahan jumlahnya. Penghitungan dilakukan saat Anki berjalan, paling sering sekali setiap sepuluh menit.</translation>
     </message>
     <message>
         <source>See how much of a frequency list you know</source>
-        <translation type="unfinished" />
+        <translation>Lihat seberapa banyak daftar frekuensi yang Anda kenal</translation>
     </message>
     <message>
         <source>Analytics → Frequency Coverage counts the words you know in ranks 1–1,000 up to 20,000 of your first frequency list with numeric ranks, and lists the missing words of each band. It needs Anki running.</source>
-        <translation type="unfinished" />
+        <translation>Analitik → Cakupan Frekuensi menghitung kata yang Anda kenal pada peringkat 1–1.000 hingga 20.000 dari daftar frekuensi pertama Anda yang memiliki peringkat angka, dan mencantumkan kata yang belum dikenal di setiap rentang. Fitur ini memerlukan Anki yang sedang berjalan.</translation>
     </message>
     <message>
         <source>Reset mining statistics</source>
@@ -2607,11 +2609,11 @@ Tidak ada berkas indeks yang dihapus.</translation>
     </message>
     <message>
         <source>Count a word as known only after its card has been reviewed</source>
-        <translation type="unfinished" />
+        <translation>Anggap kata dikenal hanya setelah kartunya diulas</translation>
     </message>
     <message>
         <source>Readability and the i+1 sentence rule then count a word as known only when its Anki card has been reviewed at least once. Mining still skips every word that already has a card.</source>
-        <translation type="unfinished" />
+        <translation>Keterbacaan dan aturan kalimat i+1 kemudian menganggap kata dikenal hanya jika kartu Anki-nya sudah diulas setidaknya sekali. Mining tetap melewati setiap kata yang sudah memiliki kartu.</translation>
     </message>
     <message>
         <source>Exclude specific Anki decks from 'known'</source>
@@ -2631,27 +2633,27 @@ Tidak ada berkas indeks yang dihapus.</translation>
     </message>
     <message>
         <source>Browse every known word</source>
-        <translation type="unfinished" />
+        <translation>Jelajahi setiap kata yang dikenal</translation>
     </message>
     <message>
         <source>Manage Known Words lists every word this language counts as known, with where it came from (added by you, mined by Anki Miner, from Anki) and the date it was added. Search it, filter it by source, and remove words you added. Words from Anki come back on the next sync.</source>
-        <translation type="unfinished" />
+        <translation>Kelola Kata yang Dikenal mencantumkan setiap kata yang dianggap dikenal dalam bahasa ini, beserta asalnya (ditambahkan oleh Anda, di-mining oleh Anki Miner, dari Anki) dan tanggal ditambahkan. Cari, saring menurut sumber, dan hapus kata yang Anda tambahkan. Kata dari Anki kembali pada sinkronisasi berikutnya.</translation>
     </message>
     <message>
         <source>Import known words from Kindle, Lute or LWT</source>
-        <translation type="unfinished" />
+        <translation>Impor kata yang dikenal dari Kindle, Lute, atau LWT</translation>
     </message>
     <message>
         <source>In Manage Known Words, Import… also reads a Kindle Vocabulary Builder file (vocab.db; words marked mastered) and Lute or LWT term exports (status 5 and 99).</source>
-        <translation type="unfinished" />
+        <translation>Di Kelola Kata yang Dikenal, Impor… juga membaca berkas Kindle Vocabulary Builder (vocab.db; kata yang ditandai sudah dikuasai) serta ekspor istilah Lute atau LWT (status 5 dan 99).</translation>
     </message>
     <message>
         <source>Export words to a CSV file</source>
-        <translation type="unfinished" />
+        <translation>Ekspor kata ke berkas CSV</translation>
     </message>
     <message>
         <source>Export words… saves the list you are looking at in Manage Known Words, or a finished run's mined and not-mined words with the reason each was skipped, as a CSV file.</source>
-        <translation type="unfinished" />
+        <translation>Ekspor kata… menyimpan daftar yang sedang Anda lihat di Kelola Kata yang Dikenal, atau kata yang di-mining dan tidak di-mining dari proses yang selesai beserta alasan tiap kata dilewati, sebagai berkas CSV.</translation>
     </message>
     <message>
         <source>Exclude kana-only words</source>
@@ -2683,23 +2685,23 @@ Tidak ada berkas indeks yang dihapus.</translation>
     </message>
     <message>
         <source>Mine at most one word from each example sentence. A word whose sentence is taken moves to another line it appears on, and is skipped only when every one of its lines is taken.</source>
-        <translation type="unfinished" />
+        <translation>Mining paling banyak satu kata dari setiap kalimat contoh. Kata yang kalimatnya sudah terpakai pindah ke baris lain tempat kata itu muncul, dan hanya dilewati jika semua barisnya sudah terpakai.</translation>
     </message>
     <message>
         <source>Pick the clearest sentence</source>
-        <translation type="unfinished" />
+        <translation>Pilih kalimat yang paling jelas</translation>
     </message>
     <message>
         <source>When a word appears on several lines, its card uses the line with the fewest unknown words and a comfortable length instead of the first one. The Word Curator still lists every line.</source>
-        <translation type="unfinished" />
+        <translation>Jika suatu kata muncul di beberapa baris, kartunya memakai baris dengan kata tak dikenal paling sedikit dan panjang yang nyaman, bukan baris pertama. Word Curator tetap mencantumkan setiap baris.</translation>
     </message>
     <message>
         <source>Skip openings, endings and signs</source>
-        <translation type="unfinished" />
+        <translation>Lewati opening, ending, dan tulisan layar</translation>
     </message>
     <message>
         <source>Leave opening and ending songs, previews and on-screen signs out of mining, Condense and Readability: lines styled as songs or signs, and lines inside a video's opening, ending and preview chapters. On by default for new installs; turn it off in Settings → Sentences.</source>
-        <translation type="unfinished" />
+        <translation>Kecualikan lagu opening dan ending, cuplikan, serta tulisan di layar dari mining, Padatkan, dan Keterbacaan: baris yang diberi gaya sebagai lagu atau tulisan, dan baris di dalam bab opening, ending, dan cuplikan video. Aktif secara bawaan untuk instalasi baru; matikan di Pengaturan → Kalimat.</translation>
     </message>
     <message>
         <source>Strip junk from subtitles (regex)</source>
@@ -2767,11 +2769,11 @@ Tidak ada berkas indeks yang dihapus.</translation>
     </message>
     <message>
         <source>Import a dictionary file</source>
-        <translation type="unfinished" />
+        <translation>Impor berkas kamus</translation>
     </message>
     <message>
         <source>Add a Yomitan zip, a StarDict dictionary (its archive or its .ifo file) or a CSV/TSV word list (term and definition, or term, reading and definition) as a definition source.</source>
-        <translation type="unfinished" />
+        <translation>Tambahkan zip Yomitan, kamus StarDict (arsipnya atau berkas .ifo-nya), atau daftar kata CSV/TSV (istilah dan definisi, atau istilah, cara baca, dan definisi) sebagai sumber definisi.</translation>
     </message>
     <message>
         <source>Keep dictionaries up to date</source>
@@ -2843,7 +2845,7 @@ Tidak ada berkas indeks yang dihapus.</translation>
     </message>
     <message>
         <source>Attach word audio to cards from audio packs, JPod101 (Japanese), Google text-to-speech, or Microsoft Edge text-to-speech (every language). Wikimedia Commons plays recordings of real speakers from Wiktionary and Lingua Libre, tried before Google TTS in most languages.</source>
-        <translation type="unfinished" />
+        <translation>Lampirkan audio kata ke kartu dari paket audio, JPod101 (Jepang), text-to-speech Google, atau text-to-speech Microsoft Edge (semua bahasa). Wikimedia Commons memutar rekaman penutur sungguhan dari Wiktionary dan Lingua Libre, dan dicoba sebelum Google TTS di sebagian besar bahasa.</translation>
     </message>
     <message>
         <source>Import local audio packs</source>
@@ -2859,7 +2861,7 @@ Tidak ada berkas indeks yang dihapus.</translation>
     </message>
     <message>
         <source>Extract the spoken sentence as an audio clip; tune its format and bitrate. Even out audio volume brings sentence clips and condensed audio to one loudness and fades each clip in and out.</source>
-        <translation type="unfinished" />
+        <translation>Ekstrak kalimat yang diucapkan sebagai klip audio; atur format dan bitrate-nya. Ratakan volume audio menyamakan kenyaringan klip kalimat dan audio yang dipadatkan serta memberi efek fade in dan fade out pada setiap klip.</translation>
     </message>
     <message>
         <source>Sentence audio for reading (TTS)</source>
@@ -2883,7 +2885,7 @@ Tidak ada berkas indeks yang dihapus.</translation>
     </message>
     <message>
         <source>Capture a still frame from the scene to put on the card. Crop manga pictures to the speech bubble shows the bubble and the art around it instead of the whole page.</source>
-        <translation type="unfinished" />
+        <translation>Ambil gambar diam dari adegan untuk ditaruh di kartu. Pangkas gambar manga ke balon kata menampilkan balon dan gambar di sekitarnya, bukan seluruh halaman.</translation>
     </message>
     <message>
         <source>Animated clips (GIF/WebP)</source>
@@ -2963,7 +2965,7 @@ Tidak ada berkas indeks yang dihapus.</translation>
     </message>
     <message>
         <source>Add tags to every note Anki Miner creates. Card tags can use {series}, {episode} and {volume}. Each card gets its own show, episode or book volume, for example mined::{series}::{episode} gives mined::Frieren::03.</source>
-        <translation type="unfinished" />
+        <translation>Tambahkan tag ke setiap catatan yang dibuat Anki Miner. Tag kartu dapat memakai {series}, {episode}, dan {volume}. Setiap kartu mendapat acara, episode, atau volume bukunya sendiri, misalnya mined::{series}::{episode} menghasilkan mined::Frieren::03.</translation>
     </message>
     <message>
         <source>Connect to Anki (AnkiConnect)</source>
@@ -2971,15 +2973,15 @@ Tidak ada berkas indeks yang dihapus.</translation>
     </message>
     <message>
         <source>Set the AnkiConnect address; Refresh re-checks the connection to your running Anki. If AnkiConnect is set up with an API key, add it to the address: http://127.0.0.1:8765/?key=YOUR_KEY. Anki Miner sends it with every request and never writes it to the log.</source>
-        <translation type="unfinished" />
+        <translation>Atur alamat AnkiConnect; Segarkan memeriksa ulang koneksi ke Anki Anda yang sedang berjalan. Jika AnkiConnect disiapkan dengan kunci API, tambahkan ke alamat: http://127.0.0.1:8765/?key=YOUR_KEY. Anki Miner mengirimkannya bersama setiap permintaan dan tidak pernah menuliskannya ke log.</translation>
     </message>
     <message>
         <source>Sync Anki after mining</source>
-        <translation type="unfinished" />
+        <translation>Sinkronkan Anki setelah mining</translation>
     </message>
     <message>
         <source>After a run that added cards, Anki Miner asks Anki to sync with AnkiWeb. If the sync fails, the Activity Log says so and the cards stay added.</source>
-        <translation type="unfinished" />
+        <translation>Setelah proses yang menambahkan kartu, Anki Miner meminta Anki melakukan sinkronisasi dengan AnkiWeb. Jika sinkronisasi gagal, Log Aktivitas mencatatnya dan kartu tetap ditambahkan.</translation>
     </message>
     <message>
         <source>Fill in field mappings automatically</source>
@@ -3067,7 +3069,7 @@ Tidak ada berkas indeks yang dihapus.</translation>
     </message>
     <message>
         <source>Draw a box where a video's on-screen dialogue appears and Anki Miner reads it into a timed .srt that Video → Single can mine. Made for game longplays without commentary. It also reads image subtitles (Blu-ray .sup, DVD .idx/.sub, or an image track inside a video) without a box. Lines with none of your mining language's letters are left out. Download the OCR engine from the setup card on Utilities → Video OCR.</source>
-        <translation type="unfinished" />
+        <translation>Gambar kotak di tempat dialog muncul di layar video, lalu Anki Miner membacanya menjadi .srt berwaktu yang dapat di-mining di Video → Tunggal. Dibuat untuk longplay game tanpa komentar. Fitur ini juga membaca subtitel gambar (Blu-ray .sup, DVD .idx/.sub, atau trek gambar di dalam video) tanpa kotak. Baris tanpa satu pun huruf bahasa mining Anda diabaikan. Unduh mesin OCR dari kartu penyiapan di Utilitas → Video OCR.</translation>
     </message>
     <message>
         <source>Sync an audiobook to its EPUB</source>
@@ -3075,23 +3077,23 @@ Tidak ada berkas indeks yang dihapus.</translation>
     </message>
     <message>
         <source>Transcribe an audiobook and time the book's own sentences to it, writing an .srt the Audiobook tab, Reading → Subtitle Files or a reader can use. A second run on the same audio reuses the saved transcript instead of transcribing again.</source>
-        <translation type="unfinished" />
+        <translation>Transkripsikan buku audio dan cocokkan waktu kalimat buku itu sendiri dengannya, lalu tulis .srt yang dapat dipakai tab Buku Audio, Bacaan → Berkas Subtitel, atau aplikasi pembaca. Proses kedua pada audio yang sama memakai ulang transkrip yang tersimpan alih-alih mentranskripsi lagi.</translation>
     </message>
     <message>
         <source>Sync a shelf of audiobooks in one run</source>
-        <translation type="unfinished" />
+        <translation>Sinkronkan satu rak buku audio dalam satu proses</translation>
     </message>
     <message>
         <source>In Utilities → Audiobook Sync, choose Folder and pick a folder that holds one folder per book, each with its EPUB (or text file) and its audio files. The books sync one after another, in name order.</source>
-        <translation type="unfinished" />
+        <translation>Di Utilitas → Sinkronisasi Buku Audio, pilih Folder lalu pilih folder yang berisi satu folder per buku, masing-masing dengan EPUB-nya (atau berkas teks) dan berkas audionya. Buku disinkronkan satu per satu, menurut urutan nama.</translation>
     </message>
     <message>
         <source>See how well an audiobook synced</source>
-        <translation type="unfinished" />
+        <translation>Lihat seberapa baik buku audio tersinkron</translation>
     </message>
     <message>
         <source>After Audiobook Sync, each book gets a line under the Book card: how many of its sentences got a subtitle, how much of the narration matched the book, and a grade from A to D. Chapters read out of book order are found too; sentences the narrator skipped never get a subtitle.</source>
-        <translation type="unfinished" />
+        <translation>Setelah Sinkronisasi Buku Audio, setiap buku mendapat satu baris di bawah kartu Buku: berapa banyak kalimatnya yang mendapat subtitel, berapa banyak narasi yang cocok dengan buku, dan nilai dari A sampai D. Bab yang dibacakan di luar urutan buku juga ditemukan; kalimat yang dilewati narator tidak pernah mendapat subtitel.</translation>
     </message>
     <message>
         <source>Check how much of a show, book or manga you can read</source>
@@ -3175,11 +3177,11 @@ Tidak ada berkas indeks yang dihapus.</translation>
     </message>
     <message>
         <source>Restore an automatic backup</source>
-        <translation type="unfinished" />
+        <translation>Pulihkan cadangan otomatis</translation>
     </message>
     <message>
         <source>Anki Miner backs up your known words, statistics, settings and profiles once a day when it starts, and keeps the last 7 days. Settings → General → Restore a backup… puts one back the next time the app starts.</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner mencadangkan kata yang dikenal, statistik, pengaturan, dan profil Anda sekali sehari saat dimulai, dan menyimpan cadangan 7 hari terakhir. Pengaturan → Umum → Pulihkan cadangan… mengembalikan salah satunya saat aplikasi dimulai berikutnya.</translation>
     </message>
     <message>
         <source>Undo a mining run</source>
@@ -3191,11 +3193,11 @@ Tidak ada berkas indeks yang dihapus.</translation>
     </message>
     <message>
         <source>Export a run's words</source>
-        <translation type="unfinished" />
+        <translation>Ekspor kata dari suatu proses</translation>
     </message>
     <message>
         <source>Press View details on a run's result line, then Export words… to save the run's mined and not-mined words, with the reason each was skipped, as a CSV file.</source>
-        <translation type="unfinished" />
+        <translation>Tekan Lihat detail pada baris hasil suatu proses, lalu Ekspor kata… untuk menyimpan kata yang di-mining dan tidak di-mining dari proses itu, beserta alasan tiap kata dilewati, sebagai berkas CSV.</translation>
     </message>
     <message>
         <source>Keyboard shortcuts</source>
@@ -4567,11 +4569,11 @@ Ini akan mengubah %n catatan (%1) dan memberinya tag %2. Lanjutkan?</numerusform
     </message>
     <message>
         <source>Choose dictionary files</source>
-        <translation type="unfinished" />
+        <translation>Pilih berkas kamus</translation>
     </message>
     <message>
         <source>Dictionaries (*.zip *.ifo *.tar.gz *.tgz *.tar.bz2 *.tar.xz *.csv *.tsv)</source>
-        <translation type="unfinished" />
+        <translation>Kamus (*.zip *.ifo *.tar.gz *.tgz *.tar.bz2 *.tar.xz *.csv *.tsv)</translation>
     </message>
     <message>
         <source>Dictionary %1 of %2: %3</source>
@@ -5405,8 +5407,8 @@ Tidak ada berkas di disk yang dihapus.</translation>
     </message>
     <message numerus="yes">
         <source>Skipping lines in %n opening, ending or preview chapter(s)</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>Melewati baris di %n bab opening, ending, atau cuplikan</numerusform>
         </translation>
     </message>
     <message>
@@ -5453,7 +5455,7 @@ Tidak ada berkas di disk yang dihapus.</translation>
     </message>
     <message>
         <source>Only %1% of the first %2 words have an entry in your dictionaries. Is this file in the language you are mining?</source>
-        <translation type="unfinished" />
+        <translation>Hanya %1% dari %2 kata pertama yang memiliki entri di kamus Anda. Apakah berkas ini dalam bahasa yang sedang Anda mining?</translation>
     </message>
     <message>
         <source>Frequency cutoff ignored — no ranked frequency source is loaded (Settings → Frequency).</source>
@@ -5561,11 +5563,11 @@ Tidak ada berkas di disk yang dihapus.</translation>
     </message>
     <message>
         <source>Translation subtitles picked automatically: %1</source>
-        <translation type="unfinished" />
+        <translation>Subtitel terjemahan dipilih otomatis: %1</translation>
     </message>
     <message>
         <source>Translation subtitles picked automatically: embedded track %1</source>
-        <translation type="unfinished" />
+        <translation>Subtitel terjemahan dipilih otomatis: trek tertanam %1</translation>
     </message>
     <message>
         <source>Could not extract media for any word — no cards created</source>
@@ -5833,11 +5835,11 @@ Tidak ada berkas di disk yang dihapus.</translation>
     </message>
     <message>
         <source>Count a word as known only after its card has been reviewed</source>
-        <translation type="unfinished" />
+        <translation>Anggap kata dikenal hanya setelah kartunya diulas</translation>
     </message>
     <message>
         <source>Readability and the i+1 sentence rule count a word as known only when its Anki card has been reviewed at least once. Mining still skips every word that already has a card.</source>
-        <translation type="unfinished" />
+        <translation>Keterbacaan dan aturan kalimat i+1 menganggap kata dikenal hanya jika kartu Anki-nya sudah diulas setidaknya sekali. Mining tetap melewati setiap kata yang sudah memiliki kartu.</translation>
     </message>
     <message>
         <source>Keep words known after their cards are deleted</source>
@@ -6499,15 +6501,15 @@ Tidak ada berkas indeks yang dihapus.</translation>
     <name>KnownWordsManagerDialog</name>
     <message>
         <source>Word</source>
-        <translation type="unfinished" />
+        <translation>Kata</translation>
     </message>
     <message>
         <source>Source</source>
-        <translation type="unfinished" />
+        <translation>Sumber</translation>
     </message>
     <message>
         <source>Added</source>
-        <translation type="unfinished" />
+        <translation>Ditambahkan</translation>
     </message>
     <message>
         <source>Manage Known Words</source>
@@ -6519,7 +6521,7 @@ Tidak ada berkas indeks yang dihapus.</translation>
     </message>
     <message>
         <source>Every word this language counts as known, and where it came from. Words you added from the Word Curator stay known on every run and across cache rebuilds.</source>
-        <translation type="unfinished" />
+        <translation>Setiap kata yang dianggap dikenal dalam bahasa ini, beserta asalnya. Kata yang Anda tambahkan dari Word Curator tetap dikenal di setiap proses dan setelah cache dibangun ulang.</translation>
     </message>
     <message>
         <source>Decks this language's known-words scan skips: %1. Change them in Settings → Word Filters.</source>
@@ -6531,15 +6533,15 @@ Tidak ada berkas indeks yang dihapus.</translation>
     </message>
     <message>
         <source>Added by you</source>
-        <translation type="unfinished" />
+        <translation>Ditambahkan oleh Anda</translation>
     </message>
     <message>
         <source>Mined by Anki Miner</source>
-        <translation type="unfinished" />
+        <translation>Di-mining oleh Anki Miner</translation>
     </message>
     <message>
         <source>From Anki</source>
-        <translation type="unfinished" />
+        <translation>Dari Anki</translation>
     </message>
     <message>
         <source>Filter…</source>
@@ -6547,7 +6549,7 @@ Tidak ada berkas indeks yang dihapus.</translation>
     </message>
     <message>
         <source>All sources</source>
-        <translation type="unfinished" />
+        <translation>Semua sumber</translation>
     </message>
     <message>
         <source>Rebuild Known Words DB</source>
@@ -6563,7 +6565,7 @@ Tidak ada berkas indeks yang dihapus.</translation>
     </message>
     <message>
         <source>Removes words you added. Words from Anki come back on the next run, and mined words leave with Undo.</source>
-        <translation type="unfinished" />
+        <translation>Menghapus kata yang Anda tambahkan. Kata dari Anki kembali pada proses berikutnya, dan kata hasil mining dihapus dengan Batalkan.</translation>
     </message>
     <message>
         <source>Import…</source>
@@ -6571,7 +6573,7 @@ Tidak ada berkas indeks yang dihapus.</translation>
     </message>
     <message>
         <source>Export words…</source>
-        <translation type="unfinished" />
+        <translation>Ekspor kata…</translation>
     </message>
     <message>
         <source>Reset User List</source>
@@ -6603,11 +6605,11 @@ Tidak ada berkas indeks yang dihapus.</translation>
     </message>
     <message>
         <source>Kindle Vocabulary Builder</source>
-        <translation type="unfinished" />
+        <translation>Kindle Vocabulary Builder</translation>
     </message>
     <message>
         <source>Lute or LWT term export</source>
-        <translation type="unfinished" />
+        <translation>Ekspor istilah Lute atau LWT</translation>
     </message>
     <message>
         <source>plain word list</source>
@@ -6619,7 +6621,7 @@ Tidak ada berkas indeks yang dihapus.</translation>
     </message>
     <message>
         <source>Known word lists (*.csv *.tsv *.txt *.json *.db);;All Files (*)</source>
-        <translation type="unfinished" />
+        <translation>Daftar kata yang dikenal (*.csv *.tsv *.txt *.json *.db);;Semua Berkas (*)</translation>
     </message>
     <message>
         <source>Detected: %1 — every entry is imported.
@@ -6651,7 +6653,7 @@ Kata yang akan ditambahkan: %3. Lanjutkan?</translation>
     </message>
     <message>
         <source>This file has no words for %1. It contains: %2.</source>
-        <translation type="unfinished" />
+        <translation>Berkas ini tidak berisi kata untuk %1. Isinya: %2.</translation>
     </message>
     <message>
         <source>That file is too large to import.</source>
@@ -6667,7 +6669,7 @@ Kata yang akan ditambahkan: %3. Lanjutkan?</translation>
     </message>
     <message>
         <source>File format not recognized. Supported: jpdb review export (JSON), Migaku word export (JSON/CSV), AnkiMorphs known morphs (CSV), Kindle Vocabulary Builder (vocab.db), Lute or LWT term export (CSV/TSV), plain word lists (one word per line).</source>
-        <translation type="unfinished" />
+        <translation>Format berkas tidak dikenali. Didukung: ekspor ulasan jpdb (JSON), ekspor kata Migaku (JSON/CSV), morf yang dikenal AnkiMorphs (CSV), Kindle Vocabulary Builder (vocab.db), ekspor istilah Lute atau LWT (CSV/TSV), daftar kata biasa (satu kata per baris).</translation>
     </message>
     <message>
         <source>That file could not be imported.</source>
@@ -6689,7 +6691,7 @@ Kata yang akan ditambahkan: %3. Lanjutkan?</translation>
     </message>
     <message>
         <source>CSV files (*.csv);;Text files, one word per line (*.txt)</source>
-        <translation type="unfinished" />
+        <translation>Berkas CSV (*.csv);;Berkas teks, satu kata per baris (*.txt)</translation>
     </message>
     <message>
         <source>The known words list could not be exported.</source>
@@ -7437,7 +7439,7 @@ Lanjutkan?</translation>
     </message>
     <message>
         <source>Opus clips do not play in AnkiMobile on iPhone or iPad. Choose MP3 if you review there.</source>
-        <translation type="unfinished" />
+        <translation>Klip Opus tidak dapat diputar di AnkiMobile pada iPhone atau iPad. Pilih MP3 jika Anda mengulas di sana.</translation>
     </message>
     <message>
         <source> kbps</source>
@@ -7465,11 +7467,11 @@ Lanjutkan?</translation>
     </message>
     <message>
         <source>Even out audio volume</source>
-        <translation type="unfinished" />
+        <translation>Ratakan volume audio</translation>
     </message>
     <message>
         <source>Brings sentence clips and condensed audio to one volume and fades each clip in and out, so quiet and loud sources sound alike. Applies to new clips.</source>
-        <translation type="unfinished" />
+        <translation>Menyamakan volume klip kalimat dan audio yang dipadatkan serta memberi efek fade in dan fade out pada setiap klip, sehingga sumber yang pelan dan keras terdengar serupa. Berlaku untuk klip baru.</translation>
     </message>
     <message>
         <source>Text-to-speech</source>
@@ -7493,11 +7495,11 @@ Lanjutkan?</translation>
     </message>
     <message>
         <source>Crop manga pictures to the speech bubble</source>
-        <translation type="unfinished" />
+        <translation>Pangkas gambar manga ke balon kata</translation>
     </message>
     <message>
         <source>Manga cards show the speech bubble and the art around it instead of the whole page. A sentence with no bubble position keeps the whole page.</source>
-        <translation type="unfinished" />
+        <translation>Kartu manga menampilkan balon kata dan gambar di sekitarnya, bukan seluruh halaman. Kalimat tanpa posisi balon tetap memakai seluruh halaman.</translation>
     </message>
     <message>
         <source>Enable animated screenshots</source>
@@ -7733,7 +7735,7 @@ Lanjutkan?</translation>
     </message>
     <message>
         <source>Anki didn't sync after this run. Your cards are added; sync from Anki, or see the log for why.</source>
-        <translation type="unfinished" />
+        <translation>Anki tidak tersinkron setelah proses ini. Kartu Anda sudah ditambahkan; sinkronkan dari Anki, atau lihat log untuk mengetahui sebabnya.</translation>
     </message>
     <message>
         <source>Anki Miner couldn't open these cards in Anki.</source>
@@ -9498,7 +9500,7 @@ Tidak ada berkas indeks yang dihapus.</translation>
     </message>
     <message>
         <source>An .epub, .txt or .pdf book, or a folder of books; each book is mined separately.</source>
-        <translation type="unfinished" />
+        <translation>Buku .epub, .txt, atau .pdf, atau folder berisi buku; setiap buku di-mining secara terpisah.</translation>
     </message>
     <message>
         <source>Mine</source>
@@ -9534,7 +9536,7 @@ Tidak ada berkas indeks yang dihapus.</translation>
     </message>
     <message>
         <source>Choose an .epub, .txt or .pdf book, or a folder of books.</source>
-        <translation type="unfinished" />
+        <translation>Pilih buku .epub, .txt, atau .pdf, atau folder berisi buku.</translation>
     </message>
     <message>
         <source>Starting…</source>
@@ -9600,7 +9602,7 @@ Tidak ada berkas indeks yang dihapus.</translation>
     </message>
     <message>
         <source>Add subtitle files (.srt, .ass, .ssa, .vtt, .smi, .lrc) to the list.</source>
-        <translation type="unfinished" />
+        <translation>Tambahkan berkas subtitel (.srt, .ass, .ssa, .vtt, .smi, .lrc) ke daftar.</translation>
     </message>
     <message>
         <source>Remove Selected</source>
@@ -9781,19 +9783,19 @@ Tidak ada berkas indeks yang dihapus.</translation>
     </message>
     <message>
         <source>Web addresses to fetch, one per line (https://…)</source>
-        <translation type="unfinished" />
+        <translation>Alamat web yang akan diambil, satu per baris (https://…)</translation>
     </message>
     <message>
         <source>Web addresses</source>
-        <translation type="unfinished" />
+        <translation>Alamat web</translation>
     </message>
     <message>
         <source>Fetch</source>
-        <translation type="unfinished" />
+        <translation>Ambil</translation>
     </message>
     <message>
         <source>Put the article text of each web address in the box below, to check before mining.</source>
-        <translation type="unfinished" />
+        <translation>Masukkan teks artikel dari setiap alamat web ke kotak di bawah, untuk diperiksa sebelum mining.</translation>
     </message>
     <message>
         <source>Paste the text you want to mine. Cards from pasted text have no sentence audio from a recording.</source>
@@ -9841,59 +9843,59 @@ Tidak ada berkas indeks yang dihapus.</translation>
     </message>
     <message>
         <source>Each line must be a web address that starts with http:// or https://.</source>
-        <translation type="unfinished" />
+        <translation>Setiap baris harus berupa alamat web yang diawali http:// atau https://.</translation>
     </message>
     <message>
         <source>Enter a web address first.</source>
-        <translation type="unfinished" />
+        <translation>Masukkan alamat web terlebih dahulu.</translation>
     </message>
     <message>
         <source>Fetch takes up to 10 web addresses at a time.</source>
-        <translation type="unfinished" />
+        <translation>Ambil menerima hingga 10 alamat web sekaligus.</translation>
     </message>
     <message>
         <source>Fetching…</source>
-        <translation type="unfinished" />
+        <translation>Mengambil…</translation>
     </message>
     <message>
         <source>Could not fetch %1: %2</source>
-        <translation type="unfinished" />
+        <translation>Tidak dapat mengambil %1: %2</translation>
     </message>
     <message>
         <source>None of the pages could be fetched.</source>
-        <translation type="unfinished" />
+        <translation>Tidak ada halaman yang dapat diambil.</translation>
     </message>
     <message>
         <source>Fetched %1.</source>
-        <translation type="unfinished" />
+        <translation>Diambil: %1.</translation>
     </message>
     <message>
         <source>The pages could not be fetched.</source>
-        <translation type="unfinished" />
+        <translation>Halaman tidak dapat diambil.</translation>
     </message>
     <message>
         <source>The page could not be reached. Check the address and your connection.</source>
-        <translation type="unfinished" />
+        <translation>Halaman tidak dapat dijangkau. Periksa alamat dan koneksi Anda.</translation>
     </message>
     <message>
         <source>The site did not send the page.</source>
-        <translation type="unfinished" />
+        <translation>Situs tidak mengirimkan halamannya.</translation>
     </message>
     <message>
         <source>This address is not a web page.</source>
-        <translation type="unfinished" />
+        <translation>Alamat ini bukan halaman web.</translation>
     </message>
     <message>
         <source>This page is too large to read.</source>
-        <translation type="unfinished" />
+        <translation>Halaman ini terlalu besar untuk dibaca.</translation>
     </message>
     <message>
         <source>This is not a web address.</source>
-        <translation type="unfinished" />
+        <translation>Ini bukan alamat web.</translation>
     </message>
     <message>
         <source>No article text found on this page. Pages that draw their text with JavaScript cannot be read.</source>
-        <translation type="unfinished" />
+        <translation>Tidak ada teks artikel di halaman ini. Halaman yang menampilkan teksnya dengan JavaScript tidak dapat dibaca.</translation>
     </message>
     <message>
         <source>Paste some text first.</source>
@@ -9905,7 +9907,7 @@ Tidak ada berkas indeks yang dihapus.</translation>
     </message>
     <message>
         <source>The fetched text was edited, so it is mined as one text without its page titles.</source>
-        <translation type="unfinished" />
+        <translation>Teks yang diambil telah diedit, sehingga di-mining sebagai satu teks tanpa judul halamannya.</translation>
     </message>
     <message>
         <source>That picture cannot be read. Pick another, or remove it to mine without one.</source>
@@ -10691,7 +10693,7 @@ Tidak ada berkas indeks yang dihapus.</translation>
     </message>
     <message>
         <source>Export words…</source>
-        <translation type="unfinished" />
+        <translation>Ekspor kata…</translation>
     </message>
     <message>
         <source>Close</source>
@@ -10705,19 +10707,19 @@ Tidak ada berkas indeks yang dihapus.</translation>
     </message>
     <message>
         <source>Export Words</source>
-        <translation type="unfinished" />
+        <translation>Ekspor Kata</translation>
     </message>
     <message>
         <source>CSV files (*.csv)</source>
-        <translation type="unfinished" />
+        <translation>Berkas CSV (*.csv)</translation>
     </message>
     <message>
         <source>Words exported</source>
-        <translation type="unfinished" />
+        <translation>Kata diekspor</translation>
     </message>
     <message>
         <source>Export failed — try again</source>
-        <translation type="unfinished" />
+        <translation>Ekspor gagal — coba lagi</translation>
     </message>
     <message>
         <source>Confirm Undo</source>
@@ -10921,11 +10923,11 @@ Tidak ada berkas indeks yang dihapus.</translation>
     </message>
     <message>
         <source>Skip openings, endings and signs</source>
-        <translation type="unfinished" />
+        <translation>Lewati opening, ending, dan tulisan layar</translation>
     </message>
     <message>
         <source>Leaves out song lyrics, previews and on-screen signs: lines whose subtitle style marks them as a song or a sign, and lines inside a video's opening, ending or preview chapters. Applies to mining, Condense and Readability.</source>
-        <translation type="unfinished" />
+        <translation>Mengecualikan lirik lagu, cuplikan, dan tulisan di layar: baris yang gaya subtitelnya menandainya sebagai lagu atau tulisan, dan baris di dalam bab opening, ending, atau cuplikan video. Berlaku untuk mining, Padatkan, dan Keterbacaan.</translation>
     </message>
     <message>
         <source>Sentence options</source>
@@ -10941,7 +10943,7 @@ Tidak ada berkas indeks yang dihapus.</translation>
     </message>
     <message>
         <source>Mines at most one word per example sentence. A word whose sentence is already taken moves to another line it appears on, and is skipped only when every one of its lines is taken. Whitelisted words are still mined.</source>
-        <translation type="unfinished" />
+        <translation>Mining paling banyak satu kata per kalimat contoh. Kata yang kalimatnya sudah terpakai pindah ke baris lain tempat kata itu muncul, dan hanya dilewati jika semua barisnya sudah terpakai. Kata dalam daftar putih tetap di-mining.</translation>
     </message>
     <message>
         <source>Only i+1 sentences (exactly one unknown word)</source>
@@ -10957,11 +10959,11 @@ Tidak ada berkas indeks yang dihapus.</translation>
     </message>
     <message>
         <source>Pick the clearest sentence for each word</source>
-        <translation type="unfinished" />
+        <translation>Pilih kalimat yang paling jelas untuk setiap kata</translation>
     </message>
     <message>
         <source>When a word appears on several lines, its card uses the line with the fewest unknown words and a comfortable length instead of the first one. The Word Curator still lists every line, and card order does not change.</source>
-        <translation type="unfinished" />
+        <translation>Jika suatu kata muncul di beberapa baris, kartunya memakai baris dengan kata tak dikenal paling sedikit dan panjang yang nyaman, bukan baris pertama. Word Curator tetap mencantumkan setiap baris, dan urutan kartu tidak berubah.</translation>
     </message>
     <message>
         <source> s</source>
@@ -13017,15 +13019,15 @@ Sumber daya yang terpasang dan tema Anda tetap dipertahankan.</translation>
     </message>
     <message>
         <source>Restore a backup…</source>
-        <translation type="unfinished" />
+        <translation>Pulihkan cadangan…</translation>
     </message>
     <message>
         <source>Backups</source>
-        <translation type="unfinished" />
+        <translation>Cadangan</translation>
     </message>
     <message>
         <source>Anki Miner saves your known words, statistics, settings and profiles once a day when it starts, and keeps the last 7 days.</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner menyimpan kata yang dikenal, statistik, pengaturan, dan profil Anda sekali sehari saat dimulai, dan mempertahankan cadangan 7 hari terakhir.</translation>
     </message>
     <message>
         <source>Themes</source>
@@ -13069,27 +13071,27 @@ Sumber daya yang terpasang dan tema Anda tetap dipertahankan.</translation>
     </message>
     <message>
         <source>There is no backup yet. Anki Miner makes one each day when it starts.</source>
-        <translation type="unfinished" />
+        <translation>Belum ada cadangan. Anki Miner membuatnya setiap hari saat dimulai.</translation>
     </message>
     <message>
         <source>Restore a Backup</source>
-        <translation type="unfinished" />
+        <translation>Pulihkan Cadangan</translation>
     </message>
     <message>
         <source>Restore the backup from:</source>
-        <translation type="unfinished" />
+        <translation>Pulihkan cadangan dari:</translation>
     </message>
     <message>
         <source>Replace your known words, statistics, settings and profiles with the copies from %1? The restore runs the next time Anki Miner starts. Changes made after that backup are lost.</source>
-        <translation type="unfinished" />
+        <translation>Ganti kata yang dikenal, statistik, pengaturan, dan profil Anda dengan salinan dari %1? Pemulihan dijalankan saat Anki Miner dimulai berikutnya. Perubahan yang dibuat setelah cadangan itu akan hilang.</translation>
     </message>
     <message>
         <source>The restore could not be scheduled.</source>
-        <translation type="unfinished" />
+        <translation>Pemulihan tidak dapat dijadwalkan.</translation>
     </message>
     <message>
         <source>The backup from %1 will be restored when Anki Miner next starts.</source>
-        <translation type="unfinished" />
+        <translation>Cadangan dari %1 akan dipulihkan saat Anki Miner dimulai berikutnya.</translation>
     </message>
 </context><context>
     <name>UpdateBanner</name>
@@ -13257,11 +13259,11 @@ Sumber daya yang terpasang dan tema Anda tetap dipertahankan.</translation>
     </message>
     <message>
         <source>The picture (burned-in text)</source>
-        <translation type="unfinished" />
+        <translation>Gambar video (teks yang menyatu)</translation>
     </message>
     <message>
         <source>Image subtitle track %1</source>
-        <translation type="unfinished" />
+        <translation>Trek subtitel gambar %1</translation>
     </message>
     <message>
         <source>The OCR engine could not start on this computer. The details say why.</source>
@@ -13301,15 +13303,15 @@ Sumber daya yang terpasang dan tema Anda tetap dipertahankan.</translation>
     </message>
     <message>
         <source>This field takes a video or an image subtitle file (.sup, .idx, .sub).</source>
-        <translation type="unfinished" />
+        <translation>Kolom ini menerima video atau berkas subtitel gambar (.sup, .idx, .sub).</translation>
     </message>
     <message>
         <source>Read from:</source>
-        <translation type="unfinished" />
+        <translation>Baca dari:</translation>
     </message>
     <message>
         <source>Read text drawn into the picture, or one of the video's image subtitle tracks.</source>
-        <translation type="unfinished" />
+        <translation>Baca teks yang tergambar di dalam gambar video, atau salah satu trek subtitel gambar dari video.</translation>
     </message>
     <message>
         <source>Video Folder:</source>
@@ -13393,7 +13395,7 @@ Sumber daya yang terpasang dan tema Anda tetap dipertahankan.</translation>
     </message>
     <message>
         <source>Image subtitles are read over the whole frame, so they need no region.</source>
-        <translation type="unfinished" />
+        <translation>Subtitel gambar dibaca di seluruh bingkai, jadi tidak memerlukan area.</translation>
     </message>
     <message>
         <source>Download OCR models</source>
@@ -13437,7 +13439,7 @@ Sumber daya yang terpasang dan tema Anda tetap dipertahankan.</translation>
     </message>
     <message>
         <source>A DVD subtitle needs its .idx and .sub files in the same folder.</source>
-        <translation type="unfinished" />
+        <translation>Subtitel DVD memerlukan berkas .idx dan .sub-nya di folder yang sama.</translation>
     </message>
     <message>
         <source>Choose a folder before reading subtitles.</source>
@@ -13723,15 +13725,15 @@ Urutkan berdasarkan kolom ini untuk menelusuri rekaman panjang secara berurutan 
     </message>
     <message>
         <source>Used on the card</source>
-        <translation type="unfinished" />
+        <translation>Dipakai di kartu</translation>
     </message>
     <message>
         <source>Back to the first match</source>
-        <translation type="unfinished" />
+        <translation>Kembali ke kecocokan pertama</translation>
     </message>
     <message>
         <source>Use this dictionary on the card</source>
-        <translation type="unfinished" />
+        <translation>Pakai kamus ini di kartu</translation>
     </message>
     <message>
         <source>Sentences (%1)</source>
@@ -14169,7 +14171,7 @@ Urutkan berdasarkan kolom ini untuk menelusuri rekaman panjang secara berurutan 
     </message>
     <message>
         <source>Wikimedia Commons (native recordings)</source>
-        <translation type="unfinished" />
+        <translation>Wikimedia Commons (rekaman penutur asli)</translation>
     </message>
     <message>
         <source>Microsoft Edge read-aloud (synthetic TTS)</source>
@@ -14183,7 +14185,7 @@ Urutkan berdasarkan kolom ini untuk menelusuri rekaman panjang secara berurutan 
     <name>_BarChart</name>
     <message>
         <source>Cards per period</source>
-        <translation type="unfinished" />
+        <translation>Kartu per periode</translation>
     </message>
 </context><context>
     <name>_HealthRow</name>
@@ -14205,11 +14207,11 @@ Urutkan berdasarkan kolom ini untuk menelusuri rekaman panjang secara berurutan 
     <name>_MissingWordsDialog</name>
     <message>
         <source>Missing Words</source>
-        <translation type="unfinished" />
+        <translation>Kata yang Belum Dikenal</translation>
     </message>
     <message>
         <source>Not known yet in ranks %1</source>
-        <translation type="unfinished" />
+        <translation>Belum dikenal di peringkat %1</translation>
     </message>
 </context><context>
     <name>app</name>

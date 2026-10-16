@@ -93,59 +93,59 @@
     </message>
     <message>
         <source>Known Words</source>
-        <translation type="unfinished" />
+        <translation>Відомі слова</translation>
     </message>
     <message>
         <source>Words Anki Miner treats as known in the current mining language.</source>
-        <translation type="unfinished" />
+        <translation>Слова, які Anki Miner вважає відомими в поточній мові видобування.</translation>
     </message>
     <message>
         <source>Mining History</source>
-        <translation type="unfinished" />
+        <translation>Історія видобування</translation>
     </message>
     <message>
         <source>History period</source>
-        <translation type="unfinished" />
+        <translation>Період історії</translation>
     </message>
     <message>
         <source>All time</source>
-        <translation type="unfinished" />
+        <translation>За весь час</translation>
     </message>
     <message>
         <source>Last 7 days</source>
-        <translation type="unfinished" />
+        <translation>Останні 7 днів</translation>
     </message>
     <message>
         <source>Last 30 days</source>
-        <translation type="unfinished" />
+        <translation>Останні 30 днів</translation>
     </message>
     <message>
         <source>Last 12 months</source>
-        <translation type="unfinished" />
+        <translation>Останні 12 місяців</translation>
     </message>
     <message>
         <source>History grouping</source>
-        <translation type="unfinished" />
+        <translation>Групування історії</translation>
     </message>
     <message>
         <source>Each run</source>
-        <translation type="unfinished" />
+        <translation>Кожен запуск</translation>
     </message>
     <message>
         <source>By day</source>
-        <translation type="unfinished" />
+        <translation>За днями</translation>
     </message>
     <message>
         <source>By week</source>
-        <translation type="unfinished" />
+        <translation>За тижнями</translation>
     </message>
     <message>
         <source>By month</source>
-        <translation type="unfinished" />
+        <translation>За місяцями</translation>
     </message>
     <message>
         <source>Export CSV…</source>
-        <translation type="unfinished" />
+        <translation>Експорт CSV…</translation>
     </message>
     <message>
         <source>No sessions yet — process an episode to see your history.</source>
@@ -177,7 +177,7 @@
     </message>
     <message>
         <source>Period</source>
-        <translation type="unfinished" />
+        <translation>Період</translation>
     </message>
     <message>
         <source>Show in Anki</source>
@@ -185,7 +185,7 @@
     </message>
     <message>
         <source>Delete this run's cards…</source>
-        <translation type="unfinished" />
+        <translation>Видалити картки цього запуску…</translation>
     </message>
     <message>
         <source>Series Difficulty Ranking</source>
@@ -217,11 +217,11 @@
     </message>
     <message>
         <source>Frequency Coverage</source>
-        <translation type="unfinished" />
+        <translation>Охоплення частотного списку</translation>
     </message>
     <message>
         <source>Rank band</source>
-        <translation type="unfinished" />
+        <translation>Діапазон рангів</translation>
     </message>
     <message>
         <source>Known</source>
@@ -229,15 +229,15 @@
     </message>
     <message>
         <source>Not known</source>
-        <translation type="unfinished" />
+        <translation>Невідомі</translation>
     </message>
     <message>
         <source>Known %</source>
-        <translation type="unfinished" />
+        <translation>Відомі, %</translation>
     </message>
     <message>
         <source>Show missing words</source>
-        <translation type="unfinished" />
+        <translation>Показати відсутні слова</translation>
     </message>
     <message>
         <source>Milestones</source>
@@ -265,93 +265,95 @@
     </message>
     <message>
         <source>No runs in this period.</source>
-        <translation type="unfinished" />
+        <translation>За цей період запусків немає.</translation>
     </message>
     <message>
         <source>Export Mining History</source>
-        <translation type="unfinished" />
+        <translation>Експорт історії видобування</translation>
     </message>
     <message>
         <source>CSV Files (*.csv);;All Files (*)</source>
-        <translation type="unfinished" />
+        <translation>Файли CSV (*.csv);;Усі файли (*)</translation>
     </message>
     <message>
         <source>History saved to %1.</source>
-        <translation type="unfinished" />
+        <translation>Історію збережено в %1.</translation>
     </message>
     <message>
         <source>The history could not be exported.</source>
-        <translation type="unfinished" />
+        <translation>Не вдалося експортувати історію.</translation>
     </message>
     <message>
         <source>%1 (cards deleted: %2)</source>
-        <translation type="unfinished" />
+        <translation>%1 (видалено карток: %2)</translation>
     </message>
     <message>
         <source>Select one run in the table.</source>
-        <translation type="unfinished" />
+        <translation>Виберіть у таблиці один запуск.</translation>
     </message>
     <message>
         <source>This run's cards were deleted: %1.</source>
-        <translation type="unfinished" />
+        <translation>Видалено карток цього запуску: %1.</translation>
     </message>
     <message>
         <source>Anki Miner has no card list for this run: it was mined before this version, or it made no cards.</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner не має списку карток для цього запуску: його виконано до цієї версії, або він не створив карток.</translation>
     </message>
     <message>
         <source>Anki Miner couldn't open this run's cards in Anki.</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner не вдалося відкрити картки цього запуску в Anki.</translation>
     </message>
     <message>
         <source>None of this run's cards are in Anki any more.</source>
-        <translation type="unfinished" />
+        <translation>Жодної картки цього запуску в Anki вже немає.</translation>
     </message>
     <message>
         <source>Delete This Run's Cards</source>
-        <translation type="unfinished" />
+        <translation>Видалення карток запуску</translation>
     </message>
     <message>
         <source>Cards this run added that are still in Anki: %1. Reviewed at least once: %2.
 
 Delete them from Anki? Their review history is deleted with them. This cannot be undone.</source>
-        <translation type="unfinished" />
+        <translation>Карток цього запуску, які ще є в Anki: %1. Повторених хоча б раз: %2.
+
+Видалити їх з Anki? Історію повторень буде видалено разом із ними. Цю дію не можна скасувати.</translation>
     </message>
     <message>
         <source>Cards deleted from Anki: %1.</source>
-        <translation type="unfinished" />
+        <translation>Видалено карток з Anki: %1.</translation>
     </message>
     <message>
         <source>This run's cards could not be deleted.</source>
-        <translation type="unfinished" />
+        <translation>Не вдалося видалити картки цього запуску.</translation>
     </message>
     <message>
         <source>Known words could not be counted.</source>
-        <translation type="unfinished" />
+        <translation>Не вдалося підрахувати відомі слова.</translation>
     </message>
     <message>
         <source>Words Anki Miner treats as known in %1.</source>
-        <translation type="unfinished" />
+        <translation>Слова, які Anki Miner вважає відомими для мови %1.</translation>
     </message>
     <message>
         <source>Change since %1: %2</source>
-        <translation type="unfinished" />
+        <translation>Зміна від %1: %2</translation>
     </message>
     <message>
         <source>Last counted on %1; Anki was not reachable.</source>
-        <translation type="unfinished" />
+        <translation>Останній підрахунок: %1; Anki був недоступний.</translation>
     </message>
     <message>
         <source>Last counted on %1.</source>
-        <translation type="unfinished" />
+        <translation>Останній підрахунок: %1.</translation>
     </message>
     <message>
         <source>Coverage needs Anki running: it compares the list with your cards.</source>
-        <translation type="unfinished" />
+        <translation>Для охоплення потрібен запущений Anki: список порівнюється з вашими картками.</translation>
     </message>
     <message>
         <source>How many of the most frequent words in %1 you already know.</source>
-        <translation type="unfinished" />
+        <translation>Скільки найчастіших слів із %1 ви вже знаєте.</translation>
     </message>
     <message>
         <source>%1 mining sessions completed</source>
@@ -763,7 +765,7 @@ Delete them from Anki? Their review history is deleted with them. This cannot be
     </message>
     <message>
         <source>{series}, {episode} and {volume} become each card's show, episode or book volume, for example mined::{series}::{episode}.</source>
-        <translation type="unfinished" />
+        <translation>{series}, {episode} і {volume} замінюються серіалом, епізодом або томом книги кожної картки, наприклад mined::{series}::{episode}.</translation>
     </message>
     <message>
         <source>Refresh</source>
@@ -791,11 +793,11 @@ Delete them from Anki? Their review history is deleted with them. This cannot be
     </message>
     <message>
         <source>Sync Anki after mining</source>
-        <translation type="unfinished" />
+        <translation>Синхронізувати Anki після видобування</translation>
     </message>
     <message>
         <source>After a run that added cards, ask Anki to sync with AnkiWeb. If the sync fails, the Activity Log says so and the cards stay added.</source>
-        <translation type="unfinished" />
+        <translation>Після запуску, що додав картки, просити Anki синхронізуватися з AnkiWeb. Якщо синхронізація не вдасться, журнал дій про це повідомить, а картки залишаться доданими.</translation>
     </message>
     <message>
         <source>AnkiConnect URL</source>
@@ -807,7 +809,7 @@ Delete them from Anki? Their review history is deleted with them. This cannot be
     </message>
     <message>
         <source>If AnkiConnect asks for an API key, add it to the address: http://127.0.0.1:8765/?key=YOUR_KEY</source>
-        <translation type="unfinished" />
+        <translation>Якщо AnkiConnect запитує ключ API, додайте його до адреси: http://127.0.0.1:8765/?key=YOUR_KEY</translation>
     </message>
     <message>
         <source>Fill in automatically</source>
@@ -1519,7 +1521,7 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
     </message>
     <message>
         <source>Wikimedia Commons (native recordings)</source>
-        <translation type="unfinished" />
+        <translation>Wikimedia Commons (записи носіїв мови)</translation>
     </message>
     <message>
         <source>Custom JSON</source>
@@ -2089,7 +2091,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Every audio file in the folder, in file-name order, one .srt each. A folder of book folders (each with its EPUB and audio) syncs every book in turn.</source>
-        <translation type="unfinished" />
+        <translation>Усі аудіофайли в теці за порядком назв, по одному .srt на кожен. Тека з теками книг (у кожній свій EPUB і аудіо) синхронізує всі книги по черзі.</translation>
     </message>
     <message>
         <source>EPUB or Text File:</source>
@@ -2117,7 +2119,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Sentences: how many of the book's sentences, from the first one found to the last, got a subtitle. Audio: how much of the narration matched the book. Grade: A from 90% on both, B from 75%, C from 50%, else D.</source>
-        <translation type="unfinished" />
+        <translation>Речення: скільки речень книги, від першого знайденого до останнього, отримали субтитр. Аудіо: яка частка начитки збіглася з книгою. Оцінка: A — від 90% за обома показниками, B — від 75%, C — від 50%, інакше D.</translation>
     </message>
     <message>
         <source>Output</source>
@@ -2181,7 +2183,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>No audio files were found in that folder, and no book folders (each with its book and audio).</source>
-        <translation type="unfinished" />
+        <translation>У цій теці не знайдено ні аудіофайлів, ні тек книг (кожна з книгою та аудіо).</translation>
     </message>
     <message>
         <source>That folder could not be scanned.</source>
@@ -2189,15 +2191,15 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Skipped folder %1: no audio files</source>
-        <translation type="unfinished" />
+        <translation>Теку %1 пропущено: немає аудіофайлів</translation>
     </message>
     <message>
         <source>Skipped folder %1: no .epub or .txt book</source>
-        <translation type="unfinished" />
+        <translation>Теку %1 пропущено: немає книги .epub або .txt</translation>
     </message>
     <message>
         <source>Skipped folder %1: more than one book</source>
-        <translation type="unfinished" />
+        <translation>Теку %1 пропущено: більше однієї книги</translation>
     </message>
     <message>
         <source>Output folder is not writable.</source>
@@ -2217,11 +2219,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Books: %1 — %2</source>
-        <translation type="unfinished" />
+        <translation>Книги: %1 — %2</translation>
     </message>
     <message>
         <source>%1: sentences %2%, audio %3% — grade %4</source>
-        <translation type="unfinished" />
+        <translation>%1: речення %2%, аудіо %3% — оцінка %4</translation>
     </message>
     <message>
         <source>Syncing file %1 of %2</source>
@@ -2235,11 +2237,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>%1 could not be loaded: %2</source>
-        <translation type="unfinished" />
+        <translation>Книгу %1 не вдалося завантажити: %2</translation>
     </message>
     <message>
         <source>Its book could not be loaded</source>
-        <translation type="unfinished" />
+        <translation>Не вдалося завантажити його книгу</translation>
     </message>
     <message>
         <source>Skipped, exists</source>
@@ -2259,11 +2261,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Reusing the saved transcript</source>
-        <translation type="unfinished" />
+        <translation>Використовується збережена транскрипція</translation>
     </message>
     <message>
         <source>Found sentence %1 again later in the audio; timed it out of book order</source>
-        <translation type="unfinished" />
+        <translation>Речення %1 знову знайдено далі в аудіо; таймінг задано поза порядком книги</translation>
     </message>
     <message>
         <source>%1 sentences timed, %2 in between had no audio</source>
@@ -2345,7 +2347,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Approve or reject each word, pick its sentence and scene, trim its audio, mark words known, and fix a mistranscribed sentence or swap the word to mine -- before any card is created. When a word has entries in several dictionaries, choose which one the card's Definition uses.</source>
-        <translation type="unfinished" />
+        <translation>Схвалюйте або відхиляйте кожне слово, вибирайте його речення й сцену, обрізайте аудіо, позначайте слова як відомі, виправляйте неправильно розпізнане речення або замінюйте слово для видобування — ще до створення карток. Якщо слово має статті в кількох словниках, виберіть, яку з них використає визначення на картці.</translation>
     </message>
     <message>
         <source>Secondary-language subtitles</source>
@@ -2353,7 +2355,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. Leave the file empty and Anki Miner picks a translation itself: a subtitle named for the video, or a text track inside it, in your interface language or else English. The Activity Log names the track it used. On Video → Batch, point it at a folder of translation subtitles instead and they pair to the videos by episode number. Turn it on under Settings → Sentences.</source>
-        <translation type="unfinished" />
+        <translation>Завантажте другий файл субтитрів вашою мовою поруч із субтитрами мовою видобування: він показується під рядком у попередньому перегляді «Куратора слів» і може зберігатися в поле перекладу. Залиште файл порожнім, і Anki Miner сам підбере переклад: субтитри з назвою відео або текстову доріжку всередині нього мовою інтерфейсу, а якщо їх немає — англійською. Журнал дій називає вибрану доріжку. На вкладці Відео → Пакет натомість укажіть теку із субтитрами перекладу, і їх буде зіставлено з відео за номером епізоду. Вмикається в розділі Налаштування → Речення.</translation>
     </message>
     <message>
         <source>Build a deck by coverage %</source>
@@ -2389,11 +2391,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Mine songs from .lrc lyrics</source>
-        <translation type="unfinished" />
+        <translation>Видобування пісень з текстів .lrc</translation>
     </message>
     <message>
         <source>Use a .lrc lyrics file wherever a subtitle file goes. Each line lasts until the next one starts. Pair a song with its lyrics on Audiobooks, condense it in Condense, or mine a music video on Video.</source>
-        <translation type="unfinished" />
+        <translation>Використовуйте файл тексту пісні .lrc скрізь, де підходить файл субтитрів. Кожен рядок триває до початку наступного. Поєднайте пісню з її текстом на вкладці «Аудіокниги», стисніть її у «Стисненні» або видобудьте слова з кліпу на вкладці «Відео».</translation>
     </message>
     <message>
         <source>Mine from manga</source>
@@ -2409,23 +2411,23 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Mine vocabulary from novels and other text (EPUB, PDF, Aozora, plain text).</source>
-        <translation type="unfinished" />
+        <translation>Видобування лексики з романів та інших текстів (EPUB, PDF, Aozora, звичайний текст).</translation>
     </message>
     <message>
         <source>Readings from a book's own furigana</source>
-        <translation type="unfinished" />
+        <translation>Читання з фурігани самої книги</translation>
     </message>
     <message>
         <source>When a Japanese EPUB prints furigana over a word, the card takes that reading instead of the parser's guess.</source>
-        <translation type="unfinished" />
+        <translation>Якщо в японському EPUB над словом надрукована фурігана, картка бере це читання замість здогадки парсера.</translation>
     </message>
     <message>
         <source>Mine pasted text or a web article</source>
-        <translation type="unfinished" />
+        <translation>Видобування зі вставленого тексту або вебстатті</translation>
     </message>
     <message>
         <source>Paste text in your mining language, or fetch a web article by its address, and mine it into Anki cards. A fetched article's cards name the page and site as their source.</source>
-        <translation type="unfinished" />
+        <translation>Вставте текст мовою видобування або завантажте вебстаттю за її адресою і перетворіть його на картки Anki. Картки із завантаженої статті вказують сторінку й сайт як джерело.</translation>
     </message>
     <message>
         <source>Mine subtitle files without video</source>
@@ -2449,7 +2451,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Create subtitles from audio with a local Whisper model -- as a standalone tool. Long lines are split at sentence ends, and a second run on the same file reuses the saved transcript.</source>
-        <translation type="unfinished" />
+        <translation>Створюйте субтитри з аудіо локальною моделлю Whisper — як окремий інструмент. Довгі рядки діляться на кінцях речень, а повторний запуск на тому самому файлі використовує збережену транскрипцію.</translation>
     </message>
     <message>
         <source>Re-time existing subtitles</source>
@@ -2509,35 +2511,35 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Browse your whole mining history</source>
-        <translation type="unfinished" />
+        <translation>Перегляд усієї історії видобування</translation>
     </message>
     <message>
         <source>Analytics lists every run you have mined. Pick a period, group the runs by day, week or month, see the cards per period in a chart, and export the table as a CSV file.</source>
-        <translation type="unfinished" />
+        <translation>«Аналітика» показує кожен ваш запуск видобування. Виберіть період, згрупуйте запуски за днями, тижнями або місяцями, перегляньте на діаграмі картки за період і експортуйте таблицю у файл CSV.</translation>
     </message>
     <message>
         <source>Show or delete a past run's cards</source>
-        <translation type="unfinished" />
+        <translation>Показ або видалення карток минулого запуску</translation>
     </message>
     <message>
         <source>Select a run in Analytics → Mining History to open its cards in Anki's browser or to delete them. The confirmation says how many of its cards are still in Anki and how many you have reviewed. Runs mined before this version have no card list.</source>
-        <translation type="unfinished" />
+        <translation>Виберіть запуск у розділі Аналітика → Історія видобування, щоб відкрити його картки в оглядачі Anki або видалити їх. У підтвердженні сказано, скільки його карток ще є в Anki і скільки з них ви повторювали. Запуски до цієї версії не мають списку карток.</translation>
     </message>
     <message>
         <source>Track how many words you know</source>
-        <translation type="unfinished" />
+        <translation>Стеження за кількістю відомих слів</translation>
     </message>
     <message>
         <source>The Known Words card on Analytics counts the words Anki Miner treats as known in the current mining language and shows how that number changed. It is counted while Anki is running, at most once every ten minutes.</source>
-        <translation type="unfinished" />
+        <translation>Картка «Відомі слова» на вкладці «Аналітика» показує, скільки слів Anki Miner вважає відомими в поточній мові видобування і як змінилося це число. Підрахунок відбувається, поки запущено Anki, не частіше ніж раз на десять хвилин.</translation>
     </message>
     <message>
         <source>See how much of a frequency list you know</source>
-        <translation type="unfinished" />
+        <translation>Яку частину частотного списку ви знаєте</translation>
     </message>
     <message>
         <source>Analytics → Frequency Coverage counts the words you know in ranks 1–1,000 up to 20,000 of your first frequency list with numeric ranks, and lists the missing words of each band. It needs Anki running.</source>
-        <translation type="unfinished" />
+        <translation>Аналітика → Охоплення частотного списку рахує відомі вам слова в діапазонах рангів від 1–1 000 до 20 000 першого з ваших частотних списків із числовими рангами і показує відсутні слова кожного діапазону. Потрібен запущений Anki.</translation>
     </message>
     <message>
         <source>Reset mining statistics</source>
@@ -2613,11 +2615,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Count a word as known only after its card has been reviewed</source>
-        <translation type="unfinished" />
+        <translation>Вважати слово відомим лише після повторення його картки</translation>
     </message>
     <message>
         <source>Readability and the i+1 sentence rule then count a word as known only when its Anki card has been reviewed at least once. Mining still skips every word that already has a card.</source>
-        <translation type="unfinished" />
+        <translation>Тоді «Читабельність» і правило речень i+1 вважають слово відомим, лише якщо його картку в Anki повторили хоча б раз. Видобування й далі пропускає кожне слово, що вже має картку.</translation>
     </message>
     <message>
         <source>Exclude specific Anki decks from 'known'</source>
@@ -2637,27 +2639,27 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Browse every known word</source>
-        <translation type="unfinished" />
+        <translation>Перегляд усіх відомих слів</translation>
     </message>
     <message>
         <source>Manage Known Words lists every word this language counts as known, with where it came from (added by you, mined by Anki Miner, from Anki) and the date it was added. Search it, filter it by source, and remove words you added. Words from Anki come back on the next sync.</source>
-        <translation type="unfinished" />
+        <translation>«Керування відомими словами» показує всі слова, які ця мова вважає відомими, з їхнім джерелом (додано вами, видобуто Anki Miner, з Anki) і датою додавання. Шукайте в списку, фільтруйте його за джерелом і вилучайте додані вами слова. Слова з Anki повертаються під час наступної синхронізації.</translation>
     </message>
     <message>
         <source>Import known words from Kindle, Lute or LWT</source>
-        <translation type="unfinished" />
+        <translation>Імпорт відомих слів з Kindle, Lute або LWT</translation>
     </message>
     <message>
         <source>In Manage Known Words, Import… also reads a Kindle Vocabulary Builder file (vocab.db; words marked mastered) and Lute or LWT term exports (status 5 and 99).</source>
-        <translation type="unfinished" />
+        <translation>У вікні «Керування відомими словами» кнопка «Імпорт…» також читає файл Kindle Vocabulary Builder (vocab.db; слова, позначені як вивчені) та експорт термінів Lute або LWT (статус 5 і 99).</translation>
     </message>
     <message>
         <source>Export words to a CSV file</source>
-        <translation type="unfinished" />
+        <translation>Експорт слів у файл CSV</translation>
     </message>
     <message>
         <source>Export words… saves the list you are looking at in Manage Known Words, or a finished run's mined and not-mined words with the reason each was skipped, as a CSV file.</source>
-        <translation type="unfinished" />
+        <translation>«Експорт слів…» зберігає у файл CSV список, відкритий у вікні «Керування відомими словами», або видобуті й невидобуті слова завершеного запуску з причиною пропуску кожного.</translation>
     </message>
     <message>
         <source>Exclude kana-only words</source>
@@ -2689,23 +2691,23 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Mine at most one word from each example sentence. A word whose sentence is taken moves to another line it appears on, and is skipped only when every one of its lines is taken.</source>
-        <translation type="unfinished" />
+        <translation>Видобувайте не більше одного слова з кожного прикладу речення. Слово, чиє речення вже зайняте, переходить на інший рядок, де воно трапляється, і пропускається, лише коли зайняті всі його рядки.</translation>
     </message>
     <message>
         <source>Pick the clearest sentence</source>
-        <translation type="unfinished" />
+        <translation>Вибір найзрозумілішого речення</translation>
     </message>
     <message>
         <source>When a word appears on several lines, its card uses the line with the fewest unknown words and a comfortable length instead of the first one. The Word Curator still lists every line.</source>
-        <translation type="unfinished" />
+        <translation>Коли слово трапляється в кількох рядках, його картка бере рядок із найменшою кількістю невідомих слів і зручною довжиною, а не перший. «Куратор слів» і далі показує всі рядки.</translation>
     </message>
     <message>
         <source>Skip openings, endings and signs</source>
-        <translation type="unfinished" />
+        <translation>Пропускати опенінги, ендінги й написи</translation>
     </message>
     <message>
         <source>Leave opening and ending songs, previews and on-screen signs out of mining, Condense and Readability: lines styled as songs or signs, and lines inside a video's opening, ending and preview chapters. On by default for new installs; turn it off in Settings → Sentences.</source>
-        <translation type="unfinished" />
+        <translation>Виключайте пісні опенінгу й ендінгу, анонси та написи на екрані з видобування, «Стиснення» і «Читабельності»: рядки зі стилем пісень або написів і рядки всередині розділів опенінгу, ендінгу та анонсу відео. У нових встановленнях увімкнено за замовчуванням; вимикається в розділі Налаштування → Речення.</translation>
     </message>
     <message>
         <source>Strip junk from subtitles (regex)</source>
@@ -2773,11 +2775,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Import a dictionary file</source>
-        <translation type="unfinished" />
+        <translation>Імпорт файлу словника</translation>
     </message>
     <message>
         <source>Add a Yomitan zip, a StarDict dictionary (its archive or its .ifo file) or a CSV/TSV word list (term and definition, or term, reading and definition) as a definition source.</source>
-        <translation type="unfinished" />
+        <translation>Додайте zip Yomitan, словник StarDict (його архів або файл .ifo) чи список слів CSV/TSV (термін і визначення або термін, читання й визначення) як джерело визначень.</translation>
     </message>
     <message>
         <source>Keep dictionaries up to date</source>
@@ -2849,7 +2851,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Attach word audio to cards from audio packs, JPod101 (Japanese), Google text-to-speech, or Microsoft Edge text-to-speech (every language). Wikimedia Commons plays recordings of real speakers from Wiktionary and Lingua Libre, tried before Google TTS in most languages.</source>
-        <translation type="unfinished" />
+        <translation>Додавайте до карток аудіо слів з аудіопакетів, JPod101 (японська), синтезу мовлення Google або синтезу мовлення Microsoft Edge (усі мови). Wikimedia Commons відтворює записи справжніх мовців із Wiktionary та Lingua Libre; для більшості мов його пробують раніше за Google TTS.</translation>
     </message>
     <message>
         <source>Import local audio packs</source>
@@ -2865,7 +2867,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Extract the spoken sentence as an audio clip; tune its format and bitrate. Even out audio volume brings sentence clips and condensed audio to one loudness and fades each clip in and out.</source>
-        <translation type="unfinished" />
+        <translation>Видобувайте вимовлене речення як аудіокліп; налаштовуйте його формат і бітрейт. «Вирівнювати гучність аудіо» зводить кліпи речень і стиснене аудіо до однієї гучності й плавно починає та завершує кожен кліп.</translation>
     </message>
     <message>
         <source>Sentence audio for reading (TTS)</source>
@@ -2889,7 +2891,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Capture a still frame from the scene to put on the card. Crop manga pictures to the speech bubble shows the bubble and the art around it instead of the whole page.</source>
-        <translation type="unfinished" />
+        <translation>Зберігайте кадр зі сцени на картку. «Обрізати зображення манґи до хмарки реплік» показує хмарку й малюнок навколо неї замість усієї сторінки.</translation>
     </message>
     <message>
         <source>Animated clips (GIF/WebP)</source>
@@ -2969,7 +2971,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Add tags to every note Anki Miner creates. Card tags can use {series}, {episode} and {volume}. Each card gets its own show, episode or book volume, for example mined::{series}::{episode} gives mined::Frieren::03.</source>
-        <translation type="unfinished" />
+        <translation>Додавайте теги до кожної нотатки, яку створює Anki Miner. Теги карток можуть містити {series}, {episode} і {volume}. Кожна картка отримує свій серіал, епізод або том книги: наприклад, mined::{series}::{episode} дає mined::Frieren::03.</translation>
     </message>
     <message>
         <source>Connect to Anki (AnkiConnect)</source>
@@ -2977,15 +2979,15 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Set the AnkiConnect address; Refresh re-checks the connection to your running Anki. If AnkiConnect is set up with an API key, add it to the address: http://127.0.0.1:8765/?key=YOUR_KEY. Anki Miner sends it with every request and never writes it to the log.</source>
-        <translation type="unfinished" />
+        <translation>Укажіть адресу AnkiConnect; «Оновити» повторно перевіряє з’єднання із запущеним Anki. Якщо в AnkiConnect налаштовано ключ API, додайте його до адреси: http://127.0.0.1:8765/?key=YOUR_KEY. Anki Miner надсилає його з кожним запитом і ніколи не записує в журнал.</translation>
     </message>
     <message>
         <source>Sync Anki after mining</source>
-        <translation type="unfinished" />
+        <translation>Синхронізувати Anki після видобування</translation>
     </message>
     <message>
         <source>After a run that added cards, Anki Miner asks Anki to sync with AnkiWeb. If the sync fails, the Activity Log says so and the cards stay added.</source>
-        <translation type="unfinished" />
+        <translation>Після запуску, що додав картки, Anki Miner просить Anki синхронізуватися з AnkiWeb. Якщо синхронізація не вдасться, журнал дій про це повідомить, а картки залишаться доданими.</translation>
     </message>
     <message>
         <source>Fill in field mappings automatically</source>
@@ -3073,7 +3075,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Draw a box where a video's on-screen dialogue appears and Anki Miner reads it into a timed .srt that Video → Single can mine. Made for game longplays without commentary. It also reads image subtitles (Blu-ray .sup, DVD .idx/.sub, or an image track inside a video) without a box. Lines with none of your mining language's letters are left out. Download the OCR engine from the setup card on Utilities → Video OCR.</source>
-        <translation type="unfinished" />
+        <translation>Обведіть рамкою місце, де у відео з’являються діалоги на екрані, і Anki Miner розпізнає їх у .srt із таймінгами, з якого можна видобувати на вкладці Відео → Одне. Створено для проходжень ігор без коментарів. Також без рамки розпізнає графічні субтитри (Blu-ray .sup, DVD .idx/.sub або графічну доріжку всередині відео). Рядки без літер вашої мови видобування пропускаються. Завантажте рушій OCR з картки налаштування на вкладці Утиліти → OCR відео.</translation>
     </message>
     <message>
         <source>Sync an audiobook to its EPUB</source>
@@ -3081,23 +3083,23 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Transcribe an audiobook and time the book's own sentences to it, writing an .srt the Audiobook tab, Reading → Subtitle Files or a reader can use. A second run on the same audio reuses the saved transcript instead of transcribing again.</source>
-        <translation type="unfinished" />
+        <translation>Транскрибуйте аудіокнигу й синхронізуйте з нею речення самої книги, отримуючи .srt для вкладки «Аудіокниги», розділу Читання → Субтитри або читалки. Повторний запуск на тому самому аудіо використовує збережену транскрипцію замість нового транскрибування.</translation>
     </message>
     <message>
         <source>Sync a shelf of audiobooks in one run</source>
-        <translation type="unfinished" />
+        <translation>Синхронізація полиці аудіокниг за один запуск</translation>
     </message>
     <message>
         <source>In Utilities → Audiobook Sync, choose Folder and pick a folder that holds one folder per book, each with its EPUB (or text file) and its audio files. The books sync one after another, in name order.</source>
-        <translation type="unfinished" />
+        <translation>У розділі Утиліти → Синхр. книг виберіть «Тека» і вкажіть теку, де кожна книга має власну теку зі своїм EPUB (або текстовим файлом) та аудіофайлами. Книги синхронізуються одна за одною, за порядком назв.</translation>
     </message>
     <message>
         <source>See how well an audiobook synced</source>
-        <translation type="unfinished" />
+        <translation>Якість синхронізації аудіокниги</translation>
     </message>
     <message>
         <source>After Audiobook Sync, each book gets a line under the Book card: how many of its sentences got a subtitle, how much of the narration matched the book, and a grade from A to D. Chapters read out of book order are found too; sentences the narrator skipped never get a subtitle.</source>
-        <translation type="unfinished" />
+        <translation>Після синхронізації аудіокниги кожна книга отримує рядок під карткою «Книга»: скільки її речень отримали субтитр, яка частка начитки збіглася з книгою, та оцінку від A до D. Розділи, прочитані не за порядком книги, теж знаходяться; речення, які пропустив диктор, субтитрів не отримують.</translation>
     </message>
     <message>
         <source>Check how much of a show, book or manga you can read</source>
@@ -3181,11 +3183,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Restore an automatic backup</source>
-        <translation type="unfinished" />
+        <translation>Відновлення автоматичної резервної копії</translation>
     </message>
     <message>
         <source>Anki Miner backs up your known words, statistics, settings and profiles once a day when it starts, and keeps the last 7 days. Settings → General → Restore a backup… puts one back the next time the app starts.</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner раз на день під час запуску створює резервну копію відомих слів, статистики, налаштувань і профілів та зберігає копії за останні 7 днів. Налаштування → Загальні → Відновити резервну копію… повертає вибрану копію під час наступного запуску застосунку.</translation>
     </message>
     <message>
         <source>Undo a mining run</source>
@@ -3197,11 +3199,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Export a run's words</source>
-        <translation type="unfinished" />
+        <translation>Експорт слів запуску</translation>
     </message>
     <message>
         <source>Press View details on a run's result line, then Export words… to save the run's mined and not-mined words, with the reason each was skipped, as a CSV file.</source>
-        <translation type="unfinished" />
+        <translation>Натисніть «Докладніше» в рядку результату запуску, потім «Експорт слів…», щоб зберегти у файл CSV видобуті й невидобуті слова запуску з причиною пропуску кожного.</translation>
     </message>
     <message>
         <source>Keyboard shortcuts</source>
@@ -4617,11 +4619,11 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
     </message>
     <message>
         <source>Choose dictionary files</source>
-        <translation type="unfinished" />
+        <translation>Виберіть файли словників</translation>
     </message>
     <message>
         <source>Dictionaries (*.zip *.ifo *.tar.gz *.tgz *.tar.bz2 *.tar.xz *.csv *.tsv)</source>
-        <translation type="unfinished" />
+        <translation>Словники (*.zip *.ifo *.tar.gz *.tgz *.tar.bz2 *.tar.xz *.csv *.tsv)</translation>
     </message>
     <message>
         <source>Dictionary %1 of %2: %3</source>
@@ -5459,8 +5461,10 @@ No files on disk are deleted.</source>
     </message>
     <message numerus="yes">
         <source>Skipping lines in %n opening, ending or preview chapter(s)</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>Пропуск рядків у %n розділі опенінгу, ендінгу або анонсу</numerusform>
+            <numerusform>Пропуск рядків у %n розділах опенінгу, ендінгу або анонсу</numerusform>
+            <numerusform>Пропуск рядків у %n розділах опенінгу, ендінгу або анонсу</numerusform>
         </translation>
     </message>
     <message>
@@ -5513,7 +5517,7 @@ No files on disk are deleted.</source>
     </message>
     <message>
         <source>Only %1% of the first %2 words have an entry in your dictionaries. Is this file in the language you are mining?</source>
-        <translation type="unfinished" />
+        <translation>Лише %1% з перших %2 слів мають статтю у ваших словниках. Чи цей файл справді мовою, яку ви видобуваєте?</translation>
     </message>
     <message>
         <source>Frequency cutoff ignored — no ranked frequency source is loaded (Settings → Frequency).</source>
@@ -5629,11 +5633,11 @@ No files on disk are deleted.</source>
     </message>
     <message>
         <source>Translation subtitles picked automatically: %1</source>
-        <translation type="unfinished" />
+        <translation>Субтитри перекладу вибрано автоматично: %1</translation>
     </message>
     <message>
         <source>Translation subtitles picked automatically: embedded track %1</source>
-        <translation type="unfinished" />
+        <translation>Субтитри перекладу вибрано автоматично: вбудована доріжка %1</translation>
     </message>
     <message>
         <source>Could not extract media for any word — no cards created</source>
@@ -5905,11 +5909,11 @@ No files on disk are deleted.</source>
     </message>
     <message>
         <source>Count a word as known only after its card has been reviewed</source>
-        <translation type="unfinished" />
+        <translation>Вважати слово відомим лише після повторення його картки</translation>
     </message>
     <message>
         <source>Readability and the i+1 sentence rule count a word as known only when its Anki card has been reviewed at least once. Mining still skips every word that already has a card.</source>
-        <translation type="unfinished" />
+        <translation>«Читабельність» і правило речень i+1 вважають слово відомим, лише якщо його картку в Anki повторили хоча б раз. Видобування й далі пропускає кожне слово, що вже має картку.</translation>
     </message>
     <message>
         <source>Keep words known after their cards are deleted</source>
@@ -6571,15 +6575,15 @@ No index files are deleted.</source>
     <name>KnownWordsManagerDialog</name>
     <message>
         <source>Word</source>
-        <translation type="unfinished" />
+        <translation>Слово</translation>
     </message>
     <message>
         <source>Source</source>
-        <translation type="unfinished" />
+        <translation>Джерело</translation>
     </message>
     <message>
         <source>Added</source>
-        <translation type="unfinished" />
+        <translation>Додано</translation>
     </message>
     <message>
         <source>Manage Known Words</source>
@@ -6591,7 +6595,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Every word this language counts as known, and where it came from. Words you added from the Word Curator stay known on every run and across cache rebuilds.</source>
-        <translation type="unfinished" />
+        <translation>Усі слова, які ця мова вважає відомими, та їхнє джерело. Слова, які ви додали з «Куратора слів», залишаються відомими під час кожного запуску й після перебудови кешу.</translation>
     </message>
     <message>
         <source>Decks this language's known-words scan skips: %1. Change them in Settings → Word Filters.</source>
@@ -6603,15 +6607,15 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Added by you</source>
-        <translation type="unfinished" />
+        <translation>Додано вами</translation>
     </message>
     <message>
         <source>Mined by Anki Miner</source>
-        <translation type="unfinished" />
+        <translation>Видобуто Anki Miner</translation>
     </message>
     <message>
         <source>From Anki</source>
-        <translation type="unfinished" />
+        <translation>З Anki</translation>
     </message>
     <message>
         <source>Filter…</source>
@@ -6619,7 +6623,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>All sources</source>
-        <translation type="unfinished" />
+        <translation>Усі джерела</translation>
     </message>
     <message>
         <source>Rebuild Known Words DB</source>
@@ -6635,7 +6639,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Removes words you added. Words from Anki come back on the next run, and mined words leave with Undo.</source>
-        <translation type="unfinished" />
+        <translation>Вилучає додані вами слова. Слова з Anki повернуться під час наступного запуску, а видобуті слова прибираються через «Відмінити».</translation>
     </message>
     <message>
         <source>Import…</source>
@@ -6643,7 +6647,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Export words…</source>
-        <translation type="unfinished" />
+        <translation>Експорт слів…</translation>
     </message>
     <message>
         <source>Reset User List</source>
@@ -6675,11 +6679,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Kindle Vocabulary Builder</source>
-        <translation type="unfinished" />
+        <translation>Kindle Vocabulary Builder</translation>
     </message>
     <message>
         <source>Lute or LWT term export</source>
-        <translation type="unfinished" />
+        <translation>Експорт термінів Lute або LWT</translation>
     </message>
     <message>
         <source>plain word list</source>
@@ -6691,7 +6695,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Known word lists (*.csv *.tsv *.txt *.json *.db);;All Files (*)</source>
-        <translation type="unfinished" />
+        <translation>Списки відомих слів (*.csv *.tsv *.txt *.json *.db);;Усі файли (*)</translation>
     </message>
     <message>
         <source>Detected: %1 — every entry is imported.
@@ -6723,7 +6727,7 @@ Words to add: %3. Continue?</source>
     </message>
     <message>
         <source>This file has no words for %1. It contains: %2.</source>
-        <translation type="unfinished" />
+        <translation>У цьому файлі немає слів для мови %1. У ньому є: %2.</translation>
     </message>
     <message>
         <source>That file is too large to import.</source>
@@ -6739,7 +6743,7 @@ Words to add: %3. Continue?</source>
     </message>
     <message>
         <source>File format not recognized. Supported: jpdb review export (JSON), Migaku word export (JSON/CSV), AnkiMorphs known morphs (CSV), Kindle Vocabulary Builder (vocab.db), Lute or LWT term export (CSV/TSV), plain word lists (one word per line).</source>
-        <translation type="unfinished" />
+        <translation>Формат файлу не розпізнано. Підтримуються: експорт повторень jpdb (JSON), експорт слів Migaku (JSON/CSV), відомі морфи AnkiMorphs (CSV), Kindle Vocabulary Builder (vocab.db), експорт термінів Lute або LWT (CSV/TSV), прості списки слів (по одному слову в рядку).</translation>
     </message>
     <message>
         <source>That file could not be imported.</source>
@@ -6761,7 +6765,7 @@ Words to add: %3. Continue?</source>
     </message>
     <message>
         <source>CSV files (*.csv);;Text files, one word per line (*.txt)</source>
-        <translation type="unfinished" />
+        <translation>Файли CSV (*.csv);;Текстові файли, по одному слову в рядку (*.txt)</translation>
     </message>
     <message>
         <source>The known words list could not be exported.</source>
@@ -7511,7 +7515,7 @@ Continue?</source>
     </message>
     <message>
         <source>Opus clips do not play in AnkiMobile on iPhone or iPad. Choose MP3 if you review there.</source>
-        <translation type="unfinished" />
+        <translation>Кліпи Opus не відтворюються в AnkiMobile на iPhone та iPad. Якщо повторюєте там, виберіть MP3.</translation>
     </message>
     <message>
         <source> kbps</source>
@@ -7539,11 +7543,11 @@ Continue?</source>
     </message>
     <message>
         <source>Even out audio volume</source>
-        <translation type="unfinished" />
+        <translation>Вирівнювати гучність аудіо</translation>
     </message>
     <message>
         <source>Brings sentence clips and condensed audio to one volume and fades each clip in and out, so quiet and loud sources sound alike. Applies to new clips.</source>
-        <translation type="unfinished" />
+        <translation>Зводить кліпи речень і стиснене аудіо до однієї гучності й плавно починає та завершує кожен кліп, щоб тихі й гучні джерела звучали однаково. Діє для нових кліпів.</translation>
     </message>
     <message>
         <source>Text-to-speech</source>
@@ -7567,11 +7571,11 @@ Continue?</source>
     </message>
     <message>
         <source>Crop manga pictures to the speech bubble</source>
-        <translation type="unfinished" />
+        <translation>Обрізати зображення манґи до хмарки реплік</translation>
     </message>
     <message>
         <source>Manga cards show the speech bubble and the art around it instead of the whole page. A sentence with no bubble position keeps the whole page.</source>
-        <translation type="unfinished" />
+        <translation>Картки манґи показують хмарку реплік і малюнок навколо неї замість усієї сторінки. Для речення без позиції хмарки залишається вся сторінка.</translation>
     </message>
     <message>
         <source>Enable animated screenshots</source>
@@ -7807,7 +7811,7 @@ Continue?</source>
     </message>
     <message>
         <source>Anki didn't sync after this run. Your cards are added; sync from Anki, or see the log for why.</source>
-        <translation type="unfinished" />
+        <translation>Anki не синхронізувався після цього запуску. Картки додано; синхронізуйте з Anki або подивіться причину в журналі.</translation>
     </message>
     <message>
         <source>Anki Miner couldn't open these cards in Anki.</source>
@@ -9582,7 +9586,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>An .epub, .txt or .pdf book, or a folder of books; each book is mined separately.</source>
-        <translation type="unfinished" />
+        <translation>Книга .epub, .txt або .pdf чи тека з книгами; кожна книга видобувається окремо.</translation>
     </message>
     <message>
         <source>Mine</source>
@@ -9618,7 +9622,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Choose an .epub, .txt or .pdf book, or a folder of books.</source>
-        <translation type="unfinished" />
+        <translation>Виберіть книгу .epub, .txt або .pdf чи теку з книгами.</translation>
     </message>
     <message>
         <source>Starting…</source>
@@ -9684,7 +9688,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Add subtitle files (.srt, .ass, .ssa, .vtt, .smi, .lrc) to the list.</source>
-        <translation type="unfinished" />
+        <translation>Додати до списку файли субтитрів (.srt, .ass, .ssa, .vtt, .smi, .lrc).</translation>
     </message>
     <message>
         <source>Remove Selected</source>
@@ -9865,19 +9869,19 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Web addresses to fetch, one per line (https://…)</source>
-        <translation type="unfinished" />
+        <translation>Вебадреси для завантаження, по одній у рядку (https://…)</translation>
     </message>
     <message>
         <source>Web addresses</source>
-        <translation type="unfinished" />
+        <translation>Вебадреси</translation>
     </message>
     <message>
         <source>Fetch</source>
-        <translation type="unfinished" />
+        <translation>Завантажити</translation>
     </message>
     <message>
         <source>Put the article text of each web address in the box below, to check before mining.</source>
-        <translation type="unfinished" />
+        <translation>Помістити текст статті з кожної вебадреси в поле нижче, щоб перевірити його перед видобуванням.</translation>
     </message>
     <message>
         <source>Paste the text you want to mine. Cards from pasted text have no sentence audio from a recording.</source>
@@ -9925,59 +9929,59 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Each line must be a web address that starts with http:// or https://.</source>
-        <translation type="unfinished" />
+        <translation>Кожен рядок має бути вебадресою, що починається з http:// або https://.</translation>
     </message>
     <message>
         <source>Enter a web address first.</source>
-        <translation type="unfinished" />
+        <translation>Спершу введіть вебадресу.</translation>
     </message>
     <message>
         <source>Fetch takes up to 10 web addresses at a time.</source>
-        <translation type="unfinished" />
+        <translation>За раз можна завантажити не більше 10 вебадрес.</translation>
     </message>
     <message>
         <source>Fetching…</source>
-        <translation type="unfinished" />
+        <translation>Завантаження…</translation>
     </message>
     <message>
         <source>Could not fetch %1: %2</source>
-        <translation type="unfinished" />
+        <translation>Не вдалося завантажити %1: %2</translation>
     </message>
     <message>
         <source>None of the pages could be fetched.</source>
-        <translation type="unfinished" />
+        <translation>Не вдалося завантажити жодної сторінки.</translation>
     </message>
     <message>
         <source>Fetched %1.</source>
-        <translation type="unfinished" />
+        <translation>Завантажено: %1.</translation>
     </message>
     <message>
         <source>The pages could not be fetched.</source>
-        <translation type="unfinished" />
+        <translation>Не вдалося завантажити сторінки.</translation>
     </message>
     <message>
         <source>The page could not be reached. Check the address and your connection.</source>
-        <translation type="unfinished" />
+        <translation>Сторінка недоступна. Перевірте адресу та з’єднання.</translation>
     </message>
     <message>
         <source>The site did not send the page.</source>
-        <translation type="unfinished" />
+        <translation>Сайт не надіслав сторінку.</translation>
     </message>
     <message>
         <source>This address is not a web page.</source>
-        <translation type="unfinished" />
+        <translation>Ця адреса не веде на вебсторінку.</translation>
     </message>
     <message>
         <source>This page is too large to read.</source>
-        <translation type="unfinished" />
+        <translation>Ця сторінка завелика для читання.</translation>
     </message>
     <message>
         <source>This is not a web address.</source>
-        <translation type="unfinished" />
+        <translation>Це не вебадреса.</translation>
     </message>
     <message>
         <source>No article text found on this page. Pages that draw their text with JavaScript cannot be read.</source>
-        <translation type="unfinished" />
+        <translation>На цій сторінці не знайдено тексту статті. Сторінки, що виводять текст через JavaScript, прочитати не можна.</translation>
     </message>
     <message>
         <source>Paste some text first.</source>
@@ -9989,7 +9993,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>The fetched text was edited, so it is mined as one text without its page titles.</source>
-        <translation type="unfinished" />
+        <translation>Завантажений текст було змінено, тому він видобувається як один текст без заголовків сторінок.</translation>
     </message>
     <message>
         <source>That picture cannot be read. Pick another, or remove it to mine without one.</source>
@@ -10777,7 +10781,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Export words…</source>
-        <translation type="unfinished" />
+        <translation>Експорт слів…</translation>
     </message>
     <message>
         <source>Close</source>
@@ -10793,19 +10797,19 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Export Words</source>
-        <translation type="unfinished" />
+        <translation>Експорт слів</translation>
     </message>
     <message>
         <source>CSV files (*.csv)</source>
-        <translation type="unfinished" />
+        <translation>Файли CSV (*.csv)</translation>
     </message>
     <message>
         <source>Words exported</source>
-        <translation type="unfinished" />
+        <translation>Слова експортовано</translation>
     </message>
     <message>
         <source>Export failed — try again</source>
-        <translation type="unfinished" />
+        <translation>Експорт не вдався — спробуйте ще раз</translation>
     </message>
     <message>
         <source>Confirm Undo</source>
@@ -11011,11 +11015,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Skip openings, endings and signs</source>
-        <translation type="unfinished" />
+        <translation>Пропускати опенінги, ендінги й написи</translation>
     </message>
     <message>
         <source>Leaves out song lyrics, previews and on-screen signs: lines whose subtitle style marks them as a song or a sign, and lines inside a video's opening, ending or preview chapters. Applies to mining, Condense and Readability.</source>
-        <translation type="unfinished" />
+        <translation>Виключає тексти пісень, анонси й написи на екрані: рядки, стиль субтитрів яких позначає їх як пісню або напис, і рядки всередині розділів опенінгу, ендінгу чи анонсу відео. Діє для видобування, «Стиснення» і «Читабельності».</translation>
     </message>
     <message>
         <source>Sentence options</source>
@@ -11031,7 +11035,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Mines at most one word per example sentence. A word whose sentence is already taken moves to another line it appears on, and is skipped only when every one of its lines is taken. Whitelisted words are still mined.</source>
-        <translation type="unfinished" />
+        <translation>Видобуває не більше одного слова на приклад речення. Слово, чиє речення вже зайняте, переходить на інший рядок, де воно трапляється, і пропускається, лише коли зайняті всі його рядки. Слова з білого списку й далі видобуваються.</translation>
     </message>
     <message>
         <source>Only i+1 sentences (exactly one unknown word)</source>
@@ -11047,11 +11051,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Pick the clearest sentence for each word</source>
-        <translation type="unfinished" />
+        <translation>Вибирати найзрозуміліше речення для кожного слова</translation>
     </message>
     <message>
         <source>When a word appears on several lines, its card uses the line with the fewest unknown words and a comfortable length instead of the first one. The Word Curator still lists every line, and card order does not change.</source>
-        <translation type="unfinished" />
+        <translation>Коли слово трапляється в кількох рядках, його картка бере рядок із найменшою кількістю невідомих слів і зручною довжиною, а не перший. «Куратор слів» і далі показує всі рядки, а порядок карток не змінюється.</translation>
     </message>
     <message>
         <source> s</source>
@@ -13113,15 +13117,15 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>Restore a backup…</source>
-        <translation type="unfinished" />
+        <translation>Відновити резервну копію…</translation>
     </message>
     <message>
         <source>Backups</source>
-        <translation type="unfinished" />
+        <translation>Резервні копії</translation>
     </message>
     <message>
         <source>Anki Miner saves your known words, statistics, settings and profiles once a day when it starts, and keeps the last 7 days.</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner раз на день під час запуску зберігає копію відомих слів, статистики, налаштувань і профілів та тримає копії за останні 7 днів.</translation>
     </message>
     <message>
         <source>Themes</source>
@@ -13165,27 +13169,27 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>There is no backup yet. Anki Miner makes one each day when it starts.</source>
-        <translation type="unfinished" />
+        <translation>Резервних копій ще немає. Anki Miner створює одну щодня під час запуску.</translation>
     </message>
     <message>
         <source>Restore a Backup</source>
-        <translation type="unfinished" />
+        <translation>Відновлення резервної копії</translation>
     </message>
     <message>
         <source>Restore the backup from:</source>
-        <translation type="unfinished" />
+        <translation>Відновити резервну копію від:</translation>
     </message>
     <message>
         <source>Replace your known words, statistics, settings and profiles with the copies from %1? The restore runs the next time Anki Miner starts. Changes made after that backup are lost.</source>
-        <translation type="unfinished" />
+        <translation>Замінити відомі слова, статистику, налаштування й профілі копіями від %1? Відновлення відбудеться під час наступного запуску Anki Miner. Зміни, зроблені після цієї копії, буде втрачено.</translation>
     </message>
     <message>
         <source>The restore could not be scheduled.</source>
-        <translation type="unfinished" />
+        <translation>Не вдалося запланувати відновлення.</translation>
     </message>
     <message>
         <source>The backup from %1 will be restored when Anki Miner next starts.</source>
-        <translation type="unfinished" />
+        <translation>Резервну копію від %1 буде відновлено під час наступного запуску Anki Miner.</translation>
     </message>
 </context><context>
     <name>UpdateBanner</name>
@@ -13353,11 +13357,11 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>The picture (burned-in text)</source>
-        <translation type="unfinished" />
+        <translation>Зображення (вшитий текст)</translation>
     </message>
     <message>
         <source>Image subtitle track %1</source>
-        <translation type="unfinished" />
+        <translation>Графічна доріжка субтитрів %1</translation>
     </message>
     <message>
         <source>The OCR engine could not start on this computer. The details say why.</source>
@@ -13397,15 +13401,15 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>This field takes a video or an image subtitle file (.sup, .idx, .sub).</source>
-        <translation type="unfinished" />
+        <translation>Це поле приймає відео або графічний файл субтитрів (.sup, .idx, .sub).</translation>
     </message>
     <message>
         <source>Read from:</source>
-        <translation type="unfinished" />
+        <translation>Читати з:</translation>
     </message>
     <message>
         <source>Read text drawn into the picture, or one of the video's image subtitle tracks.</source>
-        <translation type="unfinished" />
+        <translation>Розпізнавати текст, намальований на зображенні, або одну з графічних доріжок субтитрів відео.</translation>
     </message>
     <message>
         <source>Video Folder:</source>
@@ -13489,7 +13493,7 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>Image subtitles are read over the whole frame, so they need no region.</source>
-        <translation type="unfinished" />
+        <translation>Графічні субтитри розпізнаються по всьому кадру, тому область не потрібна.</translation>
     </message>
     <message>
         <source>Download OCR models</source>
@@ -13533,7 +13537,7 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>A DVD subtitle needs its .idx and .sub files in the same folder.</source>
-        <translation type="unfinished" />
+        <translation>Субтитрам DVD потрібні файли .idx і .sub в одній теці.</translation>
     </message>
     <message>
         <source>Choose a folder before reading subtitles.</source>
@@ -13819,15 +13823,15 @@ Sort by it to work through a long recording in order — then highlight the rows
     </message>
     <message>
         <source>Used on the card</source>
-        <translation type="unfinished" />
+        <translation>Використовується на картці</translation>
     </message>
     <message>
         <source>Back to the first match</source>
-        <translation type="unfinished" />
+        <translation>Повернутися до першого збігу</translation>
     </message>
     <message>
         <source>Use this dictionary on the card</source>
-        <translation type="unfinished" />
+        <translation>Використати цей словник на картці</translation>
     </message>
     <message>
         <source>Sentences (%1)</source>
@@ -14265,7 +14269,7 @@ Sort by it to work through a long recording in order — then highlight the rows
     </message>
     <message>
         <source>Wikimedia Commons (native recordings)</source>
-        <translation type="unfinished" />
+        <translation>Wikimedia Commons (записи носіїв мови)</translation>
     </message>
     <message>
         <source>Microsoft Edge read-aloud (synthetic TTS)</source>
@@ -14279,7 +14283,7 @@ Sort by it to work through a long recording in order — then highlight the rows
     <name>_BarChart</name>
     <message>
         <source>Cards per period</source>
-        <translation type="unfinished" />
+        <translation>Картки за період</translation>
     </message>
 </context><context>
     <name>_HealthRow</name>
@@ -14301,11 +14305,11 @@ Sort by it to work through a long recording in order — then highlight the rows
     <name>_MissingWordsDialog</name>
     <message>
         <source>Missing Words</source>
-        <translation type="unfinished" />
+        <translation>Відсутні слова</translation>
     </message>
     <message>
         <source>Not known yet in ranks %1</source>
-        <translation type="unfinished" />
+        <translation>Ще не відомі в рангах %1</translation>
     </message>
 </context><context>
     <name>app</name>

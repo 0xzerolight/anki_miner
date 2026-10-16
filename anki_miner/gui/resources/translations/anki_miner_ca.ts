@@ -93,59 +93,59 @@
     </message>
     <message>
         <source>Known Words</source>
-        <translation type="unfinished" />
+        <translation>Paraules conegudes</translation>
     </message>
     <message>
         <source>Words Anki Miner treats as known in the current mining language.</source>
-        <translation type="unfinished" />
+        <translation>Paraules que l'Anki Miner considera conegudes en la llengua d'extracció actual.</translation>
     </message>
     <message>
         <source>Mining History</source>
-        <translation type="unfinished" />
+        <translation>Historial d'extracció</translation>
     </message>
     <message>
         <source>History period</source>
-        <translation type="unfinished" />
+        <translation>Període de l'historial</translation>
     </message>
     <message>
         <source>All time</source>
-        <translation type="unfinished" />
+        <translation>Des del principi</translation>
     </message>
     <message>
         <source>Last 7 days</source>
-        <translation type="unfinished" />
+        <translation>Últims 7 dies</translation>
     </message>
     <message>
         <source>Last 30 days</source>
-        <translation type="unfinished" />
+        <translation>Últims 30 dies</translation>
     </message>
     <message>
         <source>Last 12 months</source>
-        <translation type="unfinished" />
+        <translation>Últims 12 mesos</translation>
     </message>
     <message>
         <source>History grouping</source>
-        <translation type="unfinished" />
+        <translation>Agrupació de l'historial</translation>
     </message>
     <message>
         <source>Each run</source>
-        <translation type="unfinished" />
+        <translation>Cada execució</translation>
     </message>
     <message>
         <source>By day</source>
-        <translation type="unfinished" />
+        <translation>Per dia</translation>
     </message>
     <message>
         <source>By week</source>
-        <translation type="unfinished" />
+        <translation>Per setmana</translation>
     </message>
     <message>
         <source>By month</source>
-        <translation type="unfinished" />
+        <translation>Per mes</translation>
     </message>
     <message>
         <source>Export CSV…</source>
-        <translation type="unfinished" />
+        <translation>Exporta en CSV…</translation>
     </message>
     <message>
         <source>No sessions yet — process an episode to see your history.</source>
@@ -177,7 +177,7 @@
     </message>
     <message>
         <source>Period</source>
-        <translation type="unfinished" />
+        <translation>Període</translation>
     </message>
     <message>
         <source>Show in Anki</source>
@@ -185,7 +185,7 @@
     </message>
     <message>
         <source>Delete this run's cards…</source>
-        <translation type="unfinished" />
+        <translation>Suprimeix les targetes d'aquesta execució…</translation>
     </message>
     <message>
         <source>Series Difficulty Ranking</source>
@@ -217,11 +217,11 @@
     </message>
     <message>
         <source>Frequency Coverage</source>
-        <translation type="unfinished" />
+        <translation>Cobertura de freqüència</translation>
     </message>
     <message>
         <source>Rank band</source>
-        <translation type="unfinished" />
+        <translation>Franja de posicions</translation>
     </message>
     <message>
         <source>Known</source>
@@ -229,15 +229,15 @@
     </message>
     <message>
         <source>Not known</source>
-        <translation type="unfinished" />
+        <translation>No conegudes</translation>
     </message>
     <message>
         <source>Known %</source>
-        <translation type="unfinished" />
+        <translation>% conegudes</translation>
     </message>
     <message>
         <source>Show missing words</source>
-        <translation type="unfinished" />
+        <translation>Mostra les paraules que falten</translation>
     </message>
     <message>
         <source>Milestones</source>
@@ -265,93 +265,95 @@
     </message>
     <message>
         <source>No runs in this period.</source>
-        <translation type="unfinished" />
+        <translation>No hi ha cap execució en aquest període.</translation>
     </message>
     <message>
         <source>Export Mining History</source>
-        <translation type="unfinished" />
+        <translation>Exporta l'historial d'extracció</translation>
     </message>
     <message>
         <source>CSV Files (*.csv);;All Files (*)</source>
-        <translation type="unfinished" />
+        <translation>Fitxers CSV (*.csv);;Tots els fitxers (*)</translation>
     </message>
     <message>
         <source>History saved to %1.</source>
-        <translation type="unfinished" />
+        <translation>S'ha desat l'historial a %1.</translation>
     </message>
     <message>
         <source>The history could not be exported.</source>
-        <translation type="unfinished" />
+        <translation>No s'ha pogut exportar l'historial.</translation>
     </message>
     <message>
         <source>%1 (cards deleted: %2)</source>
-        <translation type="unfinished" />
+        <translation>%1 (targetes suprimides: %2)</translation>
     </message>
     <message>
         <source>Select one run in the table.</source>
-        <translation type="unfinished" />
+        <translation>Seleccioneu una sola execució a la taula.</translation>
     </message>
     <message>
         <source>This run's cards were deleted: %1.</source>
-        <translation type="unfinished" />
+        <translation>Targetes d'aquesta execució suprimides: %1.</translation>
     </message>
     <message>
         <source>Anki Miner has no card list for this run: it was mined before this version, or it made no cards.</source>
-        <translation type="unfinished" />
+        <translation>L'Anki Miner no té cap llista de targetes per a aquesta execució: es va fer abans d'aquesta versió o no va crear cap targeta.</translation>
     </message>
     <message>
         <source>Anki Miner couldn't open this run's cards in Anki.</source>
-        <translation type="unfinished" />
+        <translation>L'Anki Miner no ha pogut obrir les targetes d'aquesta execució a l'Anki.</translation>
     </message>
     <message>
         <source>None of this run's cards are in Anki any more.</source>
-        <translation type="unfinished" />
+        <translation>Ja no queda cap targeta d'aquesta execució a l'Anki.</translation>
     </message>
     <message>
         <source>Delete This Run's Cards</source>
-        <translation type="unfinished" />
+        <translation>Suprimeix les targetes d'aquesta execució</translation>
     </message>
     <message>
         <source>Cards this run added that are still in Anki: %1. Reviewed at least once: %2.
 
 Delete them from Anki? Their review history is deleted with them. This cannot be undone.</source>
-        <translation type="unfinished" />
+        <translation>Targetes afegides per aquesta execució que encara són a l'Anki: %1. Repassades almenys una vegada: %2.
+
+Voleu suprimir-les de l'Anki? El seu historial de repàs se suprimeix amb elles. Aquesta acció no es pot desfer.</translation>
     </message>
     <message>
         <source>Cards deleted from Anki: %1.</source>
-        <translation type="unfinished" />
+        <translation>Targetes suprimides de l'Anki: %1.</translation>
     </message>
     <message>
         <source>This run's cards could not be deleted.</source>
-        <translation type="unfinished" />
+        <translation>No s'han pogut suprimir les targetes d'aquesta execució.</translation>
     </message>
     <message>
         <source>Known words could not be counted.</source>
-        <translation type="unfinished" />
+        <translation>No s'han pogut comptar les paraules conegudes.</translation>
     </message>
     <message>
         <source>Words Anki Miner treats as known in %1.</source>
-        <translation type="unfinished" />
+        <translation>Paraules que l'Anki Miner considera conegudes en %1.</translation>
     </message>
     <message>
         <source>Change since %1: %2</source>
-        <translation type="unfinished" />
+        <translation>Canvi des del %1: %2</translation>
     </message>
     <message>
         <source>Last counted on %1; Anki was not reachable.</source>
-        <translation type="unfinished" />
+        <translation>Últim recompte el %1; no s'ha pogut connectar amb l'Anki.</translation>
     </message>
     <message>
         <source>Last counted on %1.</source>
-        <translation type="unfinished" />
+        <translation>Últim recompte el %1.</translation>
     </message>
     <message>
         <source>Coverage needs Anki running: it compares the list with your cards.</source>
-        <translation type="unfinished" />
+        <translation>La cobertura necessita l'Anki en execució: compara la llista amb les vostres targetes.</translation>
     </message>
     <message>
         <source>How many of the most frequent words in %1 you already know.</source>
-        <translation type="unfinished" />
+        <translation>Quantes de les paraules més freqüents de %1 ja coneixeu.</translation>
     </message>
     <message>
         <source>%1 mining sessions completed</source>
@@ -761,7 +763,7 @@ Delete them from Anki? Their review history is deleted with them. This cannot be
     </message>
     <message>
         <source>{series}, {episode} and {volume} become each card's show, episode or book volume, for example mined::{series}::{episode}.</source>
-        <translation type="unfinished" />
+        <translation>{series}, {episode} i {volume} esdevenen la sèrie, l'episodi o el volum del llibre de cada targeta, per exemple mined::{series}::{episode}.</translation>
     </message>
     <message>
         <source>Refresh</source>
@@ -789,11 +791,11 @@ Delete them from Anki? Their review history is deleted with them. This cannot be
     </message>
     <message>
         <source>Sync Anki after mining</source>
-        <translation type="unfinished" />
+        <translation>Sincronitza l'Anki després de l'extracció</translation>
     </message>
     <message>
         <source>After a run that added cards, ask Anki to sync with AnkiWeb. If the sync fails, the Activity Log says so and the cards stay added.</source>
-        <translation type="unfinished" />
+        <translation>Després d'una execució que ha afegit targetes, demana a l'Anki que se sincronitzi amb AnkiWeb. Si la sincronització falla, el Registre d'activitat ho indica i les targetes continuen afegides.</translation>
     </message>
     <message>
         <source>AnkiConnect URL</source>
@@ -805,7 +807,7 @@ Delete them from Anki? Their review history is deleted with them. This cannot be
     </message>
     <message>
         <source>If AnkiConnect asks for an API key, add it to the address: http://127.0.0.1:8765/?key=YOUR_KEY</source>
-        <translation type="unfinished" />
+        <translation>Si l'AnkiConnect demana una clau d'API, afegiu-la a l'adreça: http://127.0.0.1:8765/?key=YOUR_KEY</translation>
     </message>
     <message>
         <source>Fill in automatically</source>
@@ -1517,7 +1519,7 @@ Formats compatibles: AJT (index.json + media/), NHK16 (entries.json + audio/), F
     </message>
     <message>
         <source>Wikimedia Commons (native recordings)</source>
-        <translation type="unfinished" />
+        <translation>Wikimedia Commons (enregistraments de parlants nadius)</translation>
     </message>
     <message>
         <source>Custom JSON</source>
@@ -2086,7 +2088,7 @@ No se suprimeix cap fitxer d'índex.</translation>
     </message>
     <message>
         <source>Every audio file in the folder, in file-name order, one .srt each. A folder of book folders (each with its EPUB and audio) syncs every book in turn.</source>
-        <translation type="unfinished" />
+        <translation>Cada fitxer d'àudio de la carpeta, per ordre de nom de fitxer, amb un .srt per a cadascun. Una carpeta de carpetes de llibres (cadascuna amb el seu EPUB i el seu àudio) sincronitza cada llibre per torns.</translation>
     </message>
     <message>
         <source>EPUB or Text File:</source>
@@ -2114,7 +2116,7 @@ No se suprimeix cap fitxer d'índex.</translation>
     </message>
     <message>
         <source>Sentences: how many of the book's sentences, from the first one found to the last, got a subtitle. Audio: how much of the narration matched the book. Grade: A from 90% on both, B from 75%, C from 50%, else D.</source>
-        <translation type="unfinished" />
+        <translation>Frases: quantes frases del llibre, de la primera trobada a l'última, han rebut un subtítol. Àudio: quina part de la narració coincideix amb el llibre. Nota: A a partir del 90 % en tots dos, B a partir del 75 %, C a partir del 50 %, si no D.</translation>
     </message>
     <message>
         <source>Output</source>
@@ -2178,7 +2180,7 @@ No se suprimeix cap fitxer d'índex.</translation>
     </message>
     <message>
         <source>No audio files were found in that folder, and no book folders (each with its book and audio).</source>
-        <translation type="unfinished" />
+        <translation>No s'han trobat fitxers d'àudio en aquesta carpeta, ni cap carpeta de llibre (cadascuna amb el seu llibre i el seu àudio).</translation>
     </message>
     <message>
         <source>That folder could not be scanned.</source>
@@ -2186,15 +2188,15 @@ No se suprimeix cap fitxer d'índex.</translation>
     </message>
     <message>
         <source>Skipped folder %1: no audio files</source>
-        <translation type="unfinished" />
+        <translation>S'ha omès la carpeta %1: no hi ha fitxers d'àudio</translation>
     </message>
     <message>
         <source>Skipped folder %1: no .epub or .txt book</source>
-        <translation type="unfinished" />
+        <translation>S'ha omès la carpeta %1: no hi ha cap llibre .epub o .txt</translation>
     </message>
     <message>
         <source>Skipped folder %1: more than one book</source>
-        <translation type="unfinished" />
+        <translation>S'ha omès la carpeta %1: més d'un llibre</translation>
     </message>
     <message>
         <source>Output folder is not writable.</source>
@@ -2214,11 +2216,11 @@ No se suprimeix cap fitxer d'índex.</translation>
     </message>
     <message>
         <source>Books: %1 — %2</source>
-        <translation type="unfinished" />
+        <translation>Llibres: %1 — %2</translation>
     </message>
     <message>
         <source>%1: sentences %2%, audio %3% — grade %4</source>
-        <translation type="unfinished" />
+        <translation>%1: frases %2%, àudio %3% — nota %4</translation>
     </message>
     <message>
         <source>Syncing file %1 of %2</source>
@@ -2232,11 +2234,11 @@ No se suprimeix cap fitxer d'índex.</translation>
     </message>
     <message>
         <source>%1 could not be loaded: %2</source>
-        <translation type="unfinished" />
+        <translation>No s'ha pogut carregar %1: %2</translation>
     </message>
     <message>
         <source>Its book could not be loaded</source>
-        <translation type="unfinished" />
+        <translation>No s'ha pogut carregar el seu llibre</translation>
     </message>
     <message>
         <source>Skipped, exists</source>
@@ -2256,11 +2258,11 @@ No se suprimeix cap fitxer d'índex.</translation>
     </message>
     <message>
         <source>Reusing the saved transcript</source>
-        <translation type="unfinished" />
+        <translation>S'està reutilitzant la transcripció desada</translation>
     </message>
     <message>
         <source>Found sentence %1 again later in the audio; timed it out of book order</source>
-        <translation type="unfinished" />
+        <translation>La frase %1 torna a aparèixer més endavant a l'àudio; s'ha sincronitzat fora de l'ordre del llibre</translation>
     </message>
     <message>
         <source>%1 sentences timed, %2 in between had no audio</source>
@@ -2342,7 +2344,7 @@ No se suprimeix cap fitxer d'índex.</translation>
     </message>
     <message>
         <source>Approve or reject each word, pick its sentence and scene, trim its audio, mark words known, and fix a mistranscribed sentence or swap the word to mine -- before any card is created. When a word has entries in several dictionaries, choose which one the card's Definition uses.</source>
-        <translation type="unfinished" />
+        <translation>Aproveu o rebutgeu cada paraula, trieu-ne la frase i l'escena, retalleu-ne l'àudio, marqueu paraules com a conegudes i corregiu una frase mal transcrita o canvieu la paraula que s'ha d'extreure -- abans de crear cap targeta. Quan una paraula té entrades en diversos diccionaris, trieu quina fa servir la Definició de la targeta.</translation>
     </message>
     <message>
         <source>Secondary-language subtitles</source>
@@ -2350,7 +2352,7 @@ No se suprimeix cap fitxer d'índex.</translation>
     </message>
     <message>
         <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. Leave the file empty and Anki Miner picks a translation itself: a subtitle named for the video, or a text track inside it, in your interface language or else English. The Activity Log names the track it used. On Video → Batch, point it at a folder of translation subtitles instead and they pair to the videos by episode number. Turn it on under Settings → Sentences.</source>
-        <translation type="unfinished" />
+        <translation>Carregueu un segon fitxer de subtítols en la vostra llengua al costat del de la llengua d'extracció: es mostra sota la línia a la previsualització del Curador de paraules i es pot desar en un camp Traducció. Deixeu el fitxer buit i l'Anki Miner tria una traducció pel seu compte: un subtítol amb el nom del vídeo, o una pista de text que contingui, en la vostra llengua d'interfície o, si no, en anglès. El Registre d'activitat indica la pista utilitzada. A Vídeo → Lot, indiqueu-hi en canvi una carpeta de subtítols de traducció i s'aparellen amb els vídeos pel número d'episodi. Activeu-ho a Paràmetres → Frases.</translation>
     </message>
     <message>
         <source>Build a deck by coverage %</source>
@@ -2386,11 +2388,11 @@ No se suprimeix cap fitxer d'índex.</translation>
     </message>
     <message>
         <source>Mine songs from .lrc lyrics</source>
-        <translation type="unfinished" />
+        <translation>Extreu cançons a partir de lletres .lrc</translation>
     </message>
     <message>
         <source>Use a .lrc lyrics file wherever a subtitle file goes. Each line lasts until the next one starts. Pair a song with its lyrics on Audiobooks, condense it in Condense, or mine a music video on Video.</source>
-        <translation type="unfinished" />
+        <translation>Feu servir un fitxer de lletres .lrc a qualsevol lloc on vagi un fitxer de subtítols. Cada línia dura fins que comença la següent. Aparelleu una cançó amb la seva lletra a Audiollibres, condenseu-la a Condensa o extraieu un videoclip a Vídeo.</translation>
     </message>
     <message>
         <source>Mine from manga</source>
@@ -2406,23 +2408,23 @@ No se suprimeix cap fitxer d'índex.</translation>
     </message>
     <message>
         <source>Mine vocabulary from novels and other text (EPUB, PDF, Aozora, plain text).</source>
-        <translation type="unfinished" />
+        <translation>Extraieu vocabulari de novel·les i altres textos (EPUB, PDF, Aozora, text pla).</translation>
     </message>
     <message>
         <source>Readings from a book's own furigana</source>
-        <translation type="unfinished" />
+        <translation>Lectures a partir del furigana del mateix llibre</translation>
     </message>
     <message>
         <source>When a Japanese EPUB prints furigana over a word, the card takes that reading instead of the parser's guess.</source>
-        <translation type="unfinished" />
+        <translation>Quan un EPUB japonès mostra furigana sobre una paraula, la targeta pren aquesta lectura en lloc de la que endevina l'analitzador.</translation>
     </message>
     <message>
         <source>Mine pasted text or a web article</source>
-        <translation type="unfinished" />
+        <translation>Extreu text enganxat o un article web</translation>
     </message>
     <message>
         <source>Paste text in your mining language, or fetch a web article by its address, and mine it into Anki cards. A fetched article's cards name the page and site as their source.</source>
-        <translation type="unfinished" />
+        <translation>Enganxeu text en la vostra llengua d'extracció, o obteniu un article web per la seva adreça, i extraieu-ne targetes de l'Anki. Les targetes d'un article obtingut indiquen la pàgina i el lloc com a font.</translation>
     </message>
     <message>
         <source>Mine subtitle files without video</source>
@@ -2446,7 +2448,7 @@ No se suprimeix cap fitxer d'índex.</translation>
     </message>
     <message>
         <source>Create subtitles from audio with a local Whisper model -- as a standalone tool. Long lines are split at sentence ends, and a second run on the same file reuses the saved transcript.</source>
-        <translation type="unfinished" />
+        <translation>Creeu subtítols a partir d'àudio amb un model Whisper local -- com a eina independent. Les línies llargues es divideixen al final de les frases, i una segona execució sobre el mateix fitxer reutilitza la transcripció desada.</translation>
     </message>
     <message>
         <source>Re-time existing subtitles</source>
@@ -2506,35 +2508,35 @@ No se suprimeix cap fitxer d'índex.</translation>
     </message>
     <message>
         <source>Browse your whole mining history</source>
-        <translation type="unfinished" />
+        <translation>Exploreu tot el vostre historial d'extracció</translation>
     </message>
     <message>
         <source>Analytics lists every run you have mined. Pick a period, group the runs by day, week or month, see the cards per period in a chart, and export the table as a CSV file.</source>
-        <translation type="unfinished" />
+        <translation>Anàlisi mostra totes les execucions que heu fet. Trieu un període, agrupeu les execucions per dia, setmana o mes, vegeu les targetes per període en un gràfic i exporteu la taula com a fitxer CSV.</translation>
     </message>
     <message>
         <source>Show or delete a past run's cards</source>
-        <translation type="unfinished" />
+        <translation>Mostra o suprimeix les targetes d'una execució anterior</translation>
     </message>
     <message>
         <source>Select a run in Analytics → Mining History to open its cards in Anki's browser or to delete them. The confirmation says how many of its cards are still in Anki and how many you have reviewed. Runs mined before this version have no card list.</source>
-        <translation type="unfinished" />
+        <translation>Seleccioneu una execució a Anàlisi → Historial d'extracció per obrir-ne les targetes al navegador de l'Anki o per suprimir-les. La confirmació indica quantes de les seves targetes encara són a l'Anki i quantes n'heu repassat. Les execucions anteriors a aquesta versió no tenen llista de targetes.</translation>
     </message>
     <message>
         <source>Track how many words you know</source>
-        <translation type="unfinished" />
+        <translation>Seguiu quantes paraules coneixeu</translation>
     </message>
     <message>
         <source>The Known Words card on Analytics counts the words Anki Miner treats as known in the current mining language and shows how that number changed. It is counted while Anki is running, at most once every ten minutes.</source>
-        <translation type="unfinished" />
+        <translation>La targeta Paraules conegudes d'Anàlisi compta les paraules que l'Anki Miner considera conegudes en la llengua d'extracció actual i mostra com ha canviat aquest nombre. Es compta mentre l'Anki està en execució, com a màxim un cop cada deu minuts.</translation>
     </message>
     <message>
         <source>See how much of a frequency list you know</source>
-        <translation type="unfinished" />
+        <translation>Vegeu quina part d'una llista de freqüència coneixeu</translation>
     </message>
     <message>
         <source>Analytics → Frequency Coverage counts the words you know in ranks 1–1,000 up to 20,000 of your first frequency list with numeric ranks, and lists the missing words of each band. It needs Anki running.</source>
-        <translation type="unfinished" />
+        <translation>Anàlisi → Cobertura de freqüència compta les paraules que coneixeu en les posicions 1–1.000 fins a 20.000 de la vostra primera llista de freqüència amb posicions numèriques, i mostra les paraules que falten de cada franja. Necessita l'Anki en execució.</translation>
     </message>
     <message>
         <source>Reset mining statistics</source>
@@ -2610,11 +2612,11 @@ No se suprimeix cap fitxer d'índex.</translation>
     </message>
     <message>
         <source>Count a word as known only after its card has been reviewed</source>
-        <translation type="unfinished" />
+        <translation>Compta una paraula com a coneguda només després de repassar-ne la targeta</translation>
     </message>
     <message>
         <source>Readability and the i+1 sentence rule then count a word as known only when its Anki card has been reviewed at least once. Mining still skips every word that already has a card.</source>
-        <translation type="unfinished" />
+        <translation>Aleshores Llegibilitat i la regla de frases i+1 compten una paraula com a coneguda només quan la seva targeta de l'Anki s'ha repassat almenys una vegada. L'extracció continua ometent totes les paraules que ja tenen targeta.</translation>
     </message>
     <message>
         <source>Exclude specific Anki decks from 'known'</source>
@@ -2634,27 +2636,27 @@ No se suprimeix cap fitxer d'índex.</translation>
     </message>
     <message>
         <source>Browse every known word</source>
-        <translation type="unfinished" />
+        <translation>Exploreu totes les paraules conegudes</translation>
     </message>
     <message>
         <source>Manage Known Words lists every word this language counts as known, with where it came from (added by you, mined by Anki Miner, from Anki) and the date it was added. Search it, filter it by source, and remove words you added. Words from Anki come back on the next sync.</source>
-        <translation type="unfinished" />
+        <translation>Gestiona les paraules conegudes mostra cada paraula que aquesta llengua compta com a coneguda, amb la seva procedència (afegida per vós, extreta per l'Anki Miner, de l'Anki) i la data en què es va afegir. Cerqueu-hi, filtreu-la per font i elimineu les paraules que heu afegit. Les paraules de l'Anki tornen a la sincronització següent.</translation>
     </message>
     <message>
         <source>Import known words from Kindle, Lute or LWT</source>
-        <translation type="unfinished" />
+        <translation>Importa paraules conegudes de Kindle, Lute o LWT</translation>
     </message>
     <message>
         <source>In Manage Known Words, Import… also reads a Kindle Vocabulary Builder file (vocab.db; words marked mastered) and Lute or LWT term exports (status 5 and 99).</source>
-        <translation type="unfinished" />
+        <translation>A Gestiona les paraules conegudes, Importa… també llegeix un fitxer de Kindle Vocabulary Builder (vocab.db; paraules marcades com a dominades) i exportacions de termes de Lute o LWT (estats 5 i 99).</translation>
     </message>
     <message>
         <source>Export words to a CSV file</source>
-        <translation type="unfinished" />
+        <translation>Exporta paraules a un fitxer CSV</translation>
     </message>
     <message>
         <source>Export words… saves the list you are looking at in Manage Known Words, or a finished run's mined and not-mined words with the reason each was skipped, as a CSV file.</source>
-        <translation type="unfinished" />
+        <translation>Exporta les paraules… desa com a fitxer CSV la llista que esteu veient a Gestiona les paraules conegudes, o les paraules extretes i no extretes d'una execució acabada, amb el motiu pel qual s'ha omès cadascuna.</translation>
     </message>
     <message>
         <source>Exclude kana-only words</source>
@@ -2686,23 +2688,23 @@ No se suprimeix cap fitxer d'índex.</translation>
     </message>
     <message>
         <source>Mine at most one word from each example sentence. A word whose sentence is taken moves to another line it appears on, and is skipped only when every one of its lines is taken.</source>
-        <translation type="unfinished" />
+        <translation>Extraieu com a màxim una paraula de cada frase d'exemple. Una paraula amb la frase ja ocupada passa a una altra línia on apareix, i només s'omet quan totes les seves línies estan ocupades.</translation>
     </message>
     <message>
         <source>Pick the clearest sentence</source>
-        <translation type="unfinished" />
+        <translation>Tria la frase més clara</translation>
     </message>
     <message>
         <source>When a word appears on several lines, its card uses the line with the fewest unknown words and a comfortable length instead of the first one. The Word Curator still lists every line.</source>
-        <translation type="unfinished" />
+        <translation>Quan una paraula apareix en diverses línies, la seva targeta fa servir la línia amb menys paraules desconegudes i una llargada còmoda en lloc de la primera. El Curador de paraules continua mostrant totes les línies.</translation>
     </message>
     <message>
         <source>Skip openings, endings and signs</source>
-        <translation type="unfinished" />
+        <translation>Omet openings, endings i rètols</translation>
     </message>
     <message>
         <source>Leave opening and ending songs, previews and on-screen signs out of mining, Condense and Readability: lines styled as songs or signs, and lines inside a video's opening, ending and preview chapters. On by default for new installs; turn it off in Settings → Sentences.</source>
-        <translation type="unfinished" />
+        <translation>Deixeu fora de l'extracció, de Condensa i de Llegibilitat les cançons d'opening i ending, els avançaments i els rètols en pantalla: línies amb estil de cançó o rètol, i línies dins dels capítols d'opening, ending i avançament d'un vídeo. Activat per defecte en instal·lacions noves; desactiveu-ho a Paràmetres → Frases.</translation>
     </message>
     <message>
         <source>Strip junk from subtitles (regex)</source>
@@ -2770,11 +2772,11 @@ No se suprimeix cap fitxer d'índex.</translation>
     </message>
     <message>
         <source>Import a dictionary file</source>
-        <translation type="unfinished" />
+        <translation>Importa un fitxer de diccionari</translation>
     </message>
     <message>
         <source>Add a Yomitan zip, a StarDict dictionary (its archive or its .ifo file) or a CSV/TSV word list (term and definition, or term, reading and definition) as a definition source.</source>
-        <translation type="unfinished" />
+        <translation>Afegiu un zip de Yomitan, un diccionari StarDict (el seu arxiu o el seu fitxer .ifo) o una llista de paraules CSV/TSV (terme i definició, o terme, lectura i definició) com a font de definicions.</translation>
     </message>
     <message>
         <source>Keep dictionaries up to date</source>
@@ -2846,7 +2848,7 @@ No se suprimeix cap fitxer d'índex.</translation>
     </message>
     <message>
         <source>Attach word audio to cards from audio packs, JPod101 (Japanese), Google text-to-speech, or Microsoft Edge text-to-speech (every language). Wikimedia Commons plays recordings of real speakers from Wiktionary and Lingua Libre, tried before Google TTS in most languages.</source>
-        <translation type="unfinished" />
+        <translation>Adjunteu àudio de paraules a les targetes des de paquets d'àudio, JPod101 (japonès), la síntesi de veu de Google o la de Microsoft Edge (totes les llengües). Wikimedia Commons reprodueix enregistraments de parlants reals de Wiktionary i Lingua Libre, i es prova abans que Google TTS en la majoria de llengües.</translation>
     </message>
     <message>
         <source>Import local audio packs</source>
@@ -2862,7 +2864,7 @@ No se suprimeix cap fitxer d'índex.</translation>
     </message>
     <message>
         <source>Extract the spoken sentence as an audio clip; tune its format and bitrate. Even out audio volume brings sentence clips and condensed audio to one loudness and fades each clip in and out.</source>
-        <translation type="unfinished" />
+        <translation>Extraieu la frase parlada com a clip d'àudio; ajusteu-ne el format i la taxa de bits. Iguala el volum de l'àudio porta els clips de frases i l'àudio condensat a una mateixa sonoritat i aplica una fosa d'entrada i de sortida a cada clip.</translation>
     </message>
     <message>
         <source>Sentence audio for reading (TTS)</source>
@@ -2886,7 +2888,7 @@ No se suprimeix cap fitxer d'índex.</translation>
     </message>
     <message>
         <source>Capture a still frame from the scene to put on the card. Crop manga pictures to the speech bubble shows the bubble and the art around it instead of the whole page.</source>
-        <translation type="unfinished" />
+        <translation>Captureu un fotograma de l'escena per posar-lo a la targeta. Retalla les imatges de manga a la bafarada mostra la bafarada i el dibuix que l'envolta en lloc de la pàgina sencera.</translation>
     </message>
     <message>
         <source>Animated clips (GIF/WebP)</source>
@@ -2966,7 +2968,7 @@ No se suprimeix cap fitxer d'índex.</translation>
     </message>
     <message>
         <source>Add tags to every note Anki Miner creates. Card tags can use {series}, {episode} and {volume}. Each card gets its own show, episode or book volume, for example mined::{series}::{episode} gives mined::Frieren::03.</source>
-        <translation type="unfinished" />
+        <translation>Afegiu etiquetes a cada nota que crea l'Anki Miner. Les etiquetes de targeta poden fer servir {series}, {episode} i {volume}. Cada targeta rep la seva sèrie, episodi o volum de llibre; per exemple, mined::{series}::{episode} dona mined::Frieren::03.</translation>
     </message>
     <message>
         <source>Connect to Anki (AnkiConnect)</source>
@@ -2974,15 +2976,15 @@ No se suprimeix cap fitxer d'índex.</translation>
     </message>
     <message>
         <source>Set the AnkiConnect address; Refresh re-checks the connection to your running Anki. If AnkiConnect is set up with an API key, add it to the address: http://127.0.0.1:8765/?key=YOUR_KEY. Anki Miner sends it with every request and never writes it to the log.</source>
-        <translation type="unfinished" />
+        <translation>Definiu l'adreça de l'AnkiConnect; Actualitza torna a comprovar la connexió amb l'Anki en execució. Si l'AnkiConnect està configurat amb una clau d'API, afegiu-la a l'adreça: http://127.0.0.1:8765/?key=YOUR_KEY. L'Anki Miner l'envia amb cada sol·licitud i mai no l'escriu al registre.</translation>
     </message>
     <message>
         <source>Sync Anki after mining</source>
-        <translation type="unfinished" />
+        <translation>Sincronitza l'Anki després de l'extracció</translation>
     </message>
     <message>
         <source>After a run that added cards, Anki Miner asks Anki to sync with AnkiWeb. If the sync fails, the Activity Log says so and the cards stay added.</source>
-        <translation type="unfinished" />
+        <translation>Després d'una execució que ha afegit targetes, l'Anki Miner demana a l'Anki que se sincronitzi amb AnkiWeb. Si la sincronització falla, el Registre d'activitat ho indica i les targetes continuen afegides.</translation>
     </message>
     <message>
         <source>Fill in field mappings automatically</source>
@@ -3070,7 +3072,7 @@ No se suprimeix cap fitxer d'índex.</translation>
     </message>
     <message>
         <source>Draw a box where a video's on-screen dialogue appears and Anki Miner reads it into a timed .srt that Video → Single can mine. Made for game longplays without commentary. It also reads image subtitles (Blu-ray .sup, DVD .idx/.sub, or an image track inside a video) without a box. Lines with none of your mining language's letters are left out. Download the OCR engine from the setup card on Utilities → Video OCR.</source>
-        <translation type="unfinished" />
+        <translation>Dibuixeu un requadre on apareixen els diàlegs en pantalla d'un vídeo i l'Anki Miner els llegeix en un .srt sincronitzat que Vídeo → Individual pot extreure. Pensat per a longplays de jocs sense comentaris. També llegeix subtítols d'imatge (.sup de Blu-ray, .idx/.sub de DVD, o una pista d'imatge dins d'un vídeo) sense requadre. Es descarten les línies sense cap lletra de la vostra llengua d'extracció. Baixeu el motor d'OCR des de la targeta de configuració d'Utilitats → OCR de vídeo.</translation>
     </message>
     <message>
         <source>Sync an audiobook to its EPUB</source>
@@ -3078,23 +3080,23 @@ No se suprimeix cap fitxer d'índex.</translation>
     </message>
     <message>
         <source>Transcribe an audiobook and time the book's own sentences to it, writing an .srt the Audiobook tab, Reading → Subtitle Files or a reader can use. A second run on the same audio reuses the saved transcript instead of transcribing again.</source>
-        <translation type="unfinished" />
+        <translation>Transcriviu un audiollibre i sincronitzeu-hi les frases del mateix llibre, escrivint un .srt que poden fer servir la pestanya Audiollibre, Lectura → Fitxers de subtítols o un lector. Una segona execució sobre el mateix àudio reutilitza la transcripció desada en lloc de tornar a transcriure.</translation>
     </message>
     <message>
         <source>Sync a shelf of audiobooks in one run</source>
-        <translation type="unfinished" />
+        <translation>Sincronitza un prestatge d'audiollibres en una sola execució</translation>
     </message>
     <message>
         <source>In Utilities → Audiobook Sync, choose Folder and pick a folder that holds one folder per book, each with its EPUB (or text file) and its audio files. The books sync one after another, in name order.</source>
-        <translation type="unfinished" />
+        <translation>A Utilitats → Sincronia, trieu Carpeta i seleccioneu una carpeta que contingui una carpeta per llibre, cadascuna amb el seu EPUB (o fitxer de text) i els seus fitxers d'àudio. Els llibres se sincronitzen l'un després de l'altre, per ordre de nom.</translation>
     </message>
     <message>
         <source>See how well an audiobook synced</source>
-        <translation type="unfinished" />
+        <translation>Vegeu com de bé s'ha sincronitzat un audiollibre</translation>
     </message>
     <message>
         <source>After Audiobook Sync, each book gets a line under the Book card: how many of its sentences got a subtitle, how much of the narration matched the book, and a grade from A to D. Chapters read out of book order are found too; sentences the narrator skipped never get a subtitle.</source>
-        <translation type="unfinished" />
+        <translation>Després de Sincronia, cada llibre rep una línia sota la targeta Llibre: quantes de les seves frases han rebut un subtítol, quina part de la narració coincideix amb el llibre i una nota de l'A a la D. També es troben els capítols llegits fora de l'ordre del llibre; les frases que el narrador s'ha saltat no reben mai subtítol.</translation>
     </message>
     <message>
         <source>Check how much of a show, book or manga you can read</source>
@@ -3178,11 +3180,11 @@ No se suprimeix cap fitxer d'índex.</translation>
     </message>
     <message>
         <source>Restore an automatic backup</source>
-        <translation type="unfinished" />
+        <translation>Restaura una còpia de seguretat automàtica</translation>
     </message>
     <message>
         <source>Anki Miner backs up your known words, statistics, settings and profiles once a day when it starts, and keeps the last 7 days. Settings → General → Restore a backup… puts one back the next time the app starts.</source>
-        <translation type="unfinished" />
+        <translation>L'Anki Miner fa una còpia de seguretat de les paraules conegudes, les estadístiques, els paràmetres i els perfils un cop al dia en iniciar-se, i conserva els últims 7 dies. Paràmetres → General → Restaura una còpia de seguretat… en restaura una el proper cop que s'iniciï l'aplicació.</translation>
     </message>
     <message>
         <source>Undo a mining run</source>
@@ -3194,11 +3196,11 @@ No se suprimeix cap fitxer d'índex.</translation>
     </message>
     <message>
         <source>Export a run's words</source>
-        <translation type="unfinished" />
+        <translation>Exporta les paraules d'una execució</translation>
     </message>
     <message>
         <source>Press View details on a run's result line, then Export words… to save the run's mined and not-mined words, with the reason each was skipped, as a CSV file.</source>
-        <translation type="unfinished" />
+        <translation>Premeu Mostra els detalls a la línia de resultat d'una execució i després Exporta les paraules… per desar com a fitxer CSV les paraules extretes i no extretes, amb el motiu pel qual s'ha omès cadascuna.</translation>
     </message>
     <message>
         <source>Keyboard shortcuts</source>
@@ -4592,11 +4594,11 @@ Això modificarà %n notes (%1) i les etiquetarà amb %2. Voleu continuar?</nume
     </message>
     <message>
         <source>Choose dictionary files</source>
-        <translation type="unfinished" />
+        <translation>Trieu fitxers de diccionari</translation>
     </message>
     <message>
         <source>Dictionaries (*.zip *.ifo *.tar.gz *.tgz *.tar.bz2 *.tar.xz *.csv *.tsv)</source>
-        <translation type="unfinished" />
+        <translation>Diccionaris (*.zip *.ifo *.tar.gz *.tgz *.tar.bz2 *.tar.xz *.csv *.tsv)</translation>
     </message>
     <message>
         <source>Dictionary %1 of %2: %3</source>
@@ -5432,8 +5434,9 @@ No se suprimeix cap fitxer del disc.</translation>
     </message>
     <message numerus="yes">
         <source>Skipping lines in %n opening, ending or preview chapter(s)</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>S'ometen les línies de %n capítol d'opening, ending o avançament</numerusform>
+            <numerusform>S'ometen les línies de %n capítols d'opening, ending o avançament</numerusform>
         </translation>
     </message>
     <message>
@@ -5483,7 +5486,7 @@ No se suprimeix cap fitxer del disc.</translation>
     </message>
     <message>
         <source>Only %1% of the first %2 words have an entry in your dictionaries. Is this file in the language you are mining?</source>
-        <translation type="unfinished" />
+        <translation>Només el %1% de les primeres %2 paraules té una entrada als vostres diccionaris. Aquest fitxer és en la llengua que esteu extraient?</translation>
     </message>
     <message>
         <source>Frequency cutoff ignored — no ranked frequency source is loaded (Settings → Frequency).</source>
@@ -5595,11 +5598,11 @@ No se suprimeix cap fitxer del disc.</translation>
     </message>
     <message>
         <source>Translation subtitles picked automatically: %1</source>
-        <translation type="unfinished" />
+        <translation>Subtítols de traducció triats automàticament: %1</translation>
     </message>
     <message>
         <source>Translation subtitles picked automatically: embedded track %1</source>
-        <translation type="unfinished" />
+        <translation>Subtítols de traducció triats automàticament: pista integrada %1</translation>
     </message>
     <message>
         <source>Could not extract media for any word — no cards created</source>
@@ -5869,11 +5872,11 @@ No se suprimeix cap fitxer del disc.</translation>
     </message>
     <message>
         <source>Count a word as known only after its card has been reviewed</source>
-        <translation type="unfinished" />
+        <translation>Compta una paraula com a coneguda només després de repassar-ne la targeta</translation>
     </message>
     <message>
         <source>Readability and the i+1 sentence rule count a word as known only when its Anki card has been reviewed at least once. Mining still skips every word that already has a card.</source>
-        <translation type="unfinished" />
+        <translation>Llegibilitat i la regla de frases i+1 compten una paraula com a coneguda només quan la seva targeta de l'Anki s'ha repassat almenys una vegada. L'extracció continua ometent totes les paraules que ja tenen targeta.</translation>
     </message>
     <message>
         <source>Keep words known after their cards are deleted</source>
@@ -6535,15 +6538,15 @@ No se suprimeix cap fitxer d'índex.</translation>
     <name>KnownWordsManagerDialog</name>
     <message>
         <source>Word</source>
-        <translation type="unfinished" />
+        <translation>Paraula</translation>
     </message>
     <message>
         <source>Source</source>
-        <translation type="unfinished" />
+        <translation>Font</translation>
     </message>
     <message>
         <source>Added</source>
-        <translation type="unfinished" />
+        <translation>Afegida</translation>
     </message>
     <message>
         <source>Manage Known Words</source>
@@ -6555,7 +6558,7 @@ No se suprimeix cap fitxer d'índex.</translation>
     </message>
     <message>
         <source>Every word this language counts as known, and where it came from. Words you added from the Word Curator stay known on every run and across cache rebuilds.</source>
-        <translation type="unfinished" />
+        <translation>Cada paraula que aquesta llengua compta com a coneguda, i la seva procedència. Les paraules que heu afegit des del Curador de paraules continuen conegudes a cada execució i després de reconstruir la memòria cau.</translation>
     </message>
     <message>
         <source>Decks this language's known-words scan skips: %1. Change them in Settings → Word Filters.</source>
@@ -6567,15 +6570,15 @@ No se suprimeix cap fitxer d'índex.</translation>
     </message>
     <message>
         <source>Added by you</source>
-        <translation type="unfinished" />
+        <translation>Afegida per vós</translation>
     </message>
     <message>
         <source>Mined by Anki Miner</source>
-        <translation type="unfinished" />
+        <translation>Extreta per l'Anki Miner</translation>
     </message>
     <message>
         <source>From Anki</source>
-        <translation type="unfinished" />
+        <translation>De l'Anki</translation>
     </message>
     <message>
         <source>Filter…</source>
@@ -6583,7 +6586,7 @@ No se suprimeix cap fitxer d'índex.</translation>
     </message>
     <message>
         <source>All sources</source>
-        <translation type="unfinished" />
+        <translation>Totes les fonts</translation>
     </message>
     <message>
         <source>Rebuild Known Words DB</source>
@@ -6599,7 +6602,7 @@ No se suprimeix cap fitxer d'índex.</translation>
     </message>
     <message>
         <source>Removes words you added. Words from Anki come back on the next run, and mined words leave with Undo.</source>
-        <translation type="unfinished" />
+        <translation>Elimina les paraules que heu afegit. Les paraules de l'Anki tornen a la següent execució, i les paraules extretes s'eliminen amb Desfés.</translation>
     </message>
     <message>
         <source>Import…</source>
@@ -6607,7 +6610,7 @@ No se suprimeix cap fitxer d'índex.</translation>
     </message>
     <message>
         <source>Export words…</source>
-        <translation type="unfinished" />
+        <translation>Exporta les paraules…</translation>
     </message>
     <message>
         <source>Reset User List</source>
@@ -6639,11 +6642,11 @@ No se suprimeix cap fitxer d'índex.</translation>
     </message>
     <message>
         <source>Kindle Vocabulary Builder</source>
-        <translation type="unfinished" />
+        <translation>Kindle Vocabulary Builder</translation>
     </message>
     <message>
         <source>Lute or LWT term export</source>
-        <translation type="unfinished" />
+        <translation>Exportació de termes de Lute o LWT</translation>
     </message>
     <message>
         <source>plain word list</source>
@@ -6655,7 +6658,7 @@ No se suprimeix cap fitxer d'índex.</translation>
     </message>
     <message>
         <source>Known word lists (*.csv *.tsv *.txt *.json *.db);;All Files (*)</source>
-        <translation type="unfinished" />
+        <translation>Llistes de paraules conegudes (*.csv *.tsv *.txt *.json *.db);;Tots els fitxers (*)</translation>
     </message>
     <message>
         <source>Detected: %1 — every entry is imported.
@@ -6687,7 +6690,7 @@ Paraules que s'afegiran: %3. Voleu continuar?</translation>
     </message>
     <message>
         <source>This file has no words for %1. It contains: %2.</source>
-        <translation type="unfinished" />
+        <translation>Aquest fitxer no té paraules per a %1. Conté: %2.</translation>
     </message>
     <message>
         <source>That file is too large to import.</source>
@@ -6703,7 +6706,7 @@ Paraules que s'afegiran: %3. Voleu continuar?</translation>
     </message>
     <message>
         <source>File format not recognized. Supported: jpdb review export (JSON), Migaku word export (JSON/CSV), AnkiMorphs known morphs (CSV), Kindle Vocabulary Builder (vocab.db), Lute or LWT term export (CSV/TSV), plain word lists (one word per line).</source>
-        <translation type="unfinished" />
+        <translation>No es reconeix el format del fitxer. Formats admesos: exportació de repassos de jpdb (JSON), exportació de paraules de Migaku (JSON/CSV), morfs coneguts d'AnkiMorphs (CSV), Kindle Vocabulary Builder (vocab.db), exportació de termes de Lute o LWT (CSV/TSV), llistes de paraules simples (una paraula per línia).</translation>
     </message>
     <message>
         <source>That file could not be imported.</source>
@@ -6725,7 +6728,7 @@ Paraules que s'afegiran: %3. Voleu continuar?</translation>
     </message>
     <message>
         <source>CSV files (*.csv);;Text files, one word per line (*.txt)</source>
-        <translation type="unfinished" />
+        <translation>Fitxers CSV (*.csv);;Fitxers de text, una paraula per línia (*.txt)</translation>
     </message>
     <message>
         <source>The known words list could not be exported.</source>
@@ -7474,7 +7477,7 @@ Voleu continuar?</translation>
     </message>
     <message>
         <source>Opus clips do not play in AnkiMobile on iPhone or iPad. Choose MP3 if you review there.</source>
-        <translation type="unfinished" />
+        <translation>Els clips Opus no es reprodueixen a AnkiMobile a l'iPhone o l'iPad. Trieu MP3 si hi repasseu.</translation>
     </message>
     <message>
         <source> kbps</source>
@@ -7502,11 +7505,11 @@ Voleu continuar?</translation>
     </message>
     <message>
         <source>Even out audio volume</source>
-        <translation type="unfinished" />
+        <translation>Iguala el volum de l'àudio</translation>
     </message>
     <message>
         <source>Brings sentence clips and condensed audio to one volume and fades each clip in and out, so quiet and loud sources sound alike. Applies to new clips.</source>
-        <translation type="unfinished" />
+        <translation>Porta els clips de frases i l'àudio condensat a un mateix volum i aplica una fosa d'entrada i de sortida a cada clip, perquè les fonts fluixes i fortes sonin igual. S'aplica als clips nous.</translation>
     </message>
     <message>
         <source>Text-to-speech</source>
@@ -7530,11 +7533,11 @@ Voleu continuar?</translation>
     </message>
     <message>
         <source>Crop manga pictures to the speech bubble</source>
-        <translation type="unfinished" />
+        <translation>Retalla les imatges de manga a la bafarada</translation>
     </message>
     <message>
         <source>Manga cards show the speech bubble and the art around it instead of the whole page. A sentence with no bubble position keeps the whole page.</source>
-        <translation type="unfinished" />
+        <translation>Les targetes de manga mostren la bafarada i el dibuix que l'envolta en lloc de la pàgina sencera. Una frase sense posició de bafarada conserva la pàgina sencera.</translation>
     </message>
     <message>
         <source>Enable animated screenshots</source>
@@ -7770,7 +7773,7 @@ Voleu continuar?</translation>
     </message>
     <message>
         <source>Anki didn't sync after this run. Your cards are added; sync from Anki, or see the log for why.</source>
-        <translation type="unfinished" />
+        <translation>L'Anki no s'ha sincronitzat després d'aquesta execució. Les targetes s'han afegit; sincronitzeu des de l'Anki o consulteu el registre per veure'n el motiu.</translation>
     </message>
     <message>
         <source>Anki Miner couldn't open these cards in Anki.</source>
@@ -9540,7 +9543,7 @@ No se suprimeix cap fitxer d'índex.</translation>
     </message>
     <message>
         <source>An .epub, .txt or .pdf book, or a folder of books; each book is mined separately.</source>
-        <translation type="unfinished" />
+        <translation>Un llibre .epub, .txt o .pdf, o una carpeta de llibres; cada llibre s'extreu per separat.</translation>
     </message>
     <message>
         <source>Mine</source>
@@ -9576,7 +9579,7 @@ No se suprimeix cap fitxer d'índex.</translation>
     </message>
     <message>
         <source>Choose an .epub, .txt or .pdf book, or a folder of books.</source>
-        <translation type="unfinished" />
+        <translation>Trieu un llibre .epub, .txt o .pdf, o una carpeta de llibres.</translation>
     </message>
     <message>
         <source>Starting…</source>
@@ -9642,7 +9645,7 @@ No se suprimeix cap fitxer d'índex.</translation>
     </message>
     <message>
         <source>Add subtitle files (.srt, .ass, .ssa, .vtt, .smi, .lrc) to the list.</source>
-        <translation type="unfinished" />
+        <translation>Afegeix fitxers de subtítols (.srt, .ass, .ssa, .vtt, .smi, .lrc) a la llista.</translation>
     </message>
     <message>
         <source>Remove Selected</source>
@@ -9823,19 +9826,19 @@ No se suprimeix cap fitxer d'índex.</translation>
     </message>
     <message>
         <source>Web addresses to fetch, one per line (https://…)</source>
-        <translation type="unfinished" />
+        <translation>Adreces web per obtenir, una per línia (https://…)</translation>
     </message>
     <message>
         <source>Web addresses</source>
-        <translation type="unfinished" />
+        <translation>Adreces web</translation>
     </message>
     <message>
         <source>Fetch</source>
-        <translation type="unfinished" />
+        <translation>Obtén</translation>
     </message>
     <message>
         <source>Put the article text of each web address in the box below, to check before mining.</source>
-        <translation type="unfinished" />
+        <translation>Posa el text de l'article de cada adreça web al quadre de sota, per revisar-lo abans de l'extracció.</translation>
     </message>
     <message>
         <source>Paste the text you want to mine. Cards from pasted text have no sentence audio from a recording.</source>
@@ -9883,59 +9886,59 @@ No se suprimeix cap fitxer d'índex.</translation>
     </message>
     <message>
         <source>Each line must be a web address that starts with http:// or https://.</source>
-        <translation type="unfinished" />
+        <translation>Cada línia ha de ser una adreça web que comenci per http:// o https://.</translation>
     </message>
     <message>
         <source>Enter a web address first.</source>
-        <translation type="unfinished" />
+        <translation>Primer introduïu una adreça web.</translation>
     </message>
     <message>
         <source>Fetch takes up to 10 web addresses at a time.</source>
-        <translation type="unfinished" />
+        <translation>Obtén admet fins a 10 adreces web alhora.</translation>
     </message>
     <message>
         <source>Fetching…</source>
-        <translation type="unfinished" />
+        <translation>S'està obtenint…</translation>
     </message>
     <message>
         <source>Could not fetch %1: %2</source>
-        <translation type="unfinished" />
+        <translation>No s'ha pogut obtenir %1: %2</translation>
     </message>
     <message>
         <source>None of the pages could be fetched.</source>
-        <translation type="unfinished" />
+        <translation>No s'ha pogut obtenir cap de les pàgines.</translation>
     </message>
     <message>
         <source>Fetched %1.</source>
-        <translation type="unfinished" />
+        <translation>S'ha obtingut: %1.</translation>
     </message>
     <message>
         <source>The pages could not be fetched.</source>
-        <translation type="unfinished" />
+        <translation>No s'han pogut obtenir les pàgines.</translation>
     </message>
     <message>
         <source>The page could not be reached. Check the address and your connection.</source>
-        <translation type="unfinished" />
+        <translation>No s'ha pogut accedir a la pàgina. Comproveu l'adreça i la connexió.</translation>
     </message>
     <message>
         <source>The site did not send the page.</source>
-        <translation type="unfinished" />
+        <translation>El lloc no ha enviat la pàgina.</translation>
     </message>
     <message>
         <source>This address is not a web page.</source>
-        <translation type="unfinished" />
+        <translation>Aquesta adreça no és una pàgina web.</translation>
     </message>
     <message>
         <source>This page is too large to read.</source>
-        <translation type="unfinished" />
+        <translation>Aquesta pàgina és massa gran per llegir-la.</translation>
     </message>
     <message>
         <source>This is not a web address.</source>
-        <translation type="unfinished" />
+        <translation>Això no és una adreça web.</translation>
     </message>
     <message>
         <source>No article text found on this page. Pages that draw their text with JavaScript cannot be read.</source>
-        <translation type="unfinished" />
+        <translation>No s'ha trobat text d'article en aquesta pàgina. Les pàgines que mostren el text amb JavaScript no es poden llegir.</translation>
     </message>
     <message>
         <source>Paste some text first.</source>
@@ -9947,7 +9950,7 @@ No se suprimeix cap fitxer d'índex.</translation>
     </message>
     <message>
         <source>The fetched text was edited, so it is mined as one text without its page titles.</source>
-        <translation type="unfinished" />
+        <translation>El text obtingut s'ha editat, de manera que s'extreu com un sol text sense els títols de les pàgines.</translation>
     </message>
     <message>
         <source>That picture cannot be read. Pick another, or remove it to mine without one.</source>
@@ -10734,7 +10737,7 @@ No se suprimeix cap fitxer d'índex.</translation>
     </message>
     <message>
         <source>Export words…</source>
-        <translation type="unfinished" />
+        <translation>Exporta les paraules…</translation>
     </message>
     <message>
         <source>Close</source>
@@ -10749,19 +10752,19 @@ No se suprimeix cap fitxer d'índex.</translation>
     </message>
     <message>
         <source>Export Words</source>
-        <translation type="unfinished" />
+        <translation>Exporta les paraules</translation>
     </message>
     <message>
         <source>CSV files (*.csv)</source>
-        <translation type="unfinished" />
+        <translation>Fitxers CSV (*.csv)</translation>
     </message>
     <message>
         <source>Words exported</source>
-        <translation type="unfinished" />
+        <translation>Paraules exportades</translation>
     </message>
     <message>
         <source>Export failed — try again</source>
-        <translation type="unfinished" />
+        <translation>L'exportació ha fallat — torneu-ho a provar</translation>
     </message>
     <message>
         <source>Confirm Undo</source>
@@ -10966,11 +10969,11 @@ No se suprimeix cap fitxer d'índex.</translation>
     </message>
     <message>
         <source>Skip openings, endings and signs</source>
-        <translation type="unfinished" />
+        <translation>Omet openings, endings i rètols</translation>
     </message>
     <message>
         <source>Leaves out song lyrics, previews and on-screen signs: lines whose subtitle style marks them as a song or a sign, and lines inside a video's opening, ending or preview chapters. Applies to mining, Condense and Readability.</source>
-        <translation type="unfinished" />
+        <translation>Deixa fora les lletres de cançons, els avançaments i els rètols en pantalla: línies que l'estil de subtítol marca com a cançó o rètol, i línies dins dels capítols d'opening, ending o avançament d'un vídeo. S'aplica a l'extracció, a Condensa i a Llegibilitat.</translation>
     </message>
     <message>
         <source>Sentence options</source>
@@ -10986,7 +10989,7 @@ No se suprimeix cap fitxer d'índex.</translation>
     </message>
     <message>
         <source>Mines at most one word per example sentence. A word whose sentence is already taken moves to another line it appears on, and is skipped only when every one of its lines is taken. Whitelisted words are still mined.</source>
-        <translation type="unfinished" />
+        <translation>Extreu com a màxim una paraula per frase d'exemple. Una paraula amb la frase ja ocupada passa a una altra línia on apareix, i només s'omet quan totes les seves línies estan ocupades. Les paraules de la llista blanca s'extreuen igualment.</translation>
     </message>
     <message>
         <source>Only i+1 sentences (exactly one unknown word)</source>
@@ -11002,11 +11005,11 @@ No se suprimeix cap fitxer d'índex.</translation>
     </message>
     <message>
         <source>Pick the clearest sentence for each word</source>
-        <translation type="unfinished" />
+        <translation>Tria la frase més clara per a cada paraula</translation>
     </message>
     <message>
         <source>When a word appears on several lines, its card uses the line with the fewest unknown words and a comfortable length instead of the first one. The Word Curator still lists every line, and card order does not change.</source>
-        <translation type="unfinished" />
+        <translation>Quan una paraula apareix en diverses línies, la seva targeta fa servir la línia amb menys paraules desconegudes i una llargada còmoda en lloc de la primera. El Curador de paraules continua mostrant totes les línies, i l'ordre de les targetes no canvia.</translation>
     </message>
     <message>
         <source> s</source>
@@ -13065,15 +13068,15 @@ Es mantenen els recursos instal·lats i el tema.</translation>
     </message>
     <message>
         <source>Restore a backup…</source>
-        <translation type="unfinished" />
+        <translation>Restaura una còpia de seguretat…</translation>
     </message>
     <message>
         <source>Backups</source>
-        <translation type="unfinished" />
+        <translation>Còpies de seguretat</translation>
     </message>
     <message>
         <source>Anki Miner saves your known words, statistics, settings and profiles once a day when it starts, and keeps the last 7 days.</source>
-        <translation type="unfinished" />
+        <translation>L'Anki Miner desa les paraules conegudes, les estadístiques, els paràmetres i els perfils un cop al dia en iniciar-se, i conserva els últims 7 dies.</translation>
     </message>
     <message>
         <source>Themes</source>
@@ -13117,27 +13120,27 @@ Es mantenen els recursos instal·lats i el tema.</translation>
     </message>
     <message>
         <source>There is no backup yet. Anki Miner makes one each day when it starts.</source>
-        <translation type="unfinished" />
+        <translation>Encara no hi ha cap còpia de seguretat. L'Anki Miner en fa una cada dia en iniciar-se.</translation>
     </message>
     <message>
         <source>Restore a Backup</source>
-        <translation type="unfinished" />
+        <translation>Restaura una còpia de seguretat</translation>
     </message>
     <message>
         <source>Restore the backup from:</source>
-        <translation type="unfinished" />
+        <translation>Restaura la còpia de seguretat del:</translation>
     </message>
     <message>
         <source>Replace your known words, statistics, settings and profiles with the copies from %1? The restore runs the next time Anki Miner starts. Changes made after that backup are lost.</source>
-        <translation type="unfinished" />
+        <translation>Voleu substituir les paraules conegudes, les estadístiques, els paràmetres i els perfils per les còpies del %1? La restauració es farà el proper cop que s'iniciï l'Anki Miner. Es perdran els canvis fets després d'aquesta còpia.</translation>
     </message>
     <message>
         <source>The restore could not be scheduled.</source>
-        <translation type="unfinished" />
+        <translation>No s'ha pogut programar la restauració.</translation>
     </message>
     <message>
         <source>The backup from %1 will be restored when Anki Miner next starts.</source>
-        <translation type="unfinished" />
+        <translation>La còpia de seguretat del %1 es restaurarà el proper cop que s'iniciï l'Anki Miner.</translation>
     </message>
 </context><context>
     <name>UpdateBanner</name>
@@ -13305,11 +13308,11 @@ Es mantenen els recursos instal·lats i el tema.</translation>
     </message>
     <message>
         <source>The picture (burned-in text)</source>
-        <translation type="unfinished" />
+        <translation>La imatge (text incrustat)</translation>
     </message>
     <message>
         <source>Image subtitle track %1</source>
-        <translation type="unfinished" />
+        <translation>Pista de subtítols d'imatge %1</translation>
     </message>
     <message>
         <source>The OCR engine could not start on this computer. The details say why.</source>
@@ -13349,15 +13352,15 @@ Es mantenen els recursos instal·lats i el tema.</translation>
     </message>
     <message>
         <source>This field takes a video or an image subtitle file (.sup, .idx, .sub).</source>
-        <translation type="unfinished" />
+        <translation>Aquest camp admet un vídeo o un fitxer de subtítols d'imatge (.sup, .idx, .sub).</translation>
     </message>
     <message>
         <source>Read from:</source>
-        <translation type="unfinished" />
+        <translation>Llegeix de:</translation>
     </message>
     <message>
         <source>Read text drawn into the picture, or one of the video's image subtitle tracks.</source>
-        <translation type="unfinished" />
+        <translation>Llegeix el text dibuixat a la imatge, o una de les pistes de subtítols d'imatge del vídeo.</translation>
     </message>
     <message>
         <source>Video Folder:</source>
@@ -13441,7 +13444,7 @@ Es mantenen els recursos instal·lats i el tema.</translation>
     </message>
     <message>
         <source>Image subtitles are read over the whole frame, so they need no region.</source>
-        <translation type="unfinished" />
+        <translation>Els subtítols d'imatge es llegeixen sobre tot el fotograma, de manera que no necessiten cap regió.</translation>
     </message>
     <message>
         <source>Download OCR models</source>
@@ -13485,7 +13488,7 @@ Es mantenen els recursos instal·lats i el tema.</translation>
     </message>
     <message>
         <source>A DVD subtitle needs its .idx and .sub files in the same folder.</source>
-        <translation type="unfinished" />
+        <translation>Un subtítol de DVD necessita els seus fitxers .idx i .sub a la mateixa carpeta.</translation>
     </message>
     <message>
         <source>Choose a folder before reading subtitles.</source>
@@ -13771,15 +13774,15 @@ Ordeneu per aquesta columna per recórrer un enregistrament llarg en ordre; desp
     </message>
     <message>
         <source>Used on the card</source>
-        <translation type="unfinished" />
+        <translation>Utilitzada a la targeta</translation>
     </message>
     <message>
         <source>Back to the first match</source>
-        <translation type="unfinished" />
+        <translation>Torna a la primera coincidència</translation>
     </message>
     <message>
         <source>Use this dictionary on the card</source>
-        <translation type="unfinished" />
+        <translation>Fes servir aquest diccionari a la targeta</translation>
     </message>
     <message>
         <source>Sentences (%1)</source>
@@ -14217,7 +14220,7 @@ Ordeneu per aquesta columna per recórrer un enregistrament llarg en ordre; desp
     </message>
     <message>
         <source>Wikimedia Commons (native recordings)</source>
-        <translation type="unfinished" />
+        <translation>Wikimedia Commons (enregistraments de parlants nadius)</translation>
     </message>
     <message>
         <source>Microsoft Edge read-aloud (synthetic TTS)</source>
@@ -14231,7 +14234,7 @@ Ordeneu per aquesta columna per recórrer un enregistrament llarg en ordre; desp
     <name>_BarChart</name>
     <message>
         <source>Cards per period</source>
-        <translation type="unfinished" />
+        <translation>Targetes per període</translation>
     </message>
 </context><context>
     <name>_HealthRow</name>
@@ -14253,11 +14256,11 @@ Ordeneu per aquesta columna per recórrer un enregistrament llarg en ordre; desp
     <name>_MissingWordsDialog</name>
     <message>
         <source>Missing Words</source>
-        <translation type="unfinished" />
+        <translation>Paraules que falten</translation>
     </message>
     <message>
         <source>Not known yet in ranks %1</source>
-        <translation type="unfinished" />
+        <translation>Encara no conegudes a les posicions %1</translation>
     </message>
 </context><context>
     <name>app</name>

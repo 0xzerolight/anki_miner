@@ -93,59 +93,59 @@
     </message>
     <message>
         <source>Known Words</source>
-        <translation type="unfinished" />
+        <translation>คำที่รู้แล้ว</translation>
     </message>
     <message>
         <source>Words Anki Miner treats as known in the current mining language.</source>
-        <translation type="unfinished" />
+        <translation>คำที่ Anki Miner ถือว่ารู้แล้วในภาษาที่ขุดคำปัจจุบัน</translation>
     </message>
     <message>
         <source>Mining History</source>
-        <translation type="unfinished" />
+        <translation>ประวัติการขุดคำ</translation>
     </message>
     <message>
         <source>History period</source>
-        <translation type="unfinished" />
+        <translation>ช่วงเวลาของประวัติ</translation>
     </message>
     <message>
         <source>All time</source>
-        <translation type="unfinished" />
+        <translation>ตลอดเวลา</translation>
     </message>
     <message>
         <source>Last 7 days</source>
-        <translation type="unfinished" />
+        <translation>7 วันล่าสุด</translation>
     </message>
     <message>
         <source>Last 30 days</source>
-        <translation type="unfinished" />
+        <translation>30 วันล่าสุด</translation>
     </message>
     <message>
         <source>Last 12 months</source>
-        <translation type="unfinished" />
+        <translation>12 เดือนล่าสุด</translation>
     </message>
     <message>
         <source>History grouping</source>
-        <translation type="unfinished" />
+        <translation>การจัดกลุ่มประวัติ</translation>
     </message>
     <message>
         <source>Each run</source>
-        <translation type="unfinished" />
+        <translation>แต่ละรอบ</translation>
     </message>
     <message>
         <source>By day</source>
-        <translation type="unfinished" />
+        <translation>รายวัน</translation>
     </message>
     <message>
         <source>By week</source>
-        <translation type="unfinished" />
+        <translation>รายสัปดาห์</translation>
     </message>
     <message>
         <source>By month</source>
-        <translation type="unfinished" />
+        <translation>รายเดือน</translation>
     </message>
     <message>
         <source>Export CSV…</source>
-        <translation type="unfinished" />
+        <translation>ส่งออก CSV…</translation>
     </message>
     <message>
         <source>No sessions yet — process an episode to see your history.</source>
@@ -177,7 +177,7 @@
     </message>
     <message>
         <source>Period</source>
-        <translation type="unfinished" />
+        <translation>ช่วงเวลา</translation>
     </message>
     <message>
         <source>Show in Anki</source>
@@ -185,7 +185,7 @@
     </message>
     <message>
         <source>Delete this run's cards…</source>
-        <translation type="unfinished" />
+        <translation>ลบการ์ดของรอบนี้…</translation>
     </message>
     <message>
         <source>Series Difficulty Ranking</source>
@@ -217,11 +217,11 @@
     </message>
     <message>
         <source>Frequency Coverage</source>
-        <translation type="unfinished" />
+        <translation>ความครอบคลุมตามความถี่</translation>
     </message>
     <message>
         <source>Rank band</source>
-        <translation type="unfinished" />
+        <translation>ช่วงอันดับ</translation>
     </message>
     <message>
         <source>Known</source>
@@ -229,15 +229,15 @@
     </message>
     <message>
         <source>Not known</source>
-        <translation type="unfinished" />
+        <translation>ยังไม่รู้</translation>
     </message>
     <message>
         <source>Known %</source>
-        <translation type="unfinished" />
+        <translation>รู้แล้ว %</translation>
     </message>
     <message>
         <source>Show missing words</source>
-        <translation type="unfinished" />
+        <translation>แสดงคำที่ยังไม่รู้</translation>
     </message>
     <message>
         <source>Milestones</source>
@@ -265,93 +265,95 @@
     </message>
     <message>
         <source>No runs in this period.</source>
-        <translation type="unfinished" />
+        <translation>ไม่มีรอบการขุดคำในช่วงเวลานี้</translation>
     </message>
     <message>
         <source>Export Mining History</source>
-        <translation type="unfinished" />
+        <translation>ส่งออกประวัติการขุดคำ</translation>
     </message>
     <message>
         <source>CSV Files (*.csv);;All Files (*)</source>
-        <translation type="unfinished" />
+        <translation>ไฟล์ CSV (*.csv);;ไฟล์ทั้งหมด (*)</translation>
     </message>
     <message>
         <source>History saved to %1.</source>
-        <translation type="unfinished" />
+        <translation>บันทึกประวัติไปที่ %1 แล้ว</translation>
     </message>
     <message>
         <source>The history could not be exported.</source>
-        <translation type="unfinished" />
+        <translation>ไม่สามารถส่งออกประวัติได้</translation>
     </message>
     <message>
         <source>%1 (cards deleted: %2)</source>
-        <translation type="unfinished" />
+        <translation>%1 (ลบการ์ดแล้ว: %2)</translation>
     </message>
     <message>
         <source>Select one run in the table.</source>
-        <translation type="unfinished" />
+        <translation>เลือกหนึ่งรอบในตาราง</translation>
     </message>
     <message>
         <source>This run's cards were deleted: %1.</source>
-        <translation type="unfinished" />
+        <translation>การ์ดของรอบนี้ที่ถูกลบแล้ว: %1</translation>
     </message>
     <message>
         <source>Anki Miner has no card list for this run: it was mined before this version, or it made no cards.</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner ไม่มีรายการการ์ดของรอบนี้: รอบนี้ขุดคำก่อนเวอร์ชันนี้ หรือไม่ได้สร้างการ์ดเลย</translation>
     </message>
     <message>
         <source>Anki Miner couldn't open this run's cards in Anki.</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner เปิดการ์ดของรอบนี้ใน Anki ไม่ได้</translation>
     </message>
     <message>
         <source>None of this run's cards are in Anki any more.</source>
-        <translation type="unfinished" />
+        <translation>ไม่มีการ์ดของรอบนี้อยู่ใน Anki แล้ว</translation>
     </message>
     <message>
         <source>Delete This Run's Cards</source>
-        <translation type="unfinished" />
+        <translation>ลบการ์ดของรอบนี้</translation>
     </message>
     <message>
         <source>Cards this run added that are still in Anki: %1. Reviewed at least once: %2.
 
 Delete them from Anki? Their review history is deleted with them. This cannot be undone.</source>
-        <translation type="unfinished" />
+        <translation>การ์ดที่รอบนี้เพิ่มและยังอยู่ใน Anki: %1 ทบทวนแล้วอย่างน้อยหนึ่งครั้ง: %2
+
+ลบการ์ดเหล่านี้ออกจาก Anki หรือไม่? ประวัติการทบทวนจะถูกลบไปด้วย การกระทำนี้ย้อนกลับไม่ได้</translation>
     </message>
     <message>
         <source>Cards deleted from Anki: %1.</source>
-        <translation type="unfinished" />
+        <translation>การ์ดที่ลบออกจาก Anki แล้ว: %1</translation>
     </message>
     <message>
         <source>This run's cards could not be deleted.</source>
-        <translation type="unfinished" />
+        <translation>ไม่สามารถลบการ์ดของรอบนี้ได้</translation>
     </message>
     <message>
         <source>Known words could not be counted.</source>
-        <translation type="unfinished" />
+        <translation>ไม่สามารถนับคำที่รู้แล้วได้</translation>
     </message>
     <message>
         <source>Words Anki Miner treats as known in %1.</source>
-        <translation type="unfinished" />
+        <translation>คำที่ Anki Miner ถือว่ารู้แล้วใน %1</translation>
     </message>
     <message>
         <source>Change since %1: %2</source>
-        <translation type="unfinished" />
+        <translation>เปลี่ยนแปลงตั้งแต่ %1: %2</translation>
     </message>
     <message>
         <source>Last counted on %1; Anki was not reachable.</source>
-        <translation type="unfinished" />
+        <translation>นับล่าสุดเมื่อ %1; ติดต่อ Anki ไม่ได้</translation>
     </message>
     <message>
         <source>Last counted on %1.</source>
-        <translation type="unfinished" />
+        <translation>นับล่าสุดเมื่อ %1</translation>
     </message>
     <message>
         <source>Coverage needs Anki running: it compares the list with your cards.</source>
-        <translation type="unfinished" />
+        <translation>ความครอบคลุมต้องเปิด Anki ไว้: ระบบจะเทียบรายการกับการ์ดของคุณ</translation>
     </message>
     <message>
         <source>How many of the most frequent words in %1 you already know.</source>
-        <translation type="unfinished" />
+        <translation>คุณรู้คำที่พบบ่อยที่สุดใน %1 แล้วกี่คำ</translation>
     </message>
     <message>
         <source>%1 mining sessions completed</source>
@@ -759,7 +761,7 @@ Delete them from Anki? Their review history is deleted with them. This cannot be
     </message>
     <message>
         <source>{series}, {episode} and {volume} become each card's show, episode or book volume, for example mined::{series}::{episode}.</source>
-        <translation type="unfinished" />
+        <translation>{series}, {episode} และ {volume} จะกลายเป็นชื่อเรื่อง ตอน หรือเล่มหนังสือของแต่ละการ์ด เช่น mined::{series}::{episode}</translation>
     </message>
     <message>
         <source>Refresh</source>
@@ -787,11 +789,11 @@ Delete them from Anki? Their review history is deleted with them. This cannot be
     </message>
     <message>
         <source>Sync Anki after mining</source>
-        <translation type="unfinished" />
+        <translation>ซิงก์ Anki หลังขุดคำ</translation>
     </message>
     <message>
         <source>After a run that added cards, ask Anki to sync with AnkiWeb. If the sync fails, the Activity Log says so and the cards stay added.</source>
-        <translation type="unfinished" />
+        <translation>หลังรอบที่เพิ่มการ์ด จะขอให้ Anki ซิงก์กับ AnkiWeb หากซิงก์ไม่สำเร็จ บันทึกกิจกรรมจะแจ้งไว้ และการ์ดที่เพิ่มแล้วยังคงอยู่</translation>
     </message>
     <message>
         <source>AnkiConnect URL</source>
@@ -803,7 +805,7 @@ Delete them from Anki? Their review history is deleted with them. This cannot be
     </message>
     <message>
         <source>If AnkiConnect asks for an API key, add it to the address: http://127.0.0.1:8765/?key=YOUR_KEY</source>
-        <translation type="unfinished" />
+        <translation>หาก AnkiConnect ขอคีย์ API ให้เพิ่มคีย์ลงในที่อยู่: http://127.0.0.1:8765/?key=YOUR_KEY</translation>
     </message>
     <message>
         <source>Fill in automatically</source>
@@ -1515,7 +1517,7 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
     </message>
     <message>
         <source>Wikimedia Commons (native recordings)</source>
-        <translation type="unfinished" />
+        <translation>Wikimedia Commons (เสียงบันทึกจากเจ้าของภาษา)</translation>
     </message>
     <message>
         <source>Custom JSON</source>
@@ -2083,7 +2085,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Every audio file in the folder, in file-name order, one .srt each. A folder of book folders (each with its EPUB and audio) syncs every book in turn.</source>
-        <translation type="unfinished" />
+        <translation>ไฟล์เสียงทุกไฟล์ในโฟลเดอร์ เรียงตามชื่อไฟล์ ไฟล์ละหนึ่ง .srt โฟลเดอร์ที่มีโฟลเดอร์หนังสือ (แต่ละโฟลเดอร์มี EPUB และเสียงของตัวเอง) จะซิงก์หนังสือทีละเล่ม</translation>
     </message>
     <message>
         <source>EPUB or Text File:</source>
@@ -2111,7 +2113,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Sentences: how many of the book's sentences, from the first one found to the last, got a subtitle. Audio: how much of the narration matched the book. Grade: A from 90% on both, B from 75%, C from 50%, else D.</source>
-        <translation type="unfinished" />
+        <translation>ประโยค: จำนวนประโยคในหนังสือ ตั้งแต่ประโยคแรกที่พบจนถึงประโยคสุดท้าย ที่ได้คำบรรยาย เสียง: สัดส่วนของเสียงบรรยายที่ตรงกับหนังสือ เกรด: A เมื่อได้ 90% ขึ้นไปทั้งสองค่า, B ตั้งแต่ 75%, C ตั้งแต่ 50%, นอกนั้น D</translation>
     </message>
     <message>
         <source>Output</source>
@@ -2175,7 +2177,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>No audio files were found in that folder, and no book folders (each with its book and audio).</source>
-        <translation type="unfinished" />
+        <translation>ไม่พบไฟล์เสียงในโฟลเดอร์นั้น และไม่มีโฟลเดอร์หนังสือ (แต่ละโฟลเดอร์มีหนังสือและเสียงของตัวเอง)</translation>
     </message>
     <message>
         <source>That folder could not be scanned.</source>
@@ -2183,15 +2185,15 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Skipped folder %1: no audio files</source>
-        <translation type="unfinished" />
+        <translation>ข้ามโฟลเดอร์ %1: ไม่มีไฟล์เสียง</translation>
     </message>
     <message>
         <source>Skipped folder %1: no .epub or .txt book</source>
-        <translation type="unfinished" />
+        <translation>ข้ามโฟลเดอร์ %1: ไม่มีหนังสือ .epub หรือ .txt</translation>
     </message>
     <message>
         <source>Skipped folder %1: more than one book</source>
-        <translation type="unfinished" />
+        <translation>ข้ามโฟลเดอร์ %1: มีหนังสือมากกว่าหนึ่งเล่ม</translation>
     </message>
     <message>
         <source>Output folder is not writable.</source>
@@ -2211,11 +2213,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Books: %1 — %2</source>
-        <translation type="unfinished" />
+        <translation>หนังสือ: %1 — %2</translation>
     </message>
     <message>
         <source>%1: sentences %2%, audio %3% — grade %4</source>
-        <translation type="unfinished" />
+        <translation>%1: ประโยค %2%, เสียง %3% — เกรด %4</translation>
     </message>
     <message>
         <source>Syncing file %1 of %2</source>
@@ -2229,11 +2231,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>%1 could not be loaded: %2</source>
-        <translation type="unfinished" />
+        <translation>โหลด %1 ไม่ได้: %2</translation>
     </message>
     <message>
         <source>Its book could not be loaded</source>
-        <translation type="unfinished" />
+        <translation>โหลดหนังสือของไฟล์นี้ไม่ได้</translation>
     </message>
     <message>
         <source>Skipped, exists</source>
@@ -2253,11 +2255,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Reusing the saved transcript</source>
-        <translation type="unfinished" />
+        <translation>ใช้บทถอดความที่บันทึกไว้ซ้ำ</translation>
     </message>
     <message>
         <source>Found sentence %1 again later in the audio; timed it out of book order</source>
-        <translation type="unfinished" />
+        <translation>พบประโยค %1 อีกครั้งในช่วงหลังของเสียง จึงกำหนดเวลาโดยไม่เรียงตามลำดับในหนังสือ</translation>
     </message>
     <message>
         <source>%1 sentences timed, %2 in between had no audio</source>
@@ -2339,7 +2341,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Approve or reject each word, pick its sentence and scene, trim its audio, mark words known, and fix a mistranscribed sentence or swap the word to mine -- before any card is created. When a word has entries in several dictionaries, choose which one the card's Definition uses.</source>
-        <translation type="unfinished" />
+        <translation>อนุมัติหรือปฏิเสธแต่ละคำ เลือกประโยคและฉากของคำนั้น ตัดเสียง ทำเครื่องหมายคำว่ารู้แล้ว และแก้ประโยคที่ถอดความผิดหรือเปลี่ยนคำที่จะขุด -- ก่อนสร้างการ์ดใดๆ เมื่อคำหนึ่งมีรายการในพจนานุกรมหลายเล่ม ให้เลือกว่าจะใช้เล่มใดสำหรับฟิลด์ความหมายของการ์ด</translation>
     </message>
     <message>
         <source>Secondary-language subtitles</source>
@@ -2347,7 +2349,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. Leave the file empty and Anki Miner picks a translation itself: a subtitle named for the video, or a text track inside it, in your interface language or else English. The Activity Log names the track it used. On Video → Batch, point it at a folder of translation subtitles instead and they pair to the videos by episode number. Turn it on under Settings → Sentences.</source>
-        <translation type="unfinished" />
+        <translation>โหลดไฟล์คำบรรยายชุดที่สองในภาษาของคุณคู่กับไฟล์ภาษาที่ขุดคำ: คำบรรยายนี้จะแสดงใต้บรรทัดในตัวอย่างของตัวคัดคำ และบันทึกลงฟิลด์คำแปลได้ หากเว้นไฟล์ว่างไว้ Anki Miner จะเลือกคำแปลเอง: คำบรรยายที่ตั้งชื่อตามวิดีโอ หรือแทร็กข้อความภายในวิดีโอ ในภาษาอินเทอร์เฟซของคุณ หรือไม่เช่นนั้นก็ภาษาอังกฤษ บันทึกกิจกรรมจะระบุแทร็กที่ใช้ ใน วิดีโอ → ชุด ให้ชี้ไปที่โฟลเดอร์คำบรรยายคำแปลแทน แล้วระบบจะจับคู่กับวิดีโอตามหมายเลขตอน เปิดใช้งานได้ที่ การตั้งค่า → ประโยค</translation>
     </message>
     <message>
         <source>Build a deck by coverage %</source>
@@ -2383,11 +2385,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Mine songs from .lrc lyrics</source>
-        <translation type="unfinished" />
+        <translation>ขุดคำจากเพลงด้วยเนื้อเพลง .lrc</translation>
     </message>
     <message>
         <source>Use a .lrc lyrics file wherever a subtitle file goes. Each line lasts until the next one starts. Pair a song with its lyrics on Audiobooks, condense it in Condense, or mine a music video on Video.</source>
-        <translation type="unfinished" />
+        <translation>ใช้ไฟล์เนื้อเพลง .lrc ได้ทุกที่ที่ใช้ไฟล์คำบรรยาย แต่ละบรรทัดจะแสดงจนกว่าบรรทัดถัดไปจะเริ่ม จับคู่เพลงกับเนื้อเพลงในแท็บหนังสือเสียง ย่อเพลงในแท็บย่อเสียง หรือขุดคำจากมิวสิกวิดีโอในแท็บวิดีโอ</translation>
     </message>
     <message>
         <source>Mine from manga</source>
@@ -2403,23 +2405,23 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Mine vocabulary from novels and other text (EPUB, PDF, Aozora, plain text).</source>
-        <translation type="unfinished" />
+        <translation>ขุดคำศัพท์จากนิยายและข้อความอื่นๆ (EPUB, PDF, Aozora, ข้อความธรรมดา)</translation>
     </message>
     <message>
         <source>Readings from a book's own furigana</source>
-        <translation type="unfinished" />
+        <translation>คำอ่านจากฟุริงานะในหนังสือเอง</translation>
     </message>
     <message>
         <source>When a Japanese EPUB prints furigana over a word, the card takes that reading instead of the parser's guess.</source>
-        <translation type="unfinished" />
+        <translation>เมื่อ EPUB ภาษาญี่ปุ่นพิมพ์ฟุริงานะไว้เหนือคำ การ์ดจะใช้คำอ่านนั้นแทนคำอ่านที่ตัวแยกคำคาดเดา</translation>
     </message>
     <message>
         <source>Mine pasted text or a web article</source>
-        <translation type="unfinished" />
+        <translation>ขุดคำจากข้อความที่วางหรือบทความบนเว็บ</translation>
     </message>
     <message>
         <source>Paste text in your mining language, or fetch a web article by its address, and mine it into Anki cards. A fetched article's cards name the page and site as their source.</source>
-        <translation type="unfinished" />
+        <translation>วางข้อความในภาษาที่คุณขุดคำ หรือดึงบทความบนเว็บจากที่อยู่ของบทความ แล้วขุดคำเป็นการ์ด Anki การ์ดจากบทความที่ดึงมาจะระบุหน้าเว็บและเว็บไซต์เป็นแหล่งที่มา</translation>
     </message>
     <message>
         <source>Mine subtitle files without video</source>
@@ -2443,7 +2445,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Create subtitles from audio with a local Whisper model -- as a standalone tool. Long lines are split at sentence ends, and a second run on the same file reuses the saved transcript.</source>
-        <translation type="unfinished" />
+        <translation>สร้างคำบรรยายจากเสียงด้วยโมเดล Whisper ในเครื่อง -- เป็นเครื่องมือแยกต่างหาก บรรทัดยาวจะถูกแบ่งที่ท้ายประโยค และการรันครั้งที่สองกับไฟล์เดิมจะใช้บทถอดความที่บันทึกไว้ซ้ำ</translation>
     </message>
     <message>
         <source>Re-time existing subtitles</source>
@@ -2503,35 +2505,35 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Browse your whole mining history</source>
-        <translation type="unfinished" />
+        <translation>เรียกดูประวัติการขุดคำทั้งหมดของคุณ</translation>
     </message>
     <message>
         <source>Analytics lists every run you have mined. Pick a period, group the runs by day, week or month, see the cards per period in a chart, and export the table as a CSV file.</source>
-        <translation type="unfinished" />
+        <translation>สถิติแสดงทุกรอบที่คุณขุดคำ เลือกช่วงเวลา จัดกลุ่มรอบตามวัน สัปดาห์ หรือเดือน ดูจำนวนการ์ดต่อช่วงเวลาในแผนภูมิ และส่งออกตารางเป็นไฟล์ CSV</translation>
     </message>
     <message>
         <source>Show or delete a past run's cards</source>
-        <translation type="unfinished" />
+        <translation>แสดงหรือลบการ์ดของรอบที่ผ่านมา</translation>
     </message>
     <message>
         <source>Select a run in Analytics → Mining History to open its cards in Anki's browser or to delete them. The confirmation says how many of its cards are still in Anki and how many you have reviewed. Runs mined before this version have no card list.</source>
-        <translation type="unfinished" />
+        <translation>เลือกรอบใน สถิติ → ประวัติการขุดคำ เพื่อเปิดการ์ดของรอบนั้นในเบราว์เซอร์ของ Anki หรือเพื่อลบการ์ด หน้าต่างยืนยันจะบอกว่าการ์ดของรอบนั้นยังอยู่ใน Anki กี่ใบ และคุณทบทวนไปแล้วกี่ใบ รอบที่ขุดคำก่อนเวอร์ชันนี้ไม่มีรายการการ์ด</translation>
     </message>
     <message>
         <source>Track how many words you know</source>
-        <translation type="unfinished" />
+        <translation>ติดตามว่าคุณรู้คำศัพท์กี่คำ</translation>
     </message>
     <message>
         <source>The Known Words card on Analytics counts the words Anki Miner treats as known in the current mining language and shows how that number changed. It is counted while Anki is running, at most once every ten minutes.</source>
-        <translation type="unfinished" />
+        <translation>การ์ดคำที่รู้แล้วในแท็บสถิติจะนับคำที่ Anki Miner ถือว่ารู้แล้วในภาษาที่ขุดคำปัจจุบัน และแสดงว่าจำนวนนั้นเปลี่ยนไปอย่างไร ระบบจะนับขณะที่ Anki เปิดอยู่ ไม่เกินหนึ่งครั้งทุกสิบนาที</translation>
     </message>
     <message>
         <source>See how much of a frequency list you know</source>
-        <translation type="unfinished" />
+        <translation>ดูว่าคุณรู้คำในรายการความถี่มากแค่ไหน</translation>
     </message>
     <message>
         <source>Analytics → Frequency Coverage counts the words you know in ranks 1–1,000 up to 20,000 of your first frequency list with numeric ranks, and lists the missing words of each band. It needs Anki running.</source>
-        <translation type="unfinished" />
+        <translation>สถิติ → ความครอบคลุมตามความถี่ จะนับคำที่คุณรู้ในอันดับ 1–1,000 ไปจนถึง 20,000 ของรายการความถี่รายการแรกที่มีอันดับเป็นตัวเลข และแสดงคำที่ยังไม่รู้ในแต่ละช่วง ต้องเปิด Anki ไว้</translation>
     </message>
     <message>
         <source>Reset mining statistics</source>
@@ -2607,11 +2609,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Count a word as known only after its card has been reviewed</source>
-        <translation type="unfinished" />
+        <translation>นับคำว่ารู้แล้วเมื่อการ์ดของคำนั้นได้รับการทบทวนแล้วเท่านั้น</translation>
     </message>
     <message>
         <source>Readability and the i+1 sentence rule then count a word as known only when its Anki card has been reviewed at least once. Mining still skips every word that already has a card.</source>
-        <translation type="unfinished" />
+        <translation>จากนั้นความอ่านง่ายและกฎประโยค i+1 จะนับคำว่ารู้แล้วเฉพาะเมื่อการ์ด Anki ของคำนั้นได้รับการทบทวนอย่างน้อยหนึ่งครั้ง การขุดคำยังคงข้ามทุกคำที่มีการ์ดอยู่แล้ว</translation>
     </message>
     <message>
         <source>Exclude specific Anki decks from 'known'</source>
@@ -2631,27 +2633,27 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Browse every known word</source>
-        <translation type="unfinished" />
+        <translation>เรียกดูคำที่รู้แล้วทั้งหมด</translation>
     </message>
     <message>
         <source>Manage Known Words lists every word this language counts as known, with where it came from (added by you, mined by Anki Miner, from Anki) and the date it was added. Search it, filter it by source, and remove words you added. Words from Anki come back on the next sync.</source>
-        <translation type="unfinished" />
+        <translation>จัดการคำที่รู้แล้ว จะแสดงทุกคำที่ภาษานี้นับว่ารู้แล้ว พร้อมที่มา (คุณเพิ่มเอง, ขุดโดย Anki Miner, จาก Anki) และวันที่เพิ่ม ค้นหา กรองตามที่มา และเอาคำที่คุณเพิ่มออกได้ คำจาก Anki จะกลับมาในการซิงก์ครั้งถัดไป</translation>
     </message>
     <message>
         <source>Import known words from Kindle, Lute or LWT</source>
-        <translation type="unfinished" />
+        <translation>นำเข้าคำที่รู้แล้วจาก Kindle, Lute หรือ LWT</translation>
     </message>
     <message>
         <source>In Manage Known Words, Import… also reads a Kindle Vocabulary Builder file (vocab.db; words marked mastered) and Lute or LWT term exports (status 5 and 99).</source>
-        <translation type="unfinished" />
+        <translation>ใน จัดการคำที่รู้แล้ว ปุ่ม นำเข้า… ยังอ่านไฟล์ Kindle Vocabulary Builder (vocab.db; คำที่ทำเครื่องหมายว่าจำได้แล้ว) และไฟล์ส่งออกคำศัพท์ของ Lute หรือ LWT (สถานะ 5 และ 99) ได้ด้วย</translation>
     </message>
     <message>
         <source>Export words to a CSV file</source>
-        <translation type="unfinished" />
+        <translation>ส่งออกคำเป็นไฟล์ CSV</translation>
     </message>
     <message>
         <source>Export words… saves the list you are looking at in Manage Known Words, or a finished run's mined and not-mined words with the reason each was skipped, as a CSV file.</source>
-        <translation type="unfinished" />
+        <translation>ส่งออกคำ… จะบันทึกรายการที่คุณกำลังดูใน จัดการคำที่รู้แล้ว หรือคำที่ขุดและไม่ได้ขุดของรอบที่เสร็จแล้ว พร้อมเหตุผลที่ข้ามแต่ละคำ เป็นไฟล์ CSV</translation>
     </message>
     <message>
         <source>Exclude kana-only words</source>
@@ -2683,23 +2685,23 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Mine at most one word from each example sentence. A word whose sentence is taken moves to another line it appears on, and is skipped only when every one of its lines is taken.</source>
-        <translation type="unfinished" />
+        <translation>ขุดคำไม่เกินหนึ่งคำจากแต่ละประโยคตัวอย่าง คำที่ประโยคถูกใช้ไปแล้วจะย้ายไปยังบรรทัดอื่นที่คำนั้นปรากฏ และจะถูกข้ามเมื่อทุกบรรทัดของคำนั้นถูกใช้ไปแล้วเท่านั้น</translation>
     </message>
     <message>
         <source>Pick the clearest sentence</source>
-        <translation type="unfinished" />
+        <translation>เลือกประโยคที่ชัดเจนที่สุด</translation>
     </message>
     <message>
         <source>When a word appears on several lines, its card uses the line with the fewest unknown words and a comfortable length instead of the first one. The Word Curator still lists every line.</source>
-        <translation type="unfinished" />
+        <translation>เมื่อคำหนึ่งปรากฏในหลายบรรทัด การ์ดจะใช้บรรทัดที่มีคำที่ยังไม่รู้น้อยที่สุดและมีความยาวพอเหมาะ แทนบรรทัดแรก ตัวคัดคำยังคงแสดงทุกบรรทัด</translation>
     </message>
     <message>
         <source>Skip openings, endings and signs</source>
-        <translation type="unfinished" />
+        <translation>ข้ามเพลงเปิด เพลงปิด และป้ายข้อความ</translation>
     </message>
     <message>
         <source>Leave opening and ending songs, previews and on-screen signs out of mining, Condense and Readability: lines styled as songs or signs, and lines inside a video's opening, ending and preview chapters. On by default for new installs; turn it off in Settings → Sentences.</source>
-        <translation type="unfinished" />
+        <translation>ไม่นำเพลงเปิดและเพลงปิด ตัวอย่างตอนถัดไป และป้ายข้อความบนจอไปใช้ในการขุดคำ ย่อเสียง และความอ่านง่าย: บรรทัดที่จัดรูปแบบเป็นเพลงหรือป้ายข้อความ และบรรทัดที่อยู่ในบทเปิด บทปิด และบทตัวอย่างของวิดีโอ เปิดอยู่เป็นค่าเริ่มต้นสำหรับการติดตั้งใหม่ ปิดได้ที่ การตั้งค่า → ประโยค</translation>
     </message>
     <message>
         <source>Strip junk from subtitles (regex)</source>
@@ -2767,11 +2769,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Import a dictionary file</source>
-        <translation type="unfinished" />
+        <translation>นำเข้าไฟล์พจนานุกรม</translation>
     </message>
     <message>
         <source>Add a Yomitan zip, a StarDict dictionary (its archive or its .ifo file) or a CSV/TSV word list (term and definition, or term, reading and definition) as a definition source.</source>
-        <translation type="unfinished" />
+        <translation>เพิ่มไฟล์ zip ของ Yomitan, พจนานุกรม StarDict (ไฟล์บีบอัดหรือไฟล์ .ifo) หรือรายการคำ CSV/TSV (คำและความหมาย หรือคำ คำอ่าน และความหมาย) เป็นแหล่งความหมาย</translation>
     </message>
     <message>
         <source>Keep dictionaries up to date</source>
@@ -2843,7 +2845,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Attach word audio to cards from audio packs, JPod101 (Japanese), Google text-to-speech, or Microsoft Edge text-to-speech (every language). Wikimedia Commons plays recordings of real speakers from Wiktionary and Lingua Libre, tried before Google TTS in most languages.</source>
-        <translation type="unfinished" />
+        <translation>แนบเสียงคำศัพท์กับการ์ดจากชุดเสียง, JPod101 (ภาษาญี่ปุ่น), ระบบแปลงข้อความเป็นเสียงของ Google หรือระบบแปลงข้อความเป็นเสียงของ Microsoft Edge (ทุกภาษา) Wikimedia Commons เล่นเสียงบันทึกของผู้พูดจริงจาก Wiktionary และ Lingua Libre โดยจะลองก่อน Google TTS ในภาษาส่วนใหญ่</translation>
     </message>
     <message>
         <source>Import local audio packs</source>
@@ -2859,7 +2861,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Extract the spoken sentence as an audio clip; tune its format and bitrate. Even out audio volume brings sentence clips and condensed audio to one loudness and fades each clip in and out.</source>
-        <translation type="unfinished" />
+        <translation>ตัดเสียงประโยคที่พูดออกมาเป็นคลิปเสียง ปรับรูปแบบและบิตเรตได้ ปรับระดับเสียงให้เท่ากัน จะทำให้คลิปประโยคและเสียงที่ย่อแล้วดังเท่ากัน และเฟดเข้าออกที่แต่ละคลิป</translation>
     </message>
     <message>
         <source>Sentence audio for reading (TTS)</source>
@@ -2883,7 +2885,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Capture a still frame from the scene to put on the card. Crop manga pictures to the speech bubble shows the bubble and the art around it instead of the whole page.</source>
-        <translation type="unfinished" />
+        <translation>จับภาพนิ่งจากฉากเพื่อใส่ในการ์ด ครอปภาพมังงะเฉพาะกรอบคำพูด จะแสดงกรอบคำพูดและภาพรอบๆ แทนทั้งหน้า</translation>
     </message>
     <message>
         <source>Animated clips (GIF/WebP)</source>
@@ -2963,7 +2965,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Add tags to every note Anki Miner creates. Card tags can use {series}, {episode} and {volume}. Each card gets its own show, episode or book volume, for example mined::{series}::{episode} gives mined::Frieren::03.</source>
-        <translation type="unfinished" />
+        <translation>เพิ่มแท็กให้ทุกโน้ตที่ Anki Miner สร้าง แท็กการ์ดใช้ {series}, {episode} และ {volume} ได้ แต่ละการ์ดจะได้ชื่อเรื่อง ตอน หรือเล่มหนังสือของตัวเอง เช่น mined::{series}::{episode} จะได้ mined::Frieren::03</translation>
     </message>
     <message>
         <source>Connect to Anki (AnkiConnect)</source>
@@ -2971,15 +2973,15 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Set the AnkiConnect address; Refresh re-checks the connection to your running Anki. If AnkiConnect is set up with an API key, add it to the address: http://127.0.0.1:8765/?key=YOUR_KEY. Anki Miner sends it with every request and never writes it to the log.</source>
-        <translation type="unfinished" />
+        <translation>ตั้งที่อยู่ของ AnkiConnect; รีเฟรช จะตรวจการเชื่อมต่อกับ Anki ที่เปิดอยู่อีกครั้ง หากตั้งค่า AnkiConnect ด้วยคีย์ API ให้เพิ่มคีย์ลงในที่อยู่: http://127.0.0.1:8765/?key=YOUR_KEY Anki Miner จะส่งคีย์ไปกับทุกคำขอและไม่เขียนคีย์ลงในบันทึกเลย</translation>
     </message>
     <message>
         <source>Sync Anki after mining</source>
-        <translation type="unfinished" />
+        <translation>ซิงก์ Anki หลังขุดคำ</translation>
     </message>
     <message>
         <source>After a run that added cards, Anki Miner asks Anki to sync with AnkiWeb. If the sync fails, the Activity Log says so and the cards stay added.</source>
-        <translation type="unfinished" />
+        <translation>หลังรอบที่เพิ่มการ์ด Anki Miner จะขอให้ Anki ซิงก์กับ AnkiWeb หากซิงก์ไม่สำเร็จ บันทึกกิจกรรมจะแจ้งไว้ และการ์ดที่เพิ่มแล้วยังคงอยู่</translation>
     </message>
     <message>
         <source>Fill in field mappings automatically</source>
@@ -3067,7 +3069,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Draw a box where a video's on-screen dialogue appears and Anki Miner reads it into a timed .srt that Video → Single can mine. Made for game longplays without commentary. It also reads image subtitles (Blu-ray .sup, DVD .idx/.sub, or an image track inside a video) without a box. Lines with none of your mining language's letters are left out. Download the OCR engine from the setup card on Utilities → Video OCR.</source>
-        <translation type="unfinished" />
+        <translation>วาดกรอบตรงที่บทพูดบนจอของวิดีโอปรากฏ แล้ว Anki Miner จะอ่านเป็นไฟล์ .srt พร้อมเวลาที่ วิดีโอ → เดี่ยว ใช้ขุดคำได้ ออกแบบมาสำหรับวิดีโอเล่นเกมยาวที่ไม่มีคำพากย์ ยังอ่านคำบรรยายแบบภาพ (Blu-ray .sup, DVD .idx/.sub หรือแทร็กภาพในวิดีโอ) ได้โดยไม่ต้องวาดกรอบ บรรทัดที่ไม่มีตัวอักษรของภาษาที่ขุดคำเลยจะถูกตัดออก ดาวน์โหลดเอนจิน OCR ได้จากการ์ดตั้งค่าใน ยูทิลิตี้ → OCR วิดีโอ</translation>
     </message>
     <message>
         <source>Sync an audiobook to its EPUB</source>
@@ -3075,23 +3077,23 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Transcribe an audiobook and time the book's own sentences to it, writing an .srt the Audiobook tab, Reading → Subtitle Files or a reader can use. A second run on the same audio reuses the saved transcript instead of transcribing again.</source>
-        <translation type="unfinished" />
+        <translation>ถอดความหนังสือเสียงและจับเวลาประโยคของหนังสือเองให้ตรงกับเสียง แล้วเขียนไฟล์ .srt ที่แท็บหนังสือเสียง, การอ่าน → ไฟล์คำบรรยาย หรือแอปอ่านหนังสือใช้ได้ การรันครั้งที่สองกับเสียงเดิมจะใช้บทถอดความที่บันทึกไว้ซ้ำแทนการถอดความใหม่</translation>
     </message>
     <message>
         <source>Sync a shelf of audiobooks in one run</source>
-        <translation type="unfinished" />
+        <translation>ซิงก์หนังสือเสียงทั้งชั้นในรอบเดียว</translation>
     </message>
     <message>
         <source>In Utilities → Audiobook Sync, choose Folder and pick a folder that holds one folder per book, each with its EPUB (or text file) and its audio files. The books sync one after another, in name order.</source>
-        <translation type="unfinished" />
+        <translation>ใน ยูทิลิตี้ → ซิงก์หนังสือเสียง เลือก โฟลเดอร์ แล้วเลือกโฟลเดอร์ที่มีโฟลเดอร์ย่อยเล่มละหนึ่งโฟลเดอร์ แต่ละโฟลเดอร์มี EPUB (หรือไฟล์ข้อความ) และไฟล์เสียงของเล่มนั้น หนังสือจะซิงก์ทีละเล่มตามลำดับชื่อ</translation>
     </message>
     <message>
         <source>See how well an audiobook synced</source>
-        <translation type="unfinished" />
+        <translation>ดูว่าหนังสือเสียงซิงก์ได้ดีแค่ไหน</translation>
     </message>
     <message>
         <source>After Audiobook Sync, each book gets a line under the Book card: how many of its sentences got a subtitle, how much of the narration matched the book, and a grade from A to D. Chapters read out of book order are found too; sentences the narrator skipped never get a subtitle.</source>
-        <translation type="unfinished" />
+        <translation>หลัง ซิงก์หนังสือเสียง หนังสือแต่ละเล่มจะได้หนึ่งบรรทัดใต้การ์ดหนังสือ: ประโยคกี่ประโยคที่ได้คำบรรยาย เสียงบรรยายตรงกับหนังสือมากแค่ไหน และเกรดตั้งแต่ A ถึง D บทที่อ่านไม่เรียงตามหนังสือก็จะถูกพบด้วย ส่วนประโยคที่ผู้บรรยายข้ามไปจะไม่ได้คำบรรยายเลย</translation>
     </message>
     <message>
         <source>Check how much of a show, book or manga you can read</source>
@@ -3175,11 +3177,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Restore an automatic backup</source>
-        <translation type="unfinished" />
+        <translation>กู้คืนข้อมูลสำรองอัตโนมัติ</translation>
     </message>
     <message>
         <source>Anki Miner backs up your known words, statistics, settings and profiles once a day when it starts, and keeps the last 7 days. Settings → General → Restore a backup… puts one back the next time the app starts.</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner สำรองคำที่รู้แล้ว สถิติ การตั้งค่า และโปรไฟล์ของคุณวันละครั้งเมื่อเริ่มทำงาน และเก็บไว้ 7 วันล่าสุด การตั้งค่า → ทั่วไป → กู้คืนข้อมูลสำรอง… จะนำข้อมูลสำรองชุดหนึ่งกลับมาในครั้งถัดไปที่เปิดแอป</translation>
     </message>
     <message>
         <source>Undo a mining run</source>
@@ -3191,11 +3193,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Export a run's words</source>
-        <translation type="unfinished" />
+        <translation>ส่งออกคำของรอบหนึ่ง</translation>
     </message>
     <message>
         <source>Press View details on a run's result line, then Export words… to save the run's mined and not-mined words, with the reason each was skipped, as a CSV file.</source>
-        <translation type="unfinished" />
+        <translation>กด ดูรายละเอียด ที่บรรทัดผลลัพธ์ของรอบ แล้วกด ส่งออกคำ… เพื่อบันทึกคำที่ขุดและไม่ได้ขุดของรอบนั้น พร้อมเหตุผลที่ข้ามแต่ละคำ เป็นไฟล์ CSV</translation>
     </message>
     <message>
         <source>Keyboard shortcuts</source>
@@ -4567,11 +4569,11 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
     </message>
     <message>
         <source>Choose dictionary files</source>
-        <translation type="unfinished" />
+        <translation>เลือกไฟล์พจนานุกรม</translation>
     </message>
     <message>
         <source>Dictionaries (*.zip *.ifo *.tar.gz *.tgz *.tar.bz2 *.tar.xz *.csv *.tsv)</source>
-        <translation type="unfinished" />
+        <translation>พจนานุกรม (*.zip *.ifo *.tar.gz *.tgz *.tar.bz2 *.tar.xz *.csv *.tsv)</translation>
     </message>
     <message>
         <source>Dictionary %1 of %2: %3</source>
@@ -5405,8 +5407,8 @@ No files on disk are deleted.</source>
     </message>
     <message numerus="yes">
         <source>Skipping lines in %n opening, ending or preview chapter(s)</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>กำลังข้ามบรรทัดใน %n บทเปิด บทปิด หรือบทตัวอย่าง</numerusform>
         </translation>
     </message>
     <message>
@@ -5453,7 +5455,7 @@ No files on disk are deleted.</source>
     </message>
     <message>
         <source>Only %1% of the first %2 words have an entry in your dictionaries. Is this file in the language you are mining?</source>
-        <translation type="unfinished" />
+        <translation>มีเพียง %1% ของ %2 คำแรกที่มีรายการในพจนานุกรมของคุณ ไฟล์นี้เป็นภาษาที่คุณกำลังขุดคำหรือไม่?</translation>
     </message>
     <message>
         <source>Frequency cutoff ignored — no ranked frequency source is loaded (Settings → Frequency).</source>
@@ -5561,11 +5563,11 @@ No files on disk are deleted.</source>
     </message>
     <message>
         <source>Translation subtitles picked automatically: %1</source>
-        <translation type="unfinished" />
+        <translation>เลือกคำบรรยายคำแปลโดยอัตโนมัติ: %1</translation>
     </message>
     <message>
         <source>Translation subtitles picked automatically: embedded track %1</source>
-        <translation type="unfinished" />
+        <translation>เลือกคำบรรยายคำแปลโดยอัตโนมัติ: แทร็กที่ฝังในไฟล์ %1</translation>
     </message>
     <message>
         <source>Could not extract media for any word — no cards created</source>
@@ -5833,11 +5835,11 @@ No files on disk are deleted.</source>
     </message>
     <message>
         <source>Count a word as known only after its card has been reviewed</source>
-        <translation type="unfinished" />
+        <translation>นับคำว่ารู้แล้วเมื่อการ์ดของคำนั้นได้รับการทบทวนแล้วเท่านั้น</translation>
     </message>
     <message>
         <source>Readability and the i+1 sentence rule count a word as known only when its Anki card has been reviewed at least once. Mining still skips every word that already has a card.</source>
-        <translation type="unfinished" />
+        <translation>ความอ่านง่ายและกฎประโยค i+1 จะนับคำว่ารู้แล้วเฉพาะเมื่อการ์ด Anki ของคำนั้นได้รับการทบทวนอย่างน้อยหนึ่งครั้ง การขุดคำยังคงข้ามทุกคำที่มีการ์ดอยู่แล้ว</translation>
     </message>
     <message>
         <source>Keep words known after their cards are deleted</source>
@@ -6499,15 +6501,15 @@ No index files are deleted.</source>
     <name>KnownWordsManagerDialog</name>
     <message>
         <source>Word</source>
-        <translation type="unfinished" />
+        <translation>คำ</translation>
     </message>
     <message>
         <source>Source</source>
-        <translation type="unfinished" />
+        <translation>ที่มา</translation>
     </message>
     <message>
         <source>Added</source>
-        <translation type="unfinished" />
+        <translation>วันที่เพิ่ม</translation>
     </message>
     <message>
         <source>Manage Known Words</source>
@@ -6519,7 +6521,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Every word this language counts as known, and where it came from. Words you added from the Word Curator stay known on every run and across cache rebuilds.</source>
-        <translation type="unfinished" />
+        <translation>ทุกคำที่ภาษานี้นับว่ารู้แล้ว และที่มาของคำ คำที่คุณเพิ่มจากตัวคัดคำจะยังนับว่ารู้แล้วในทุกรอบ แม้สร้างแคชใหม่</translation>
     </message>
     <message>
         <source>Decks this language's known-words scan skips: %1. Change them in Settings → Word Filters.</source>
@@ -6531,15 +6533,15 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Added by you</source>
-        <translation type="unfinished" />
+        <translation>คุณเพิ่มเอง</translation>
     </message>
     <message>
         <source>Mined by Anki Miner</source>
-        <translation type="unfinished" />
+        <translation>ขุดโดย Anki Miner</translation>
     </message>
     <message>
         <source>From Anki</source>
-        <translation type="unfinished" />
+        <translation>จาก Anki</translation>
     </message>
     <message>
         <source>Filter…</source>
@@ -6547,7 +6549,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>All sources</source>
-        <translation type="unfinished" />
+        <translation>ทุกที่มา</translation>
     </message>
     <message>
         <source>Rebuild Known Words DB</source>
@@ -6563,7 +6565,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Removes words you added. Words from Anki come back on the next run, and mined words leave with Undo.</source>
-        <translation type="unfinished" />
+        <translation>เอาคำที่คุณเพิ่มออก คำจาก Anki จะกลับมาในรอบถัดไป ส่วนคำที่ขุดแล้วจะออกไปเมื่อเลิกทำ</translation>
     </message>
     <message>
         <source>Import…</source>
@@ -6571,7 +6573,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Export words…</source>
-        <translation type="unfinished" />
+        <translation>ส่งออกคำ…</translation>
     </message>
     <message>
         <source>Reset User List</source>
@@ -6603,11 +6605,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Kindle Vocabulary Builder</source>
-        <translation type="unfinished" />
+        <translation>Kindle Vocabulary Builder</translation>
     </message>
     <message>
         <source>Lute or LWT term export</source>
-        <translation type="unfinished" />
+        <translation>ไฟล์ส่งออกคำศัพท์ของ Lute หรือ LWT</translation>
     </message>
     <message>
         <source>plain word list</source>
@@ -6619,7 +6621,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Known word lists (*.csv *.tsv *.txt *.json *.db);;All Files (*)</source>
-        <translation type="unfinished" />
+        <translation>รายการคำที่รู้แล้ว (*.csv *.tsv *.txt *.json *.db);;ไฟล์ทั้งหมด (*)</translation>
     </message>
     <message>
         <source>Detected: %1 — every entry is imported.
@@ -6651,7 +6653,7 @@ Words to add: %3. Continue?</source>
     </message>
     <message>
         <source>This file has no words for %1. It contains: %2.</source>
-        <translation type="unfinished" />
+        <translation>ไฟล์นี้ไม่มีคำสำหรับ %1 ในไฟล์มี: %2</translation>
     </message>
     <message>
         <source>That file is too large to import.</source>
@@ -6667,7 +6669,7 @@ Words to add: %3. Continue?</source>
     </message>
     <message>
         <source>File format not recognized. Supported: jpdb review export (JSON), Migaku word export (JSON/CSV), AnkiMorphs known morphs (CSV), Kindle Vocabulary Builder (vocab.db), Lute or LWT term export (CSV/TSV), plain word lists (one word per line).</source>
-        <translation type="unfinished" />
+        <translation>ไม่รู้จักรูปแบบไฟล์ รองรับ: ไฟล์ส่งออกการทบทวนของ jpdb (JSON), ไฟล์ส่งออกคำของ Migaku (JSON/CSV), หน่วยคำที่รู้แล้วของ AnkiMorphs (CSV), Kindle Vocabulary Builder (vocab.db), ไฟล์ส่งออกคำศัพท์ของ Lute หรือ LWT (CSV/TSV), รายการคำแบบธรรมดา (บรรทัดละหนึ่งคำ)</translation>
     </message>
     <message>
         <source>That file could not be imported.</source>
@@ -6689,7 +6691,7 @@ Words to add: %3. Continue?</source>
     </message>
     <message>
         <source>CSV files (*.csv);;Text files, one word per line (*.txt)</source>
-        <translation type="unfinished" />
+        <translation>ไฟล์ CSV (*.csv);;ไฟล์ข้อความ บรรทัดละหนึ่งคำ (*.txt)</translation>
     </message>
     <message>
         <source>The known words list could not be exported.</source>
@@ -7437,7 +7439,7 @@ Continue?</source>
     </message>
     <message>
         <source>Opus clips do not play in AnkiMobile on iPhone or iPad. Choose MP3 if you review there.</source>
-        <translation type="unfinished" />
+        <translation>คลิป Opus เล่นใน AnkiMobile บน iPhone หรือ iPad ไม่ได้ เลือก MP3 หากคุณทบทวนบนอุปกรณ์เหล่านั้น</translation>
     </message>
     <message>
         <source> kbps</source>
@@ -7465,11 +7467,11 @@ Continue?</source>
     </message>
     <message>
         <source>Even out audio volume</source>
-        <translation type="unfinished" />
+        <translation>ปรับระดับเสียงให้เท่ากัน</translation>
     </message>
     <message>
         <source>Brings sentence clips and condensed audio to one volume and fades each clip in and out, so quiet and loud sources sound alike. Applies to new clips.</source>
-        <translation type="unfinished" />
+        <translation>ทำให้คลิปประโยคและเสียงที่ย่อแล้วมีระดับเสียงเท่ากัน และเฟดเข้าออกที่แต่ละคลิป เพื่อให้แหล่งเสียงที่เบาและดังฟังใกล้เคียงกัน มีผลกับคลิปใหม่</translation>
     </message>
     <message>
         <source>Text-to-speech</source>
@@ -7493,11 +7495,11 @@ Continue?</source>
     </message>
     <message>
         <source>Crop manga pictures to the speech bubble</source>
-        <translation type="unfinished" />
+        <translation>ครอปภาพมังงะเฉพาะกรอบคำพูด</translation>
     </message>
     <message>
         <source>Manga cards show the speech bubble and the art around it instead of the whole page. A sentence with no bubble position keeps the whole page.</source>
-        <translation type="unfinished" />
+        <translation>การ์ดมังงะจะแสดงกรอบคำพูดและภาพรอบๆ แทนทั้งหน้า ประโยคที่ไม่มีตำแหน่งกรอบคำพูดจะใช้ทั้งหน้าตามเดิม</translation>
     </message>
     <message>
         <source>Enable animated screenshots</source>
@@ -7733,7 +7735,7 @@ Continue?</source>
     </message>
     <message>
         <source>Anki didn't sync after this run. Your cards are added; sync from Anki, or see the log for why.</source>
-        <translation type="unfinished" />
+        <translation>Anki ไม่ได้ซิงก์หลังรอบนี้ การ์ดของคุณถูกเพิ่มแล้ว ซิงก์จาก Anki หรือดูสาเหตุในบันทึก</translation>
     </message>
     <message>
         <source>Anki Miner couldn't open these cards in Anki.</source>
@@ -9498,7 +9500,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>An .epub, .txt or .pdf book, or a folder of books; each book is mined separately.</source>
-        <translation type="unfinished" />
+        <translation>หนังสือ .epub, .txt หรือ .pdf หรือโฟลเดอร์หนังสือ โดยขุดคำแยกทีละเล่ม</translation>
     </message>
     <message>
         <source>Mine</source>
@@ -9534,7 +9536,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Choose an .epub, .txt or .pdf book, or a folder of books.</source>
-        <translation type="unfinished" />
+        <translation>เลือกหนังสือ .epub, .txt หรือ .pdf หรือโฟลเดอร์หนังสือ</translation>
     </message>
     <message>
         <source>Starting…</source>
@@ -9600,7 +9602,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Add subtitle files (.srt, .ass, .ssa, .vtt, .smi, .lrc) to the list.</source>
-        <translation type="unfinished" />
+        <translation>เพิ่มไฟล์คำบรรยาย (.srt, .ass, .ssa, .vtt, .smi, .lrc) ลงในรายการ</translation>
     </message>
     <message>
         <source>Remove Selected</source>
@@ -9781,19 +9783,19 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Web addresses to fetch, one per line (https://…)</source>
-        <translation type="unfinished" />
+        <translation>ที่อยู่เว็บที่จะดึง บรรทัดละหนึ่งที่อยู่ (https://…)</translation>
     </message>
     <message>
         <source>Web addresses</source>
-        <translation type="unfinished" />
+        <translation>ที่อยู่เว็บ</translation>
     </message>
     <message>
         <source>Fetch</source>
-        <translation type="unfinished" />
+        <translation>ดึง</translation>
     </message>
     <message>
         <source>Put the article text of each web address in the box below, to check before mining.</source>
-        <translation type="unfinished" />
+        <translation>นำข้อความบทความจากแต่ละที่อยู่เว็บมาใส่ในช่องด้านล่าง เพื่อตรวจดูก่อนขุดคำ</translation>
     </message>
     <message>
         <source>Paste the text you want to mine. Cards from pasted text have no sentence audio from a recording.</source>
@@ -9841,59 +9843,59 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Each line must be a web address that starts with http:// or https://.</source>
-        <translation type="unfinished" />
+        <translation>แต่ละบรรทัดต้องเป็นที่อยู่เว็บที่ขึ้นต้นด้วย http:// หรือ https://</translation>
     </message>
     <message>
         <source>Enter a web address first.</source>
-        <translation type="unfinished" />
+        <translation>ป้อนที่อยู่เว็บก่อน</translation>
     </message>
     <message>
         <source>Fetch takes up to 10 web addresses at a time.</source>
-        <translation type="unfinished" />
+        <translation>ดึง รับที่อยู่เว็บได้ครั้งละไม่เกิน 10 รายการ</translation>
     </message>
     <message>
         <source>Fetching…</source>
-        <translation type="unfinished" />
+        <translation>กำลังดึง…</translation>
     </message>
     <message>
         <source>Could not fetch %1: %2</source>
-        <translation type="unfinished" />
+        <translation>ดึง %1 ไม่ได้: %2</translation>
     </message>
     <message>
         <source>None of the pages could be fetched.</source>
-        <translation type="unfinished" />
+        <translation>ดึงหน้าเว็บไม่ได้เลยสักหน้า</translation>
     </message>
     <message>
         <source>Fetched %1.</source>
-        <translation type="unfinished" />
+        <translation>ดึง %1 แล้ว</translation>
     </message>
     <message>
         <source>The pages could not be fetched.</source>
-        <translation type="unfinished" />
+        <translation>ดึงหน้าเว็บไม่ได้</translation>
     </message>
     <message>
         <source>The page could not be reached. Check the address and your connection.</source>
-        <translation type="unfinished" />
+        <translation>เข้าถึงหน้าเว็บไม่ได้ ตรวจสอบที่อยู่และการเชื่อมต่อของคุณ</translation>
     </message>
     <message>
         <source>The site did not send the page.</source>
-        <translation type="unfinished" />
+        <translation>เว็บไซต์ไม่ได้ส่งหน้าเว็บมา</translation>
     </message>
     <message>
         <source>This address is not a web page.</source>
-        <translation type="unfinished" />
+        <translation>ที่อยู่นี้ไม่ใช่หน้าเว็บ</translation>
     </message>
     <message>
         <source>This page is too large to read.</source>
-        <translation type="unfinished" />
+        <translation>หน้านี้ใหญ่เกินกว่าจะอ่านได้</translation>
     </message>
     <message>
         <source>This is not a web address.</source>
-        <translation type="unfinished" />
+        <translation>นี่ไม่ใช่ที่อยู่เว็บ</translation>
     </message>
     <message>
         <source>No article text found on this page. Pages that draw their text with JavaScript cannot be read.</source>
-        <translation type="unfinished" />
+        <translation>ไม่พบข้อความบทความในหน้านี้ หน้าที่แสดงข้อความด้วย JavaScript จะอ่านไม่ได้</translation>
     </message>
     <message>
         <source>Paste some text first.</source>
@@ -9905,7 +9907,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>The fetched text was edited, so it is mined as one text without its page titles.</source>
-        <translation type="unfinished" />
+        <translation>ข้อความที่ดึงมาถูกแก้ไขแล้ว จึงขุดคำเป็นข้อความเดียวโดยไม่มีชื่อหน้าเว็บ</translation>
     </message>
     <message>
         <source>That picture cannot be read. Pick another, or remove it to mine without one.</source>
@@ -10691,7 +10693,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Export words…</source>
-        <translation type="unfinished" />
+        <translation>ส่งออกคำ…</translation>
     </message>
     <message>
         <source>Close</source>
@@ -10705,19 +10707,19 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Export Words</source>
-        <translation type="unfinished" />
+        <translation>ส่งออกคำ</translation>
     </message>
     <message>
         <source>CSV files (*.csv)</source>
-        <translation type="unfinished" />
+        <translation>ไฟล์ CSV (*.csv)</translation>
     </message>
     <message>
         <source>Words exported</source>
-        <translation type="unfinished" />
+        <translation>ส่งออกคำแล้ว</translation>
     </message>
     <message>
         <source>Export failed — try again</source>
-        <translation type="unfinished" />
+        <translation>ส่งออกไม่สำเร็จ — ลองอีกครั้ง</translation>
     </message>
     <message>
         <source>Confirm Undo</source>
@@ -10921,11 +10923,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Skip openings, endings and signs</source>
-        <translation type="unfinished" />
+        <translation>ข้ามเพลงเปิด เพลงปิด และป้ายข้อความ</translation>
     </message>
     <message>
         <source>Leaves out song lyrics, previews and on-screen signs: lines whose subtitle style marks them as a song or a sign, and lines inside a video's opening, ending or preview chapters. Applies to mining, Condense and Readability.</source>
-        <translation type="unfinished" />
+        <translation>ตัดเนื้อเพลง ตัวอย่างตอนถัดไป และป้ายข้อความบนจอออก: บรรทัดที่สไตล์คำบรรยายระบุว่าเป็นเพลงหรือป้ายข้อความ และบรรทัดที่อยู่ในบทเปิด บทปิด หรือบทตัวอย่างของวิดีโอ มีผลกับการขุดคำ ย่อเสียง และความอ่านง่าย</translation>
     </message>
     <message>
         <source>Sentence options</source>
@@ -10941,7 +10943,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Mines at most one word per example sentence. A word whose sentence is already taken moves to another line it appears on, and is skipped only when every one of its lines is taken. Whitelisted words are still mined.</source>
-        <translation type="unfinished" />
+        <translation>ขุดคำไม่เกินหนึ่งคำต่อประโยคตัวอย่าง คำที่ประโยคถูกใช้ไปแล้วจะย้ายไปยังบรรทัดอื่นที่คำนั้นปรากฏ และจะถูกข้ามเมื่อทุกบรรทัดของคำนั้นถูกใช้ไปแล้วเท่านั้น คำในรายการอนุญาตยังคงถูกขุด</translation>
     </message>
     <message>
         <source>Only i+1 sentences (exactly one unknown word)</source>
@@ -10957,11 +10959,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Pick the clearest sentence for each word</source>
-        <translation type="unfinished" />
+        <translation>เลือกประโยคที่ชัดเจนที่สุดสำหรับแต่ละคำ</translation>
     </message>
     <message>
         <source>When a word appears on several lines, its card uses the line with the fewest unknown words and a comfortable length instead of the first one. The Word Curator still lists every line, and card order does not change.</source>
-        <translation type="unfinished" />
+        <translation>เมื่อคำหนึ่งปรากฏในหลายบรรทัด การ์ดจะใช้บรรทัดที่มีคำที่ยังไม่รู้น้อยที่สุดและมีความยาวพอเหมาะ แทนบรรทัดแรก ตัวคัดคำยังคงแสดงทุกบรรทัด และลำดับการ์ดไม่เปลี่ยน</translation>
     </message>
     <message>
         <source> s</source>
@@ -13017,15 +13019,15 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>Restore a backup…</source>
-        <translation type="unfinished" />
+        <translation>กู้คืนข้อมูลสำรอง…</translation>
     </message>
     <message>
         <source>Backups</source>
-        <translation type="unfinished" />
+        <translation>ข้อมูลสำรอง</translation>
     </message>
     <message>
         <source>Anki Miner saves your known words, statistics, settings and profiles once a day when it starts, and keeps the last 7 days.</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner บันทึกคำที่รู้แล้ว สถิติ การตั้งค่า และโปรไฟล์ของคุณวันละครั้งเมื่อเริ่มทำงาน และเก็บไว้ 7 วันล่าสุด</translation>
     </message>
     <message>
         <source>Themes</source>
@@ -13069,27 +13071,27 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>There is no backup yet. Anki Miner makes one each day when it starts.</source>
-        <translation type="unfinished" />
+        <translation>ยังไม่มีข้อมูลสำรอง Anki Miner จะสร้างข้อมูลสำรองทุกวันเมื่อเริ่มทำงาน</translation>
     </message>
     <message>
         <source>Restore a Backup</source>
-        <translation type="unfinished" />
+        <translation>กู้คืนข้อมูลสำรอง</translation>
     </message>
     <message>
         <source>Restore the backup from:</source>
-        <translation type="unfinished" />
+        <translation>กู้คืนข้อมูลสำรองจาก:</translation>
     </message>
     <message>
         <source>Replace your known words, statistics, settings and profiles with the copies from %1? The restore runs the next time Anki Miner starts. Changes made after that backup are lost.</source>
-        <translation type="unfinished" />
+        <translation>แทนที่คำที่รู้แล้ว สถิติ การตั้งค่า และโปรไฟล์ของคุณด้วยสำเนาจาก %1 หรือไม่? การกู้คืนจะทำงานในครั้งถัดไปที่ Anki Miner เริ่มทำงาน การเปลี่ยนแปลงที่ทำหลังข้อมูลสำรองนั้นจะหายไป</translation>
     </message>
     <message>
         <source>The restore could not be scheduled.</source>
-        <translation type="unfinished" />
+        <translation>ไม่สามารถกำหนดเวลาการกู้คืนได้</translation>
     </message>
     <message>
         <source>The backup from %1 will be restored when Anki Miner next starts.</source>
-        <translation type="unfinished" />
+        <translation>ข้อมูลสำรองจาก %1 จะถูกกู้คืนเมื่อ Anki Miner เริ่มทำงานครั้งถัดไป</translation>
     </message>
 </context><context>
     <name>UpdateBanner</name>
@@ -13257,11 +13259,11 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>The picture (burned-in text)</source>
-        <translation type="unfinished" />
+        <translation>ภาพในวิดีโอ (ข้อความที่ฝังในภาพ)</translation>
     </message>
     <message>
         <source>Image subtitle track %1</source>
-        <translation type="unfinished" />
+        <translation>แทร็กคำบรรยายแบบภาพ %1</translation>
     </message>
     <message>
         <source>The OCR engine could not start on this computer. The details say why.</source>
@@ -13301,15 +13303,15 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>This field takes a video or an image subtitle file (.sup, .idx, .sub).</source>
-        <translation type="unfinished" />
+        <translation>ช่องนี้รับวิดีโอหรือไฟล์คำบรรยายแบบภาพ (.sup, .idx, .sub)</translation>
     </message>
     <message>
         <source>Read from:</source>
-        <translation type="unfinished" />
+        <translation>อ่านจาก:</translation>
     </message>
     <message>
         <source>Read text drawn into the picture, or one of the video's image subtitle tracks.</source>
-        <translation type="unfinished" />
+        <translation>อ่านข้อความที่อยู่ในภาพ หรือแทร็กคำบรรยายแบบภาพแทร็กหนึ่งของวิดีโอ</translation>
     </message>
     <message>
         <source>Video Folder:</source>
@@ -13393,7 +13395,7 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>Image subtitles are read over the whole frame, so they need no region.</source>
-        <translation type="unfinished" />
+        <translation>คำบรรยายแบบภาพจะอ่านจากทั้งเฟรม จึงไม่ต้องกำหนดพื้นที่</translation>
     </message>
     <message>
         <source>Download OCR models</source>
@@ -13437,7 +13439,7 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>A DVD subtitle needs its .idx and .sub files in the same folder.</source>
-        <translation type="unfinished" />
+        <translation>คำบรรยาย DVD ต้องมีไฟล์ .idx และ .sub อยู่ในโฟลเดอร์เดียวกัน</translation>
     </message>
     <message>
         <source>Choose a folder before reading subtitles.</source>
@@ -13723,15 +13725,15 @@ Sort by it to work through a long recording in order — then highlight the rows
     </message>
     <message>
         <source>Used on the card</source>
-        <translation type="unfinished" />
+        <translation>ใช้ในการ์ด</translation>
     </message>
     <message>
         <source>Back to the first match</source>
-        <translation type="unfinished" />
+        <translation>กลับไปที่รายการแรกที่ตรงกัน</translation>
     </message>
     <message>
         <source>Use this dictionary on the card</source>
-        <translation type="unfinished" />
+        <translation>ใช้พจนานุกรมนี้ในการ์ด</translation>
     </message>
     <message>
         <source>Sentences (%1)</source>
@@ -14169,7 +14171,7 @@ Sort by it to work through a long recording in order — then highlight the rows
     </message>
     <message>
         <source>Wikimedia Commons (native recordings)</source>
-        <translation type="unfinished" />
+        <translation>Wikimedia Commons (เสียงบันทึกจากเจ้าของภาษา)</translation>
     </message>
     <message>
         <source>Microsoft Edge read-aloud (synthetic TTS)</source>
@@ -14183,7 +14185,7 @@ Sort by it to work through a long recording in order — then highlight the rows
     <name>_BarChart</name>
     <message>
         <source>Cards per period</source>
-        <translation type="unfinished" />
+        <translation>การ์ดต่อช่วงเวลา</translation>
     </message>
 </context><context>
     <name>_HealthRow</name>
@@ -14205,11 +14207,11 @@ Sort by it to work through a long recording in order — then highlight the rows
     <name>_MissingWordsDialog</name>
     <message>
         <source>Missing Words</source>
-        <translation type="unfinished" />
+        <translation>คำที่ยังไม่รู้</translation>
     </message>
     <message>
         <source>Not known yet in ranks %1</source>
-        <translation type="unfinished" />
+        <translation>ยังไม่รู้ในอันดับ %1</translation>
     </message>
 </context><context>
     <name>app</name>

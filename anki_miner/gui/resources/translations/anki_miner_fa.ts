@@ -93,59 +93,59 @@
     </message>
     <message>
         <source>Known Words</source>
-        <translation type="unfinished" />
+        <translation>واژه‌های شناخته‌شده</translation>
     </message>
     <message>
         <source>Words Anki Miner treats as known in the current mining language.</source>
-        <translation type="unfinished" />
+        <translation>واژه‌هایی که Anki Miner در زبان استخراج فعلی شناخته‌شده به شمار می‌آورد.</translation>
     </message>
     <message>
         <source>Mining History</source>
-        <translation type="unfinished" />
+        <translation>تاریخچه استخراج</translation>
     </message>
     <message>
         <source>History period</source>
-        <translation type="unfinished" />
+        <translation>بازه تاریخچه</translation>
     </message>
     <message>
         <source>All time</source>
-        <translation type="unfinished" />
+        <translation>همه زمان‌ها</translation>
     </message>
     <message>
         <source>Last 7 days</source>
-        <translation type="unfinished" />
+        <translation>۷ روز گذشته</translation>
     </message>
     <message>
         <source>Last 30 days</source>
-        <translation type="unfinished" />
+        <translation>۳۰ روز گذشته</translation>
     </message>
     <message>
         <source>Last 12 months</source>
-        <translation type="unfinished" />
+        <translation>۱۲ ماه گذشته</translation>
     </message>
     <message>
         <source>History grouping</source>
-        <translation type="unfinished" />
+        <translation>گروه‌بندی تاریخچه</translation>
     </message>
     <message>
         <source>Each run</source>
-        <translation type="unfinished" />
+        <translation>هر اجرا</translation>
     </message>
     <message>
         <source>By day</source>
-        <translation type="unfinished" />
+        <translation>بر اساس روز</translation>
     </message>
     <message>
         <source>By week</source>
-        <translation type="unfinished" />
+        <translation>بر اساس هفته</translation>
     </message>
     <message>
         <source>By month</source>
-        <translation type="unfinished" />
+        <translation>بر اساس ماه</translation>
     </message>
     <message>
         <source>Export CSV…</source>
-        <translation type="unfinished" />
+        <translation>صدور CSV…</translation>
     </message>
     <message>
         <source>No sessions yet — process an episode to see your history.</source>
@@ -177,7 +177,7 @@
     </message>
     <message>
         <source>Period</source>
-        <translation type="unfinished" />
+        <translation>بازه</translation>
     </message>
     <message>
         <source>Show in Anki</source>
@@ -185,7 +185,7 @@
     </message>
     <message>
         <source>Delete this run's cards…</source>
-        <translation type="unfinished" />
+        <translation>حذف کارت‌های این اجرا…</translation>
     </message>
     <message>
         <source>Series Difficulty Ranking</source>
@@ -217,11 +217,11 @@
     </message>
     <message>
         <source>Frequency Coverage</source>
-        <translation type="unfinished" />
+        <translation>پوشش بسامد</translation>
     </message>
     <message>
         <source>Rank band</source>
-        <translation type="unfinished" />
+        <translation>بازه رتبه</translation>
     </message>
     <message>
         <source>Known</source>
@@ -229,15 +229,15 @@
     </message>
     <message>
         <source>Not known</source>
-        <translation type="unfinished" />
+        <translation>ناشناخته</translation>
     </message>
     <message>
         <source>Known %</source>
-        <translation type="unfinished" />
+        <translation>درصد شناخته‌شده</translation>
     </message>
     <message>
         <source>Show missing words</source>
-        <translation type="unfinished" />
+        <translation>نمایش واژه‌های جاافتاده</translation>
     </message>
     <message>
         <source>Milestones</source>
@@ -265,93 +265,95 @@
     </message>
     <message>
         <source>No runs in this period.</source>
-        <translation type="unfinished" />
+        <translation>در این بازه اجرایی نیست.</translation>
     </message>
     <message>
         <source>Export Mining History</source>
-        <translation type="unfinished" />
+        <translation>صدور تاریخچه استخراج</translation>
     </message>
     <message>
         <source>CSV Files (*.csv);;All Files (*)</source>
-        <translation type="unfinished" />
+        <translation>فایل‌های CSV (*.csv);;همه فایل‌ها (*)</translation>
     </message>
     <message>
         <source>History saved to %1.</source>
-        <translation type="unfinished" />
+        <translation>تاریخچه در %1 ذخیره شد.</translation>
     </message>
     <message>
         <source>The history could not be exported.</source>
-        <translation type="unfinished" />
+        <translation>صدور تاریخچه ممکن نشد.</translation>
     </message>
     <message>
         <source>%1 (cards deleted: %2)</source>
-        <translation type="unfinished" />
+        <translation>‏%1 (کارت‌های حذف‌شده: %2)</translation>
     </message>
     <message>
         <source>Select one run in the table.</source>
-        <translation type="unfinished" />
+        <translation>یک اجرا را در جدول انتخاب کنید.</translation>
     </message>
     <message>
         <source>This run's cards were deleted: %1.</source>
-        <translation type="unfinished" />
+        <translation>کارت‌های حذف‌شده این اجرا: %1.</translation>
     </message>
     <message>
         <source>Anki Miner has no card list for this run: it was mined before this version, or it made no cards.</source>
-        <translation type="unfinished" />
+        <translation>‏Anki Miner فهرست کارتی برای این اجرا ندارد: یا پیش از این نسخه استخراج شده، یا هیچ کارتی نساخته است.</translation>
     </message>
     <message>
         <source>Anki Miner couldn't open this run's cards in Anki.</source>
-        <translation type="unfinished" />
+        <translation>‏Anki Miner نتوانست کارت‌های این اجرا را در Anki باز کند.</translation>
     </message>
     <message>
         <source>None of this run's cards are in Anki any more.</source>
-        <translation type="unfinished" />
+        <translation>هیچ‌یک از کارت‌های این اجرا دیگر در Anki نیست.</translation>
     </message>
     <message>
         <source>Delete This Run's Cards</source>
-        <translation type="unfinished" />
+        <translation>حذف کارت‌های این اجرا</translation>
     </message>
     <message>
         <source>Cards this run added that are still in Anki: %1. Reviewed at least once: %2.
 
 Delete them from Anki? Their review history is deleted with them. This cannot be undone.</source>
-        <translation type="unfinished" />
+        <translation>کارت‌هایی که این اجرا افزوده و هنوز در Anki هستند: %1. دست‌کم یک بار مرور‌شده: %2.
+
+از Anki حذف شوند؟ تاریخچه مرورشان هم همراهشان حذف می‌شود. این کار برگشت‌پذیر نیست.</translation>
     </message>
     <message>
         <source>Cards deleted from Anki: %1.</source>
-        <translation type="unfinished" />
+        <translation>کارت‌های حذف‌شده از Anki: %1.</translation>
     </message>
     <message>
         <source>This run's cards could not be deleted.</source>
-        <translation type="unfinished" />
+        <translation>حذف کارت‌های این اجرا ممکن نشد.</translation>
     </message>
     <message>
         <source>Known words could not be counted.</source>
-        <translation type="unfinished" />
+        <translation>شمارش واژه‌های شناخته‌شده ممکن نشد.</translation>
     </message>
     <message>
         <source>Words Anki Miner treats as known in %1.</source>
-        <translation type="unfinished" />
+        <translation>واژه‌هایی که Anki Miner در %1 شناخته‌شده به شمار می‌آورد.</translation>
     </message>
     <message>
         <source>Change since %1: %2</source>
-        <translation type="unfinished" />
+        <translation>تغییر از %1: %2</translation>
     </message>
     <message>
         <source>Last counted on %1; Anki was not reachable.</source>
-        <translation type="unfinished" />
+        <translation>آخرین شمارش در %1؛ Anki در دسترس نبود.</translation>
     </message>
     <message>
         <source>Last counted on %1.</source>
-        <translation type="unfinished" />
+        <translation>آخرین شمارش در %1.</translation>
     </message>
     <message>
         <source>Coverage needs Anki running: it compares the list with your cards.</source>
-        <translation type="unfinished" />
+        <translation>پوشش به اجرای Anki نیاز دارد: فهرست را با کارت‌های شما مقایسه می‌کند.</translation>
     </message>
     <message>
         <source>How many of the most frequent words in %1 you already know.</source>
-        <translation type="unfinished" />
+        <translation>چند تا از پربسامدترین واژه‌های %1 را از قبل می‌دانید.</translation>
     </message>
     <message>
         <source>%1 mining sessions completed</source>
@@ -759,7 +761,7 @@ Delete them from Anki? Their review history is deleted with them. This cannot be
     </message>
     <message>
         <source>{series}, {episode} and {volume} become each card's show, episode or book volume, for example mined::{series}::{episode}.</source>
-        <translation type="unfinished" />
+        <translation>‏{series}، {episode} و {volume} به مجموعه، قسمت یا جلد کتاب هر کارت تبدیل می‌شوند، برای نمونه mined::{series}::{episode}.</translation>
     </message>
     <message>
         <source>Refresh</source>
@@ -787,11 +789,11 @@ Delete them from Anki? Their review history is deleted with them. This cannot be
     </message>
     <message>
         <source>Sync Anki after mining</source>
-        <translation type="unfinished" />
+        <translation>همگام‌سازی Anki پس از استخراج</translation>
     </message>
     <message>
         <source>After a run that added cards, ask Anki to sync with AnkiWeb. If the sync fails, the Activity Log says so and the cards stay added.</source>
-        <translation type="unfinished" />
+        <translation>پس از اجرایی که کارت افزوده، از Anki خواسته می‌شود با AnkiWeb همگام شود. اگر همگام‌سازی شکست بخورد، گزارش فعالیت آن را اعلام می‌کند و کارت‌ها افزوده باقی می‌مانند.</translation>
     </message>
     <message>
         <source>AnkiConnect URL</source>
@@ -803,7 +805,7 @@ Delete them from Anki? Their review history is deleted with them. This cannot be
     </message>
     <message>
         <source>If AnkiConnect asks for an API key, add it to the address: http://127.0.0.1:8765/?key=YOUR_KEY</source>
-        <translation type="unfinished" />
+        <translation>اگر AnkiConnect کلید API بخواهد، آن را به نشانی بیفزایید: http://127.0.0.1:8765/?key=YOUR_KEY</translation>
     </message>
     <message>
         <source>Fill in automatically</source>
@@ -1515,7 +1517,7 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
     </message>
     <message>
         <source>Wikimedia Commons (native recordings)</source>
-        <translation type="unfinished" />
+        <translation>‏Wikimedia Commons (ضبط‌های گویشوران بومی)</translation>
     </message>
     <message>
         <source>Custom JSON</source>
@@ -2083,7 +2085,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Every audio file in the folder, in file-name order, one .srt each. A folder of book folders (each with its EPUB and audio) syncs every book in turn.</source>
-        <translation type="unfinished" />
+        <translation>هر فایل صوتی پوشه، به ترتیب نام فایل، و برای هر کدام یک .srt. پوشه‌ای از پوشه‌های کتاب (هر کدام با EPUB و صوت خود) همه کتاب‌ها را به نوبت همگام می‌کند.</translation>
     </message>
     <message>
         <source>EPUB or Text File:</source>
@@ -2111,7 +2113,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Sentences: how many of the book's sentences, from the first one found to the last, got a subtitle. Audio: how much of the narration matched the book. Grade: A from 90% on both, B from 75%, C from 50%, else D.</source>
-        <translation type="unfinished" />
+        <translation>جمله‌ها: چند تا از جمله‌های کتاب، از نخستین جمله یافته‌شده تا آخرین، زیرنویس گرفتند. صوت: چه مقدار از روایت با کتاب جور شد. نمره: A از 90% در هر دو، B از 75%، C از 50%، وگرنه D.</translation>
     </message>
     <message>
         <source>Output</source>
@@ -2175,7 +2177,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>No audio files were found in that folder, and no book folders (each with its book and audio).</source>
-        <translation type="unfinished" />
+        <translation>در آن پوشه نه فایل صوتی پیدا شد و نه پوشه کتابی (هر کدام با کتاب و صوت خود).</translation>
     </message>
     <message>
         <source>That folder could not be scanned.</source>
@@ -2183,15 +2185,15 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Skipped folder %1: no audio files</source>
-        <translation type="unfinished" />
+        <translation>پوشه %1 رد شد: فایل صوتی ندارد</translation>
     </message>
     <message>
         <source>Skipped folder %1: no .epub or .txt book</source>
-        <translation type="unfinished" />
+        <translation>پوشه %1 رد شد: کتاب .epub یا .txt ندارد</translation>
     </message>
     <message>
         <source>Skipped folder %1: more than one book</source>
-        <translation type="unfinished" />
+        <translation>پوشه %1 رد شد: بیش از یک کتاب دارد</translation>
     </message>
     <message>
         <source>Output folder is not writable.</source>
@@ -2211,11 +2213,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Books: %1 — %2</source>
-        <translation type="unfinished" />
+        <translation>کتاب‌ها: %1 — %2</translation>
     </message>
     <message>
         <source>%1: sentences %2%, audio %3% — grade %4</source>
-        <translation type="unfinished" />
+        <translation>‏%1: جمله‌ها %2%، صوت %3% — نمره %4</translation>
     </message>
     <message>
         <source>Syncing file %1 of %2</source>
@@ -2229,11 +2231,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>%1 could not be loaded: %2</source>
-        <translation type="unfinished" />
+        <translation>بارگذاری %1 ممکن نشد: %2</translation>
     </message>
     <message>
         <source>Its book could not be loaded</source>
-        <translation type="unfinished" />
+        <translation>بارگذاری کتابش ممکن نشد</translation>
     </message>
     <message>
         <source>Skipped, exists</source>
@@ -2253,11 +2255,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Reusing the saved transcript</source>
-        <translation type="unfinished" />
+        <translation>استفاده دوباره از رونوشت ذخیره‌شده</translation>
     </message>
     <message>
         <source>Found sentence %1 again later in the audio; timed it out of book order</source>
-        <translation type="unfinished" />
+        <translation>جمله %1 دوباره در ادامه صوت پیدا شد؛ خارج از ترتیب کتاب زمان‌بندی شد</translation>
     </message>
     <message>
         <source>%1 sentences timed, %2 in between had no audio</source>
@@ -2339,7 +2341,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Approve or reject each word, pick its sentence and scene, trim its audio, mark words known, and fix a mistranscribed sentence or swap the word to mine -- before any card is created. When a word has entries in several dictionaries, choose which one the card's Definition uses.</source>
-        <translation type="unfinished" />
+        <translation>پیش از ساخته شدن هر کارت، هر واژه را بپذیرید یا رد کنید، جمله و صحنه‌اش را برگزینید، صوتش را کوتاه کنید، واژه‌ها را شناخته‌شده علامت بزنید و جمله‌ای را که نادرست رونویسی شده اصلاح کنید یا واژه استخراجی را عوض کنید. وقتی واژه‌ای در چند واژه‌نامه مدخل دارد، انتخاب کنید فیلد تعریف کارت از کدام استفاده کند.</translation>
     </message>
     <message>
         <source>Secondary-language subtitles</source>
@@ -2347,7 +2349,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. Leave the file empty and Anki Miner picks a translation itself: a subtitle named for the video, or a text track inside it, in your interface language or else English. The Activity Log names the track it used. On Video → Batch, point it at a folder of translation subtitles instead and they pair to the videos by episode number. Turn it on under Settings → Sentences.</source>
-        <translation type="unfinished" />
+        <translation>کنار زیرنویس زبان استخراج، یک فایل زیرنویس دوم به زبان خودتان بارگذاری کنید: زیر سطر در پیش‌نمایش گزینشگر واژه نشان داده می‌شود و می‌تواند در فیلد ترجمه ذخیره شود. اگر فایل را خالی بگذارید، Anki Miner خودش ترجمه‌ای برمی‌گزیند: زیرنویسی هم‌نام با ویدیو یا یک ترک متنی درون آن، به زبان رابط کاربری یا در غیر این صورت انگلیسی. گزارش فعالیت نام ترکی را که استفاده کرده می‌آورد. در ویدیو ← گروهی، به‌جای آن پوشه‌ای از زیرنویس‌های ترجمه را مشخص کنید تا بر اساس شماره قسمت با ویدیوها جفت شوند. آن را از تنظیمات ← جمله‌ها روشن کنید.</translation>
     </message>
     <message>
         <source>Build a deck by coverage %</source>
@@ -2383,11 +2385,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Mine songs from .lrc lyrics</source>
-        <translation type="unfinished" />
+        <translation>استخراج از آهنگ‌ها با متن ترانه .lrc</translation>
     </message>
     <message>
         <source>Use a .lrc lyrics file wherever a subtitle file goes. Each line lasts until the next one starts. Pair a song with its lyrics on Audiobooks, condense it in Condense, or mine a music video on Video.</source>
-        <translation type="unfinished" />
+        <translation>هر جا فایل زیرنویس به کار می‌رود، از فایل متن ترانه .lrc استفاده کنید. هر سطر تا شروع سطر بعدی ادامه دارد. آهنگی را در کتاب صوتی با متنش جفت کنید، در فشرده‌سازی فشرده کنید، یا از یک موزیک‌ویدیو در ویدیو استخراج کنید.</translation>
     </message>
     <message>
         <source>Mine from manga</source>
@@ -2403,23 +2405,23 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Mine vocabulary from novels and other text (EPUB, PDF, Aozora, plain text).</source>
-        <translation type="unfinished" />
+        <translation>استخراج واژگان از رمان‌ها و متن‌های دیگر (EPUB، PDF، Aozora، متن ساده).</translation>
     </message>
     <message>
         <source>Readings from a book's own furigana</source>
-        <translation type="unfinished" />
+        <translation>خوانش‌ها از فوریگانای خود کتاب</translation>
     </message>
     <message>
         <source>When a Japanese EPUB prints furigana over a word, the card takes that reading instead of the parser's guess.</source>
-        <translation type="unfinished" />
+        <translation>وقتی یک EPUB ژاپنی بالای واژه‌ای فوریگانا چاپ می‌کند، کارت به‌جای حدس تجزیه‌گر همان خوانش را می‌گیرد.</translation>
     </message>
     <message>
         <source>Mine pasted text or a web article</source>
-        <translation type="unfinished" />
+        <translation>استخراج از متن چسبانده‌شده یا مقاله وب</translation>
     </message>
     <message>
         <source>Paste text in your mining language, or fetch a web article by its address, and mine it into Anki cards. A fetched article's cards name the page and site as their source.</source>
-        <translation type="unfinished" />
+        <translation>متنی به زبان استخراج بچسبانید، یا مقاله‌ای وب را با نشانی‌اش واکشی کنید، و آن را به کارت‌های Anki استخراج کنید. کارت‌های مقاله واکشی‌شده صفحه و سایت را منبع خود ذکر می‌کنند.</translation>
     </message>
     <message>
         <source>Mine subtitle files without video</source>
@@ -2443,7 +2445,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Create subtitles from audio with a local Whisper model -- as a standalone tool. Long lines are split at sentence ends, and a second run on the same file reuses the saved transcript.</source>
-        <translation type="unfinished" />
+        <translation>با یک مدل محلی Whisper از صوت زیرنویس بسازید — به‌عنوان ابزاری مستقل. سطرهای بلند در پایان جمله‌ها شکسته می‌شوند و اجرای دوم روی همان فایل از رونوشت ذخیره‌شده دوباره استفاده می‌کند.</translation>
     </message>
     <message>
         <source>Re-time existing subtitles</source>
@@ -2503,35 +2505,35 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Browse your whole mining history</source>
-        <translation type="unfinished" />
+        <translation>مرور کل تاریخچه استخراج</translation>
     </message>
     <message>
         <source>Analytics lists every run you have mined. Pick a period, group the runs by day, week or month, see the cards per period in a chart, and export the table as a CSV file.</source>
-        <translation type="unfinished" />
+        <translation>آمار همه اجراهای استخراج شما را فهرست می‌کند. بازه‌ای برگزینید، اجراها را بر اساس روز، هفته یا ماه گروه‌بندی کنید، کارت‌های هر بازه را در نمودار ببینید و جدول را به‌صورت فایل CSV صادر کنید.</translation>
     </message>
     <message>
         <source>Show or delete a past run's cards</source>
-        <translation type="unfinished" />
+        <translation>نمایش یا حذف کارت‌های یک اجرای پیشین</translation>
     </message>
     <message>
         <source>Select a run in Analytics → Mining History to open its cards in Anki's browser or to delete them. The confirmation says how many of its cards are still in Anki and how many you have reviewed. Runs mined before this version have no card list.</source>
-        <translation type="unfinished" />
+        <translation>در آمار ← تاریخچه استخراج یک اجرا را برگزینید تا کارت‌هایش را در مرورگر Anki باز کنید یا حذفشان کنید. پنجره تأیید می‌گوید چند تا از کارت‌هایش هنوز در Anki هستند و چند تا را مرور کرده‌اید. اجراهایی که پیش از این نسخه استخراج شده‌اند فهرست کارت ندارند.</translation>
     </message>
     <message>
         <source>Track how many words you know</source>
-        <translation type="unfinished" />
+        <translation>پیگیری شمار واژه‌هایی که می‌دانید</translation>
     </message>
     <message>
         <source>The Known Words card on Analytics counts the words Anki Miner treats as known in the current mining language and shows how that number changed. It is counted while Anki is running, at most once every ten minutes.</source>
-        <translation type="unfinished" />
+        <translation>کارت واژه‌های شناخته‌شده در آمار، واژه‌هایی را که Anki Miner در زبان استخراج فعلی شناخته‌شده به شمار می‌آورد می‌شمارد و نشان می‌دهد این عدد چگونه تغییر کرده است. شمارش هنگام اجرای Anki و حداکثر هر ده دقیقه یک بار انجام می‌شود.</translation>
     </message>
     <message>
         <source>See how much of a frequency list you know</source>
-        <translation type="unfinished" />
+        <translation>ببینید چه مقدار از یک فهرست بسامد را می‌دانید</translation>
     </message>
     <message>
         <source>Analytics → Frequency Coverage counts the words you know in ranks 1–1,000 up to 20,000 of your first frequency list with numeric ranks, and lists the missing words of each band. It needs Anki running.</source>
-        <translation type="unfinished" />
+        <translation>آمار ← پوشش بسامد واژه‌هایی را که در رتبه‌های 1–1,000 تا 20,000 نخستین فهرست بسامد شما با رتبه‌های عددی می‌دانید می‌شمارد و واژه‌های جاافتاده هر بازه را فهرست می‌کند. به اجرای Anki نیاز دارد.</translation>
     </message>
     <message>
         <source>Reset mining statistics</source>
@@ -2607,11 +2609,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Count a word as known only after its card has been reviewed</source>
-        <translation type="unfinished" />
+        <translation>شمردن واژه به‌عنوان شناخته‌شده فقط پس از مرور کارتش</translation>
     </message>
     <message>
         <source>Readability and the i+1 sentence rule then count a word as known only when its Anki card has been reviewed at least once. Mining still skips every word that already has a card.</source>
-        <translation type="unfinished" />
+        <translation>در این حالت خوانایی و قاعده جمله i+1 واژه‌ای را فقط وقتی شناخته‌شده می‌شمارند که کارت Anki آن دست‌کم یک بار مرور شده باشد. استخراج همچنان هر واژه‌ای را که از قبل کارت دارد رد می‌کند.</translation>
     </message>
     <message>
         <source>Exclude specific Anki decks from 'known'</source>
@@ -2631,27 +2633,27 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Browse every known word</source>
-        <translation type="unfinished" />
+        <translation>مرور همه واژه‌های شناخته‌شده</translation>
     </message>
     <message>
         <source>Manage Known Words lists every word this language counts as known, with where it came from (added by you, mined by Anki Miner, from Anki) and the date it was added. Search it, filter it by source, and remove words you added. Words from Anki come back on the next sync.</source>
-        <translation type="unfinished" />
+        <translation>مدیریت واژه‌های شناخته‌شده همه واژه‌هایی را که این زبان شناخته‌شده می‌شمارد، همراه با منبعشان (افزوده‌شده توسط شما، استخراج‌شده توسط Anki Miner، از Anki) و تاریخ افزودن، فهرست می‌کند. در آن جست‌وجو کنید، بر اساس منبع فیلترش کنید و واژه‌هایی را که افزوده‌اید حذف کنید. واژه‌های Anki در همگام‌سازی بعدی برمی‌گردند.</translation>
     </message>
     <message>
         <source>Import known words from Kindle, Lute or LWT</source>
-        <translation type="unfinished" />
+        <translation>وارد کردن واژه‌های شناخته‌شده از Kindle، Lute یا LWT</translation>
     </message>
     <message>
         <source>In Manage Known Words, Import… also reads a Kindle Vocabulary Builder file (vocab.db; words marked mastered) and Lute or LWT term exports (status 5 and 99).</source>
-        <translation type="unfinished" />
+        <translation>در مدیریت واژه‌های شناخته‌شده، وارد کردن… فایل Kindle Vocabulary Builder (vocab.db؛ واژه‌هایی که آموخته‌شده علامت خورده‌اند) و خروجی‌های اصطلاح Lute یا LWT (وضعیت 5 و 99) را هم می‌خواند.</translation>
     </message>
     <message>
         <source>Export words to a CSV file</source>
-        <translation type="unfinished" />
+        <translation>صدور واژه‌ها به فایل CSV</translation>
     </message>
     <message>
         <source>Export words… saves the list you are looking at in Manage Known Words, or a finished run's mined and not-mined words with the reason each was skipped, as a CSV file.</source>
-        <translation type="unfinished" />
+        <translation>صدور واژه‌ها… فهرستی را که در مدیریت واژه‌های شناخته‌شده می‌بینید، یا واژه‌های استخراج‌شده و استخراج‌نشده یک اجرای تمام‌شده را همراه با دلیل رد شدن هر کدام، به‌صورت فایل CSV ذخیره می‌کند.</translation>
     </message>
     <message>
         <source>Exclude kana-only words</source>
@@ -2683,23 +2685,23 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Mine at most one word from each example sentence. A word whose sentence is taken moves to another line it appears on, and is skipped only when every one of its lines is taken.</source>
-        <translation type="unfinished" />
+        <translation>از هر جمله نمونه حداکثر یک واژه استخراج کنید. واژه‌ای که جمله‌اش گرفته شده به سطر دیگری که در آن آمده منتقل می‌شود و فقط وقتی رد می‌شود که همه سطرهایش گرفته شده باشند.</translation>
     </message>
     <message>
         <source>Pick the clearest sentence</source>
-        <translation type="unfinished" />
+        <translation>انتخاب روشن‌ترین جمله</translation>
     </message>
     <message>
         <source>When a word appears on several lines, its card uses the line with the fewest unknown words and a comfortable length instead of the first one. The Word Curator still lists every line.</source>
-        <translation type="unfinished" />
+        <translation>وقتی واژه‌ای در چند سطر می‌آید، کارتش به‌جای نخستین سطر، سطری را به کار می‌برد که کمترین واژه ناشناخته و طولی مناسب دارد. گزینشگر واژه همچنان همه سطرها را فهرست می‌کند.</translation>
     </message>
     <message>
         <source>Skip openings, endings and signs</source>
-        <translation type="unfinished" />
+        <translation>رد کردن تیتراژهای آغاز و پایان و نوشته‌های روی صفحه</translation>
     </message>
     <message>
         <source>Leave opening and ending songs, previews and on-screen signs out of mining, Condense and Readability: lines styled as songs or signs, and lines inside a video's opening, ending and preview chapters. On by default for new installs; turn it off in Settings → Sentences.</source>
-        <translation type="unfinished" />
+        <translation>آهنگ‌های آغاز و پایان، پیش‌نمایش‌ها و نوشته‌های روی صفحه را از استخراج، فشرده‌سازی و خوانایی کنار بگذارید: سطرهایی با سبک آهنگ یا نوشته، و سطرهای درون فصل‌های آغاز، پایان و پیش‌نمایش ویدیو. در نصب‌های تازه به‌طور پیش‌فرض روشن است؛ آن را در تنظیمات ← جمله‌ها خاموش کنید.</translation>
     </message>
     <message>
         <source>Strip junk from subtitles (regex)</source>
@@ -2767,11 +2769,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Import a dictionary file</source>
-        <translation type="unfinished" />
+        <translation>وارد کردن فایل واژه‌نامه</translation>
     </message>
     <message>
         <source>Add a Yomitan zip, a StarDict dictionary (its archive or its .ifo file) or a CSV/TSV word list (term and definition, or term, reading and definition) as a definition source.</source>
-        <translation type="unfinished" />
+        <translation>یک فایل zip از Yomitan، یک واژه‌نامه StarDict (بایگانی آن یا فایل .ifo آن) یا یک فهرست واژه CSV/TSV (اصطلاح و تعریف، یا اصطلاح، خوانش و تعریف) را به‌عنوان منبع تعریف بیفزایید.</translation>
     </message>
     <message>
         <source>Keep dictionaries up to date</source>
@@ -2843,7 +2845,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Attach word audio to cards from audio packs, JPod101 (Japanese), Google text-to-speech, or Microsoft Edge text-to-speech (every language). Wikimedia Commons plays recordings of real speakers from Wiktionary and Lingua Libre, tried before Google TTS in most languages.</source>
-        <translation type="unfinished" />
+        <translation>صوت واژه را از بسته‌های صوتی، JPod101 (ژاپنی)، متن به گفتار Google یا متن به گفتار Microsoft Edge (همه زبان‌ها) به کارت‌ها پیوست کنید. Wikimedia Commons ضبط‌های گویندگان واقعی را از Wiktionary و Lingua Libre پخش می‌کند و در بیشتر زبان‌ها پیش از Google TTS امتحان می‌شود.</translation>
     </message>
     <message>
         <source>Import local audio packs</source>
@@ -2859,7 +2861,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Extract the spoken sentence as an audio clip; tune its format and bitrate. Even out audio volume brings sentence clips and condensed audio to one loudness and fades each clip in and out.</source>
-        <translation type="unfinished" />
+        <translation>جمله گفته‌شده را به‌صورت کلیپ صوتی بیرون بکشید؛ قالب و نرخ بیت آن را تنظیم کنید. «یکسان‌سازی بلندی صدا» کلیپ‌های جمله و صوت فشرده را به یک بلندی می‌رساند و هر کلیپ را با محو تدریجی آغاز و پایان می‌دهد.</translation>
     </message>
     <message>
         <source>Sentence audio for reading (TTS)</source>
@@ -2883,7 +2885,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Capture a still frame from the scene to put on the card. Crop manga pictures to the speech bubble shows the bubble and the art around it instead of the whole page.</source>
-        <translation type="unfinished" />
+        <translation>یک فریم ثابت از صحنه برای گذاشتن روی کارت بگیرید. «برش تصاویر مانگا به حباب گفتار» به‌جای کل صفحه، حباب و طرح پیرامون آن را نشان می‌دهد.</translation>
     </message>
     <message>
         <source>Animated clips (GIF/WebP)</source>
@@ -2963,7 +2965,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Add tags to every note Anki Miner creates. Card tags can use {series}, {episode} and {volume}. Each card gets its own show, episode or book volume, for example mined::{series}::{episode} gives mined::Frieren::03.</source>
-        <translation type="unfinished" />
+        <translation>به هر یادداشتی که Anki Miner می‌سازد برچسب بیفزایید. برچسب‌های کارت می‌توانند از {series}، {episode} و {volume} استفاده کنند. هر کارت مجموعه، قسمت یا جلد کتاب خودش را می‌گیرد، برای نمونه mined::{series}::{episode} به mined::Frieren::03 تبدیل می‌شود.</translation>
     </message>
     <message>
         <source>Connect to Anki (AnkiConnect)</source>
@@ -2971,15 +2973,15 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Set the AnkiConnect address; Refresh re-checks the connection to your running Anki. If AnkiConnect is set up with an API key, add it to the address: http://127.0.0.1:8765/?key=YOUR_KEY. Anki Miner sends it with every request and never writes it to the log.</source>
-        <translation type="unfinished" />
+        <translation>نشانی AnkiConnect را تنظیم کنید؛ تازه‌سازی اتصال به Anki در حال اجرا را دوباره بررسی می‌کند. اگر AnkiConnect با کلید API راه‌اندازی شده، آن را به نشانی بیفزایید: http://127.0.0.1:8765/?key=YOUR_KEY. Anki Miner آن را با هر درخواست می‌فرستد و هرگز در گزارش نمی‌نویسد.</translation>
     </message>
     <message>
         <source>Sync Anki after mining</source>
-        <translation type="unfinished" />
+        <translation>همگام‌سازی Anki پس از استخراج</translation>
     </message>
     <message>
         <source>After a run that added cards, Anki Miner asks Anki to sync with AnkiWeb. If the sync fails, the Activity Log says so and the cards stay added.</source>
-        <translation type="unfinished" />
+        <translation>پس از اجرایی که کارت افزوده، Anki Miner از Anki می‌خواهد با AnkiWeb همگام شود. اگر همگام‌سازی شکست بخورد، گزارش فعالیت آن را اعلام می‌کند و کارت‌ها افزوده باقی می‌مانند.</translation>
     </message>
     <message>
         <source>Fill in field mappings automatically</source>
@@ -3067,7 +3069,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Draw a box where a video's on-screen dialogue appears and Anki Miner reads it into a timed .srt that Video → Single can mine. Made for game longplays without commentary. It also reads image subtitles (Blu-ray .sup, DVD .idx/.sub, or an image track inside a video) without a box. Lines with none of your mining language's letters are left out. Download the OCR engine from the setup card on Utilities → Video OCR.</source>
-        <translation type="unfinished" />
+        <translation>جایی که گفت‌وگوی روی صفحه ویدیو ظاهر می‌شود کادری بکشید تا Anki Miner آن را به یک .srt زمان‌دار بخواند که ویدیو ← تکی بتواند از آن استخراج کند. برای ویدیوهای کامل بازی بدون گفتار ساخته شده است. زیرنویس‌های تصویری (Blu-ray .sup، DVD .idx/.sub یا یک ترک تصویری درون ویدیو) را هم بدون کادر می‌خواند. سطرهایی که هیچ حرفی از زبان استخراج شما ندارند کنار گذاشته می‌شوند. موتور OCR را از کارت راه‌اندازی در امکانات ← ‏OCR ویدیو دانلود کنید.</translation>
     </message>
     <message>
         <source>Sync an audiobook to its EPUB</source>
@@ -3075,23 +3077,23 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Transcribe an audiobook and time the book's own sentences to it, writing an .srt the Audiobook tab, Reading → Subtitle Files or a reader can use. A second run on the same audio reuses the saved transcript instead of transcribing again.</source>
-        <translation type="unfinished" />
+        <translation>یک کتاب صوتی را رونویسی کنید و جمله‌های خود کتاب را با آن زمان‌بندی کنید تا یک .srt نوشته شود که زبانه کتاب صوتی، خواندن ← فایل‌های زیرنویس یا یک کتاب‌خوان بتواند به کار ببرد. اجرای دوم روی همان صوت به‌جای رونویسی دوباره، از رونوشت ذخیره‌شده استفاده می‌کند.</translation>
     </message>
     <message>
         <source>Sync a shelf of audiobooks in one run</source>
-        <translation type="unfinished" />
+        <translation>همگام‌سازی یک قفسه کتاب صوتی در یک اجرا</translation>
     </message>
     <message>
         <source>In Utilities → Audiobook Sync, choose Folder and pick a folder that holds one folder per book, each with its EPUB (or text file) and its audio files. The books sync one after another, in name order.</source>
-        <translation type="unfinished" />
+        <translation>در امکانات ← همگام‌سازی کتاب، پوشه را برگزینید و پوشه‌ای را انتخاب کنید که برای هر کتاب یک پوشه دارد، هر کدام با EPUB (یا فایل متنی) و فایل‌های صوتی‌اش. کتاب‌ها یکی پس از دیگری، به ترتیب نام، همگام می‌شوند.</translation>
     </message>
     <message>
         <source>See how well an audiobook synced</source>
-        <translation type="unfinished" />
+        <translation>ببینید یک کتاب صوتی چقدر خوب همگام شد</translation>
     </message>
     <message>
         <source>After Audiobook Sync, each book gets a line under the Book card: how many of its sentences got a subtitle, how much of the narration matched the book, and a grade from A to D. Chapters read out of book order are found too; sentences the narrator skipped never get a subtitle.</source>
-        <translation type="unfinished" />
+        <translation>پس از همگام‌سازی کتاب، هر کتاب یک سطر زیر کارت کتاب می‌گیرد: چند تا از جمله‌هایش زیرنویس گرفتند، چه مقدار از روایت با کتاب جور شد و نمره‌ای از A تا D. فصل‌هایی که خارج از ترتیب کتاب خوانده شده‌اند هم پیدا می‌شوند؛ جمله‌هایی که راوی جا انداخته هرگز زیرنویس نمی‌گیرند.</translation>
     </message>
     <message>
         <source>Check how much of a show, book or manga you can read</source>
@@ -3175,11 +3177,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Restore an automatic backup</source>
-        <translation type="unfinished" />
+        <translation>بازیابی یک پشتیبان خودکار</translation>
     </message>
     <message>
         <source>Anki Miner backs up your known words, statistics, settings and profiles once a day when it starts, and keeps the last 7 days. Settings → General → Restore a backup… puts one back the next time the app starts.</source>
-        <translation type="unfinished" />
+        <translation>‏Anki Miner روزی یک بار هنگام شروع، از واژه‌های شناخته‌شده، آمار، تنظیمات و پروفایل‌های شما پشتیبان می‌گیرد و ۷ روز آخر را نگه می‌دارد. تنظیمات ← عمومی ← بازیابی پشتیبان… یکی را در شروع بعدی برنامه بازمی‌گرداند.</translation>
     </message>
     <message>
         <source>Undo a mining run</source>
@@ -3191,11 +3193,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Export a run's words</source>
-        <translation type="unfinished" />
+        <translation>صدور واژه‌های یک اجرا</translation>
     </message>
     <message>
         <source>Press View details on a run's result line, then Export words… to save the run's mined and not-mined words, with the reason each was skipped, as a CSV file.</source>
-        <translation type="unfinished" />
+        <translation>در سطر نتیجه یک اجرا مشاهده جزئیات و سپس صدور واژه‌ها… را بزنید تا واژه‌های استخراج‌شده و استخراج‌نشده اجرا، همراه با دلیل رد شدن هر کدام، به‌صورت فایل CSV ذخیره شوند.</translation>
     </message>
     <message>
         <source>Keyboard shortcuts</source>
@@ -4567,11 +4569,11 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
     </message>
     <message>
         <source>Choose dictionary files</source>
-        <translation type="unfinished" />
+        <translation>انتخاب فایل‌های واژه‌نامه</translation>
     </message>
     <message>
         <source>Dictionaries (*.zip *.ifo *.tar.gz *.tgz *.tar.bz2 *.tar.xz *.csv *.tsv)</source>
-        <translation type="unfinished" />
+        <translation>واژه‌نامه‌ها (*.zip *.ifo *.tar.gz *.tgz *.tar.bz2 *.tar.xz *.csv *.tsv)</translation>
     </message>
     <message>
         <source>Dictionary %1 of %2: %3</source>
@@ -5405,8 +5407,8 @@ No files on disk are deleted.</source>
     </message>
     <message numerus="yes">
         <source>Skipping lines in %n opening, ending or preview chapter(s)</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>رد کردن سطرهای %n فصل آغاز، پایان یا پیش‌نمایش</numerusform>
         </translation>
     </message>
     <message>
@@ -5453,7 +5455,7 @@ No files on disk are deleted.</source>
     </message>
     <message>
         <source>Only %1% of the first %2 words have an entry in your dictionaries. Is this file in the language you are mining?</source>
-        <translation type="unfinished" />
+        <translation>فقط %1% از %2 واژه نخست در واژه‌نامه‌های شما مدخل دارند. آیا این فایل به زبانی است که استخراج می‌کنید؟</translation>
     </message>
     <message>
         <source>Frequency cutoff ignored — no ranked frequency source is loaded (Settings → Frequency).</source>
@@ -5561,11 +5563,11 @@ No files on disk are deleted.</source>
     </message>
     <message>
         <source>Translation subtitles picked automatically: %1</source>
-        <translation type="unfinished" />
+        <translation>زیرنویس ترجمه به‌طور خودکار انتخاب شد: %1</translation>
     </message>
     <message>
         <source>Translation subtitles picked automatically: embedded track %1</source>
-        <translation type="unfinished" />
+        <translation>زیرنویس ترجمه به‌طور خودکار انتخاب شد: ترک توکار %1</translation>
     </message>
     <message>
         <source>Could not extract media for any word — no cards created</source>
@@ -5833,11 +5835,11 @@ No files on disk are deleted.</source>
     </message>
     <message>
         <source>Count a word as known only after its card has been reviewed</source>
-        <translation type="unfinished" />
+        <translation>شمردن واژه به‌عنوان شناخته‌شده فقط پس از مرور کارتش</translation>
     </message>
     <message>
         <source>Readability and the i+1 sentence rule count a word as known only when its Anki card has been reviewed at least once. Mining still skips every word that already has a card.</source>
-        <translation type="unfinished" />
+        <translation>خوانایی و قاعده جمله i+1 واژه‌ای را فقط وقتی شناخته‌شده می‌شمارند که کارت Anki آن دست‌کم یک بار مرور شده باشد. استخراج همچنان هر واژه‌ای را که از قبل کارت دارد رد می‌کند.</translation>
     </message>
     <message>
         <source>Keep words known after their cards are deleted</source>
@@ -6499,15 +6501,15 @@ No index files are deleted.</source>
     <name>KnownWordsManagerDialog</name>
     <message>
         <source>Word</source>
-        <translation type="unfinished" />
+        <translation>واژه</translation>
     </message>
     <message>
         <source>Source</source>
-        <translation type="unfinished" />
+        <translation>منبع</translation>
     </message>
     <message>
         <source>Added</source>
-        <translation type="unfinished" />
+        <translation>تاریخ افزودن</translation>
     </message>
     <message>
         <source>Manage Known Words</source>
@@ -6519,7 +6521,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Every word this language counts as known, and where it came from. Words you added from the Word Curator stay known on every run and across cache rebuilds.</source>
-        <translation type="unfinished" />
+        <translation>همه واژه‌هایی که این زبان شناخته‌شده می‌شمارد و منبع هر کدام. واژه‌هایی که از گزینشگر واژه افزوده‌اید در هر اجرا و پس از بازسازی حافظه نهان شناخته‌شده می‌مانند.</translation>
     </message>
     <message>
         <source>Decks this language's known-words scan skips: %1. Change them in Settings → Word Filters.</source>
@@ -6531,15 +6533,15 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Added by you</source>
-        <translation type="unfinished" />
+        <translation>افزوده‌شده توسط شما</translation>
     </message>
     <message>
         <source>Mined by Anki Miner</source>
-        <translation type="unfinished" />
+        <translation>استخراج‌شده توسط Anki Miner</translation>
     </message>
     <message>
         <source>From Anki</source>
-        <translation type="unfinished" />
+        <translation>از Anki</translation>
     </message>
     <message>
         <source>Filter…</source>
@@ -6547,7 +6549,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>All sources</source>
-        <translation type="unfinished" />
+        <translation>همه منابع</translation>
     </message>
     <message>
         <source>Rebuild Known Words DB</source>
@@ -6563,7 +6565,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Removes words you added. Words from Anki come back on the next run, and mined words leave with Undo.</source>
-        <translation type="unfinished" />
+        <translation>واژه‌هایی را که افزوده‌اید حذف می‌کند. واژه‌های Anki در اجرای بعدی برمی‌گردند و واژه‌های استخراج‌شده با واگرد حذف می‌شوند.</translation>
     </message>
     <message>
         <source>Import…</source>
@@ -6571,7 +6573,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Export words…</source>
-        <translation type="unfinished" />
+        <translation>صدور واژه‌ها…</translation>
     </message>
     <message>
         <source>Reset User List</source>
@@ -6603,11 +6605,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Kindle Vocabulary Builder</source>
-        <translation type="unfinished" />
+        <translation>‏Kindle Vocabulary Builder</translation>
     </message>
     <message>
         <source>Lute or LWT term export</source>
-        <translation type="unfinished" />
+        <translation>خروجی اصطلاح Lute یا LWT</translation>
     </message>
     <message>
         <source>plain word list</source>
@@ -6619,7 +6621,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Known word lists (*.csv *.tsv *.txt *.json *.db);;All Files (*)</source>
-        <translation type="unfinished" />
+        <translation>فهرست‌های واژه شناخته‌شده (*.csv *.tsv *.txt *.json *.db);;همه فایل‌ها (*)</translation>
     </message>
     <message>
         <source>Detected: %1 — every entry is imported.
@@ -6651,7 +6653,7 @@ Words to add: %3. Continue?</source>
     </message>
     <message>
         <source>This file has no words for %1. It contains: %2.</source>
-        <translation type="unfinished" />
+        <translation>این فایل واژه‌ای برای %1 ندارد. محتوای آن: %2.</translation>
     </message>
     <message>
         <source>That file is too large to import.</source>
@@ -6667,7 +6669,7 @@ Words to add: %3. Continue?</source>
     </message>
     <message>
         <source>File format not recognized. Supported: jpdb review export (JSON), Migaku word export (JSON/CSV), AnkiMorphs known morphs (CSV), Kindle Vocabulary Builder (vocab.db), Lute or LWT term export (CSV/TSV), plain word lists (one word per line).</source>
-        <translation type="unfinished" />
+        <translation>قالب فایل شناخته نشد. پشتیبانی‌شده: خروجی مرور jpdb (JSON)، خروجی واژه Migaku (JSON/CSV)، تکواژهای شناخته‌شده AnkiMorphs (CSV)، Kindle Vocabulary Builder (vocab.db)، خروجی اصطلاح Lute یا LWT (CSV/TSV)، فهرست‌های واژه ساده (یک واژه در هر سطر).</translation>
     </message>
     <message>
         <source>That file could not be imported.</source>
@@ -6689,7 +6691,7 @@ Words to add: %3. Continue?</source>
     </message>
     <message>
         <source>CSV files (*.csv);;Text files, one word per line (*.txt)</source>
-        <translation type="unfinished" />
+        <translation>فایل‌های CSV (*.csv);;فایل‌های متنی، یک واژه در هر سطر (*.txt)</translation>
     </message>
     <message>
         <source>The known words list could not be exported.</source>
@@ -7437,7 +7439,7 @@ Continue?</source>
     </message>
     <message>
         <source>Opus clips do not play in AnkiMobile on iPhone or iPad. Choose MP3 if you review there.</source>
-        <translation type="unfinished" />
+        <translation>کلیپ‌های Opus در AnkiMobile روی iPhone یا iPad پخش نمی‌شوند. اگر آنجا مرور می‌کنید، MP3 را برگزینید.</translation>
     </message>
     <message>
         <source> kbps</source>
@@ -7465,11 +7467,11 @@ Continue?</source>
     </message>
     <message>
         <source>Even out audio volume</source>
-        <translation type="unfinished" />
+        <translation>یکسان‌سازی بلندی صدا</translation>
     </message>
     <message>
         <source>Brings sentence clips and condensed audio to one volume and fades each clip in and out, so quiet and loud sources sound alike. Applies to new clips.</source>
-        <translation type="unfinished" />
+        <translation>کلیپ‌های جمله و صوت فشرده را به یک بلندی می‌رساند و هر کلیپ را با محو تدریجی آغاز و پایان می‌دهد تا منابع آرام و بلند یکسان شنیده شوند. روی کلیپ‌های تازه اعمال می‌شود.</translation>
     </message>
     <message>
         <source>Text-to-speech</source>
@@ -7493,11 +7495,11 @@ Continue?</source>
     </message>
     <message>
         <source>Crop manga pictures to the speech bubble</source>
-        <translation type="unfinished" />
+        <translation>برش تصاویر مانگا به حباب گفتار</translation>
     </message>
     <message>
         <source>Manga cards show the speech bubble and the art around it instead of the whole page. A sentence with no bubble position keeps the whole page.</source>
-        <translation type="unfinished" />
+        <translation>کارت‌های مانگا به‌جای کل صفحه، حباب گفتار و طرح پیرامون آن را نشان می‌دهند. جمله‌ای که موقعیت حباب ندارد کل صفحه را نگه می‌دارد.</translation>
     </message>
     <message>
         <source>Enable animated screenshots</source>
@@ -7733,7 +7735,7 @@ Continue?</source>
     </message>
     <message>
         <source>Anki didn't sync after this run. Your cards are added; sync from Anki, or see the log for why.</source>
-        <translation type="unfinished" />
+        <translation>‏Anki پس از این اجرا همگام نشد. کارت‌های شما افزوده شده‌اند؛ از Anki همگام‌سازی کنید یا برای دیدن دلیل، گزارش را ببینید.</translation>
     </message>
     <message>
         <source>Anki Miner couldn't open these cards in Anki.</source>
@@ -9498,7 +9500,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>An .epub, .txt or .pdf book, or a folder of books; each book is mined separately.</source>
-        <translation type="unfinished" />
+        <translation>یک کتاب .epub، .txt یا .pdf، یا پوشه‌ای از کتاب‌ها؛ هر کتاب جداگانه استخراج می‌شود.</translation>
     </message>
     <message>
         <source>Mine</source>
@@ -9534,7 +9536,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Choose an .epub, .txt or .pdf book, or a folder of books.</source>
-        <translation type="unfinished" />
+        <translation>یک کتاب .epub، .txt یا .pdf، یا پوشه‌ای از کتاب‌ها برگزینید.</translation>
     </message>
     <message>
         <source>Starting…</source>
@@ -9600,7 +9602,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Add subtitle files (.srt, .ass, .ssa, .vtt, .smi, .lrc) to the list.</source>
-        <translation type="unfinished" />
+        <translation>فایل‌های زیرنویس (.srt، .ass، .ssa، .vtt، .smi، .lrc) را به فهرست بیفزایید.</translation>
     </message>
     <message>
         <source>Remove Selected</source>
@@ -9781,19 +9783,19 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Web addresses to fetch, one per line (https://…)</source>
-        <translation type="unfinished" />
+        <translation>نشانی‌های وب برای واکشی، یکی در هر سطر (https://…)</translation>
     </message>
     <message>
         <source>Web addresses</source>
-        <translation type="unfinished" />
+        <translation>نشانی‌های وب</translation>
     </message>
     <message>
         <source>Fetch</source>
-        <translation type="unfinished" />
+        <translation>واکشی</translation>
     </message>
     <message>
         <source>Put the article text of each web address in the box below, to check before mining.</source>
-        <translation type="unfinished" />
+        <translation>متن مقاله هر نشانی وب را در کادر زیر می‌گذارد تا پیش از استخراج بررسی شود.</translation>
     </message>
     <message>
         <source>Paste the text you want to mine. Cards from pasted text have no sentence audio from a recording.</source>
@@ -9841,59 +9843,59 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Each line must be a web address that starts with http:// or https://.</source>
-        <translation type="unfinished" />
+        <translation>هر سطر باید نشانی وبی باشد که با http:// یا https:// شروع می‌شود.</translation>
     </message>
     <message>
         <source>Enter a web address first.</source>
-        <translation type="unfinished" />
+        <translation>نخست یک نشانی وب وارد کنید.</translation>
     </message>
     <message>
         <source>Fetch takes up to 10 web addresses at a time.</source>
-        <translation type="unfinished" />
+        <translation>واکشی هر بار حداکثر 10 نشانی وب می‌پذیرد.</translation>
     </message>
     <message>
         <source>Fetching…</source>
-        <translation type="unfinished" />
+        <translation>در حال واکشی…</translation>
     </message>
     <message>
         <source>Could not fetch %1: %2</source>
-        <translation type="unfinished" />
+        <translation>واکشی %1 ممکن نشد: %2</translation>
     </message>
     <message>
         <source>None of the pages could be fetched.</source>
-        <translation type="unfinished" />
+        <translation>هیچ‌یک از صفحه‌ها واکشی نشد.</translation>
     </message>
     <message>
         <source>Fetched %1.</source>
-        <translation type="unfinished" />
+        <translation>واکشی شد: %1.</translation>
     </message>
     <message>
         <source>The pages could not be fetched.</source>
-        <translation type="unfinished" />
+        <translation>واکشی صفحه‌ها ممکن نشد.</translation>
     </message>
     <message>
         <source>The page could not be reached. Check the address and your connection.</source>
-        <translation type="unfinished" />
+        <translation>دسترسی به صفحه ممکن نشد. نشانی و اتصال خود را بررسی کنید.</translation>
     </message>
     <message>
         <source>The site did not send the page.</source>
-        <translation type="unfinished" />
+        <translation>سایت صفحه را نفرستاد.</translation>
     </message>
     <message>
         <source>This address is not a web page.</source>
-        <translation type="unfinished" />
+        <translation>این نشانی یک صفحه وب نیست.</translation>
     </message>
     <message>
         <source>This page is too large to read.</source>
-        <translation type="unfinished" />
+        <translation>این صفحه برای خواندن بیش از حد بزرگ است.</translation>
     </message>
     <message>
         <source>This is not a web address.</source>
-        <translation type="unfinished" />
+        <translation>این یک نشانی وب نیست.</translation>
     </message>
     <message>
         <source>No article text found on this page. Pages that draw their text with JavaScript cannot be read.</source>
-        <translation type="unfinished" />
+        <translation>متن مقاله‌ای در این صفحه پیدا نشد. صفحه‌هایی که متن خود را با JavaScript می‌کشند خواندنی نیستند.</translation>
     </message>
     <message>
         <source>Paste some text first.</source>
@@ -9905,7 +9907,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>The fetched text was edited, so it is mined as one text without its page titles.</source>
-        <translation type="unfinished" />
+        <translation>متن واکشی‌شده ویرایش شده است، پس به‌صورت یک متن واحد و بدون عنوان صفحه‌هایش استخراج می‌شود.</translation>
     </message>
     <message>
         <source>That picture cannot be read. Pick another, or remove it to mine without one.</source>
@@ -10691,7 +10693,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Export words…</source>
-        <translation type="unfinished" />
+        <translation>صدور واژه‌ها…</translation>
     </message>
     <message>
         <source>Close</source>
@@ -10705,19 +10707,19 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Export Words</source>
-        <translation type="unfinished" />
+        <translation>صدور واژه‌ها</translation>
     </message>
     <message>
         <source>CSV files (*.csv)</source>
-        <translation type="unfinished" />
+        <translation>فایل‌های CSV (*.csv)</translation>
     </message>
     <message>
         <source>Words exported</source>
-        <translation type="unfinished" />
+        <translation>واژه‌ها صادر شدند</translation>
     </message>
     <message>
         <source>Export failed — try again</source>
-        <translation type="unfinished" />
+        <translation>صدور ناموفق بود — دوباره تلاش کنید</translation>
     </message>
     <message>
         <source>Confirm Undo</source>
@@ -10921,11 +10923,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Skip openings, endings and signs</source>
-        <translation type="unfinished" />
+        <translation>رد کردن تیتراژهای آغاز و پایان و نوشته‌های روی صفحه</translation>
     </message>
     <message>
         <source>Leaves out song lyrics, previews and on-screen signs: lines whose subtitle style marks them as a song or a sign, and lines inside a video's opening, ending or preview chapters. Applies to mining, Condense and Readability.</source>
-        <translation type="unfinished" />
+        <translation>متن آهنگ‌ها، پیش‌نمایش‌ها و نوشته‌های روی صفحه را کنار می‌گذارد: سطرهایی که سبک زیرنویسشان آن‌ها را آهنگ یا نوشته نشان می‌دهد، و سطرهای درون فصل‌های آغاز، پایان یا پیش‌نمایش ویدیو. روی استخراج، فشرده‌سازی و خوانایی اعمال می‌شود.</translation>
     </message>
     <message>
         <source>Sentence options</source>
@@ -10941,7 +10943,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Mines at most one word per example sentence. A word whose sentence is already taken moves to another line it appears on, and is skipped only when every one of its lines is taken. Whitelisted words are still mined.</source>
-        <translation type="unfinished" />
+        <translation>از هر جمله نمونه حداکثر یک واژه استخراج می‌کند. واژه‌ای که جمله‌اش از قبل گرفته شده به سطر دیگری که در آن آمده منتقل می‌شود و فقط وقتی رد می‌شود که همه سطرهایش گرفته شده باشند. واژه‌های فهرست سفید همچنان استخراج می‌شوند.</translation>
     </message>
     <message>
         <source>Only i+1 sentences (exactly one unknown word)</source>
@@ -10957,11 +10959,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Pick the clearest sentence for each word</source>
-        <translation type="unfinished" />
+        <translation>انتخاب روشن‌ترین جمله برای هر واژه</translation>
     </message>
     <message>
         <source>When a word appears on several lines, its card uses the line with the fewest unknown words and a comfortable length instead of the first one. The Word Curator still lists every line, and card order does not change.</source>
-        <translation type="unfinished" />
+        <translation>وقتی واژه‌ای در چند سطر می‌آید، کارتش به‌جای نخستین سطر، سطری را به کار می‌برد که کمترین واژه ناشناخته و طولی مناسب دارد. گزینشگر واژه همچنان همه سطرها را فهرست می‌کند و ترتیب کارت‌ها تغییر نمی‌کند.</translation>
     </message>
     <message>
         <source> s</source>
@@ -13017,15 +13019,15 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>Restore a backup…</source>
-        <translation type="unfinished" />
+        <translation>بازیابی پشتیبان…</translation>
     </message>
     <message>
         <source>Backups</source>
-        <translation type="unfinished" />
+        <translation>پشتیبان‌ها</translation>
     </message>
     <message>
         <source>Anki Miner saves your known words, statistics, settings and profiles once a day when it starts, and keeps the last 7 days.</source>
-        <translation type="unfinished" />
+        <translation>‏Anki Miner روزی یک بار هنگام شروع، واژه‌های شناخته‌شده، آمار، تنظیمات و پروفایل‌های شما را ذخیره می‌کند و ۷ روز آخر را نگه می‌دارد.</translation>
     </message>
     <message>
         <source>Themes</source>
@@ -13069,27 +13071,27 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>There is no backup yet. Anki Miner makes one each day when it starts.</source>
-        <translation type="unfinished" />
+        <translation>هنوز پشتیبانی وجود ندارد. Anki Miner هر روز هنگام شروع یکی می‌سازد.</translation>
     </message>
     <message>
         <source>Restore a Backup</source>
-        <translation type="unfinished" />
+        <translation>بازیابی پشتیبان</translation>
     </message>
     <message>
         <source>Restore the backup from:</source>
-        <translation type="unfinished" />
+        <translation>بازیابی پشتیبانِ تاریخ:</translation>
     </message>
     <message>
         <source>Replace your known words, statistics, settings and profiles with the copies from %1? The restore runs the next time Anki Miner starts. Changes made after that backup are lost.</source>
-        <translation type="unfinished" />
+        <translation>واژه‌های شناخته‌شده، آمار، تنظیمات و پروفایل‌های شما با نسخه‌های %1 جایگزین شوند؟ بازیابی در شروع بعدی Anki Miner انجام می‌شود. تغییرات پس از آن پشتیبان از دست می‌روند.</translation>
     </message>
     <message>
         <source>The restore could not be scheduled.</source>
-        <translation type="unfinished" />
+        <translation>زمان‌بندی بازیابی ممکن نشد.</translation>
     </message>
     <message>
         <source>The backup from %1 will be restored when Anki Miner next starts.</source>
-        <translation type="unfinished" />
+        <translation>پشتیبان %1 در شروع بعدی Anki Miner بازیابی می‌شود.</translation>
     </message>
 </context><context>
     <name>UpdateBanner</name>
@@ -13257,11 +13259,11 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>The picture (burned-in text)</source>
-        <translation type="unfinished" />
+        <translation>تصویر (متن چسبیده به تصویر)</translation>
     </message>
     <message>
         <source>Image subtitle track %1</source>
-        <translation type="unfinished" />
+        <translation>ترک زیرنویس تصویری %1</translation>
     </message>
     <message>
         <source>The OCR engine could not start on this computer. The details say why.</source>
@@ -13301,15 +13303,15 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>This field takes a video or an image subtitle file (.sup, .idx, .sub).</source>
-        <translation type="unfinished" />
+        <translation>این فیلد یک ویدیو یا فایل زیرنویس تصویری (.sup، .idx، .sub) می‌پذیرد.</translation>
     </message>
     <message>
         <source>Read from:</source>
-        <translation type="unfinished" />
+        <translation>خواندن از:</translation>
     </message>
     <message>
         <source>Read text drawn into the picture, or one of the video's image subtitle tracks.</source>
-        <translation type="unfinished" />
+        <translation>متن کشیده‌شده در تصویر، یا یکی از ترک‌های زیرنویس تصویری ویدیو را بخوانید.</translation>
     </message>
     <message>
         <source>Video Folder:</source>
@@ -13393,7 +13395,7 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>Image subtitles are read over the whole frame, so they need no region.</source>
-        <translation type="unfinished" />
+        <translation>زیرنویس‌های تصویری روی کل فریم خوانده می‌شوند، پس به ناحیه نیاز ندارند.</translation>
     </message>
     <message>
         <source>Download OCR models</source>
@@ -13437,7 +13439,7 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>A DVD subtitle needs its .idx and .sub files in the same folder.</source>
-        <translation type="unfinished" />
+        <translation>زیرنویس DVD به فایل‌های .idx و .sub خود در یک پوشه نیاز دارد.</translation>
     </message>
     <message>
         <source>Choose a folder before reading subtitles.</source>
@@ -13723,15 +13725,15 @@ Sort by it to work through a long recording in order — then highlight the rows
     </message>
     <message>
         <source>Used on the card</source>
-        <translation type="unfinished" />
+        <translation>به‌کاررفته در کارت</translation>
     </message>
     <message>
         <source>Back to the first match</source>
-        <translation type="unfinished" />
+        <translation>بازگشت به نخستین تطابق</translation>
     </message>
     <message>
         <source>Use this dictionary on the card</source>
-        <translation type="unfinished" />
+        <translation>استفاده از این واژه‌نامه در کارت</translation>
     </message>
     <message>
         <source>Sentences (%1)</source>
@@ -14169,7 +14171,7 @@ Sort by it to work through a long recording in order — then highlight the rows
     </message>
     <message>
         <source>Wikimedia Commons (native recordings)</source>
-        <translation type="unfinished" />
+        <translation>‏Wikimedia Commons (ضبط‌های گویشوران بومی)</translation>
     </message>
     <message>
         <source>Microsoft Edge read-aloud (synthetic TTS)</source>
@@ -14183,7 +14185,7 @@ Sort by it to work through a long recording in order — then highlight the rows
     <name>_BarChart</name>
     <message>
         <source>Cards per period</source>
-        <translation type="unfinished" />
+        <translation>کارت‌ها در هر بازه</translation>
     </message>
 </context><context>
     <name>_HealthRow</name>
@@ -14205,11 +14207,11 @@ Sort by it to work through a long recording in order — then highlight the rows
     <name>_MissingWordsDialog</name>
     <message>
         <source>Missing Words</source>
-        <translation type="unfinished" />
+        <translation>واژه‌های جاافتاده</translation>
     </message>
     <message>
         <source>Not known yet in ranks %1</source>
-        <translation type="unfinished" />
+        <translation>هنوز ناشناخته در رتبه‌های %1</translation>
     </message>
 </context><context>
     <name>app</name>

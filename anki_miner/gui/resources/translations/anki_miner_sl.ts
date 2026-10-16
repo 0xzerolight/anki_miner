@@ -93,59 +93,59 @@
     </message>
     <message>
         <source>Known Words</source>
-        <translation type="unfinished" />
+        <translation>Znane besede</translation>
     </message>
     <message>
         <source>Words Anki Miner treats as known in the current mining language.</source>
-        <translation type="unfinished" />
+        <translation>Besede, ki jih Anki Miner v trenutnem jeziku zbiranja šteje za znane.</translation>
     </message>
     <message>
         <source>Mining History</source>
-        <translation type="unfinished" />
+        <translation>Zgodovina zbiranja</translation>
     </message>
     <message>
         <source>History period</source>
-        <translation type="unfinished" />
+        <translation>Obdobje zgodovine</translation>
     </message>
     <message>
         <source>All time</source>
-        <translation type="unfinished" />
+        <translation>Ves čas</translation>
     </message>
     <message>
         <source>Last 7 days</source>
-        <translation type="unfinished" />
+        <translation>Zadnjih 7 dni</translation>
     </message>
     <message>
         <source>Last 30 days</source>
-        <translation type="unfinished" />
+        <translation>Zadnjih 30 dni</translation>
     </message>
     <message>
         <source>Last 12 months</source>
-        <translation type="unfinished" />
+        <translation>Zadnjih 12 mesecev</translation>
     </message>
     <message>
         <source>History grouping</source>
-        <translation type="unfinished" />
+        <translation>Združevanje zgodovine</translation>
     </message>
     <message>
         <source>Each run</source>
-        <translation type="unfinished" />
+        <translation>Vsak zagon</translation>
     </message>
     <message>
         <source>By day</source>
-        <translation type="unfinished" />
+        <translation>Po dnevih</translation>
     </message>
     <message>
         <source>By week</source>
-        <translation type="unfinished" />
+        <translation>Po tednih</translation>
     </message>
     <message>
         <source>By month</source>
-        <translation type="unfinished" />
+        <translation>Po mesecih</translation>
     </message>
     <message>
         <source>Export CSV…</source>
-        <translation type="unfinished" />
+        <translation>Izvozi CSV …</translation>
     </message>
     <message>
         <source>No sessions yet — process an episode to see your history.</source>
@@ -177,7 +177,7 @@
     </message>
     <message>
         <source>Period</source>
-        <translation type="unfinished" />
+        <translation>Obdobje</translation>
     </message>
     <message>
         <source>Show in Anki</source>
@@ -185,7 +185,7 @@
     </message>
     <message>
         <source>Delete this run's cards…</source>
-        <translation type="unfinished" />
+        <translation>Izbriši kartice tega zagona …</translation>
     </message>
     <message>
         <source>Series Difficulty Ranking</source>
@@ -217,11 +217,11 @@
     </message>
     <message>
         <source>Frequency Coverage</source>
-        <translation type="unfinished" />
+        <translation>Pokritost po pogostosti</translation>
     </message>
     <message>
         <source>Rank band</source>
-        <translation type="unfinished" />
+        <translation>Razpon mest</translation>
     </message>
     <message>
         <source>Known</source>
@@ -229,15 +229,15 @@
     </message>
     <message>
         <source>Not known</source>
-        <translation type="unfinished" />
+        <translation>Neznano</translation>
     </message>
     <message>
         <source>Known %</source>
-        <translation type="unfinished" />
+        <translation>Znano %</translation>
     </message>
     <message>
         <source>Show missing words</source>
-        <translation type="unfinished" />
+        <translation>Prikaži manjkajoče besede</translation>
     </message>
     <message>
         <source>Milestones</source>
@@ -265,93 +265,95 @@
     </message>
     <message>
         <source>No runs in this period.</source>
-        <translation type="unfinished" />
+        <translation>V tem obdobju ni zagonov.</translation>
     </message>
     <message>
         <source>Export Mining History</source>
-        <translation type="unfinished" />
+        <translation>Izvoz zgodovine zbiranja</translation>
     </message>
     <message>
         <source>CSV Files (*.csv);;All Files (*)</source>
-        <translation type="unfinished" />
+        <translation>Datoteke CSV (*.csv);;Vse datoteke (*)</translation>
     </message>
     <message>
         <source>History saved to %1.</source>
-        <translation type="unfinished" />
+        <translation>Zgodovina je shranjena v %1.</translation>
     </message>
     <message>
         <source>The history could not be exported.</source>
-        <translation type="unfinished" />
+        <translation>Zgodovine ni bilo mogoče izvoziti.</translation>
     </message>
     <message>
         <source>%1 (cards deleted: %2)</source>
-        <translation type="unfinished" />
+        <translation>%1 (izbrisanih kartic: %2)</translation>
     </message>
     <message>
         <source>Select one run in the table.</source>
-        <translation type="unfinished" />
+        <translation>V tabeli izberite en zagon.</translation>
     </message>
     <message>
         <source>This run's cards were deleted: %1.</source>
-        <translation type="unfinished" />
+        <translation>Izbrisane kartice tega zagona: %1.</translation>
     </message>
     <message>
         <source>Anki Miner has no card list for this run: it was mined before this version, or it made no cards.</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner za ta zagon nima seznama kartic: zbiranje je bilo pred to različico ali pa ni ustvarilo kartic.</translation>
     </message>
     <message>
         <source>Anki Miner couldn't open this run's cards in Anki.</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner kartic tega zagona ni mogel odpreti v Anki.</translation>
     </message>
     <message>
         <source>None of this run's cards are in Anki any more.</source>
-        <translation type="unfinished" />
+        <translation>Nobena kartica tega zagona ni več v Anki.</translation>
     </message>
     <message>
         <source>Delete This Run's Cards</source>
-        <translation type="unfinished" />
+        <translation>Brisanje kartic tega zagona</translation>
     </message>
     <message>
         <source>Cards this run added that are still in Anki: %1. Reviewed at least once: %2.
 
 Delete them from Anki? Their review history is deleted with them. This cannot be undone.</source>
-        <translation type="unfinished" />
+        <translation>Kartice, ki jih je dodal ta zagon in so še v Anki: %1. Vsaj enkrat ponovljene: %2.
+
+Jih izbrišem iz Anki? Z njimi se izbriše tudi njihova zgodovina ponavljanja. Tega ni mogoče razveljaviti.</translation>
     </message>
     <message>
         <source>Cards deleted from Anki: %1.</source>
-        <translation type="unfinished" />
+        <translation>Kartice, izbrisane iz Anki: %1.</translation>
     </message>
     <message>
         <source>This run's cards could not be deleted.</source>
-        <translation type="unfinished" />
+        <translation>Kartic tega zagona ni bilo mogoče izbrisati.</translation>
     </message>
     <message>
         <source>Known words could not be counted.</source>
-        <translation type="unfinished" />
+        <translation>Znanih besed ni bilo mogoče prešteti.</translation>
     </message>
     <message>
         <source>Words Anki Miner treats as known in %1.</source>
-        <translation type="unfinished" />
+        <translation>Besede, ki jih Anki Miner šteje za znane v jeziku %1.</translation>
     </message>
     <message>
         <source>Change since %1: %2</source>
-        <translation type="unfinished" />
+        <translation>Sprememba od %1: %2</translation>
     </message>
     <message>
         <source>Last counted on %1; Anki was not reachable.</source>
-        <translation type="unfinished" />
+        <translation>Nazadnje prešteto: %1; Anki ni bil dosegljiv.</translation>
     </message>
     <message>
         <source>Last counted on %1.</source>
-        <translation type="unfinished" />
+        <translation>Nazadnje prešteto: %1.</translation>
     </message>
     <message>
         <source>Coverage needs Anki running: it compares the list with your cards.</source>
-        <translation type="unfinished" />
+        <translation>Za pokritost mora biti Anki zagnan: seznam se primerja z vašimi karticami.</translation>
     </message>
     <message>
         <source>How many of the most frequent words in %1 you already know.</source>
-        <translation type="unfinished" />
+        <translation>Koliko najpogostejših besed s seznama %1 že poznate.</translation>
     </message>
     <message>
         <source>%1 mining sessions completed</source>
@@ -765,7 +767,7 @@ Delete them from Anki? Their review history is deleted with them. This cannot be
     </message>
     <message>
         <source>{series}, {episode} and {volume} become each card's show, episode or book volume, for example mined::{series}::{episode}.</source>
-        <translation type="unfinished" />
+        <translation>{series}, {episode} in {volume} postanejo serija, epizoda ali zvezek knjige vsake kartice, na primer mined::{series}::{episode}.</translation>
     </message>
     <message>
         <source>Refresh</source>
@@ -793,11 +795,11 @@ Delete them from Anki? Their review history is deleted with them. This cannot be
     </message>
     <message>
         <source>Sync Anki after mining</source>
-        <translation type="unfinished" />
+        <translation>Po zbiranju sinhroniziraj Anki</translation>
     </message>
     <message>
         <source>After a run that added cards, ask Anki to sync with AnkiWeb. If the sync fails, the Activity Log says so and the cards stay added.</source>
-        <translation type="unfinished" />
+        <translation>Po zagonu, ki je dodal kartice, Anki zaprosi za sinhronizacijo z AnkiWeb. Če sinhronizacija ne uspe, to piše v Dnevniku dejavnosti, kartice pa ostanejo dodane.</translation>
     </message>
     <message>
         <source>AnkiConnect URL</source>
@@ -809,7 +811,7 @@ Delete them from Anki? Their review history is deleted with them. This cannot be
     </message>
     <message>
         <source>If AnkiConnect asks for an API key, add it to the address: http://127.0.0.1:8765/?key=YOUR_KEY</source>
-        <translation type="unfinished" />
+        <translation>Če AnkiConnect zahteva ključ API, ga dodajte naslovu: http://127.0.0.1:8765/?key=YOUR_KEY</translation>
     </message>
     <message>
         <source>Fill in automatically</source>
@@ -1521,7 +1523,7 @@ Podprte oblike: AJT (index.json + media/), NHK16 (entries.json + audio/), Forvo 
     </message>
     <message>
         <source>Wikimedia Commons (native recordings)</source>
-        <translation type="unfinished" />
+        <translation>Wikimedia Commons (posnetki naravnih govorcev)</translation>
     </message>
     <message>
         <source>Custom JSON</source>
@@ -2092,7 +2094,7 @@ Nobena datoteka indeksa ne bo izbrisana.</translation>
     </message>
     <message>
         <source>Every audio file in the folder, in file-name order, one .srt each. A folder of book folders (each with its EPUB and audio) syncs every book in turn.</source>
-        <translation type="unfinished" />
+        <translation>Vsaka zvočna datoteka v mapi, po vrstnem redu imen datotek, vsaka s svojim .srt. Mapa z mapami knjig (vsaka s svojim EPUB in zvokom) sinhronizira knjige eno za drugo.</translation>
     </message>
     <message>
         <source>EPUB or Text File:</source>
@@ -2120,7 +2122,7 @@ Nobena datoteka indeksa ne bo izbrisana.</translation>
     </message>
     <message>
         <source>Sentences: how many of the book's sentences, from the first one found to the last, got a subtitle. Audio: how much of the narration matched the book. Grade: A from 90% on both, B from 75%, C from 50%, else D.</source>
-        <translation type="unfinished" />
+        <translation>Stavki: koliko stavkov knjige, od prvega najdenega do zadnjega, je dobilo podnapis. Zvok: koliko pripovedi se je ujemalo s knjigo. Ocena: A od 90 % pri obeh, B od 75 %, C od 50 %, sicer D.</translation>
     </message>
     <message>
         <source>Output</source>
@@ -2184,7 +2186,7 @@ Nobena datoteka indeksa ne bo izbrisana.</translation>
     </message>
     <message>
         <source>No audio files were found in that folder, and no book folders (each with its book and audio).</source>
-        <translation type="unfinished" />
+        <translation>V tej mapi ni bilo najdenih zvočnih datotek niti map knjig (vsaka s svojo knjigo in zvokom).</translation>
     </message>
     <message>
         <source>That folder could not be scanned.</source>
@@ -2192,15 +2194,15 @@ Nobena datoteka indeksa ne bo izbrisana.</translation>
     </message>
     <message>
         <source>Skipped folder %1: no audio files</source>
-        <translation type="unfinished" />
+        <translation>Mapa %1 preskočena: ni zvočnih datotek</translation>
     </message>
     <message>
         <source>Skipped folder %1: no .epub or .txt book</source>
-        <translation type="unfinished" />
+        <translation>Mapa %1 preskočena: ni knjige .epub ali .txt</translation>
     </message>
     <message>
         <source>Skipped folder %1: more than one book</source>
-        <translation type="unfinished" />
+        <translation>Mapa %1 preskočena: več kot ena knjiga</translation>
     </message>
     <message>
         <source>Output folder is not writable.</source>
@@ -2220,11 +2222,11 @@ Nobena datoteka indeksa ne bo izbrisana.</translation>
     </message>
     <message>
         <source>Books: %1 — %2</source>
-        <translation type="unfinished" />
+        <translation>Knjige: %1 — %2</translation>
     </message>
     <message>
         <source>%1: sentences %2%, audio %3% — grade %4</source>
-        <translation type="unfinished" />
+        <translation>%1: stavki %2%, zvok %3% — ocena %4</translation>
     </message>
     <message>
         <source>Syncing file %1 of %2</source>
@@ -2238,11 +2240,11 @@ Nobena datoteka indeksa ne bo izbrisana.</translation>
     </message>
     <message>
         <source>%1 could not be loaded: %2</source>
-        <translation type="unfinished" />
+        <translation>%1 ni bilo mogoče naložiti: %2</translation>
     </message>
     <message>
         <source>Its book could not be loaded</source>
-        <translation type="unfinished" />
+        <translation>Njene knjige ni bilo mogoče naložiti</translation>
     </message>
     <message>
         <source>Skipped, exists</source>
@@ -2262,11 +2264,11 @@ Nobena datoteka indeksa ne bo izbrisana.</translation>
     </message>
     <message>
         <source>Reusing the saved transcript</source>
-        <translation type="unfinished" />
+        <translation>Znova se uporablja shranjeni prepis</translation>
     </message>
     <message>
         <source>Found sentence %1 again later in the audio; timed it out of book order</source>
-        <translation type="unfinished" />
+        <translation>Stavek %1 je bil znova najden pozneje v zvoku; časovno je usklajen zunaj vrstnega reda knjige</translation>
     </message>
     <message>
         <source>%1 sentences timed, %2 in between had no audio</source>
@@ -2348,7 +2350,7 @@ Nobena datoteka indeksa ne bo izbrisana.</translation>
     </message>
     <message>
         <source>Approve or reject each word, pick its sentence and scene, trim its audio, mark words known, and fix a mistranscribed sentence or swap the word to mine -- before any card is created. When a word has entries in several dictionaries, choose which one the card's Definition uses.</source>
-        <translation type="unfinished" />
+        <translation>Potrdite ali zavrnite vsako besedo, izberite njen stavek in prizor, obrežite njen zvok, označite besede kot znane ter popravite napačno prepisan stavek ali zamenjajte besedo za zbiranje -- preden se ustvari katera koli kartica. Ko ima beseda vnose v več slovarjih, izberite, katerega uporabi definicija na kartici.</translation>
     </message>
     <message>
         <source>Secondary-language subtitles</source>
@@ -2356,7 +2358,7 @@ Nobena datoteka indeksa ne bo izbrisana.</translation>
     </message>
     <message>
         <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. Leave the file empty and Anki Miner picks a translation itself: a subtitle named for the video, or a text track inside it, in your interface language or else English. The Activity Log names the track it used. On Video → Batch, point it at a folder of translation subtitles instead and they pair to the videos by episode number. Turn it on under Settings → Sentences.</source>
-        <translation type="unfinished" />
+        <translation>Poleg datoteke podnapisov v jeziku zbiranja naložite še drugo v svojem jeziku: prikaže se pod vrstico v predogledu Kuratorja besed in jo je mogoče shraniti v polje Prevod. Pustite datoteko prazno in Anki Miner sam izbere prevod: podnapise, poimenovane po videu, ali besedilno sled v njem, v jeziku vmesnika ali sicer v angleščini. Dnevnik dejavnosti navede uporabljeno sled. V Video → Paketno namesto tega izberite mapo s podnapisi prevoda, ki se z videi povežejo po številki epizode. Vklopite to v Nastavitve → Stavki.</translation>
     </message>
     <message>
         <source>Build a deck by coverage %</source>
@@ -2392,11 +2394,11 @@ Nobena datoteka indeksa ne bo izbrisana.</translation>
     </message>
     <message>
         <source>Mine songs from .lrc lyrics</source>
-        <translation type="unfinished" />
+        <translation>Zbiranje iz pesmi z besedili .lrc</translation>
     </message>
     <message>
         <source>Use a .lrc lyrics file wherever a subtitle file goes. Each line lasts until the next one starts. Pair a song with its lyrics on Audiobooks, condense it in Condense, or mine a music video on Video.</source>
-        <translation type="unfinished" />
+        <translation>Datoteko z besedilom pesmi .lrc uporabite povsod, kjer gre datoteka podnapisov. Vsaka vrstica traja, dokler se ne začne naslednja. Pesem povežite z besedilom v Zvočne knjige, jo zgostite v Zgosti ali zbirajte iz glasbenega videa v Video.</translation>
     </message>
     <message>
         <source>Mine from manga</source>
@@ -2412,23 +2414,23 @@ Nobena datoteka indeksa ne bo izbrisana.</translation>
     </message>
     <message>
         <source>Mine vocabulary from novels and other text (EPUB, PDF, Aozora, plain text).</source>
-        <translation type="unfinished" />
+        <translation>Zbirajte besedišče iz romanov in drugih besedil (EPUB, PDF, Aozora, golo besedilo).</translation>
     </message>
     <message>
         <source>Readings from a book's own furigana</source>
-        <translation type="unfinished" />
+        <translation>Branja iz furigane same knjige</translation>
     </message>
     <message>
         <source>When a Japanese EPUB prints furigana over a word, the card takes that reading instead of the parser's guess.</source>
-        <translation type="unfinished" />
+        <translation>Ko japonski EPUB nad besedo izpiše furigano, kartica prevzame to branje namesto ugibanja razčlenjevalnika.</translation>
     </message>
     <message>
         <source>Mine pasted text or a web article</source>
-        <translation type="unfinished" />
+        <translation>Zbiranje iz prilepljenega besedila ali spletnega članka</translation>
     </message>
     <message>
         <source>Paste text in your mining language, or fetch a web article by its address, and mine it into Anki cards. A fetched article's cards name the page and site as their source.</source>
-        <translation type="unfinished" />
+        <translation>Prilepite besedilo v jeziku zbiranja ali pridobite spletni članek po njegovem naslovu in ga zberite v kartice Anki. Kartice pridobljenega članka kot vir navedejo stran in spletno mesto.</translation>
     </message>
     <message>
         <source>Mine subtitle files without video</source>
@@ -2452,7 +2454,7 @@ Nobena datoteka indeksa ne bo izbrisana.</translation>
     </message>
     <message>
         <source>Create subtitles from audio with a local Whisper model -- as a standalone tool. Long lines are split at sentence ends, and a second run on the same file reuses the saved transcript.</source>
-        <translation type="unfinished" />
+        <translation>Ustvarite podnapise iz zvoka z lokalnim modelom Whisper -- kot samostojnim orodjem. Dolge vrstice se razdelijo na koncih stavkov, drugi zagon na isti datoteki pa znova uporabi shranjeni prepis.</translation>
     </message>
     <message>
         <source>Re-time existing subtitles</source>
@@ -2512,35 +2514,35 @@ Nobena datoteka indeksa ne bo izbrisana.</translation>
     </message>
     <message>
         <source>Browse your whole mining history</source>
-        <translation type="unfinished" />
+        <translation>Brskanje po celotni zgodovini zbiranja</translation>
     </message>
     <message>
         <source>Analytics lists every run you have mined. Pick a period, group the runs by day, week or month, see the cards per period in a chart, and export the table as a CSV file.</source>
-        <translation type="unfinished" />
+        <translation>Analitika navede vsak vaš zagon zbiranja. Izberite obdobje, združite zagone po dnevih, tednih ali mesecih, si oglejte kartice po obdobjih v grafikonu in izvozite tabelo kot datoteko CSV.</translation>
     </message>
     <message>
         <source>Show or delete a past run's cards</source>
-        <translation type="unfinished" />
+        <translation>Prikaz ali brisanje kartic preteklega zagona</translation>
     </message>
     <message>
         <source>Select a run in Analytics → Mining History to open its cards in Anki's browser or to delete them. The confirmation says how many of its cards are still in Anki and how many you have reviewed. Runs mined before this version have no card list.</source>
-        <translation type="unfinished" />
+        <translation>Izberite zagon v Analitika → Zgodovina zbiranja, da odprete njegove kartice v brskalniku Anki ali jih izbrišete. Potrditev pove, koliko njegovih kartic je še v Anki in koliko ste jih ponovili. Zagoni pred to različico nimajo seznama kartic.</translation>
     </message>
     <message>
         <source>Track how many words you know</source>
-        <translation type="unfinished" />
+        <translation>Spremljanje števila znanih besed</translation>
     </message>
     <message>
         <source>The Known Words card on Analytics counts the words Anki Miner treats as known in the current mining language and shows how that number changed. It is counted while Anki is running, at most once every ten minutes.</source>
-        <translation type="unfinished" />
+        <translation>Kartica Znane besede v Analitika prešteje besede, ki jih Anki Miner v trenutnem jeziku zbiranja šteje za znane, in pokaže, kako se je to število spremenilo. Šteje se, ko je Anki zagnan, največ enkrat na deset minut.</translation>
     </message>
     <message>
         <source>See how much of a frequency list you know</source>
-        <translation type="unfinished" />
+        <translation>Koliko seznama pogostosti poznate</translation>
     </message>
     <message>
         <source>Analytics → Frequency Coverage counts the words you know in ranks 1–1,000 up to 20,000 of your first frequency list with numeric ranks, and lists the missing words of each band. It needs Anki running.</source>
-        <translation type="unfinished" />
+        <translation>Analitika → Pokritost po pogostosti prešteje znane besede na mestih od 1–1.000 do 20.000 vašega prvega seznama pogostosti s številčnimi mesti in navede manjkajoče besede vsakega razpona. Anki mora biti zagnan.</translation>
     </message>
     <message>
         <source>Reset mining statistics</source>
@@ -2616,11 +2618,11 @@ Nobena datoteka indeksa ne bo izbrisana.</translation>
     </message>
     <message>
         <source>Count a word as known only after its card has been reviewed</source>
-        <translation type="unfinished" />
+        <translation>Besedo štej za znano šele, ko je bila njena kartica ponovljena</translation>
     </message>
     <message>
         <source>Readability and the i+1 sentence rule then count a word as known only when its Anki card has been reviewed at least once. Mining still skips every word that already has a card.</source>
-        <translation type="unfinished" />
+        <translation>Berljivost in pravilo stavkov i+1 nato štejeta besedo za znano šele, ko je bila njena kartica Anki vsaj enkrat ponovljena. Zbiranje še vedno preskoči vsako besedo, ki že ima kartico.</translation>
     </message>
     <message>
         <source>Exclude specific Anki decks from 'known'</source>
@@ -2640,27 +2642,27 @@ Nobena datoteka indeksa ne bo izbrisana.</translation>
     </message>
     <message>
         <source>Browse every known word</source>
-        <translation type="unfinished" />
+        <translation>Brskanje po vseh znanih besedah</translation>
     </message>
     <message>
         <source>Manage Known Words lists every word this language counts as known, with where it came from (added by you, mined by Anki Miner, from Anki) and the date it was added. Search it, filter it by source, and remove words you added. Words from Anki come back on the next sync.</source>
-        <translation type="unfinished" />
+        <translation>Upravljaj znane besede navede vsako besedo, ki jo ta jezik šteje za znano, z njenim izvorom (dodali ste jo vi, zbral jo je Anki Miner, iz Anki) in datumom dodajanja. Iščite po seznamu, ga filtrirajte po viru in odstranite besede, ki ste jih dodali. Besede iz Anki se vrnejo ob naslednji sinhronizaciji.</translation>
     </message>
     <message>
         <source>Import known words from Kindle, Lute or LWT</source>
-        <translation type="unfinished" />
+        <translation>Uvoz znanih besed iz Kindle, Lute ali LWT</translation>
     </message>
     <message>
         <source>In Manage Known Words, Import… also reads a Kindle Vocabulary Builder file (vocab.db; words marked mastered) and Lute or LWT term exports (status 5 and 99).</source>
-        <translation type="unfinished" />
+        <translation>V Upravljaj znane besede Uvozi … prebere tudi datoteko Kindle Vocabulary Builder (vocab.db; besede, označene kot osvojene) in izvoze izrazov iz Lute ali LWT (stanje 5 in 99).</translation>
     </message>
     <message>
         <source>Export words to a CSV file</source>
-        <translation type="unfinished" />
+        <translation>Izvoz besed v datoteko CSV</translation>
     </message>
     <message>
         <source>Export words… saves the list you are looking at in Manage Known Words, or a finished run's mined and not-mined words with the reason each was skipped, as a CSV file.</source>
-        <translation type="unfinished" />
+        <translation>Izvozi besede … kot datoteko CSV shrani seznam, ki ga gledate v Upravljaj znane besede, ali zbrane in nezbrane besede končanega zagona z razlogom, zakaj je bila vsaka preskočena.</translation>
     </message>
     <message>
         <source>Exclude kana-only words</source>
@@ -2692,23 +2694,23 @@ Nobena datoteka indeksa ne bo izbrisana.</translation>
     </message>
     <message>
         <source>Mine at most one word from each example sentence. A word whose sentence is taken moves to another line it appears on, and is skipped only when every one of its lines is taken.</source>
-        <translation type="unfinished" />
+        <translation>Iz vsakega primera stavka zberite največ eno besedo. Beseda, katere stavek je zaseden, se premakne v drugo vrstico, v kateri se pojavi, in je preskočena šele, ko so zasedene vse njene vrstice.</translation>
     </message>
     <message>
         <source>Pick the clearest sentence</source>
-        <translation type="unfinished" />
+        <translation>Izbira najjasnejšega stavka</translation>
     </message>
     <message>
         <source>When a word appears on several lines, its card uses the line with the fewest unknown words and a comfortable length instead of the first one. The Word Curator still lists every line.</source>
-        <translation type="unfinished" />
+        <translation>Ko se beseda pojavi v več vrsticah, njena kartica namesto prve uporabi vrstico z najmanj neznanimi besedami in udobno dolžino. Kurator besed še vedno navede vsako vrstico.</translation>
     </message>
     <message>
         <source>Skip openings, endings and signs</source>
-        <translation type="unfinished" />
+        <translation>Preskoči uvodne in odjavne špice ter napise</translation>
     </message>
     <message>
         <source>Leave opening and ending songs, previews and on-screen signs out of mining, Condense and Readability: lines styled as songs or signs, and lines inside a video's opening, ending and preview chapters. On by default for new installs; turn it off in Settings → Sentences.</source>
-        <translation type="unfinished" />
+        <translation>Iz zbiranja, Zgosti in Berljivosti izpustite uvodne in odjavne pesmi, napovednike in napise na zaslonu: vrstice, oblikovane kot pesmi ali napisi, ter vrstice v poglavjih uvodne špice, odjavne špice in napovednika videa. Privzeto vklopljeno za nove namestitve; izklopite v Nastavitve → Stavki.</translation>
     </message>
     <message>
         <source>Strip junk from subtitles (regex)</source>
@@ -2776,11 +2778,11 @@ Nobena datoteka indeksa ne bo izbrisana.</translation>
     </message>
     <message>
         <source>Import a dictionary file</source>
-        <translation type="unfinished" />
+        <translation>Uvoz datoteke slovarja</translation>
     </message>
     <message>
         <source>Add a Yomitan zip, a StarDict dictionary (its archive or its .ifo file) or a CSV/TSV word list (term and definition, or term, reading and definition) as a definition source.</source>
-        <translation type="unfinished" />
+        <translation>Kot vir definicij dodajte Yomitan zip, slovar StarDict (njegov arhiv ali datoteko .ifo) ali seznam besed CSV/TSV (izraz in definicija ali izraz, branje in definicija).</translation>
     </message>
     <message>
         <source>Keep dictionaries up to date</source>
@@ -2852,7 +2854,7 @@ Nobena datoteka indeksa ne bo izbrisana.</translation>
     </message>
     <message>
         <source>Attach word audio to cards from audio packs, JPod101 (Japanese), Google text-to-speech, or Microsoft Edge text-to-speech (every language). Wikimedia Commons plays recordings of real speakers from Wiktionary and Lingua Libre, tried before Google TTS in most languages.</source>
-        <translation type="unfinished" />
+        <translation>Karticam dodajte zvok besed iz zvočnih paketov, JPod101 (japonščina), Googlove pretvorbe besedila v govor ali pretvorbe besedila v govor Microsoft Edge (vsi jeziki). Wikimedia Commons predvaja posnetke resničnih govorcev iz Wikislovarja in Lingua Libre, v večini jezikov pa je na vrsti pred Google TTS.</translation>
     </message>
     <message>
         <source>Import local audio packs</source>
@@ -2868,7 +2870,7 @@ Nobena datoteka indeksa ne bo izbrisana.</translation>
     </message>
     <message>
         <source>Extract the spoken sentence as an audio clip; tune its format and bitrate. Even out audio volume brings sentence clips and condensed audio to one loudness and fades each clip in and out.</source>
-        <translation type="unfinished" />
+        <translation>Izgovorjeni stavek izvlecite kot zvočni posnetek; prilagodite njegovo obliko in bitno hitrost. Izenači glasnost zvoka privede posnetke stavkov in zgoščeni zvok na enako glasnost ter vsak posnetek postopno ojača in utiša.</translation>
     </message>
     <message>
         <source>Sentence audio for reading (TTS)</source>
@@ -2892,7 +2894,7 @@ Nobena datoteka indeksa ne bo izbrisana.</translation>
     </message>
     <message>
         <source>Capture a still frame from the scene to put on the card. Crop manga pictures to the speech bubble shows the bubble and the art around it instead of the whole page.</source>
-        <translation type="unfinished" />
+        <translation>Zajemite mirujočo sličico iz prizora za kartico. Obreži slike mang na oblaček govora pokaže oblaček in risbo okoli njega namesto cele strani.</translation>
     </message>
     <message>
         <source>Animated clips (GIF/WebP)</source>
@@ -2972,7 +2974,7 @@ Nobena datoteka indeksa ne bo izbrisana.</translation>
     </message>
     <message>
         <source>Add tags to every note Anki Miner creates. Card tags can use {series}, {episode} and {volume}. Each card gets its own show, episode or book volume, for example mined::{series}::{episode} gives mined::Frieren::03.</source>
-        <translation type="unfinished" />
+        <translation>Vsaki opombi, ki jo ustvari Anki Miner, dodajte oznake. Oznake kartic lahko uporabljajo {series}, {episode} in {volume}. Vsaka kartica dobi svojo serijo, epizodo ali zvezek knjige, na primer mined::{series}::{episode} da mined::Frieren::03.</translation>
     </message>
     <message>
         <source>Connect to Anki (AnkiConnect)</source>
@@ -2980,15 +2982,15 @@ Nobena datoteka indeksa ne bo izbrisana.</translation>
     </message>
     <message>
         <source>Set the AnkiConnect address; Refresh re-checks the connection to your running Anki. If AnkiConnect is set up with an API key, add it to the address: http://127.0.0.1:8765/?key=YOUR_KEY. Anki Miner sends it with every request and never writes it to the log.</source>
-        <translation type="unfinished" />
+        <translation>Nastavite naslov AnkiConnect; Osveži znova preveri povezavo z zagnanim Anki. Če je AnkiConnect nastavljen s ključem API, ga dodajte naslovu: http://127.0.0.1:8765/?key=YOUR_KEY. Anki Miner ga pošlje z vsako zahtevo in ga nikoli ne zapiše v dnevnik.</translation>
     </message>
     <message>
         <source>Sync Anki after mining</source>
-        <translation type="unfinished" />
+        <translation>Po zbiranju sinhroniziraj Anki</translation>
     </message>
     <message>
         <source>After a run that added cards, Anki Miner asks Anki to sync with AnkiWeb. If the sync fails, the Activity Log says so and the cards stay added.</source>
-        <translation type="unfinished" />
+        <translation>Po zagonu, ki je dodal kartice, Anki Miner Anki zaprosi za sinhronizacijo z AnkiWeb. Če sinhronizacija ne uspe, to piše v Dnevniku dejavnosti, kartice pa ostanejo dodane.</translation>
     </message>
     <message>
         <source>Fill in field mappings automatically</source>
@@ -3076,7 +3078,7 @@ Nobena datoteka indeksa ne bo izbrisana.</translation>
     </message>
     <message>
         <source>Draw a box where a video's on-screen dialogue appears and Anki Miner reads it into a timed .srt that Video → Single can mine. Made for game longplays without commentary. It also reads image subtitles (Blu-ray .sup, DVD .idx/.sub, or an image track inside a video) without a box. Lines with none of your mining language's letters are left out. Download the OCR engine from the setup card on Utilities → Video OCR.</source>
-        <translation type="unfinished" />
+        <translation>Narišite okvir, kjer se na zaslonu pojavi dialog videa, in Anki Miner ga prebere v časovno usklajen .srt, iz katerega lahko zbira Video → Posamezno. Narejeno za posnetke igranja brez komentarja. Brez okvira prebere tudi slikovne podnapise (Blu-ray .sup, DVD .idx/.sub ali slikovno sled v videu). Vrstice brez črk vašega jezika zbiranja so izpuščene. Pogon OCR prenesite s kartice za nastavitev v Pripomočki → Video OCR.</translation>
     </message>
     <message>
         <source>Sync an audiobook to its EPUB</source>
@@ -3084,23 +3086,23 @@ Nobena datoteka indeksa ne bo izbrisana.</translation>
     </message>
     <message>
         <source>Transcribe an audiobook and time the book's own sentences to it, writing an .srt the Audiobook tab, Reading → Subtitle Files or a reader can use. A second run on the same audio reuses the saved transcript instead of transcribing again.</source>
-        <translation type="unfinished" />
+        <translation>Prepišite zvočno knjigo in nanjo časovno uskladite stavke same knjige ter zapišite .srt, ki ga lahko uporabijo zavihek Zvočne knjige, Branje → Podnapisi ali bralnik. Drugi zagon na istem zvoku znova uporabi shranjeni prepis namesto ponovnega prepisovanja.</translation>
     </message>
     <message>
         <source>Sync a shelf of audiobooks in one run</source>
-        <translation type="unfinished" />
+        <translation>Sinhronizacija police zvočnih knjig v enem zagonu</translation>
     </message>
     <message>
         <source>In Utilities → Audiobook Sync, choose Folder and pick a folder that holds one folder per book, each with its EPUB (or text file) and its audio files. The books sync one after another, in name order.</source>
-        <translation type="unfinished" />
+        <translation>V Pripomočki → Sinhronizacija izberite Mapa in nato mapo, ki vsebuje po eno mapo za vsako knjigo, vsako z njenim EPUB (ali besedilno datoteko) in zvočnimi datotekami. Knjige se sinhronizirajo ena za drugo, po vrstnem redu imen.</translation>
     </message>
     <message>
         <source>See how well an audiobook synced</source>
-        <translation type="unfinished" />
+        <translation>Kako dobro se je zvočna knjiga sinhronizirala</translation>
     </message>
     <message>
         <source>After Audiobook Sync, each book gets a line under the Book card: how many of its sentences got a subtitle, how much of the narration matched the book, and a grade from A to D. Chapters read out of book order are found too; sentences the narrator skipped never get a subtitle.</source>
-        <translation type="unfinished" />
+        <translation>Po sinhronizaciji zvočne knjige vsaka knjiga dobi vrstico pod kartico Knjiga: koliko njenih stavkov je dobilo podnapis, koliko pripovedi se je ujemalo s knjigo in oceno od A do D. Najdena so tudi poglavja, prebrana zunaj vrstnega reda knjige; stavki, ki jih je pripovedovalec preskočil, nikoli ne dobijo podnapisa.</translation>
     </message>
     <message>
         <source>Check how much of a show, book or manga you can read</source>
@@ -3184,11 +3186,11 @@ Nobena datoteka indeksa ne bo izbrisana.</translation>
     </message>
     <message>
         <source>Restore an automatic backup</source>
-        <translation type="unfinished" />
+        <translation>Obnovitev samodejne varnostne kopije</translation>
     </message>
     <message>
         <source>Anki Miner backs up your known words, statistics, settings and profiles once a day when it starts, and keeps the last 7 days. Settings → General → Restore a backup… puts one back the next time the app starts.</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner enkrat na dan ob zagonu varnostno kopira vaše znane besede, statistiko, nastavitve in profile ter hrani zadnjih 7 dni. Nastavitve → Splošno → Obnovi varnostno kopijo … eno obnovi ob naslednjem zagonu aplikacije.</translation>
     </message>
     <message>
         <source>Undo a mining run</source>
@@ -3200,11 +3202,11 @@ Nobena datoteka indeksa ne bo izbrisana.</translation>
     </message>
     <message>
         <source>Export a run's words</source>
-        <translation type="unfinished" />
+        <translation>Izvoz besed zagona</translation>
     </message>
     <message>
         <source>Press View details on a run's result line, then Export words… to save the run's mined and not-mined words, with the reason each was skipped, as a CSV file.</source>
-        <translation type="unfinished" />
+        <translation>V vrstici z rezultatom zagona pritisnite Prikaži podrobnosti in nato Izvozi besede …, da zbrane in nezbrane besede zagona z razlogom, zakaj je bila vsaka preskočena, shranite kot datoteko CSV.</translation>
     </message>
     <message>
         <source>Keyboard shortcuts</source>
@@ -4642,11 +4644,11 @@ To bo spremenilo %n zapiskov (%1) in jim dodalo oznako %2. Želite nadaljevati?<
     </message>
     <message>
         <source>Choose dictionary files</source>
-        <translation type="unfinished" />
+        <translation>Izberite datoteke slovarjev</translation>
     </message>
     <message>
         <source>Dictionaries (*.zip *.ifo *.tar.gz *.tgz *.tar.bz2 *.tar.xz *.csv *.tsv)</source>
-        <translation type="unfinished" />
+        <translation>Slovarji (*.zip *.ifo *.tar.gz *.tgz *.tar.bz2 *.tar.xz *.csv *.tsv)</translation>
     </message>
     <message>
         <source>Dictionary %1 of %2: %3</source>
@@ -5486,8 +5488,11 @@ Nobena datoteka na disku ne bo izbrisana.</translation>
     </message>
     <message numerus="yes">
         <source>Skipping lines in %n opening, ending or preview chapter(s)</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>Preskakovanje vrstic v %n poglavju uvodne špice, odjavne špice ali napovednika</numerusform>
+            <numerusform>Preskakovanje vrstic v %n poglavjih uvodne špice, odjavne špice ali napovednika</numerusform>
+            <numerusform>Preskakovanje vrstic v %n poglavjih uvodne špice, odjavne špice ali napovednika</numerusform>
+            <numerusform>Preskakovanje vrstic v %n poglavjih uvodne špice, odjavne špice ali napovednika</numerusform>
         </translation>
     </message>
     <message>
@@ -5543,7 +5548,7 @@ Nobena datoteka na disku ne bo izbrisana.</translation>
     </message>
     <message>
         <source>Only %1% of the first %2 words have an entry in your dictionaries. Is this file in the language you are mining?</source>
-        <translation type="unfinished" />
+        <translation>Samo %1% od prvih %2 besed ima vnos v vaših slovarjih. Ali je ta datoteka v jeziku, iz katerega zbirate?</translation>
     </message>
     <message>
         <source>Frequency cutoff ignored — no ranked frequency source is loaded (Settings → Frequency).</source>
@@ -5663,11 +5668,11 @@ Nobena datoteka na disku ne bo izbrisana.</translation>
     </message>
     <message>
         <source>Translation subtitles picked automatically: %1</source>
-        <translation type="unfinished" />
+        <translation>Samodejno izbrani podnapisi prevoda: %1</translation>
     </message>
     <message>
         <source>Translation subtitles picked automatically: embedded track %1</source>
-        <translation type="unfinished" />
+        <translation>Samodejno izbrani podnapisi prevoda: vdelana sled %1</translation>
     </message>
     <message>
         <source>Could not extract media for any word — no cards created</source>
@@ -5941,11 +5946,11 @@ Nobena datoteka na disku ne bo izbrisana.</translation>
     </message>
     <message>
         <source>Count a word as known only after its card has been reviewed</source>
-        <translation type="unfinished" />
+        <translation>Besedo štej za znano šele, ko je bila njena kartica ponovljena</translation>
     </message>
     <message>
         <source>Readability and the i+1 sentence rule count a word as known only when its Anki card has been reviewed at least once. Mining still skips every word that already has a card.</source>
-        <translation type="unfinished" />
+        <translation>Berljivost in pravilo stavkov i+1 štejeta besedo za znano šele, ko je bila njena kartica Anki vsaj enkrat ponovljena. Zbiranje še vedno preskoči vsako besedo, ki že ima kartico.</translation>
     </message>
     <message>
         <source>Keep words known after their cards are deleted</source>
@@ -6607,15 +6612,15 @@ Nobena datoteka indeksa ne bo izbrisana.</translation>
     <name>KnownWordsManagerDialog</name>
     <message>
         <source>Word</source>
-        <translation type="unfinished" />
+        <translation>Beseda</translation>
     </message>
     <message>
         <source>Source</source>
-        <translation type="unfinished" />
+        <translation>Vir</translation>
     </message>
     <message>
         <source>Added</source>
-        <translation type="unfinished" />
+        <translation>Dodano</translation>
     </message>
     <message>
         <source>Manage Known Words</source>
@@ -6627,7 +6632,7 @@ Nobena datoteka indeksa ne bo izbrisana.</translation>
     </message>
     <message>
         <source>Every word this language counts as known, and where it came from. Words you added from the Word Curator stay known on every run and across cache rebuilds.</source>
-        <translation type="unfinished" />
+        <translation>Vsaka beseda, ki jo ta jezik šteje za znano, in njen izvor. Besede, ki ste jih dodali iz Kuratorja besed, ostanejo znane ob vsakem zagonu in po ponovni gradnji predpomnilnika.</translation>
     </message>
     <message>
         <source>Decks this language's known-words scan skips: %1. Change them in Settings → Word Filters.</source>
@@ -6639,15 +6644,15 @@ Nobena datoteka indeksa ne bo izbrisana.</translation>
     </message>
     <message>
         <source>Added by you</source>
-        <translation type="unfinished" />
+        <translation>Dodali ste vi</translation>
     </message>
     <message>
         <source>Mined by Anki Miner</source>
-        <translation type="unfinished" />
+        <translation>Zbral Anki Miner</translation>
     </message>
     <message>
         <source>From Anki</source>
-        <translation type="unfinished" />
+        <translation>Iz Anki</translation>
     </message>
     <message>
         <source>Filter…</source>
@@ -6655,7 +6660,7 @@ Nobena datoteka indeksa ne bo izbrisana.</translation>
     </message>
     <message>
         <source>All sources</source>
-        <translation type="unfinished" />
+        <translation>Vsi viri</translation>
     </message>
     <message>
         <source>Rebuild Known Words DB</source>
@@ -6671,7 +6676,7 @@ Nobena datoteka indeksa ne bo izbrisana.</translation>
     </message>
     <message>
         <source>Removes words you added. Words from Anki come back on the next run, and mined words leave with Undo.</source>
-        <translation type="unfinished" />
+        <translation>Odstrani besede, ki ste jih dodali. Besede iz Anki se vrnejo ob naslednjem zagonu, zbrane besede pa odstrani razveljavitev.</translation>
     </message>
     <message>
         <source>Import…</source>
@@ -6679,7 +6684,7 @@ Nobena datoteka indeksa ne bo izbrisana.</translation>
     </message>
     <message>
         <source>Export words…</source>
-        <translation type="unfinished" />
+        <translation>Izvozi besede …</translation>
     </message>
     <message>
         <source>Reset User List</source>
@@ -6711,11 +6716,11 @@ Nobena datoteka indeksa ne bo izbrisana.</translation>
     </message>
     <message>
         <source>Kindle Vocabulary Builder</source>
-        <translation type="unfinished" />
+        <translation>Kindle Vocabulary Builder</translation>
     </message>
     <message>
         <source>Lute or LWT term export</source>
-        <translation type="unfinished" />
+        <translation>Izvoz izrazov iz Lute ali LWT</translation>
     </message>
     <message>
         <source>plain word list</source>
@@ -6727,7 +6732,7 @@ Nobena datoteka indeksa ne bo izbrisana.</translation>
     </message>
     <message>
         <source>Known word lists (*.csv *.tsv *.txt *.json *.db);;All Files (*)</source>
-        <translation type="unfinished" />
+        <translation>Seznami znanih besed (*.csv *.tsv *.txt *.json *.db);;Vse datoteke (*)</translation>
     </message>
     <message>
         <source>Detected: %1 — every entry is imported.
@@ -6759,7 +6764,7 @@ Besede za dodajanje: %3. Želite nadaljevati?</translation>
     </message>
     <message>
         <source>This file has no words for %1. It contains: %2.</source>
-        <translation type="unfinished" />
+        <translation>Ta datoteka nima besed za jezik %1. Vsebuje: %2.</translation>
     </message>
     <message>
         <source>That file is too large to import.</source>
@@ -6775,7 +6780,7 @@ Besede za dodajanje: %3. Želite nadaljevati?</translation>
     </message>
     <message>
         <source>File format not recognized. Supported: jpdb review export (JSON), Migaku word export (JSON/CSV), AnkiMorphs known morphs (CSV), Kindle Vocabulary Builder (vocab.db), Lute or LWT term export (CSV/TSV), plain word lists (one word per line).</source>
-        <translation type="unfinished" />
+        <translation>Oblika datoteke ni prepoznana. Podprto: izvoz ponavljanj iz jpdb (JSON), izvoz besed iz Migaku (JSON/CSV), znani morfi iz AnkiMorphs (CSV), Kindle Vocabulary Builder (vocab.db), izvoz izrazov iz Lute ali LWT (CSV/TSV), navadni seznami besed (ena beseda na vrstico).</translation>
     </message>
     <message>
         <source>That file could not be imported.</source>
@@ -6797,7 +6802,7 @@ Besede za dodajanje: %3. Želite nadaljevati?</translation>
     </message>
     <message>
         <source>CSV files (*.csv);;Text files, one word per line (*.txt)</source>
-        <translation type="unfinished" />
+        <translation>Datoteke CSV (*.csv);;Besedilne datoteke, ena beseda na vrstico (*.txt)</translation>
     </message>
     <message>
         <source>The known words list could not be exported.</source>
@@ -7548,7 +7553,7 @@ Najprej zaprite brskalnik kartic in urejevalnik zapiskov v Anki — v odprtem za
     </message>
     <message>
         <source>Opus clips do not play in AnkiMobile on iPhone or iPad. Choose MP3 if you review there.</source>
-        <translation type="unfinished" />
+        <translation>Posnetki Opus se v AnkiMobile na iPhonu ali iPadu ne predvajajo. Izberite MP3, če ponavljate tam.</translation>
     </message>
     <message>
         <source> kbps</source>
@@ -7576,11 +7581,11 @@ Najprej zaprite brskalnik kartic in urejevalnik zapiskov v Anki — v odprtem za
     </message>
     <message>
         <source>Even out audio volume</source>
-        <translation type="unfinished" />
+        <translation>Izenači glasnost zvoka</translation>
     </message>
     <message>
         <source>Brings sentence clips and condensed audio to one volume and fades each clip in and out, so quiet and loud sources sound alike. Applies to new clips.</source>
-        <translation type="unfinished" />
+        <translation>Posnetke stavkov in zgoščeni zvok privede na enako glasnost ter vsak posnetek postopno ojača in utiša, da tihi in glasni viri zvenijo enako. Velja za nove posnetke.</translation>
     </message>
     <message>
         <source>Text-to-speech</source>
@@ -7604,11 +7609,11 @@ Najprej zaprite brskalnik kartic in urejevalnik zapiskov v Anki — v odprtem za
     </message>
     <message>
         <source>Crop manga pictures to the speech bubble</source>
-        <translation type="unfinished" />
+        <translation>Obreži slike mang na oblaček govora</translation>
     </message>
     <message>
         <source>Manga cards show the speech bubble and the art around it instead of the whole page. A sentence with no bubble position keeps the whole page.</source>
-        <translation type="unfinished" />
+        <translation>Kartice mang namesto cele strani pokažejo oblaček govora in risbo okoli njega. Stavek brez položaja oblačka obdrži celo stran.</translation>
     </message>
     <message>
         <source>Enable animated screenshots</source>
@@ -7844,7 +7849,7 @@ Najprej zaprite brskalnik kartic in urejevalnik zapiskov v Anki — v odprtem za
     </message>
     <message>
         <source>Anki didn't sync after this run. Your cards are added; sync from Anki, or see the log for why.</source>
-        <translation type="unfinished" />
+        <translation>Anki se po tem zagonu ni sinhroniziral. Vaše kartice so dodane; sinhronizirajte iz Anki ali poglejte razlog v dnevniku.</translation>
     </message>
     <message>
         <source>Anki Miner couldn't open these cards in Anki.</source>
@@ -9624,7 +9629,7 @@ Nobena datoteka indeksa ne bo izbrisana.</translation>
     </message>
     <message>
         <source>An .epub, .txt or .pdf book, or a folder of books; each book is mined separately.</source>
-        <translation type="unfinished" />
+        <translation>Knjiga .epub, .txt ali .pdf ali mapa knjig; iz vsake knjige se zbira posebej.</translation>
     </message>
     <message>
         <source>Mine</source>
@@ -9660,7 +9665,7 @@ Nobena datoteka indeksa ne bo izbrisana.</translation>
     </message>
     <message>
         <source>Choose an .epub, .txt or .pdf book, or a folder of books.</source>
-        <translation type="unfinished" />
+        <translation>Izberite knjigo .epub, .txt ali .pdf ali mapo knjig.</translation>
     </message>
     <message>
         <source>Starting…</source>
@@ -9726,7 +9731,7 @@ Nobena datoteka indeksa ne bo izbrisana.</translation>
     </message>
     <message>
         <source>Add subtitle files (.srt, .ass, .ssa, .vtt, .smi, .lrc) to the list.</source>
-        <translation type="unfinished" />
+        <translation>Na seznam dodajte datoteke podnapisov (.srt, .ass, .ssa, .vtt, .smi, .lrc).</translation>
     </message>
     <message>
         <source>Remove Selected</source>
@@ -9907,19 +9912,19 @@ Nobena datoteka indeksa ne bo izbrisana.</translation>
     </message>
     <message>
         <source>Web addresses to fetch, one per line (https://…)</source>
-        <translation type="unfinished" />
+        <translation>Spletni naslovi za pridobitev, en na vrstico (https://…)</translation>
     </message>
     <message>
         <source>Web addresses</source>
-        <translation type="unfinished" />
+        <translation>Spletni naslovi</translation>
     </message>
     <message>
         <source>Fetch</source>
-        <translation type="unfinished" />
+        <translation>Pridobi</translation>
     </message>
     <message>
         <source>Put the article text of each web address in the box below, to check before mining.</source>
-        <translation type="unfinished" />
+        <translation>Besedilo članka z vsakega spletnega naslova postavi v polje spodaj, da ga preverite pred zbiranjem.</translation>
     </message>
     <message>
         <source>Paste the text you want to mine. Cards from pasted text have no sentence audio from a recording.</source>
@@ -9967,59 +9972,59 @@ Nobena datoteka indeksa ne bo izbrisana.</translation>
     </message>
     <message>
         <source>Each line must be a web address that starts with http:// or https://.</source>
-        <translation type="unfinished" />
+        <translation>Vsaka vrstica mora biti spletni naslov, ki se začne s http:// ali https://.</translation>
     </message>
     <message>
         <source>Enter a web address first.</source>
-        <translation type="unfinished" />
+        <translation>Najprej vnesite spletni naslov.</translation>
     </message>
     <message>
         <source>Fetch takes up to 10 web addresses at a time.</source>
-        <translation type="unfinished" />
+        <translation>Pridobivanje sprejme največ 10 spletnih naslovov hkrati.</translation>
     </message>
     <message>
         <source>Fetching…</source>
-        <translation type="unfinished" />
+        <translation>Pridobivanje …</translation>
     </message>
     <message>
         <source>Could not fetch %1: %2</source>
-        <translation type="unfinished" />
+        <translation>%1 ni bilo mogoče pridobiti: %2</translation>
     </message>
     <message>
         <source>None of the pages could be fetched.</source>
-        <translation type="unfinished" />
+        <translation>Nobene strani ni bilo mogoče pridobiti.</translation>
     </message>
     <message>
         <source>Fetched %1.</source>
-        <translation type="unfinished" />
+        <translation>Pridobljeno: %1.</translation>
     </message>
     <message>
         <source>The pages could not be fetched.</source>
-        <translation type="unfinished" />
+        <translation>Strani ni bilo mogoče pridobiti.</translation>
     </message>
     <message>
         <source>The page could not be reached. Check the address and your connection.</source>
-        <translation type="unfinished" />
+        <translation>Strani ni bilo mogoče doseči. Preverite naslov in povezavo.</translation>
     </message>
     <message>
         <source>The site did not send the page.</source>
-        <translation type="unfinished" />
+        <translation>Spletno mesto ni poslalo strani.</translation>
     </message>
     <message>
         <source>This address is not a web page.</source>
-        <translation type="unfinished" />
+        <translation>Ta naslov ni spletna stran.</translation>
     </message>
     <message>
         <source>This page is too large to read.</source>
-        <translation type="unfinished" />
+        <translation>Ta stran je prevelika za branje.</translation>
     </message>
     <message>
         <source>This is not a web address.</source>
-        <translation type="unfinished" />
+        <translation>To ni spletni naslov.</translation>
     </message>
     <message>
         <source>No article text found on this page. Pages that draw their text with JavaScript cannot be read.</source>
-        <translation type="unfinished" />
+        <translation>Na tej strani ni bilo najdenega besedila članka. Strani, ki besedilo izrišejo z JavaScriptom, ni mogoče prebrati.</translation>
     </message>
     <message>
         <source>Paste some text first.</source>
@@ -10031,7 +10036,7 @@ Nobena datoteka indeksa ne bo izbrisana.</translation>
     </message>
     <message>
         <source>The fetched text was edited, so it is mined as one text without its page titles.</source>
-        <translation type="unfinished" />
+        <translation>Pridobljeno besedilo je bilo urejeno, zato se zbira kot eno besedilo brez naslovov strani.</translation>
     </message>
     <message>
         <source>That picture cannot be read. Pick another, or remove it to mine without one.</source>
@@ -10820,7 +10825,7 @@ Nobena datoteka indeksa ne bo izbrisana.</translation>
     </message>
     <message>
         <source>Export words…</source>
-        <translation type="unfinished" />
+        <translation>Izvozi besede …</translation>
     </message>
     <message>
         <source>Close</source>
@@ -10837,19 +10842,19 @@ Nobena datoteka indeksa ne bo izbrisana.</translation>
     </message>
     <message>
         <source>Export Words</source>
-        <translation type="unfinished" />
+        <translation>Izvoz besed</translation>
     </message>
     <message>
         <source>CSV files (*.csv)</source>
-        <translation type="unfinished" />
+        <translation>Datoteke CSV (*.csv)</translation>
     </message>
     <message>
         <source>Words exported</source>
-        <translation type="unfinished" />
+        <translation>Besede izvožene</translation>
     </message>
     <message>
         <source>Export failed — try again</source>
-        <translation type="unfinished" />
+        <translation>Izvoz ni uspel — poskusite znova</translation>
     </message>
     <message>
         <source>Confirm Undo</source>
@@ -11056,11 +11061,11 @@ Nobena datoteka indeksa ne bo izbrisana.</translation>
     </message>
     <message>
         <source>Skip openings, endings and signs</source>
-        <translation type="unfinished" />
+        <translation>Preskoči uvodne in odjavne špice ter napise</translation>
     </message>
     <message>
         <source>Leaves out song lyrics, previews and on-screen signs: lines whose subtitle style marks them as a song or a sign, and lines inside a video's opening, ending or preview chapters. Applies to mining, Condense and Readability.</source>
-        <translation type="unfinished" />
+        <translation>Izpusti besedila pesmi, napovednike in napise na zaslonu: vrstice, ki jih slog podnapisov označi kot pesem ali napis, ter vrstice v poglavjih uvodne špice, odjavne špice ali napovednika videa. Velja za zbiranje, Zgosti in Berljivost.</translation>
     </message>
     <message>
         <source>Sentence options</source>
@@ -11076,7 +11081,7 @@ Nobena datoteka indeksa ne bo izbrisana.</translation>
     </message>
     <message>
         <source>Mines at most one word per example sentence. A word whose sentence is already taken moves to another line it appears on, and is skipped only when every one of its lines is taken. Whitelisted words are still mined.</source>
-        <translation type="unfinished" />
+        <translation>Iz vsakega primera stavka zbere največ eno besedo. Beseda, katere stavek je že zaseden, se premakne v drugo vrstico, v kateri se pojavi, in je preskočena šele, ko so zasedene vse njene vrstice. Besede z belega seznama se še vedno zbirajo.</translation>
     </message>
     <message>
         <source>Only i+1 sentences (exactly one unknown word)</source>
@@ -11092,11 +11097,11 @@ Nobena datoteka indeksa ne bo izbrisana.</translation>
     </message>
     <message>
         <source>Pick the clearest sentence for each word</source>
-        <translation type="unfinished" />
+        <translation>Za vsako besedo izberi najjasnejši stavek</translation>
     </message>
     <message>
         <source>When a word appears on several lines, its card uses the line with the fewest unknown words and a comfortable length instead of the first one. The Word Curator still lists every line, and card order does not change.</source>
-        <translation type="unfinished" />
+        <translation>Ko se beseda pojavi v več vrsticah, njena kartica namesto prve uporabi vrstico z najmanj neznanimi besedami in udobno dolžino. Kurator besed še vedno navede vsako vrstico, vrstni red kartic pa se ne spremeni.</translation>
     </message>
     <message>
         <source> s</source>
@@ -13161,15 +13166,15 @@ Nameščeni viri in tema se ohranijo.</translation>
     </message>
     <message>
         <source>Restore a backup…</source>
-        <translation type="unfinished" />
+        <translation>Obnovi varnostno kopijo …</translation>
     </message>
     <message>
         <source>Backups</source>
-        <translation type="unfinished" />
+        <translation>Varnostne kopije</translation>
     </message>
     <message>
         <source>Anki Miner saves your known words, statistics, settings and profiles once a day when it starts, and keeps the last 7 days.</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner enkrat na dan ob zagonu shrani vaše znane besede, statistiko, nastavitve in profile ter hrani zadnjih 7 dni.</translation>
     </message>
     <message>
         <source>Themes</source>
@@ -13213,27 +13218,27 @@ Nameščeni viri in tema se ohranijo.</translation>
     </message>
     <message>
         <source>There is no backup yet. Anki Miner makes one each day when it starts.</source>
-        <translation type="unfinished" />
+        <translation>Varnostne kopije še ni. Anki Miner jo naredi vsak dan ob zagonu.</translation>
     </message>
     <message>
         <source>Restore a Backup</source>
-        <translation type="unfinished" />
+        <translation>Obnovitev varnostne kopije</translation>
     </message>
     <message>
         <source>Restore the backup from:</source>
-        <translation type="unfinished" />
+        <translation>Obnovi varnostno kopijo z dne:</translation>
     </message>
     <message>
         <source>Replace your known words, statistics, settings and profiles with the copies from %1? The restore runs the next time Anki Miner starts. Changes made after that backup are lost.</source>
-        <translation type="unfinished" />
+        <translation>Želite znane besede, statistiko, nastavitve in profile zamenjati s kopijami z dne %1? Obnovitev se izvede ob naslednjem zagonu Anki Miner. Spremembe po tej varnostni kopiji bodo izgubljene.</translation>
     </message>
     <message>
         <source>The restore could not be scheduled.</source>
-        <translation type="unfinished" />
+        <translation>Obnovitve ni bilo mogoče načrtovati.</translation>
     </message>
     <message>
         <source>The backup from %1 will be restored when Anki Miner next starts.</source>
-        <translation type="unfinished" />
+        <translation>Varnostna kopija z dne %1 bo obnovljena ob naslednjem zagonu Anki Miner.</translation>
     </message>
 </context><context>
     <name>UpdateBanner</name>
@@ -13401,11 +13406,11 @@ Nameščeni viri in tema se ohranijo.</translation>
     </message>
     <message>
         <source>The picture (burned-in text)</source>
-        <translation type="unfinished" />
+        <translation>Slika (vžgano besedilo)</translation>
     </message>
     <message>
         <source>Image subtitle track %1</source>
-        <translation type="unfinished" />
+        <translation>Sled slikovnih podnapisov %1</translation>
     </message>
     <message>
         <source>The OCR engine could not start on this computer. The details say why.</source>
@@ -13445,15 +13450,15 @@ Nameščeni viri in tema se ohranijo.</translation>
     </message>
     <message>
         <source>This field takes a video or an image subtitle file (.sup, .idx, .sub).</source>
-        <translation type="unfinished" />
+        <translation>To polje sprejme video ali datoteko slikovnih podnapisov (.sup, .idx, .sub).</translation>
     </message>
     <message>
         <source>Read from:</source>
-        <translation type="unfinished" />
+        <translation>Beri iz:</translation>
     </message>
     <message>
         <source>Read text drawn into the picture, or one of the video's image subtitle tracks.</source>
-        <translation type="unfinished" />
+        <translation>Beri besedilo, vrisano v sliko, ali eno od sledi slikovnih podnapisov videa.</translation>
     </message>
     <message>
         <source>Video Folder:</source>
@@ -13537,7 +13542,7 @@ Nameščeni viri in tema se ohranijo.</translation>
     </message>
     <message>
         <source>Image subtitles are read over the whole frame, so they need no region.</source>
-        <translation type="unfinished" />
+        <translation>Slikovni podnapisi se berejo s celotne sličice, zato ne potrebujejo območja.</translation>
     </message>
     <message>
         <source>Download OCR models</source>
@@ -13581,7 +13586,7 @@ Nameščeni viri in tema se ohranijo.</translation>
     </message>
     <message>
         <source>A DVD subtitle needs its .idx and .sub files in the same folder.</source>
-        <translation type="unfinished" />
+        <translation>Podnapisi DVD potrebujejo svoji datoteki .idx in .sub v isti mapi.</translation>
     </message>
     <message>
         <source>Choose a folder before reading subtitles.</source>
@@ -13867,15 +13872,15 @@ Razvrstite po tem stolpcu, da dolg posnetek obdelate po vrsti — nato označite
     </message>
     <message>
         <source>Used on the card</source>
-        <translation type="unfinished" />
+        <translation>Uporabljeno na kartici</translation>
     </message>
     <message>
         <source>Back to the first match</source>
-        <translation type="unfinished" />
+        <translation>Nazaj na prvo ujemanje</translation>
     </message>
     <message>
         <source>Use this dictionary on the card</source>
-        <translation type="unfinished" />
+        <translation>Uporabi ta slovar na kartici</translation>
     </message>
     <message>
         <source>Sentences (%1)</source>
@@ -14313,7 +14318,7 @@ Razvrstite po tem stolpcu, da dolg posnetek obdelate po vrsti — nato označite
     </message>
     <message>
         <source>Wikimedia Commons (native recordings)</source>
-        <translation type="unfinished" />
+        <translation>Wikimedia Commons (posnetki naravnih govorcev)</translation>
     </message>
     <message>
         <source>Microsoft Edge read-aloud (synthetic TTS)</source>
@@ -14327,7 +14332,7 @@ Razvrstite po tem stolpcu, da dolg posnetek obdelate po vrsti — nato označite
     <name>_BarChart</name>
     <message>
         <source>Cards per period</source>
-        <translation type="unfinished" />
+        <translation>Kartice po obdobjih</translation>
     </message>
 </context><context>
     <name>_HealthRow</name>
@@ -14349,11 +14354,11 @@ Razvrstite po tem stolpcu, da dolg posnetek obdelate po vrsti — nato označite
     <name>_MissingWordsDialog</name>
     <message>
         <source>Missing Words</source>
-        <translation type="unfinished" />
+        <translation>Manjkajoče besede</translation>
     </message>
     <message>
         <source>Not known yet in ranks %1</source>
-        <translation type="unfinished" />
+        <translation>Še neznano na mestih %1</translation>
     </message>
 </context><context>
     <name>app</name>

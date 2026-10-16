@@ -5416,8 +5416,9 @@ No files on disk are deleted.</source>
     </message>
     <message numerus="yes">
         <source>Skipping lines in %n opening, ending or preview chapter(s)</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>Skipping lines in %n opening, ending or preview chapter</numerusform>
+            <numerusform>Skipping lines in %n opening, ending or preview chapters</numerusform>
         </translation>
     </message>
     <message>

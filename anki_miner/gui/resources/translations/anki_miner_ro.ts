@@ -93,59 +93,59 @@
     </message>
     <message>
         <source>Known Words</source>
-        <translation type="unfinished" />
+        <translation>Cuvinte cunoscute</translation>
     </message>
     <message>
         <source>Words Anki Miner treats as known in the current mining language.</source>
-        <translation type="unfinished" />
+        <translation>Cuvintele pe care Anki Miner le consideră cunoscute în limba de extragere curentă.</translation>
     </message>
     <message>
         <source>Mining History</source>
-        <translation type="unfinished" />
+        <translation>Istoric de extragere</translation>
     </message>
     <message>
         <source>History period</source>
-        <translation type="unfinished" />
+        <translation>Perioada istoricului</translation>
     </message>
     <message>
         <source>All time</source>
-        <translation type="unfinished" />
+        <translation>Tot timpul</translation>
     </message>
     <message>
         <source>Last 7 days</source>
-        <translation type="unfinished" />
+        <translation>Ultimele 7 zile</translation>
     </message>
     <message>
         <source>Last 30 days</source>
-        <translation type="unfinished" />
+        <translation>Ultimele 30 de zile</translation>
     </message>
     <message>
         <source>Last 12 months</source>
-        <translation type="unfinished" />
+        <translation>Ultimele 12 luni</translation>
     </message>
     <message>
         <source>History grouping</source>
-        <translation type="unfinished" />
+        <translation>Gruparea istoricului</translation>
     </message>
     <message>
         <source>Each run</source>
-        <translation type="unfinished" />
+        <translation>Fiecare rulare</translation>
     </message>
     <message>
         <source>By day</source>
-        <translation type="unfinished" />
+        <translation>Pe zile</translation>
     </message>
     <message>
         <source>By week</source>
-        <translation type="unfinished" />
+        <translation>Pe săptămâni</translation>
     </message>
     <message>
         <source>By month</source>
-        <translation type="unfinished" />
+        <translation>Pe luni</translation>
     </message>
     <message>
         <source>Export CSV…</source>
-        <translation type="unfinished" />
+        <translation>Exportă CSV…</translation>
     </message>
     <message>
         <source>No sessions yet — process an episode to see your history.</source>
@@ -177,7 +177,7 @@
     </message>
     <message>
         <source>Period</source>
-        <translation type="unfinished" />
+        <translation>Perioadă</translation>
     </message>
     <message>
         <source>Show in Anki</source>
@@ -185,7 +185,7 @@
     </message>
     <message>
         <source>Delete this run's cards…</source>
-        <translation type="unfinished" />
+        <translation>Șterge cardurile acestei rulări…</translation>
     </message>
     <message>
         <source>Series Difficulty Ranking</source>
@@ -217,11 +217,11 @@
     </message>
     <message>
         <source>Frequency Coverage</source>
-        <translation type="unfinished" />
+        <translation>Acoperire după frecvență</translation>
     </message>
     <message>
         <source>Rank band</source>
-        <translation type="unfinished" />
+        <translation>Interval de rang</translation>
     </message>
     <message>
         <source>Known</source>
@@ -229,15 +229,15 @@
     </message>
     <message>
         <source>Not known</source>
-        <translation type="unfinished" />
+        <translation>Necunoscute</translation>
     </message>
     <message>
         <source>Known %</source>
-        <translation type="unfinished" />
+        <translation>% cunoscute</translation>
     </message>
     <message>
         <source>Show missing words</source>
-        <translation type="unfinished" />
+        <translation>Afișează cuvintele lipsă</translation>
     </message>
     <message>
         <source>Milestones</source>
@@ -265,93 +265,95 @@
     </message>
     <message>
         <source>No runs in this period.</source>
-        <translation type="unfinished" />
+        <translation>Nicio rulare în această perioadă.</translation>
     </message>
     <message>
         <source>Export Mining History</source>
-        <translation type="unfinished" />
+        <translation>Exportă istoricul de extragere</translation>
     </message>
     <message>
         <source>CSV Files (*.csv);;All Files (*)</source>
-        <translation type="unfinished" />
+        <translation>Fișiere CSV (*.csv);;Toate fișierele (*)</translation>
     </message>
     <message>
         <source>History saved to %1.</source>
-        <translation type="unfinished" />
+        <translation>Istoricul a fost salvat în %1.</translation>
     </message>
     <message>
         <source>The history could not be exported.</source>
-        <translation type="unfinished" />
+        <translation>Istoricul nu a putut fi exportat.</translation>
     </message>
     <message>
         <source>%1 (cards deleted: %2)</source>
-        <translation type="unfinished" />
+        <translation>%1 (carduri șterse: %2)</translation>
     </message>
     <message>
         <source>Select one run in the table.</source>
-        <translation type="unfinished" />
+        <translation>Selectați o singură rulare din tabel.</translation>
     </message>
     <message>
         <source>This run's cards were deleted: %1.</source>
-        <translation type="unfinished" />
+        <translation>Cardurile acestei rulări au fost șterse: %1.</translation>
     </message>
     <message>
         <source>Anki Miner has no card list for this run: it was mined before this version, or it made no cards.</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner nu are o listă de carduri pentru această rulare: a fost făcută înainte de această versiune sau nu a creat niciun card.</translation>
     </message>
     <message>
         <source>Anki Miner couldn't open this run's cards in Anki.</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner nu a putut deschide în Anki cardurile acestei rulări.</translation>
     </message>
     <message>
         <source>None of this run's cards are in Anki any more.</source>
-        <translation type="unfinished" />
+        <translation>Niciunul dintre cardurile acestei rulări nu mai este în Anki.</translation>
     </message>
     <message>
         <source>Delete This Run's Cards</source>
-        <translation type="unfinished" />
+        <translation>Șterge cardurile acestei rulări</translation>
     </message>
     <message>
         <source>Cards this run added that are still in Anki: %1. Reviewed at least once: %2.
 
 Delete them from Anki? Their review history is deleted with them. This cannot be undone.</source>
-        <translation type="unfinished" />
+        <translation>Carduri adăugate de această rulare care sunt încă în Anki: %1. Revizuite cel puțin o dată: %2.
+
+Le ștergeți din Anki? Istoricul lor de recapitulare se șterge odată cu ele. Acțiunea nu poate fi anulată.</translation>
     </message>
     <message>
         <source>Cards deleted from Anki: %1.</source>
-        <translation type="unfinished" />
+        <translation>Carduri șterse din Anki: %1.</translation>
     </message>
     <message>
         <source>This run's cards could not be deleted.</source>
-        <translation type="unfinished" />
+        <translation>Cardurile acestei rulări nu au putut fi șterse.</translation>
     </message>
     <message>
         <source>Known words could not be counted.</source>
-        <translation type="unfinished" />
+        <translation>Cuvintele cunoscute nu au putut fi numărate.</translation>
     </message>
     <message>
         <source>Words Anki Miner treats as known in %1.</source>
-        <translation type="unfinished" />
+        <translation>Cuvintele pe care Anki Miner le consideră cunoscute în %1.</translation>
     </message>
     <message>
         <source>Change since %1: %2</source>
-        <translation type="unfinished" />
+        <translation>Modificare din %1: %2</translation>
     </message>
     <message>
         <source>Last counted on %1; Anki was not reachable.</source>
-        <translation type="unfinished" />
+        <translation>Numărate ultima dată la %1; Anki nu era accesibil.</translation>
     </message>
     <message>
         <source>Last counted on %1.</source>
-        <translation type="unfinished" />
+        <translation>Numărate ultima dată la %1.</translation>
     </message>
     <message>
         <source>Coverage needs Anki running: it compares the list with your cards.</source>
-        <translation type="unfinished" />
+        <translation>Acoperirea necesită Anki pornit: compară lista cu cardurile dumneavoastră.</translation>
     </message>
     <message>
         <source>How many of the most frequent words in %1 you already know.</source>
-        <translation type="unfinished" />
+        <translation>Câte dintre cele mai frecvente cuvinte din %1 cunoașteți deja.</translation>
     </message>
     <message>
         <source>%1 mining sessions completed</source>
@@ -763,7 +765,7 @@ Delete them from Anki? Their review history is deleted with them. This cannot be
     </message>
     <message>
         <source>{series}, {episode} and {volume} become each card's show, episode or book volume, for example mined::{series}::{episode}.</source>
-        <translation type="unfinished" />
+        <translation>{series}, {episode} și {volume} devin serialul, episodul sau volumul de carte al fiecărui card, de exemplu mined::{series}::{episode}.</translation>
     </message>
     <message>
         <source>Refresh</source>
@@ -791,11 +793,11 @@ Delete them from Anki? Their review history is deleted with them. This cannot be
     </message>
     <message>
         <source>Sync Anki after mining</source>
-        <translation type="unfinished" />
+        <translation>Sincronizează Anki după extragere</translation>
     </message>
     <message>
         <source>After a run that added cards, ask Anki to sync with AnkiWeb. If the sync fails, the Activity Log says so and the cards stay added.</source>
-        <translation type="unfinished" />
+        <translation>După o rulare care a adăugat carduri, îi cere lui Anki să se sincronizeze cu AnkiWeb. Dacă sincronizarea eșuează, Jurnalul de activitate o semnalează, iar cardurile rămân adăugate.</translation>
     </message>
     <message>
         <source>AnkiConnect URL</source>
@@ -807,7 +809,7 @@ Delete them from Anki? Their review history is deleted with them. This cannot be
     </message>
     <message>
         <source>If AnkiConnect asks for an API key, add it to the address: http://127.0.0.1:8765/?key=YOUR_KEY</source>
-        <translation type="unfinished" />
+        <translation>Dacă AnkiConnect cere o cheie API, adăugați-o la adresă: http://127.0.0.1:8765/?key=YOUR_KEY</translation>
     </message>
     <message>
         <source>Fill in automatically</source>
@@ -1519,7 +1521,7 @@ Formate acceptate: AJT (index.json + media/), NHK16 (entries.json + audio/), For
     </message>
     <message>
         <source>Wikimedia Commons (native recordings)</source>
-        <translation type="unfinished" />
+        <translation>Wikimedia Commons (înregistrări ale vorbitorilor nativi)</translation>
     </message>
     <message>
         <source>Custom JSON</source>
@@ -2089,7 +2091,7 @@ Nu se șterge niciun fișier index.</translation>
     </message>
     <message>
         <source>Every audio file in the folder, in file-name order, one .srt each. A folder of book folders (each with its EPUB and audio) syncs every book in turn.</source>
-        <translation type="unfinished" />
+        <translation>Fiecare fișier audio din dosar, în ordinea numelor de fișier, câte un .srt pentru fiecare. Un dosar cu dosare de cărți (fiecare cu EPUB-ul și fișierele audio proprii) sincronizează pe rând fiecare carte.</translation>
     </message>
     <message>
         <source>EPUB or Text File:</source>
@@ -2117,7 +2119,7 @@ Nu se șterge niciun fișier index.</translation>
     </message>
     <message>
         <source>Sentences: how many of the book's sentences, from the first one found to the last, got a subtitle. Audio: how much of the narration matched the book. Grade: A from 90% on both, B from 75%, C from 50%, else D.</source>
-        <translation type="unfinished" />
+        <translation>Propoziții: câte dintre propozițiile cărții, de la prima găsită până la ultima, au primit o subtitrare. Audio: cât din narațiune s-a potrivit cu cartea. Calificativ: A de la 90% la ambele, B de la 75%, C de la 50%, altfel D.</translation>
     </message>
     <message>
         <source>Output</source>
@@ -2181,7 +2183,7 @@ Nu se șterge niciun fișier index.</translation>
     </message>
     <message>
         <source>No audio files were found in that folder, and no book folders (each with its book and audio).</source>
-        <translation type="unfinished" />
+        <translation>Nu s-au găsit fișiere audio în acel dosar și nici dosare de cărți (fiecare cu cartea și fișierele audio proprii).</translation>
     </message>
     <message>
         <source>That folder could not be scanned.</source>
@@ -2189,15 +2191,15 @@ Nu se șterge niciun fișier index.</translation>
     </message>
     <message>
         <source>Skipped folder %1: no audio files</source>
-        <translation type="unfinished" />
+        <translation>Dosar omis %1: niciun fișier audio</translation>
     </message>
     <message>
         <source>Skipped folder %1: no .epub or .txt book</source>
-        <translation type="unfinished" />
+        <translation>Dosar omis %1: nicio carte .epub sau .txt</translation>
     </message>
     <message>
         <source>Skipped folder %1: more than one book</source>
-        <translation type="unfinished" />
+        <translation>Dosar omis %1: mai multe cărți</translation>
     </message>
     <message>
         <source>Output folder is not writable.</source>
@@ -2217,11 +2219,11 @@ Nu se șterge niciun fișier index.</translation>
     </message>
     <message>
         <source>Books: %1 — %2</source>
-        <translation type="unfinished" />
+        <translation>Cărți: %1 — %2</translation>
     </message>
     <message>
         <source>%1: sentences %2%, audio %3% — grade %4</source>
-        <translation type="unfinished" />
+        <translation>%1: propoziții %2%, audio %3% — calificativ %4</translation>
     </message>
     <message>
         <source>Syncing file %1 of %2</source>
@@ -2235,11 +2237,11 @@ Nu se șterge niciun fișier index.</translation>
     </message>
     <message>
         <source>%1 could not be loaded: %2</source>
-        <translation type="unfinished" />
+        <translation>Nu s-a putut încărca %1: %2</translation>
     </message>
     <message>
         <source>Its book could not be loaded</source>
-        <translation type="unfinished" />
+        <translation>Cartea asociată nu a putut fi încărcată</translation>
     </message>
     <message>
         <source>Skipped, exists</source>
@@ -2259,11 +2261,11 @@ Nu se șterge niciun fișier index.</translation>
     </message>
     <message>
         <source>Reusing the saved transcript</source>
-        <translation type="unfinished" />
+        <translation>Se reutilizează transcrierea salvată</translation>
     </message>
     <message>
         <source>Found sentence %1 again later in the audio; timed it out of book order</source>
-        <translation type="unfinished" />
+        <translation>Propoziția %1 a fost găsită din nou mai târziu în audio; a fost sincronizată în afara ordinii din carte</translation>
     </message>
     <message>
         <source>%1 sentences timed, %2 in between had no audio</source>
@@ -2345,7 +2347,7 @@ Nu se șterge niciun fișier index.</translation>
     </message>
     <message>
         <source>Approve or reject each word, pick its sentence and scene, trim its audio, mark words known, and fix a mistranscribed sentence or swap the word to mine -- before any card is created. When a word has entries in several dictionaries, choose which one the card's Definition uses.</source>
-        <translation type="unfinished" />
+        <translation>Aprobați sau respingeți fiecare cuvânt, alegeți-i propoziția și scena, tăiați-i audio-ul, marcați cuvinte drept cunoscute și corectați o propoziție transcrisă greșit sau schimbați cuvântul de extras -- înainte de crearea oricărui card. Când un cuvânt are intrări în mai multe dicționare, alegeți pe care o folosește Definiția cardului.</translation>
     </message>
     <message>
         <source>Secondary-language subtitles</source>
@@ -2353,7 +2355,7 @@ Nu se șterge niciun fișier index.</translation>
     </message>
     <message>
         <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. Leave the file empty and Anki Miner picks a translation itself: a subtitle named for the video, or a text track inside it, in your interface language or else English. The Activity Log names the track it used. On Video → Batch, point it at a folder of translation subtitles instead and they pair to the videos by episode number. Turn it on under Settings → Sentences.</source>
-        <translation type="unfinished" />
+        <translation>Încărcați un al doilea fișier de subtitrare, în limba dumneavoastră, lângă cel în limba de extragere: apare sub replică în previzualizarea din Selectorul de cuvinte și poate fi salvat într-un câmp Traducere. Lăsați fișierul gol și Anki Miner alege singur o traducere: o subtitrare cu numele videoclipului sau o pistă de text din interiorul acestuia, în limba interfeței sau, altfel, în engleză. Jurnalul de activitate numește pista folosită. În Video → Lot, indicați în schimb un dosar cu subtitrări de traducere, iar acestea se asociază videoclipurilor după numărul episodului. Activați funcția în Setări → Propoziții.</translation>
     </message>
     <message>
         <source>Build a deck by coverage %</source>
@@ -2389,11 +2391,11 @@ Nu se șterge niciun fișier index.</translation>
     </message>
     <message>
         <source>Mine songs from .lrc lyrics</source>
-        <translation type="unfinished" />
+        <translation>Extrageți din cântece cu versuri .lrc</translation>
     </message>
     <message>
         <source>Use a .lrc lyrics file wherever a subtitle file goes. Each line lasts until the next one starts. Pair a song with its lyrics on Audiobooks, condense it in Condense, or mine a music video on Video.</source>
-        <translation type="unfinished" />
+        <translation>Folosiți un fișier de versuri .lrc oriunde se folosește un fișier de subtitrare. Fiecare vers durează până începe următorul. Asociați un cântec cu versurile sale în Cărți audio, condensați-l în Condensare sau extrageți dintr-un videoclip muzical în Video.</translation>
     </message>
     <message>
         <source>Mine from manga</source>
@@ -2409,23 +2411,23 @@ Nu se șterge niciun fișier index.</translation>
     </message>
     <message>
         <source>Mine vocabulary from novels and other text (EPUB, PDF, Aozora, plain text).</source>
-        <translation type="unfinished" />
+        <translation>Extrageți vocabular din romane și alte texte (EPUB, PDF, Aozora, text simplu).</translation>
     </message>
     <message>
         <source>Readings from a book's own furigana</source>
-        <translation type="unfinished" />
+        <translation>Citiri din furigana proprie a cărții</translation>
     </message>
     <message>
         <source>When a Japanese EPUB prints furigana over a word, the card takes that reading instead of the parser's guess.</source>
-        <translation type="unfinished" />
+        <translation>Când un EPUB japonez afișează furigana deasupra unui cuvânt, cardul preia acea citire în locul estimării analizorului.</translation>
     </message>
     <message>
         <source>Mine pasted text or a web article</source>
-        <translation type="unfinished" />
+        <translation>Extrageți din text lipit sau dintr-un articol web</translation>
     </message>
     <message>
         <source>Paste text in your mining language, or fetch a web article by its address, and mine it into Anki cards. A fetched article's cards name the page and site as their source.</source>
-        <translation type="unfinished" />
+        <translation>Lipiți text în limba de extragere sau preluați un articol web după adresa sa și extrageți-l în carduri Anki. Cardurile unui articol preluat indică pagina și site-ul drept sursă.</translation>
     </message>
     <message>
         <source>Mine subtitle files without video</source>
@@ -2449,7 +2451,7 @@ Nu se șterge niciun fișier index.</translation>
     </message>
     <message>
         <source>Create subtitles from audio with a local Whisper model -- as a standalone tool. Long lines are split at sentence ends, and a second run on the same file reuses the saved transcript.</source>
-        <translation type="unfinished" />
+        <translation>Creați subtitrări din audio cu un model Whisper local -- ca instrument de sine stătător. Replicile lungi sunt împărțite la sfârșit de propoziție, iar o a doua rulare pe același fișier reutilizează transcrierea salvată.</translation>
     </message>
     <message>
         <source>Re-time existing subtitles</source>
@@ -2509,35 +2511,35 @@ Nu se șterge niciun fișier index.</translation>
     </message>
     <message>
         <source>Browse your whole mining history</source>
-        <translation type="unfinished" />
+        <translation>Răsfoiți întregul istoric de extragere</translation>
     </message>
     <message>
         <source>Analytics lists every run you have mined. Pick a period, group the runs by day, week or month, see the cards per period in a chart, and export the table as a CSV file.</source>
-        <translation type="unfinished" />
+        <translation>Fila Statistici listează fiecare rulare de extragere. Alegeți o perioadă, grupați rulările pe zi, săptămână sau lună, vedeți cardurile pe perioadă într-un grafic și exportați tabelul ca fișier CSV.</translation>
     </message>
     <message>
         <source>Show or delete a past run's cards</source>
-        <translation type="unfinished" />
+        <translation>Afișați sau ștergeți cardurile unei rulări anterioare</translation>
     </message>
     <message>
         <source>Select a run in Analytics → Mining History to open its cards in Anki's browser or to delete them. The confirmation says how many of its cards are still in Anki and how many you have reviewed. Runs mined before this version have no card list.</source>
-        <translation type="unfinished" />
+        <translation>Selectați o rulare în Statistici → Istoric de extragere pentru a-i deschide cardurile în browserul Anki sau pentru a le șterge. Confirmarea arată câte dintre cardurile sale sunt încă în Anki și câte ați revizuit. Rulările făcute înainte de această versiune nu au listă de carduri.</translation>
     </message>
     <message>
         <source>Track how many words you know</source>
-        <translation type="unfinished" />
+        <translation>Urmăriți câte cuvinte cunoașteți</translation>
     </message>
     <message>
         <source>The Known Words card on Analytics counts the words Anki Miner treats as known in the current mining language and shows how that number changed. It is counted while Anki is running, at most once every ten minutes.</source>
-        <translation type="unfinished" />
+        <translation>Cardul Cuvinte cunoscute din Statistici numără cuvintele pe care Anki Miner le consideră cunoscute în limba de extragere curentă și arată cum s-a schimbat acest număr. Numărarea are loc cât timp Anki rulează, cel mult o dată la zece minute.</translation>
     </message>
     <message>
         <source>See how much of a frequency list you know</source>
-        <translation type="unfinished" />
+        <translation>Vedeți cât dintr-o listă de frecvență cunoașteți</translation>
     </message>
     <message>
         <source>Analytics → Frequency Coverage counts the words you know in ranks 1–1,000 up to 20,000 of your first frequency list with numeric ranks, and lists the missing words of each band. It needs Anki running.</source>
-        <translation type="unfinished" />
+        <translation>Statistici → Acoperire după frecvență numără cuvintele pe care le cunoașteți în rangurile 1–1.000 până la 20.000 din prima listă de frecvență cu ranguri numerice și listează cuvintele lipsă din fiecare interval. Necesită Anki pornit.</translation>
     </message>
     <message>
         <source>Reset mining statistics</source>
@@ -2613,11 +2615,11 @@ Nu se șterge niciun fișier index.</translation>
     </message>
     <message>
         <source>Count a word as known only after its card has been reviewed</source>
-        <translation type="unfinished" />
+        <translation>Consideră un cuvânt cunoscut doar după ce cardul său a fost revizuit</translation>
     </message>
     <message>
         <source>Readability and the i+1 sentence rule then count a word as known only when its Anki card has been reviewed at least once. Mining still skips every word that already has a card.</source>
-        <translation type="unfinished" />
+        <translation>Lizibilitatea și regula de propoziție i+1 consideră atunci un cuvânt cunoscut doar când cardul său Anki a fost revizuit cel puțin o dată. Extragerea omite în continuare orice cuvânt care are deja un card.</translation>
     </message>
     <message>
         <source>Exclude specific Anki decks from 'known'</source>
@@ -2637,27 +2639,27 @@ Nu se șterge niciun fișier index.</translation>
     </message>
     <message>
         <source>Browse every known word</source>
-        <translation type="unfinished" />
+        <translation>Răsfoiți toate cuvintele cunoscute</translation>
     </message>
     <message>
         <source>Manage Known Words lists every word this language counts as known, with where it came from (added by you, mined by Anki Miner, from Anki) and the date it was added. Search it, filter it by source, and remove words you added. Words from Anki come back on the next sync.</source>
-        <translation type="unfinished" />
+        <translation>Gestionează cuvintele cunoscute listează fiecare cuvânt pe care această limbă îl consideră cunoscut, cu proveniența sa (adăugat de dumneavoastră, extras de Anki Miner, din Anki) și data adăugării. Căutați în listă, filtrați-o după sursă și eliminați cuvintele adăugate de dumneavoastră. Cuvintele din Anki revin la următoarea sincronizare.</translation>
     </message>
     <message>
         <source>Import known words from Kindle, Lute or LWT</source>
-        <translation type="unfinished" />
+        <translation>Importați cuvinte cunoscute din Kindle, Lute sau LWT</translation>
     </message>
     <message>
         <source>In Manage Known Words, Import… also reads a Kindle Vocabulary Builder file (vocab.db; words marked mastered) and Lute or LWT term exports (status 5 and 99).</source>
-        <translation type="unfinished" />
+        <translation>În Gestionează cuvintele cunoscute, Importă… citește și un fișier Kindle Vocabulary Builder (vocab.db; cuvintele marcate ca stăpânite) și exporturi de termeni Lute sau LWT (starea 5 și 99).</translation>
     </message>
     <message>
         <source>Export words to a CSV file</source>
-        <translation type="unfinished" />
+        <translation>Exportați cuvinte într-un fișier CSV</translation>
     </message>
     <message>
         <source>Export words… saves the list you are looking at in Manage Known Words, or a finished run's mined and not-mined words with the reason each was skipped, as a CSV file.</source>
-        <translation type="unfinished" />
+        <translation>Exportă cuvinte… salvează ca fișier CSV lista pe care o vedeți în Gestionează cuvintele cunoscute sau cuvintele extrase și neextrase ale unei rulări încheiate, cu motivul pentru care fiecare a fost omis.</translation>
     </message>
     <message>
         <source>Exclude kana-only words</source>
@@ -2689,23 +2691,23 @@ Nu se șterge niciun fișier index.</translation>
     </message>
     <message>
         <source>Mine at most one word from each example sentence. A word whose sentence is taken moves to another line it appears on, and is skipped only when every one of its lines is taken.</source>
-        <translation type="unfinished" />
+        <translation>Extrageți cel mult un cuvânt din fiecare propoziție-exemplu. Un cuvânt a cărui propoziție este ocupată trece la o altă replică în care apare și este omis doar când toate replicile sale sunt ocupate.</translation>
     </message>
     <message>
         <source>Pick the clearest sentence</source>
-        <translation type="unfinished" />
+        <translation>Alegeți propoziția cea mai clară</translation>
     </message>
     <message>
         <source>When a word appears on several lines, its card uses the line with the fewest unknown words and a comfortable length instead of the first one. The Word Curator still lists every line.</source>
-        <translation type="unfinished" />
+        <translation>Când un cuvânt apare în mai multe replici, cardul său folosește replica cu cele mai puține cuvinte necunoscute și o lungime confortabilă în locul primei. Selectorul de cuvinte listează în continuare toate replicile.</translation>
     </message>
     <message>
         <source>Skip openings, endings and signs</source>
-        <translation type="unfinished" />
+        <translation>Omite genericele de început, de final și inscripțiile</translation>
     </message>
     <message>
         <source>Leave opening and ending songs, previews and on-screen signs out of mining, Condense and Readability: lines styled as songs or signs, and lines inside a video's opening, ending and preview chapters. On by default for new installs; turn it off in Settings → Sentences.</source>
-        <translation type="unfinished" />
+        <translation>Excludeți din extragere, Condensare și Lizibilitate cântecele de început și de final, previzualizările și inscripțiile de pe ecran: replicile stilizate ca melodii sau inscripții și replicile din capitolele de început, de final și de previzualizare ale unui videoclip. Activat implicit la instalările noi; dezactivați-l în Setări → Propoziții.</translation>
     </message>
     <message>
         <source>Strip junk from subtitles (regex)</source>
@@ -2773,11 +2775,11 @@ Nu se șterge niciun fișier index.</translation>
     </message>
     <message>
         <source>Import a dictionary file</source>
-        <translation type="unfinished" />
+        <translation>Importați un fișier de dicționar</translation>
     </message>
     <message>
         <source>Add a Yomitan zip, a StarDict dictionary (its archive or its .ifo file) or a CSV/TSV word list (term and definition, or term, reading and definition) as a definition source.</source>
-        <translation type="unfinished" />
+        <translation>Adăugați ca sursă de definiții o arhivă zip Yomitan, un dicționar StarDict (arhiva sa sau fișierul .ifo) ori o listă de cuvinte CSV/TSV (termen și definiție sau termen, citire și definiție).</translation>
     </message>
     <message>
         <source>Keep dictionaries up to date</source>
@@ -2849,7 +2851,7 @@ Nu se șterge niciun fișier index.</translation>
     </message>
     <message>
         <source>Attach word audio to cards from audio packs, JPod101 (Japanese), Google text-to-speech, or Microsoft Edge text-to-speech (every language). Wikimedia Commons plays recordings of real speakers from Wiktionary and Lingua Libre, tried before Google TTS in most languages.</source>
-        <translation type="unfinished" />
+        <translation>Atașați cardurilor audio pentru cuvinte din pachete audio, JPod101 (japoneză), sinteza vocală Google sau sinteza vocală Microsoft Edge (toate limbile). Wikimedia Commons redă înregistrări ale unor vorbitori reali din Wiktionary și Lingua Libre și este încercat înaintea Google TTS în majoritatea limbilor.</translation>
     </message>
     <message>
         <source>Import local audio packs</source>
@@ -2865,7 +2867,7 @@ Nu se șterge niciun fișier index.</translation>
     </message>
     <message>
         <source>Extract the spoken sentence as an audio clip; tune its format and bitrate. Even out audio volume brings sentence clips and condensed audio to one loudness and fades each clip in and out.</source>
-        <translation type="unfinished" />
+        <translation>Extrageți propoziția rostită ca clip audio; ajustați-i formatul și rata de biți. Egalizează volumul audio aduce clipurile de propoziții și audio-ul condensat la aceeași intensitate și aplică fiecărui clip o intrare și o ieșire treptată.</translation>
     </message>
     <message>
         <source>Sentence audio for reading (TTS)</source>
@@ -2889,7 +2891,7 @@ Nu se șterge niciun fișier index.</translation>
     </message>
     <message>
         <source>Capture a still frame from the scene to put on the card. Crop manga pictures to the speech bubble shows the bubble and the art around it instead of the whole page.</source>
-        <translation type="unfinished" />
+        <translation>Capturați un cadru static din scenă pentru card. Decupează imaginile manga la balonul de dialog afișează balonul și desenul din jurul lui în locul întregii pagini.</translation>
     </message>
     <message>
         <source>Animated clips (GIF/WebP)</source>
@@ -2969,7 +2971,7 @@ Nu se șterge niciun fișier index.</translation>
     </message>
     <message>
         <source>Add tags to every note Anki Miner creates. Card tags can use {series}, {episode} and {volume}. Each card gets its own show, episode or book volume, for example mined::{series}::{episode} gives mined::Frieren::03.</source>
-        <translation type="unfinished" />
+        <translation>Adăugați etichete fiecărei note create de Anki Miner. Etichetele cardurilor pot folosi {series}, {episode} și {volume}. Fiecare card primește propriul serial, episod sau volum de carte, de exemplu mined::{series}::{episode} devine mined::Frieren::03.</translation>
     </message>
     <message>
         <source>Connect to Anki (AnkiConnect)</source>
@@ -2977,15 +2979,15 @@ Nu se șterge niciun fișier index.</translation>
     </message>
     <message>
         <source>Set the AnkiConnect address; Refresh re-checks the connection to your running Anki. If AnkiConnect is set up with an API key, add it to the address: http://127.0.0.1:8765/?key=YOUR_KEY. Anki Miner sends it with every request and never writes it to the log.</source>
-        <translation type="unfinished" />
+        <translation>Setați adresa AnkiConnect; Reîmprospătează reverifică conexiunea la Anki pornit. Dacă AnkiConnect este configurat cu o cheie API, adăugați-o la adresă: http://127.0.0.1:8765/?key=YOUR_KEY. Anki Miner o trimite cu fiecare cerere și nu o scrie niciodată în jurnal.</translation>
     </message>
     <message>
         <source>Sync Anki after mining</source>
-        <translation type="unfinished" />
+        <translation>Sincronizează Anki după extragere</translation>
     </message>
     <message>
         <source>After a run that added cards, Anki Miner asks Anki to sync with AnkiWeb. If the sync fails, the Activity Log says so and the cards stay added.</source>
-        <translation type="unfinished" />
+        <translation>După o rulare care a adăugat carduri, Anki Miner îi cere lui Anki să se sincronizeze cu AnkiWeb. Dacă sincronizarea eșuează, Jurnalul de activitate o semnalează, iar cardurile rămân adăugate.</translation>
     </message>
     <message>
         <source>Fill in field mappings automatically</source>
@@ -3073,7 +3075,7 @@ Nu se șterge niciun fișier index.</translation>
     </message>
     <message>
         <source>Draw a box where a video's on-screen dialogue appears and Anki Miner reads it into a timed .srt that Video → Single can mine. Made for game longplays without commentary. It also reads image subtitles (Blu-ray .sup, DVD .idx/.sub, or an image track inside a video) without a box. Lines with none of your mining language's letters are left out. Download the OCR engine from the setup card on Utilities → Video OCR.</source>
-        <translation type="unfinished" />
+        <translation>Desenați un cadru unde apare dialogul afișat pe ecran al unui videoclip, iar Anki Miner îl citește într-un .srt sincronizat din care Video → Individual poate extrage. Gândit pentru longplay-uri de jocuri fără comentariu. Citește și subtitrări de tip imagine (Blu-ray .sup, DVD .idx/.sub sau o pistă de imagini dintr-un videoclip) fără cadru. Replicile fără nicio literă din limba de extragere sunt omise. Descărcați motorul OCR din cardul de configurare din Utilitare → OCR video.</translation>
     </message>
     <message>
         <source>Sync an audiobook to its EPUB</source>
@@ -3081,23 +3083,23 @@ Nu se șterge niciun fișier index.</translation>
     </message>
     <message>
         <source>Transcribe an audiobook and time the book's own sentences to it, writing an .srt the Audiobook tab, Reading → Subtitle Files or a reader can use. A second run on the same audio reuses the saved transcript instead of transcribing again.</source>
-        <translation type="unfinished" />
+        <translation>Transcrieți o carte audio și sincronizați cu ea propozițiile cărții, scriind un .srt pe care îl pot folosi fila Cărți audio, Lectură → Fișiere de subtitrare sau un cititor. O a doua rulare pe același audio reutilizează transcrierea salvată în loc să transcrie din nou.</translation>
     </message>
     <message>
         <source>Sync a shelf of audiobooks in one run</source>
-        <translation type="unfinished" />
+        <translation>Sincronizați un raft de cărți audio într-o singură rulare</translation>
     </message>
     <message>
         <source>In Utilities → Audiobook Sync, choose Folder and pick a folder that holds one folder per book, each with its EPUB (or text file) and its audio files. The books sync one after another, in name order.</source>
-        <translation type="unfinished" />
+        <translation>În Utilitare → Sincronizare carte, alegeți Dosar și selectați un dosar care conține câte un dosar pentru fiecare carte, fiecare cu EPUB-ul (sau fișierul text) și fișierele audio proprii. Cărțile se sincronizează una după alta, în ordinea numelor.</translation>
     </message>
     <message>
         <source>See how well an audiobook synced</source>
-        <translation type="unfinished" />
+        <translation>Vedeți cât de bine s-a sincronizat o carte audio</translation>
     </message>
     <message>
         <source>After Audiobook Sync, each book gets a line under the Book card: how many of its sentences got a subtitle, how much of the narration matched the book, and a grade from A to D. Chapters read out of book order are found too; sentences the narrator skipped never get a subtitle.</source>
-        <translation type="unfinished" />
+        <translation>După Sincronizare carte, fiecare carte primește un rând sub cardul Carte: câte dintre propozițiile sale au primit o subtitrare, cât din narațiune s-a potrivit cu cartea și un calificativ de la A la D. Capitolele citite în afara ordinii din carte sunt găsite și ele; propozițiile omise de narator nu primesc niciodată subtitrare.</translation>
     </message>
     <message>
         <source>Check how much of a show, book or manga you can read</source>
@@ -3181,11 +3183,11 @@ Nu se șterge niciun fișier index.</translation>
     </message>
     <message>
         <source>Restore an automatic backup</source>
-        <translation type="unfinished" />
+        <translation>Restaurați o copie de rezervă automată</translation>
     </message>
     <message>
         <source>Anki Miner backs up your known words, statistics, settings and profiles once a day when it starts, and keeps the last 7 days. Settings → General → Restore a backup… puts one back the next time the app starts.</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner face o copie de rezervă a cuvintelor cunoscute, statisticilor, setărilor și profilurilor o dată pe zi, la pornire, și le păstrează pe cele din ultimele 7 zile. Setări → General → Restaurează o copie de rezervă… readuce una la următoarea pornire a aplicației.</translation>
     </message>
     <message>
         <source>Undo a mining run</source>
@@ -3197,11 +3199,11 @@ Nu se șterge niciun fișier index.</translation>
     </message>
     <message>
         <source>Export a run's words</source>
-        <translation type="unfinished" />
+        <translation>Exportați cuvintele unei rulări</translation>
     </message>
     <message>
         <source>Press View details on a run's result line, then Export words… to save the run's mined and not-mined words, with the reason each was skipped, as a CSV file.</source>
-        <translation type="unfinished" />
+        <translation>Apăsați Vizualizează detaliile pe rândul de rezultat al unei rulări, apoi Exportă cuvinte… pentru a salva ca fișier CSV cuvintele extrase și neextrase ale rulării, cu motivul pentru care fiecare a fost omis.</translation>
     </message>
     <message>
         <source>Keyboard shortcuts</source>
@@ -4617,11 +4619,11 @@ Se vor modifica %n de note (%1), care vor primi eticheta %2. Continuați?</numer
     </message>
     <message>
         <source>Choose dictionary files</source>
-        <translation type="unfinished" />
+        <translation>Alegeți fișiere de dicționar</translation>
     </message>
     <message>
         <source>Dictionaries (*.zip *.ifo *.tar.gz *.tgz *.tar.bz2 *.tar.xz *.csv *.tsv)</source>
-        <translation type="unfinished" />
+        <translation>Dicționare (*.zip *.ifo *.tar.gz *.tgz *.tar.bz2 *.tar.xz *.csv *.tsv)</translation>
     </message>
     <message>
         <source>Dictionary %1 of %2: %3</source>
@@ -5459,8 +5461,10 @@ Nu se șterge niciun fișier de pe disc.</translation>
     </message>
     <message numerus="yes">
         <source>Skipping lines in %n opening, ending or preview chapter(s)</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>Se omit replicile din %n capitol de început, de final sau de previzualizare</numerusform>
+            <numerusform>Se omit replicile din %n capitole de început, de final sau de previzualizare</numerusform>
+            <numerusform>Se omit replicile din %n de capitole de început, de final sau de previzualizare</numerusform>
         </translation>
     </message>
     <message>
@@ -5513,7 +5517,7 @@ Nu se șterge niciun fișier de pe disc.</translation>
     </message>
     <message>
         <source>Only %1% of the first %2 words have an entry in your dictionaries. Is this file in the language you are mining?</source>
-        <translation type="unfinished" />
+        <translation>Doar %1% din primele %2 cuvinte au o intrare în dicționarele dumneavoastră. Este acest fișier în limba din care extrageți?</translation>
     </message>
     <message>
         <source>Frequency cutoff ignored — no ranked frequency source is loaded (Settings → Frequency).</source>
@@ -5629,11 +5633,11 @@ Nu se șterge niciun fișier de pe disc.</translation>
     </message>
     <message>
         <source>Translation subtitles picked automatically: %1</source>
-        <translation type="unfinished" />
+        <translation>Subtitrări de traducere alese automat: %1</translation>
     </message>
     <message>
         <source>Translation subtitles picked automatically: embedded track %1</source>
-        <translation type="unfinished" />
+        <translation>Subtitrări de traducere alese automat: pista încorporată %1</translation>
     </message>
     <message>
         <source>Could not extract media for any word — no cards created</source>
@@ -5905,11 +5909,11 @@ Nu se șterge niciun fișier de pe disc.</translation>
     </message>
     <message>
         <source>Count a word as known only after its card has been reviewed</source>
-        <translation type="unfinished" />
+        <translation>Consideră un cuvânt cunoscut doar după ce cardul său a fost revizuit</translation>
     </message>
     <message>
         <source>Readability and the i+1 sentence rule count a word as known only when its Anki card has been reviewed at least once. Mining still skips every word that already has a card.</source>
-        <translation type="unfinished" />
+        <translation>Lizibilitatea și regula de propoziție i+1 consideră un cuvânt cunoscut doar când cardul său Anki a fost revizuit cel puțin o dată. Extragerea omite în continuare orice cuvânt care are deja un card.</translation>
     </message>
     <message>
         <source>Keep words known after their cards are deleted</source>
@@ -6571,15 +6575,15 @@ Nu se șterge niciun fișier index.</translation>
     <name>KnownWordsManagerDialog</name>
     <message>
         <source>Word</source>
-        <translation type="unfinished" />
+        <translation>Cuvânt</translation>
     </message>
     <message>
         <source>Source</source>
-        <translation type="unfinished" />
+        <translation>Sursă</translation>
     </message>
     <message>
         <source>Added</source>
-        <translation type="unfinished" />
+        <translation>Adăugat</translation>
     </message>
     <message>
         <source>Manage Known Words</source>
@@ -6591,7 +6595,7 @@ Nu se șterge niciun fișier index.</translation>
     </message>
     <message>
         <source>Every word this language counts as known, and where it came from. Words you added from the Word Curator stay known on every run and across cache rebuilds.</source>
-        <translation type="unfinished" />
+        <translation>Fiecare cuvânt pe care această limbă îl consideră cunoscut și de unde provine. Cuvintele adăugate de dumneavoastră din Selectorul de cuvinte rămân cunoscute la fiecare rulare și după reconstruirea memoriei cache.</translation>
     </message>
     <message>
         <source>Decks this language's known-words scan skips: %1. Change them in Settings → Word Filters.</source>
@@ -6603,15 +6607,15 @@ Nu se șterge niciun fișier index.</translation>
     </message>
     <message>
         <source>Added by you</source>
-        <translation type="unfinished" />
+        <translation>Adăugat de dumneavoastră</translation>
     </message>
     <message>
         <source>Mined by Anki Miner</source>
-        <translation type="unfinished" />
+        <translation>Extras de Anki Miner</translation>
     </message>
     <message>
         <source>From Anki</source>
-        <translation type="unfinished" />
+        <translation>Din Anki</translation>
     </message>
     <message>
         <source>Filter…</source>
@@ -6619,7 +6623,7 @@ Nu se șterge niciun fișier index.</translation>
     </message>
     <message>
         <source>All sources</source>
-        <translation type="unfinished" />
+        <translation>Toate sursele</translation>
     </message>
     <message>
         <source>Rebuild Known Words DB</source>
@@ -6635,7 +6639,7 @@ Nu se șterge niciun fișier index.</translation>
     </message>
     <message>
         <source>Removes words you added. Words from Anki come back on the next run, and mined words leave with Undo.</source>
-        <translation type="unfinished" />
+        <translation>Elimină cuvintele adăugate de dumneavoastră. Cuvintele din Anki revin la următoarea rulare, iar cuvintele extrase dispar prin Anulare.</translation>
     </message>
     <message>
         <source>Import…</source>
@@ -6643,7 +6647,7 @@ Nu se șterge niciun fișier index.</translation>
     </message>
     <message>
         <source>Export words…</source>
-        <translation type="unfinished" />
+        <translation>Exportă cuvinte…</translation>
     </message>
     <message>
         <source>Reset User List</source>
@@ -6675,11 +6679,11 @@ Nu se șterge niciun fișier index.</translation>
     </message>
     <message>
         <source>Kindle Vocabulary Builder</source>
-        <translation type="unfinished" />
+        <translation>Kindle Vocabulary Builder</translation>
     </message>
     <message>
         <source>Lute or LWT term export</source>
-        <translation type="unfinished" />
+        <translation>Export de termeni Lute sau LWT</translation>
     </message>
     <message>
         <source>plain word list</source>
@@ -6691,7 +6695,7 @@ Nu se șterge niciun fișier index.</translation>
     </message>
     <message>
         <source>Known word lists (*.csv *.tsv *.txt *.json *.db);;All Files (*)</source>
-        <translation type="unfinished" />
+        <translation>Liste de cuvinte cunoscute (*.csv *.tsv *.txt *.json *.db);;Toate fișierele (*)</translation>
     </message>
     <message>
         <source>Detected: %1 — every entry is imported.
@@ -6723,7 +6727,7 @@ Cuvinte de adăugat: %3. Continuați?</translation>
     </message>
     <message>
         <source>This file has no words for %1. It contains: %2.</source>
-        <translation type="unfinished" />
+        <translation>Acest fișier nu conține cuvinte pentru %1. Conține: %2.</translation>
     </message>
     <message>
         <source>That file is too large to import.</source>
@@ -6739,7 +6743,7 @@ Cuvinte de adăugat: %3. Continuați?</translation>
     </message>
     <message>
         <source>File format not recognized. Supported: jpdb review export (JSON), Migaku word export (JSON/CSV), AnkiMorphs known morphs (CSV), Kindle Vocabulary Builder (vocab.db), Lute or LWT term export (CSV/TSV), plain word lists (one word per line).</source>
-        <translation type="unfinished" />
+        <translation>Format de fișier nerecunoscut. Acceptate: export de recapitulări jpdb (JSON), export de cuvinte Migaku (JSON/CSV), morfeme cunoscute AnkiMorphs (CSV), Kindle Vocabulary Builder (vocab.db), export de termeni Lute sau LWT (CSV/TSV), liste simple de cuvinte (un cuvânt pe rând).</translation>
     </message>
     <message>
         <source>That file could not be imported.</source>
@@ -6761,7 +6765,7 @@ Cuvinte de adăugat: %3. Continuați?</translation>
     </message>
     <message>
         <source>CSV files (*.csv);;Text files, one word per line (*.txt)</source>
-        <translation type="unfinished" />
+        <translation>Fișiere CSV (*.csv);;Fișiere text, un cuvânt pe rând (*.txt)</translation>
     </message>
     <message>
         <source>The known words list could not be exported.</source>
@@ -7511,7 +7515,7 @@ Continuați?</translation>
     </message>
     <message>
         <source>Opus clips do not play in AnkiMobile on iPhone or iPad. Choose MP3 if you review there.</source>
-        <translation type="unfinished" />
+        <translation>Clipurile Opus nu se redau în AnkiMobile pe iPhone sau iPad. Alegeți MP3 dacă recapitulați acolo.</translation>
     </message>
     <message>
         <source> kbps</source>
@@ -7539,11 +7543,11 @@ Continuați?</translation>
     </message>
     <message>
         <source>Even out audio volume</source>
-        <translation type="unfinished" />
+        <translation>Egalizează volumul audio</translation>
     </message>
     <message>
         <source>Brings sentence clips and condensed audio to one volume and fades each clip in and out, so quiet and loud sources sound alike. Applies to new clips.</source>
-        <translation type="unfinished" />
+        <translation>Aduce clipurile de propoziții și audio-ul condensat la același volum și aplică fiecărui clip o intrare și o ieșire treptată, astfel încât sursele încete și cele puternice să sune la fel. Se aplică clipurilor noi.</translation>
     </message>
     <message>
         <source>Text-to-speech</source>
@@ -7567,11 +7571,11 @@ Continuați?</translation>
     </message>
     <message>
         <source>Crop manga pictures to the speech bubble</source>
-        <translation type="unfinished" />
+        <translation>Decupează imaginile manga la balonul de dialog</translation>
     </message>
     <message>
         <source>Manga cards show the speech bubble and the art around it instead of the whole page. A sentence with no bubble position keeps the whole page.</source>
-        <translation type="unfinished" />
+        <translation>Cardurile manga afișează balonul de dialog și desenul din jurul lui în locul întregii pagini. O propoziție fără poziția balonului păstrează întreaga pagină.</translation>
     </message>
     <message>
         <source>Enable animated screenshots</source>
@@ -7807,7 +7811,7 @@ Continuați?</translation>
     </message>
     <message>
         <source>Anki didn't sync after this run. Your cards are added; sync from Anki, or see the log for why.</source>
-        <translation type="unfinished" />
+        <translation>Anki nu s-a sincronizat după această rulare. Cardurile sunt adăugate; sincronizați din Anki sau consultați jurnalul pentru cauză.</translation>
     </message>
     <message>
         <source>Anki Miner couldn't open these cards in Anki.</source>
@@ -9582,7 +9586,7 @@ Nu se șterge niciun fișier index.</translation>
     </message>
     <message>
         <source>An .epub, .txt or .pdf book, or a folder of books; each book is mined separately.</source>
-        <translation type="unfinished" />
+        <translation>O carte .epub, .txt sau .pdf ori un dosar de cărți; fiecare carte este extrasă separat.</translation>
     </message>
     <message>
         <source>Mine</source>
@@ -9618,7 +9622,7 @@ Nu se șterge niciun fișier index.</translation>
     </message>
     <message>
         <source>Choose an .epub, .txt or .pdf book, or a folder of books.</source>
-        <translation type="unfinished" />
+        <translation>Alegeți o carte .epub, .txt sau .pdf ori un dosar de cărți.</translation>
     </message>
     <message>
         <source>Starting…</source>
@@ -9684,7 +9688,7 @@ Nu se șterge niciun fișier index.</translation>
     </message>
     <message>
         <source>Add subtitle files (.srt, .ass, .ssa, .vtt, .smi, .lrc) to the list.</source>
-        <translation type="unfinished" />
+        <translation>Adăugați fișiere de subtitrare (.srt, .ass, .ssa, .vtt, .smi, .lrc) în listă.</translation>
     </message>
     <message>
         <source>Remove Selected</source>
@@ -9865,19 +9869,19 @@ Nu se șterge niciun fișier index.</translation>
     </message>
     <message>
         <source>Web addresses to fetch, one per line (https://…)</source>
-        <translation type="unfinished" />
+        <translation>Adrese web de preluat, câte una pe rând (https://…)</translation>
     </message>
     <message>
         <source>Web addresses</source>
-        <translation type="unfinished" />
+        <translation>Adrese web</translation>
     </message>
     <message>
         <source>Fetch</source>
-        <translation type="unfinished" />
+        <translation>Preia</translation>
     </message>
     <message>
         <source>Put the article text of each web address in the box below, to check before mining.</source>
-        <translation type="unfinished" />
+        <translation>Pune textul articolului de la fiecare adresă web în caseta de mai jos, pentru verificare înainte de extragere.</translation>
     </message>
     <message>
         <source>Paste the text you want to mine. Cards from pasted text have no sentence audio from a recording.</source>
@@ -9925,59 +9929,59 @@ Nu se șterge niciun fișier index.</translation>
     </message>
     <message>
         <source>Each line must be a web address that starts with http:// or https://.</source>
-        <translation type="unfinished" />
+        <translation>Fiecare rând trebuie să fie o adresă web care începe cu http:// sau https://.</translation>
     </message>
     <message>
         <source>Enter a web address first.</source>
-        <translation type="unfinished" />
+        <translation>Introduceți mai întâi o adresă web.</translation>
     </message>
     <message>
         <source>Fetch takes up to 10 web addresses at a time.</source>
-        <translation type="unfinished" />
+        <translation>Preia acceptă cel mult 10 adrese web odată.</translation>
     </message>
     <message>
         <source>Fetching…</source>
-        <translation type="unfinished" />
+        <translation>Se preia…</translation>
     </message>
     <message>
         <source>Could not fetch %1: %2</source>
-        <translation type="unfinished" />
+        <translation>Nu s-a putut prelua %1: %2</translation>
     </message>
     <message>
         <source>None of the pages could be fetched.</source>
-        <translation type="unfinished" />
+        <translation>Niciuna dintre pagini nu a putut fi preluată.</translation>
     </message>
     <message>
         <source>Fetched %1.</source>
-        <translation type="unfinished" />
+        <translation>Preluat: %1.</translation>
     </message>
     <message>
         <source>The pages could not be fetched.</source>
-        <translation type="unfinished" />
+        <translation>Paginile nu au putut fi preluate.</translation>
     </message>
     <message>
         <source>The page could not be reached. Check the address and your connection.</source>
-        <translation type="unfinished" />
+        <translation>Pagina nu a putut fi accesată. Verificați adresa și conexiunea.</translation>
     </message>
     <message>
         <source>The site did not send the page.</source>
-        <translation type="unfinished" />
+        <translation>Site-ul nu a trimis pagina.</translation>
     </message>
     <message>
         <source>This address is not a web page.</source>
-        <translation type="unfinished" />
+        <translation>Această adresă nu este o pagină web.</translation>
     </message>
     <message>
         <source>This page is too large to read.</source>
-        <translation type="unfinished" />
+        <translation>Această pagină este prea mare pentru a fi citită.</translation>
     </message>
     <message>
         <source>This is not a web address.</source>
-        <translation type="unfinished" />
+        <translation>Aceasta nu este o adresă web.</translation>
     </message>
     <message>
         <source>No article text found on this page. Pages that draw their text with JavaScript cannot be read.</source>
-        <translation type="unfinished" />
+        <translation>Nu s-a găsit textul unui articol pe această pagină. Paginile care își afișează textul prin JavaScript nu pot fi citite.</translation>
     </message>
     <message>
         <source>Paste some text first.</source>
@@ -9989,7 +9993,7 @@ Nu se șterge niciun fișier index.</translation>
     </message>
     <message>
         <source>The fetched text was edited, so it is mined as one text without its page titles.</source>
-        <translation type="unfinished" />
+        <translation>Textul preluat a fost editat, așa că este extras ca un singur text, fără titlurile paginilor.</translation>
     </message>
     <message>
         <source>That picture cannot be read. Pick another, or remove it to mine without one.</source>
@@ -10777,7 +10781,7 @@ Nu se șterge niciun fișier index.</translation>
     </message>
     <message>
         <source>Export words…</source>
-        <translation type="unfinished" />
+        <translation>Exportă cuvinte…</translation>
     </message>
     <message>
         <source>Close</source>
@@ -10793,19 +10797,19 @@ Nu se șterge niciun fișier index.</translation>
     </message>
     <message>
         <source>Export Words</source>
-        <translation type="unfinished" />
+        <translation>Exportă cuvintele</translation>
     </message>
     <message>
         <source>CSV files (*.csv)</source>
-        <translation type="unfinished" />
+        <translation>Fișiere CSV (*.csv)</translation>
     </message>
     <message>
         <source>Words exported</source>
-        <translation type="unfinished" />
+        <translation>Cuvinte exportate</translation>
     </message>
     <message>
         <source>Export failed — try again</source>
-        <translation type="unfinished" />
+        <translation>Exportul a eșuat — încercați din nou</translation>
     </message>
     <message>
         <source>Confirm Undo</source>
@@ -11011,11 +11015,11 @@ Nu se șterge niciun fișier index.</translation>
     </message>
     <message>
         <source>Skip openings, endings and signs</source>
-        <translation type="unfinished" />
+        <translation>Omite genericele de început, de final și inscripțiile</translation>
     </message>
     <message>
         <source>Leaves out song lyrics, previews and on-screen signs: lines whose subtitle style marks them as a song or a sign, and lines inside a video's opening, ending or preview chapters. Applies to mining, Condense and Readability.</source>
-        <translation type="unfinished" />
+        <translation>Exclude versurile cântecelor, previzualizările și inscripțiile de pe ecran: replicile pe care stilul subtitrării le marchează drept cântec sau inscripție și replicile din capitolele de început, de final sau de previzualizare ale unui videoclip. Se aplică la extragere, Condensare și Lizibilitate.</translation>
     </message>
     <message>
         <source>Sentence options</source>
@@ -11031,7 +11035,7 @@ Nu se șterge niciun fișier index.</translation>
     </message>
     <message>
         <source>Mines at most one word per example sentence. A word whose sentence is already taken moves to another line it appears on, and is skipped only when every one of its lines is taken. Whitelisted words are still mined.</source>
-        <translation type="unfinished" />
+        <translation>Extrage cel mult un cuvânt pe propoziție-exemplu. Un cuvânt a cărui propoziție este deja ocupată trece la o altă replică în care apare și este omis doar când toate replicile sale sunt ocupate. Cuvintele din lista albă sunt extrase în continuare.</translation>
     </message>
     <message>
         <source>Only i+1 sentences (exactly one unknown word)</source>
@@ -11047,11 +11051,11 @@ Nu se șterge niciun fișier index.</translation>
     </message>
     <message>
         <source>Pick the clearest sentence for each word</source>
-        <translation type="unfinished" />
+        <translation>Alege propoziția cea mai clară pentru fiecare cuvânt</translation>
     </message>
     <message>
         <source>When a word appears on several lines, its card uses the line with the fewest unknown words and a comfortable length instead of the first one. The Word Curator still lists every line, and card order does not change.</source>
-        <translation type="unfinished" />
+        <translation>Când un cuvânt apare în mai multe replici, cardul său folosește replica cu cele mai puține cuvinte necunoscute și o lungime confortabilă în locul primei. Selectorul de cuvinte listează în continuare toate replicile, iar ordinea cardurilor nu se schimbă.</translation>
     </message>
     <message>
         <source> s</source>
@@ -13113,15 +13117,15 @@ Resursele instalate și tema se păstrează.</translation>
     </message>
     <message>
         <source>Restore a backup…</source>
-        <translation type="unfinished" />
+        <translation>Restaurează o copie de rezervă…</translation>
     </message>
     <message>
         <source>Backups</source>
-        <translation type="unfinished" />
+        <translation>Copii de rezervă</translation>
     </message>
     <message>
         <source>Anki Miner saves your known words, statistics, settings and profiles once a day when it starts, and keeps the last 7 days.</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner salvează cuvintele cunoscute, statisticile, setările și profilurile o dată pe zi, la pornire, și le păstrează pe cele din ultimele 7 zile.</translation>
     </message>
     <message>
         <source>Themes</source>
@@ -13165,27 +13169,27 @@ Resursele instalate și tema se păstrează.</translation>
     </message>
     <message>
         <source>There is no backup yet. Anki Miner makes one each day when it starts.</source>
-        <translation type="unfinished" />
+        <translation>Nu există încă nicio copie de rezervă. Anki Miner face una în fiecare zi, la pornire.</translation>
     </message>
     <message>
         <source>Restore a Backup</source>
-        <translation type="unfinished" />
+        <translation>Restaurare copie de rezervă</translation>
     </message>
     <message>
         <source>Restore the backup from:</source>
-        <translation type="unfinished" />
+        <translation>Restaurează copia de rezervă din:</translation>
     </message>
     <message>
         <source>Replace your known words, statistics, settings and profiles with the copies from %1? The restore runs the next time Anki Miner starts. Changes made after that backup are lost.</source>
-        <translation type="unfinished" />
+        <translation>Înlocuiți cuvintele cunoscute, statisticile, setările și profilurile cu copiile din %1? Restaurarea are loc la următoarea pornire a Anki Miner. Modificările făcute după acea copie de rezervă se pierd.</translation>
     </message>
     <message>
         <source>The restore could not be scheduled.</source>
-        <translation type="unfinished" />
+        <translation>Restaurarea nu a putut fi programată.</translation>
     </message>
     <message>
         <source>The backup from %1 will be restored when Anki Miner next starts.</source>
-        <translation type="unfinished" />
+        <translation>Copia de rezervă din %1 va fi restaurată la următoarea pornire a Anki Miner.</translation>
     </message>
 </context><context>
     <name>UpdateBanner</name>
@@ -13353,11 +13357,11 @@ Resursele instalate și tema se păstrează.</translation>
     </message>
     <message>
         <source>The picture (burned-in text)</source>
-        <translation type="unfinished" />
+        <translation>Imaginea (text încorporat)</translation>
     </message>
     <message>
         <source>Image subtitle track %1</source>
-        <translation type="unfinished" />
+        <translation>Pistă de subtitrare de tip imagine %1</translation>
     </message>
     <message>
         <source>The OCR engine could not start on this computer. The details say why.</source>
@@ -13397,15 +13401,15 @@ Resursele instalate și tema se păstrează.</translation>
     </message>
     <message>
         <source>This field takes a video or an image subtitle file (.sup, .idx, .sub).</source>
-        <translation type="unfinished" />
+        <translation>Acest câmp acceptă un videoclip sau un fișier de subtitrare de tip imagine (.sup, .idx, .sub).</translation>
     </message>
     <message>
         <source>Read from:</source>
-        <translation type="unfinished" />
+        <translation>Citește din:</translation>
     </message>
     <message>
         <source>Read text drawn into the picture, or one of the video's image subtitle tracks.</source>
-        <translation type="unfinished" />
+        <translation>Citește textul desenat în imagine sau una dintre pistele de subtitrare de tip imagine ale videoclipului.</translation>
     </message>
     <message>
         <source>Video Folder:</source>
@@ -13489,7 +13493,7 @@ Resursele instalate și tema se păstrează.</translation>
     </message>
     <message>
         <source>Image subtitles are read over the whole frame, so they need no region.</source>
-        <translation type="unfinished" />
+        <translation>Subtitrările de tip imagine sunt citite pe tot cadrul, deci nu au nevoie de o regiune.</translation>
     </message>
     <message>
         <source>Download OCR models</source>
@@ -13533,7 +13537,7 @@ Resursele instalate și tema se păstrează.</translation>
     </message>
     <message>
         <source>A DVD subtitle needs its .idx and .sub files in the same folder.</source>
-        <translation type="unfinished" />
+        <translation>O subtitrare DVD are nevoie de fișierele sale .idx și .sub în același dosar.</translation>
     </message>
     <message>
         <source>Choose a folder before reading subtitles.</source>
@@ -13819,15 +13823,15 @@ Sortați după această coloană pentru a parcurge în ordine o înregistrare lu
     </message>
     <message>
         <source>Used on the card</source>
-        <translation type="unfinished" />
+        <translation>Folosit pe card</translation>
     </message>
     <message>
         <source>Back to the first match</source>
-        <translation type="unfinished" />
+        <translation>Înapoi la prima potrivire</translation>
     </message>
     <message>
         <source>Use this dictionary on the card</source>
-        <translation type="unfinished" />
+        <translation>Folosește acest dicționar pe card</translation>
     </message>
     <message>
         <source>Sentences (%1)</source>
@@ -14265,7 +14269,7 @@ Sortați după această coloană pentru a parcurge în ordine o înregistrare lu
     </message>
     <message>
         <source>Wikimedia Commons (native recordings)</source>
-        <translation type="unfinished" />
+        <translation>Wikimedia Commons (înregistrări ale vorbitorilor nativi)</translation>
     </message>
     <message>
         <source>Microsoft Edge read-aloud (synthetic TTS)</source>
@@ -14279,7 +14283,7 @@ Sortați după această coloană pentru a parcurge în ordine o înregistrare lu
     <name>_BarChart</name>
     <message>
         <source>Cards per period</source>
-        <translation type="unfinished" />
+        <translation>Carduri pe perioadă</translation>
     </message>
 </context><context>
     <name>_HealthRow</name>
@@ -14301,11 +14305,11 @@ Sortați după această coloană pentru a parcurge în ordine o înregistrare lu
     <name>_MissingWordsDialog</name>
     <message>
         <source>Missing Words</source>
-        <translation type="unfinished" />
+        <translation>Cuvinte lipsă</translation>
     </message>
     <message>
         <source>Not known yet in ranks %1</source>
-        <translation type="unfinished" />
+        <translation>Încă necunoscute în rangurile %1</translation>
     </message>
 </context><context>
     <name>app</name>
