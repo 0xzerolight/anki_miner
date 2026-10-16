@@ -5,10 +5,12 @@ import logging
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, replace
+from datetime import datetime, timedelta
 
 from PyQt6.QtCore import QEvent, QPointF, QRectF, QSize, Qt
 from PyQt6.QtGui import QFont, QHelpEvent, QPainter, QPalette
 from PyQt6.QtWidgets import (
+    QComboBox,
     QFrame,
     QGridLayout,
     QHBoxLayout,
@@ -50,15 +52,17 @@ from anki_miner.languages.profile import ContentTextStyle
 from anki_miner.languages.registry import get_profile, language_display_name
 from anki_miner.models.stats import (
     DifficultyEntry,
+    HistoryGrouping,
     Milestone,
     MilestoneKind,
     MiningSession,
     OverallStats,
+    SessionGroup,
 )
 from anki_miner.services.anki_service import AnkiService
 from anki_miner.services.known_word_db import KnownWordDB
 from anki_miner.services.run_history import RunNotesCheck, check_run_notes, delete_run
-from anki_miner.services.stats_service import StatsService
+from anki_miner.services.stats_service import StatsService, group_sessions, sessions_since
 from anki_miner.utils.i18n import tr_format
 from anki_miner.utils.logging_ext import log_summary
 
@@ -81,6 +85,9 @@ _DIFFICULTY_NAME_COLUMNS = (1,)
 #: Column 0 of each history row carries its stats.db session id (AI-16).
 #: UserRole is free: make_table_item keeps sort and copy values on +1 and +2.
 _SESSION_ID_ROLE = Qt.ItemDataRole.UserRole
+
+#: Mining History, grouped: period, sessions, words, new words, cards.
+_GROUP_COUNT_COLUMNS = (1, 2, 3, 4)
 
 
 def _count(value: int) -> SortableTableWidgetItem:
@@ -278,6 +285,11 @@ class AnalyticsTab(ScreenIssueHost, QWidget):
         self._sessions_by_id: dict[int, MiningSession] = {}
         # One run action at a time: a second click would race the first delete.
         self._run_action_in_flight = False
+        # ST-02: the whole history as last read; range and grouping re-cut it
+        # on the GUI thread without another query.
+        self._all_sessions: list[MiningSession] = []
+        # The rows of the table on show, for Export CSV (L2.ST02.T4).
+        self._history_export: list[list[object]] = []
         self._setup_ui()
         self._setup_accessibility()
 
@@ -380,7 +392,11 @@ class AnalyticsTab(ScreenIssueHost, QWidget):
         """
         super().changeEvent(a0)
         if a0 is not None and a0.type() == QEvent.Type.FontChange:
-            for table in (getattr(self, "sessions_table", None), getattr(self, "difficulty_table", None)):
+            for table in (
+                getattr(self, "sessions_table", None),
+                getattr(self, "difficulty_table", None),
+                getattr(self, "history_groups_table", None),
+            ):
                 if table is not None:
                     configure_data_view(table)
                     _apply_height_floor(table)
@@ -421,8 +437,39 @@ class AnalyticsTab(ScreenIssueHost, QWidget):
         layout = QVBoxLayout()
         configure_card_layout(layout)
 
-        header = SectionHeader(self.tr("Recent Sessions"))
+        header = SectionHeader(self.tr("Mining History"))
         layout.addWidget(header)
+
+        # ST-02: a range and a grouping over the whole history. Both are
+        # transient (no setting): every launch opens on all runs, one by one.
+        controls = QHBoxLayout()
+        controls.setSpacing(SPACING.sm)
+        self.history_range_combo = QComboBox()
+        self.history_range_combo.setAccessibleName(self.tr("History period"))
+        for text, days in (
+            (self.tr("All time"), 0),
+            (self.tr("Last 7 days"), 7),
+            (self.tr("Last 30 days"), 30),
+            (self.tr("Last 12 months"), 365),
+        ):
+            self.history_range_combo.addItem(text, days)
+        controls.addWidget(self.history_range_combo)
+        self.history_group_combo = QComboBox()
+        self.history_group_combo.setAccessibleName(self.tr("History grouping"))
+        for text, grouping in (
+            (self.tr("Each run"), HistoryGrouping.RUN),
+            (self.tr("By day"), HistoryGrouping.DAY),
+            (self.tr("By week"), HistoryGrouping.WEEK),
+            (self.tr("By month"), HistoryGrouping.MONTH),
+        ):
+            self.history_group_combo.addItem(text, grouping.value)
+        controls.addWidget(self.history_group_combo)
+        controls.addStretch(1)
+        layout.addLayout(controls)
+
+        self.history_chart = _BarChart()
+        self.history_chart.hide()
+        layout.addWidget(self.history_chart)
 
         self.sessions_empty_label = QLabel(self.tr("No sessions yet — process an episode to see your history."))
         self.sessions_empty_label.setObjectName("helper-text")
@@ -448,11 +495,25 @@ class AnalyticsTab(ScreenIssueHost, QWidget):
         self.sessions_table.setSortingEnabled(True)
         configure_data_view(self.sessions_table)
         install_copy_rows(self.sessions_table)
-
         _apply_height_floor(self.sessions_table)
         self.sessions_table.hide()
-
         layout.addWidget(self.sessions_table)
+
+        # The grouped view: one row per period, the same counts summed.
+        self.history_groups_table = QTableWidget()
+        self.history_groups_table.setColumnCount(5)
+        self.history_groups_table.setHorizontalHeaderLabels(
+            [self.tr("Period"), self.tr("Sessions"), self.tr("Words"), self.tr("New Words"), self.tr("Cards")]
+        )
+        configure_table_header(self.history_groups_table, fit_columns=(0, *_GROUP_COUNT_COLUMNS))
+        self.history_groups_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        self.history_groups_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self.history_groups_table.setSortingEnabled(True)
+        configure_data_view(self.history_groups_table)
+        install_copy_rows(self.history_groups_table)
+        _apply_height_floor(self.history_groups_table)
+        self.history_groups_table.hide()
+        layout.addWidget(self.history_groups_table)
 
         # AI-16: act on the one selected run. Both actions run off the GUI
         # thread; a failure lands in the screen banner (D24).
@@ -475,6 +536,11 @@ class AnalyticsTab(ScreenIssueHost, QWidget):
         layout.addWidget(self.run_actions_row)
         self.sessions_table.itemSelectionChanged.connect(self._sync_run_actions)
         self._sync_run_actions()
+
+        # Connected last: addItem above already moved the current index, and
+        # a render before the tables exist would fail.
+        self.history_range_combo.currentIndexChanged.connect(self._render_history)
+        self.history_group_combo.currentIndexChanged.connect(self._render_history)
 
         group.setLayout(layout)
         return group
@@ -575,7 +641,8 @@ class AnalyticsTab(ScreenIssueHost, QWidget):
             stats = service.get_overall_stats()
             return _AnalyticsBundle(
                 stats=stats,
-                sessions=service.get_recent_sessions(limit=20),
+                # ST-02: the whole history; the range combo cuts it on screen.
+                sessions=service.get_recent_sessions(limit=None),
                 difficulties=service.get_series_difficulty(),
                 milestones=service.get_milestones(stats=stats),
             )
@@ -718,7 +785,8 @@ class AnalyticsTab(ScreenIssueHost, QWidget):
         # rather than raise a confirmation over an empty database.
         self.reset_button.setEnabled(not empty)
         self._update_dashboard(bundle.stats)
-        self._update_recent_sessions(bundle.sessions)
+        self._all_sessions = list(bundle.sessions)
+        self._render_history()
         self._update_difficulty_ranking(bundle.difficulties)
         self._update_milestones(bundle.milestones)
 
@@ -762,6 +830,76 @@ class AnalyticsTab(ScreenIssueHost, QWidget):
             self.sessions_table.setUpdatesEnabled(True)
         hold_numeric_columns(self.sessions_table, _SESSION_COUNT_COLUMNS)
         self._sync_run_actions()
+
+    # === ST-02: range, grouping, chart ===
+
+    def _history_since(self) -> datetime | None:
+        """The start of the chosen range, or ``None`` for all time."""
+        days = self.history_range_combo.currentData()
+        if not isinstance(days, int) or days <= 0:
+            return None
+        return datetime.now() - timedelta(days=days)
+
+    def _render_history(self, *_args: object) -> None:
+        """Cut the cached history to the range and show it run by run or per period."""
+        sessions = sessions_since(self._all_sessions, self._history_since())
+        grouping = HistoryGrouping(self.history_group_combo.currentData())
+        per_run = grouping is HistoryGrouping.RUN
+        groups = [] if per_run else group_sessions(sessions, grouping)
+        self._update_recent_sessions(sessions if per_run else [])
+        self._update_history_groups(groups)
+        # Oldest to newest; run by run, the chart counts cards per day.
+        chart = group_sessions(sessions, HistoryGrouping.DAY) if per_run else groups
+        self.history_chart.set_bars([(period.key, period.cards_created) for period in reversed(chart)])
+        self.history_chart.setVisible(bool(chart))
+        self.sessions_empty_label.setText(
+            self.tr("No runs in this period.")
+            if self._all_sessions
+            else self.tr("No sessions yet — process an episode to see your history.")
+        )
+        self.sessions_empty_label.setVisible(not sessions)
+        if per_run:
+            self._history_export = [
+                [
+                    session.mined_at.strftime("%Y-%m-%d %H:%M"),
+                    session.series_name,
+                    session.episode_name,
+                    session.total_words,
+                    session.unknown_words,
+                    session.cards_created,
+                ]
+                for session in sessions
+            ]
+        else:
+            self._history_export = [
+                [period.key, period.sessions, period.total_words, period.unknown_words, period.cards_created]
+                for period in groups
+            ]
+
+    def _update_history_groups(self, groups: list[SessionGroup]) -> None:
+        """Fill the per-period table; hidden when there is nothing to group."""
+        table = self.history_groups_table
+        table.setVisible(bool(groups))
+        table.setUpdatesEnabled(False)
+        was_sorting = table.isSortingEnabled()
+        table.setSortingEnabled(False)
+        try:
+            table.setRowCount(len(groups))
+            for row_idx, period in enumerate(groups):
+                items = [
+                    # Sorted by the period's first day: "2026-W9" must not sort after "2026-W10".
+                    make_table_item(period.key, sort_value=period.start.toordinal()),
+                    _count(period.sessions),
+                    _count(period.total_words),
+                    _count(period.unknown_words),
+                    _count(period.cards_created),
+                ]
+                for col_idx, item in enumerate(items):
+                    table.setItem(row_idx, col_idx, item)
+        finally:
+            table.setSortingEnabled(was_sorting)
+            table.setUpdatesEnabled(True)
+        hold_numeric_columns(table, _GROUP_COUNT_COLUMNS)
 
     # === AI-16: act on one past run ===
 
