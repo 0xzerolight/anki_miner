@@ -127,3 +127,25 @@ def test_a_spanish_foreword_read_last_is_timed_too():
     assert len(indices & set(range(100))) >= 75
     assert [t.start for t in timings] == sorted(t.start for t in timings)
     assert cursor.sentence >= 290  # the main pass ended in the story, not in the foreword
+
+
+def test_a_detour_sentence_cut_by_a_window_boundary_keeps_its_whole_cue():
+    """A detour that runs on into the next window resumes inside the sentence the
+    previous window was cut in; that sentence's cue must reach its real end (Z.2 WB3 I-1)."""
+    from tests.unit.services.book_sync.test_aligner import _index_of
+
+    book = _book(300)
+    story = _read(book, 100, 299, rng=random.Random(21))
+    foreword_read = _read(book, 0, 99, rng=random.Random(22))
+    cursor = BookCursor()
+
+    timings = align_to_book(story + _shifted(foreword_read, len(story)), book, cursor)
+
+    detour = [t for t in timings if t.index < 100]
+    assert len(detour) >= 80
+    short = []
+    for t in detour:
+        _first_seg, last_seg = _index_of(foreword_read, book, 0, t.index)
+        if t.end < len(story) + last_seg:  # ends before the segment holding its last character starts
+            short.append((t.index, round(len(story) + last_seg - t.end, 2)))
+    assert short == []

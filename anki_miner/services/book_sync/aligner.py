@@ -307,7 +307,8 @@ def align_to_book(
         Only sentences nobody has timed count toward the floor, so a recap of
         a passage already timed is not taken for a detour.
         """
-        taken = cursor.timed | {s for s, c in main.hits.items() if c >= _need(book, s)} | detour.hits.keys()
+        done = cursor.timed | {s for s, c in main.hits.items() if c >= _need(book, s)}
+        taken = done | detour.hits.keys()
         starts: list[int] = []
         if detour_at is not None and detour_at < len(book.keys):
             starts.append(detour_at)
@@ -323,7 +324,10 @@ def align_to_book(
             fresh = sum(c for s, c in match.hits.items() if s not in taken)
             if fresh / commit < window_floor or match.last_equal_sentence is None:
                 continue
-            detour.add(match, skip=taken)
+            # A running detour resumes inside the sentence the last window was
+            # cut in: that sentence keeps collecting, or its cue ends at the cut.
+            resumed = {start} - done if start == detour_at else set()
+            detour.add(match, skip=taken - resumed)
             if log is not None and start != detour_at:
                 log(f"Found sentence {start + 1} again later in the audio; timed it out of book order")
             return match.last_equal_sentence
