@@ -23,7 +23,7 @@ On Windows, `AnkiMiner.exe` is a GUI-subsystem program. Its output reaches a cal
 ```
 anki-miner mine batch VIDEO_DIR SUBTITLE_DIR [--deck NAME]
 anki-miner mine pairs --pair VIDEO SUBTITLE [--pair VIDEO SUBTITLE ...] [--deck NAME]
-anki-miner mine reading PATH [PATH ...] [--deck NAME]
+anki-miner mine reading PATH_OR_URL [PATH_OR_URL ...] [--deck NAME]
 anki-miner mine youtube URL [URL ...] [--deck NAME]
 anki-miner version
 ```
@@ -32,8 +32,9 @@ anki-miner version
   `anki-miner mine batch ~/anime/show ~/subs/show`
 - `pairs` mines the video/subtitle pairs you name. One pair is a single episode.
   `anki-miner mine pairs --pair ep01.mkv ep01.ja.srt --pair ep02.mkv ep02.ja.srt`
-- `reading` mines subtitle files without video. It also accepts what Reading accepts in the app: `.txt`/`.epub` novels and mokuro manga.
+- `reading` mines subtitle files without video. It also accepts what Reading accepts in the app: `.txt`/`.epub`/`.pdf` books, mokuro manga, and web article addresses (`http://` or `https://`), whose main text is fetched and mined like pasted text.
   `anki-miner mine reading ep01.ja.srt ep02.ja.srt`
+  `anki-miner mine reading "https://example.com/article"`
 - `youtube` downloads and mines YouTube videos. Playlist links are refused; pass video links.
   `anki-miner mine youtube "https://www.youtube.com/watch?v=VIDEO_ID"`
 - `--deck NAME` adds the cards to NAME instead of the deck in the user's settings. The deck must exist.
@@ -64,7 +65,7 @@ An item report:
  "total_words_found": 140, "note_ids": [1726…], "errors": [], "retryable": false}
 ```
 
-Item `status` is `success`, `failed`, `cancelled` or `skipped` (not reached after a cancel). File paths in `input` are absolute and resolved (symlinks followed), so they can differ from the paths you passed; match items by `item`, their position in the run. `note_ids` are the Anki note IDs created. `retryable` is true only when the failure was transient and no note was written, so running the item again cannot duplicate cards.
+Item `status` is `success`, `failed`, `cancelled` or `skipped` (not reached after a cancel). File paths in `input` are absolute and resolved (symlinks followed), so they can differ from the paths you passed; match items by `item`, their position in the run. `note_ids` are the Anki note IDs created. `retryable` is true only when the failure was transient and no note was written, so running the item again cannot duplicate cards. A web article's `input` is `{"url": "…"}`; a failed fetch is a failed item, `retryable` when the network or the site (HTTP 429/5xx) was at fault.
 
 | `result.status` | exit code | meaning |
 |---|---|---|
@@ -88,6 +89,7 @@ Item `status` is `success`, `failed`, `cancelled` or `skipped` (not reached afte
 - YouTube needs yt-dlp, which the app installs the first time it is used (Video → YouTube).
 - To cancel, send SIGINT or SIGTERM on Linux and macOS; the run stops at its next step and reports `cancelled`. On Windows, terminate the process. Notes already added to Anki stay.
 - Runs are written to Anki Miner's log and statistics like runs started in the app.
+- With "Sync Anki after mining" on (Settings → Cards & Anki), a run that added cards asks Anki to sync once at the end. A failed sync is logged and does not change the run's `status`.
 
 ## Example (Python)
 

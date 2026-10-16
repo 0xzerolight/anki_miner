@@ -109,7 +109,7 @@ Allowed `config` keys:
 
 `anki_fields` and `card_type_marker_fields` merge key by key into the profile's. An unknown key, a value of the wrong type, or a value Anki Miner's settings refuse gives `BAD_RUN_FILE`. The ranges themselves are not checked.
 
-API runs never subtract words the user already knows (Anki's cards, the known-words list, the ignore list): the caller names only words it wants mined. For the same reason the sentence rules are off (one card per sentence and i+1): `deduplicate_sentences` and `use_i_plus_one_filter` may be sent as `false`; `true` gives `BAD_RUN_FILE`. Every named word also counts as whitelisted for its episode: it gets past the profile's optional filters, the name lists and the part-of-speech and script rules, as a word in the profile's whitelist does. The profile's own whitelist still applies to its own words when `use_whitelist` is on. The whitelist never rescues particles, auxiliaries and other grammar words, but one named with its line is made from that line (see Choosing the line). The dictionary check, Anki's duplicate check and, unless `allow_duplicate_cards` is on, the merge of words that share one dictionary entry still apply.
+API runs never subtract words the user already knows (Anki's cards, the known-words list, the ignore list): the caller names only words it wants mined. For the same reason the sentence rules are off (one card per sentence and i+1): `deduplicate_sentences` and `use_i_plus_one_filter` may be sent as `false`; `true` gives `BAD_RUN_FILE`. Every named word also counts as whitelisted for its episode: it gets past the profile's optional filters, the name lists and the part-of-speech and script rules, as a word in the profile's whitelist does. The profile's own whitelist still applies to its own words when `use_whitelist` is on. The whitelist never rescues particles, auxiliaries and other grammar words, but one named with its line is made from that line (see Choosing the line). The dictionary check, Anki's duplicate check and, unless `allow_duplicate_cards` is on, the merge of words that share one dictionary entry still apply. API runs keep every subtitle line: Skip openings, endings and signs is off for them.
 
 An episode:
 
@@ -121,7 +121,7 @@ An episode:
 | `subtitle_offset` | seconds added to every subtitle time; `0` when left out (the profile's offset is not used) |
 | `audio_track_override` | 0-based audio track, or `null` to find the mining language's track |
 | `source_label_override` | the card's Source text instead of `<series> — <episode>` |
-| `secondary_subtitle_file`, `secondary_subtitle_offset` | a second-language track for the sentence translation field |
+| `secondary_subtitle_file`, `secondary_subtitle_offset` | a second-language track for the sentence translation field. API runs never pick a translation track themselves; pass `secondary_subtitle_file` |
 | `series_name_override`, `episode_name_override` | instead of the video's folder and file names |
 | `tags` | added to the profile's tags on this episode's cards |
 
