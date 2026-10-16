@@ -52,7 +52,7 @@ def test_the_panel_offers_edge_for_a_voiced_language_until_it_is_in_the_chain(qt
     offers: list[bool] = []
 
     class _Dialog:
-        def __init__(self, parent=None, *, offer_edge_tts: bool = False) -> None:
+        def __init__(self, parent=None, *, offer_edge_tts: bool = False, offer_wikimedia: bool = False) -> None:
             offers.append(offer_edge_tts)
 
         def exec(self) -> QDialog.DialogCode:
