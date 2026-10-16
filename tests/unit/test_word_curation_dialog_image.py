@@ -502,3 +502,39 @@ class TestTeardown:
         dlg._preview_scene(0.0)
 
         dispatch.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# F-11: the card crop is outlined when Card Media crops manga pictures
+# ---------------------------------------------------------------------------
+
+
+class TestCropPreview:
+    @staticmethod
+    def _shown(qtbot, sync_off_thread, *, crop: bool):
+        from anki_miner.services.reading.images import manga_crop_box
+
+        sync_off_thread.side_effect = lambda ref: _qimage(200, 300)
+        unit = ReadingUnit(
+            text="unit0",
+            index=0,
+            location_label="p.1",
+            image_ref=ImageRef(Path("/pages/001.png")),
+            block_box=(40, 60, 80, 120),
+        )
+        ctx = CurationMediaContext(video_file=None, subtitle_entries=[], page_units={0: unit}, crop_manga_to_text=crop)
+        dlg = WordCurationDialog([_make_word("食べる", 0)], media_context=ctx)
+        qtbot.addWidget(dlg)
+        _select_row(dlg, 0)
+        _fire_timer(dlg)
+        return dlg.page_image_view, manga_crop_box(unit.block_box, (200, 300))
+
+    def test_the_crop_switch_outlines_the_card_crop(self, qtbot, sync_off_thread):
+        view, expected = self._shown(qtbot, sync_off_thread, crop=True)
+        assert expected is not None
+        assert view.current_crop == expected
+
+    def test_without_the_switch_there_is_no_crop_outline(self, qtbot, sync_off_thread):
+        view, _expected = self._shown(qtbot, sync_off_thread, crop=False)
+        assert view.current_pixmap is not None
+        assert view.current_crop is None

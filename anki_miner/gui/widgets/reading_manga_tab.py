@@ -513,7 +513,15 @@ class ReadingMangaTab(_ReadingMiningTabBase):
         if doc is None or doc.kind != "manga" or not any(u.image_ref for u in doc.units):
             return None, lookup
         units = {u.index: u for u in doc.units}
-        return CurationMediaContext(video_file=None, subtitle_entries=[], page_units=units), lookup
+        return (
+            CurationMediaContext(
+                video_file=None,
+                subtitle_entries=[],
+                page_units=units,
+                crop_manga_to_text=self.config.crop_manga_to_text,
+            ),
+            lookup,
+        )
 
     # ------------------------------------------------------------------
     # Per-item signal slots (READ-ONLY on item state — the worker owns it)

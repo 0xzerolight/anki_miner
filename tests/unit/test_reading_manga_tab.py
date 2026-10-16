@@ -853,6 +853,19 @@ class TestCurationContext:
         # unmatched pages still show their page label in the placeholder.
         assert ctx.page_units == {0: doc.units[0], 1: doc.units[1]}
 
+    def test_the_crop_switch_reaches_the_curator(self, tab):
+        """F-11: the curator outlines the card crop only when Card Media crops manga pictures."""
+        from dataclasses import replace
+
+        _mine(tab, [_make_ref()])
+        tab.worker_thread.curation_document = _manga_document()
+        ctx, _lookup = tab._build_curation_context()
+        assert ctx is not None and ctx.crop_manga_to_text is False
+
+        tab.config = replace(tab.config, crop_manga_to_text=True)
+        ctx, _lookup = tab._build_curation_context()
+        assert ctx is not None and ctx.crop_manga_to_text is True
+
     def test_none_document_falls_back(self, tab):
         _mine(tab, [_make_ref()])
         tab.worker_thread.curation_document = None

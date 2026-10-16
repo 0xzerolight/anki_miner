@@ -281,6 +281,10 @@ class CurationMediaContext:
     #: own picture, not a volume's pages, so the picture pane's notices speak
     #: of a card. Set by the one construction site that knows the run's source.
     page_units_are_cards: bool = False
+    #: ``config.crop_manga_to_text`` (F-11): the page view outlines the part of
+    #: the page a manga card keeps. Carried for the same reason as
+    #: ``audio_padding``: the dialog is built without a config.
+    crop_manga_to_text: bool = False
 
 
 def auto_translation_of(processor: object | None, video: Path | None) -> list[tuple[float, float, str]]:
@@ -1368,6 +1372,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
             # Mutually exclusive with the player in practice (manga has no
             # video), but the panes-list pattern composes either way.
             self.page_image_view = PageImageView()
+            self.page_image_view.set_crop_preview(bool(self._media_context and self._media_context.crop_manga_to_text))
             image_pane: QWidget = self.page_image_view
             if self._clip_audio is not None:
                 # Same pane name either way, so _side_key and every saved
