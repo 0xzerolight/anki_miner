@@ -73,7 +73,7 @@ def test_scoped_defaults_turn_on_the_norwegian_sdh_filter():
     assert config.allowed_pos == ("ADJ", "ADV", "NOUN", "VERB") and config.excluded_subtypes == ()
     assert config.use_subtitle_regex_filter is True and config.subtitle_regex_filter == NB_SUBTITLE_REGEX
     assert config.anki_fields["pos"] == config.anki_fields["noun_gender"] == config.anki_fields["noun_article"] == ""
-    assert [entry.kind for entry in config.expression_audio_chain] == ["googletts"]
+    assert [entry.kind for entry in config.expression_audio_chain] == ["wikimedia", "googletts"]
 
 
 def test_a_known_word_front_meets_the_mined_lemma():

@@ -48,8 +48,8 @@ RU_AUDIO = AudioDefaults(
     sentence_cache_stem_prefix="sentencetts_ru",
     custom_fetcher_language="ru",
     papago_speaker=None,
-    # Google TTS only: the Wiktionary/Lingua Libre kind is not built (DECIDED 1).
-    default_chain=(AudioSourceEntry(kind="googletts"),),
+    wikimedia_prefixes=("Ru-", "LL-Q7737 (rus)-"),
+    default_chain=(AudioSourceEntry(kind="wikimedia"), AudioSourceEntry(kind="googletts")),
     edge_voice="ru-RU-SvetlanaNeural",
     candidates=spaced_audio_candidates,
     speakable=spaced_speakable,

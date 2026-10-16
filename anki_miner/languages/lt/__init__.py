@@ -51,8 +51,8 @@ LT_AUDIO = AudioDefaults(
     sentence_cache_stem_prefix="sentencetts_lt",
     custom_fetcher_language="lt",
     papago_speaker=None,
-    # Wiktionary native audio is Stage W (not built).
-    default_chain=(AudioSourceEntry(kind="googletts"),),
+    wikimedia_prefixes=("LL-Q9083 (lit)-", "Lt-"),
+    default_chain=(AudioSourceEntry(kind="wikimedia"), AudioSourceEntry(kind="googletts")),
     edge_voice="lt-LT-OnaNeural",
     candidates=spaced_audio_candidates,
     speakable=spaced_speakable,

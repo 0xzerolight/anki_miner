@@ -42,8 +42,8 @@ CA_AUDIO = AudioDefaults(
     sentence_cache_stem_prefix="sentencetts_ca",
     custom_fetcher_language="ca",
     papago_speaker=None,
-    # Lingua Libre (LL-Q7026 (cat)-) leads once the wiktionary kind exists (Stage W); Google TTS until then.
-    default_chain=(AudioSourceEntry(kind="googletts"),),
+    wikimedia_prefixes=("LL-Q7026 (cat)-",),
+    default_chain=(AudioSourceEntry(kind="wikimedia"), AudioSourceEntry(kind="googletts")),
     edge_voice="ca-ES-JoanaNeural",
     candidates=spaced_audio_candidates,
     speakable=spaced_speakable,

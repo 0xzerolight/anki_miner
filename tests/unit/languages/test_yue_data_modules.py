@@ -16,8 +16,8 @@ from anki_miner.languages.yue.fields import YUE_CARD_FIELD_DEFAULTS
 from anki_miner.languages.yue.style import YUE_CONTENT_STYLE, yue_card_lang
 
 
-def test_the_audio_chain_is_google_only_with_an_edge_voice_available():
-    assert YUE_AUDIO.default_chain == (AudioSourceEntry(kind="googletts"),)
+def test_the_audio_chain_is_commons_then_google_with_an_edge_voice_available():
+    assert YUE_AUDIO.default_chain == (AudioSourceEntry(kind="wikimedia"), AudioSourceEntry(kind="googletts"))
     assert YUE_AUDIO.resolved_gtts_lang(AnkiMinerConfig(language="yue")) == "yue"
     assert YUE_AUDIO.edge_voice == "zh-HK-HiuMaanNeural"
     assert YUE_AUDIO.cache_stem_prefix == "googletts_yue"

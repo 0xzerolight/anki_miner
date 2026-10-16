@@ -84,7 +84,7 @@ def test_both_google_legs_follow_the_variety():
 def test_audio_speaks_the_front_with_namespaced_stems():
     audio = get_profile("pt").audio
     assert (audio.cache_stem_prefix, audio.sentence_cache_stem_prefix) == ("googletts_pt", "sentencetts_pt")
-    assert [entry.kind for entry in audio.default_chain] == ["googletts"]
+    assert [entry.kind for entry in audio.default_chain] == ["wikimedia", "googletts"]
     assert audio.speakable is not None and audio.speakable("dar", "") == "dar"
 
 

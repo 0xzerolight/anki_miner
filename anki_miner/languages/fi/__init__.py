@@ -40,8 +40,8 @@ FI_AUDIO = AudioDefaults(
     sentence_cache_stem_prefix="sentencetts_fi",
     custom_fetcher_language="fi",
     papago_speaker=None,
-    # Wiktionary recordings (Fi-, LL-Q1412 (fin)-) lead once the wiktionary kind exists (Stage W); Google TTS until then.
-    default_chain=(AudioSourceEntry(kind="googletts"),),
+    wikimedia_prefixes=("Fi-", "LL-Q1412 (fin)-"),
+    default_chain=(AudioSourceEntry(kind="wikimedia"), AudioSourceEntry(kind="googletts")),
     edge_voice="fi-FI-NooraNeural",
     candidates=spaced_audio_candidates,
     speakable=spaced_speakable,

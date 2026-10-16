@@ -62,7 +62,7 @@ def test_the_scoped_defaults_carry_the_swedish_subtitle_filter_and_pos_gate():
     assert config.excluded_subtypes == SV_EXCLUDED_SUBTYPES
     assert config.downloader_subtitle_langs == "sv"
     assert config.anki_fields["noun_article"] == "" and "noun_plural" not in config.anki_fields
-    assert config.expression_audio_chain == (AudioSourceEntry(kind="googletts"),)
+    assert config.expression_audio_chain == (AudioSourceEntry(kind="wikimedia"), AudioSourceEntry(kind="googletts"))
 
 
 def test_the_sentence_rules_take_the_swedish_abbreviations_and_leave_the_quote_a_closer():

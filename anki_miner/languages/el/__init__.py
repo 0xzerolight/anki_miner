@@ -46,8 +46,9 @@ EL_AUDIO = AudioDefaults(
     sentence_cache_stem_prefix="sentencetts_el",
     custom_fetcher_language="el",
     papago_speaker=None,
-    # Wiktionary native audio is Stage W (not built); for el it would near-always miss (LL ell = 0 files).
-    default_chain=(AudioSourceEntry(kind="googletts"),),
+    # Commons recordings near-always miss for el (Lingua Libre has no Greek files); Google TTS answers.
+    wikimedia_prefixes=("El-", "EL-", "Ell-"),
+    default_chain=(AudioSourceEntry(kind="wikimedia"), AudioSourceEntry(kind="googletts")),
     edge_voice="el-GR-AthinaNeural",
     candidates=spaced_audio_candidates,
     speakable=spaced_speakable,

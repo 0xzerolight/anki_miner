@@ -5,9 +5,8 @@ Google Translate carries a Cantonese voice -- gTTS 2.5.4's ``tts_langs()`` lists
 A user adds an audio pack or a custom_json server ahead of it exactly as on the
 JA side.
 
-The spec's chain starts with a Wiktionary recordings leg; batch C ships no
-Wiktionary fetcher (owner decision 1, no Stage W), so the chain starts at the
-next leg and no ``wiktionary_audio`` capability is declared.
+The chain starts with Commons recordings (``LL-Q9186 (yue)-``, the spec's
+Wiktionary leg, built as the ``wikimedia`` kind in F-16) and falls through to Google.
 
 ``edge_voice`` is the Microsoft Edge read-aloud voice the user can ADD as a
 second synthetic leg (Settings -> Word Audio -> Add audio source... -> Online
@@ -57,7 +56,8 @@ YUE_AUDIO = AudioDefaults(
     sentence_cache_stem_prefix="sentencetts_yue",
     custom_fetcher_language="yue",
     papago_speaker=None,
-    default_chain=(AudioSourceEntry(kind="googletts"),),
+    wikimedia_prefixes=("LL-Q9186 (yue)-", "LL-Q9186-"),
+    default_chain=(AudioSourceEntry(kind="wikimedia"), AudioSourceEntry(kind="googletts")),
     candidates=yue_audio_candidates,
     speakable=yue_speakable,
     edge_voice="zh-HK-HiuMaanNeural",

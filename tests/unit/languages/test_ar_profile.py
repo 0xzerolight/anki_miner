@@ -78,7 +78,7 @@ def test_scoped_defaults_map_the_reading_and_turn_on_the_arabic_sdh_filter():
     assert config.anki_fields["expression_reading"] == "Reading"
     assert {config.anki_fields[key] for key in ("root", "expression_grammar", "clitic_segmentation")} == {""}
     assert config.anki_fields["expression_furigana"] == config.anki_fields["sentence_furigana"] == ""
-    assert [entry.kind for entry in config.expression_audio_chain] == ["googletts"]
+    assert [entry.kind for entry in config.expression_audio_chain] == ["wikimedia", "googletts"]
 
 
 def test_audio_speaks_the_vocalised_lemma_through_google():

@@ -81,7 +81,7 @@ def test_word_audio_speaks_the_front_through_google():
         "googletts_el",
         "sentencetts_el",
     )
-    assert [entry.kind for entry in audio.default_chain] == ["googletts"]
+    assert [entry.kind for entry in audio.default_chain] == ["wikimedia", "googletts"]
     assert audio.speakable is not None and audio.speakable("γράφω", "") == "γράφω"
     assert audio.candidates is not None
 
@@ -97,7 +97,7 @@ def test_scoped_defaults_turn_on_the_greek_sdh_filter():
         "aspect_pair": "",
     }
     assert config.downloader_subtitle_langs == "el"
-    assert [entry.kind for entry in config.expression_audio_chain] == ["googletts"]
+    assert [entry.kind for entry in config.expression_audio_chain] == ["wikimedia", "googletts"]
 
 
 def test_a_deck_front_with_an_article_meets_the_mined_lemma():

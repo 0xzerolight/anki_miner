@@ -48,9 +48,8 @@ PL_AUDIO = AudioDefaults(
     sentence_cache_stem_prefix="sentencetts_pl",
     custom_fetcher_language="pl",
     papago_speaker=None,
-    # Wiktionary/Lingua Libre (Pl-, LL-Q809 (pol)-) leads once the wiktionary kind exists (Stage W);
-    # Google TTS until then.
-    default_chain=(AudioSourceEntry(kind="googletts"),),
+    wikimedia_prefixes=("Pl-", "LL-Q809 (pol)-"),
+    default_chain=(AudioSourceEntry(kind="wikimedia"), AudioSourceEntry(kind="googletts")),
     edge_voice="pl-PL-ZofiaNeural",
     candidates=spaced_audio_candidates,
     speakable=spaced_speakable,

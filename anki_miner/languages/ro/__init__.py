@@ -69,8 +69,8 @@ RO_AUDIO = AudioDefaults(
     sentence_cache_stem_prefix="sentencetts_ro",
     custom_fetcher_language="ro",
     papago_speaker=None,
-    # Lingua Libre leads once the wiktionary audio kind exists (Stage W); Google TTS until then.
-    default_chain=(AudioSourceEntry(kind="googletts"),),
+    wikimedia_prefixes=("LL-Q7913 (ron)-", "Ro-"),
+    default_chain=(AudioSourceEntry(kind="wikimedia"), AudioSourceEntry(kind="googletts")),
     edge_voice="ro-RO-AlinaNeural",
     candidates=spaced_audio_candidates,
     speakable=spaced_speakable,
