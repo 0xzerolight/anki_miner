@@ -17,6 +17,7 @@ from anki_miner.languages.registry import get_profile
 from anki_miner.models.stats import KnownSizePoint, MiningSession, OverallStats
 from anki_miner.services.anki_service import AnkiService
 from anki_miner.services.frequency import storage
+from anki_miner.services.frequency.coverage import CoverageBand, FrequencyCoverage
 from anki_miner.services.known_word_db import KnownWordDB
 from anki_miner.services.stats_service import StatsService
 
@@ -269,3 +270,75 @@ def test_a_failed_scan_is_a_banner_with_retry(qtbot, knowledge):
     assert issue is not None
     assert issue.summary == "Known words could not be counted."
     assert issue.action_text == "Retry"
+
+
+def _coverage() -> FrequencyCoverage:
+    return FrequencyCoverage(
+        source_name="JPDB",
+        bands=(
+            CoverageBand(low=1, high=1000, known=1, missing=((2, "犬"),)),
+            CoverageBand(low=1001, high=2000, known=3, missing=()),
+            CoverageBand(low=2001, high=5000, known=0, missing=((3000, "鳥"), (4000, "魚"))),
+            CoverageBand(low=5001, high=10000, known=0, missing=()),
+            CoverageBand(low=10001, high=20000, known=0, missing=()),
+        ),
+    )
+
+
+def test_the_table_lists_each_band(qtbot, knowledge):
+    knowledge["bundle"] = _bundle(coverage=_coverage(), has_numeric_source=True)
+    tab = knowledge["make"]()
+    _show(qtbot, tab)
+
+    assert tab._coverage_card.isVisible()
+    table = tab.coverage_table
+    assert table.rowCount() == 5
+    assert [table.item(0, column).text() for column in range(4)] == ["1–1,000", "1", "1", "50.0%"]
+    assert table.item(3, 3).text() == "—"
+    assert "JPDB" in tab.coverage_source_label.text()
+
+
+def test_show_missing_words_lists_the_band(qtbot, knowledge):
+    knowledge["bundle"] = _bundle(coverage=_coverage(), has_numeric_source=True)
+    tab = knowledge["make"]()
+    _show(qtbot, tab)
+    assert not tab.show_missing_button.isEnabled()
+
+    tab.coverage_table.selectRow(2)
+    assert tab.show_missing_button.isEnabled()
+    tab.show_missing_button.click()
+
+    dialog = tab._missing_dialog
+    assert dialog is not None
+    qtbot.addWidget(dialog)
+    assert dialog.words_view.toPlainText() == "3000\t鳥\n4000\t魚"
+    dialog.close()
+
+
+def test_a_band_with_nothing_missing_disables_the_button(qtbot, knowledge):
+    knowledge["bundle"] = _bundle(coverage=_coverage(), has_numeric_source=True)
+    tab = knowledge["make"]()
+    _show(qtbot, tab)
+
+    tab.coverage_table.selectRow(1)
+
+    assert not tab.show_missing_button.isEnabled()
+
+
+def test_no_numeric_source_hides_the_section(qtbot, knowledge):
+    knowledge["bundle"] = _bundle(coverage=None, has_numeric_source=False)
+    tab = knowledge["make"]()
+    _show(qtbot, tab)
+
+    assert not tab._coverage_card.isVisible()
+
+
+def test_anki_down_explains_instead_of_a_table(qtbot, knowledge):
+    knowledge["bundle"] = _bundle(known_count=None, coverage=None, has_numeric_source=True, anki_error="down")
+    tab = knowledge["make"]()
+    _show(qtbot, tab)
+
+    assert tab._coverage_card.isVisible()
+    assert tab.coverage_status_label.isVisible()
+    assert tab.coverage_status_label.text() == "Coverage needs Anki running: it compares the list with your cards."
+    assert not tab.coverage_table.isVisible()

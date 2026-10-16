@@ -17,6 +17,7 @@ from PyQt6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QMessageBox,
+    QPlainTextEdit,
     QProgressBar,
     QScrollArea,
     QSizePolicy,
@@ -30,7 +31,7 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import AnkiConnectionError
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
 from anki_miner.gui.utils import file_dialogs
-from anki_miner.gui.utils.content_text import content_cell_font
+from anki_miner.gui.utils.content_text import apply_content_direction, content_cell_font
 from anki_miner.gui.utils.dialog_paths import resolve_start_dir
 from anki_miner.gui.utils.qt_helpers import (
     CellRole,
@@ -51,6 +52,7 @@ from anki_miner.gui.widgets.base import (
     configure_card_layout,
     configure_scrolled_page,
 )
+from anki_miner.gui.widgets.base.enhanced_dialog import EnhancedDialog
 from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader, StatCard
 from anki_miner.languages.profile import ContentTextStyle
 from anki_miner.languages.registry import config_language, get_profile, language_display_name
@@ -65,7 +67,12 @@ from anki_miner.models.stats import (
     SessionGroup,
 )
 from anki_miner.services.anki_service import AnkiService
-from anki_miner.services.frequency.coverage import FrequencyCoverage, measure_coverage, open_first_numeric_source
+from anki_miner.services.frequency.coverage import (
+    CoverageBand,
+    FrequencyCoverage,
+    measure_coverage,
+    open_first_numeric_source,
+)
 from anki_miner.services.known_word_db import KnownWordDB, collect_known_forms
 from anki_miner.services.run_history import RunNotesCheck, check_run_notes, delete_run
 from anki_miner.services.stats_service import StatsService, export_csv, group_sessions, sessions_since
@@ -94,6 +101,9 @@ _SESSION_ID_ROLE = Qt.ItemDataRole.UserRole
 
 #: Mining History, grouped: period, sessions, words, new words, cards.
 _GROUP_COUNT_COLUMNS = (1, 2, 3, 4)
+
+#: Frequency Coverage: rank band, known, not known, known share.
+_COVERAGE_COUNT_COLUMNS = (1, 2, 3)
 
 
 def _count(value: int) -> SortableTableWidgetItem:
@@ -325,6 +335,26 @@ class _BarChart(QWidget):
         return super().event(a0)
 
 
+class _MissingWordsDialog(EnhancedDialog):
+    """The words of one rank band the user does not know yet, rank first (ST-07).
+
+    Read-only but selectable, so the list can be copied into a study tool.
+    """
+
+    def __init__(self, parent: QWidget | None, band: CoverageBand, source_name: str, style: ContentTextStyle) -> None:
+        super().__init__(parent)
+        self.setWindowTitle(self.tr("Missing Words"))
+        self.set_header("", tr_format(self.tr("Not known yet in ranks %1"), f"{band.low:,}–{band.high:,}"), source_name)
+        self.words_view = QPlainTextEdit()
+        self.words_view.setReadOnly(True)
+        # Mined content: the mining language's face and direction (D45-B, S21).
+        self.words_view.setFont(content_cell_font(style))
+        apply_content_direction(self.words_view, style)
+        self.words_view.setPlainText("\n".join(f"{rank}\t{word}" for rank, word in band.missing))
+        self.add_content(self.words_view, 1)
+        self.add_close_button()
+
+
 class AnalyticsTab(ScreenIssueHost, QWidget):
     """Tab displaying mining analytics, difficulty rankings, and milestones."""
 
@@ -392,6 +422,10 @@ class AnalyticsTab(ScreenIssueHost, QWidget):
         self._knowledge_in_flight = False
         self._knowledge_at: float | None = None
         self._has_history = False
+        # ST-07: the last coverage shown, and whether the language has a numeric list.
+        self._coverage: FrequencyCoverage | None = None
+        self._coverage_available = False
+        self._missing_dialog: _MissingWordsDialog | None = None
         self._setup_ui()
         self._setup_accessibility()
 
@@ -452,6 +486,10 @@ class AnalyticsTab(ScreenIssueHost, QWidget):
         self._difficulty_card = self._create_difficulty_section()
         layout.addWidget(self._difficulty_card)
 
+        # Section: Frequency Coverage (ST-07), only when the language has a numeric list.
+        self._coverage_card = self._create_coverage_section()
+        layout.addWidget(self._coverage_card)
+
         # Section 4: Milestones
         self._milestones_card = self._create_milestones_section()
         layout.addWidget(self._milestones_card)
@@ -500,6 +538,7 @@ class AnalyticsTab(ScreenIssueHost, QWidget):
                 getattr(self, "sessions_table", None),
                 getattr(self, "difficulty_table", None),
                 getattr(self, "history_groups_table", None),
+                getattr(self, "coverage_table", None),
             ):
                 if table is not None:
                     configure_data_view(table)
@@ -708,6 +747,53 @@ class AnalyticsTab(ScreenIssueHost, QWidget):
         group.setLayout(layout)
         return group
 
+    def _create_coverage_section(self) -> QFrame:
+        group = QFrame()
+        group.setObjectName("card")
+        layout = QVBoxLayout()
+        configure_card_layout(layout)
+
+        layout.addWidget(SectionHeader(self.tr("Frequency Coverage")))
+
+        self.coverage_source_label = QLabel()
+        self.coverage_source_label.setObjectName("helper-text")
+        self.coverage_source_label.setWordWrap(True)
+        layout.addWidget(self.coverage_source_label)
+
+        self.coverage_status_label = QLabel()
+        self.coverage_status_label.setObjectName("helper-text")
+        self.coverage_status_label.setWordWrap(True)
+        self.coverage_status_label.hide()
+        layout.addWidget(self.coverage_status_label)
+
+        self.coverage_table = QTableWidget()
+        self.coverage_table.setColumnCount(4)
+        self.coverage_table.setHorizontalHeaderLabels(
+            [self.tr("Rank band"), self.tr("Known"), self.tr("Not known"), self.tr("Known %")]
+        )
+        configure_table_header(self.coverage_table, fit_columns=(0, *_COVERAGE_COUNT_COLUMNS))
+        self.coverage_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        self.coverage_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self.coverage_table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
+        # No sorting: the bands read in rank order, and a row's index is its band's.
+        configure_data_view(self.coverage_table)
+        install_copy_rows(self.coverage_table)
+        _apply_height_floor(self.coverage_table)
+        self.coverage_table.itemSelectionChanged.connect(self._sync_missing_button)
+        layout.addWidget(self.coverage_table)
+
+        buttons = QHBoxLayout()
+        self.show_missing_button = ModernButton(self.tr("Show missing words"), variant="secondary")
+        self.show_missing_button.setEnabled(False)
+        self.show_missing_button.clicked.connect(self._on_show_missing_clicked)
+        buttons.addWidget(self.show_missing_button)
+        buttons.addStretch(1)
+        layout.addLayout(buttons)
+
+        group.setLayout(layout)
+        group.hide()
+        return group
+
     def _create_milestones_section(self) -> QFrame:
         group = QFrame()
         group.setObjectName("card")
@@ -913,6 +999,7 @@ class AnalyticsTab(ScreenIssueHost, QWidget):
         # rather than raise a confirmation over an empty database.
         self.reset_button.setEnabled(not empty)
         self._has_history = not empty
+        self._coverage_card.setVisible(not empty and self._coverage_available)
         if self._knowledge_at is None:
             # Until this visit's scan lands, the last recorded count stands in.
             self._render_known_words(
@@ -1371,6 +1458,7 @@ class AnalyticsTab(ScreenIssueHost, QWidget):
         self._render_known_words(
             bundle.language, bundle.known_count, bundle.history, anki_down=bundle.known_count is None
         )
+        self._render_coverage(bundle)
 
     def _render_known_words(
         self, language: str, count: int | None, history: list[KnownSizePoint], *, anki_down: bool
@@ -1394,6 +1482,66 @@ class AnalyticsTab(ScreenIssueHost, QWidget):
             else:
                 parts.append(tr_format(self.tr("Last counted on %1."), last_day))
         self.known_words_caption.setText(" ".join(parts))
+
+    def _render_coverage(self, bundle: _KnowledgeBundle) -> None:
+        """Fill the band table, or say why there is none; hidden without a numeric list."""
+        self._coverage_available = bundle.has_numeric_source
+        self._coverage_card.setVisible(bundle.has_numeric_source and self._has_history)
+        self._coverage = bundle.coverage
+        if not bundle.has_numeric_source:
+            return
+        if bundle.coverage is None:
+            self.coverage_status_label.setText(
+                self.tr("Coverage needs Anki running: it compares the list with your cards.")
+            )
+            self.coverage_status_label.show()
+            self.coverage_source_label.hide()
+            self.coverage_table.hide()
+            self.show_missing_button.hide()
+            return
+        self.coverage_status_label.hide()
+        self.coverage_source_label.setText(
+            tr_format(
+                self.tr("How many of the most frequent words in %1 you already know."), bundle.coverage.source_name
+            )
+        )
+        self.coverage_source_label.show()
+        table = self.coverage_table
+        table.setRowCount(len(bundle.coverage.bands))
+        for row_idx, band in enumerate(bundle.coverage.bands):
+            share = f"{band.known_share * 100:.1f}%" if band.total else "—"
+            items = [
+                make_table_item(f"{band.low:,}–{band.high:,}", sort_value=band.low),
+                _count(band.known),
+                _count(len(band.missing)),
+                make_table_item(share, CellRole.NUMBER, sort_value=band.known_share),
+            ]
+            for col_idx, item in enumerate(items):
+                table.setItem(row_idx, col_idx, item)
+        hold_numeric_columns(table, _COVERAGE_COUNT_COLUMNS)
+        table.show()
+        self.show_missing_button.show()
+        self._sync_missing_button()
+
+    def _selected_band(self) -> CoverageBand | None:
+        """The band whose row is selected, or ``None``."""
+        rows = {index.row() for index in self.coverage_table.selectedIndexes()}
+        if self._coverage is None or len(rows) != 1:
+            return None
+        row = rows.pop()
+        return self._coverage.bands[row] if 0 <= row < len(self._coverage.bands) else None
+
+    def _sync_missing_button(self) -> None:
+        band = self._selected_band()
+        self.show_missing_button.setEnabled(band is not None and bool(band.missing))
+
+    def _on_show_missing_clicked(self) -> None:
+        """Open the selected band's missing words (non-modal to the page's data)."""
+        band = self._selected_band()
+        if band is None or self._coverage is None:
+            return
+        self._missing_dialog = _MissingWordsDialog(self, band, self._coverage.source_name, self._content_style)
+        self._missing_dialog.open()
 
     def _milestone_text(self, milestone: Milestone) -> str:
         """State the milestone as a fact, in the UI language (decision D47).
