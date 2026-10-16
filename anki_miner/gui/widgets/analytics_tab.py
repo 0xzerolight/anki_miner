@@ -6,8 +6,8 @@ import time
 from collections.abc import Callable
 from dataclasses import dataclass, replace
 
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QFont
+from PyQt6.QtCore import QEvent, QPointF, QRectF, QSize, Qt
+from PyQt6.QtGui import QFont, QHelpEvent, QPainter, QPalette
 from PyQt6.QtWidgets import (
     QFrame,
     QGridLayout,
@@ -16,7 +16,9 @@ from PyQt6.QtWidgets import (
     QMessageBox,
     QProgressBar,
     QScrollArea,
+    QSizePolicy,
     QTableWidget,
+    QToolTip,
     QVBoxLayout,
     QWidget,
 )
@@ -129,6 +131,99 @@ class _AnalyticsBundle:
     sessions: list[MiningSession]
     difficulties: list[DifficultyEntry]
     milestones: list[Milestone]
+
+
+class _BarChart(QWidget):
+    """Cards per period as plain bars (ST-02).
+
+    AM ships no chart library and one bar series does not need one: a QPainter
+    fill per bar in the palette's highlight colour (a theme routes the whole
+    palette), the largest value at the top left, the first and last period
+    under the bars, and each bar's period and count in its tooltip.
+    """
+
+    _HEIGHT = 150
+
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self._bars: list[tuple[str, int]] = []
+        self.setMinimumHeight(self._HEIGHT)
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self.setAccessibleName(self.tr("Cards per period"))
+
+    def sizeHint(self) -> QSize:
+        return QSize(400, self._HEIGHT)
+
+    def set_bars(self, bars: list[tuple[str, int]]) -> None:
+        """Show ``bars`` as (period, cards), oldest first."""
+        self._bars = list(bars)
+        self.update()
+
+    def bars(self) -> list[tuple[str, int]]:
+        """The (period, cards) pairs on show, oldest first."""
+        return list(self._bars)
+
+    def _plot_rect(self) -> QRectF:
+        """The area the bars stand in: one text line kept free above and below."""
+        line = float(self.fontMetrics().height())
+        return QRectF(4.0, line + 4.0, max(1.0, self.width() - 8.0), max(1.0, self.height() - 2.0 * line - 12.0))
+
+    def bar_rects(self) -> list[QRectF]:
+        """One rect per bar, left to right, scaled so the largest fills the plot."""
+        if not self._bars:
+            return []
+        plot = self._plot_rect()
+        peak = max(value for _label, value in self._bars) or 1
+        slot = plot.width() / len(self._bars)
+        width = max(1.0, slot * 0.7)
+        rects: list[QRectF] = []
+        for index, (_label, value) in enumerate(self._bars):
+            height = plot.height() * value / peak
+            left = plot.left() + index * slot + (slot - width) / 2
+            rects.append(QRectF(left, plot.bottom() - height, width, height))
+        return rects
+
+    def bar_at(self, x: float) -> int | None:
+        """The index of the bar whose slot holds ``x``, or ``None`` outside the plot."""
+        if not self._bars:
+            return None
+        plot = self._plot_rect()
+        if x < plot.left() or x >= plot.right():
+            return None
+        index = int((x - plot.left()) / (plot.width() / len(self._bars)))
+        return min(index, len(self._bars) - 1)
+
+    def paintEvent(self, a0) -> None:
+        painter = QPainter(self)
+        try:
+            palette = self.palette()
+            for rect in self.bar_rects():
+                painter.fillRect(rect, palette.color(QPalette.ColorRole.Highlight))
+            if not self._bars:
+                return
+            metrics = self.fontMetrics()
+            plot = self._plot_rect()
+            painter.setPen(palette.color(QPalette.ColorRole.WindowText))
+            peak = max(value for _label, value in self._bars)
+            painter.drawText(QPointF(plot.left(), float(metrics.ascent())), f"{peak:,}")
+            baseline = float(self.height() - metrics.descent() - 2)
+            painter.drawText(QPointF(plot.left(), baseline), self._bars[0][0])
+            last = self._bars[-1][0]
+            painter.drawText(QPointF(plot.right() - metrics.horizontalAdvance(last), baseline), last)
+        finally:
+            painter.end()
+
+    def event(self, a0) -> bool:
+        if a0 is not None and a0.type() == QEvent.Type.ToolTip and isinstance(a0, QHelpEvent):
+            index = self.bar_at(float(a0.pos().x()))
+            if index is None:
+                QToolTip.hideText()
+                a0.ignore()
+            else:
+                label, value = self._bars[index]
+                QToolTip.showText(a0.globalPos(), f"{label}: {value:,}", self)
+            return True
+        return super().event(a0)
 
 
 class AnalyticsTab(ScreenIssueHost, QWidget):
@@ -283,8 +378,6 @@ class AnalyticsTab(ScreenIssueHost, QWidget):
         same "pixel constant frozen against a font that later grows" mistake the
         row sizing exists to fix.
         """
-        from PyQt6.QtCore import QEvent
-
         super().changeEvent(a0)
         if a0 is not None and a0.type() == QEvent.Type.FontChange:
             for table in (getattr(self, "sessions_table", None), getattr(self, "difficulty_table", None)):
