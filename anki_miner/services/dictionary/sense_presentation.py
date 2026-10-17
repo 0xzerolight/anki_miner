@@ -68,16 +68,38 @@ def _list_key(attrs: str) -> str | None:
     return None
 
 
-def _recognised_lists(inner: str) -> list[tuple[str, str, str]] | None:
-    """``(key, attrs, body)`` per list, or None unless ``inner`` is only recognised lists."""
-    lists: list[tuple[str, str, str]] = []
+def _list_items(body: str) -> list[str] | None:
+    """The item bodies, or None unless ``body`` is only whitespace-separated flat ``gloss-sc-li`` items.
+
+    Loose text or a ``span`` child sits directly in a structured ``ul``; a split would
+    drop it, so such a list is not recognised and the row goes out verbatim.
+    """
+    items: list[str] = []
+    pos = 0
+    for match in _LIST_ITEM_RE.finditer(body):
+        item = match.group(1)
+        if body[pos : match.start()].strip() or "<li" in item:
+            return None
+        items.append(item)
+        pos = match.end()
+    if body[pos:].strip():
+        return None
+    return items
+
+
+def _recognised_lists(inner: str) -> list[tuple[str, str, list[str]]] | None:
+    """``(key, attrs, items)`` per list, or None unless ``inner`` is only recognised lists."""
+    lists: list[tuple[str, str, list[str]]] = []
     pos = 0
     for match in _LIST_RE.finditer(inner):
         attrs, body = match.group(1), match.group(2)
         key = _list_key(attrs)
         if inner[pos : match.start()].strip() or key is None or any(tag in body for tag in _BLOCK_TAGS):
             return None
-        lists.append((key, attrs, body))
+        items = _list_items(body)
+        if items is None:
+            return None
+        lists.append((key, attrs, items))
         pos = match.end()
     if inner[pos:].strip():
         return None
@@ -110,14 +132,14 @@ def present_sense(row_html: str, *, styled: bool) -> str:
     glosses: list[str] = []
     notes: list[str] = []
     lang = ""
-    for key, attrs, body in lists:
+    for key, attrs, items in lists:
         if key in _GLOSS_KEYS:
-            glosses.extend(_LIST_ITEM_RE.findall(body))
+            glosses.extend(items)
             found = _LANG_RE.search(attrs)
             if not lang and found:
                 lang = found.group(0)
         elif key == _NOTE_KEY:
-            notes.extend(_LIST_ITEM_RE.findall(body))
+            notes.extend(items)
 
     note = "; ".join(notes)
     if len(glosses) == 1:

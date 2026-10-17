@@ -84,6 +84,10 @@ def test_source_languages_dropped_info_glossary_kept():
         '<ul class="gloss-sc-ul" style="list-style-type: none"><li class="gloss-sc-li">a</li><li class="gloss-sc-li">b</li></ul>',  # authored list, no jmdict key: verbatim
         '<ul class="gloss-sc-ul" lang="de"><li class="gloss-sc-li">a</li><li class="gloss-sc-li">b</li></ul>',  # authored list, no jmdict key: verbatim
         '<ul class="gloss-sc-ul"><li class="gloss-sc-li">a</li><li class="gloss-sc-li">b</li></ul>',  # StarDict/CSV list: verbatim
+        '<ul class="gloss-sc-ul" data-sc-content="glossary">see also<li class="gloss-sc-li">x</li><li class="gloss-sc-li">y</li></ul>',  # loose text in list: verbatim
+        '<ul class="gloss-sc-ul" data-sc-content="glossary"><li class="gloss-sc-li">x</li><span class="gloss-sc-span">TAG</span></ul>',  # span child in list: verbatim
+        '<ul class="gloss-sc-ul" data-sc-content="glossary">only text</ul>',  # list with no items: verbatim
+        '<ul class="gloss-sc-ul" data-sc-content="glossary"><li class="gloss-sc-li">a<li class="gloss-sc-li">b</li>c</li></ul>',  # nested li: verbatim
     ],
 )
 def test_unrecognised_rows_pass_through_verbatim(inner):
