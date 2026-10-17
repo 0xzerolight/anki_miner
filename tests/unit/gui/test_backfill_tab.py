@@ -208,19 +208,77 @@ class TestScanFlow:
         assert factory.call_args[0][1].deck == "Mining"
 
 
-class TestRestyleButton:
-    def test_click_emits_restyle_requested(self, tab, qtbot):
-        with qtbot.waitSignal(tab.restyle_requested, timeout=1000):
-            tab.restyle_button.click()
+def _styling_plan(notes=(), **kwargs):
+    return _plan(list(notes), options=BackfillOptions(field_keys=frozenset(), styling=True), **kwargs)
 
-    def test_disabled_while_a_scan_or_apply_is_running(self, tab):
-        running = MagicMock()
-        running.isRunning.return_value = True
-        tab.worker_thread = running
-        tab._set_running(True)
-        assert not tab.restyle_button.isEnabled()
-        tab._set_running(False)
-        assert tab.restyle_button.isEnabled()
+
+class TestStylingOption:
+    """Styling is one of the field options, not a separate button or mode."""
+
+    def test_styling_sits_right_under_glossary(self, tab):
+        groups = list(tab.field_checkboxes)
+        assert groups[groups.index("glossary") + 1] == "styling"
+        assert tab.field_checkboxes["styling"].text() == "Styling"
+        assert "text stays" in tab.field_checkboxes["styling"].toolTip()
+
+    def test_enabled_when_either_carrier_is_mapped(self, tab):
+        # backfill_config maps definition but not glossary.
+        assert tab.field_checkboxes["styling"].isEnabled()
+
+    def test_disabled_when_neither_carrier_is_mapped(self, qtbot, backfill_config):
+        unmapped = replace(
+            backfill_config, anki_fields={**backfill_config.anki_fields, "definition": "", "glossary": ""}
+        )
+        widget = CardBackfillTab(unmapped)
+        qtbot.addWidget(widget)
+        assert not widget.field_checkboxes["styling"].isEnabled()
+
+    def test_styling_alone_scans_with_no_field_keys(self, tab):
+        tab.field_checkboxes["styling"].setChecked(True)
+        with patch(f"{_TAB_MOD}.BackfillScanWorker", return_value=MagicMock()) as factory:
+            tab._start_scan()
+        options = factory.call_args[0][1]
+        assert options.field_keys == frozenset()
+        assert options.styling is True
+
+    def test_styling_beside_a_group_adds_no_field_key(self, tab):
+        tab.field_checkboxes["styling"].setChecked(True)
+        tab.field_checkboxes["frequency"].setChecked(True)
+        with patch(f"{_TAB_MOD}.BackfillScanWorker", return_value=MagicMock()) as factory:
+            tab._start_scan()
+        options = factory.call_args[0][1]
+        assert options.field_keys == frozenset({"frequency"})
+        assert options.styling is True
+
+    def test_a_group_without_styling_scans_with_styling_off(self, tab):
+        tab.field_checkboxes["frequency"].setChecked(True)
+        with patch(f"{_TAB_MOD}.BackfillScanWorker", return_value=MagicMock()) as factory:
+            tab._start_scan()
+        assert factory.call_args[0][1].styling is False
+
+    def test_preview_marks_a_styling_row(self, tab):
+        change = FieldChange("definition", "definition", "gloss", "<b>gloss</b><style>new</style>", expected="old")
+        tab._on_scan_finished(_styling_plan([NotePlan(1, "word1", (change,))]))
+        assert tab.preview_table.item(0, 3).text() == "(styling updated)"
+        assert tab.apply_button.isEnabled()
+
+    def test_summary_counts_old_layout_fields(self, tab):
+        tab._on_scan_finished(_styling_plan(scanned=3, legacy_markup_skips=3))
+        text = tab.summary_label.text()
+        assert "old definition layout" in text
+        assert "3" in text
+        assert "No new values were found" not in text
+
+    def test_styling_only_summary_reports_up_to_date_fields(self, tab):
+        tab._on_scan_finished(_styling_plan(scanned=5, identical_skips=5))
+        text = tab.summary_label.text()
+        assert "already up to date" in text
+        assert "No new values were found" not in text
+
+    def test_there_is_no_restyle_button(self, tab):
+        assert not hasattr(tab, "restyle_button")
+        assert not hasattr(tab, "restyle_requested")
+        assert "Restyle" not in tab.overwrite_checkbox.toolTip()
 
 
 class TestPreviewTable:

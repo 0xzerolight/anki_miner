@@ -2115,9 +2115,6 @@ def compose_main_window(
     # so its config_refreshed connection is wired here too. SubtitlesTab.update_config
     # fans out to both Generate and Retime children.
     window.config_refreshed.connect(subtitles_tab.update_config)
-    # Restyle moved off the Tools menu onto Card Backfill (Task 14); the
-    # button re-emits, and the window still owns the AnkiService + worker.
-    subtitles_tab.backfill_tab.restyle_requested.connect(window.restyle_mined_cards)
 
     # A validation sweep that reached Anki re-drives the four deck / note-type
     # fetches that failed while Anki was closed.

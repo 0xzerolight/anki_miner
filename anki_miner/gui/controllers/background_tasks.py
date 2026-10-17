@@ -45,12 +45,9 @@ if TYPE_CHECKING:
     from anki_miner.gui.workers.app_update_worker import AppUpdateWorker
     from anki_miner.gui.workers.import_worker import ImportWorker
     from anki_miner.gui.workers.install_worker import InstallWorker
-    from anki_miner.gui.workers.restyle_cards_worker import RestyleCardsWorker
     from anki_miner.gui.workers.update_worker import UpdateWorkerThread
     from anki_miner.gui.workers.ytdlp_update_worker import YtdlpUpdateWorker
     from anki_miner.services import ValidationService
-    from anki_miner.services.anki_service import AnkiService
-    from anki_miner.services.card_restyler import RestyleResult
     from anki_miner.services.ocr.model_installer import ModelSpec
     from anki_miner.services.ocr.recognizers import RecognizerSpec
     from anki_miner.services.update_checker import UpdateInfo
@@ -182,7 +179,6 @@ class BackgroundTaskController(QObject):
         self.vulkan_model_download_worker: InstallWorker | None = None
         self.video_ocr_install_worker: InstallWorker | None = None
         self.language_pack_workers = {}
-        self.restyle_cards_worker: RestyleCardsWorker | None = None
         # The recommended-resource download. Adopted rather than started here:
         # the session owns the run, but the download is now backgroundable, so
         # closing the app must still find and join its thread.
@@ -346,34 +342,6 @@ class BackgroundTaskController(QObject):
             on_status,
             on_finished,
         )
-
-    def start_restyle_cards(
-        self,
-        service: AnkiService,
-        config: AnkiMinerConfig,
-        on_progress: Callable[[int, int], None],
-        on_result: Callable[[RestyleResult], None],
-        on_error: Callable[[str], None],
-    ) -> None:
-        """Start the one-time Restyle Mined Cards worker unless one is already running.
-
-        Mirrors :meth:`start_asr_model_download`: concurrency guard, lazy import,
-        connect ``progress``/``result_ready``/``error`` to the caller's slots, and
-        release the handle on the native ``QThread.finished`` (covers the cancel
-        path, where ``result_ready`` never fires).
-        """
-        if still_running(self.restyle_cards_worker):
-            return
-
-        from anki_miner.gui.workers.restyle_cards_worker import RestyleCardsWorker
-
-        worker = RestyleCardsWorker(service, config, parent=self)
-        self.restyle_cards_worker = worker
-        worker.progress.connect(on_progress)
-        worker.result_ready.connect(on_result)
-        worker.error.connect(on_error)
-        worker.finished.connect(lambda w=worker: self._release_worker("restyle_cards_worker", w))
-        worker.start()
 
     def start_alass_download(
         self,
@@ -854,7 +822,6 @@ class BackgroundTaskController(QObject):
         # or aborts the close.
         for language_pack_worker in list(self.language_pack_workers.values()):
             join(language_pack_worker)
-        join(self.restyle_cards_worker)
         join(self.resource_download_worker)
 
         join(self.prewarm_worker)

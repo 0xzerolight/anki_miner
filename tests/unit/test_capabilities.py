@@ -164,12 +164,15 @@ def test_pos_filter_is_not_advertised() -> None:
     assert all(cap.id != "pos-filter" for cap in CAPABILITIES)
 
 
-def test_restyle_mined_cards_targets_backfill() -> None:
-    # The Restyle button lives on Utilities -> Card Backfill (Task 14); it is
-    # no longer a Tools-menu-only dialog.
-    hits = search("restyle mined cards")
-    capability = next(c for c in hits if c.id == "restyle-mined-cards")
-    assert capability.target == CapabilityTarget("subtitles", "backfill")
+def test_restyle_finds_card_backfill() -> None:
+    # Restyle cards… became Card Backfill's Styling option; the words that
+    # found it still land on that screen.
+    for query in ("restyle", "restyle cards", "update styles"):
+        assert search(query)[0].id == "card-backfill", query
+    # Generic styling words still reach Settings' card-styling entry first.
+    for query in ("css", "card styling"):
+        assert search(query)[0].id == "card-styling", query
+    assert all(c.id != "restyle-mined-cards" for c in CAPABILITIES)
 
 
 def test_subtitle_regex_targets_sentences() -> None:

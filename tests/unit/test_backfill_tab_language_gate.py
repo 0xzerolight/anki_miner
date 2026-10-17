@@ -9,7 +9,7 @@ import pytest
 from anki_miner.gui.widgets.backfill_tab import CardBackfillTab
 from anki_miner.languages.registry import get_profile
 from anki_miner.languages.switching import switch_language
-from anki_miner.services.card_backfiller import FIELD_GROUPS
+from anki_miner.services.card_backfiller import FIELD_GROUPS, STYLING_GROUP
 
 
 @pytest.fixture
@@ -46,8 +46,8 @@ def _switched(mapped_config, language: str):
 
 
 def _hook_groups(tab: CardBackfillTab) -> set[str]:
-    """The tab's profile-derived groups: everything the core six do not cover."""
-    return set(tab.field_checkboxes) - set(FIELD_GROUPS)
+    """The tab's profile-derived groups: everything the core six and Styling do not cover."""
+    return set(tab.field_checkboxes) - set(FIELD_GROUPS) - {STYLING_GROUP}
 
 
 def test_ja_offers_every_core_group_and_no_profile_group(qtbot, mapped_config):

@@ -202,6 +202,19 @@ def test_the_backfill_field_groups_reopen_where_they_were(wired_window):
     assert tab.field_checkboxes["frequency"].isChecked() is True
 
 
+def test_the_styling_option_reopens_where_it_was(wired_window):
+    """Styling persists with the field groups, under its own group name."""
+    window, _titles, _tabs = wired_window
+    tab = _screen(window, "CardBackfillTab")
+
+    tab.field_checkboxes["styling"].setChecked(True)
+
+    assert "styling" in window.config.backfill_field_groups
+
+    tab.update_config(window.config)
+    assert tab.field_checkboxes["styling"].isChecked() is True
+
+
 def test_a_language_gate_hides_a_group_without_erasing_the_preference(wired_window, monkeypatch):
     """Config holds intent; the gate only masks what this language can do."""
     from unittest.mock import MagicMock

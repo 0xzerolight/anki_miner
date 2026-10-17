@@ -1128,14 +1128,16 @@ CAPABILITIES: tuple[Capability, ...] = (
         description=QT_TRANSLATE_NOOP(
             "Capabilities",
             "Fill missing frequency, definition and word-audio fields on already-mined notes, plus pitch and "
-            "reading for Japanese and your language's own card fields.",
+            "reading for Japanese and your language's own card fields, and refresh their styling.",
         ),
         category=_CAT_SOURCES,
         target=CapabilityTarget("subtitles", "backfill"),
         # The screen has been called Card Backfill, Backfill and Update Notes
         # across releases; every one of those words stays a keyword. A rename
         # that drops the previous name makes the screen unfindable to exactly
-        # the people who already knew it.
+        # the people who already knew it — so the words that found the old
+        # Restyle cards… entry land here, on its Styling option. Generic styling
+        # words (css, card styling) stay with Settings' card-styling entry.
         keywords=(
             "backfill",
             "update notes",
@@ -1148,6 +1150,9 @@ CAPABILITIES: tuple[Capability, ...] = (
             "existing cards",
             "bulk update",
             "old cards",
+            "restyle",
+            "restyle cards",
+            "update styles",
         ),
     ),
     Capability(
@@ -1696,17 +1701,6 @@ CAPABILITIES: tuple[Capability, ...] = (
             "sup",
             "pgs",
         ),
-    ),
-    Capability(
-        id="restyle-mined-cards",
-        title=QT_TRANSLATE_NOOP("Capabilities", "Restyle mined cards"),
-        description=QT_TRANSLATE_NOOP(
-            "Capabilities",
-            "Re-apply the latest Anki Miner styling to cards you mined earlier -- Utilities → Card Backfill.",
-        ),
-        category=_CAT_TOOLS,
-        target=CapabilityTarget("subtitles", "backfill"),
-        keywords=("restyle", "existing cards", "old cards", "card styling", "css", "update styles"),
     ),
     Capability(
         id="system-health",

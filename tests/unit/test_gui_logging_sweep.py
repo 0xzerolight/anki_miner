@@ -17,7 +17,6 @@ _SWEPT_GUI_MODULES = (
     "anki_miner/gui/widgets/panels/filtering_settings_panel.py",
     "anki_miner/gui/workers/episode_worker.py",
     "anki_miner/gui/workers/install_worker.py",
-    "anki_miner/gui/workers/restyle_cards_worker.py",
     "anki_miner/gui/workers/update_worker.py",
     "anki_miner/gui/workers/validation_worker.py",
     "anki_miner/gui/workers/youtube_probe_worker.py",
@@ -27,7 +26,6 @@ _SWEPT_GUI_MODULES = (
 _WORKER_RUN_CLASSES = {
     "anki_miner/gui/workers/episode_worker.py": "EpisodeWorkerThread",
     "anki_miner/gui/workers/install_worker.py": "InstallWorker",
-    "anki_miner/gui/workers/restyle_cards_worker.py": "RestyleCardsWorker",
     "anki_miner/gui/workers/update_worker.py": "UpdateWorkerThread",
     "anki_miner/gui/workers/validation_worker.py": "ValidationWorkerThread",
     # Both public probe workers use this shared run body.

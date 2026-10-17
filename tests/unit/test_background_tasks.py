@@ -225,7 +225,6 @@ class TestShutdownJoinsOffThreadWorkers:
             "asr_pack_download_worker",
             "vulkan_model_download_worker",
             "video_ocr_install_worker",
-            "restyle_cards_worker",
             "resource_download_worker",
             "prewarm_worker",
         ):
@@ -1186,75 +1185,6 @@ def test_start_asr_pack_download_builds_an_install_worker_on_its_own_handle(monk
     # A second start while the first runs is refused (isRunning is True).
     ctrl.start_asr_pack_download(tmp_path, on_status, on_finished)
     assert len(built) == 1
-
-
-class _FakeRestyleWorker(QObject):
-    """Fake RestyleCardsWorker: progress(int,int) + result_ready(object) + native finished()."""
-
-    progress = pyqtSignal(int, int)
-    result_ready = pyqtSignal(object)
-    error = pyqtSignal(str)
-    finished = pyqtSignal()
-
-    def __init__(self, service, config, parent=None) -> None:
-        super().__init__(parent)
-        self._running = False
-        self.deleteLater = MagicMock()  # type: ignore[method-assign]
-
-    def isRunning(self) -> bool:  # noqa: N802
-        return self._running
-
-    def start(self) -> None:
-        self._running = True
-
-    def emit_finished(self) -> None:
-        self._running = False
-        self.finished.emit()
-
-
-class TestStartRestyleCards:
-    def _patch(self, monkeypatch, worker):
-        monkeypatch.setattr(
-            "anki_miner.gui.workers.restyle_cards_worker.RestyleCardsWorker",
-            lambda service, config, parent=None: worker,
-        )
-
-    def test_starts_and_routes_progress_and_result(self, controller, qtbot, monkeypatch):
-        worker = _FakeRestyleWorker(MagicMock(), MagicMock())
-        self._patch(monkeypatch, worker)
-
-        progress: list[tuple] = []
-        results: list = []
-        controller.start_restyle_cards(
-            MagicMock(), MagicMock(), lambda s, t: progress.append((s, t)), results.append, lambda m: None
-        )
-        assert controller.restyle_cards_worker is worker
-
-        worker.progress.emit(3, 10)
-        worker.result_ready.emit("RESULT")
-        assert progress == [(3, 10)]
-        assert results == ["RESULT"]
-
-    def test_refused_while_running(self, controller, qtbot, monkeypatch):
-        worker_a = _FakeRestyleWorker(MagicMock(), MagicMock())
-        self._patch(monkeypatch, worker_a)
-        controller.start_restyle_cards(MagicMock(), MagicMock(), lambda s, t: None, lambda r: None, lambda m: None)
-        assert controller.restyle_cards_worker is worker_a
-
-        worker_b = _FakeRestyleWorker(MagicMock(), MagicMock())
-        self._patch(monkeypatch, worker_b)
-        controller.start_restyle_cards(MagicMock(), MagicMock(), lambda s, t: None, lambda r: None, lambda m: None)
-        assert controller.restyle_cards_worker is worker_a  # not replaced
-
-    def test_handle_nulled_after_finished(self, controller, qtbot, monkeypatch):
-        worker = _FakeRestyleWorker(MagicMock(), MagicMock())
-        self._patch(monkeypatch, worker)
-        controller.start_restyle_cards(MagicMock(), MagicMock(), lambda s, t: None, lambda r: None, lambda m: None)
-
-        worker.emit_finished()
-
-        assert controller.restyle_cards_worker is None
-        worker.deleteLater.assert_called_once()
 
 
 class _FakeAppUpdateWorker(QObject):

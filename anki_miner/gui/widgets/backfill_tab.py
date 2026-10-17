@@ -21,7 +21,6 @@ import logging
 
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import (
-    QAbstractButton,
     QCheckBox,
     QComboBox,
     QFrame,
@@ -68,6 +67,8 @@ from anki_miner.services.anki_service import AnkiService
 from anki_miner.services.card_backfiller import (
     BACKFILL_TAG,
     FIELD_GROUPS,
+    STYLING_CARRIER_KEYS,
+    STYLING_GROUP,
     BackfillOptions,
     BackfillPlan,
     BackfillResult,
@@ -96,11 +97,6 @@ class CardBackfillTab(RunOptionsMixin, _AnkiPlanTabBase):
     #: _refresh_checkbox_gates only mask it. Connected once, by discovery, in
     #: compose_main_window.
     run_options_changed = pyqtSignal(object)  # Emits AnkiMinerConfig
-
-    #: Re-emitted so the window can run the Restyle entry point (moved here
-    #: from the Tools menu); this screen owns no AnkiService or worker of its
-    #: own, so it asks rather than starting the run itself.
-    restyle_requested = pyqtSignal()
 
     #: Tables and queue rows genuinely use the extra width.
     PAGE_WIDTH = PageWidth.PAGE
@@ -131,8 +127,16 @@ class CardBackfillTab(RunOptionsMixin, _AnkiPlanTabBase):
         # beside the six core ones. Built once and gated afterwards, like the
         # Settings field rows these mirror: the capability gate owns which of
         # them the current language sees, so a language switch needs no rebuild.
+        # Styling sits right under Glossary: it is listed, gated (on its carrier
+        # fields) and persisted like a group, but it fills no field — a tick
+        # sets BackfillOptions.styling instead (see _selected_field_keys).
         self._hook_specs = profile_card_field_specs()
-        self._field_groups = {**FIELD_GROUPS, **hook_field_groups(self._hook_specs)}
+        core_groups: dict[str, tuple[str, ...]] = {}
+        for group, keys in FIELD_GROUPS.items():
+            core_groups[group] = keys
+            if group == "glossary":
+                core_groups[STYLING_GROUP] = STYLING_CARRIER_KEYS
+        self._field_groups = {**core_groups, **hook_field_groups(self._hook_specs)}
         self._group_capabilities = {
             **_CORE_GROUP_CAPABILITIES,
             **{spec.key: spec.capability for spec in self._hook_specs},
@@ -200,6 +204,7 @@ class CardBackfillTab(RunOptionsMixin, _AnkiPlanTabBase):
             "frequency": self.tr("Frequency (display + sort)"),
             "definition": self.tr("Definitions"),
             "glossary": self.tr("Glossary"),
+            STYLING_GROUP: self.tr("Styling"),
             "reading": self.tr("Reading + furigana"),
             "word_audio": self.tr("Word audio"),
         }
@@ -212,6 +217,9 @@ class CardBackfillTab(RunOptionsMixin, _AnkiPlanTabBase):
         # is disabled, so without a copy to restore from, one pass through an
         # unmapped state destroys the explanation permanently.
         self._group_tooltips = {
+            STYLING_GROUP: self.tr(
+                "Updates the styling embedded in the Definitions and Glossary fields. Their text stays as it is."
+            ),
             "reading": self.tr(
                 "Fills furigana from an existing reading and vice versa; does not generate new readings."
             ),
@@ -238,23 +246,14 @@ class CardBackfillTab(RunOptionsMixin, _AnkiPlanTabBase):
         # silently. Pinned by
         # tests/unit/test_run_option_persistence.py::test_overwrite_is_never_persisted.
         self.overwrite_checkbox = QCheckBox(self.tr("Overwrite existing values"))
-        self.overwrite_checkbox.setToolTip(
-            self.tr("Overwritten cards may need to use Restyle cards… to refresh their styling.")
-        )
         fields_layout.addWidget(self.overwrite_checkbox)
         layout.addWidget(self.fields_card)
 
         # Scan, Apply and Cancel all live in the pinned bar (D6). Scan is the
         # primary until a preview exists; after that Apply takes over and Scan
-        # stays reachable as the quiet way to rescan. Restyle is unrelated to
-        # the scan/apply cycle -- it re-applies styling to every card of the
-        # note type, not just the previewed ones -- so it sits beside Scan
-        # rather than swapping with it.
+        # stays reachable as the quiet way to rescan.
         self.scan_button = ModernButton(self.tr("Scan Anki (read-only)"), variant="primary")
         self.scan_button.clicked.connect(self._start_scan)
-        self.restyle_button = ModernButton(self.tr("Restyle cards…"), variant="secondary")
-        self.restyle_button.setToolTip(self.tr("Refresh the dictionary styling on every card of your note type"))
-        self.restyle_button.clicked.connect(self.restyle_requested.emit)
         self.cancel_button = ModernButton(self.tr("Cancel"), variant="secondary")
         self.cancel_button.hide()  # shown only while a scan or apply runs (E07)
         self.cancel_button.clicked.connect(self._cancel)
@@ -333,11 +332,6 @@ class CardBackfillTab(RunOptionsMixin, _AnkiPlanTabBase):
         # moves the primary, and the bar is read at press time, so the shortcut
         # follows without knowing the stage itself.
         primary_action_shortcut(self, self.action_bar.trigger_primary)
-
-    def _quiet_extras(self) -> tuple[QAbstractButton, ...]:
-        # Restyle is unrelated to the scan/apply cycle, so it stays beside the
-        # quiet verb whatever the stage (see _build_ui).
-        return (self.restyle_button,)
 
     # ------------------------------------------------------------------
     # Drag and drop (D50): this screen takes no payload, and says so
@@ -503,7 +497,9 @@ class CardBackfillTab(RunOptionsMixin, _AnkiPlanTabBase):
     def _selected_field_keys(self) -> frozenset[str]:
         keys: set[str] = set()
         for group, checkbox in self.field_checkboxes.items():
-            if not checkbox.isChecked():
+            # Styling's keys are its carriers, not fields it fills: ticking it
+            # must not add a Definitions/Glossary lookup (see _start_scan).
+            if group == STYLING_GROUP or not checkbox.isChecked():
                 continue
             keys.update(key for key in self._field_groups[group] if self.config.anki_fields.get(key))
         return frozenset(keys)
@@ -512,7 +508,8 @@ class CardBackfillTab(RunOptionsMixin, _AnkiPlanTabBase):
         # A fresh attempt supersedes the complaint about the last one (D24).
         self.clear_screen_issue()
         field_keys = self._selected_field_keys()
-        if not field_keys:
+        styling = self.field_checkboxes[STYLING_GROUP].isChecked()
+        if not field_keys and not styling:
             self.show_screen_issue(ScreenIssue(summary=self.tr("Select at least one field group to fill.")))
             return
         deck = self.deck_combo.currentText() if self.deck_combo.currentIndex() > 0 else None
@@ -520,6 +517,7 @@ class CardBackfillTab(RunOptionsMixin, _AnkiPlanTabBase):
             field_keys=field_keys,
             deck=deck,
             overwrite=self.overwrite_checkbox.isChecked(),
+            styling=styling,
         )
         worker = BackfillScanWorker(self.config, options, parent=self)
         worker.progress.connect(self._on_progress)
@@ -579,7 +577,14 @@ class CardBackfillTab(RunOptionsMixin, _AnkiPlanTabBase):
                 # 9999999 the lookup could not replace. Without its own marker the
                 # row would show a blank New cell, which reads as a rendering bug
                 # rather than as the write it is.
-                new_display = self._strip_cell(change.new_value)
+                #
+                # A Styling row's text is unchanged by design (only its embedded
+                # block moves), so the New cell says what happens instead of
+                # repeating the Current text.
+                if change.expected is not None:
+                    new_display = self.tr("(styling updated)")
+                else:
+                    new_display = self._strip_cell(change.new_value)
                 if not new_display:
                     new_display = self.tr("(formatted content)") if change.new_value else self.tr("(cleared)")
                 for col, text in enumerate((expression, change.field_name, change.old_display, new_display)):
@@ -642,6 +647,10 @@ class CardBackfillTab(RunOptionsMixin, _AnkiPlanTabBase):
             )
             if plan.total_field_changes > shown_rows:
                 parts.append(self.tr("Showing first %n row(s).", "", shown_rows))
+        elif not plan.options.field_keys:
+            # Styling alone looks nothing up, so "no new values" would be false;
+            # the up-to-date and old-layout counts below carry the summary.
+            pass
         elif not plan.options.overwrite:
             parts.append(self.tr("No new values were found for the selected fields."))
         elif plan.identical_skips > 0:
@@ -656,6 +665,15 @@ class CardBackfillTab(RunOptionsMixin, _AnkiPlanTabBase):
             parts.append(self.tr("No new values were found for the selected fields."))
         if plan.identical_skips > 0:
             parts.append(self.tr("%n field value(s) already up to date.", "", plan.identical_skips))
+        if plan.legacy_markup_skips > 0:
+            parts.append(
+                self.tr(
+                    "%n field(s) keep the old definition layout, which Styling cannot update. "
+                    "Scan with Definitions or Glossary and Overwrite existing values to rebuild them.",
+                    "",
+                    plan.legacy_markup_skips,
+                )
+            )
         if plan.guessed_reading_skips > 0:
             parts.append(
                 self.tr(
@@ -774,7 +792,6 @@ class CardBackfillTab(RunOptionsMixin, _AnkiPlanTabBase):
     def _set_running(self, running: bool) -> None:
         self.scan_button.setEnabled(not running)
         self.apply_button.setEnabled(not running and self._can_apply_plan())
-        self.restyle_button.setEnabled(not running)
         self.cancel_button.setVisible(running)
         self.cancel_button.setEnabled(running)
         for checkbox in self.field_checkboxes.values():

@@ -359,7 +359,6 @@ class TestBackgroundTasksShutdownDuckTyped:
         ctrl.asr_pack_download_worker = None
         ctrl.vulkan_model_download_worker = None
         ctrl.video_ocr_install_worker = None
-        ctrl.restyle_cards_worker = None
         ctrl.resource_download_worker = None
         ctrl.prewarm_worker = None
         ctrl._join_worker_for_close = MagicMock(return_value=True)
