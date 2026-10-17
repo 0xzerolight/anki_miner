@@ -1993,12 +1993,26 @@ class TestStylingOption:
         (note,) = plan.notes
         assert [(c.field_key, c.expected) for c in note.changes] == [("definition", _STALE)]
 
+    def test_yomitan_export_field_is_not_ours_to_style(self, backfill_config):
+        # A genuine Yomitan export carries the wrapper but no data-count: not
+        # miner markup, so Styling neither changes nor counts it.
+        export = '<div class="yomitan-glossary"><ol><li>gloss</li></ol></div>'
+        anki = FakeAnkiService({1: _note(1, word="猫", Glossary=export)})
+
+        plan = scan_backfill(anki, backfill_config, _services(), _styling())
+
+        assert plan.notes == ()
+        assert (plan.identical_skips, plan.legacy_markup_skips) == (0, 0)
+
     def test_styling_only_scan_never_tags_or_looks_up(self, backfill_config, monkeypatch):
         tagged: list[str] = []
-        monkeypatch.setattr(
-            "anki_miner.services.card_backfiller.get_shared_tagger",
-            lambda: lambda text: tagged.append(text) or [],
-        )
+        loaded: list[str] = []
+
+        def load_tagger():
+            loaded.append("tagger")
+            return lambda text: tagged.append(text) or []
+
+        monkeypatch.setattr("anki_miner.services.card_backfiller.get_shared_tagger", load_tagger)
         looked_up: list[str] = []
 
         class SpyDefinitions(FakeDefinitionService):
@@ -2019,6 +2033,7 @@ class TestStylingOption:
         plan = scan_backfill(anki, backfill_config, _services(defs=SpyDefinitions()), _styling())
 
         assert len(plan.notes) == 2
+        assert loaded == []  # no engine loaded, not just never called
         assert tagged == []
         assert looked_up == []
 

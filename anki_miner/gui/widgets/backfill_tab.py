@@ -648,9 +648,11 @@ class CardBackfillTab(RunOptionsMixin, _AnkiPlanTabBase):
             if plan.total_field_changes > shown_rows:
                 parts.append(self.tr("Showing first %n row(s).", "", shown_rows))
         elif not plan.options.field_keys:
-            # Styling alone looks nothing up, so "no new values" would be false;
-            # the up-to-date and old-layout counts below carry the summary.
-            pass
+            # Styling alone looks nothing up: the up-to-date and old-layout
+            # counts below carry the summary, unless there is neither (no field
+            # carried miner markup at all) and it would otherwise be blank.
+            if not plan.identical_skips and not plan.legacy_markup_skips:
+                parts.append(self.tr("No new values were found for the selected fields."))
         elif not plan.options.overwrite:
             parts.append(self.tr("No new values were found for the selected fields."))
         elif plan.identical_skips > 0:

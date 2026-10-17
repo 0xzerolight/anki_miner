@@ -269,6 +269,11 @@ class TestStylingOption:
         assert "3" in text
         assert "No new values were found" not in text
 
+    def test_styling_only_scan_with_nothing_to_style_says_so(self, tab):
+        # No up-to-date and no old-layout fields: the summary must not go blank.
+        tab._on_scan_finished(_styling_plan(scanned=2))
+        assert tab.summary_label.text() == "No new values were found for the selected fields."
+
     def test_styling_only_summary_reports_up_to_date_fields(self, tab):
         tab._on_scan_finished(_styling_plan(scanned=5, identical_skips=5))
         text = tab.summary_label.text()
