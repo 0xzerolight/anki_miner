@@ -21,6 +21,7 @@ from tests._home_isolation import (
     guard_real_home,
     restore_home_patches,
     set_test_home,
+    snapshot_home,
 )
 
 
@@ -104,3 +105,53 @@ def test_guard_real_home_raises_on_modified_file(tmp_path):
     with pytest.raises(AssertionError) as excinfo, guard_real_home(watched):
         target.write_text('{"changed": true}', encoding="utf-8")
     assert "modified:" in str(excinfo.value)
+
+
+_OLD_NS = 1_000_000_000_000_000_000  # 2001: far from "now", so any new write moves an mtime
+
+
+def _real_like_home(tmp_path):
+    """A home with a state file plus the two bulk stores, every dir mtime aged so a
+    write in the same coarse clock tick as setup still moves it."""
+    home = tmp_path / ".anki_miner"
+    (home / "profiles").mkdir(parents=True)
+    (home / "gui_config.json").write_text("{}", encoding="utf-8")
+    (home / "audio_cache" / "jpod101").mkdir(parents=True)
+    (home / "audio_cache" / "jpod101" / "jpod101_a_a.mp3").write_bytes(b"x")
+    (home / "uv" / "python" / "lib").mkdir(parents=True)
+    (home / "uv" / "python" / "lib" / "site.py").write_text("", encoding="utf-8")
+    for dirpath, _dirnames, _filenames in os.walk(home):
+        os.utime(dirpath, ns=(_OLD_NS, _OLD_NS))
+    return home
+
+
+def test_snapshot_skips_files_inside_bulk_stores(tmp_path):
+    """The uv tree and the audio caches hold tens of thousands of files on a real
+    install; stat-ing them twice per test made the local suite ~12x slower."""
+    home = _real_like_home(tmp_path)
+    keys = snapshot_home(home)
+    assert str(home / "gui_config.json") in keys
+    assert str(home / "audio_cache" / "jpod101" / "jpod101_a_a.mp3") not in keys
+    assert str(home / "uv" / "python" / "lib" / "site.py") not in keys
+
+
+def test_guard_real_home_raises_on_file_created_in_a_cache_dir(tmp_path):
+    """A leaking audio fetcher writing a new cache file still trips the guard,
+    through the cache dir's mtime."""
+    home = _real_like_home(tmp_path)
+    with pytest.raises(AssertionError) as excinfo, guard_real_home(home):
+        (home / "audio_cache" / "jpod101" / "jpod101_b_b.mp3").write_bytes(b"y")
+    assert str(home / "audio_cache" / "jpod101") in str(excinfo.value)
+
+
+def test_guard_real_home_raises_on_file_deleted_from_a_cache_dir(tmp_path):
+    home = _real_like_home(tmp_path)
+    with pytest.raises(AssertionError), guard_real_home(home):
+        (home / "audio_cache" / "jpod101" / "jpod101_a_a.mp3").unlink()
+
+
+def test_guard_real_home_raises_on_new_cache_source_dir(tmp_path):
+    """A new per-source cache dir (e.g. the first Wikimedia hit) moves the store's mtime."""
+    home = _real_like_home(tmp_path)
+    with pytest.raises(AssertionError), guard_real_home(home):
+        (home / "audio_cache" / "wikimedia").mkdir()

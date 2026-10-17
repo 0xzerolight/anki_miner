@@ -16,6 +16,7 @@ fixtures call into this module; the runner imports ``set_test_home`` /
 """
 
 import importlib
+import os
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -107,19 +108,49 @@ def set_test_home(tmp_home: Path) -> list[tuple[object, str, object]]:
     return apply_home_patches(tmp_home)
 
 
+# Bulk content stores (the uv-managed Python + venvs, the per-source audio caches) hold
+# tens of thousands of files on a real install. Stat-ing each one before and after
+# every test took ~13 of a 15-minute local run (2026-10-17: 43k files, 170 ms per
+# snapshot). For these only the store's own mtime and its direct subdirectories' are
+# recorded, so a test that creates, deletes or renames a file in a cache dir still
+# trips the guard; a rewrite of an existing file deep inside one does not.
+BULK_STORES = ("uv", "audio_cache")
+
+
 def snapshot_home(root: Path) -> dict[str, tuple[int, float]]:
-    """Map every file under ``root`` to ``(size, mtime_ns)``; empty if absent."""
+    """Map every file under ``root`` to ``(size, mtime_ns)``; empty if absent.
+
+    Inside ``BULK_STORES`` only directories are recorded, one level deep (see above).
+    """
     snap: dict[str, tuple[int, float]] = {}
     if not root.exists():
         return snap
-    for path in root.rglob("*"):
-        if path.is_file():
+    for dirpath, dirnames, filenames in os.walk(root):
+        if dirpath == str(root):
+            for name in [d for d in dirnames if d in BULK_STORES]:
+                _snapshot_bulk_store(root / name, snap)
+            dirnames[:] = [d for d in dirnames if d not in BULK_STORES]
+        for name in filenames:
+            path = os.path.join(dirpath, name)
             try:
-                st = path.stat()
+                st = os.stat(path)
             except OSError:
                 continue
-            snap[str(path)] = (st.st_size, st.st_mtime_ns)
+            snap[path] = (st.st_size, st.st_mtime_ns)
     return snap
+
+
+def _snapshot_bulk_store(store: Path, snap: dict[str, tuple[int, float]]) -> None:
+    try:
+        st = store.stat()
+        snap[str(store)] = (st.st_size, st.st_mtime_ns)
+        with os.scandir(store) as entries:
+            for entry in entries:
+                if entry.is_dir(follow_symlinks=False):
+                    st = entry.stat(follow_symlinks=False)
+                    snap[entry.path] = (st.st_size, st.st_mtime_ns)
+    except OSError:
+        return
 
 
 @contextmanager
