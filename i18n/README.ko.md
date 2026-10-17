@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:ecd0ab0242935ee3 -->
+<!-- i18n-source: README.md sha256:6f9163baa7a87e06 -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -163,7 +163,7 @@ anki_miner_gui
 - 내장 libmpv 동영상 미리 보기 - 선별 중에 단어의 장면을 재생하거나, 재생하면서 자막 타이밍을 미세 조정.
 - 애니메이션 스크린샷(위의 카드 예시 참조).
 - 설정 프로필 - 이름을 붙인 구성을 저장하고 헤더에서 전환.
-- 마이닝한 카드 스타일 다시 적용 - 현재 카드 스타일을 이미 만든 카드에 다시 적용(유틸리티 → 카드 보충).
+- 마이닝한 카드 스타일 다시 적용 - 현재 카드 스타일을 이미 만든 카드에 다시 적용하며, 이전 버전에서 만든 카드에는 대신 카드 보충을 사용(유틸리티 → 카드 보충).
 
 <details>
 <summary><strong>기본 제공 테마(29개)</strong></summary>

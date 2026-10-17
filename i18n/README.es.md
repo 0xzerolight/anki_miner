@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:ecd0ab0242935ee3 -->
+<!-- i18n-source: README.md sha256:6f9163baa7a87e06 -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -163,7 +163,7 @@ Para la configuración completa de desarrollo, consulta [CONTRIBUTING.md](../CON
 - Vista previa de video integrada con libmpv - reproduce la escena de cada palabra mientras curas, o ajusta la temporización de los subtítulos con reproducción en vivo.
 - Capturas de pantalla animadas (ver ejemplos de tarjetas arriba).
 - Perfiles de configuración - guarda configuraciones con nombre y cambia entre ellas desde la cabecera.
-- Reestilizar tarjetas minadas - vuelve a aplicar tu estilo de tarjeta actual a las tarjetas que ya creaste (Utilidades → Completar tarjetas).
+- Reestilizar tarjetas minadas - vuelve a aplicar tu estilo de tarjeta actual a las tarjetas que ya creaste; para las tarjetas de versiones anteriores, usa Completar tarjetas en su lugar (Utilidades → Completar tarjetas).
 
 <details>
 <summary><strong>Temas integrados (29)</strong></summary>

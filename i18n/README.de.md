@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:ecd0ab0242935ee3 -->
+<!-- i18n-source: README.md sha256:6f9163baa7a87e06 -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -163,7 +163,7 @@ Die vollständige Entwicklungseinrichtung findest du in [CONTRIBUTING.md](../CON
 - Eingebettete libmpv-Videovorschau - die Szene eines Worts während der Prüfung abspielen oder das Untertitel-Timing per Live-Wiedergabe nachjustieren.
 - Animierte Screenshots (siehe Beispielkarten oben).
 - Einstellungsprofile - benannte Konfigurationen speichern und über den Header wechseln.
-- Gesammelte Karten neu gestalten - dein aktuelles Karten-Styling auf bereits erstellte Karten anwenden (Utilities → Nachbefüllung).
+- Gesammelte Karten neu gestalten - dein aktuelles Karten-Styling auf bereits erstellte Karten anwenden; Karten aus älteren Versionen brauchen stattdessen die Nachbefüllung (Utilities → Nachbefüllung).
 
 <details>
 <summary><strong>Integrierte Themes (29)</strong></summary>

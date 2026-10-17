@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:ecd0ab0242935ee3 -->
+<!-- i18n-source: README.md sha256:6f9163baa7a87e06 -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -163,7 +163,7 @@ Per la configurazione completa dell'ambiente di sviluppo, consulta [CONTRIBUTING
 - Anteprima video integrata con libmpv - riproduci la scena di una parola durante la revisione, oppure regola la sincronizzazione dei sottotitoli con la riproduzione dal vivo.
 - Schermate animate (vedi gli esempi di carte sopra).
 - Profili delle impostazioni - salva configurazioni con nome e passa dall'una all'altra dall'intestazione.
-- Riapplica stile alle carte estratte - riapplica il tuo stile attuale delle carte a quelle già create (Utilità → Completamento).
+- Riapplica stile alle carte estratte - riapplica il tuo stile attuale delle carte a quelle già create; per le carte delle versioni precedenti serve invece il Completamento (Utilità → Completamento).
 
 <details>
 <summary><strong>Temi integrati (29)</strong></summary>

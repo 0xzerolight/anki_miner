@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:ecd0ab0242935ee3 -->
+<!-- i18n-source: README.md sha256:6f9163baa7a87e06 -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -163,7 +163,7 @@ Za potpuno razvojno okruženje pogledajte [CONTRIBUTING.md](../CONTRIBUTING.md).
 - Ugrađeni libmpv pregled videozapisa - reproducirajte scenu riječi tijekom odabira ili fino podesite vrijeme titlova uz reprodukciju uživo.
 - Animirane snimke zaslona (pogledajte primjere kartica iznad).
 - Profili postavki - spremite imenovane konfiguracije i prebacujte se između njih iz zaglavlja.
-- Preoblikuj prikupljene kartice - ponovno primijenite trenutačni stil kartica na kartice koje ste već izradili (Pomagala → Dopuna kartica).
+- Preoblikuj prikupljene kartice - ponovno primijenite trenutačni stil kartica na kartice koje ste već izradili; za kartice iz starijih verzija umjesto toga upotrijebite Dopunu kartica (Pomagala → Dopuna kartica).
 
 <details>
 <summary><strong>Ugrađene teme (29)</strong></summary>

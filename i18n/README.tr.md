@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:ecd0ab0242935ee3 -->
+<!-- i18n-source: README.md sha256:6f9163baa7a87e06 -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -163,7 +163,7 @@ Geliştirme ortamının tam kurulumu için [CONTRIBUTING.md](../CONTRIBUTING.md)
 - Gömülü libmpv video önizlemesi - kelimeleri seçerken bir kelimenin sahnesini oynatın veya altyazı zamanlamasını canlı oynatmayla ince ayarlayın.
 - Hareketli ekran görüntüleri (yukarıdaki örnek kartlara bakın).
 - Ayar profilleri - adlandırılmış yapılandırmaları kaydedin ve başlık çubuğundan aralarında geçiş yapın.
-- Toplanan kartları yeniden biçimlendir - geçerli kart biçiminizi daha önce oluşturduğunuz kartlara yeniden uygulayın (Yardımcılar → Kart Tamamla).
+- Toplanan kartları yeniden biçimlendir - geçerli kart biçiminizi daha önce oluşturduğunuz kartlara yeniden uygulayın; eski sürümlerden kalan kartlar için bunun yerine Kart Tamamla'yı kullanın (Yardımcılar → Kart Tamamla).
 
 <details>
 <summary><strong>Yerleşik temalar (29)</strong></summary>

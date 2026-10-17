@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:ecd0ab0242935ee3 -->
+<!-- i18n-source: README.md sha256:6f9163baa7a87e06 -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -163,7 +163,7 @@ Per a la configuració de desenvolupament completa, vegeu [CONTRIBUTING.md](../C
 - Previsualització de vídeo amb libmpv integrat: reproduïu l'escena d'una paraula mentre la reviseu o ajusteu la sincronia dels subtítols amb reproducció en directe.
 - Captures de pantalla animades (vegeu les targetes d'exemple de més amunt).
 - Perfils de paràmetres: deseu configuracions amb nom i canvieu-ne des de la capçalera.
-- Reaplica l'estil a les targetes extretes: torneu a aplicar l'estil de targeta actual a les targetes que ja heu creat (Utilitats → Completa targetes).
+- Reaplica l'estil a les targetes extretes: torneu a aplicar l'estil de targeta actual a les targetes que ja heu creat; per a les targetes de versions anteriors, feu servir en canvi Completa targetes (Utilitats → Completa targetes).
 
 <details>
 <summary><strong>Temes integrats (29)</strong></summary>
