@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import sys
+
 from anki_miner.gui.utils import ankiconnect_help as help_mod
 
 
@@ -57,16 +59,17 @@ def test_linux_without_anki_on_path_has_no_command(monkeypatch):
     assert help_mod.anki_launch_command(platform="linux", environ={}) is None
 
 
-def test_launch_starts_the_command_detached(monkeypatch):
-    calls: list[tuple[str, list[str]]] = []
+def test_launch_keeps_the_child_output_out_of_our_terminal(tmp_path, capfd, qtbot):
+    """Anki and its add-ons print on stdout and stderr; the detached child must not inherit ours."""
+    done = tmp_path / "done"
+    script = (
+        "import pathlib, sys; print('ANKI-STDOUT', flush=True); "
+        "sys.stderr.write('ANKI-STDERR\\n'); sys.stderr.flush(); pathlib.Path(sys.argv[1]).touch()"
+    )
 
-    class FakeProcess:
-        @staticmethod
-        def startDetached(program, arguments):  # noqa: N802 - mirrors QProcess
-            calls.append((program, list(arguments)))
-            return True, 42
+    assert help_mod.launch_anki([sys.executable, "-c", script, str(done)]) is True
 
-    monkeypatch.setattr(help_mod, "QProcess", FakeProcess)
-
-    assert help_mod.launch_anki(["open", "/Applications/Anki.app"]) is True
-    assert calls == [("open", ["/Applications/Anki.app"])]
+    qtbot.waitUntil(done.exists, timeout=15_000)
+    out, err = capfd.readouterr()
+    assert "ANKI-STDOUT" not in out + err
+    assert "ANKI-STDERR" not in out + err
