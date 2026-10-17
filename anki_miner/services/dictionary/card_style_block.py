@@ -31,7 +31,9 @@ minified; a dictionary's own CSS is embedded verbatim.
 
 Pure string transform: no Qt, no HTTP, no disk I/O beyond ``load_glossary_css``'s
 bundled read. The scoped per-dictionary CSS is gathered separately by
-``definition_service.collect_dictionary_css`` and passed in as ``dict_css``.
+``definition_service.collect_dictionary_css_entries`` and passed in as
+``dict_css_entries``; ``attach_card_style_block`` keeps only the entries of the
+dictionaries the field contains (``filter_dict_css_entries``).
 """
 
 from __future__ import annotations

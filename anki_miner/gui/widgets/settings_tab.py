@@ -2388,8 +2388,8 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         disk but is absent from dictionary_chain in gui_config, i.e. invisible to
         DictionaryRegistry.build_provider_chain.
 
-        A chain change alters which dictionaries' scoped CSS is embedded in the
-        per-card ``<style>`` block, but that block is assembled per-episode at
+        A chain change alters which dictionaries' scoped CSS is embedded in each
+        field's trailing ``<style>`` block, but that block is assembled per-episode at
         card-creation time (``EpisodeProcessor._phase5_create``), so nothing
         needs to sync to Anki here.
         """

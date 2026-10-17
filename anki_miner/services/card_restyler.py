@@ -170,7 +170,7 @@ def restyle_mined_cards(
     to each (``EpisodeProcessor._phase5_create``). Each carrier field with
     miner markup (``yomitan-glossary`` and ``data-count``) and no legacy markup
     (``is_legacy_markup``) goes through ``_restyle_field``: our base block
-    (wherever it sits — legacy leading head or current tail) migrates/refreshes
+    (wherever it sits — a leading or a trailing block) migrates/refreshes
     to a tail block with the carried ``dict_css`` preserved verbatim, and a
     field that never carried a block gets a fresh one from current-config CSS.
     A legacy-markup field is left as it is. Changed fields of one note are
