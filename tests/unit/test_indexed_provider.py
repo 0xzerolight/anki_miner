@@ -51,7 +51,7 @@ class TestIndexedDictProvider:
                 DictRow(
                     term="食べる",
                     reading="たべる",
-                    content='<li class="gloss-item" data-am-def-tags="v1 expr">eat</li>',
+                    content='<li class="gloss-item">eat</li>',
                     tags="v1 expr",
                     sequence=1,
                 )
@@ -104,17 +104,14 @@ class TestIndexedDictProvider:
                 DictRow(
                     term="橋",
                     reading="はし",
-                    content='<li class="gloss-item" data-am-def-tags="n common">bridge</li>',
+                    content='<li class="gloss-item">bridge</li>',
                     tags="n common",
                     sequence=1,
                 ),
                 DictRow(
                     term="箸",
                     reading="はし",
-                    content=(
-                        '<li class="gloss-item" data-am-def-tags="common food">chopsticks</li>'
-                        '<li class="gloss-item">eating sticks</li>'
-                    ),
+                    content='<li class="gloss-item">chopsticks</li><li class="gloss-item">eating sticks</li>',
                     tags="common food",
                     sequence=2,
                 ),
@@ -398,7 +395,7 @@ class TestIndexedDictProviderLookupMany:
                 DictRow(
                     term="食べる",
                     reading="たべる",
-                    content='<li class="gloss-item" data-am-def-tags="v1 expr">eat</li>',
+                    content='<li class="gloss-item">eat</li>',
                     tags="v1 expr",
                     sequence=1,
                 ),
@@ -408,10 +405,7 @@ class TestIndexedDictProviderLookupMany:
                 DictRow(
                     term="箸",
                     reading="はし",
-                    content=(
-                        '<li class="gloss-item" data-am-def-tags="common food">chopsticks</li>'
-                        '<li class="gloss-item">eating sticks</li>'
-                    ),
+                    content='<li class="gloss-item">chopsticks</li><li class="gloss-item">eating sticks</li>',
                     tags="common food",
                     sequence=3,
                 ),
@@ -669,7 +663,7 @@ class TestKanaDedup:
                 DictRow(
                     term="日本",
                     reading="にほん",
-                    content='<li class="gloss-item" data-am-def-tags="n">Japan</li>',
+                    content='<li class="gloss-item">Japan</li>',
                     tags="n",
                     sequence=1,
                 )
@@ -692,7 +686,7 @@ class TestKanaDedup:
                 DictRow(
                     term="日本",
                     reading="にほん",
-                    content='<li class="gloss-item" data-am-def-tags="n">Japan</li>',
+                    content='<li class="gloss-item">Japan</li>',
                     tags="n",
                     sequence=1,
                 )
@@ -734,14 +728,14 @@ class TestKanaDedup:
                 DictRow(
                     term="橋",
                     reading="はし",
-                    content='<li class="gloss-item" data-am-def-tags="n">bridge</li>',
+                    content='<li class="gloss-item">bridge</li>',
                     tags="n",
                     sequence=1,
                 ),
                 DictRow(
                     term="箸",
                     reading="はし",
-                    content='<li class="gloss-item" data-am-def-tags="n">chopsticks</li>',
+                    content='<li class="gloss-item">chopsticks</li>',
                     tags="n",
                     sequence=2,
                 ),
@@ -758,23 +752,22 @@ class TestKanaDedup:
     def test_dedup_still_unions_tags(self, tmp_path: Path):
         """When a duplicate content row has extra tags, they must be UNIONed in."""
         db = tmp_path / "test.sqlite"
-        # Two rows with SAME content (one definition, double-keyed) but different
-        # term tags: the chip line unions them, the label is the definition's own.
+        # Two rows with SAME content but different tags (simulates double-keyed import)
         _seed_db(
             db,
             [
                 DictRow(
                     term="日本語",
                     reading="にほんご",
-                    content='<li class="gloss-item" data-am-def-tags="n">Japanese</li>',
+                    content='<li class="gloss-item">Japanese</li>',
                     tags="n lang",
                     sequence=1,
                 ),
                 DictRow(
                     term="にほんご",
                     reading=None,
-                    content='<li class="gloss-item" data-am-def-tags="n">Japanese</li>',
-                    tags="n common",
+                    content='<li class="gloss-item">Japanese</li>',
+                    tags="common",
                     sequence=2,
                 ),
             ],
@@ -785,7 +778,7 @@ class TestKanaDedup:
         result = provider.lookup("にほんご")
         assert result is not None
         # Content appears exactly once
-        assert result.count('<li class="gloss-item" data-am-tags="n">Japanese</li>') == 1
+        assert result.count('<li class="gloss-item" data-am-tags="common, n, lang">Japanese</li>') == 1
         # Tags from both rows should be unioned (n, lang, common)
         assert "n" in result
         assert "lang" in result
@@ -1006,7 +999,7 @@ class TestDictionaryCss:
 
 
 class TestCompactTagStamp:
-    """Yomitan's per-definition label (definitionTags, compactTags), stamped for anki_export."""
+    """Yomitan compactTags plus shared-tag dedupe, stamped per definition for anki_export."""
 
     @staticmethod
     def _render(rows, tag_meta):
@@ -1015,42 +1008,18 @@ class TestCompactTagStamp:
         return provider._render(rows)
 
     @staticmethod
-    def _item(gloss, def_tags=""):
-        """A row as the Yomitan importer stores it: its own definitionTags stamped on the item."""
-        return render_glossary_entry([gloss], definition_tags=def_tags.split(" ") if def_tags else None)
+    def _item(gloss):
+        return f'<li class="gloss-item"><div class="gloss-content">{gloss}</div></li>'
 
-    def test_term_tags_never_reach_the_label(self):
-        """JMdict お小遣い: definitionTags ``n``, termTags ``⭐ spec``; Yomitan writes ``(n, JMdict)``."""
+    def test_tags_on_every_definition_show_once(self):
         meta = {
-            "⭐": TagMeta("⭐", "popular", -10, "high priority term", 10.0),
-            "spec": TagMeta("spec", "frequent", -2, "common", 0.0),
-            "n": TagMeta("n", "partOfSpeech", -3, "noun", 0.0),
+            "⭐": TagMeta("⭐", "popular", -10, "common", 0.0),  # JMdict's popular tag sorts first
+            "v1": TagMeta("v1", "partOfSpeech", 0, "Ichidan verb", 0.0),
+            "vt": TagMeta("vt", "partOfSpeech", 0, "transitive", 0.0),
         }
-        html = self._render([(self._item("pocket money", "n"), "n ⭐ spec", 1)], meta)
-        assert 'data-am-tags="n"><div class="gloss-content">pocket money<' in html
-        assert "data-am-def-tags" not in html
-        assert ">⭐</span>" in html  # the chip line keeps every tag
-
-    def test_forms_row_is_labelled_forms(self):
-        """十中八九 in Yomitan's own export: ``(adv, n, yoji, JMdict)`` then ``(forms)``."""
-        meta = {
-            "adv": TagMeta("adv", "partOfSpeech", -3, "adverb", 0.0),
-            "n": TagMeta("n", "partOfSpeech", -3, "noun", 0.0),
-            "yoji": TagMeta("yoji", "misc", 0, "yojijukugo", 0.0),
-            "forms": TagMeta("forms", "", 0, "other forms", 0.0),
-        }
-        rows = [
-            (self._item("in all likelihood", "adv n yoji"), "adv n yoji", 7),
-            (self._item("十中八九", "forms"), "forms", 7),
-        ]
-        html = self._render(rows, meta)
-        assert 'data-am-tags="adv, n, yoji"><div class="gloss-content">in all likelihood<' in html
-        assert 'data-am-tags="forms" data-sc-content="forms"><div class="gloss-content">十中八九<' in html
-
-    def test_row_without_definition_tags_has_an_empty_label(self):
-        meta = {"⭐": TagMeta("⭐", "popular", -10, "common", 0.0)}
-        html = self._render([(self._item("eat"), "⭐", 1)], meta)
-        assert 'data-am-tags=""><div class="gloss-content">eat<' in html
+        html = self._render([(self._item("eat"), "v1 vt ⭐", 1), (self._item("live on"), "v1 vt ⭐", 1)], meta)
+        assert 'data-am-tags="⭐, v1, vt"><div class="gloss-content">eat<' in html
+        assert 'data-am-tags=""><div class="gloss-content">live on<' in html
 
     def test_repeated_part_of_speech_drops_but_new_misc_tag_shows(self):
         meta = {
@@ -1058,24 +1027,20 @@ class TestCompactTagStamp:
             "uk": TagMeta("uk", "misc", 0, "usually kana", 0.0),
             "col": TagMeta("col", "misc", 0, "colloquial", 0.0),
         }
-        rows = [
-            (self._item("a", "n uk"), "n uk", 1),
-            (self._item("b", "n col"), "n col", 1),
-            (self._item("c", "n"), "n", 2),
-        ]
+        rows = [(self._item("a"), "n uk", 1), (self._item("b"), "n col", 1), (self._item("c"), "n", 2)]
         html = self._render(rows, meta)
-        assert 'data-am-tags="n, uk"><div class="gloss-content">a<' in html
-        assert 'data-am-tags="col"><div class="gloss-content">b<' in html  # same POS as previous
+        assert 'data-am-tags="n, uk"><div class="gloss-content">a<' in html  # first of its group
+        assert 'data-am-tags="col"><div class="gloss-content">b<' in html  # n shared in group
         assert 'data-am-tags=""><div class="gloss-content">c<' in html  # same POS as previous
 
     def test_changed_part_of_speech_is_kept(self):
         meta = {"n": TagMeta("n", "partOfSpeech", 0, "noun", 0.0), "vs": TagMeta("vs", "partOfSpeech", 0, "suru", 0.0)}
-        html = self._render([(self._item("a", "n"), "n", None), (self._item("b", "vs"), "vs", None)], meta)
+        html = self._render([(self._item("a"), "n", None), (self._item("b"), "vs", None)], meta)
         assert 'data-am-tags="n"><div class="gloss-content">a<' in html
         assert 'data-am-tags="vs"><div class="gloss-content">b<' in html
 
     def test_label_is_attribute_escaped(self):
-        assert 'data-am-tags="x&quot;&lt;y"' in self._render([(self._item("a", 'x"<y'), 'x"<y', None)], {})
+        assert 'data-am-tags="x&quot;&lt;y"' in self._render([(self._item("a"), 'x"<y', None)], {})
 
     def test_envelope_is_never_stamped_with_has_styles(self):
         provider = IndexedDictProvider("d", Path("/nonexistent"), display_name="D")

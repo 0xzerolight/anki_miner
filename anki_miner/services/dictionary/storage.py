@@ -32,11 +32,9 @@ if TYPE_CHECKING:
 
 # v6: no table change — bumped to force a one-time reimport with NFC-normalized
 # term and reading keys.
-# v7: no table change — Yomitan rows stamp their own definitionTags on the
-# stored item (render_glossary_entry) for the per-definition label.
 # Stale (< SCHEMA_VERSION) indexes are dropped and the startup Reimport-All
 # prompt + pre-run gate act on schema_ok; reimport is the migration.
-SCHEMA_VERSION = 7
+SCHEMA_VERSION = 6
 
 # Lone UTF-16 surrogates (U+D800–U+DFFF) have no valid UTF-8 encoding, so sqlite3
 # raises ``UnicodeEncodeError: surrogates not allowed`` the moment such text is
@@ -317,7 +315,7 @@ def _nfc(value: str) -> str:
 # The key-folding seam. Every import/query helper below takes a keyword-only
 # ``keys: DictKeyFolding | None``; ``None`` selects the Japanese pair above, which
 # is what every existing caller and every committed index was built with. Folding
-# is a strategy, NEVER stored schema — the index's SCHEMA_VERSION is the same
+# is a strategy, NEVER stored schema — the index stays at SCHEMA_VERSION 6
 # whichever folding wrote it.
 #
 # The two halves must be SYMMETRIC: an index written with one folding and queried

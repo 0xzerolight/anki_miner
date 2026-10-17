@@ -129,8 +129,8 @@ class TestCreateIndex:
         finally:
             conn.close()
 
-    def test_schema_version_is_7(self):
-        assert SCHEMA_VERSION == 7
+    def test_schema_version_is_6(self):
+        assert SCHEMA_VERSION == 6
 
     def test_entries_table_has_tags_column(self, tmp_path: Path):
         db_path = tmp_path / "test.sqlite"

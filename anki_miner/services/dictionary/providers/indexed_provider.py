@@ -5,7 +5,6 @@ from __future__ import annotations
 import contextlib
 import html
 import logging
-import re
 import sqlite3
 import threading
 from pathlib import Path
@@ -57,8 +56,6 @@ logger = logging.getLogger(__name__)
 # candidate pool (storage._LOOKUP_LIMIT) so duplicate-content rows can't consume
 # a display slot before dedup runs.
 _DISPLAY_LIMIT = 5
-# A row's own definitionTags, stamped on its item by render_glossary_entry.
-_DEF_TAGS_RE = re.compile(r'^(<li class="gloss-item"[^>]*?) data-am-def-tags="([^"]*)"')
 
 
 def _is_jmdict_sense_index_tag(meta: TagMeta) -> bool:
@@ -559,26 +556,34 @@ class IndexedDictProvider:
         tag_meta = self._tag_meta()
 
         # Per-definition tag label for the Yomitan-export pass (anki_export), which
-        # writes one `<i>(tags, dict)</i>` per definition. Yomitan lists the
-        # definition's own definitionTags there; termTags go on the headword, never
-        # in the glossary. The `tags` column unions both, so the label reads the
-        # importer's stamp (render_glossary_entry). compactTags: a definition whose
-        # partOfSpeech set equals the previous one's in this dictionary drops its
-        # partOfSpeech tags (translator.js _flagRedundantDefinitionTags).
+        # writes one `<i>(tags, dict)</i>` per definition with Yomitan compactTags:
+        # a definition whose partOfSpeech set equals the previous one's in this
+        # dictionary drops its partOfSpeech tags (translator.js
+        # _flagRedundantDefinitionTags). The stored `tags` column unions
+        # definitionTags and termTags, and Yomitan never puts term tags in the
+        # glossary, so a tag on EVERY definition of a sequence group (term tags
+        # are, by construction) shows once, on the group's first definition.
         sense_label: dict[str, str] = {}
         last_pos: tuple[str, ...] | None = None
         for group in capped_groups:
-            for content in group:
-                stamp = _DEF_TAGS_RE.match(content)
-                def_tags = [t for t in html.unescape(stamp.group(2)).split(" ") if t] if stamp else []
+            shared = set(sense_tags[group[0]]).intersection(*(sense_tags[c] for c in group[1:]))
+            for index, content in enumerate(group):
                 metas = sorted(
-                    (tag_meta[t] for t in def_tags if t in tag_meta and not _is_jmdict_sense_index_tag(tag_meta[t])),
+                    (
+                        tag_meta[t]
+                        for t in sense_tags[content]
+                        if t in tag_meta and not _is_jmdict_sense_index_tag(tag_meta[t])
+                    ),
                     key=lambda m: (m.ord, -m.score, m.name),
                 )
                 pos = tuple(sorted(m.name for m in metas if m.category == "partOfSpeech"))
                 drop_pos, last_pos = pos == last_pos, pos
-                names = [m.name for m in metas if not (drop_pos and m.category == "partOfSpeech")]
-                names += [t for t in def_tags if t not in tag_meta]
+                names = [
+                    m.name
+                    for m in metas
+                    if not (drop_pos and m.category == "partOfSpeech") and (index == 0 or m.name not in shared)
+                ]
+                names += [t for t in sense_tags[content] if t not in tag_meta and (index == 0 or t not in shared)]
                 sense_label[content] = html.escape(", ".join(names), quote=True)
 
         # One sub-block per group: its own chips + italic tag line + gloss-list.
@@ -593,7 +598,7 @@ class IndexedDictProvider:
                         group_tags.append(tag)
 
             merged = "".join(
-                _DEF_TAGS_RE.sub(r"\1", content, count=1).replace(
+                content.replace(
                     '<li class="gloss-item"', f'<li class="gloss-item" data-am-tags="{sense_label[content]}"', 1
                 )
                 for content in group

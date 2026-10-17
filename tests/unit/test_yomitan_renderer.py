@@ -403,18 +403,9 @@ class TestRenderGlossaryEntry:
             definition_tags=["forms"],
         )
 
-        assert html.startswith('<li class="gloss-item" data-sc-content="forms" data-am-def-tags="forms">')
+        assert html.startswith('<li class="gloss-item" data-sc-content="forms">')
         assert html.count('<li class="gloss-item"') == 1
         assert html.count('<li class="gloss-sc-li">') == 5
-
-    def test_definition_tags_are_stamped_on_the_item(self):
-        """The row's own definitionTags, apart from the termTags the index's ``tags`` column unions in."""
-        html = render_glossary_entry(["x"], definition_tags=["n", "priority form", 'a"b'])
-        assert html.startswith('<li class="gloss-item" data-am-def-tags="n priority form a&quot;b">')
-
-    def test_no_definition_tags_no_stamp(self):
-        assert "data-am-def-tags" not in render_glossary_entry(["x"], definition_tags=[])
-        assert "data-am-def-tags" not in render_glossary_entry(["x"])
 
     def test_forms_table_marks_outer_item_and_preserves_source_marker(self):
         forms_table = {
@@ -428,7 +419,7 @@ class TestRenderGlossaryEntry:
 
         html = render_glossary_entry([forms_table], definition_tags=["forms"])
 
-        assert html.startswith('<li class="gloss-item" data-sc-content="forms" data-am-def-tags="forms">')
+        assert html.startswith('<li class="gloss-item" data-sc-content="forms">')
         assert html.count('<li class="gloss-item"') == 1
         assert '<table class="gloss-sc-table" data-sc-content="formsTable">' in html
 
