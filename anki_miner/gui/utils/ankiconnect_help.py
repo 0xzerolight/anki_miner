@@ -85,6 +85,17 @@ def anki_launch_command(
 
 
 def launch_anki(command: list[str]) -> bool:
-    """Start Anki detached from this process; True when the OS accepted the start."""
-    started, _pid = QProcess.startDetached(command[0], command[1:])
+    """Start Anki detached from this process; True when the OS accepted the start.
+
+    Anki and its add-ons print deprecation notices and missing-file lines on
+    stdout and stderr. A detached child inherits ours, so without the null
+    device it keeps writing into the terminal that started Anki Miner, even
+    after Anki Miner exits.
+    """
+    process = QProcess()
+    process.setProgram(command[0])
+    process.setArguments(command[1:])
+    process.setStandardOutputFile(QProcess.nullDevice())
+    process.setStandardErrorFile(QProcess.nullDevice())
+    started, _pid = process.startDetached()
     return bool(started)
