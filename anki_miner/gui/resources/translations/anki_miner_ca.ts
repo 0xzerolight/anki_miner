@@ -2807,8 +2807,8 @@ No se suprimeix cap fitxer d'índex.</translation>
         <translation>Emplena els camps que falten de notes existents</translation>
     </message>
     <message>
-        <source>Fill missing frequency, definition and word-audio fields on already-mined notes, plus pitch and reading for Japanese and your language's own card fields.</source>
-        <translation>Emplena els camps de freqüència, definició i àudio de paraula que falten a notes ja extretes, a més de l'accent i la lectura per al japonès i els camps de targeta propis de la vostra llengua.</translation>
+        <source>Fill missing frequency, definition and word-audio fields on already-mined notes, plus pitch and reading for Japanese and your language's own card fields, and refresh their styling.</source>
+        <translation>Emplena els camps de freqüència, definició i àudio de paraula que falten a notes ja extretes, a més de l'accent i la lectura per al japonès i els camps de targeta propis de la vostra llengua, i n'actualitza l'estil.</translation>
     </message>
     <message>
         <source>Speech-to-text (no subtitles needed)</source>
@@ -3115,14 +3115,6 @@ No se suprimeix cap fitxer d'índex.</translation>
         <translation>Trieu un .mkv o un altre vídeo, o una carpeta de vídeos, marqueu-ne les pistes de subtítols o d'àudio i deseu cadascuna com a fitxer propi, copiada sense recodificar. Un subtítol únic rep el nom del seu vídeo, perquè l'extracció de Vídeo el trobi. El vídeo no es modifica mai.</translation>
     </message>
     <message>
-        <source>Restyle mined cards</source>
-        <translation>Reaplica l'estil a les targetes extretes</translation>
-    </message>
-    <message>
-        <source>Re-apply the latest Anki Miner styling to cards you mined earlier -- Utilities → Card Backfill.</source>
-        <translation>Torna a aplicar l'estil més recent de l'Anki Miner a les targetes que vau extreure abans: Utilitats → Completa targetes.</translation>
-    </message>
-    <message>
         <source>System health check</source>
         <translation>Comprovació de l'estat del sistema</translation>
     </message>
@@ -3317,12 +3309,20 @@ No se suprimeix cap fitxer d'índex.</translation>
         <translation>Glossari</translation>
     </message>
     <message>
+        <source>Styling</source>
+        <translation>Estil</translation>
+    </message>
+    <message>
         <source>Reading + furigana</source>
         <translation>Lectura + furigana</translation>
     </message>
     <message>
         <source>Word audio</source>
         <translation>Àudio de paraules</translation>
+    </message>
+    <message>
+        <source>Updates the styling embedded in the Definitions and Glossary fields. Their text stays as it is.</source>
+        <translation>Actualitza l'estil incrustat als camps Definicions i Glossari. El seu text no canvia.</translation>
     </message>
     <message>
         <source>Fills furigana from an existing reading and vice versa; does not generate new readings.</source>
@@ -3337,20 +3337,8 @@ No se suprimeix cap fitxer d'índex.</translation>
         <translation>Sobreescriu els valors existents</translation>
     </message>
     <message>
-        <source>Overwritten cards may need to use Restyle cards… to refresh their styling.</source>
-        <translation>Pot ser que les targetes sobreescrites necessitin Reaplica l'estil… per actualitzar-ne l'estil.</translation>
-    </message>
-    <message>
         <source>Scan Anki (read-only)</source>
         <translation>Analitza l'Anki (només lectura)</translation>
-    </message>
-    <message>
-        <source>Restyle cards…</source>
-        <translation>Reaplica l'estil…</translation>
-    </message>
-    <message>
-        <source>Refresh the dictionary styling on every card of your note type</source>
-        <translation>Actualitza l'estil del diccionari a totes les targetes del vostre tipus de nota</translation>
     </message>
     <message>
         <source>Cancel</source>
@@ -3409,6 +3397,10 @@ No se suprimeix cap fitxer d'índex.</translation>
         <translation>S'està analitzant…</translation>
     </message>
     <message>
+        <source>(styling updated)</source>
+        <translation>(estil actualitzat)</translation>
+    </message>
+    <message>
         <source>(formatted content)</source>
         <translation>(contingut amb format)</translation>
     </message>
@@ -3462,6 +3454,13 @@ No se suprimeix cap fitxer d'índex.</translation>
         <translation>
             <numerusform>%n valor de camp ja està actualitzat.</numerusform>
             <numerusform>%n valors de camp ja estan actualitzats.</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>%n field(s) keep the old definition layout, which Styling cannot update. Scan with Definitions or Glossary and Overwrite existing values to rebuild them.</source>
+        <translation>
+            <numerusform>%n camp conserva la disposició antiga de les definicions, que Estil no pot actualitzar. Analitzeu amb Definicions o Glossari i Sobreescriu els valors existents per reconstruir-lo.</numerusform>
+            <numerusform>%n camps conserven la disposició antiga de les definicions, que Estil no pot actualitzar. Analitzeu amb Definicions o Glossari i Sobreescriu els valors existents per reconstruir-los.</numerusform>
         </translation>
     </message>
     <message numerus="yes">
@@ -7228,62 +7227,6 @@ Paraules que s'afegiran: %3. Voleu continuar?</translation>
     <message>
         <source>Open Settings</source>
         <translation>Obre els paràmetres</translation>
-    </message>
-    <message>
-        <source>Restyle Mined Cards</source>
-        <translation>Reaplica l'estil a les targetes extretes</translation>
-    </message>
-    <message>
-        <source>Re-applies the current built-in styling to your mined cards.
-
-Close Anki's card browser and note editor first — an open note can lose unsaved edits.
-
-Continue?</source>
-        <translation>Torna a aplicar l'estil integrat actual a les vostres targetes extretes.
-
-Tanqueu primer el navegador de targetes i l'editor de notes de l'Anki: una nota oberta pot perdre els canvis no desats.
-
-Voleu continuar?</translation>
-    </message>
-    <message>
-        <source>Restyling cannot start: the Anki field mapping is not usable.</source>
-        <translation>No es pot reaplicar l'estil: l'assignació de camps de l'Anki no és utilitzable.</translation>
-    </message>
-    <message>
-        <source>Open Anki Settings</source>
-        <translation>Obre els paràmetres de l'Anki</translation>
-    </message>
-    <message>
-        <source>Restyling mined cards…</source>
-        <translation>S'està reaplicant l'estil a les targetes extretes…</translation>
-    </message>
-    <message>
-        <source>Restyling mined cards… %1/%2</source>
-        <translation>S'està reaplicant l'estil a les targetes extretes… %1/%2</translation>
-    </message>
-    <message>
-        <source>Restyle incomplete</source>
-        <translation>Reaplicació de l'estil incompleta</translation>
-    </message>
-    <message>
-        <source>%1 note update(s) were not confirmed; run Restyle again.</source>
-        <translation>No s'han confirmat %1 actualitzacions de notes; torneu a reaplicar l'estil.</translation>
-    </message>
-    <message>
-        <source>Restyled %1 of %2 notes; %3 already up to date.</source>
-        <translation>S'ha reaplicat l'estil a %1 de %2 notes; %3 ja estaven al dia.</translation>
-    </message>
-    <message>
-        <source>Restyle complete</source>
-        <translation>Reaplicació de l'estil completada</translation>
-    </message>
-    <message>
-        <source>Restyle failed</source>
-        <translation>Ha fallat la reaplicació de l'estil</translation>
-    </message>
-    <message>
-        <source>The mined cards could not be restyled.</source>
-        <translation>No s'ha pogut reaplicar l'estil a les targetes extretes.</translation>
     </message>
     <message>
         <source>Dictionaries:</source>

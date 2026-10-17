@@ -2810,8 +2810,8 @@ Indekso failai neištrinami.</translation>
         <translation>Užpildyti trūkstamus esamų užrašų laukus</translation>
     </message>
     <message>
-        <source>Fill missing frequency, definition and word-audio fields on already-mined notes, plus pitch and reading for Japanese and your language's own card fields.</source>
-        <translation>Užpildykite trūkstamus dažnio, apibrėžties ir žodžio garso laukus jau surinktuose užrašuose, taip pat priegaidę ir skaitymą japonų kalbai bei jūsų kalbos kortelės laukus.</translation>
+        <source>Fill missing frequency, definition and word-audio fields on already-mined notes, plus pitch and reading for Japanese and your language's own card fields, and refresh their styling.</source>
+        <translation>Užpildykite trūkstamus dažnio, apibrėžties ir žodžio garso laukus jau surinktuose užrašuose, taip pat priegaidę ir skaitymą japonų kalbai bei jūsų kalbos kortelės laukus ir atnaujinkite jų stilių.</translation>
     </message>
     <message>
         <source>Speech-to-text (no subtitles needed)</source>
@@ -3118,14 +3118,6 @@ Indekso failai neištrinami.</translation>
         <translation>Pasirinkite .mkv ar kitą vaizdo įrašą arba jų aplanką, pažymėkite subtitrų ar garso takelius ir įrašykite kiekvieną kaip atskirą failą, nukopijuotą be perkodavimo. Vieni subtitrai pavadinami pagal vaizdo įrašą, kad rinkimas skiltyje Video juos rastų. Vaizdo įrašas niekada nekeičiamas.</translation>
     </message>
     <message>
-        <source>Restyle mined cards</source>
-        <translation>Atnaujinti surinktų kortelių stilių</translation>
-    </message>
-    <message>
-        <source>Re-apply the latest Anki Miner styling to cards you mined earlier -- Utilities → Card Backfill.</source>
-        <translation>Pritaikykite naujausią Anki Miner stilių anksčiau surinktoms kortelėms -- Priemonės → Papildyti.</translation>
-    </message>
-    <message>
         <source>System health check</source>
         <translation>Sistemos būklės patikra</translation>
     </message>
@@ -3320,12 +3312,20 @@ Indekso failai neištrinami.</translation>
         <translation>Glosarijus</translation>
     </message>
     <message>
+        <source>Styling</source>
+        <translation>Stilius</translation>
+    </message>
+    <message>
         <source>Reading + furigana</source>
         <translation>Skaitymas + furigana</translation>
     </message>
     <message>
         <source>Word audio</source>
         <translation>Žodžio garsas</translation>
+    </message>
+    <message>
+        <source>Updates the styling embedded in the Definitions and Glossary fields. Their text stays as it is.</source>
+        <translation>Atnaujina stilių, įterptą į laukus „Apibrėžtys“ ir „Glosarijus“. Jų tekstas lieka nepakeistas.</translation>
     </message>
     <message>
         <source>Fills furigana from an existing reading and vice versa; does not generate new readings.</source>
@@ -3340,20 +3340,8 @@ Indekso failai neištrinami.</translation>
         <translation>Perrašyti esamas reikšmes</translation>
     </message>
     <message>
-        <source>Overwritten cards may need to use Restyle cards… to refresh their styling.</source>
-        <translation>Perrašytoms kortelėms gali prireikti „Atnaujinti kortelių stilių…“, kad būtų atnaujintas jų stilius.</translation>
-    </message>
-    <message>
         <source>Scan Anki (read-only)</source>
         <translation>Nuskaityti Anki (tik skaityti)</translation>
-    </message>
-    <message>
-        <source>Restyle cards…</source>
-        <translation>Atnaujinti kortelių stilių…</translation>
-    </message>
-    <message>
-        <source>Refresh the dictionary styling on every card of your note type</source>
-        <translation>Atnaujinti žodyno stilių kiekvienoje jūsų užrašo tipo kortelėje</translation>
     </message>
     <message>
         <source>Cancel</source>
@@ -3410,6 +3398,10 @@ Indekso failai neištrinami.</translation>
     <message>
         <source>Scanning…</source>
         <translation>Nuskaitoma…</translation>
+    </message>
+    <message>
+        <source>(styling updated)</source>
+        <translation>(atnaujintas stilius)</translation>
     </message>
     <message>
         <source>(formatted content)</source>
@@ -3469,6 +3461,14 @@ Indekso failai neištrinami.</translation>
             <numerusform>%n lauko reikšmė jau atnaujinta.</numerusform>
             <numerusform>%n laukų reikšmės jau atnaujintos.</numerusform>
             <numerusform>%n laukų reikšmių jau atnaujinta.</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>%n field(s) keep the old definition layout, which Styling cannot update. Scan with Definitions or Glossary and Overwrite existing values to rebuild them.</source>
+        <translation>
+            <numerusform>%n laukas išlaiko seną apibrėžčių išdėstymą, kurio parinktis „Stilius“ negali atnaujinti. Norėdami jį perkurti, nuskaitykite pažymėję parinktis „Apibrėžtys“ arba „Glosarijus“ ir „Perrašyti esamas reikšmes“.</numerusform>
+            <numerusform>%n laukai išlaiko seną apibrėžčių išdėstymą, kurio parinktis „Stilius“ negali atnaujinti. Norėdami juos perkurti, nuskaitykite pažymėję parinktis „Apibrėžtys“ arba „Glosarijus“ ir „Perrašyti esamas reikšmes“.</numerusform>
+            <numerusform>%n laukų išlaiko seną apibrėžčių išdėstymą, kurio parinktis „Stilius“ negali atnaujinti. Norėdami juos perkurti, nuskaitykite pažymėję parinktis „Apibrėžtys“ arba „Glosarijus“ ir „Perrašyti esamas reikšmes“.</numerusform>
         </translation>
     </message>
     <message numerus="yes">
@@ -7266,62 +7266,6 @@ Pridedamų žodžių: %3. Tęsti?</translation>
     <message>
         <source>Open Settings</source>
         <translation>Atverti nustatymus</translation>
-    </message>
-    <message>
-        <source>Restyle Mined Cards</source>
-        <translation>Atnaujinti surinktų kortelių stilių</translation>
-    </message>
-    <message>
-        <source>Re-applies the current built-in styling to your mined cards.
-
-Close Anki's card browser and note editor first — an open note can lose unsaved edits.
-
-Continue?</source>
-        <translation>Surinktoms kortelėms bus pritaikytas dabartinis įtaisytasis stilius.
-
-Pirmiausia užverkite Anki kortelių naršyklę ir užrašų redaktorių — atvertame užraše galima prarasti neįrašytus pakeitimus.
-
-Tęsti?</translation>
-    </message>
-    <message>
-        <source>Restyling cannot start: the Anki field mapping is not usable.</source>
-        <translation>Negalima pradėti stiliaus atnaujinimo: Anki laukų susiejimas netinkamas.</translation>
-    </message>
-    <message>
-        <source>Open Anki Settings</source>
-        <translation>Atverti Anki nustatymus</translation>
-    </message>
-    <message>
-        <source>Restyling mined cards…</source>
-        <translation>Atnaujinamas surinktų kortelių stilius…</translation>
-    </message>
-    <message>
-        <source>Restyling mined cards… %1/%2</source>
-        <translation>Atnaujinamas surinktų kortelių stilius… %1/%2</translation>
-    </message>
-    <message>
-        <source>Restyle incomplete</source>
-        <translation>Stiliaus atnaujinimas nebaigtas</translation>
-    </message>
-    <message>
-        <source>%1 note update(s) were not confirmed; run Restyle again.</source>
-        <translation>Nepatvirtinta užrašų atnaujinimų: %1. Atnaujinkite stilių dar kartą.</translation>
-    </message>
-    <message>
-        <source>Restyled %1 of %2 notes; %3 already up to date.</source>
-        <translation>Stilius atnaujintas: %1 iš %2 užrašų; jau naujausi: %3.</translation>
-    </message>
-    <message>
-        <source>Restyle complete</source>
-        <translation>Stiliaus atnaujinimas baigtas</translation>
-    </message>
-    <message>
-        <source>Restyle failed</source>
-        <translation>Stiliaus atnaujinti nepavyko</translation>
-    </message>
-    <message>
-        <source>The mined cards could not be restyled.</source>
-        <translation>Nepavyko atnaujinti surinktų kortelių stiliaus.</translation>
     </message>
     <message>
         <source>Dictionaries:</source>

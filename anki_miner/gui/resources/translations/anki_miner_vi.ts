@@ -2804,8 +2804,8 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Điền các trường còn thiếu trên ghi chú hiện có</translation>
     </message>
     <message>
-        <source>Fill missing frequency, definition and word-audio fields on already-mined notes, plus pitch and reading for Japanese and your language's own card fields.</source>
-        <translation>Điền các trường tần suất, định nghĩa và âm thanh từ còn trống trên các ghi chú đã khai thác, cùng trọng âm cao độ và cách đọc cho tiếng Nhật và các trường thẻ riêng của ngôn ngữ bạn.</translation>
+        <source>Fill missing frequency, definition and word-audio fields on already-mined notes, plus pitch and reading for Japanese and your language's own card fields, and refresh their styling.</source>
+        <translation>Điền các trường tần suất, định nghĩa và âm thanh từ còn trống trên các ghi chú đã khai thác, cùng trọng âm cao độ và cách đọc cho tiếng Nhật và các trường thẻ riêng của ngôn ngữ bạn, đồng thời làm mới phần tạo kiểu của chúng.</translation>
     </message>
     <message>
         <source>Speech-to-text (no subtitles needed)</source>
@@ -3112,14 +3112,6 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Chọn một tệp .mkv hoặc video khác, hoặc một thư mục video, đánh dấu các rãnh phụ đề hoặc âm thanh rồi lưu mỗi rãnh thành một tệp riêng, sao chép nguyên trạng không mã hóa lại. Một phụ đề duy nhất được đặt tên theo video của nó, nên khai thác trên tab Video sẽ tìm thấy nó. Video không bao giờ bị thay đổi.</translation>
     </message>
     <message>
-        <source>Restyle mined cards</source>
-        <translation>Định dạng lại thẻ đã khai thác</translation>
-    </message>
-    <message>
-        <source>Re-apply the latest Anki Miner styling to cards you mined earlier -- Utilities → Card Backfill.</source>
-        <translation>Áp dụng lại kiểu định dạng Anki Miner mới nhất cho các thẻ đã khai thác trước đây — Tiện ích → Điền dữ liệu còn thiếu cho thẻ.</translation>
-    </message>
-    <message>
         <source>System health check</source>
         <translation>Kiểm tra tình trạng hệ thống</translation>
     </message>
@@ -3314,12 +3306,20 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Bảng chú giải</translation>
     </message>
     <message>
+        <source>Styling</source>
+        <translation>Tạo kiểu</translation>
+    </message>
+    <message>
         <source>Reading + furigana</source>
         <translation>Cách đọc + furigana</translation>
     </message>
     <message>
         <source>Word audio</source>
         <translation>Âm thanh từ</translation>
+    </message>
+    <message>
+        <source>Updates the styling embedded in the Definitions and Glossary fields. Their text stays as it is.</source>
+        <translation>Cập nhật phần tạo kiểu được nhúng trong các trường Định nghĩa và Bảng chú giải. Văn bản của chúng vẫn giữ nguyên.</translation>
     </message>
     <message>
         <source>Fills furigana from an existing reading and vice versa; does not generate new readings.</source>
@@ -3334,20 +3334,8 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Ghi đè giá trị hiện có</translation>
     </message>
     <message>
-        <source>Overwritten cards may need to use Restyle cards… to refresh their styling.</source>
-        <translation>Thẻ bị ghi đè có thể cần dùng Tạo lại kiểu thẻ… để làm mới kiểu định dạng.</translation>
-    </message>
-    <message>
         <source>Scan Anki (read-only)</source>
         <translation>Quét Anki (chỉ đọc)</translation>
-    </message>
-    <message>
-        <source>Restyle cards…</source>
-        <translation>Tạo lại kiểu thẻ…</translation>
-    </message>
-    <message>
-        <source>Refresh the dictionary styling on every card of your note type</source>
-        <translation>Làm mới kiểu định dạng từ điển trên mọi thẻ thuộc loại ghi chú của bạn</translation>
     </message>
     <message>
         <source>Cancel</source>
@@ -3406,6 +3394,10 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Đang quét…</translation>
     </message>
     <message>
+        <source>(styling updated)</source>
+        <translation>(đã cập nhật tạo kiểu)</translation>
+    </message>
+    <message>
         <source>(formatted content)</source>
         <translation>(nội dung đã định dạng)</translation>
     </message>
@@ -3455,6 +3447,12 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <source>%n field value(s) already up to date.</source>
         <translation>
             <numerusform>%n giá trị trường đã cập nhật sẵn.</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>%n field(s) keep the old definition layout, which Styling cannot update. Scan with Definitions or Glossary and Overwrite existing values to rebuild them.</source>
+        <translation>
+            <numerusform>%n trường vẫn giữ bố cục định nghĩa cũ mà “Tạo kiểu” không thể cập nhật. Để dựng lại các trường này, hãy quét khi đã chọn “Định nghĩa” hoặc “Bảng chú giải” cùng “Ghi đè giá trị hiện có”.</numerusform>
         </translation>
     </message>
     <message numerus="yes">
@@ -7190,62 +7188,6 @@ Số từ sẽ thêm: %3. Tiếp tục?</translation>
     <message>
         <source>Open Settings</source>
         <translation>Mở Cài đặt</translation>
-    </message>
-    <message>
-        <source>Restyle Mined Cards</source>
-        <translation>Tạo lại kiểu cho thẻ đã khai thác</translation>
-    </message>
-    <message>
-        <source>Re-applies the current built-in styling to your mined cards.
-
-Close Anki's card browser and note editor first — an open note can lose unsaved edits.
-
-Continue?</source>
-        <translation>Áp dụng lại kiểu dáng tích hợp hiện tại cho các thẻ bạn đã khai thác.
-
-Hãy đóng trình duyệt thẻ và trình sửa ghi chú của Anki trước — một ghi chú đang mở có thể mất các chỉnh sửa chưa lưu.
-
-Tiếp tục?</translation>
-    </message>
-    <message>
-        <source>Restyling cannot start: the Anki field mapping is not usable.</source>
-        <translation>Không thể bắt đầu chỉnh kiểu: ánh xạ trường Anki không dùng được.</translation>
-    </message>
-    <message>
-        <source>Open Anki Settings</source>
-        <translation>Mở cài đặt Anki</translation>
-    </message>
-    <message>
-        <source>Restyling mined cards…</source>
-        <translation>Đang tạo lại kiểu cho thẻ đã khai thác…</translation>
-    </message>
-    <message>
-        <source>Restyling mined cards… %1/%2</source>
-        <translation>Đang tạo lại kiểu cho thẻ đã khai thác… %1/%2</translation>
-    </message>
-    <message>
-        <source>Restyle incomplete</source>
-        <translation>Tạo lại kiểu chưa hoàn tất</translation>
-    </message>
-    <message>
-        <source>%1 note update(s) were not confirmed; run Restyle again.</source>
-        <translation>%1 bản cập nhật ghi chú chưa được xác nhận; hãy chạy Tạo lại kiểu lần nữa.</translation>
-    </message>
-    <message>
-        <source>Restyled %1 of %2 notes; %3 already up to date.</source>
-        <translation>Đã tạo lại kiểu cho %1 trên %2 ghi chú; %3 vốn đã cập nhật.</translation>
-    </message>
-    <message>
-        <source>Restyle complete</source>
-        <translation>Đã tạo lại kiểu xong</translation>
-    </message>
-    <message>
-        <source>Restyle failed</source>
-        <translation>Tạo lại kiểu thất bại</translation>
-    </message>
-    <message>
-        <source>The mined cards could not be restyled.</source>
-        <translation>Không thể chỉnh kiểu các thẻ đã khai thác.</translation>
     </message>
     <message>
         <source>Dictionaries:</source>

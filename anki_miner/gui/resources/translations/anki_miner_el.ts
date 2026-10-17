@@ -2807,8 +2807,8 @@ No index files are deleted.</source>
         <translation>Συμπλήρωση κενών πεδίων σε υπάρχουσες σημειώσεις</translation>
     </message>
     <message>
-        <source>Fill missing frequency, definition and word-audio fields on already-mined notes, plus pitch and reading for Japanese and your language's own card fields.</source>
-        <translation>Συμπλήρωση κενών πεδίων συχνότητας, ορισμού και ήχου λέξης σε σημειώσεις που έχουν ήδη εξορυχτεί, καθώς και τονισμού και ανάγνωσης για τα Ιαπωνικά και των ειδικών πεδίων καρτών της γλώσσας σας.</translation>
+        <source>Fill missing frequency, definition and word-audio fields on already-mined notes, plus pitch and reading for Japanese and your language's own card fields, and refresh their styling.</source>
+        <translation>Συμπλήρωση κενών πεδίων συχνότητας, ορισμού και ήχου λέξης σε σημειώσεις που έχουν ήδη εξορυχτεί, καθώς και τονισμού και ανάγνωσης για τα Ιαπωνικά και των ειδικών πεδίων καρτών της γλώσσας σας, και ανανέωση της μορφοποίησής τους.</translation>
     </message>
     <message>
         <source>Speech-to-text (no subtitles needed)</source>
@@ -3115,14 +3115,6 @@ No index files are deleted.</source>
         <translation>Επιλέξτε ένα .mkv ή άλλο βίντεο, ή έναν φάκελο με βίντεο, τσεκάρετε τα κανάλια υποτίτλων ή ήχου και αποθηκεύστε το καθένα ως ξεχωριστό αρχείο, αντιγραμμένο χωρίς επανακωδικοποίηση. Ένας μεμονωμένος υπότιτλος παίρνει το όνομα του βίντεο του, ώστε να τον βρίσκει η εξόρυξη Βίντεο. Το βίντεο δεν αλλάζει ποτέ.</translation>
     </message>
     <message>
-        <source>Restyle mined cards</source>
-        <translation>Νέα μορφοποίηση καρτών εξόρυξης</translation>
-    </message>
-    <message>
-        <source>Re-apply the latest Anki Miner styling to cards you mined earlier -- Utilities → Card Backfill.</source>
-        <translation>Εφαρμόστε ξανά την τελευταία μορφοποίηση του Anki Miner σε κάρτες που εξορύξατε παλαιότερα -- Βοηθήματα → Συμπλήρωση.</translation>
-    </message>
-    <message>
         <source>System health check</source>
         <translation>Έλεγχος υγείας συστήματος</translation>
     </message>
@@ -3317,12 +3309,20 @@ No index files are deleted.</source>
         <translation>Γλωσσάριο</translation>
     </message>
     <message>
+        <source>Styling</source>
+        <translation>Μορφοποίηση</translation>
+    </message>
+    <message>
         <source>Reading + furigana</source>
         <translation>Ανάγνωση + furigana</translation>
     </message>
     <message>
         <source>Word audio</source>
         <translation>Ήχος λέξης</translation>
+    </message>
+    <message>
+        <source>Updates the styling embedded in the Definitions and Glossary fields. Their text stays as it is.</source>
+        <translation>Ενημερώνει τη μορφοποίηση που είναι ενσωματωμένη στα πεδία «Ορισμοί» και «Γλωσσάριο». Το κείμενό τους παραμένει αμετάβλητο.</translation>
     </message>
     <message>
         <source>Fills furigana from an existing reading and vice versa; does not generate new readings.</source>
@@ -3337,20 +3337,8 @@ No index files are deleted.</source>
         <translation>Αντικατάσταση υπαρχουσών τιμών</translation>
     </message>
     <message>
-        <source>Overwritten cards may need to use Restyle cards… to refresh their styling.</source>
-        <translation>Οι κάρτες που αντικαταστάθηκαν ίσως χρειαστούν τη Νέα μορφοποίηση καρτών… για ανανέωση της μορφοποίησής τους.</translation>
-    </message>
-    <message>
         <source>Scan Anki (read-only)</source>
         <translation>Σάρωση Anki (μόνο ανάγνωση)</translation>
-    </message>
-    <message>
-        <source>Restyle cards…</source>
-        <translation>Νέα μορφοποίηση καρτών…</translation>
-    </message>
-    <message>
-        <source>Refresh the dictionary styling on every card of your note type</source>
-        <translation>Ανανέωση της μορφοποίησης λεξικού σε κάθε κάρτα του τύπου σημείωσής σας</translation>
     </message>
     <message>
         <source>Cancel</source>
@@ -3409,6 +3397,10 @@ No index files are deleted.</source>
         <translation>Σάρωση…</translation>
     </message>
     <message>
+        <source>(styling updated)</source>
+        <translation>(ενημερωμένη μορφοποίηση)</translation>
+    </message>
+    <message>
         <source>(formatted content)</source>
         <translation>(μορφοποιημένο περιεχόμενο)</translation>
     </message>
@@ -3462,6 +3454,13 @@ No index files are deleted.</source>
         <translation>
             <numerusform>%n τιμή πεδίου είναι ήδη ενημερωμένη.</numerusform>
             <numerusform>%n τιμές πεδίων είναι ήδη ενημερωμένες.</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>%n field(s) keep the old definition layout, which Styling cannot update. Scan with Definitions or Glossary and Overwrite existing values to rebuild them.</source>
+        <translation>
+            <numerusform>%n πεδίο διατηρεί την παλιά διάταξη ορισμών, την οποία η επιλογή «Μορφοποίηση» δεν μπορεί να ενημερώσει. Για να το αναδημιουργήσετε, σαρώστε με επιλεγμένα τα πλαίσια «Ορισμοί» ή «Γλωσσάριο» και «Αντικατάσταση υπαρχουσών τιμών».</numerusform>
+            <numerusform>%n πεδία διατηρούν την παλιά διάταξη ορισμών, την οποία η επιλογή «Μορφοποίηση» δεν μπορεί να ενημερώσει. Για να τα αναδημιουργήσετε, σαρώστε με επιλεγμένα τα πλαίσια «Ορισμοί» ή «Γλωσσάριο» και «Αντικατάσταση υπαρχουσών τιμών».</numerusform>
         </translation>
     </message>
     <message numerus="yes">
@@ -7228,62 +7227,6 @@ Words to add: %3. Continue?</source>
     <message>
         <source>Open Settings</source>
         <translation>Άνοιγμα ρυθμίσεων</translation>
-    </message>
-    <message>
-        <source>Restyle Mined Cards</source>
-        <translation>Νέα μορφοποίηση καρτών εξόρυξης</translation>
-    </message>
-    <message>
-        <source>Re-applies the current built-in styling to your mined cards.
-
-Close Anki's card browser and note editor first — an open note can lose unsaved edits.
-
-Continue?</source>
-        <translation>Εφαρμόζει ξανά την τρέχουσα ενσωματωμένη μορφοποίηση στις κάρτες εξόρυξης.
-
-Κλείστε πρώτα το πρόγραμμα περιήγησης καρτών και τον επεξεργαστή σημειώσεων του Anki — μια ανοιχτή σημείωση μπορεί να χάσει μη αποθηκευμένες αλλαγές.
-
-Συνέχεια;</translation>
-    </message>
-    <message>
-        <source>Restyling cannot start: the Anki field mapping is not usable.</source>
-        <translation>Η νέα μορφοποίηση δεν μπορεί να ξεκινήσει: η αντιστοίχιση πεδίων του Anki δεν είναι χρησιμοποιήσιμη.</translation>
-    </message>
-    <message>
-        <source>Open Anki Settings</source>
-        <translation>Άνοιγμα ρυθμίσεων Anki</translation>
-    </message>
-    <message>
-        <source>Restyling mined cards…</source>
-        <translation>Νέα μορφοποίηση καρτών εξόρυξης…</translation>
-    </message>
-    <message>
-        <source>Restyling mined cards… %1/%2</source>
-        <translation>Νέα μορφοποίηση καρτών εξόρυξης… %1/%2</translation>
-    </message>
-    <message>
-        <source>Restyle incomplete</source>
-        <translation>Η νέα μορφοποίηση δεν ολοκληρώθηκε</translation>
-    </message>
-    <message>
-        <source>%1 note update(s) were not confirmed; run Restyle again.</source>
-        <translation>Δεν επιβεβαιώθηκαν %1 ενημερώσεις σημειώσεων· εκτελέστε ξανά τη νέα μορφοποίηση.</translation>
-    </message>
-    <message>
-        <source>Restyled %1 of %2 notes; %3 already up to date.</source>
-        <translation>Μορφοποιήθηκαν ξανά %1 από %2 σημειώσεις· %3 ήταν ήδη ενημερωμένες.</translation>
-    </message>
-    <message>
-        <source>Restyle complete</source>
-        <translation>Η νέα μορφοποίηση ολοκληρώθηκε</translation>
-    </message>
-    <message>
-        <source>Restyle failed</source>
-        <translation>Η νέα μορφοποίηση απέτυχε</translation>
-    </message>
-    <message>
-        <source>The mined cards could not be restyled.</source>
-        <translation>Δεν ήταν δυνατή η νέα μορφοποίηση των καρτών εξόρυξης.</translation>
     </message>
     <message>
         <source>Dictionaries:</source>

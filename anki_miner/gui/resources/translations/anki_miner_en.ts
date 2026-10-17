@@ -2796,7 +2796,7 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Fill missing frequency, definition and word-audio fields on already-mined notes, plus pitch and reading for Japanese and your language's own card fields.</source>
+        <source>Fill missing frequency, definition and word-audio fields on already-mined notes, plus pitch and reading for Japanese and your language's own card fields, and refresh their styling.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -3104,14 +3104,6 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Restyle mined cards</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Re-apply the latest Anki Miner styling to cards you mined earlier -- Utilities → Card Backfill.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>System health check</source>
         <translation type="unfinished" />
     </message>
@@ -3306,11 +3298,19 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Styling</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Reading + furigana</source>
         <translation type="unfinished" />
     </message>
     <message>
         <source>Word audio</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Updates the styling embedded in the Definitions and Glossary fields. Their text stays as it is.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -3326,19 +3326,7 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Overwritten cards may need to use Restyle cards… to refresh their styling.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Scan Anki (read-only)</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Restyle cards…</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Refresh the dictionary styling on every card of your note type</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -3398,6 +3386,10 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>(styling updated)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>(formatted content)</source>
         <translation type="unfinished" />
     </message>
@@ -3451,6 +3443,12 @@ No index files are deleted.</source>
         <translation>
             <numerusform>%n field value already up to date.</numerusform>
             <numerusform>%n field values already up to date.</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>%n field(s) keep the old definition layout, which Styling cannot update. Scan with Definitions or Glossary and Overwrite existing values to rebuild them.</source>
+        <translation type="unfinished">
+            <numerusform />
         </translation>
     </message>
     <message numerus="yes">
@@ -7199,58 +7197,6 @@ Words to add: %3. Continue?</source>
     </message>
     <message>
         <source>Open Settings</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Restyle Mined Cards</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Re-applies the current built-in styling to your mined cards.
-
-Close Anki's card browser and note editor first — an open note can lose unsaved edits.
-
-Continue?</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Restyling cannot start: the Anki field mapping is not usable.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Open Anki Settings</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Restyling mined cards…</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Restyling mined cards… %1/%2</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Restyle incomplete</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>%1 note update(s) were not confirmed; run Restyle again.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Restyled %1 of %2 notes; %3 already up to date.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Restyle complete</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Restyle failed</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>The mined cards could not be restyled.</source>
         <translation type="unfinished" />
     </message>
     <message>

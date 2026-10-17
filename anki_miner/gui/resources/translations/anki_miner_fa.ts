@@ -2804,8 +2804,8 @@ No index files are deleted.</source>
         <translation>پر کردن فیلدهای خالی یادداشت‌های موجود</translation>
     </message>
     <message>
-        <source>Fill missing frequency, definition and word-audio fields on already-mined notes, plus pitch and reading for Japanese and your language's own card fields.</source>
-        <translation>فیلدهای خالی بسامد، تعریف و صوت واژه را در یادداشت‌هایی که پیش‌تر استخراج شده‌اند پر کنید، به‌علاوه زیروبمی و خوانش برای ژاپنی و فیلدهای کارت ویژه زبان شما.</translation>
+        <source>Fill missing frequency, definition and word-audio fields on already-mined notes, plus pitch and reading for Japanese and your language's own card fields, and refresh their styling.</source>
+        <translation>فیلدهای خالی بسامد، تعریف و صوت واژه را در یادداشت‌هایی که پیش‌تر استخراج شده‌اند پر کنید، به‌علاوه زیروبمی و خوانش برای ژاپنی و فیلدهای کارت ویژه زبان شما، و سبک آن‌ها را نیز تازه کنید.</translation>
     </message>
     <message>
         <source>Speech-to-text (no subtitles needed)</source>
@@ -3112,14 +3112,6 @@ No index files are deleted.</source>
         <translation>یک فایل .mkv یا ویدیوی دیگر، یا پوشه‌ای از آن‌ها را انتخاب کنید، ترک‌های زیرنویس یا صوتی آن را تیک بزنید و هر کدام را به صورت فایلی جداگانه، بدون رمزگذاری دوباره، ذخیره کنید. زیرنویس تکی هم‌نام ویدیوی خود ذخیره می‌شود تا استخراج ویدیو آن را پیدا کند. ویدیو هرگز تغییر نمی‌کند.</translation>
     </message>
     <message>
-        <source>Restyle mined cards</source>
-        <translation>تغییر سبک کارت‌های استخراج‌شده</translation>
-    </message>
-    <message>
-        <source>Re-apply the latest Anki Miner styling to cards you mined earlier -- Utilities → Card Backfill.</source>
-        <translation>آخرین سبک Anki Miner را دوباره روی کارت‌هایی که پیش‌تر استخراج کرده‌اید اعمال کنید — امکانات ← تکمیل کارت.</translation>
-    </message>
-    <message>
         <source>System health check</source>
         <translation>بررسی سلامت سیستم</translation>
     </message>
@@ -3314,12 +3306,20 @@ No index files are deleted.</source>
         <translation>واژه‌نما</translation>
     </message>
     <message>
+        <source>Styling</source>
+        <translation>سبک</translation>
+    </message>
+    <message>
         <source>Reading + furigana</source>
         <translation>خوانش + فوریگانا</translation>
     </message>
     <message>
         <source>Word audio</source>
         <translation>صوت واژه</translation>
+    </message>
+    <message>
+        <source>Updates the styling embedded in the Definitions and Glossary fields. Their text stays as it is.</source>
+        <translation>سبک جاسازی‌شده در فیلدهای تعریف‌ها و واژه‌نما را به‌روز می‌کند. متن آن‌ها بدون تغییر می‌ماند.</translation>
     </message>
     <message>
         <source>Fills furigana from an existing reading and vice versa; does not generate new readings.</source>
@@ -3334,20 +3334,8 @@ No index files are deleted.</source>
         <translation>بازنویسی مقادیر موجود</translation>
     </message>
     <message>
-        <source>Overwritten cards may need to use Restyle cards… to refresh their styling.</source>
-        <translation>کارت‌های بازنویسی‌شده ممکن است برای تازه‌سازی سبکشان به «تغییر سبک کارت‌ها…» نیاز داشته باشند.</translation>
-    </message>
-    <message>
         <source>Scan Anki (read-only)</source>
         <translation>پویش Anki (فقط خواندنی)</translation>
-    </message>
-    <message>
-        <source>Restyle cards…</source>
-        <translation>تغییر سبک کارت‌ها…</translation>
-    </message>
-    <message>
-        <source>Refresh the dictionary styling on every card of your note type</source>
-        <translation>تازه‌سازی سبک واژه‌نامه روی همه کارت‌های نوع یادداشت شما</translation>
     </message>
     <message>
         <source>Cancel</source>
@@ -3406,6 +3394,10 @@ No index files are deleted.</source>
         <translation>در حال پویش…</translation>
     </message>
     <message>
+        <source>(styling updated)</source>
+        <translation>(سبک به‌روزشده)</translation>
+    </message>
+    <message>
         <source>(formatted content)</source>
         <translation>(محتوای قالب‌بندی‌شده)</translation>
     </message>
@@ -3455,6 +3447,12 @@ No index files are deleted.</source>
         <source>%n field value(s) already up to date.</source>
         <translation>
             <numerusform>‏%n مقدار فیلد از قبل به‌روز است.</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>%n field(s) keep the old definition layout, which Styling cannot update. Scan with Definitions or Glossary and Overwrite existing values to rebuild them.</source>
+        <translation>
+            <numerusform>‏%n فیلد هنوز چیدمان قدیمی تعریف‌ها را دارد که گزینه «سبک» نمی‌تواند آن را به‌روز کند. برای بازسازی آن‌ها، با فعال بودن «تعریف‌ها» یا «واژه‌نما» و «بازنویسی مقادیر موجود» پویش کنید.</numerusform>
         </translation>
     </message>
     <message numerus="yes">
@@ -7190,62 +7188,6 @@ Words to add: %3. Continue?</source>
     <message>
         <source>Open Settings</source>
         <translation>باز کردن تنظیمات</translation>
-    </message>
-    <message>
-        <source>Restyle Mined Cards</source>
-        <translation>تغییر سبک کارت‌های استخراج‌شده</translation>
-    </message>
-    <message>
-        <source>Re-applies the current built-in styling to your mined cards.
-
-Close Anki's card browser and note editor first — an open note can lose unsaved edits.
-
-Continue?</source>
-        <translation>سبک داخلی فعلی را دوباره روی کارت‌های استخراج‌شده شما اعمال می‌کند.
-
-ابتدا مرورگر کارت و ویرایشگر یادداشت Anki را ببندید — یادداشتی که باز است ممکن است ویرایش‌های ذخیره‌نشده را از دست بدهد.
-
-ادامه می‌دهید؟</translation>
-    </message>
-    <message>
-        <source>Restyling cannot start: the Anki field mapping is not usable.</source>
-        <translation>تغییر سبک آغاز نمی‌شود: نگاشت فیلدهای Anki قابل استفاده نیست.</translation>
-    </message>
-    <message>
-        <source>Open Anki Settings</source>
-        <translation>باز کردن تنظیمات Anki</translation>
-    </message>
-    <message>
-        <source>Restyling mined cards…</source>
-        <translation>در حال تغییر سبک کارت‌های استخراج‌شده…</translation>
-    </message>
-    <message>
-        <source>Restyling mined cards… %1/%2</source>
-        <translation>در حال تغییر سبک کارت‌های استخراج‌شده… %1/%2</translation>
-    </message>
-    <message>
-        <source>Restyle incomplete</source>
-        <translation>تغییر سبک ناقص ماند</translation>
-    </message>
-    <message>
-        <source>%1 note update(s) were not confirmed; run Restyle again.</source>
-        <translation>به‌روزرسانی %1 یادداشت تأیید نشد؛ تغییر سبک را دوباره اجرا کنید.</translation>
-    </message>
-    <message>
-        <source>Restyled %1 of %2 notes; %3 already up to date.</source>
-        <translation>سبک %1 از %2 یادداشت تغییر کرد؛ %3 یادداشت از قبل به‌روز بود.</translation>
-    </message>
-    <message>
-        <source>Restyle complete</source>
-        <translation>تغییر سبک کامل شد</translation>
-    </message>
-    <message>
-        <source>Restyle failed</source>
-        <translation>تغییر سبک ناموفق بود</translation>
-    </message>
-    <message>
-        <source>The mined cards could not be restyled.</source>
-        <translation>سبک کارت‌های استخراج‌شده تغییر نکرد.</translation>
     </message>
     <message>
         <source>Dictionaries:</source>

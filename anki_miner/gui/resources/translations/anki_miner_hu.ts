@@ -2804,8 +2804,8 @@ Indexfájl nem törlődik.</translation>
         <translation>Hiányzó mezők kitöltése meglévő jegyzeteken</translation>
     </message>
     <message>
-        <source>Fill missing frequency, definition and word-audio fields on already-mined notes, plus pitch and reading for Japanese and your language's own card fields.</source>
-        <translation>A már gyűjtött jegyzetek hiányzó gyakoriság-, definíció- és szókiejtés-mezőinek kitöltése, továbbá japánnál a hangsúly és az olvasat, valamint a nyelv saját kártyamezői.</translation>
+        <source>Fill missing frequency, definition and word-audio fields on already-mined notes, plus pitch and reading for Japanese and your language's own card fields, and refresh their styling.</source>
+        <translation>A már gyűjtött jegyzetek hiányzó gyakoriság-, definíció- és szókiejtés-mezőinek kitöltése, továbbá japánnál a hangsúly és az olvasat, valamint a nyelv saját kártyamezői, végül a jegyzetek stílusának frissítése.</translation>
     </message>
     <message>
         <source>Speech-to-text (no subtitles needed)</source>
@@ -3112,14 +3112,6 @@ Indexfájl nem törlődik.</translation>
         <translation>Válasszon egy .mkv-t vagy más videót, illetve ezek mappáját, jelölje be a felirat- vagy hangsávokat, és mentse mindegyiket külön fájlba, újrakódolás nélkül másolva. Az egyetlen felirat a videója nevét kapja, így a Videó gyűjtés megtalálja. A videó sosem változik.</translation>
     </message>
     <message>
-        <source>Restyle mined cards</source>
-        <translation>Gyűjtött kártyák stílusfrissítése</translation>
-    </message>
-    <message>
-        <source>Re-apply the latest Anki Miner styling to cards you mined earlier -- Utilities → Card Backfill.</source>
-        <translation>A legújabb Anki Miner-stílus újbóli alkalmazása a korábban gyűjtött kártyákra -- Segédeszközök → Kártyapótlás.</translation>
-    </message>
-    <message>
         <source>System health check</source>
         <translation>Rendszerállapot-ellenőrzés</translation>
     </message>
@@ -3314,12 +3306,20 @@ Indexfájl nem törlődik.</translation>
         <translation>Szójegyzék</translation>
     </message>
     <message>
+        <source>Styling</source>
+        <translation>Stílus</translation>
+    </message>
+    <message>
         <source>Reading + furigana</source>
         <translation>Olvasat + furigana</translation>
     </message>
     <message>
         <source>Word audio</source>
         <translation>Szókiejtés</translation>
+    </message>
+    <message>
+        <source>Updates the styling embedded in the Definitions and Glossary fields. Their text stays as it is.</source>
+        <translation>Frissíti a Definíciók és a Szójegyzék mezőbe ágyazott stílust. A mezők szövege változatlan marad.</translation>
     </message>
     <message>
         <source>Fills furigana from an existing reading and vice versa; does not generate new readings.</source>
@@ -3334,20 +3334,8 @@ Indexfájl nem törlődik.</translation>
         <translation>Meglévő értékek felülírása</translation>
     </message>
     <message>
-        <source>Overwritten cards may need to use Restyle cards… to refresh their styling.</source>
-        <translation>A felülírt kártyák stílusának frissítéséhez szükség lehet a Kártyastílus frissítése… használatára.</translation>
-    </message>
-    <message>
         <source>Scan Anki (read-only)</source>
         <translation>Anki átvizsgálása (csak olvasás)</translation>
-    </message>
-    <message>
-        <source>Restyle cards…</source>
-        <translation>Kártyastílus frissítése…</translation>
-    </message>
-    <message>
-        <source>Refresh the dictionary styling on every card of your note type</source>
-        <translation>A szótári stílus frissítése a jegyzettípus minden kártyáján</translation>
     </message>
     <message>
         <source>Cancel</source>
@@ -3406,6 +3394,10 @@ Indexfájl nem törlődik.</translation>
         <translation>Átvizsgálás…</translation>
     </message>
     <message>
+        <source>(styling updated)</source>
+        <translation>(stílus frissítve)</translation>
+    </message>
+    <message>
         <source>(formatted content)</source>
         <translation>(formázott tartalom)</translation>
     </message>
@@ -3455,6 +3447,12 @@ Indexfájl nem törlődik.</translation>
         <source>%n field value(s) already up to date.</source>
         <translation>
             <numerusform>%n mezőérték már naprakész.</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>%n field(s) keep the old definition layout, which Styling cannot update. Scan with Definitions or Glossary and Overwrite existing values to rebuild them.</source>
+        <translation>
+            <numerusform>%n mező még a régi definíciós elrendezést használja, amelyet a „Stílus” nem tud frissíteni. Az újraépítéshez vizsgálja át az Ankit úgy, hogy a „Definíciók” vagy a „Szójegyzék”, valamint a „Meglévő értékek felülírása” be legyen jelölve.</numerusform>
         </translation>
     </message>
     <message numerus="yes">
@@ -7190,62 +7188,6 @@ Hozzáadandó szavak: %3. Folytatja?</translation>
     <message>
         <source>Open Settings</source>
         <translation>Beállítások megnyitása</translation>
-    </message>
-    <message>
-        <source>Restyle Mined Cards</source>
-        <translation>Gyűjtött kártyák stílusfrissítése</translation>
-    </message>
-    <message>
-        <source>Re-applies the current built-in styling to your mined cards.
-
-Close Anki's card browser and note editor first — an open note can lose unsaved edits.
-
-Continue?</source>
-        <translation>A jelenlegi beépített stílust alkalmazza újra a gyűjtött kártyákon.
-
-Előbb zárja be az Anki kártyaböngészőjét és jegyzetszerkesztőjét — egy megnyitott jegyzet elveszítheti a nem mentett módosításokat.
-
-Folytatja?</translation>
-    </message>
-    <message>
-        <source>Restyling cannot start: the Anki field mapping is not usable.</source>
-        <translation>A stílusfrissítés nem indítható: az Anki-mezőhozzárendelés nem használható.</translation>
-    </message>
-    <message>
-        <source>Open Anki Settings</source>
-        <translation>Anki-beállítások megnyitása</translation>
-    </message>
-    <message>
-        <source>Restyling mined cards…</source>
-        <translation>Gyűjtött kártyák stílusfrissítése…</translation>
-    </message>
-    <message>
-        <source>Restyling mined cards… %1/%2</source>
-        <translation>Gyűjtött kártyák stílusfrissítése… %1/%2</translation>
-    </message>
-    <message>
-        <source>Restyle incomplete</source>
-        <translation>Hiányos stílusfrissítés</translation>
-    </message>
-    <message>
-        <source>%1 note update(s) were not confirmed; run Restyle again.</source>
-        <translation>%1 jegyzetfrissítés nem lett megerősítve; futtassa újra a stílusfrissítést.</translation>
-    </message>
-    <message>
-        <source>Restyled %1 of %2 notes; %3 already up to date.</source>
-        <translation>%1/%2 jegyzet stílusa frissítve; %3 már naprakész volt.</translation>
-    </message>
-    <message>
-        <source>Restyle complete</source>
-        <translation>A stílusfrissítés kész</translation>
-    </message>
-    <message>
-        <source>Restyle failed</source>
-        <translation>Sikertelen stílusfrissítés</translation>
-    </message>
-    <message>
-        <source>The mined cards could not be restyled.</source>
-        <translation>A gyűjtött kártyák stílusát nem sikerült frissíteni.</translation>
     </message>
     <message>
         <source>Dictionaries:</source>

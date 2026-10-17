@@ -2807,8 +2807,8 @@ Er worden geen indexbestanden gewist.</translation>
         <translation>Ontbrekende velden van bestaande notities invullen</translation>
     </message>
     <message>
-        <source>Fill missing frequency, definition and word-audio fields on already-mined notes, plus pitch and reading for Japanese and your language's own card fields.</source>
-        <translation>Ontbrekende velden voor frequentie, definitie en woordaudio invullen op al geminede notities, plus toonhoogte en lezing voor Japans en de eigen kaartvelden van je taal.</translation>
+        <source>Fill missing frequency, definition and word-audio fields on already-mined notes, plus pitch and reading for Japanese and your language's own card fields, and refresh their styling.</source>
+        <translation>Ontbrekende velden voor frequentie, definitie en woordaudio invullen op al geminede notities, plus toonhoogte en lezing voor Japans en de eigen kaartvelden van je taal, en de opmaak van de notities vernieuwen.</translation>
     </message>
     <message>
         <source>Speech-to-text (no subtitles needed)</source>
@@ -3115,14 +3115,6 @@ Er worden geen indexbestanden gewist.</translation>
         <translation>Kies een .mkv of een andere video, of een map daarmee, vink de ondertitel- of audiosporen aan en sla elk op als eigen bestand, gekopieerd zonder hercodering. Een enkele ondertitel krijgt de naam van de video, zodat Video-mining hem vindt. De video wordt nooit gewijzigd.</translation>
     </message>
     <message>
-        <source>Restyle mined cards</source>
-        <translation>Geminede kaarten opnieuw opmaken</translation>
-    </message>
-    <message>
-        <source>Re-apply the latest Anki Miner styling to cards you mined earlier -- Utilities → Card Backfill.</source>
-        <translation>De nieuwste opmaak van Anki Miner opnieuw toepassen op kaarten die je eerder hebt gemined -- Hulpmiddelen → Aanvullen.</translation>
-    </message>
-    <message>
         <source>System health check</source>
         <translation>Controle van de systeemstatus</translation>
     </message>
@@ -3317,12 +3309,20 @@ Er worden geen indexbestanden gewist.</translation>
         <translation>Glossarium</translation>
     </message>
     <message>
+        <source>Styling</source>
+        <translation>Opmaak</translation>
+    </message>
+    <message>
         <source>Reading + furigana</source>
         <translation>Lezing + furigana</translation>
     </message>
     <message>
         <source>Word audio</source>
         <translation>Woordaudio</translation>
+    </message>
+    <message>
+        <source>Updates the styling embedded in the Definitions and Glossary fields. Their text stays as it is.</source>
+        <translation>Werkt de ingebedde opmaak in de velden Definities en Glossarium bij. De tekst zelf blijft ongewijzigd.</translation>
     </message>
     <message>
         <source>Fills furigana from an existing reading and vice versa; does not generate new readings.</source>
@@ -3337,20 +3337,8 @@ Er worden geen indexbestanden gewist.</translation>
         <translation>Bestaande waarden overschrijven</translation>
     </message>
     <message>
-        <source>Overwritten cards may need to use Restyle cards… to refresh their styling.</source>
-        <translation>Bij overschreven kaarten moet je mogelijk Kaarten opnieuw opmaken… gebruiken om hun opmaak te vernieuwen.</translation>
-    </message>
-    <message>
         <source>Scan Anki (read-only)</source>
         <translation>Anki scannen (alleen lezen)</translation>
-    </message>
-    <message>
-        <source>Restyle cards…</source>
-        <translation>Kaarten opnieuw opmaken…</translation>
-    </message>
-    <message>
-        <source>Refresh the dictionary styling on every card of your note type</source>
-        <translation>De woordenboekopmaak vernieuwen op elke kaart van je notitietype</translation>
     </message>
     <message>
         <source>Cancel</source>
@@ -3409,6 +3397,10 @@ Er worden geen indexbestanden gewist.</translation>
         <translation>Scannen…</translation>
     </message>
     <message>
+        <source>(styling updated)</source>
+        <translation>(opmaak bijgewerkt)</translation>
+    </message>
+    <message>
         <source>(formatted content)</source>
         <translation>(opgemaakte inhoud)</translation>
     </message>
@@ -3462,6 +3454,13 @@ Er worden geen indexbestanden gewist.</translation>
         <translation>
             <numerusform>%n veldwaarde is al up-to-date.</numerusform>
             <numerusform>%n veldwaarden zijn al up-to-date.</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>%n field(s) keep the old definition layout, which Styling cannot update. Scan with Definitions or Glossary and Overwrite existing values to rebuild them.</source>
+        <translation>
+            <numerusform>%n veld heeft nog de oude definitie-indeling, die “Opmaak” niet kan bijwerken. Scan met “Definities” of “Glossarium” en “Bestaande waarden overschrijven” aangevinkt om het opnieuw op te bouwen.</numerusform>
+            <numerusform>%n velden hebben nog de oude definitie-indeling, die “Opmaak” niet kan bijwerken. Scan met “Definities” of “Glossarium” en “Bestaande waarden overschrijven” aangevinkt om ze opnieuw op te bouwen.</numerusform>
         </translation>
     </message>
     <message numerus="yes">
@@ -7228,62 +7227,6 @@ Woorden om toe te voegen: %3. Doorgaan?</translation>
     <message>
         <source>Open Settings</source>
         <translation>Instellingen openen</translation>
-    </message>
-    <message>
-        <source>Restyle Mined Cards</source>
-        <translation>Geminede kaarten opnieuw opmaken</translation>
-    </message>
-    <message>
-        <source>Re-applies the current built-in styling to your mined cards.
-
-Close Anki's card browser and note editor first — an open note can lose unsaved edits.
-
-Continue?</source>
-        <translation>Past de huidige ingebouwde opmaak opnieuw toe op je geminede kaarten.
-
-Sluit eerst de kaartbrowser en de notitie-editor van Anki — een geopende notitie kan niet-opgeslagen wijzigingen verliezen.
-
-Doorgaan?</translation>
-    </message>
-    <message>
-        <source>Restyling cannot start: the Anki field mapping is not usable.</source>
-        <translation>Opnieuw opmaken kan niet starten: de Anki-veldtoewijzing is niet bruikbaar.</translation>
-    </message>
-    <message>
-        <source>Open Anki Settings</source>
-        <translation>Anki-instellingen openen</translation>
-    </message>
-    <message>
-        <source>Restyling mined cards…</source>
-        <translation>Geminede kaarten opnieuw opmaken…</translation>
-    </message>
-    <message>
-        <source>Restyling mined cards… %1/%2</source>
-        <translation>Geminede kaarten opnieuw opmaken… %1/%2</translation>
-    </message>
-    <message>
-        <source>Restyle incomplete</source>
-        <translation>Opnieuw opmaken onvolledig</translation>
-    </message>
-    <message>
-        <source>%1 note update(s) were not confirmed; run Restyle again.</source>
-        <translation>%1 notitie-update(s) niet bevestigd; voer Opnieuw opmaken nogmaals uit.</translation>
-    </message>
-    <message>
-        <source>Restyled %1 of %2 notes; %3 already up to date.</source>
-        <translation>%1 van %2 notities opnieuw opgemaakt; %3 waren al up-to-date.</translation>
-    </message>
-    <message>
-        <source>Restyle complete</source>
-        <translation>Opnieuw opmaken voltooid</translation>
-    </message>
-    <message>
-        <source>Restyle failed</source>
-        <translation>Opnieuw opmaken mislukt</translation>
-    </message>
-    <message>
-        <source>The mined cards could not be restyled.</source>
-        <translation>De geminede kaarten konden niet opnieuw worden opgemaakt.</translation>
     </message>
     <message>
         <source>Dictionaries:</source>

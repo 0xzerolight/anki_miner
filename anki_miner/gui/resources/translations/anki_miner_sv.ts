@@ -2807,8 +2807,8 @@ Inga indexfiler raderas.</translation>
         <translation>Fyll i saknade fält i befintliga anteckningar</translation>
     </message>
     <message>
-        <source>Fill missing frequency, definition and word-audio fields on already-mined notes, plus pitch and reading for Japanese and your language's own card fields.</source>
-        <translation>Fyll i saknade fält för frekvens, definition och ordljud i redan insamlade anteckningar, plus tonhöjd och läsning för japanska och ditt språks egna kortfält.</translation>
+        <source>Fill missing frequency, definition and word-audio fields on already-mined notes, plus pitch and reading for Japanese and your language's own card fields, and refresh their styling.</source>
+        <translation>Fyll i saknade fält för frekvens, definition och ordljud i redan insamlade anteckningar, plus tonhöjd och läsning för japanska och ditt språks egna kortfält, och uppdatera anteckningarnas stil.</translation>
     </message>
     <message>
         <source>Speech-to-text (no subtitles needed)</source>
@@ -3115,14 +3115,6 @@ Inga indexfiler raderas.</translation>
         <translation>Välj en .mkv eller en annan video, eller en mapp med sådana, kryssa för undertext- eller ljudspåren och spara vart och ett som en egen fil, kopierad utan omkodning. En enskild undertext namnges efter sin video, så att insamling under Video hittar den. Videon ändras aldrig.</translation>
     </message>
     <message>
-        <source>Restyle mined cards</source>
-        <translation>Formatera om insamlade kort</translation>
-    </message>
-    <message>
-        <source>Re-apply the latest Anki Miner styling to cards you mined earlier -- Utilities → Card Backfill.</source>
-        <translation>Tillämpa den senaste Anki Miner-formateringen igen på kort du samlat in tidigare -- Hjälpprogram → Fyll i kort.</translation>
-    </message>
-    <message>
         <source>System health check</source>
         <translation>Kontroll av systemhälsa</translation>
     </message>
@@ -3317,12 +3309,20 @@ Inga indexfiler raderas.</translation>
         <translation>Ordförklaringar</translation>
     </message>
     <message>
+        <source>Styling</source>
+        <translation>Stil</translation>
+    </message>
+    <message>
         <source>Reading + furigana</source>
         <translation>Läsning + furigana</translation>
     </message>
     <message>
         <source>Word audio</source>
         <translation>Ordljud</translation>
+    </message>
+    <message>
+        <source>Updates the styling embedded in the Definitions and Glossary fields. Their text stays as it is.</source>
+        <translation>Uppdaterar stilen som är inbäddad i fälten Definitioner och Ordförklaringar. Texten förblir oförändrad.</translation>
     </message>
     <message>
         <source>Fills furigana from an existing reading and vice versa; does not generate new readings.</source>
@@ -3337,20 +3337,8 @@ Inga indexfiler raderas.</translation>
         <translation>Skriv över befintliga värden</translation>
     </message>
     <message>
-        <source>Overwritten cards may need to use Restyle cards… to refresh their styling.</source>
-        <translation>Överskrivna kort kan behöva Formatera om kort… för att uppdatera sin formatering.</translation>
-    </message>
-    <message>
         <source>Scan Anki (read-only)</source>
         <translation>Sök igenom Anki (skrivskyddat)</translation>
-    </message>
-    <message>
-        <source>Restyle cards…</source>
-        <translation>Formatera om kort…</translation>
-    </message>
-    <message>
-        <source>Refresh the dictionary styling on every card of your note type</source>
-        <translation>Uppdatera ordboksformateringen på alla kort med din anteckningstyp</translation>
     </message>
     <message>
         <source>Cancel</source>
@@ -3409,6 +3397,10 @@ Inga indexfiler raderas.</translation>
         <translation>Söker igenom…</translation>
     </message>
     <message>
+        <source>(styling updated)</source>
+        <translation>(stil uppdaterad)</translation>
+    </message>
+    <message>
         <source>(formatted content)</source>
         <translation>(formaterat innehåll)</translation>
     </message>
@@ -3462,6 +3454,13 @@ Inga indexfiler raderas.</translation>
         <translation>
             <numerusform>%n fältvärde är redan uppdaterat.</numerusform>
             <numerusform>%n fältvärden är redan uppdaterade.</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>%n field(s) keep the old definition layout, which Styling cannot update. Scan with Definitions or Glossary and Overwrite existing values to rebuild them.</source>
+        <translation>
+            <numerusform>%n fält har kvar den gamla definitionslayouten, som ”Stil” inte kan uppdatera. Sök igenom Anki med ”Definitioner” eller ”Ordförklaringar” och ”Skriv över befintliga värden” markerade för att bygga om det.</numerusform>
+            <numerusform>%n fält har kvar den gamla definitionslayouten, som ”Stil” inte kan uppdatera. Sök igenom Anki med ”Definitioner” eller ”Ordförklaringar” och ”Skriv över befintliga värden” markerade för att bygga om dem.</numerusform>
         </translation>
     </message>
     <message numerus="yes">
@@ -7228,62 +7227,6 @@ Ord att lägga till: %3. Vill du fortsätta?</translation>
     <message>
         <source>Open Settings</source>
         <translation>Öppna inställningar</translation>
-    </message>
-    <message>
-        <source>Restyle Mined Cards</source>
-        <translation>Formatera om insamlade kort</translation>
-    </message>
-    <message>
-        <source>Re-applies the current built-in styling to your mined cards.
-
-Close Anki's card browser and note editor first — an open note can lose unsaved edits.
-
-Continue?</source>
-        <translation>Tillämpar den aktuella inbyggda formateringen på dina insamlade kort igen.
-
-Stäng Ankis kortbläddrare och anteckningsredigerare först – en öppen anteckning kan förlora osparade ändringar.
-
-Vill du fortsätta?</translation>
-    </message>
-    <message>
-        <source>Restyling cannot start: the Anki field mapping is not usable.</source>
-        <translation>Omformateringen kan inte starta: Anki-fältmappningen går inte att använda.</translation>
-    </message>
-    <message>
-        <source>Open Anki Settings</source>
-        <translation>Öppna Anki-inställningar</translation>
-    </message>
-    <message>
-        <source>Restyling mined cards…</source>
-        <translation>Formaterar om insamlade kort…</translation>
-    </message>
-    <message>
-        <source>Restyling mined cards… %1/%2</source>
-        <translation>Formaterar om insamlade kort… %1/%2</translation>
-    </message>
-    <message>
-        <source>Restyle incomplete</source>
-        <translation>Omformateringen är ofullständig</translation>
-    </message>
-    <message>
-        <source>%1 note update(s) were not confirmed; run Restyle again.</source>
-        <translation>%1 anteckningsuppdatering(ar) bekräftades inte. Kör omformateringen igen.</translation>
-    </message>
-    <message>
-        <source>Restyled %1 of %2 notes; %3 already up to date.</source>
-        <translation>%1 av %2 anteckningar har formaterats om; %3 var redan uppdaterade.</translation>
-    </message>
-    <message>
-        <source>Restyle complete</source>
-        <translation>Omformateringen är klar</translation>
-    </message>
-    <message>
-        <source>Restyle failed</source>
-        <translation>Omformateringen misslyckades</translation>
-    </message>
-    <message>
-        <source>The mined cards could not be restyled.</source>
-        <translation>De insamlade korten kunde inte formateras om.</translation>
     </message>
     <message>
         <source>Dictionaries:</source>

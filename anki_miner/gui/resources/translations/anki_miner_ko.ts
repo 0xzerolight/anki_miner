@@ -2804,8 +2804,8 @@ No index files are deleted.</source>
         <translation>기존 노트의 빈 필드 채우기</translation>
     </message>
     <message>
-        <source>Fill missing frequency, definition and word-audio fields on already-mined notes, plus pitch and reading for Japanese and your language's own card fields.</source>
-        <translation>이미 마이닝한 노트의 빈 빈도, 정의, 단어 오디오 필드를 채우고, 일본어의 피치와 읽기 및 해당 언어 고유의 카드 필드도 채웁니다.</translation>
+        <source>Fill missing frequency, definition and word-audio fields on already-mined notes, plus pitch and reading for Japanese and your language's own card fields, and refresh their styling.</source>
+        <translation>이미 마이닝한 노트의 빈 빈도, 정의, 단어 오디오 필드를 채우고, 일본어의 피치와 읽기 및 해당 언어 고유의 카드 필드도 채우며, 노트의 스타일도 새로 고칩니다.</translation>
     </message>
     <message>
         <source>Speech-to-text (no subtitles needed)</source>
@@ -3112,14 +3112,6 @@ No index files are deleted.</source>
         <translation>.mkv 또는 다른 동영상이나 그 폴더를 선택하고 자막 또는 오디오 트랙을 체크하면 각각을 다시 인코딩하지 않고 별도 파일로 복사해 저장합니다. 자막이 하나이면 동영상 이름을 따서 저장되므로 동영상 마이닝에서 찾을 수 있습니다. 동영상은 변경되지 않습니다.</translation>
     </message>
     <message>
-        <source>Restyle mined cards</source>
-        <translation>마이닝한 카드 스타일 다시 적용</translation>
-    </message>
-    <message>
-        <source>Re-apply the latest Anki Miner styling to cards you mined earlier -- Utilities → Card Backfill.</source>
-        <translation>이전에 마이닝한 카드에 최신 Anki Miner 스타일을 다시 적용합니다. 유틸리티 → 카드 보충에서 사용하세요.</translation>
-    </message>
-    <message>
         <source>System health check</source>
         <translation>시스템 상태 검사</translation>
     </message>
@@ -3314,12 +3306,20 @@ No index files are deleted.</source>
         <translation>용어집</translation>
     </message>
     <message>
+        <source>Styling</source>
+        <translation>스타일</translation>
+    </message>
+    <message>
         <source>Reading + furigana</source>
         <translation>읽기 + 후리가나</translation>
     </message>
     <message>
         <source>Word audio</source>
         <translation>단어 오디오</translation>
+    </message>
+    <message>
+        <source>Updates the styling embedded in the Definitions and Glossary fields. Their text stays as it is.</source>
+        <translation>정의 및 용어집 필드에 삽입된 스타일을 업데이트합니다. 텍스트는 그대로 유지됩니다.</translation>
     </message>
     <message>
         <source>Fills furigana from an existing reading and vice versa; does not generate new readings.</source>
@@ -3334,20 +3334,8 @@ No index files are deleted.</source>
         <translation>기존 값 덮어쓰기</translation>
     </message>
     <message>
-        <source>Overwritten cards may need to use Restyle cards… to refresh their styling.</source>
-        <translation>덮어쓴 카드는 카드 스타일 다시 적용…으로 스타일을 새로 고쳐야 할 수 있습니다.</translation>
-    </message>
-    <message>
         <source>Scan Anki (read-only)</source>
         <translation>Anki 검사(읽기 전용)</translation>
-    </message>
-    <message>
-        <source>Restyle cards…</source>
-        <translation>카드 스타일 다시 적용…</translation>
-    </message>
-    <message>
-        <source>Refresh the dictionary styling on every card of your note type</source>
-        <translation>노트 유형의 모든 카드에서 사전 스타일을 새로 고칩니다</translation>
     </message>
     <message>
         <source>Cancel</source>
@@ -3406,6 +3394,10 @@ No index files are deleted.</source>
         <translation>검사 중…</translation>
     </message>
     <message>
+        <source>(styling updated)</source>
+        <translation>(스타일 업데이트됨)</translation>
+    </message>
+    <message>
         <source>(formatted content)</source>
         <translation>(서식 있는 내용)</translation>
     </message>
@@ -3455,6 +3447,12 @@ No index files are deleted.</source>
         <source>%n field value(s) already up to date.</source>
         <translation>
             <numerusform>필드 값 %n개가 이미 최신 상태입니다.</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>%n field(s) keep the old definition layout, which Styling cannot update. Scan with Definitions or Glossary and Overwrite existing values to rebuild them.</source>
+        <translation>
+            <numerusform>필드 %n개가 이전 정의 레이아웃을 사용하고 있어 스타일 옵션으로는 업데이트할 수 없습니다. 다시 만들려면 정의 또는 용어집과 기존 값 덮어쓰기를 켜고 검사하세요.</numerusform>
         </translation>
     </message>
     <message numerus="yes">
@@ -7190,62 +7188,6 @@ Words to add: %3. Continue?</source>
     <message>
         <source>Open Settings</source>
         <translation>설정 열기</translation>
-    </message>
-    <message>
-        <source>Restyle Mined Cards</source>
-        <translation>마이닝한 카드 스타일 다시 적용</translation>
-    </message>
-    <message>
-        <source>Re-applies the current built-in styling to your mined cards.
-
-Close Anki's card browser and note editor first — an open note can lose unsaved edits.
-
-Continue?</source>
-        <translation>현재 기본 제공 스타일을 마이닝한 카드에 다시 적용합니다.
-
-먼저 Anki의 카드 브라우저와 노트 편집기를 닫으세요. 노트가 열려 있으면 저장하지 않은 편집 내용이 사라질 수 있습니다.
-
-계속하시겠습니까?</translation>
-    </message>
-    <message>
-        <source>Restyling cannot start: the Anki field mapping is not usable.</source>
-        <translation>스타일을 다시 적용할 수 없습니다: Anki 필드 매핑을 사용할 수 없습니다.</translation>
-    </message>
-    <message>
-        <source>Open Anki Settings</source>
-        <translation>Anki 설정 열기</translation>
-    </message>
-    <message>
-        <source>Restyling mined cards…</source>
-        <translation>마이닝한 카드에 스타일 적용 중…</translation>
-    </message>
-    <message>
-        <source>Restyling mined cards… %1/%2</source>
-        <translation>마이닝한 카드에 스타일 적용 중… %1/%2</translation>
-    </message>
-    <message>
-        <source>Restyle incomplete</source>
-        <translation>스타일 적용 미완료</translation>
-    </message>
-    <message>
-        <source>%1 note update(s) were not confirmed; run Restyle again.</source>
-        <translation>노트 %1개의 업데이트가 확인되지 않았습니다. 스타일 다시 적용을 다시 실행하세요.</translation>
-    </message>
-    <message>
-        <source>Restyled %1 of %2 notes; %3 already up to date.</source>
-        <translation>노트 %2개 중 %1개에 스타일을 다시 적용했습니다. %3개는 이미 최신 상태입니다.</translation>
-    </message>
-    <message>
-        <source>Restyle complete</source>
-        <translation>스타일 적용 완료</translation>
-    </message>
-    <message>
-        <source>Restyle failed</source>
-        <translation>스타일 적용 실패</translation>
-    </message>
-    <message>
-        <source>The mined cards could not be restyled.</source>
-        <translation>마이닝한 카드에 스타일을 다시 적용할 수 없습니다.</translation>
     </message>
     <message>
         <source>Dictionaries:</source>

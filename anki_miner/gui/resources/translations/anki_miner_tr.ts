@@ -2804,8 +2804,8 @@ Hiçbir dizin dosyası silinmez.</translation>
         <translation>Var olan notlardaki eksik alanları doldur</translation>
     </message>
     <message>
-        <source>Fill missing frequency, definition and word-audio fields on already-mined notes, plus pitch and reading for Japanese and your language's own card fields.</source>
-        <translation>Daha önce toplanmış notlardaki eksik sıklık, tanım ve kelime sesi alanlarını; Japonca için ayrıca perde ve okunuş alanlarını ve dilinize özgü kart alanlarını doldurun.</translation>
+        <source>Fill missing frequency, definition and word-audio fields on already-mined notes, plus pitch and reading for Japanese and your language's own card fields, and refresh their styling.</source>
+        <translation>Daha önce toplanmış notlardaki eksik sıklık, tanım ve kelime sesi alanlarını; Japonca için ayrıca perde ve okunuş alanlarını ve dilinize özgü kart alanlarını doldurun; notların biçimlendirmesini de yenileyin.</translation>
     </message>
     <message>
         <source>Speech-to-text (no subtitles needed)</source>
@@ -3112,14 +3112,6 @@ Hiçbir dizin dosyası silinmez.</translation>
         <translation>Bir .mkv veya başka bir video ya da bunların bulunduğu bir klasör seçin, altyazı veya ses parçalarını işaretleyin ve her birini yeniden kodlamadan kopyalanmış ayrı bir dosya olarak kaydedin. Tek bir altyazı videosunun adını alır, böylece Video toplama onu bulur. Video asla değiştirilmez.</translation>
     </message>
     <message>
-        <source>Restyle mined cards</source>
-        <translation>Toplanan kartları yeniden biçimlendir</translation>
-    </message>
-    <message>
-        <source>Re-apply the latest Anki Miner styling to cards you mined earlier -- Utilities → Card Backfill.</source>
-        <translation>Daha önce topladığınız kartlara en son Anki Miner biçimlendirmesini yeniden uygulayın — Yardımcılar → Kart Tamamla.</translation>
-    </message>
-    <message>
         <source>System health check</source>
         <translation>Sistem durumu denetimi</translation>
     </message>
@@ -3314,12 +3306,20 @@ Hiçbir dizin dosyası silinmez.</translation>
         <translation>Sözlükçe</translation>
     </message>
     <message>
+        <source>Styling</source>
+        <translation>Biçimlendirme</translation>
+    </message>
+    <message>
         <source>Reading + furigana</source>
         <translation>Okunuş + furigana</translation>
     </message>
     <message>
         <source>Word audio</source>
         <translation>Kelime sesi</translation>
+    </message>
+    <message>
+        <source>Updates the styling embedded in the Definitions and Glossary fields. Their text stays as it is.</source>
+        <translation>Tanımlar ve Sözlükçe alanlarına gömülü biçimlendirmeyi günceller. Metinleri olduğu gibi kalır.</translation>
     </message>
     <message>
         <source>Fills furigana from an existing reading and vice versa; does not generate new readings.</source>
@@ -3334,20 +3334,8 @@ Hiçbir dizin dosyası silinmez.</translation>
         <translation>Var olan değerlerin üzerine yaz</translation>
     </message>
     <message>
-        <source>Overwritten cards may need to use Restyle cards… to refresh their styling.</source>
-        <translation>Üzerine yazılan kartların biçimlendirmesini yenilemek için Kartları yeniden biçimlendir… kullanılması gerekebilir.</translation>
-    </message>
-    <message>
         <source>Scan Anki (read-only)</source>
         <translation>Anki'yi tara (salt okunur)</translation>
-    </message>
-    <message>
-        <source>Restyle cards…</source>
-        <translation>Kartları yeniden biçimlendir…</translation>
-    </message>
-    <message>
-        <source>Refresh the dictionary styling on every card of your note type</source>
-        <translation>Not türünüzün tüm kartlarındaki sözlük biçimlendirmesini yenile</translation>
     </message>
     <message>
         <source>Cancel</source>
@@ -3406,6 +3394,10 @@ Hiçbir dizin dosyası silinmez.</translation>
         <translation>Taranıyor…</translation>
     </message>
     <message>
+        <source>(styling updated)</source>
+        <translation>(güncellenmiş biçimlendirme)</translation>
+    </message>
+    <message>
         <source>(formatted content)</source>
         <translation>(biçimlendirilmiş içerik)</translation>
     </message>
@@ -3455,6 +3447,12 @@ Hiçbir dizin dosyası silinmez.</translation>
         <source>%n field value(s) already up to date.</source>
         <translation>
             <numerusform>%n alan değeri zaten güncel.</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>%n field(s) keep the old definition layout, which Styling cannot update. Scan with Definitions or Glossary and Overwrite existing values to rebuild them.</source>
+        <translation>
+            <numerusform>%n alan, “Biçimlendirme” seçeneğinin güncelleyemediği eski tanım düzenini koruyor. Bunları yeniden oluşturmak için “Tanımlar” veya “Sözlükçe” ile “Var olan değerlerin üzerine yaz” seçiliyken tarayın.</numerusform>
         </translation>
     </message>
     <message numerus="yes">
@@ -7190,62 +7188,6 @@ Eklenecek kelimeler: %3. Devam edilsin mi?</translation>
     <message>
         <source>Open Settings</source>
         <translation>Ayarları aç</translation>
-    </message>
-    <message>
-        <source>Restyle Mined Cards</source>
-        <translation>Toplanan kartları yeniden biçimlendir</translation>
-    </message>
-    <message>
-        <source>Re-applies the current built-in styling to your mined cards.
-
-Close Anki's card browser and note editor first — an open note can lose unsaved edits.
-
-Continue?</source>
-        <translation>Geçerli yerleşik biçimlendirmeyi toplanan kartlarınıza yeniden uygular.
-
-Önce Anki'nin kart tarayıcısını ve not düzenleyicisini kapatın — açık bir not kaydedilmemiş düzenlemelerini kaybedebilir.
-
-Devam edilsin mi?</translation>
-    </message>
-    <message>
-        <source>Restyling cannot start: the Anki field mapping is not usable.</source>
-        <translation>Yeniden biçimlendirme başlatılamıyor: Anki alan eşlemesi kullanılabilir değil.</translation>
-    </message>
-    <message>
-        <source>Open Anki Settings</source>
-        <translation>Anki ayarlarını aç</translation>
-    </message>
-    <message>
-        <source>Restyling mined cards…</source>
-        <translation>Toplanan kartlar yeniden biçimlendiriliyor…</translation>
-    </message>
-    <message>
-        <source>Restyling mined cards… %1/%2</source>
-        <translation>Toplanan kartlar yeniden biçimlendiriliyor… %1/%2</translation>
-    </message>
-    <message>
-        <source>Restyle incomplete</source>
-        <translation>Yeniden biçimlendirme tamamlanmadı</translation>
-    </message>
-    <message>
-        <source>%1 note update(s) were not confirmed; run Restyle again.</source>
-        <translation>%1 not güncellemesi onaylanmadı; yeniden biçimlendirmeyi tekrar çalıştırın.</translation>
-    </message>
-    <message>
-        <source>Restyled %1 of %2 notes; %3 already up to date.</source>
-        <translation>%2 nottan %1 tanesi yeniden biçimlendirildi; %3 tanesi zaten güncel.</translation>
-    </message>
-    <message>
-        <source>Restyle complete</source>
-        <translation>Yeniden biçimlendirme tamamlandı</translation>
-    </message>
-    <message>
-        <source>Restyle failed</source>
-        <translation>Yeniden biçimlendirme başarısız</translation>
-    </message>
-    <message>
-        <source>The mined cards could not be restyled.</source>
-        <translation>Toplanan kartlar yeniden biçimlendirilemedi.</translation>
     </message>
     <message>
         <source>Dictionaries:</source>

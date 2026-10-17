@@ -2804,8 +2804,8 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Isi bidang yang hilang pada catatan yang ada</translation>
     </message>
     <message>
-        <source>Fill missing frequency, definition and word-audio fields on already-mined notes, plus pitch and reading for Japanese and your language's own card fields.</source>
-        <translation>Mengisi bidang frekuensi, definisi, dan audio kata yang kosong pada catatan yang sudah ditambang, ditambah aksen nada dan cara baca untuk bahasa Jepang serta bidang kartu khusus bahasa Anda.</translation>
+        <source>Fill missing frequency, definition and word-audio fields on already-mined notes, plus pitch and reading for Japanese and your language's own card fields, and refresh their styling.</source>
+        <translation>Mengisi bidang frekuensi, definisi, dan audio kata yang kosong pada catatan yang sudah ditambang, ditambah aksen nada dan cara baca untuk bahasa Jepang serta bidang kartu khusus bahasa Anda, sekaligus menyegarkan penataannya.</translation>
     </message>
     <message>
         <source>Speech-to-text (no subtitles needed)</source>
@@ -3112,14 +3112,6 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Pilih berkas .mkv atau video lain, atau folder berisi video, centang trek subtitel atau audionya, lalu simpan masing-masing sebagai berkas tersendiri, disalin tanpa enkode ulang. Jika hanya satu subtitel yang dicentang, subtitel itu diberi nama sesuai videonya agar ditemukan oleh Mining Video. Video tidak pernah diubah.</translation>
     </message>
     <message>
-        <source>Restyle mined cards</source>
-        <translation>Ubah gaya kartu hasil mining</translation>
-    </message>
-    <message>
-        <source>Re-apply the latest Anki Miner styling to cards you mined earlier -- Utilities → Card Backfill.</source>
-        <translation>Terapkan ulang gaya Anki Miner terbaru ke kartu yang sudah Anda mining sebelumnya — Utilitas → Pengisian Bidang Kartu.</translation>
-    </message>
-    <message>
         <source>System health check</source>
         <translation>Pemeriksaan kesehatan sistem</translation>
     </message>
@@ -3314,12 +3306,20 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Glosarium</translation>
     </message>
     <message>
+        <source>Styling</source>
+        <translation>Penataan</translation>
+    </message>
+    <message>
         <source>Reading + furigana</source>
         <translation>Bacaan + furigana</translation>
     </message>
     <message>
         <source>Word audio</source>
         <translation>Audio kata</translation>
+    </message>
+    <message>
+        <source>Updates the styling embedded in the Definitions and Glossary fields. Their text stays as it is.</source>
+        <translation>Memperbarui penataan yang tertanam di bidang Definisi dan Glosarium. Teksnya tetap seperti semula.</translation>
     </message>
     <message>
         <source>Fills furigana from an existing reading and vice versa; does not generate new readings.</source>
@@ -3334,20 +3334,8 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Timpa nilai yang ada</translation>
     </message>
     <message>
-        <source>Overwritten cards may need to use Restyle cards… to refresh their styling.</source>
-        <translation>Kartu yang ditimpa mungkin perlu memakai Tata ulang kartu… untuk menyegarkan gayanya.</translation>
-    </message>
-    <message>
         <source>Scan Anki (read-only)</source>
         <translation>Pindai Anki (hanya-baca)</translation>
-    </message>
-    <message>
-        <source>Restyle cards…</source>
-        <translation>Tata ulang kartu…</translation>
-    </message>
-    <message>
-        <source>Refresh the dictionary styling on every card of your note type</source>
-        <translation>Segarkan gaya kamus pada setiap kartu dari tipe catatan Anda</translation>
     </message>
     <message>
         <source>Cancel</source>
@@ -3406,6 +3394,10 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Memindai…</translation>
     </message>
     <message>
+        <source>(styling updated)</source>
+        <translation>(penataan diperbarui)</translation>
+    </message>
+    <message>
         <source>(formatted content)</source>
         <translation>(konten terformat)</translation>
     </message>
@@ -3455,6 +3447,12 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <source>%n field value(s) already up to date.</source>
         <translation>
             <numerusform>%n nilai bidang sudah terkini.</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>%n field(s) keep the old definition layout, which Styling cannot update. Scan with Definitions or Glossary and Overwrite existing values to rebuild them.</source>
+        <translation>
+            <numerusform>%n bidang masih memakai tata letak definisi lama yang tidak dapat diperbarui oleh “Penataan”. Untuk membangunnya kembali, pindai dengan “Definisi” atau “Glosarium” serta “Timpa nilai yang ada” dicentang.</numerusform>
         </translation>
     </message>
     <message numerus="yes">
@@ -7190,62 +7188,6 @@ Kata yang akan ditambahkan: %3. Lanjutkan?</translation>
     <message>
         <source>Open Settings</source>
         <translation>Buka Pengaturan</translation>
-    </message>
-    <message>
-        <source>Restyle Mined Cards</source>
-        <translation>Tata Ulang Kartu Hasil Mining</translation>
-    </message>
-    <message>
-        <source>Re-applies the current built-in styling to your mined cards.
-
-Close Anki's card browser and note editor first — an open note can lose unsaved edits.
-
-Continue?</source>
-        <translation>Menerapkan ulang gaya bawaan saat ini pada kartu hasil mining Anda.
-
-Tutup peramban kartu Anki dan editor catatan terlebih dahulu — catatan yang terbuka dapat kehilangan perubahan yang belum disimpan.
-
-Lanjutkan?</translation>
-    </message>
-    <message>
-        <source>Restyling cannot start: the Anki field mapping is not usable.</source>
-        <translation>Penataan ulang tidak dapat dimulai: pemetaan bidang Anki tidak dapat digunakan.</translation>
-    </message>
-    <message>
-        <source>Open Anki Settings</source>
-        <translation>Buka Pengaturan Anki</translation>
-    </message>
-    <message>
-        <source>Restyling mined cards…</source>
-        <translation>Menata ulang kartu hasil mining…</translation>
-    </message>
-    <message>
-        <source>Restyling mined cards… %1/%2</source>
-        <translation>Menata ulang kartu hasil mining… %1/%2</translation>
-    </message>
-    <message>
-        <source>Restyle incomplete</source>
-        <translation>Tata Ulang belum selesai</translation>
-    </message>
-    <message>
-        <source>%1 note update(s) were not confirmed; run Restyle again.</source>
-        <translation>%1 pembaruan catatan tidak dikonfirmasi; jalankan Tata Ulang lagi.</translation>
-    </message>
-    <message>
-        <source>Restyled %1 of %2 notes; %3 already up to date.</source>
-        <translation>%1 dari %2 catatan ditata ulang; %3 sudah terkini.</translation>
-    </message>
-    <message>
-        <source>Restyle complete</source>
-        <translation>Penataan ulang selesai</translation>
-    </message>
-    <message>
-        <source>Restyle failed</source>
-        <translation>Penataan ulang gagal</translation>
-    </message>
-    <message>
-        <source>The mined cards could not be restyled.</source>
-        <translation>Kartu yang di-mining tidak dapat ditata ulang.</translation>
     </message>
     <message>
         <source>Dictionaries:</source>

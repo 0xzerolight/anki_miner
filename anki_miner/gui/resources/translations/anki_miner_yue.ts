@@ -2804,8 +2804,8 @@ No index files are deleted.</source>
         <translation>幫現有筆記補填欄位</translation>
     </message>
     <message>
-        <source>Fill missing frequency, definition and word-audio fields on already-mined notes, plus pitch and reading for Japanese and your language's own card fields.</source>
-        <translation>幫已採集嘅筆記補返缺少嘅詞頻、釋義同詞語音訊欄位，日文另外補音調同讀音，仲有你語言自己嘅卡片欄位。</translation>
+        <source>Fill missing frequency, definition and word-audio fields on already-mined notes, plus pitch and reading for Japanese and your language's own card fields, and refresh their styling.</source>
+        <translation>幫已採集嘅筆記補返缺少嘅詞頻、釋義同詞語音訊欄位，日文另外補音調同讀音，仲有你語言自己嘅卡片欄位，同埋更新呢啲筆記嘅樣式。</translation>
     </message>
     <message>
         <source>Speech-to-text (no subtitles needed)</source>
@@ -3112,14 +3112,6 @@ No index files are deleted.</source>
         <translation>揀一個 .mkv 或者其他影片，又或者一個影片資料夾，剔選佢嘅字幕或音訊軌道，每條各自儲存成一個檔案，直接複製唔重新編碼。單一字幕會用影片名命名，等影片採集搵得到。影片本身永遠唔會被改動。</translation>
     </message>
     <message>
-        <source>Restyle mined cards</source>
-        <translation>重新套用卡片樣式</translation>
-    </message>
-    <message>
-        <source>Re-apply the latest Anki Miner styling to cards you mined earlier -- Utilities → Card Backfill.</source>
-        <translation>將最新嘅 Anki Miner 樣式重新套用到你之前採集嘅卡片 -- 「實用工具 → 卡片補填」。</translation>
-    </message>
-    <message>
         <source>System health check</source>
         <translation>系統健康檢查</translation>
     </message>
@@ -3314,12 +3306,20 @@ No index files are deleted.</source>
         <translation>詞彙表</translation>
     </message>
     <message>
+        <source>Styling</source>
+        <translation>樣式</translation>
+    </message>
+    <message>
         <source>Reading + furigana</source>
         <translation>讀音 + 振假名</translation>
     </message>
     <message>
         <source>Word audio</source>
         <translation>詞語發音</translation>
+    </message>
+    <message>
+        <source>Updates the styling embedded in the Definitions and Glossary fields. Their text stays as it is.</source>
+        <translation>更新「釋義」同「詞彙表」欄位入面嵌咗嘅樣式，啲文字唔會變。</translation>
     </message>
     <message>
         <source>Fills furigana from an existing reading and vice versa; does not generate new readings.</source>
@@ -3334,20 +3334,8 @@ No index files are deleted.</source>
         <translation>覆寫現有值</translation>
     </message>
     <message>
-        <source>Overwritten cards may need to use Restyle cards… to refresh their styling.</source>
-        <translation>被覆寫嘅卡片可能要用「重新套用卡片樣式…」更新佢哋嘅樣式。</translation>
-    </message>
-    <message>
         <source>Scan Anki (read-only)</source>
         <translation>掃描 Anki（唯讀）</translation>
-    </message>
-    <message>
-        <source>Restyle cards…</source>
-        <translation>重新套用卡片樣式…</translation>
-    </message>
-    <message>
-        <source>Refresh the dictionary styling on every card of your note type</source>
-        <translation>更新你筆記類型每張卡片嘅字典樣式</translation>
     </message>
     <message>
         <source>Cancel</source>
@@ -3406,6 +3394,10 @@ No index files are deleted.</source>
         <translation>掃描中…</translation>
     </message>
     <message>
+        <source>(styling updated)</source>
+        <translation>（已更新樣式）</translation>
+    </message>
+    <message>
         <source>(formatted content)</source>
         <translation>（格式化內容）</translation>
     </message>
@@ -3455,6 +3447,12 @@ No index files are deleted.</source>
         <source>%n field value(s) already up to date.</source>
         <translation>
             <numerusform>%n 個欄位值已經係最新。</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>%n field(s) keep the old definition layout, which Styling cannot update. Scan with Definitions or Glossary and Overwrite existing values to rebuild them.</source>
+        <translation>
+            <numerusform>%n 個欄位仲係舊式釋義排版，「樣式」更新唔到佢哋。要重建嘅話，剔「釋義」或者「詞彙表」同埋「覆寫現有值」再掃描。</numerusform>
         </translation>
     </message>
     <message numerus="yes">
@@ -7190,62 +7188,6 @@ Words to add: %3. Continue?</source>
     <message>
         <source>Open Settings</source>
         <translation>打開設定</translation>
-    </message>
-    <message>
-        <source>Restyle Mined Cards</source>
-        <translation>重新套用卡片樣式</translation>
-    </message>
-    <message>
-        <source>Re-applies the current built-in styling to your mined cards.
-
-Close Anki's card browser and note editor first — an open note can lose unsaved edits.
-
-Continue?</source>
-        <translation>將目前內建嘅樣式重新套用到你採集咗嘅卡片。
-
-請先關閉 Anki 嘅卡片瀏覽器同筆記編輯器 — 打開緊嘅筆記可能會冇咗未儲存嘅修改。
-
-繼續？</translation>
-    </message>
-    <message>
-        <source>Restyling cannot start: the Anki field mapping is not usable.</source>
-        <translation>開始唔到重新套用樣式：Anki 欄位對應用唔到。</translation>
-    </message>
-    <message>
-        <source>Open Anki Settings</source>
-        <translation>打開 Anki 設定</translation>
-    </message>
-    <message>
-        <source>Restyling mined cards…</source>
-        <translation>重新套用緊卡片樣式…</translation>
-    </message>
-    <message>
-        <source>Restyling mined cards… %1/%2</source>
-        <translation>重新套用緊卡片樣式… %1/%2</translation>
-    </message>
-    <message>
-        <source>Restyle incomplete</source>
-        <translation>重新套用樣式未完成</translation>
-    </message>
-    <message>
-        <source>%1 note update(s) were not confirmed; run Restyle again.</source>
-        <translation>有 %1 個筆記更新未確認；請再執行一次重新套用樣式。</translation>
-    </message>
-    <message>
-        <source>Restyled %1 of %2 notes; %3 already up to date.</source>
-        <translation>已重新套用 %2 個筆記之中嘅 %1 個；%3 個本身已經係最新。</translation>
-    </message>
-    <message>
-        <source>Restyle complete</source>
-        <translation>重新套用樣式完成</translation>
-    </message>
-    <message>
-        <source>Restyle failed</source>
-        <translation>重新套用樣式失敗</translation>
-    </message>
-    <message>
-        <source>The mined cards could not be restyled.</source>
-        <translation>重新套用唔到已採集卡片嘅樣式。</translation>
     </message>
     <message>
         <source>Dictionaries:</source>

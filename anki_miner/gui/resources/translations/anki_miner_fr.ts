@@ -2807,8 +2807,8 @@ Aucun fichier d'index n'est supprimé.</translation>
         <translation>Remplir les champs manquants des notes existantes</translation>
     </message>
     <message>
-        <source>Fill missing frequency, definition and word-audio fields on already-mined notes, plus pitch and reading for Japanese and your language's own card fields.</source>
-        <translation>Remplit les champs de fréquence, de définition et d'audio du mot manquants sur les notes déjà extraites, ainsi que l'accent de hauteur et la lecture pour le japonais et les champs de carte propres à votre langue.</translation>
+        <source>Fill missing frequency, definition and word-audio fields on already-mined notes, plus pitch and reading for Japanese and your language's own card fields, and refresh their styling.</source>
+        <translation>Remplit les champs de fréquence, de définition et d'audio du mot manquants sur les notes déjà extraites, ainsi que l'accent de hauteur et la lecture pour le japonais et les champs de carte propres à votre langue, et actualise leur style.</translation>
     </message>
     <message>
         <source>Speech-to-text (no subtitles needed)</source>
@@ -3115,14 +3115,6 @@ Aucun fichier d'index n'est supprimé.</translation>
         <translation>Choisissez un fichier .mkv ou une autre vidéo, ou un dossier de vidéos, cochez ses pistes de sous-titres ou audio et enregistrez chacune dans son propre fichier, copiée sans réencodage. Un sous-titre seul prend le nom de sa vidéo, afin que l'onglet Vidéo le trouve lors de l'extraction. La vidéo n'est jamais modifiée.</translation>
     </message>
     <message>
-        <source>Restyle mined cards</source>
-        <translation>Réappliquer le style aux cartes extraites</translation>
-    </message>
-    <message>
-        <source>Re-apply the latest Anki Miner styling to cards you mined earlier -- Utilities → Card Backfill.</source>
-        <translation>Réappliquez le dernier style d'Anki Miner aux cartes que vous avez extraites précédemment — Utilitaires → Complétion des cartes.</translation>
-    </message>
-    <message>
         <source>System health check</source>
         <translation>Vérification de l'état du système</translation>
     </message>
@@ -3317,12 +3309,20 @@ Aucun fichier d'index n'est supprimé.</translation>
         <translation>Glossaire</translation>
     </message>
     <message>
+        <source>Styling</source>
+        <translation>Style</translation>
+    </message>
+    <message>
         <source>Reading + furigana</source>
         <translation>Lecture + furigana</translation>
     </message>
     <message>
         <source>Word audio</source>
         <translation>Audio du mot</translation>
+    </message>
+    <message>
+        <source>Updates the styling embedded in the Definitions and Glossary fields. Their text stays as it is.</source>
+        <translation>Met à jour le style intégré dans les champs Définitions et Glossaire. Leur texte reste inchangé.</translation>
     </message>
     <message>
         <source>Fills furigana from an existing reading and vice versa; does not generate new readings.</source>
@@ -3337,20 +3337,8 @@ Aucun fichier d'index n'est supprimé.</translation>
         <translation>Écraser les valeurs existantes</translation>
     </message>
     <message>
-        <source>Overwritten cards may need to use Restyle cards… to refresh their styling.</source>
-        <translation>Les cartes écrasées peuvent nécessiter « Redéfinir le style des cartes… » pour actualiser leur style.</translation>
-    </message>
-    <message>
         <source>Scan Anki (read-only)</source>
         <translation>Analyser Anki (lecture seule)</translation>
-    </message>
-    <message>
-        <source>Restyle cards…</source>
-        <translation>Redéfinir le style des cartes…</translation>
-    </message>
-    <message>
-        <source>Refresh the dictionary styling on every card of your note type</source>
-        <translation>Actualiser le style du dictionnaire sur toutes les cartes de votre type de note</translation>
     </message>
     <message>
         <source>Cancel</source>
@@ -3409,6 +3397,10 @@ Aucun fichier d'index n'est supprimé.</translation>
         <translation>Analyse…</translation>
     </message>
     <message>
+        <source>(styling updated)</source>
+        <translation>(style mis à jour)</translation>
+    </message>
+    <message>
         <source>(formatted content)</source>
         <translation>(contenu mis en forme)</translation>
     </message>
@@ -3462,6 +3454,13 @@ Aucun fichier d'index n'est supprimé.</translation>
         <translation>
             <numerusform>%n valeur de champ déjà à jour.</numerusform>
             <numerusform>%n valeurs de champ déjà à jour.</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>%n field(s) keep the old definition layout, which Styling cannot update. Scan with Definitions or Glossary and Overwrite existing values to rebuild them.</source>
+        <translation>
+            <numerusform>%n champ conserve l'ancienne mise en page des définitions, que Style ne peut pas mettre à jour. Analysez avec Définitions ou Glossaire et Écraser les valeurs existantes pour le reconstruire.</numerusform>
+            <numerusform>%n champs conservent l'ancienne mise en page des définitions, que Style ne peut pas mettre à jour. Analysez avec Définitions ou Glossaire et Écraser les valeurs existantes pour les reconstruire.</numerusform>
         </translation>
     </message>
     <message numerus="yes">
@@ -7228,62 +7227,6 @@ Mots à ajouter : %3. Continuer ?</translation>
     <message>
         <source>Open Settings</source>
         <translation>Ouvrir les paramètres</translation>
-    </message>
-    <message>
-        <source>Restyle Mined Cards</source>
-        <translation>Redéfinir le style des cartes extraites</translation>
-    </message>
-    <message>
-        <source>Re-applies the current built-in styling to your mined cards.
-
-Close Anki's card browser and note editor first — an open note can lose unsaved edits.
-
-Continue?</source>
-        <translation>Réapplique le style intégré actuel à vos cartes extraites.
-
-Fermez d'abord le navigateur de cartes et l'éditeur de notes d'Anki — une note ouverte peut perdre des modifications non enregistrées.
-
-Continuer ?</translation>
-    </message>
-    <message>
-        <source>Restyling cannot start: the Anki field mapping is not usable.</source>
-        <translation>La mise à jour du style ne peut pas démarrer : le mappage des champs Anki n'est pas utilisable.</translation>
-    </message>
-    <message>
-        <source>Open Anki Settings</source>
-        <translation>Ouvrir les paramètres Anki</translation>
-    </message>
-    <message>
-        <source>Restyling mined cards…</source>
-        <translation>Redéfinition du style des cartes extraites…</translation>
-    </message>
-    <message>
-        <source>Restyling mined cards… %1/%2</source>
-        <translation>Redéfinition du style des cartes extraites… %1/%2</translation>
-    </message>
-    <message>
-        <source>Restyle incomplete</source>
-        <translation>Restylage incomplet</translation>
-    </message>
-    <message>
-        <source>%1 note update(s) were not confirmed; run Restyle again.</source>
-        <translation>%1 mise(s) à jour de note n'ont pas été confirmées ; relancez le Restylage.</translation>
-    </message>
-    <message>
-        <source>Restyled %1 of %2 notes; %3 already up to date.</source>
-        <translation>%1 note(s) sur %2 restylée(s) ; %3 déjà à jour.</translation>
-    </message>
-    <message>
-        <source>Restyle complete</source>
-        <translation>Redéfinition du style terminée</translation>
-    </message>
-    <message>
-        <source>Restyle failed</source>
-        <translation>Échec de la redéfinition du style</translation>
-    </message>
-    <message>
-        <source>The mined cards could not be restyled.</source>
-        <translation>Le style des cartes extraites n'a pas pu être mis à jour.</translation>
     </message>
     <message>
         <source>Dictionaries:</source>

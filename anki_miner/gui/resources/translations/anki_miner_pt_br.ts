@@ -2807,8 +2807,8 @@ Nenhum arquivo de índice é excluído.</translation>
         <translation>Preencher campos ausentes em notas existentes</translation>
     </message>
     <message>
-        <source>Fill missing frequency, definition and word-audio fields on already-mined notes, plus pitch and reading for Japanese and your language's own card fields.</source>
-        <translation>Preenche os campos ausentes de frequência, definição e áudio da palavra em notas já mineradas, além de acento tonal e leitura para japonês e dos campos de cartão próprios do seu idioma.</translation>
+        <source>Fill missing frequency, definition and word-audio fields on already-mined notes, plus pitch and reading for Japanese and your language's own card fields, and refresh their styling.</source>
+        <translation>Preenche os campos ausentes de frequência, definição e áudio da palavra em notas já mineradas, além de acento tonal e leitura para japonês e dos campos de cartão próprios do seu idioma, e atualiza o estilo delas.</translation>
     </message>
     <message>
         <source>Speech-to-text (no subtitles needed)</source>
@@ -3115,14 +3115,6 @@ Nenhum arquivo de índice é excluído.</translation>
         <translation>Escolha um .mkv ou outro vídeo, ou uma pasta de vídeos, marque as faixas de legenda ou de áudio e salve cada uma como um arquivo próprio, copiada sem recodificação. Se houver uma só legenda, ela recebe o nome do vídeo, para que a mineração da aba Vídeo a encontre. O vídeo nunca é alterado.</translation>
     </message>
     <message>
-        <source>Restyle mined cards</source>
-        <translation>Reestilizar cartões minerados</translation>
-    </message>
-    <message>
-        <source>Re-apply the latest Anki Miner styling to cards you mined earlier -- Utilities → Card Backfill.</source>
-        <translation>Reaplique o estilo mais recente do Anki Miner aos cartões que você minerou antes — Utilitários → Preenchimento retroativo de cartões.</translation>
-    </message>
-    <message>
         <source>System health check</source>
         <translation>Verificação de integridade do sistema</translation>
     </message>
@@ -3317,12 +3309,20 @@ Nenhum arquivo de índice é excluído.</translation>
         <translation>Glossário</translation>
     </message>
     <message>
+        <source>Styling</source>
+        <translation>Estilo</translation>
+    </message>
+    <message>
         <source>Reading + furigana</source>
         <translation>Leitura + furigana</translation>
     </message>
     <message>
         <source>Word audio</source>
         <translation>Áudio da palavra</translation>
+    </message>
+    <message>
+        <source>Updates the styling embedded in the Definitions and Glossary fields. Their text stays as it is.</source>
+        <translation>Atualiza o estilo incorporado nos campos Definições e Glossário. O texto deles não é alterado.</translation>
     </message>
     <message>
         <source>Fills furigana from an existing reading and vice versa; does not generate new readings.</source>
@@ -3337,20 +3337,8 @@ Nenhum arquivo de índice é excluído.</translation>
         <translation>Sobrescrever valores existentes</translation>
     </message>
     <message>
-        <source>Overwritten cards may need to use Restyle cards… to refresh their styling.</source>
-        <translation>Cartões sobrescritos podem precisar de Reestilizar cartões… para atualizar o estilo.</translation>
-    </message>
-    <message>
         <source>Scan Anki (read-only)</source>
         <translation>Examinar o Anki (somente leitura)</translation>
-    </message>
-    <message>
-        <source>Restyle cards…</source>
-        <translation>Reestilizar cartões…</translation>
-    </message>
-    <message>
-        <source>Refresh the dictionary styling on every card of your note type</source>
-        <translation>Atualizar o estilo do dicionário em todos os cartões do seu tipo de nota</translation>
     </message>
     <message>
         <source>Cancel</source>
@@ -3409,6 +3397,10 @@ Nenhum arquivo de índice é excluído.</translation>
         <translation>Verificando…</translation>
     </message>
     <message>
+        <source>(styling updated)</source>
+        <translation>(estilo atualizado)</translation>
+    </message>
+    <message>
         <source>(formatted content)</source>
         <translation>(conteúdo formatado)</translation>
     </message>
@@ -3462,6 +3454,13 @@ Nenhum arquivo de índice é excluído.</translation>
         <translation>
             <numerusform>%n valor de campo já está atualizado.</numerusform>
             <numerusform>%n valores de campo já estão atualizados.</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>%n field(s) keep the old definition layout, which Styling cannot update. Scan with Definitions or Glossary and Overwrite existing values to rebuild them.</source>
+        <translation>
+            <numerusform>%n campo mantém o formato antigo das definições, que Estilo não pode atualizar. Examine com Definições ou Glossário e Sobrescrever valores existentes para reconstruí-lo.</numerusform>
+            <numerusform>%n campos mantêm o formato antigo das definições, que Estilo não pode atualizar. Examine com Definições ou Glossário e Sobrescrever valores existentes para reconstruí-los.</numerusform>
         </translation>
     </message>
     <message numerus="yes">
@@ -7228,62 +7227,6 @@ Palavras a adicionar: %3. Continuar?</translation>
     <message>
         <source>Open Settings</source>
         <translation>Abrir Configurações</translation>
-    </message>
-    <message>
-        <source>Restyle Mined Cards</source>
-        <translation>Reestilizar Cartões Minerados</translation>
-    </message>
-    <message>
-        <source>Re-applies the current built-in styling to your mined cards.
-
-Close Anki's card browser and note editor first — an open note can lose unsaved edits.
-
-Continue?</source>
-        <translation>Reaplica o estilo interno atual aos seus cartões minerados.
-
-Feche antes o navegador de cartões e o editor de notas do Anki — uma nota aberta pode perder edições não salvas.
-
-Continuar?</translation>
-    </message>
-    <message>
-        <source>Restyling cannot start: the Anki field mapping is not usable.</source>
-        <translation>Não é possível iniciar a reaplicação de estilo: o mapeamento de campos do Anki não é utilizável.</translation>
-    </message>
-    <message>
-        <source>Open Anki Settings</source>
-        <translation>Abrir Configurações do Anki</translation>
-    </message>
-    <message>
-        <source>Restyling mined cards…</source>
-        <translation>Reestilizando cartões minerados…</translation>
-    </message>
-    <message>
-        <source>Restyling mined cards… %1/%2</source>
-        <translation>Reestilizando cartões minerados… %1/%2</translation>
-    </message>
-    <message>
-        <source>Restyle incomplete</source>
-        <translation>Reestilização incompleta</translation>
-    </message>
-    <message>
-        <source>%1 note update(s) were not confirmed; run Restyle again.</source>
-        <translation>%1 atualização(ões) de nota não foram confirmadas; execute a reestilização novamente.</translation>
-    </message>
-    <message>
-        <source>Restyled %1 of %2 notes; %3 already up to date.</source>
-        <translation>Reestilizadas %1 de %2 notas; %3 já atualizadas.</translation>
-    </message>
-    <message>
-        <source>Restyle complete</source>
-        <translation>Reestilização concluída</translation>
-    </message>
-    <message>
-        <source>Restyle failed</source>
-        <translation>Falha na reestilização</translation>
-    </message>
-    <message>
-        <source>The mined cards could not be restyled.</source>
-        <translation>Não foi possível reaplicar o estilo aos cartões minerados.</translation>
     </message>
     <message>
         <source>Dictionaries:</source>

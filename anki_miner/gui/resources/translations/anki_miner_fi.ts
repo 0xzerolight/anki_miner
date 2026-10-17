@@ -2807,8 +2807,8 @@ Indeksitiedostoja ei poisteta.</translation>
         <translation>Täytä puuttuvat kentät olemassa oleviin muistiinpanoihin</translation>
     </message>
     <message>
-        <source>Fill missing frequency, definition and word-audio fields on already-mined notes, plus pitch and reading for Japanese and your language's own card fields.</source>
-        <translation>Täytä jo louhittujen muistiinpanojen puuttuvat yleisyys-, määritelmä- ja sanaäänikentät sekä japanin sävelkorko ja lukutapa ja kielesi omat korttikentät.</translation>
+        <source>Fill missing frequency, definition and word-audio fields on already-mined notes, plus pitch and reading for Japanese and your language's own card fields, and refresh their styling.</source>
+        <translation>Täytä jo louhittujen muistiinpanojen puuttuvat yleisyys-, määritelmä- ja sanaäänikentät sekä japanin sävelkorko ja lukutapa ja kielesi omat korttikentät. Päivitä myös muistiinpanojen tyyli.</translation>
     </message>
     <message>
         <source>Speech-to-text (no subtitles needed)</source>
@@ -3115,14 +3115,6 @@ Indeksitiedostoja ei poisteta.</translation>
         <translation>Valitse .mkv tai muu video tai niitä sisältävä kansio, rastita sen tekstitys- tai ääniraidat ja tallenna kukin omaksi tiedostokseen ilman uudelleenkoodausta. Yksittäinen tekstitys nimetään videonsa mukaan, jotta Video-louhinta löytää sen. Videota ei koskaan muuteta.</translation>
     </message>
     <message>
-        <source>Restyle mined cards</source>
-        <translation>Muotoile louhitut kortit uudelleen</translation>
-    </message>
-    <message>
-        <source>Re-apply the latest Anki Miner styling to cards you mined earlier -- Utilities → Card Backfill.</source>
-        <translation>Käytä aiemmin louhimiisi kortteihin uusinta Anki Miner -tyyliä -- Apuvälineet → Täydennys.</translation>
-    </message>
-    <message>
         <source>System health check</source>
         <translation>Järjestelmän kunnon tarkistus</translation>
     </message>
@@ -3317,12 +3309,20 @@ Indeksitiedostoja ei poisteta.</translation>
         <translation>Sanasto</translation>
     </message>
     <message>
+        <source>Styling</source>
+        <translation>Tyyli</translation>
+    </message>
+    <message>
         <source>Reading + furigana</source>
         <translation>Lukutapa + furigana</translation>
     </message>
     <message>
         <source>Word audio</source>
         <translation>Sanojen ääni</translation>
+    </message>
+    <message>
+        <source>Updates the styling embedded in the Definitions and Glossary fields. Their text stays as it is.</source>
+        <translation>Päivittää Määritelmät- ja Sanasto-kenttiin upotetun tyylin. Kenttien teksti pysyy ennallaan.</translation>
     </message>
     <message>
         <source>Fills furigana from an existing reading and vice versa; does not generate new readings.</source>
@@ -3337,20 +3337,8 @@ Indeksitiedostoja ei poisteta.</translation>
         <translation>Korvaa olemassa olevat arvot</translation>
     </message>
     <message>
-        <source>Overwritten cards may need to use Restyle cards… to refresh their styling.</source>
-        <translation>Korvattujen korttien tyyli on ehkä päivitettävä toiminnolla Muotoile kortit uudelleen….</translation>
-    </message>
-    <message>
         <source>Scan Anki (read-only)</source>
         <translation>Käy läpi Anki (vain luku)</translation>
-    </message>
-    <message>
-        <source>Restyle cards…</source>
-        <translation>Muotoile kortit uudelleen…</translation>
-    </message>
-    <message>
-        <source>Refresh the dictionary styling on every card of your note type</source>
-        <translation>Päivitä sanakirjan tyyli muistiinpanotyyppisi jokaisessa kortissa</translation>
     </message>
     <message>
         <source>Cancel</source>
@@ -3409,6 +3397,10 @@ Indeksitiedostoja ei poisteta.</translation>
         <translation>Käydään läpi…</translation>
     </message>
     <message>
+        <source>(styling updated)</source>
+        <translation>(tyyli päivitetty)</translation>
+    </message>
+    <message>
         <source>(formatted content)</source>
         <translation>(muotoiltu sisältö)</translation>
     </message>
@@ -3462,6 +3454,13 @@ Indeksitiedostoja ei poisteta.</translation>
         <translation>
             <numerusform>%n kenttäarvo on jo ajan tasalla.</numerusform>
             <numerusform>%n kenttäarvoa on jo ajan tasalla.</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>%n field(s) keep the old definition layout, which Styling cannot update. Scan with Definitions or Glossary and Overwrite existing values to rebuild them.</source>
+        <translation>
+            <numerusform>%n kenttä käyttää yhä vanhaa määritelmäasettelua, jota ”Tyyli” ei voi päivittää. Rakenna se uudelleen käymällä Anki läpi niin, että ”Määritelmät” tai ”Sanasto” ja ”Korvaa olemassa olevat arvot” ovat valittuina.</numerusform>
+            <numerusform>%n kenttää käyttää yhä vanhaa määritelmäasettelua, jota ”Tyyli” ei voi päivittää. Rakenna ne uudelleen käymällä Anki läpi niin, että ”Määritelmät” tai ”Sanasto” ja ”Korvaa olemassa olevat arvot” ovat valittuina.</numerusform>
         </translation>
     </message>
     <message numerus="yes">
@@ -7228,62 +7227,6 @@ Lisättäviä sanoja: %3. Jatketaanko?</translation>
     <message>
         <source>Open Settings</source>
         <translation>Avaa asetukset</translation>
-    </message>
-    <message>
-        <source>Restyle Mined Cards</source>
-        <translation>Muotoile louhitut kortit uudelleen</translation>
-    </message>
-    <message>
-        <source>Re-applies the current built-in styling to your mined cards.
-
-Close Anki's card browser and note editor first — an open note can lose unsaved edits.
-
-Continue?</source>
-        <translation>Käyttää louhittuihin kortteihisi uudelleen nykyistä sisäänrakennettua tyyliä.
-
-Sulje ensin Ankin korttiselain ja muistiinpanoeditori — avoinna oleva muistiinpano voi menettää tallentamattomia muokkauksia.
-
-Jatketaanko?</translation>
-    </message>
-    <message>
-        <source>Restyling cannot start: the Anki field mapping is not usable.</source>
-        <translation>Uudelleenmuotoilua ei voi aloittaa: Ankin kenttävastaavuudet eivät ole käyttökelpoiset.</translation>
-    </message>
-    <message>
-        <source>Open Anki Settings</source>
-        <translation>Avaa Anki-asetukset</translation>
-    </message>
-    <message>
-        <source>Restyling mined cards…</source>
-        <translation>Muotoillaan louhittuja kortteja uudelleen…</translation>
-    </message>
-    <message>
-        <source>Restyling mined cards… %1/%2</source>
-        <translation>Muotoillaan louhittuja kortteja uudelleen… %1/%2</translation>
-    </message>
-    <message>
-        <source>Restyle incomplete</source>
-        <translation>Uudelleenmuotoilu jäi kesken</translation>
-    </message>
-    <message>
-        <source>%1 note update(s) were not confirmed; run Restyle again.</source>
-        <translation>Muistiinpanojen päivityksiä jäi vahvistamatta: %1. Suorita uudelleenmuotoilu uudestaan.</translation>
-    </message>
-    <message>
-        <source>Restyled %1 of %2 notes; %3 already up to date.</source>
-        <translation>Muotoiltu uudelleen %1/%2 muistiinpanoa; %3 oli jo ajan tasalla.</translation>
-    </message>
-    <message>
-        <source>Restyle complete</source>
-        <translation>Uudelleenmuotoilu valmis</translation>
-    </message>
-    <message>
-        <source>Restyle failed</source>
-        <translation>Uudelleenmuotoilu epäonnistui</translation>
-    </message>
-    <message>
-        <source>The mined cards could not be restyled.</source>
-        <translation>Louhittuja kortteja ei voitu muotoilla uudelleen.</translation>
     </message>
     <message>
         <source>Dictionaries:</source>

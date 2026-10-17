@@ -2804,8 +2804,8 @@ No index files are deleted.</source>
         <translation>เติมฟิลด์ที่ขาดในโน้ตที่มีอยู่</translation>
     </message>
     <message>
-        <source>Fill missing frequency, definition and word-audio fields on already-mined notes, plus pitch and reading for Japanese and your language's own card fields.</source>
-        <translation>เติมฟิลด์ความถี่ ความหมาย และเสียงคำศัพท์ที่ขาดในโน้ตที่ขุดไว้แล้ว รวมถึงระดับเสียงและคำอ่านสำหรับภาษาญี่ปุ่น และฟิลด์การ์ดเฉพาะของภาษาของคุณ</translation>
+        <source>Fill missing frequency, definition and word-audio fields on already-mined notes, plus pitch and reading for Japanese and your language's own card fields, and refresh their styling.</source>
+        <translation>เติมฟิลด์ความถี่ ความหมาย และเสียงคำศัพท์ที่ขาดในโน้ตที่ขุดไว้แล้ว รวมถึงระดับเสียงและคำอ่านสำหรับภาษาญี่ปุ่น และฟิลด์การ์ดเฉพาะของภาษาของคุณ พร้อมรีเฟรชรูปแบบของโน้ตเหล่านั้น</translation>
     </message>
     <message>
         <source>Speech-to-text (no subtitles needed)</source>
@@ -3112,14 +3112,6 @@ No index files are deleted.</source>
         <translation>เลือกไฟล์ .mkv หรือวิดีโออื่น หรือโฟลเดอร์ของไฟล์เหล่านั้น ทำเครื่องหมายแทร็กคำบรรยายหรือเสียง แล้วบันทึกแต่ละแทร็กเป็นไฟล์แยก โดยคัดลอกโดยไม่เข้ารหัสใหม่ คำบรรยายเดี่ยวจะตั้งชื่อตามวิดีโอ เพื่อให้การขุดคำในวิดีโอหาเจอ วิดีโอจะไม่ถูกเปลี่ยนแปลง</translation>
     </message>
     <message>
-        <source>Restyle mined cards</source>
-        <translation>จัดรูปแบบการ์ดที่ขุดใหม่</translation>
-    </message>
-    <message>
-        <source>Re-apply the latest Anki Miner styling to cards you mined earlier -- Utilities → Card Backfill.</source>
-        <translation>นำรูปแบบล่าสุดของ Anki Miner ไปใช้กับการ์ดที่คุณขุดไว้ก่อนหน้า -- ยูทิลิตี้ → เติมการ์ด</translation>
-    </message>
-    <message>
         <source>System health check</source>
         <translation>ตรวจสอบสถานะระบบ</translation>
     </message>
@@ -3314,12 +3306,20 @@ No index files are deleted.</source>
         <translation>อภิธานศัพท์</translation>
     </message>
     <message>
+        <source>Styling</source>
+        <translation>รูปแบบ</translation>
+    </message>
+    <message>
         <source>Reading + furigana</source>
         <translation>คำอ่าน + ฟุริงานะ</translation>
     </message>
     <message>
         <source>Word audio</source>
         <translation>เสียงคำศัพท์</translation>
+    </message>
+    <message>
+        <source>Updates the styling embedded in the Definitions and Glossary fields. Their text stays as it is.</source>
+        <translation>อัปเดตรูปแบบที่ฝังอยู่ในฟิลด์ความหมายและอภิธานศัพท์ ข้อความในฟิลด์ยังคงเหมือนเดิม</translation>
     </message>
     <message>
         <source>Fills furigana from an existing reading and vice versa; does not generate new readings.</source>
@@ -3334,20 +3334,8 @@ No index files are deleted.</source>
         <translation>เขียนทับค่าที่มีอยู่</translation>
     </message>
     <message>
-        <source>Overwritten cards may need to use Restyle cards… to refresh their styling.</source>
-        <translation>การ์ดที่ถูกเขียนทับอาจต้องใช้ จัดรูปแบบการ์ดใหม่… เพื่อรีเฟรชรูปแบบ</translation>
-    </message>
-    <message>
         <source>Scan Anki (read-only)</source>
         <translation>สแกน Anki (อ่านอย่างเดียว)</translation>
-    </message>
-    <message>
-        <source>Restyle cards…</source>
-        <translation>จัดรูปแบบการ์ดใหม่…</translation>
-    </message>
-    <message>
-        <source>Refresh the dictionary styling on every card of your note type</source>
-        <translation>รีเฟรชรูปแบบพจนานุกรมบนการ์ดทุกใบของประเภทโน้ตของคุณ</translation>
     </message>
     <message>
         <source>Cancel</source>
@@ -3406,6 +3394,10 @@ No index files are deleted.</source>
         <translation>กำลังสแกน…</translation>
     </message>
     <message>
+        <source>(styling updated)</source>
+        <translation>(รูปแบบที่อัปเดตแล้ว)</translation>
+    </message>
+    <message>
         <source>(formatted content)</source>
         <translation>(เนื้อหาที่จัดรูปแบบ)</translation>
     </message>
@@ -3455,6 +3447,12 @@ No index files are deleted.</source>
         <source>%n field value(s) already up to date.</source>
         <translation>
             <numerusform>ค่าฟิลด์ %n ค่าเป็นปัจจุบันอยู่แล้ว</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>%n field(s) keep the old definition layout, which Styling cannot update. Scan with Definitions or Glossary and Overwrite existing values to rebuild them.</source>
+        <translation>
+            <numerusform>ฟิลด์ %n ฟิลด์ยังใช้เลย์เอาต์ความหมายแบบเก่า ซึ่ง “รูปแบบ” ไม่สามารถอัปเดตได้ หากต้องการสร้างใหม่ ให้สแกนโดยเลือก “ความหมาย” หรือ “อภิธานศัพท์” ร่วมกับ “เขียนทับค่าที่มีอยู่”</numerusform>
         </translation>
     </message>
     <message numerus="yes">
@@ -7190,62 +7188,6 @@ Words to add: %3. Continue?</source>
     <message>
         <source>Open Settings</source>
         <translation>เปิดการตั้งค่า</translation>
-    </message>
-    <message>
-        <source>Restyle Mined Cards</source>
-        <translation>จัดรูปแบบการ์ดที่ขุดใหม่</translation>
-    </message>
-    <message>
-        <source>Re-applies the current built-in styling to your mined cards.
-
-Close Anki's card browser and note editor first — an open note can lose unsaved edits.
-
-Continue?</source>
-        <translation>นำรูปแบบในตัวปัจจุบันไปใช้กับการ์ดที่ขุดไว้อีกครั้ง
-
-ปิดตัวเรียกดูการ์ดและตัวแก้ไขโน้ตของ Anki ก่อน — โน้ตที่เปิดอยู่อาจสูญเสียการแก้ไขที่ยังไม่บันทึก
-
-ดำเนินการต่อหรือไม่?</translation>
-    </message>
-    <message>
-        <source>Restyling cannot start: the Anki field mapping is not usable.</source>
-        <translation>เริ่มจัดรูปแบบใหม่ไม่ได้: การจับคู่ฟิลด์ Anki ใช้งานไม่ได้</translation>
-    </message>
-    <message>
-        <source>Open Anki Settings</source>
-        <translation>เปิดการตั้งค่า Anki</translation>
-    </message>
-    <message>
-        <source>Restyling mined cards…</source>
-        <translation>กำลังจัดรูปแบบการ์ดที่ขุดใหม่…</translation>
-    </message>
-    <message>
-        <source>Restyling mined cards… %1/%2</source>
-        <translation>กำลังจัดรูปแบบการ์ดที่ขุดใหม่… %1/%2</translation>
-    </message>
-    <message>
-        <source>Restyle incomplete</source>
-        <translation>จัดรูปแบบใหม่ไม่ครบ</translation>
-    </message>
-    <message>
-        <source>%1 note update(s) were not confirmed; run Restyle again.</source>
-        <translation>ยังไม่ได้รับการยืนยันการอัปเดตโน้ต %1 รายการ โปรดเรียกใช้การจัดรูปแบบใหม่อีกครั้ง</translation>
-    </message>
-    <message>
-        <source>Restyled %1 of %2 notes; %3 already up to date.</source>
-        <translation>จัดรูปแบบใหม่ %1 จาก %2 โน้ต อีก %3 เป็นปัจจุบันอยู่แล้ว</translation>
-    </message>
-    <message>
-        <source>Restyle complete</source>
-        <translation>จัดรูปแบบใหม่เสร็จสิ้น</translation>
-    </message>
-    <message>
-        <source>Restyle failed</source>
-        <translation>จัดรูปแบบใหม่ล้มเหลว</translation>
-    </message>
-    <message>
-        <source>The mined cards could not be restyled.</source>
-        <translation>ไม่สามารถจัดรูปแบบการ์ดที่ขุดไว้ใหม่ได้</translation>
     </message>
     <message>
         <source>Dictionaries:</source>

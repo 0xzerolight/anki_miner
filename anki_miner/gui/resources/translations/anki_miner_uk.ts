@@ -2810,8 +2810,8 @@ No index files are deleted.</source>
         <translation>Заповнення порожніх полів наявних нотаток</translation>
     </message>
     <message>
-        <source>Fill missing frequency, definition and word-audio fields on already-mined notes, plus pitch and reading for Japanese and your language's own card fields.</source>
-        <translation>Заповнюйте порожні поля частотності, визначення й аудіо слова в уже видобутих нотатках, а також наголос і читання для японської та власні поля карток вашої мови.</translation>
+        <source>Fill missing frequency, definition and word-audio fields on already-mined notes, plus pitch and reading for Japanese and your language's own card fields, and refresh their styling.</source>
+        <translation>Заповнюйте порожні поля частотності, визначення й аудіо слова в уже видобутих нотатках, а також наголос і читання для японської та власні поля карток вашої мови й оновлюйте їхній стиль.</translation>
     </message>
     <message>
         <source>Speech-to-text (no subtitles needed)</source>
@@ -3118,14 +3118,6 @@ No index files are deleted.</source>
         <translation>Виберіть .mkv чи інше відео або теку з ними, позначте доріжки субтитрів чи аудіо й збережіть кожну як окремий файл, скопійований без перекодування. Єдині субтитри отримують назву відео, тож видобування з відео їх знайде. Відео ніколи не змінюється.</translation>
     </message>
     <message>
-        <source>Restyle mined cards</source>
-        <translation>Оновлення стилю видобутих карток</translation>
-    </message>
-    <message>
-        <source>Re-apply the latest Anki Miner styling to cards you mined earlier -- Utilities → Card Backfill.</source>
-        <translation>Повторно застосуйте найновіший стиль Anki Miner до раніше видобутих карток -- Утиліти → Доповнення.</translation>
-    </message>
-    <message>
         <source>System health check</source>
         <translation>Перевірка стану системи</translation>
     </message>
@@ -3320,12 +3312,20 @@ No index files are deleted.</source>
         <translation>Глосарій</translation>
     </message>
     <message>
+        <source>Styling</source>
+        <translation>Стиль</translation>
+    </message>
+    <message>
         <source>Reading + furigana</source>
         <translation>Читання + фурігана</translation>
     </message>
     <message>
         <source>Word audio</source>
         <translation>Аудіо слова</translation>
+    </message>
+    <message>
+        <source>Updates the styling embedded in the Definitions and Glossary fields. Their text stays as it is.</source>
+        <translation>Оновлює стиль, вбудований у поля «Визначення» та «Глосарій». Їхній текст лишається без змін.</translation>
     </message>
     <message>
         <source>Fills furigana from an existing reading and vice versa; does not generate new readings.</source>
@@ -3340,20 +3340,8 @@ No index files are deleted.</source>
         <translation>Перезаписувати наявні значення</translation>
     </message>
     <message>
-        <source>Overwritten cards may need to use Restyle cards… to refresh their styling.</source>
-        <translation>Для перезаписаних карток може знадобитися «Оновити стиль карток…», щоб оновити їхній стиль.</translation>
-    </message>
-    <message>
         <source>Scan Anki (read-only)</source>
         <translation>Сканувати Anki (лише читання)</translation>
-    </message>
-    <message>
-        <source>Restyle cards…</source>
-        <translation>Оновити стиль карток…</translation>
-    </message>
-    <message>
-        <source>Refresh the dictionary styling on every card of your note type</source>
-        <translation>Оновити стиль словника на кожній картці вашого типу нотатки</translation>
     </message>
     <message>
         <source>Cancel</source>
@@ -3410,6 +3398,10 @@ No index files are deleted.</source>
     <message>
         <source>Scanning…</source>
         <translation>Сканування…</translation>
+    </message>
+    <message>
+        <source>(styling updated)</source>
+        <translation>(стиль оновлено)</translation>
     </message>
     <message>
         <source>(formatted content)</source>
@@ -3469,6 +3461,14 @@ No index files are deleted.</source>
             <numerusform>%n значення поля вже актуальне.</numerusform>
             <numerusform>%n значення полів уже актуальні.</numerusform>
             <numerusform>%n значень полів уже актуальні.</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>%n field(s) keep the old definition layout, which Styling cannot update. Scan with Definitions or Glossary and Overwrite existing values to rebuild them.</source>
+        <translation>
+            <numerusform>%n поле зберігає стару розмітку визначень, яку параметр «Стиль» не може оновити. Щоб перебудувати його, проскануйте з позначеними параметрами «Визначення» або «Глосарій» і «Перезаписувати наявні значення».</numerusform>
+            <numerusform>%n поля зберігають стару розмітку визначень, яку параметр «Стиль» не може оновити. Щоб перебудувати їх, проскануйте з позначеними параметрами «Визначення» або «Глосарій» і «Перезаписувати наявні значення».</numerusform>
+            <numerusform>%n полів зберігають стару розмітку визначень, яку параметр «Стиль» не може оновити. Щоб перебудувати їх, проскануйте з позначеними параметрами «Визначення» або «Глосарій» і «Перезаписувати наявні значення».</numerusform>
         </translation>
     </message>
     <message numerus="yes">
@@ -7266,62 +7266,6 @@ Words to add: %3. Continue?</source>
     <message>
         <source>Open Settings</source>
         <translation>Відкрити налаштування</translation>
-    </message>
-    <message>
-        <source>Restyle Mined Cards</source>
-        <translation>Оновити стиль видобутих карток</translation>
-    </message>
-    <message>
-        <source>Re-applies the current built-in styling to your mined cards.
-
-Close Anki's card browser and note editor first — an open note can lose unsaved edits.
-
-Continue?</source>
-        <translation>Повторно застосовує поточний вбудований стиль до ваших видобутих карток.
-
-Спочатку закрийте браузер карток і редактор нотаток в Anki — у відкритій нотатці можуть загубитися незбережені зміни.
-
-Продовжити?</translation>
-    </message>
-    <message>
-        <source>Restyling cannot start: the Anki field mapping is not usable.</source>
-        <translation>Неможливо почати оновлення стилю: зіставлення полів Anki непридатне до використання.</translation>
-    </message>
-    <message>
-        <source>Open Anki Settings</source>
-        <translation>Відкрити налаштування Anki</translation>
-    </message>
-    <message>
-        <source>Restyling mined cards…</source>
-        <translation>Оновлення стилю видобутих карток…</translation>
-    </message>
-    <message>
-        <source>Restyling mined cards… %1/%2</source>
-        <translation>Оновлення стилю видобутих карток… %1/%2</translation>
-    </message>
-    <message>
-        <source>Restyle incomplete</source>
-        <translation>Оновлення стилю не завершено</translation>
-    </message>
-    <message>
-        <source>%1 note update(s) were not confirmed; run Restyle again.</source>
-        <translation>Не підтверджено оновлень нотаток: %1. Запустіть оновлення стилю ще раз.</translation>
-    </message>
-    <message>
-        <source>Restyled %1 of %2 notes; %3 already up to date.</source>
-        <translation>Оновлено стиль %1 з %2 нотаток; уже актуальні: %3.</translation>
-    </message>
-    <message>
-        <source>Restyle complete</source>
-        <translation>Оновлення стилю завершено</translation>
-    </message>
-    <message>
-        <source>Restyle failed</source>
-        <translation>Помилка оновлення стилю</translation>
-    </message>
-    <message>
-        <source>The mined cards could not be restyled.</source>
-        <translation>Не вдалося оновити стиль видобутих карток.</translation>
     </message>
     <message>
         <source>Dictionaries:</source>

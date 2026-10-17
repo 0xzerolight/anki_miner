@@ -2819,8 +2819,8 @@ No index files are deleted.</source>
         <translation>تعبئة الحقول الناقصة في الملاحظات الموجودة</translation>
     </message>
     <message>
-        <source>Fill missing frequency, definition and word-audio fields on already-mined notes, plus pitch and reading for Japanese and your language's own card fields.</source>
-        <translation>املأ حقول التكرار والتعريف وصوت الكلمة الناقصة في الملاحظات المستخرجة سابقًا، إضافة إلى النبر والقراءة لليابانية وحقول البطاقات الخاصة بلغتك.</translation>
+        <source>Fill missing frequency, definition and word-audio fields on already-mined notes, plus pitch and reading for Japanese and your language's own card fields, and refresh their styling.</source>
+        <translation>املأ حقول التكرار والتعريف وصوت الكلمة الناقصة في الملاحظات المستخرجة سابقًا، إضافة إلى النبر والقراءة لليابانية وحقول البطاقات الخاصة بلغتك، وحدّث تنسيقها.</translation>
     </message>
     <message>
         <source>Speech-to-text (no subtitles needed)</source>
@@ -3127,14 +3127,6 @@ No index files are deleted.</source>
         <translation>اختر ملف .mkv أو فيديو آخر، أو مجلدًا منها، وحدّد مسارات الترجمة أو الصوت واحفظ كلًّا منها في ملف مستقل، منسوخًا دون إعادة ترميز. تُسمّى الترجمة المفردة باسم الفيديو، فيجدها استخراج الفيديو. لا يتغيّر الفيديو أبدًا.</translation>
     </message>
     <message>
-        <source>Restyle mined cards</source>
-        <translation>إعادة تنسيق البطاقات المستخرجة</translation>
-    </message>
-    <message>
-        <source>Re-apply the latest Anki Miner styling to cards you mined earlier -- Utilities → Card Backfill.</source>
-        <translation>أعد تطبيق أحدث تنسيق لـ Anki Miner على البطاقات التي استخرجتها سابقًا — مرافق ← إكمال البطاقات.</translation>
-    </message>
-    <message>
         <source>System health check</source>
         <translation>فحص صحة النظام</translation>
     </message>
@@ -3329,12 +3321,20 @@ No index files are deleted.</source>
         <translation>المسرد</translation>
     </message>
     <message>
+        <source>Styling</source>
+        <translation>التنسيق</translation>
+    </message>
+    <message>
         <source>Reading + furigana</source>
         <translation>القراءة + الفوريغانا</translation>
     </message>
     <message>
         <source>Word audio</source>
         <translation>صوت الكلمة</translation>
+    </message>
+    <message>
+        <source>Updates the styling embedded in the Definitions and Glossary fields. Their text stays as it is.</source>
+        <translation>يحدّث التنسيق المضمّن في حقلي التعريفات والمسرد. يبقى نصّهما كما هو.</translation>
     </message>
     <message>
         <source>Fills furigana from an existing reading and vice versa; does not generate new readings.</source>
@@ -3349,20 +3349,8 @@ No index files are deleted.</source>
         <translation>الكتابة فوق القيم الموجودة</translation>
     </message>
     <message>
-        <source>Overwritten cards may need to use Restyle cards… to refresh their styling.</source>
-        <translation>قد تحتاج البطاقات المكتوب فوقها إلى إعادة تنسيق البطاقات… لتحديث تنسيقها.</translation>
-    </message>
-    <message>
         <source>Scan Anki (read-only)</source>
         <translation>فحص Anki (للقراءة فقط)</translation>
-    </message>
-    <message>
-        <source>Restyle cards…</source>
-        <translation>إعادة تنسيق البطاقات…</translation>
-    </message>
-    <message>
-        <source>Refresh the dictionary styling on every card of your note type</source>
-        <translation>تحديث تنسيق القاموس في كل بطاقة من نوع ملاحظتك</translation>
     </message>
     <message>
         <source>Cancel</source>
@@ -3419,6 +3407,10 @@ No index files are deleted.</source>
     <message>
         <source>Scanning…</source>
         <translation>جارٍ الفحص…</translation>
+    </message>
+    <message>
+        <source>(styling updated)</source>
+        <translation>(تنسيق محدّث)</translation>
     </message>
     <message>
         <source>(formatted content)</source>
@@ -3490,6 +3482,17 @@ No index files are deleted.</source>
             <numerusform>‏%n قيم حقول محدّثة بالفعل.</numerusform>
             <numerusform>‏%n قيمةً محدّثة بالفعل.</numerusform>
             <numerusform>‏%n قيمة حقل محدّثة بالفعل.</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>%n field(s) keep the old definition layout, which Styling cannot update. Scan with Definitions or Glossary and Overwrite existing values to rebuild them.</source>
+        <translation>
+            <numerusform>‏%n حقل تحتفظ بتخطيط التعريفات القديم الذي لا يستطيع خيار «التنسيق» تحديثه. فعّل «التعريفات» أو «المسرد» مع «الكتابة فوق القيم الموجودة» ثم افحص لإعادة بنائها.</numerusform>
+            <numerusform>حقل واحد (%n) يحتفظ بتخطيط التعريفات القديم الذي لا يستطيع خيار «التنسيق» تحديثه. فعّل «التعريفات» أو «المسرد» مع «الكتابة فوق القيم الموجودة» ثم افحص لإعادة بنائه.</numerusform>
+            <numerusform>حقلان (%n) يحتفظان بتخطيط التعريفات القديم الذي لا يستطيع خيار «التنسيق» تحديثه. فعّل «التعريفات» أو «المسرد» مع «الكتابة فوق القيم الموجودة» ثم افحص لإعادة بنائهما.</numerusform>
+            <numerusform>‏%n حقول تحتفظ بتخطيط التعريفات القديم الذي لا يستطيع خيار «التنسيق» تحديثه. فعّل «التعريفات» أو «المسرد» مع «الكتابة فوق القيم الموجودة» ثم افحص لإعادة بنائها.</numerusform>
+            <numerusform>‏%n حقلًا تحتفظ بتخطيط التعريفات القديم الذي لا يستطيع خيار «التنسيق» تحديثه. فعّل «التعريفات» أو «المسرد» مع «الكتابة فوق القيم الموجودة» ثم افحص لإعادة بنائها.</numerusform>
+            <numerusform>‏%n حقل تحتفظ بتخطيط التعريفات القديم الذي لا يستطيع خيار «التنسيق» تحديثه. فعّل «التعريفات» أو «المسرد» مع «الكتابة فوق القيم الموجودة» ثم افحص لإعادة بنائها.</numerusform>
         </translation>
     </message>
     <message numerus="yes">
@@ -7380,62 +7383,6 @@ Words to add: %3. Continue?</source>
     <message>
         <source>Open Settings</source>
         <translation>فتح الإعدادات</translation>
-    </message>
-    <message>
-        <source>Restyle Mined Cards</source>
-        <translation>إعادة تنسيق البطاقات المستخرجة</translation>
-    </message>
-    <message>
-        <source>Re-applies the current built-in styling to your mined cards.
-
-Close Anki's card browser and note editor first — an open note can lose unsaved edits.
-
-Continue?</source>
-        <translation>يُعيد تطبيق التنسيق المدمج الحالي على بطاقاتك المستخرجة.
-
-أغلق متصفح البطاقات ومحرر الملاحظات في Anki أولًا — فقد تفقد الملاحظة المفتوحة تعديلات غير محفوظة.
-
-هل تريد المتابعة؟</translation>
-    </message>
-    <message>
-        <source>Restyling cannot start: the Anki field mapping is not usable.</source>
-        <translation>لا يمكن بدء إعادة التنسيق: ربط حقول Anki غير صالح للاستخدام.</translation>
-    </message>
-    <message>
-        <source>Open Anki Settings</source>
-        <translation>فتح إعدادات Anki</translation>
-    </message>
-    <message>
-        <source>Restyling mined cards…</source>
-        <translation>جارٍ إعادة تنسيق البطاقات المستخرجة…</translation>
-    </message>
-    <message>
-        <source>Restyling mined cards… %1/%2</source>
-        <translation>جارٍ إعادة تنسيق البطاقات المستخرجة… %1/%2</translation>
-    </message>
-    <message>
-        <source>Restyle incomplete</source>
-        <translation>إعادة التنسيق غير مكتملة</translation>
-    </message>
-    <message>
-        <source>%1 note update(s) were not confirmed; run Restyle again.</source>
-        <translation>لم يُؤكَّد %1 من تحديثات الملاحظات؛ شغّل إعادة التنسيق مرة أخرى.</translation>
-    </message>
-    <message>
-        <source>Restyled %1 of %2 notes; %3 already up to date.</source>
-        <translation>أُعيد تنسيق %1 من %2 ملاحظة؛ و%3 محدّثة مسبقًا.</translation>
-    </message>
-    <message>
-        <source>Restyle complete</source>
-        <translation>اكتملت إعادة التنسيق</translation>
-    </message>
-    <message>
-        <source>Restyle failed</source>
-        <translation>فشلت إعادة التنسيق</translation>
-    </message>
-    <message>
-        <source>The mined cards could not be restyled.</source>
-        <translation>تعذّرت إعادة تنسيق البطاقات المستخرجة.</translation>
     </message>
     <message>
         <source>Dictionaries:</source>

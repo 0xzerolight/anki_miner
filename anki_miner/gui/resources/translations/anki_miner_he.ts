@@ -2807,8 +2807,8 @@ No index files are deleted.</source>
         <translation>מילוי שדות חסרים בפתקים קיימים</translation>
     </message>
     <message>
-        <source>Fill missing frequency, definition and word-audio fields on already-mined notes, plus pitch and reading for Japanese and your language's own card fields.</source>
-        <translation>מילוי שדות חסרים של תדירות, הגדרה ושמע מילים בפתקים שכבר נכרו, וגם הטעמת גובה והגייה ליפנית ושדות הכרטיס הייחודיים לשפה שלך.</translation>
+        <source>Fill missing frequency, definition and word-audio fields on already-mined notes, plus pitch and reading for Japanese and your language's own card fields, and refresh their styling.</source>
+        <translation>מילוי שדות חסרים של תדירות, הגדרה ושמע מילים בפתקים שכבר נכרו, וגם הטעמת גובה והגייה ליפנית ושדות הכרטיס הייחודיים לשפה שלך, ורענון העיצוב שלהם.</translation>
     </message>
     <message>
         <source>Speech-to-text (no subtitles needed)</source>
@@ -3115,14 +3115,6 @@ No index files are deleted.</source>
         <translation>בחירת קובץ ‎.mkv‎ או סרטון אחר, או תיקייה שלהם, סימון רצועות הכתוביות או השמע ושמירת כל אחת כקובץ נפרד, בהעתקה ללא קידוד מחדש. כתוביות יחידות נקראות על שם הסרטון, כך שכריית וידאו מוצאת אותן. הסרטון עצמו לעולם אינו משתנה.</translation>
     </message>
     <message>
-        <source>Restyle mined cards</source>
-        <translation>עיצוב מחדש של כרטיסים שנכרו</translation>
-    </message>
-    <message>
-        <source>Re-apply the latest Anki Miner styling to cards you mined earlier -- Utilities → Card Backfill.</source>
-        <translation>החלה מחדש של העיצוב העדכני של Anki Miner על כרטיסים שנכרו בעבר -- עזרים ← השלמת כרטיסים.</translation>
-    </message>
-    <message>
         <source>System health check</source>
         <translation>בדיקת תקינות המערכת</translation>
     </message>
@@ -3317,12 +3309,20 @@ No index files are deleted.</source>
         <translation>מילון מונחים</translation>
     </message>
     <message>
+        <source>Styling</source>
+        <translation>עיצוב</translation>
+    </message>
+    <message>
         <source>Reading + furigana</source>
         <translation>הגייה + פוריגנה</translation>
     </message>
     <message>
         <source>Word audio</source>
         <translation>שמע מילים</translation>
+    </message>
+    <message>
+        <source>Updates the styling embedded in the Definitions and Glossary fields. Their text stays as it is.</source>
+        <translation>מעדכן את העיצוב המוטמע בשדות "הגדרות" ו"מילון מונחים". הטקסט שבהם נשאר כפי שהוא.</translation>
     </message>
     <message>
         <source>Fills furigana from an existing reading and vice versa; does not generate new readings.</source>
@@ -3337,20 +3337,8 @@ No index files are deleted.</source>
         <translation>לדרוס ערכים קיימים</translation>
     </message>
     <message>
-        <source>Overwritten cards may need to use Restyle cards… to refresh their styling.</source>
-        <translation>ייתכן שכרטיסים שנדרסו יצטרכו את "לעצב כרטיסים מחדש…" כדי לרענן את העיצוב שלהם.</translation>
-    </message>
-    <message>
         <source>Scan Anki (read-only)</source>
         <translation>לסרוק את Anki (קריאה בלבד)</translation>
-    </message>
-    <message>
-        <source>Restyle cards…</source>
-        <translation>לעצב כרטיסים מחדש…</translation>
-    </message>
-    <message>
-        <source>Refresh the dictionary styling on every card of your note type</source>
-        <translation>רענון עיצוב המילון בכל כרטיס מסוג הפתק שלך</translation>
     </message>
     <message>
         <source>Cancel</source>
@@ -3409,6 +3397,10 @@ No index files are deleted.</source>
         <translation>בסריקה…</translation>
     </message>
     <message>
+        <source>(styling updated)</source>
+        <translation>(עיצוב מעודכן)</translation>
+    </message>
+    <message>
         <source>(formatted content)</source>
         <translation>(תוכן מעוצב)</translation>
     </message>
@@ -3462,6 +3454,13 @@ No index files are deleted.</source>
         <translation>
             <numerusform>ערך שדה %n כבר מעודכן.</numerusform>
             <numerusform>‏%n ערכי שדות כבר מעודכנים.</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>%n field(s) keep the old definition layout, which Styling cannot update. Scan with Definitions or Glossary and Overwrite existing values to rebuild them.</source>
+        <translation>
+            <numerusform>שדה %n שומר על פריסת ההגדרות הישנה, והאפשרות "עיצוב" אינה יכולה לעדכן אותה. כדי לבנות אותו מחדש, יש לסמן "הגדרות" או "מילון מונחים" יחד עם "לדרוס ערכים קיימים" ולסרוק.</numerusform>
+            <numerusform>‏%n שדות שומרים על פריסת ההגדרות הישנה, והאפשרות "עיצוב" אינה יכולה לעדכן אותה. כדי לבנות אותם מחדש, יש לסמן "הגדרות" או "מילון מונחים" יחד עם "לדרוס ערכים קיימים" ולסרוק.</numerusform>
         </translation>
     </message>
     <message numerus="yes">
@@ -7228,62 +7227,6 @@ Words to add: %3. Continue?</source>
     <message>
         <source>Open Settings</source>
         <translation>לפתוח את ההגדרות</translation>
-    </message>
-    <message>
-        <source>Restyle Mined Cards</source>
-        <translation>עיצוב מחדש של כרטיסים שנכרו</translation>
-    </message>
-    <message>
-        <source>Re-applies the current built-in styling to your mined cards.
-
-Close Anki's card browser and note editor first — an open note can lose unsaved edits.
-
-Continue?</source>
-        <translation>הפעולה מחילה מחדש את העיצוב המובנה הנוכחי על הכרטיסים שנכרו.
-
-יש לסגור קודם את דפדפן הכרטיסים ואת עורך הפתקים של Anki — פתק פתוח עלול לאבד עריכות שלא נשמרו.
-
-להמשיך?</translation>
-    </message>
-    <message>
-        <source>Restyling cannot start: the Anki field mapping is not usable.</source>
-        <translation>לא ניתן להתחיל בעיצוב מחדש: מיפוי השדות של Anki אינו שמיש.</translation>
-    </message>
-    <message>
-        <source>Open Anki Settings</source>
-        <translation>לפתוח את הגדרות Anki</translation>
-    </message>
-    <message>
-        <source>Restyling mined cards…</source>
-        <translation>מתבצע עיצוב מחדש של הכרטיסים שנכרו…</translation>
-    </message>
-    <message>
-        <source>Restyling mined cards… %1/%2</source>
-        <translation>מתבצע עיצוב מחדש של הכרטיסים שנכרו… %1/%2</translation>
-    </message>
-    <message>
-        <source>Restyle incomplete</source>
-        <translation>העיצוב מחדש לא הושלם</translation>
-    </message>
-    <message>
-        <source>%1 note update(s) were not confirmed; run Restyle again.</source>
-        <translation>‏%1 עדכוני פתקים לא אושרו; יש להריץ שוב את העיצוב מחדש.</translation>
-    </message>
-    <message>
-        <source>Restyled %1 of %2 notes; %3 already up to date.</source>
-        <translation>עוצבו מחדש %1 מתוך %2 פתקים; %3 כבר היו מעודכנים.</translation>
-    </message>
-    <message>
-        <source>Restyle complete</source>
-        <translation>העיצוב מחדש הושלם</translation>
-    </message>
-    <message>
-        <source>Restyle failed</source>
-        <translation>העיצוב מחדש נכשל</translation>
-    </message>
-    <message>
-        <source>The mined cards could not be restyled.</source>
-        <translation>לא ניתן היה לעצב מחדש את הכרטיסים שנכרו.</translation>
     </message>
     <message>
         <source>Dictionaries:</source>

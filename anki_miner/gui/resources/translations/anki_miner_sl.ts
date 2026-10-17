@@ -2813,8 +2813,8 @@ Nobena datoteka indeksa ne bo izbrisana.</translation>
         <translation>Izpolnjevanje manjkajočih polj v obstoječih zapiskih</translation>
     </message>
     <message>
-        <source>Fill missing frequency, definition and word-audio fields on already-mined notes, plus pitch and reading for Japanese and your language's own card fields.</source>
-        <translation>Izpolnite manjkajoča polja pogostosti, definicije in zvoka besede v že zbranih zapiskih ter tonski naglas in branje za japonščino in lastna polja kartic vašega jezika.</translation>
+        <source>Fill missing frequency, definition and word-audio fields on already-mined notes, plus pitch and reading for Japanese and your language's own card fields, and refresh their styling.</source>
+        <translation>Izpolnite manjkajoča polja pogostosti, definicije in zvoka besede v že zbranih zapiskih ter tonski naglas in branje za japonščino in lastna polja kartic vašega jezika ter osvežite njihov slog.</translation>
     </message>
     <message>
         <source>Speech-to-text (no subtitles needed)</source>
@@ -3121,14 +3121,6 @@ Nobena datoteka indeksa ne bo izbrisana.</translation>
         <translation>Izberite datoteko .mkv ali drug video ali mapo z njimi, označite sledi podnapisov ali zvoka in vsako shranite v svojo datoteko, kopirano brez ponovnega kodiranja. Posamezni podnapisi so poimenovani po svojem videu, zato jih zbiranje iz videa najde. Video se nikoli ne spremeni.</translation>
     </message>
     <message>
-        <source>Restyle mined cards</source>
-        <translation>Preoblikovanje zbranih kartic</translation>
-    </message>
-    <message>
-        <source>Re-apply the latest Anki Miner styling to cards you mined earlier -- Utilities → Card Backfill.</source>
-        <translation>Na kartice, ki ste jih zbrali prej, znova uveljavite najnovejši slog Anki Miner -- Pripomočki → Dopolni kartice.</translation>
-    </message>
-    <message>
         <source>System health check</source>
         <translation>Preverjanje stanja sistema</translation>
     </message>
@@ -3323,12 +3315,20 @@ Nobena datoteka indeksa ne bo izbrisana.</translation>
         <translation>Glosar</translation>
     </message>
     <message>
+        <source>Styling</source>
+        <translation>Slog</translation>
+    </message>
+    <message>
         <source>Reading + furigana</source>
         <translation>Branje + furigana</translation>
     </message>
     <message>
         <source>Word audio</source>
         <translation>Zvok besed</translation>
+    </message>
+    <message>
+        <source>Updates the styling embedded in the Definitions and Glossary fields. Their text stays as it is.</source>
+        <translation>Posodobi slog, vdelan v polji „Definicije“ in „Glosar“. Njuno besedilo ostane nespremenjeno.</translation>
     </message>
     <message>
         <source>Fills furigana from an existing reading and vice versa; does not generate new readings.</source>
@@ -3343,20 +3343,8 @@ Nobena datoteka indeksa ne bo izbrisana.</translation>
         <translation>Prepiši obstoječe vrednosti</translation>
     </message>
     <message>
-        <source>Overwritten cards may need to use Restyle cards… to refresh their styling.</source>
-        <translation>Za prepisane kartice bo morda treba uporabiti Preoblikuj kartice …, da se osveži njihov slog.</translation>
-    </message>
-    <message>
         <source>Scan Anki (read-only)</source>
         <translation>Preglej Anki (samo branje)</translation>
-    </message>
-    <message>
-        <source>Restyle cards…</source>
-        <translation>Preoblikuj kartice …</translation>
-    </message>
-    <message>
-        <source>Refresh the dictionary styling on every card of your note type</source>
-        <translation>Osveži slog slovarja na vseh karticah vaše vrste zapiska</translation>
     </message>
     <message>
         <source>Cancel</source>
@@ -3413,6 +3401,10 @@ Nobena datoteka indeksa ne bo izbrisana.</translation>
     <message>
         <source>Scanning…</source>
         <translation>Pregledovanje …</translation>
+    </message>
+    <message>
+        <source>(styling updated)</source>
+        <translation>(posodobljen slog)</translation>
     </message>
     <message>
         <source>(formatted content)</source>
@@ -3476,6 +3468,15 @@ Nobena datoteka indeksa ne bo izbrisana.</translation>
             <numerusform>%n vrednosti polj sta že posodobljeni.</numerusform>
             <numerusform>%n vrednosti polj so že posodobljene.</numerusform>
             <numerusform>%n vrednosti polj je že posodobljenih.</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>%n field(s) keep the old definition layout, which Styling cannot update. Scan with Definitions or Glossary and Overwrite existing values to rebuild them.</source>
+        <translation>
+            <numerusform>%n polje ohranja stari razpored definicij, ki ga možnost „Slog“ ne more posodobiti. Če ga želite obnoviti, preglejte z izbranimi možnostmi „Definicije“ ali „Glosar“ in „Prepiši obstoječe vrednosti“.</numerusform>
+            <numerusform>%n polji ohranjata stari razpored definicij, ki ga možnost „Slog“ ne more posodobiti. Če ju želite obnoviti, preglejte z izbranimi možnostmi „Definicije“ ali „Glosar“ in „Prepiši obstoječe vrednosti“.</numerusform>
+            <numerusform>%n polja ohranjajo stari razpored definicij, ki ga možnost „Slog“ ne more posodobiti. Če jih želite obnoviti, preglejte z izbranimi možnostmi „Definicije“ ali „Glosar“ in „Prepiši obstoječe vrednosti“.</numerusform>
+            <numerusform>%n polj ohranja stari razpored definicij, ki ga možnost „Slog“ ne more posodobiti. Če jih želite obnoviti, preglejte z izbranimi možnostmi „Definicije“ ali „Glosar“ in „Prepiši obstoječe vrednosti“.</numerusform>
         </translation>
     </message>
     <message numerus="yes">
@@ -7304,62 +7305,6 @@ Besede za dodajanje: %3. Želite nadaljevati?</translation>
     <message>
         <source>Open Settings</source>
         <translation>Odpri nastavitve</translation>
-    </message>
-    <message>
-        <source>Restyle Mined Cards</source>
-        <translation>Preoblikuj zbrane kartice</translation>
-    </message>
-    <message>
-        <source>Re-applies the current built-in styling to your mined cards.
-
-Close Anki's card browser and note editor first — an open note can lose unsaved edits.
-
-Continue?</source>
-        <translation>Na zbrane kartice znova uveljavi trenutni vgrajeni slog.
-
-Najprej zaprite brskalnik kartic in urejevalnik zapiskov v Anki — v odprtem zapisku se lahko izgubijo neshranjene spremembe.
-
-Želite nadaljevati?</translation>
-    </message>
-    <message>
-        <source>Restyling cannot start: the Anki field mapping is not usable.</source>
-        <translation>Preoblikovanja ni mogoče začeti: preslikava polj Anki ni uporabna.</translation>
-    </message>
-    <message>
-        <source>Open Anki Settings</source>
-        <translation>Odpri nastavitve Anki</translation>
-    </message>
-    <message>
-        <source>Restyling mined cards…</source>
-        <translation>Preoblikovanje zbranih kartic …</translation>
-    </message>
-    <message>
-        <source>Restyling mined cards… %1/%2</source>
-        <translation>Preoblikovanje zbranih kartic … %1/%2</translation>
-    </message>
-    <message>
-        <source>Restyle incomplete</source>
-        <translation>Preoblikovanje ni dokončano</translation>
-    </message>
-    <message>
-        <source>%1 note update(s) were not confirmed; run Restyle again.</source>
-        <translation>Nepotrjene posodobitve zapiskov: %1; znova zaženite preoblikovanje.</translation>
-    </message>
-    <message>
-        <source>Restyled %1 of %2 notes; %3 already up to date.</source>
-        <translation>Preoblikovanih zapiskov: %1 od %2; že posodobljenih: %3.</translation>
-    </message>
-    <message>
-        <source>Restyle complete</source>
-        <translation>Preoblikovanje končano</translation>
-    </message>
-    <message>
-        <source>Restyle failed</source>
-        <translation>Preoblikovanje ni uspelo</translation>
-    </message>
-    <message>
-        <source>The mined cards could not be restyled.</source>
-        <translation>Zbranih kartic ni bilo mogoče preoblikovati.</translation>
     </message>
     <message>
         <source>Dictionaries:</source>

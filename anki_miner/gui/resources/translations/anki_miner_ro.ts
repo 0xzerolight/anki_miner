@@ -2810,8 +2810,8 @@ Nu se șterge niciun fișier index.</translation>
         <translation>Completează câmpurile lipsă din notele existente</translation>
     </message>
     <message>
-        <source>Fill missing frequency, definition and word-audio fields on already-mined notes, plus pitch and reading for Japanese and your language's own card fields.</source>
-        <translation>Completați câmpurile lipsă de frecvență, definiție și audio pentru cuvânt în notele deja extrase, plus accentul și citirea pentru japoneză și câmpurile de card specifice limbii dumneavoastră.</translation>
+        <source>Fill missing frequency, definition and word-audio fields on already-mined notes, plus pitch and reading for Japanese and your language's own card fields, and refresh their styling.</source>
+        <translation>Completați câmpurile lipsă de frecvență, definiție și audio pentru cuvânt în notele deja extrase, plus accentul și citirea pentru japoneză și câmpurile de card specifice limbii dumneavoastră, și reîmprospătați-le stilul.</translation>
     </message>
     <message>
         <source>Speech-to-text (no subtitles needed)</source>
@@ -3118,14 +3118,6 @@ Nu se șterge niciun fișier index.</translation>
         <translation>Alegeți un .mkv sau alt video ori un dosar cu astfel de fișiere, bifați pistele de subtitrare sau audio și salvați fiecare ca fișier separat, copiat fără recodare. O singură subtitrare primește numele video-ului, astfel încât extragerea Video o găsește. Video-ul nu este modificat niciodată.</translation>
     </message>
     <message>
-        <source>Restyle mined cards</source>
-        <translation>Restilizează cardurile extrase</translation>
-    </message>
-    <message>
-        <source>Re-apply the latest Anki Miner styling to cards you mined earlier -- Utilities → Card Backfill.</source>
-        <translation>Reaplicați cel mai recent stil Anki Miner cardurilor extrase anterior -- Utilitare → Completare carduri.</translation>
-    </message>
-    <message>
         <source>System health check</source>
         <translation>Verificarea stării sistemului</translation>
     </message>
@@ -3320,12 +3312,20 @@ Nu se șterge niciun fișier index.</translation>
         <translation>Glosar</translation>
     </message>
     <message>
+        <source>Styling</source>
+        <translation>Stil</translation>
+    </message>
+    <message>
         <source>Reading + furigana</source>
         <translation>Citire + furigana</translation>
     </message>
     <message>
         <source>Word audio</source>
         <translation>Audio cuvânt</translation>
+    </message>
+    <message>
+        <source>Updates the styling embedded in the Definitions and Glossary fields. Their text stays as it is.</source>
+        <translation>Actualizează stilul încorporat în câmpurile Definiții și Glosar. Textul lor rămâne neschimbat.</translation>
     </message>
     <message>
         <source>Fills furigana from an existing reading and vice versa; does not generate new readings.</source>
@@ -3340,20 +3340,8 @@ Nu se șterge niciun fișier index.</translation>
         <translation>Suprascrie valorile existente</translation>
     </message>
     <message>
-        <source>Overwritten cards may need to use Restyle cards… to refresh their styling.</source>
-        <translation>Cardurile suprascrise pot necesita Restilizează cardurile… pentru a-și reîmprospăta stilul.</translation>
-    </message>
-    <message>
         <source>Scan Anki (read-only)</source>
         <translation>Scanează Anki (doar citire)</translation>
-    </message>
-    <message>
-        <source>Restyle cards…</source>
-        <translation>Restilizează cardurile…</translation>
-    </message>
-    <message>
-        <source>Refresh the dictionary styling on every card of your note type</source>
-        <translation>Reîmprospătează stilul dicționarului pe fiecare card al tipului de notă</translation>
     </message>
     <message>
         <source>Cancel</source>
@@ -3410,6 +3398,10 @@ Nu se șterge niciun fișier index.</translation>
     <message>
         <source>Scanning…</source>
         <translation>Se scanează…</translation>
+    </message>
+    <message>
+        <source>(styling updated)</source>
+        <translation>(stil actualizat)</translation>
     </message>
     <message>
         <source>(formatted content)</source>
@@ -3469,6 +3461,14 @@ Nu se șterge niciun fișier index.</translation>
             <numerusform>%n valoare de câmp este deja la zi.</numerusform>
             <numerusform>%n valori de câmp sunt deja la zi.</numerusform>
             <numerusform>%n de valori de câmp sunt deja la zi.</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>%n field(s) keep the old definition layout, which Styling cannot update. Scan with Definitions or Glossary and Overwrite existing values to rebuild them.</source>
+        <translation>
+            <numerusform>%n câmp păstrează vechiul format al definițiilor, pe care Stil nu îl poate actualiza. Scanați cu Definiții sau Glosar și Suprascrie valorile existente pentru a-l reconstrui.</numerusform>
+            <numerusform>%n câmpuri păstrează vechiul format al definițiilor, pe care Stil nu îl poate actualiza. Scanați cu Definiții sau Glosar și Suprascrie valorile existente pentru a le reconstrui.</numerusform>
+            <numerusform>%n de câmpuri păstrează vechiul format al definițiilor, pe care Stil nu îl poate actualiza. Scanați cu Definiții sau Glosar și Suprascrie valorile existente pentru a le reconstrui.</numerusform>
         </translation>
     </message>
     <message numerus="yes">
@@ -7266,62 +7266,6 @@ Cuvinte de adăugat: %3. Continuați?</translation>
     <message>
         <source>Open Settings</source>
         <translation>Deschide setările</translation>
-    </message>
-    <message>
-        <source>Restyle Mined Cards</source>
-        <translation>Restilizează cardurile extrase</translation>
-    </message>
-    <message>
-        <source>Re-applies the current built-in styling to your mined cards.
-
-Close Anki's card browser and note editor first — an open note can lose unsaved edits.
-
-Continue?</source>
-        <translation>Reaplică stilul încorporat actual cardurilor extrase.
-
-Închideți mai întâi browserul de carduri și editorul de note din Anki — o notă deschisă poate pierde modificările nesalvate.
-
-Continuați?</translation>
-    </message>
-    <message>
-        <source>Restyling cannot start: the Anki field mapping is not usable.</source>
-        <translation>Restilizarea nu poate porni: maparea câmpurilor Anki nu este utilizabilă.</translation>
-    </message>
-    <message>
-        <source>Open Anki Settings</source>
-        <translation>Deschide setările Anki</translation>
-    </message>
-    <message>
-        <source>Restyling mined cards…</source>
-        <translation>Se restilizează cardurile extrase…</translation>
-    </message>
-    <message>
-        <source>Restyling mined cards… %1/%2</source>
-        <translation>Se restilizează cardurile extrase… %1/%2</translation>
-    </message>
-    <message>
-        <source>Restyle incomplete</source>
-        <translation>Restilizare incompletă</translation>
-    </message>
-    <message>
-        <source>%1 note update(s) were not confirmed; run Restyle again.</source>
-        <translation>Actualizări de note neconfirmate: %1; rulați din nou restilizarea.</translation>
-    </message>
-    <message>
-        <source>Restyled %1 of %2 notes; %3 already up to date.</source>
-        <translation>Au fost restilizate %1 din %2 note; %3 erau deja la zi.</translation>
-    </message>
-    <message>
-        <source>Restyle complete</source>
-        <translation>Restilizare finalizată</translation>
-    </message>
-    <message>
-        <source>Restyle failed</source>
-        <translation>Restilizarea a eșuat</translation>
-    </message>
-    <message>
-        <source>The mined cards could not be restyled.</source>
-        <translation>Cardurile extrase nu au putut fi restilizate.</translation>
     </message>
     <message>
         <source>Dictionaries:</source>
