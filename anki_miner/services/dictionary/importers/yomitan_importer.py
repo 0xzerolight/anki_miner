@@ -356,8 +356,8 @@ def import_yomitan_zip(
                     # Jitendex's "priority form", "rarely used form".
                     # Split on ASCII space ONLY (arg-less .split() also breaks on
                     # nbsp, shattering the name into fragments that never match the
-                    # nbsp-keyed tags-table chip and dump as garbled fallback words
-                    # in the attribution line). The renderer splits on " " too, so
+                    # nbsp-keyed tags-table row, so the tag's grammar or commonness
+                    # category is lost). The provider splits on " " too, so
                     # the stored string must use ASCII spaces BETWEEN tags and keep
                     # the nbsp WITHIN each name. We union both columns (definitionTags
                     # first, preserving order) and store on `DictRow.tags`.
@@ -456,8 +456,9 @@ def import_yomitan_zip(
         raise_if_cancelled(cancel_check)
 
         # Tag metadata (schema v3): glob tag_bank_*.json + convert any legacy
-        # index.json tagMeta so the provider can expand tag names into hover
-        # chips. Absent tags simply leave the table empty (italic fallback).
+        # index.json tagMeta so the provider can read each tag's category: gender
+        # and aspect tags become the envelope's `data-am-grammar`, frequent/popular
+        # tags mark common rows. Absent tags simply leave the table empty.
         tag_metas = _collect_tags(tmp_path, index, skipped, skip_examples)
         if tag_metas:
             write_tags(db_path, tag_metas)
@@ -642,8 +643,8 @@ def _collect_tags(
     last-wins upsert, an index-level definition overrides a same-named bank one
     (mirrors Yomitan pushing ``_addOldIndexTags`` after the bank tags). A tag
     that fails structural conversion is skipped, never aborting the import —
-    counted into ``skipped`` so a dictionary that lost all its tag chips says so
-    once instead of silently rendering the italic fallback everywhere.
+    counted into ``skipped`` so a dictionary that lost all its tag metadata says
+    so once instead of silently losing its grammar and commonness tags.
     """
     tags: list[TagMeta] = []
     for tag_file in sorted(zip_root.glob("tag_bank_*.json")):

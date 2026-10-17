@@ -39,6 +39,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Saved transcripts (Utilities → Generate, Audiobook Sync).** A second run on the same audio file with the same model and language reuses the saved Whisper transcript instead of transcribing again. Generate and Audiobook Sync share it; the cache is trimmed to 2 GB at startup, oldest first.
 
 ### Changed
+- **The Definition and Glossary fields hold definitions only.** Cards no longer carry tag chips or JMdict's forms row. Senses are numbered only when there are two or more, and a dictionary's name appears only in a field that stacks two or more dictionaries, such as a Glossary with Jitendex and JMdict. For a dictionary without its own stylesheet, cross-references, antonyms and loanword origins are left out, glosses get bullets only when there are two or more, and usage notes are dimmed. A dictionary that ships its own stylesheet, such as Jitendex, keeps its own entry text and styling. A one-sense JMdict definition field went from 9.3 KB to 0.8 KB. Cards mined before this version keep their old layout until you run Utilities → Card Backfill with Definitions and Glossary checked and Overwrite existing values on. Restyle cards… leaves them as they are and counts them as already up to date.
 - **One card per sentence moves a word to another line (Settings → Sentences).** A word whose sentence is already taken now moves to another line it appears on, and is skipped only when every one of its lines is taken. It used to be skipped outright.
 - **Generate splits long Whisper lines at sentence ends (Utilities → Generate).** A segment longer than six seconds is cut after each word that ends a sentence under the mining language's punctuation rules, and each piece keeps its own words' times.
 - **Condense keeps pauses shorter than one second between lines.** Two kept stretches closer than that are joined instead of cut apart.
@@ -54,6 +55,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **The Linux app keeps its video preview when started from its own menu entry or a packager's wrapper.** On first run the app adds a menu entry that starts `AnkiMiner` directly, and that entry takes the place of the one the `.deb` installs. Started that way, the app skipped the launcher that puts the system's newer `libstdc++` in front of the bundled one, so on recent distributions the graphics driver could not load. The preview and the Word Curator then failed with "EGL not available" on Wayland, and the app quit on X11. The app now restarts itself through the launcher when it was started without it. Set `ANKI_MINER_LAUNCHER=1` to skip that step.
 
 ### Removed
+- **Tag chips, their hover descriptions and the forms row on mined cards.** In a dictionary without its own stylesheet, note boxes, inline tags and example sentences also lose their house styling.
 
 ## [3.9.0] - 2026-10-15
 

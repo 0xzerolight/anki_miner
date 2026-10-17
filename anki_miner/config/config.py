@@ -589,11 +589,11 @@ class AnkiMinerConfig:
 
     # Card styling (Issue #44). anki_miner emits definition HTML with its own
     # class scheme (`.yomitan-glossary`, `gloss-sc-*`, `data-sc-*`) and ships one
-    # universal glossary stylesheet (resources/glossary.css). Glossary styling is
-    # self-contained per card (the Yomitan model): a `<style>` block — universal
-    # sheet + every enabled dictionary's scoped styles.css — is embedded at the top
-    # of each card's glossary field at card-creation time
-    # (`EpisodeProcessor._phase5_create` → `build_card_style_block`). anki_miner
+    # structural glossary stylesheet (resources/glossary.css). Glossary styling is
+    # self-contained per card (the Yomitan model): a `<style>` block — that sheet
+    # + the scoped styles.css of each dictionary in the field — is embedded as a
+    # trailing block in each glossary/definition field at card-creation time
+    # (`EpisodeProcessor._phase5_create` → `attach_card_style_block`). anki_miner
     # never writes to the note type's card styling.
 
     # Card creation order. When True, the words handed to phase 3 are re-sorted

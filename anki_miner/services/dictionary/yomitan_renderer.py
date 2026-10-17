@@ -831,8 +831,9 @@ def render_glossary_entry(
         # Yomitan's own `.gloss-list` (ext/css/display.css) and the inline style
         # the structured-content path already carries for the same role, so a
         # synthesized members list and a source-authored one look identical on one
-        # card. Inline also survives a dictionary that ships its own styles.css
-        # (those stamp `data-has-styles`, which gates every glossary.css rule off).
+        # card. Inline also covers a dictionary that ships its own styles.css: its
+        # rows reach the card with this markup, and glossary.css has no rule for it.
+        # `sense_presentation.SYNTHESIZED_LIST_ATTRS` matches these attributes verbatim.
         inner = f'<ul class="gloss-sc-ul" style="list-style-type: circle">{nested}</ul>'
 
     item_attrs = 'class="gloss-item"'
