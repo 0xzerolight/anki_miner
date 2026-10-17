@@ -9,8 +9,7 @@ from unittest.mock import patch
 import pytest
 
 from anki_miner.languages.registry import get_profile
-from anki_miner.services.card_restyler import is_legacy_markup
-from anki_miner.services.dictionary.card_style_block import attach_card_style_block
+from anki_miner.services.dictionary.card_style_block import attach_card_style_block, is_legacy_markup
 from anki_miner.services.dictionary.providers.indexed_provider import (
     _DISPLAY_LIMIT,
     IndexedDictProvider,

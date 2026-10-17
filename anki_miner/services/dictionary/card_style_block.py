@@ -272,3 +272,56 @@ def attach_card_style_block(
         direction=direction,
     )
     return field_html + block
+
+
+def is_legacy_markup(body: str) -> bool:
+    """Whether a miner field carries markup from before the clean glossary shape.
+
+    Tag chips (``class="gloss-tag"``) and the ``<ul class="gloss-list">`` sense
+    list were rendered by every earlier version and by none since; the current
+    sheet styles neither, so refreshing such a field's block would strip its
+    styling. Card Backfill rebuilds those fields from the dictionaries instead.
+    """
+    return 'class="gloss-tag"' in body or '<ul class="gloss-list"' in body
+
+
+# Blocks minted before OWNED_STYLE_MARKER existed open on this literal.
+_LEGACY_OWNED_STYLE_MARKER = ".yomitan-glossary{--am-muted: rgba(128,128,128,0.95);"
+_STYLE_SPAN_RE = re.compile(r"<style>(.*?)</style>", re.DOTALL)
+
+
+def refresh_style_block(value: str, entries: Iterable[tuple[str, str, str]], *, direction: str = "ltr") -> str | None:
+    """Return ``value`` with OUR block brought up to the current base sheet.
+
+    ``None`` when the field must be left untouched: two blocks of ours, or our
+    marker outside a well-formed ``<style>`` span (hand-edited beyond repair).
+    The caller compares the result against ``value`` for the no-op case.
+
+    **Extract** — the field carries our block (a ``<style>`` whose CSS opens with
+    ``OWNED_STYLE_MARKER`` or the older ``--am-muted`` literal) anywhere, leading
+    or trailing; a body may also carry a dictionary's own ``<style>``. The block
+    is removed, its tail after the first ``\\n`` (scoped dictionary CSS plus any
+    RTL rule; the minified base is newline-free) is kept VERBATIM — never
+    re-collected, so an uninstalled dictionary keeps its CSS — and the block is
+    re-emitted at the field tail with ``base_css`` of the body.
+
+    **Fresh attach** — no block of ours: ``attach_card_style_block`` with the
+    current ``entries`` and ``direction``, exactly what mining writes (and a
+    no-op for a field without miner markup).
+
+    The body is never rewritten.
+    """
+    markers = (OWNED_STYLE_MARKER, _LEGACY_OWNED_STYLE_MARKER)
+    ours = [match for match in _STYLE_SPAN_RE.finditer(value) if match.group(1).startswith(markers)]
+    if len(ours) > 1:
+        return None
+    if not ours:
+        if any(marker in value for marker in markers):
+            return None
+        return attach_card_style_block(value, dict_css_entries=entries, direction=direction)
+    match = ours[0]
+    body = value[: match.start()] + value[match.end() :]
+    carried = match.group(1).partition("\n")[2]
+    new_base = base_css(body)
+    inner = f"{new_base}\n{carried}" if carried else new_base
+    return f"{body}<style>{inner}</style>"

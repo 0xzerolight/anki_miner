@@ -29,6 +29,19 @@ from anki_miner.utils.logging_ext import log_summary
 
 logger = logging.getLogger(__name__)
 
+
+def escape_anki_search(text: str) -> str:
+    """Escape a deck or note-type name for use inside a quoted Anki search clause.
+
+    Backslashes, quotes, and Anki's glob metacharacters (``*`` = any run,
+    ``_`` = any single char, which Anki treats as wildcards even inside
+    ``deck:"..."`` and ``note:"..."``) are escaped so a name like ``Core_2k``
+    matches literally. Lives here, Qt-free, so services the headless CLI loads
+    (card_backfiller, deck_filter, the Anki-deck reading source) can share it.
+    """
+    return text.replace("\\", "\\\\").replace('"', '\\"').replace("*", "\\*").replace("_", "\\_")
+
+
 # Protocol version this module speaks; echoed on the readiness receipt when the
 # call was not the `version` action (AnkiConnect's envelope carries no version).
 _API_VERSION = 6

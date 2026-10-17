@@ -8,6 +8,7 @@ import pytest
 
 from anki_miner.services.dictionary import card_style_block
 from anki_miner.services.dictionary.card_style_block import (
+    OWNED_STYLE_MARKER,
     RTL_GLOSSARY_CSS,
     _minified_regions,
     _minify_css,
@@ -15,9 +16,12 @@ from anki_miner.services.dictionary.card_style_block import (
     base_css,
     build_card_style_block,
     filter_dict_css_entries,
+    is_legacy_markup,
+    refresh_style_block,
     split_group_regions,
 )
 from anki_miner.services.dictionary.card_style_presets import load_glossary_css
+from anki_miner.services.dictionary.dict_css_scope import scope_dict_css
 
 # A field carrying markup for both optional regions.
 IMAGE = '<img class="gloss-image" src="p.svg">'
@@ -348,3 +352,134 @@ class TestNoNoteTypeCssWrite:
             or "update_model_styling" in p.read_text(encoding="utf-8")
         ]
         assert offenders == [], f"note-type CSS write path resurfaced in {offenders}"
+
+
+def _owned(css: str) -> str:
+    return OWNED_STYLE_MARKER + "}" + css
+
+
+# A current-markup body with no <style> (the fresh-attach path).
+BARE = '<div class="yomitan-glossary"><ol data-count="1"><li data-dictionary="X">x</li></ol></div>'
+# The clean glossary shape: numbered senses, a circle-bulleted gloss list.
+CURRENT_BODY = (
+    '<div class="yomitan-glossary"><ol data-count="1"><li data-dictionary="JMdict" data-dictionary-id="jmdict">'
+    '<ol class="gloss-list"><li class="gloss-item"><ol class="gloss-glosses" lang="en"><li>dinner</li>'
+    '<li>evening meal</li></ol></li><li class="gloss-item">supper</li></ol></li></ol></div>'
+)
+# A card mined before the clean shape: tag chips and a ul sense list.
+LEGACY_BODY = (
+    '<div class="yomitan-glossary"><ol data-count="1">'
+    '<li data-dictionary="JMdict [2026-06-28]" data-dictionary-id="jmdict" data-has-styles="">'
+    '<i>(<span class="gloss-tag" data-category="partOfSpeech" title="noun (common)">n</span>, JMdict [2026-06-28])</i>'
+    '<ul class="gloss-list" data-count="1"><li class="gloss-item"><div class="gloss-content">dinner</div></li></ul>'
+    "</li></ol></div>"
+)
+
+
+class TestIsLegacyMarkup:
+    @pytest.mark.parametrize(
+        "body",
+        [
+            LEGACY_BODY,
+            '<li data-dictionary="X"><span class="gloss-tag" title="noun">n</span>x</li>',
+            '<li data-dictionary="X"><ul class="gloss-list" data-count="1"><li class="gloss-item">x</li></ul></li>',
+        ],
+        ids=["chips-and-ul", "chips-only", "ul-only"],
+    )
+    def test_detects_chips_or_the_ul_sense_list(self, body):
+        assert is_legacy_markup(body)
+
+    @pytest.mark.parametrize("body", [BARE, CURRENT_BODY, attach_card_style_block(CURRENT_BODY, dict_css_entries=[])])
+    def test_current_shape_is_not_legacy(self, body):
+        assert not is_legacy_markup(body)
+
+
+class TestRefreshStyleBlock:
+    """Refresh OUR block at the field tail, keep the carried dict_css tail and the
+    body verbatim; fresh-attach otherwise. ``None`` only for malformed <style>
+    structure."""
+
+    @pytest.mark.parametrize(
+        "entries",
+        [(), (("x-id", "X", '.yomitan-glossary [data-dictionary="X"]{color:red}'),)],
+        ids=["no-dict-css", "dict-css"],
+    )
+    def test_a_freshly_mined_rtl_field_is_already_current(self, entries):
+        # Writer convergence (S21): the RTL rule rides the block tail, which the
+        # refresh carries verbatim, so refreshing a fresh RTL card is a no-op.
+        mined = attach_card_style_block(BARE, dict_css_entries=list(entries), direction="rtl")
+        assert mined.endswith("\n" + RTL_GLOSSARY_CSS + "</style>")
+        assert refresh_style_block(mined, list(entries), direction="rtl") == mined
+
+    def test_fresh_attach_matches_mining_for_rtl(self):
+        entries = [("x-id", "X", ".x{}")]
+        out = refresh_style_block(BARE, entries, direction="rtl")
+        assert out == attach_card_style_block(BARE, dict_css_entries=entries, direction="rtl")
+        assert out is not None and out.endswith(RTL_GLOSSARY_CSS + "</style>")
+
+    def test_no_markup_returns_value_unchanged(self):
+        assert refresh_style_block("plain text", []) == "plain text"
+
+    def test_unclosed_our_style_returns_none(self):
+        assert refresh_style_block(BARE + f"<style>{_owned('ol[data-count]{}')}", []) is None
+
+    def test_two_base_blocks_returns_none(self):
+        v = f"<style>{_owned('A ol[data-count]{}')}</style><style>{_owned('B ol[data-count]{}')}</style>" + BARE
+        assert refresh_style_block(v, []) is None
+
+    def test_leading_migrates_to_tail_preserving_multiline_dict_tail(self):
+        tail = ".dictA{}\n.dictB{}"
+        v = f"<style>{_owned('OLD ol[data-count]{}')}\n{tail}</style><div>body</div>"
+        # Body preserved byte-for-byte, block at the tail with a freshly computed
+        # base + the verbatim dict tail.
+        assert refresh_style_block(v, []) == f"<div>body</div><style>{base_css('')}\n{tail}</style>"
+
+    def test_current_trailing_format_is_fixpoint(self):
+        v = attach_card_style_block(BARE, dict_css_entries=[])
+        assert refresh_style_block(v, []) == v
+
+    def test_stale_trailing_block_gets_fresh_base_and_keeps_tail(self):
+        tail = '.yomitan-glossary [data-dictionary="JMdict"]{color:red}'
+        stale = f"{CURRENT_BODY}<style>{_owned('STALE ol[data-count]{}')}\n{tail}</style>"
+        assert refresh_style_block(stale, []) == f"{CURRENT_BODY}<style>{base_css(CURRENT_BODY)}\n{tail}</style>"
+
+    def test_pre_owned_marker_block_is_still_recognised(self):
+        # Blocks minted before the owned-style marker open on the old literal
+        # `--am-muted` declaration: replaced, never stacked.
+        old_head = ".yomitan-glossary{--am-muted: rgba(128,128,128,0.95);}.yomitan-glossary ol[data-count]{margin:0}"
+        tail = '.yomitan-glossary [data-dictionary="X"]{color:red}'
+        out = refresh_style_block(f"{BARE}<style>{old_head}\n{tail}</style>", [])
+        assert out == f"{BARE}<style>{base_css(BARE)}\n{tail}</style>"
+        assert out.count("<style>") == 1
+
+    def test_carried_tail_wins_over_config(self):
+        # The extract path keeps the card's OWN carried CSS; current config is
+        # not consulted, so an uninstalled dictionary's CSS survives.
+        tail = '.yomitan-glossary [data-dictionary="X"]{color:red}'
+        v = f"<style>{_owned('OLD ol[data-count]{}')}\n{tail}</style>{BARE}"
+        out = refresh_style_block(v, [("x-id", "X", ".x{}")])
+        assert out == f"{BARE}<style>{base_css(BARE)}\n{tail}</style>"
+        assert ".x{}" not in out
+
+    def test_fresh_attach_filters_current_config_to_field(self):
+        entries = [("x-id", "X", ".x{color:red}"), ("y-id", "Y", ".y{color:blue}")]
+        out = refresh_style_block(BARE, entries)
+        assert out == f"{BARE}<style>{base_css(BARE)}\n.x{{color:red}}</style>"  # Y has no envelope here
+
+    def test_fresh_attach_keeps_css_for_legacy_title_envelope(self):
+        title = "Jitendex.org [2026-06-06]"
+        value = BARE.replace('data-dictionary="X"', f'data-dictionary="{title}"')
+        scoped = scope_dict_css("li {color:red}", "jitendex", title)
+
+        out = refresh_style_block(value, [("jitendex", title, scoped)])
+
+        assert out is not None
+        assert 'data-dictionary-id="' not in value
+        assert f'[data-dictionary="{title}"]:not([data-dictionary-id]) li {{color:red}}' in out
+
+    def test_body_is_never_rewritten(self):
+        scoped = '.yomitan-glossary [data-dictionary="X"] li{color:red}'
+        out = refresh_style_block(BARE, [("x-id", "X", scoped)])
+        assert out is not None
+        assert out.startswith(BARE + "<style>")
+        assert "data-has-styles" not in out

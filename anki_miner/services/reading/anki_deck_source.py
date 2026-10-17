@@ -23,9 +23,8 @@ from anki_miner.exceptions import AnkiConnectionError, SetupError, raise_if_canc
 from anki_miner.models.reading import DeckFieldMap, ImageRef, ReadingDocument, ReadingSourceRef, ReadingUnit
 
 # The escaping Deck Filter's deck query uses (quotes, backslash, and the `_`/`*`
-# wildcards a subs2srs name like "Show_01" is full of), imported from its
-# definition as card_backfiller does.
-from anki_miner.services.card_restyler import _escape_note_type as _escape_anki_search
+# wildcards a subs2srs name like "Show_01" is full of).
+from anki_miner.services._ankiconnect import escape_anki_search as _escape_anki_search
 from anki_miner.services.reading._util import READING_CANCELLED
 from anki_miner.utils.logging_ext import log_summary
 from anki_miner.utils.text_utils import clean_subtitle_text

@@ -39,87 +39,26 @@ that never carried any, which falls back to current-config CSS).
 
 from __future__ import annotations
 
-import re
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from anki_miner.services._ankiconnect import escape_anki_search
 from anki_miner.services.definition_service import collect_dictionary_css_entries
-from anki_miner.services.dictionary.card_style_block import (
-    OWNED_STYLE_MARKER,
-    base_css,
-    filter_dict_css_entries,
-)
+from anki_miner.services.dictionary.card_style_block import is_legacy_markup, refresh_style_block
 
 if TYPE_CHECKING:
     from anki_miner.config import AnkiMinerConfig
     from anki_miner.services.anki_service import AnkiService
 
-# Anki search escaping for a note-type name (mirrors AnkiService._build_vocab_query):
-# backslash, quote, and Anki's ``*``/``_`` glob metacharacters, so a name like
-# ``Core_2k`` matches literally instead of as a wildcard.
-_QUERY_ESCAPES = (("\\", "\\\\"), ('"', '\\"'), ("*", "\\*"), ("_", "\\_"))
+__all__ = ["RestyleResult", "is_legacy_markup", "restyle_mined_cards"]
 
 _CHUNK = 500
 
-_LEGACY_OWNED_STYLE_MARKER = ".yomitan-glossary{--am-muted: rgba(128,128,128,0.95);"
-
-
-def is_legacy_markup(body: str) -> bool:
-    """Whether a miner field carries markup from before the clean glossary shape.
-
-    Tag chips (``class="gloss-tag"``) and the ``<ul class="gloss-list">`` sense
-    list were rendered by every earlier version and by none since; the current
-    sheet styles neither.
-    """
-    return 'class="gloss-tag"' in body or '<ul class="gloss-list"' in body
-
-
-_STYLE_SPAN_RE = re.compile(r"<style>(.*?)</style>", re.DOTALL)
-
 
 def _restyle_field(value: str, entries: list[tuple[str, str, str]]) -> str | None:
-    """Return the field's target value under the current styling, or ``None``
-    when the field must be left untouched (malformed ``<style>`` structure).
-
-    The caller compares against the input for the idempotent no-op. Two paths:
-
-    **Extract/migrate** — the field carries OUR base block somewhere (a
-    ``<style>`` whose inner CSS opens with the owned-style marker, or the older
-    ``--am-muted`` literal; a body may legitimately carry TWO ``<style>``s, its
-    own per-dict one inside the envelope plus ours). The block is removed from
-    wherever it sits (field head or tail), its
-    ``dict_css`` tail (after the first ``\\n`` — the minified base is
-    newline-free, pinned in ``card_style_block``) is preserved VERBATIM — never
-    re-collected, so an uninstalled dictionary keeps its CSS — and the block is
-    re-emitted at the field TAIL with a fresh base.
-
-    **Fresh-attach** — no block of ours anywhere (bare or per-dict bodies, or
-    the never-carrier field of a single-carrier card). A trailing block is
-    appended with current-config CSS filtered to the dictionaries present in
-    the body (``filter_dict_css_entries`` — the same per-field filter mining and
-    backfill use, so all three writers converge byte-for-byte).
-
-    Both paths pick the base from THIS FIELD's body only (``base_css``) and
-    return the body byte-for-byte: cross-field selection would diverge from
-    mining's per-field blocks and rewrite fresh cards forever.
-    """
-    markers = (OWNED_STYLE_MARKER, _LEGACY_OWNED_STYLE_MARKER)
-    ours = [m for m in _STYLE_SPAN_RE.finditer(value) if m.group(1).startswith(markers)]
-    if len(ours) > 1:
-        return None  # two base blocks — hand-edited beyond repair, leave untouched
-    if not ours and any(marker in value for marker in markers):
-        return None  # ownership token outside a well-formed <style> span — malformed
-    if ours:
-        match = ours[0]
-        body = value[: match.start()] + value[match.end() :]
-        dict_css = match.group(1).partition("\n")[2]  # "" when no dict_css tail
-    else:
-        body = value
-        dict_css = filter_dict_css_entries(body, entries)
-    new_base = base_css(body)
-    inner = f"{new_base}\n{dict_css}" if dict_css else new_base
-    return f"{body}<style>{inner}</style>"
+    """The field's target value under the current styling (``refresh_style_block``)."""
+    return refresh_style_block(value, entries)
 
 
 @dataclass(frozen=True)
@@ -147,12 +86,6 @@ class RestyleResult:
 def _chunks(items: list[int], size: int) -> Iterator[list[int]]:
     for i in range(0, len(items), size):
         yield items[i : i + size]
-
-
-def _escape_note_type(name: str) -> str:
-    for old, new in _QUERY_ESCAPES:
-        name = name.replace(old, new)
-    return name
 
 
 def restyle_mined_cards(
@@ -196,7 +129,7 @@ def restyle_mined_cards(
     # _minified_regions) if the sheet ever loses the newline-free/ol[data-count]
     # contract — fail-loud beats a silent every-run-restyle failure mode.
 
-    note_ids = anki_service.find_notes(f'note:"{_escape_note_type(config.anki_note_type)}"')
+    note_ids = anki_service.find_notes(f'note:"{escape_anki_search(config.anki_note_type)}"')
     scanned = restyled = skipped_styled = skipped_no_markup = failed = 0
 
     for chunk in _chunks(note_ids, _CHUNK):

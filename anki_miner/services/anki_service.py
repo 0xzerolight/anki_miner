@@ -16,7 +16,7 @@ from anki_miner.exceptions import AnkiConnectionError, SetupError
 from anki_miner.interfaces import ProgressCallback
 from anki_miner.languages.profile import CARD_FRONT_KEY
 from anki_miner.models import AnkiWriteState, CardPayload
-from anki_miner.services._ankiconnect import _expect_list, post_action, post_multi
+from anki_miner.services._ankiconnect import _expect_list, escape_anki_search, post_action, post_multi
 from anki_miner.services.anki_media_store import AnkiMediaStore
 from anki_miner.services.anki_note_builder import (
     _RAW_HTML_FIELD_KEYS,
@@ -117,16 +117,6 @@ _DUPLICATE_ERROR_SUBSTRING = "cannot create note because it is a duplicate"
 # Yomitan (partitionAddibleNotes) falls back to two diffed canAddNotes calls
 # when canAddNotesWithErrorDetail is unavailable (backend.js:695).
 _UNSUPPORTED_ACTION_SUBSTRING = "unsupported action"
-
-
-def _escape_deck_name(deck: str) -> str:
-    """Escape a deck name for use inside a quoted Anki search clause.
-
-    Backslashes, quotes, and Anki's glob metacharacters (``*`` = any run,
-    ``_`` = any single char, which Anki treats as wildcards even inside
-    ``deck:"..."``) are escaped so a name like ``Core_2k`` matches literally.
-    """
-    return deck.replace("\\", "\\\\").replace('"', '\\"').replace("*", "\\*").replace("_", "\\_")
 
 
 def is_transient_anki_transport_error(exc: BaseException) -> bool:
@@ -541,7 +531,7 @@ class AnkiService:
         """
         query = "deck:*"
         for deck in self.config.excluded_decks:
-            query += f' -deck:"{_escape_deck_name(deck)}"'
+            query += f' -deck:"{escape_anki_search(deck)}"'
         logger.debug("Anki vocab query: query=%s", query)
         return query
 
@@ -891,7 +881,7 @@ class AnkiService:
         silently classify the whole source deck as unknown-but-known-elsewhere
         and produce a wrong plan.
         """
-        query = self._build_vocab_query() + f' -deck:"{_escape_deck_name(deck)}"'
+        query = self._build_vocab_query() + f' -deck:"{escape_anki_search(deck)}"'
         return self._collect_first_field_forms(query)
 
     def invalidate_existing_vocabulary_cache(self) -> None:

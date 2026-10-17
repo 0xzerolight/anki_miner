@@ -19,13 +19,12 @@ import pytest
 
 from anki_miner.config import create_default_config
 from anki_miner.services import card_restyler
-from anki_miner.services.card_restyler import RestyleResult, is_legacy_markup, restyle_mined_cards
+from anki_miner.services.card_restyler import RestyleResult, restyle_mined_cards
 from anki_miner.services.dictionary.card_style_block import (
     OWNED_STYLE_MARKER,
     attach_card_style_block,
     base_css,
 )
-from anki_miner.services.dictionary.dict_css_scope import scope_dict_css
 
 
 def _owned(css: str) -> str:
@@ -91,22 +90,6 @@ def _no_disk_io(monkeypatch):
 
 
 class TestLegacyMarkup:
-    @pytest.mark.parametrize(
-        "body",
-        [
-            LEGACY_BODY,
-            '<li data-dictionary="X"><span class="gloss-tag" title="noun">n</span>x</li>',
-            '<li data-dictionary="X"><ul class="gloss-list" data-count="1"><li class="gloss-item">x</li></ul></li>',
-        ],
-        ids=["chips-and-ul", "chips-only", "ul-only"],
-    )
-    def test_detects_chips_or_the_ul_sense_list(self, body):
-        assert is_legacy_markup(body)
-
-    @pytest.mark.parametrize("body", [BARE, CURRENT_BODY, attach_card_style_block(CURRENT_BODY, dict_css_entries=[])])
-    def test_current_shape_is_not_legacy(self, body):
-        assert not is_legacy_markup(body)
-
     def test_legacy_markup_field_is_skipped_and_counted(self):
         # The current sheet styles neither chips nor the ul sense list, and the
         # restyler never rewrites bodies: swapping the old block would strip the
@@ -518,93 +501,6 @@ class TestRestyleMinedCards:
         restyle_mined_cards(svc, replace(_cfg(), anki_note_type='Core_2k "x"'))
         (query,), _ = svc.find_notes.call_args
         assert query == 'note:"Core\\_2k \\"x\\""'
-
-
-class TestRestyleField:
-    """Pure helper: migrate/refresh OUR block to the field tail, preserve the
-    dict_css tail + body verbatim; fresh-attach otherwise. Returns None only
-    for malformed <style> structure."""
-
-    @staticmethod
-    def _restyle(value, entries=()):
-        return card_restyler._restyle_field(value, list(entries))
-
-    @pytest.mark.parametrize(
-        "entries",
-        [(), (("x-id", "X", '.yomitan-glossary [data-dictionary="X"]{color:red}'),)],
-        ids=["no-dict-css", "dict-css"],
-    )
-    def test_a_freshly_mined_rtl_field_is_already_current(self, entries):
-        # Writer convergence (S21): the RTL rule rides the block tail, which the
-        # restyler carries verbatim, so a restyle of a fresh RTL card is a no-op.
-        from anki_miner.services.dictionary.card_style_block import RTL_GLOSSARY_CSS
-
-        mined = attach_card_style_block(BARE, dict_css_entries=list(entries), direction="rtl")
-        assert mined.endswith("\n" + RTL_GLOSSARY_CSS + "</style>")
-        assert self._restyle(mined, entries) == mined
-
-    def test_unclosed_our_style_returns_none(self):
-        assert self._restyle(BARE + f"<style>{_owned('ol[data-count]{}')}") is None
-
-    def test_two_base_blocks_returns_none(self):
-        v = f"<style>{_owned('A ol[data-count]{}')}</style><style>{_owned('B ol[data-count]{}')}</style>" + BARE
-        assert self._restyle(v) is None
-
-    def test_leading_migrates_to_tail_preserving_multiline_dict_tail(self):
-        tail = ".dictA{}\n.dictB{}"
-        v = f"<style>{_owned('OLD ol[data-count]{}')}\n{tail}</style><div>body</div>"
-        out = self._restyle(v)
-        # Body preserved byte-for-byte, block at the tail with a freshly
-        # computed base + the verbatim dict tail.
-        assert out == f"<div>body</div><style>{base_css('')}\n{tail}</style>"
-
-    def test_current_trailing_format_is_fixpoint(self):
-        v = attach_card_style_block(BARE, dict_css_entries=[])
-        assert self._restyle(v) == v
-
-    def test_pre_owned_marker_block_is_still_recognised(self):
-        # Blocks minted before the owned-style marker open on the old literal
-        # `--am-muted` declaration; only card_restyler's legacy literal
-        # recognises them: replaced, never stacked.
-        old_head = ".yomitan-glossary{--am-muted: rgba(128,128,128,0.95);}.yomitan-glossary ol[data-count]{margin:0}"
-        tail = '.yomitan-glossary [data-dictionary="X"]{color:red}'
-        out = self._restyle(f"{BARE}<style>{old_head}\n{tail}</style>")
-        assert out == f"{BARE}<style>{base_css(BARE)}\n{tail}</style>"
-        assert out.count("<style>") == 1
-
-    def test_carried_tail_wins_over_config(self):
-        # The extract path keeps the card's OWN carried CSS; entries/current
-        # config are NOT consulted.
-        tail = '.yomitan-glossary [data-dictionary="X"]{color:red}'
-        v = f"<style>{_owned('OLD ol[data-count]{}')}\n{tail}</style>{BARE}"
-        out = self._restyle(v, entries=[("x-id", "X", ".x{}")])
-        assert out == f"{BARE}<style>{base_css(BARE)}\n{tail}</style>"
-        assert ".x{}" not in out  # carried CSS only, never re-collected
-
-    def test_fresh_attach_filters_current_config_to_field(self):
-        entries = [("x-id", "X", ".x{color:red}"), ("y-id", "Y", ".y{color:blue}")]
-        out = self._restyle(BARE, entries=entries)
-        assert out == f"{BARE}<style>{base_css(BARE)}\n.x{{color:red}}</style>"  # Y has no envelope here
-
-    def test_fresh_attach_keeps_css_for_legacy_title_envelope(self):
-        title = "Jitendex.org [2026-06-06]"
-        value = BARE.replace('data-dictionary="X"', f'data-dictionary="{title}"')
-        scoped = scope_dict_css("li {color:red}", "jitendex", title)
-
-        out = self._restyle(value, entries=[("jitendex", title, scoped)])
-
-        assert out is not None
-        assert 'data-dictionary-id="' not in value
-        assert f'[data-dictionary="{title}"]:not([data-dictionary-id]) li {{color:red}}' in out
-
-    def test_body_is_never_rewritten(self):
-        # No envelope stamping: whatever CSS governs a dictionary, the body bytes
-        # come back verbatim ahead of the block.
-        scoped = '.yomitan-glossary [data-dictionary="X"] li{color:red}'
-        out = self._restyle(BARE, entries=[("x-id", "X", scoped)])
-        assert out is not None
-        assert out.startswith(BARE + "<style>")
-        assert "data-has-styles" not in out
 
 
 def test_rejected_updates_reach_main_window_as_non_success(qtbot, patch_heavy_init, test_config, monkeypatch):

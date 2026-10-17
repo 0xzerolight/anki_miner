@@ -48,6 +48,10 @@ from typing import TYPE_CHECKING, Any, TypeVar
 from anki_miner.exceptions import SetupError
 from anki_miner.languages.registry import config_language, get_profile
 from anki_miner.languages.tagger_provider import get_tagger
+
+# Generic Anki-search escaper (backslash/quote/``*``/``_``): note-type and deck
+# names need the identical escaping (``Core_2k`` would otherwise glob-match).
+from anki_miner.services._ankiconnect import escape_anki_search as _escape_anki_search
 from anki_miner.services.anki_note_builder import (
     _HTML_TAG_RE,
     _RAW_HTML_FIELD_KEYS,
@@ -58,11 +62,6 @@ from anki_miner.services.anki_note_builder import (
     missing_note_type_message,
 )
 from anki_miner.services.backfill_audio import word_audio_candidates
-
-# Generic Anki-search escaper (backslash/quote/``*``/``_``); the historical name
-# says "note type" but deck names need the identical escaping (see
-# AnkiService._build_vocab_query — ``Core_2k`` would otherwise glob-match).
-from anki_miner.services.card_restyler import _escape_note_type as _escape_anki_search
 from anki_miner.services.definition_service import collect_dictionary_css_entries
 from anki_miner.services.dictionary.card_style_block import attach_card_style_block
 from anki_miner.services.frequency.multi_frequency_service import harmonic_rank
