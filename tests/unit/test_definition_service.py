@@ -908,6 +908,51 @@ class TestGetGlossariesBatchFastPath:
         legacy.lookup.assert_called_once_with("first")
 
 
+def _envelope_block(title: str, dict_id: str, body: str) -> str:
+    """One provider's glossary block in IndexedDictProvider._render's shape."""
+    return (
+        '<div class="yomitan-glossary"><ol data-count="1">'
+        f'<li data-dictionary="{title}" data-dictionary-id="{dict_id}">{body}</li>'
+        "</ol></div>"
+    )
+
+
+class TestGetGlossariesBatchLabels:
+    """The Glossary names a dictionary only when 2+ dictionaries stack in it."""
+
+    def test_word_found_by_one_of_two_providers_is_unlabelled(self, test_config):
+        jit = make_batch_offline_provider("Jitendex", table={})
+        jmd = make_batch_offline_provider(
+            "JMdict", table={"x": _envelope_block("JMdict [2026-10-16]", "jmd", "dinner")}
+        )
+        service = DefinitionService(test_config, providers=[jit, jmd])
+
+        [glossary] = service.get_glossaries_batch([("x", None)])
+
+        assert glossary == _envelope_block("JMdict [2026-10-16]", "jmd", "dinner")
+        assert "<i>" not in glossary
+
+    def test_word_found_by_both_providers_gets_two_labels(self, test_config):
+        jit = make_batch_offline_provider(
+            "Jitendex", table={"x": _envelope_block("Jitendex.org [2026-06-06]", "jit", "supper")}
+        )
+        jmd = make_batch_offline_provider(
+            "JMdict", table={"x": _envelope_block("JMdict [2026-10-16]", "jmd", "dinner")}
+        )
+        service = DefinitionService(test_config, providers=[jit, jmd])
+
+        [glossary] = service.get_glossaries_batch([("x", None)])
+
+        assert glossary is not None
+        assert glossary.count("<i>") == 2
+        assert (
+            '<li data-dictionary="Jitendex.org [2026-06-06]" data-dictionary-id="jit"><i>(Jitendex.org)</i> supper'
+            in glossary
+        )
+        assert '<li data-dictionary="JMdict [2026-10-16]" data-dictionary-id="jmd"><i>(JMdict)</i> dinner' in glossary
+        assert glossary.index("(Jitendex.org)") < glossary.index("(JMdict)")
+
+
 class TestClose:
     """Tests for DefinitionService.close (Issue #30 — Win11 sqlite handle release)."""
 

@@ -13,6 +13,7 @@ from PyQt6.QtCore import QCoreApplication
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import AnkiMinerException
 from anki_miner.interfaces import ProgressCallback
+from anki_miner.services.dictionary.glossary_label import label_stacked
 from anki_miner.services.subtitle_parser import _differs_by_okurigana_only
 from anki_miner.utils.i18n import tr_format
 from anki_miner.utils.logging_ext import capped, log_summary
@@ -1097,9 +1098,10 @@ class DefinitionService:
         queried once per word-unique sub-batch (one IN-clause SQLite query per
         sub-batch instead of N per-word queries). Walk semantics:
         * Every available provider is queried in chain order; each provider's
-          returned HTML is concatenated verbatim (each provider wraps its hit in
+          returned HTML is concatenated (each provider wraps its hit in
           ``<div class="yomitan-glossary">…</div>``, so the result is a sequence
-          of those wrappers — compatible with the Senren toggle).
+          of those wrappers — compatible with the Senren toggle). When two or
+          more blocks stack, ``label_stacked`` names each one's dictionary.
         Providers lacking ``lookup_many`` are consulted per-word.
 
         ``fallback_context`` is ``get_definitions_batch``'s lookup-miss ladder:
@@ -1185,7 +1187,7 @@ class DefinitionService:
         results: list[str | None] = []
         for i, pair in enumerate(words, 1):
             word, _reading = pair
-            glossary: str | None = "".join(offline_hits[pair]) or None
+            glossary: str | None = label_stacked(offline_hits[pair]) or None
             results.append(glossary)
             if progress_callback and not cancelled:
                 if glossary:
