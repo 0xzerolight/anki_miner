@@ -53,8 +53,9 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-# Rendered senses shown per dictionary hit, applied AFTER content-dedup and
-# sequence grouping (dedup-before-cap, plan item 5.1). Storage fetches a larger
+# Rendered senses shown per dictionary hit, applied AFTER content-dedup,
+# sequence grouping and the drop of senses that present empty
+# (dedup-before-cap, plan item 5.1). Storage fetches a larger
 # candidate pool (storage._LOOKUP_LIMIT) so duplicate-content rows can't consume
 # a display slot before dedup runs.
 _DISPLAY_LIMIT = 5
@@ -463,10 +464,12 @@ class IndexedDictProvider:
         dictionary-toggle CSS keys on it) holding the bare body of a single sense,
         or a numbered ``gloss-list`` for several. No tag chips, no attribution
         label. A sense whose tags include ``forms`` (the alternative-spellings
-        row) is dropped before the cap. Each kept row is reshaped by
+        row) is dropped before the cap, and so is a sense that ``present_sense``
+        reshapes to nothing (a references-only row). Each kept row is reshaped by
         ``present_sense``; a dictionary that ships its own styles.css keeps its
-        row markup. Gender and aspect tags reach the grammar hook as the
-        envelope's ``data-am-grammar`` attribute, present only when one is set.
+        row markup. Gender and aspect tags of the kept senses reach the grammar
+        hook as the envelope's ``data-am-grammar`` attribute, present only when
+        one is set.
 
         Sequence grouping. Ported from Yomitan ``Translator._getRelatedDictionary
         Entries`` + ``_createGroupedDictionaryEntry`` (ext/js/language/translator.js,
@@ -518,14 +521,21 @@ class IndexedDictProvider:
             else:
                 groups[idx].append(content)
 
-        # Flatten the groups in order and apply the display cap AFTER dedup +
-        # grouping + the forms drop.
-        kept = [content for group in groups for content in group][:_DISPLAY_LIMIT]
-        if not kept:
-            return None
-
+        # Flatten the groups in order, present each sense, and apply the display
+        # cap AFTER dedup + grouping + the forms drop + the empty-body drop: a
+        # sense that presents empty (a references-only row) takes no slot, and
+        # its tags never reach the grammar attribute.
         styled = bool(self._scoped_css)
-        bodies = [body for body in (present_sense(content, styled=styled) for content in kept) if body]
+        kept: list[str] = []
+        bodies: list[str] = []
+        for content in (content for group in groups for content in group):
+            body = present_sense(content, styled=styled)
+            if not body:
+                continue
+            kept.append(content)
+            bodies.append(body)
+            if len(bodies) == _DISPLAY_LIMIT:
+                break
         if not bodies:
             return None
         if len(bodies) == 1:

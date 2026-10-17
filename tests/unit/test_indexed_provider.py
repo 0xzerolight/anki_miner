@@ -2,6 +2,7 @@
 
 import logging
 import sqlite3
+from dataclasses import replace
 from pathlib import Path
 from unittest.mock import patch
 
@@ -1026,6 +1027,34 @@ def test_render_rows_with_only_dropped_content_give_none(tmp_path: Path):
     _seed_db(db, [DictRow(term="語", reading=None, content=references)])
 
     assert _loaded(db).lookup("語") is None
+
+
+def test_render_empty_sense_takes_no_display_slot_and_no_grammar(tmp_path: Path):
+    """A sense that presents empty is dropped BEFORE the cap: it leaves all five slots
+    to real senses, and a gender tag only it carries never reaches the envelope."""
+    references = (
+        '<li class="gloss-item"><div class="gloss-content"><ul class="gloss-sc-ul" data-sc-content="references">'
+        '<li class="gloss-sc-li">see 言葉</li></ul></div></li>'
+    )
+    db = tmp_path / "t.sqlite"
+    _seed_with_tags(
+        db,
+        [DictRow(term="語", reading=None, content=references, tags="f", score=10, sequence=1)]
+        + _sense_rows("語", "s0", "s1", "s2", "s3", "s4"),
+        [_GENDER_F],
+    )
+
+    assert _loaded(db).lookup("語") == _envelope(_senses("s0", "s1", "s2", "s3", "s4"))
+
+
+def test_render_capped_out_sense_tags_do_not_reach_grammar(tmp_path: Path):
+    """Six senses: the cap keeps five, so the sixth sense's gender tag is no grammar of the entry."""
+    rows = _sense_rows("語", "s0", "s1", "s2", "s3", "s4", "s5")
+    rows[5] = replace(rows[5], tags="f")
+    db = tmp_path / "t.sqlite"
+    _seed_with_tags(db, rows, [_GENDER_F])
+
+    assert _loaded(db).lookup("語") == _envelope(_senses("s0", "s1", "s2", "s3", "s4"))
 
 
 @pytest.mark.parametrize("styles_css", [None, _STYLES_CSS], ids=["unstyled", "styled"])
