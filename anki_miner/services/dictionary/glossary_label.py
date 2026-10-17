@@ -11,17 +11,20 @@ from __future__ import annotations
 import html
 import re
 
-#: One trailing ``[…]`` or ``(…)`` suffix, such as a revision date.
-_TRAILING_SUFFIX_RE = re.compile(r"\s*(?:\[[^\[\]]*\]|\([^()]*\))\s*$")
+#: One trailing ``[…]`` suffix, or a ``(…)`` one that opens with a version or date
+#: (``(v2)``, ``(2026-10-16)``); any other parenthesis is part of the name.
+_TRAILING_SUFFIX_RE = re.compile(r"\s*(?:\[[^\[\]]*\]|\(v?\d[^()]*\))\s*$")
 
 #: A provider block's envelope open tag; group 2 is its escaped dictionary title.
 _ENVELOPE_OPEN_RE = re.compile(r'(<li data-dictionary="([^"]*)"[^>]*>)')
 
 
 def display_title(title: str) -> str:
-    """The dictionary title without one trailing bracketed or parenthesised suffix.
+    """The dictionary title without one trailing revision suffix.
 
-    ``"JMdict [2026-10-16]"`` reads ``"JMdict"``. A title that is only a suffix
+    ``"JMdict [2026-10-16]"`` reads ``"JMdict"``: a ``[…]`` suffix always goes, a
+    ``(…)`` one only when it reads as a version or date (``"X (v2)"`` reads ``"X"``),
+    so ``"JMdict (English)"`` keeps its qualifier. A title that is only a suffix
     stays whole, so the result is never empty.
     """
     match = _TRAILING_SUFFIX_RE.search(title)

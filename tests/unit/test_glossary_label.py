@@ -65,6 +65,9 @@ def test_block_without_envelope_passes_through():
     [
         ("JMdict [2026-10-16]", "JMdict"),
         ("X (v2)", "X"),
+        ("X (2026-10-16)", "X"),
+        ("JMdict (English)", "JMdict (English)"),
+        ("Wiktionary (de-en) [2026]", "Wiktionary (de-en)"),
         ("明鏡国語辞典 第三版", "明鏡国語辞典 第三版"),
         ("[odd]", "[odd]"),
     ],
