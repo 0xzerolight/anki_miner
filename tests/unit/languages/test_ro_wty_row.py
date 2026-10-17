@@ -16,7 +16,7 @@ from anki_miner.services.dictionary.importers.yomitan_importer import import_yom
 from anki_miner.services.dictionary.providers.indexed_provider import IndexedDictProvider
 
 FIXTURE = json.loads((Path(__file__).parents[2] / "fixtures" / "ro" / "wty_row.json").read_text(encoding="utf-8"))
-_CHIP = re.compile(r'<span class="gloss-tag"[^>]*>[^<]*</span>')
+_CHIP = re.compile(r' data-am-grammar="[^"]*"')
 STIINTA = "știință"
 CARTI = "cărți"
 CEDILLA_STIINTA = "\u015ftiin\u0163ă"  # \u015ftiin\u0163ă
@@ -82,6 +82,7 @@ def test_the_gender_chip_gives_the_label(word):
 
 @pytest.mark.parametrize("word", ["carte", "scaun", STIINTA])
 def test_the_head_line_alone_gives_the_same_label(word):
+    assert _CHIP.search(FIXTURE["rendered_html"][word])
     without_chips = _CHIP.sub("", FIXTURE["rendered_html"][word])
     assert "Grammar-content" in without_chips
     assert _gender(without_chips) == {"noun_gender": FIXTURE["expected_gender"][word]}
@@ -91,11 +92,12 @@ def test_the_dictionary_neuter_leads_the_models_agreement_gender():
     """E.2.5: UD RRT has no neuter, so the model tags scaun Masc and scaunele Fem; the dictionary decides."""
     html = FIXTURE["rendered_html"]["scaun"]
     assert _gender(html, morph="Case=Acc,Nom|Definite=Def|Gender=Fem|Number=Plur") == {"noun_gender": "neuter"}
+    assert _CHIP.search(html)
     assert _gender(_CHIP.sub("", html), morph="Definite=Ind|Gender=Masc|Number=Sing") == {"noun_gender": "neuter"}
 
 
 def test_the_morph_gender_is_the_last_resort():
-    stub = FIXTURE["rendered_html"][CARTI]  # a form-of stub: a non-lemma chip, no gender chip, no head line
-    assert "Grammar-content" not in stub and 'data-category="gender-' not in stub
+    stub = FIXTURE["rendered_html"][CARTI]  # a form-of stub: no grammar tags, no head line
+    assert "Grammar-content" not in stub and "data-am-grammar" not in stub
     assert _gender(stub, morph="Case=Acc,Nom|Definite=Ind|Gender=Fem|Number=Plur") == {"noun_gender": "feminine"}
     assert _gender(stub) == {}

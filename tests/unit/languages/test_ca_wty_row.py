@@ -18,7 +18,7 @@ from anki_miner.services.dictionary.importers.yomitan_importer import import_yom
 from anki_miner.services.dictionary.providers.indexed_provider import IndexedDictProvider
 
 FIXTURE = json.loads((Path(__file__).parents[2] / "fixtures" / "ca" / "wty_row.json").read_text(encoding="utf-8"))
-_CHIP = re.compile(r'<span class="gloss-tag"[^>]*>[^<]*</span>')
+_CHIP = re.compile(r' data-am-grammar="[^"]*"')
 
 
 def _provider(tmp_path: Path, dict_id: str, term_rows: list) -> IndexedDictProvider:
@@ -65,6 +65,7 @@ def test_the_gender_chip_gives_the_article_label(word):
 
 @pytest.mark.parametrize("word", ["llibre", "taula"])
 def test_the_head_line_alone_gives_the_same_label(word):
+    assert _CHIP.search(FIXTURE["rendered_html"][word])
     without_chips = _CHIP.sub("", FIXTURE["rendered_html"][word])
     assert "Grammar-content" in without_chips
     assert _gender(without_chips) == {"noun_gender": FIXTURE["expected_gender"][word]}
@@ -76,6 +77,7 @@ def test_a_chip_that_excludes_the_morph_gender_wins():
 
 
 def test_the_morph_gender_leads_when_the_block_has_no_chips():
+    assert _CHIP.search(FIXTURE["rendered_html"]["llibre"])
     without_chips = _CHIP.sub("", FIXTURE["rendered_html"]["llibre"])
     assert _gender(without_chips, morph="Gender=Fem|Number=Sing") == {"noun_gender": "la"}
 

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import re
 import zipfile
 from pathlib import Path
 
@@ -78,8 +77,8 @@ def test_a_capital_dotless_i_is_not_the_dotted_one(index):
 def test_the_mined_fronts_are_headwords(index):
     provider = _provider(index, get_profile("tr").dict_keys)
     assert all(provider.lookup(front) is not None for front in ("kitap", "okumak", "ışık", "iyi"))
-    titles = set(re.findall(r'title="([^"]+)"', provider.lookup("iyi") or ""))
-    assert {"adjective", "adverb", "interjection", "noun"} <= titles
+    # iyi's adjective, adverb, interjection and noun rows: one numbered sense each.
+    assert (provider.lookup("iyi") or "").count('<li class="gloss-item">') == 4
 
 
 def test_the_surface_rung_reaches_the_inflected_forms_row(index):

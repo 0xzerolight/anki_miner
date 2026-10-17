@@ -9,23 +9,27 @@ import pytest
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.languages._spaced.grammar_hook import DEFAULT_GENDER_LABELS, GRAMMAR_FIELDS, GrammarTagHook
+from anki_miner.services.dictionary.grammar_tags import encode_grammar_tags
+from anki_miner.services.dictionary.storage import TagMeta
 
 CONFIG = AnkiMinerConfig()
 ARTICLES = {"masc": "der", "fem": "die", "neut": "das"}
 
 
 def chip(category: str, name: str) -> str:
-    return f'<span class="gloss-tag" data-category="{category}" title="{name}">{name}</span>'
+    """The ``data-am-grammar`` token(s) the provider writes for one dictionary tag; blank for a non-grammar tag."""
+    return encode_grammar_tags([TagMeta(name, category, 0, name, 0)]) + " "
 
 
 def block(chips: str, head: str, dictionary: str = "wty-de-en") -> str:
+    grammar = " ".join(sorted(set(chips.split())))
+    attr = f' data-am-grammar="{grammar}"' if grammar else ""
     return (
-        f'<li data-dictionary="{dictionary}" data-dictionary-id="{dictionary}">{chips}<i>({dictionary})</i>'
-        '<ul class="gloss-list" data-count="1"><li class="gloss-item"><div class="gloss-content">'
+        f'<li data-dictionary="{dictionary}" data-dictionary-id="{dictionary}"{attr}>'
         '<div class="gloss-sc-div" data-sc-content="preamble"><details class="gloss-sc-details" '
         'data-sc-content="details-entry-Grammar"><summary class="gloss-sc-summary" '
         f'data-sc-content="summary-entry">Grammar</summary><div class="gloss-sc-div" data-sc-content="Grammar-content">{head}'
-        "</div></details></div></div></li></ul></li>"
+        "</div></details></div></li>"
     )
 
 
@@ -176,10 +180,9 @@ def test_an_article_rule_sees_the_headword_and_wins_over_the_map():
     ],
 )
 def test_an_uncategorised_aspect_chip_is_read_by_its_title(title, morph, aspect):
-    """OpenRussian files ``pf``/``ipf``/``both`` with an empty category; the title names the aspect."""
-    name = {"perfective": "pf", "imperfective": "ipf"}.get(title, "both")
-    chips = f'<span class="gloss-tag" data-category="" title="{title}">{name}</span>'
-    opr = f'<li data-dictionary="opr-ru-en" data-dictionary-id="opr-ru-en">{chips}<i>(opr-ru-en)</i></li>'
+    """OpenRussian files ``pf``/``ipf``/``both`` with an empty category; the notes (title) name the aspect."""
+    grammar = {"perfective": "aspect:pf", "imperfective": "aspect:impf"}.get(title, "aspect:impf aspect:pf")
+    opr = f'<li data-dictionary="opr-ru-en" data-dictionary-id="opr-ru-en" data-am-grammar="{grammar}"></li>'
     out = render(("aspect_pair",), word(html(opr), morph, pos="VERB"))
     assert out == ({} if aspect is None else {"aspect_pair": aspect})
 

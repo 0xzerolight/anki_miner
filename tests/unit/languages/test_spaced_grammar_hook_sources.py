@@ -8,6 +8,8 @@ import pytest
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.languages._spaced.grammar_hook import GENDER_SOURCES, GrammarTagHook
+from anki_miner.services.dictionary.grammar_tags import encode_grammar_tags
+from anki_miner.services.dictionary.storage import TagMeta
 
 CONFIG = AnkiMinerConfig()
 DE_HET = {"masc": "de", "fem": "de", "common": "de", "neut": "het"}
@@ -16,19 +18,21 @@ DICTIONARY_FIRST = ("chips", "head", "morph")
 
 
 def chip(category: str, name: str) -> str:
-    return f'<span class="gloss-tag" data-category="{category}" title="{name}">{name}</span>'
+    """The ``data-am-grammar`` token(s) the provider writes for one dictionary tag; blank for a non-grammar tag."""
+    return encode_grammar_tags([TagMeta(name, category, 0, name, 0)]) + " "
 
 
 def html(chips: str, head: str) -> str:
+    grammar = " ".join(sorted(set(chips.split())))
+    attr = f' data-am-grammar="{grammar}"' if grammar else ""
     return (
         '<div class="yomitan-glossary"><ol data-count="1">'
-        f'<li data-dictionary="wty-nl-en" data-dictionary-id="wty-nl-en">{chips}<i>(wty-nl-en)</i>'
-        '<ul class="gloss-list" data-count="1"><li class="gloss-item"><div class="gloss-content">'
+        f'<li data-dictionary="wty-nl-en" data-dictionary-id="wty-nl-en"{attr}>'
         '<div class="gloss-sc-div" data-sc-content="preamble"><details class="gloss-sc-details" '
         'data-sc-content="details-entry-Grammar"><summary class="gloss-sc-summary" '
         'data-sc-content="summary-entry">Grammar</summary>'
         f'<div class="gloss-sc-div" data-sc-content="Grammar-content">{head}'
-        "</div></details></div></div></li></ul></li></ol></div>"
+        "</div></details></div></li></ol></div>"
     )
 
 

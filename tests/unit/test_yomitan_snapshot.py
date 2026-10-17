@@ -41,10 +41,11 @@ def test_import_lookup_roundtrip_matches_snapshot(tmp_path: Path) -> None:
     Fixture covers every shape the renderer + provider must lock down:
       - One term-bank entry whose glossary array holds two members (plain string
         + structured-content). One ROW is one definition, so the snapshot pins
-        ``data-count="1"`` with both members nested — Yomitan's two-level model,
+        one bare sense with both members nested — Yomitan's two-level model,
         not two numbered senses.
-      - One POS tag (``v5r``) in column 3 (``definitionTags``).
-      - One additional tag (``common``) in column 8 (``termTags``).
+      - One POS tag (``v5r``) in column 3 (``definitionTags``) and one
+        additional tag (``common``) in column 8 (``termTags``); neither is a
+        grammar tag, so the card shows neither.
       - One inline structured-content table (thead/tbody, 1 row each).
       - One bundled image, exercising the
         ``<a class="gloss-image-link">…<img class="gloss-image anki-miner-dict-media">``
@@ -59,7 +60,7 @@ def test_import_lookup_roundtrip_matches_snapshot(tmp_path: Path) -> None:
                 [
                     "する",  # term
                     "する",  # reading
-                    "v5r",  # definitionTags → POS badge in italic line
+                    "v5r",  # definitionTags (not shown on the card)
                     "v5r",  # ruleIdentifiers (unused by renderer)
                     100,  # score
                     [
@@ -103,7 +104,7 @@ def test_import_lookup_roundtrip_matches_snapshot(tmp_path: Path) -> None:
                         },
                     ],
                     1,  # sequence
-                    "common",  # termTags → extra badge after POS in italic line
+                    "common",  # termTags (not shown on the card)
                 ],
             ],
         ],
@@ -114,8 +115,8 @@ def test_import_lookup_roundtrip_matches_snapshot(tmp_path: Path) -> None:
     dest_root = tmp_path / "dicts"
     result = import_yomitan_zip(zip_path, dest_root)
 
-    # display_name is what shows up in the italic line; pin it to the title so
-    # the snapshot is human-readable instead of using the slugged dict_id.
+    # display_name is what the data-dictionary attribute carries; pin it to the
+    # title so the snapshot is human-readable instead of using the slugged dict_id.
     provider = IndexedDictProvider(
         result.dict_id,
         dest_root / result.dict_id / "index.sqlite",
@@ -146,7 +147,7 @@ def test_import_lookup_roundtrip_matches_snapshot(tmp_path: Path) -> None:
 def test_import_lookup_grouped_render_separates_sequences(tmp_path: Path) -> None:
     """Full import→lookup snapshot for the 5.1 sequence-grouping path: two term
     entries sharing a reading (はし) but carrying DIFFERENT sequences (1 vs 2)
-    render as two sub-blocks, each with its OWN tag line, inside one
+    render as two numbered senses of ONE list, in sequence order, inside one
     <li data-dictionary> envelope."""
     zip_path = build_yomitan_zip(
         tmp_path / "src" / "grp.zip",
@@ -175,10 +176,11 @@ def test_import_lookup_grouped_render_separates_sequences(tmp_path: Path) -> Non
         provider.close()
 
     assert actual is not None
-    # One envelope, two grouped gloss-lists, two per-group tag lines.
+    # One envelope, one list of two senses, no tag line.
     assert actual.count("<li data-dictionary=") == 1
-    assert actual.count('<ul class="gloss-list"') == 2
-    assert actual.count("<i>(n, grp-dict)</i>") == 2
+    assert actual.count('<ol class="gloss-list"') == 1
+    assert actual.count('<li class="gloss-item">') == 2
+    assert "<i>" not in actual
     # Both lexemes present; bridge (seq1) precedes chopsticks (seq2).
     assert "bridge" in actual and "chopsticks" in actual
     assert actual.index("bridge") < actual.index("chopsticks")

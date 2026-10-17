@@ -11,6 +11,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from anki_miner.services.dictionary.dict_css_scope import scope_dict_css
+from anki_miner.services.dictionary.grammar_tags import GRAMMAR_ATTR, encode_grammar_tags
+from anki_miner.services.dictionary.sense_presentation import present_sense
 from anki_miner.services.dictionary.storage import (
     COMMON_TAG_CATEGORIES,
     SCHEMA_VERSION,
@@ -58,21 +60,6 @@ logger = logging.getLogger(__name__)
 _DISPLAY_LIMIT = 5
 
 
-def _is_jmdict_sense_index_tag(meta: TagMeta) -> bool:
-    # Deliberate Yomitan divergence: Yomitan renders these on their owning
-    # definitions. Anki Miner unions same-sequence tags into one detached chip
-    # row, so the indices lose that ownership and duplicate the numbered sense
-    # list directly below.
-    return (
-        meta.name.isascii()
-        and meta.name.isdecimal()
-        and meta.category == ""
-        and meta.ord == -10
-        and meta.score == 0
-        and meta.notes == f"JMdict Sense #{meta.name}"
-    )
-
-
 class IndexedDictProvider:
     """SQLite-backed implementation of the DictionaryProvider Protocol.
 
@@ -106,8 +93,7 @@ class IndexedDictProvider:
         # Lazy per-provider tag-metadata cache (Yomitan _tagCache analog):
         # ``{tag_name: TagMeta}`` from the schema-v3 ``tags`` table, populated on
         # first render. ``None`` until then; ``{}`` for a dict that shipped no
-        # tag_bank / legacy tagMeta (every tag then renders in the italic
-        # fallback line, preserving pre-v3 output).
+        # tag_bank / legacy tagMeta (no tag then reaches ``data-am-grammar``).
         self._tag_cache: dict[str, TagMeta] | None = None
         # Same check-then-set shape as _load_lock, for the same reason: two
         # renders racing the first _tag_meta() call would otherwise both hit
@@ -446,8 +432,8 @@ class IndexedDictProvider:
 
         Yomitan ``_tagCache`` analog: the per-dictionary tag-metadata map is
         read once on first render and reused. A read failure (or an unloaded
-        connection) degrades to an empty map so every tag simply falls back to
-        the italic token line — never raising into a lookup.
+        connection) degrades to an empty map, so the render carries no
+        ``data-am-grammar`` — never raising into a lookup.
         """
         if self._tag_cache is not None:
             return self._tag_cache
@@ -460,7 +446,7 @@ class IndexedDictProvider:
                 self._tag_cache = read_tags(self._conn)
             except sqlite3.DatabaseError as e:
                 logger.warning(
-                    "Dictionary '%s' (%s) raised DatabaseError reading tags; italic fallback: %s",
+                    "Dictionary '%s' (%s) raised DatabaseError reading tags; no grammar tags: %s",
                     self.dict_id,
                     self._db_path,
                     e,
@@ -469,18 +455,25 @@ class IndexedDictProvider:
             return self._tag_cache
 
     def _render(self, rows: list[tuple[str, str, int | None]]) -> str | None:
-        """Assemble Lapis-shape HTML from (content, tags, sequence) rows. Returns
-        None when there are no rows. Shared by lookup and lookup_many to guarantee
-        byte-identical output.
+        """Assemble the card's definition HTML from (content, tags, sequence) rows.
+        Returns None when no sense survives. Shared by lookup and lookup_many to
+        guarantee byte-identical output.
+
+        Definitions only: one ``<li data-dictionary>`` envelope (Lapis/Senren
+        dictionary-toggle CSS keys on it) holding the bare body of a single sense,
+        or a numbered ``gloss-list`` for several. No tag chips, no attribution
+        label. A sense whose tags include ``forms`` (the alternative-spellings
+        row) is dropped before the cap. Each kept row is reshaped by
+        ``present_sense``; a dictionary that ships its own styles.css keeps its
+        row markup. Gender and aspect tags reach the grammar hook as the
+        envelope's ``data-am-grammar`` attribute, present only when one is set.
 
         Sequence grouping. Ported from Yomitan ``Translator._getRelatedDictionary
         Entries`` + ``_createGroupedDictionaryEntry`` (ext/js/language/translator.js,
         upstream e2ed450): rows that share a dictionary ``sequence`` belong to one
-        lexeme and are rendered as ONE sub-block with its own tag line; unrelated
-        lexemes (different sequence) get their own sub-block so tags are no longer
-        unioned across them. A row with no sequence (``None``) is its own group.
-        All sub-blocks stay inside the single ``<li data-dictionary>`` envelope so
-        Lapis/Senren dictionary-toggle CSS is unaffected.
+        lexeme, so they are ordered together — first-seen group order, then
+        within-group order — and flattened into the one list. A row with no
+        sequence (``None``) is its own group.
 
         Deduplication before the cap (OVH-026, plan item 5.1): some dictionaries
         double-key the same entry — once under a kanji term with a kana reading,
@@ -489,44 +482,31 @@ class IndexedDictProvider:
         from every duplicate so nothing is lost) and only THEN apply the display
         cap, so duplicate rows can no longer consume a display slot ahead of a
         real sense — storage over-fetches a pool for exactly this reason.
-
-        Tag rendering (schema v3): a unioned tag with a ``tags``-table row is
-        emitted as a hover chip (``<span class="gloss-tag" data-category=…
-        title=notes>name</span>``), sorted by ``(ord, -score, name)`` — Yomitan
-        ``_mergeSimilarTags`` order. Tags without a row keep the italic token line.
-        A single-group hit (the common case: one sequence, or all NULL) renders
-        byte-identically to the pre-5.1 single-block output.
         """
         if not rows:
             return None
 
         # Content-dedup into ordered "senses": first-seen content wins, tags from
         # every duplicate content row union into that sense, and the first-seen
-        # sequence is the sense's group key. ``sense_tags`` preserves first-seen
-        # tag order per sense.
+        # sequence is the sense's group key.
         sense_order: list[str] = []
         sense_seq: dict[str, int | None] = {}
-        sense_tags: dict[str, list[str]] = {}
-        sense_tags_seen: dict[str, set[str]] = {}
+        sense_tags: dict[str, set[str]] = {}
         for content, tags, sequence in rows:
             if content not in sense_seq:
                 sense_order.append(content)
                 sense_seq[content] = sequence
-                sense_tags[content] = []
-                sense_tags_seen[content] = set()
+                sense_tags[content] = set()
             if tags:
-                seen = sense_tags_seen[content]
-                ordered = sense_tags[content]
-                for tag in tags.split(" "):
-                    if tag and tag not in seen:
-                        seen.add(tag)
-                        ordered.append(tag)
+                sense_tags[content].update(tag for tag in tags.split(" ") if tag)
 
         # Group senses by sequence (None = its own group), preserving first-seen
-        # group order and within-group sense order.
+        # group order and within-group sense order. A ``forms`` sense never joins.
         groups: list[list[str]] = []
         group_index_by_seq: dict[int, int] = {}
         for content in sense_order:
+            if "forms" in sense_tags[content]:
+                continue
             seq = sense_seq[content]
             if seq is None:
                 groups.append([content])
@@ -538,74 +518,33 @@ class IndexedDictProvider:
             else:
                 groups[idx].append(content)
 
-        # Apply the display cap AFTER dedup + grouping: fill groups in order until
-        # _DISPLAY_LIMIT senses are shown, truncating the crossing group.
-        budget = _DISPLAY_LIMIT
-        capped_groups: list[list[str]] = []
-        for group in groups:
-            if budget <= 0:
-                break
-            kept = group[:budget]
-            budget -= len(kept)
-            capped_groups.append(kept)
+        # Flatten the groups in order and apply the display cap AFTER dedup +
+        # grouping + the forms drop.
+        kept = [content for group in groups for content in group][:_DISPLAY_LIMIT]
+        if not kept:
+            return None
 
-        dict_label = self._display_name
-        escaped_attr = html.escape(dict_label, quote=True)
-        escaped_id = html.escape(self.dict_id, quote=True)
+        styled = bool(self._scoped_css)
+        bodies = [body for body in (present_sense(content, styled=styled) for content in kept) if body]
+        if not bodies:
+            return None
+        if len(bodies) == 1:
+            inner = bodies[0]
+        else:
+            inner = '<ol class="gloss-list">' + "".join(f'<li class="gloss-item">{b}</li>' for b in bodies) + "</ol>"
+
         tag_meta = self._tag_meta()
+        kept_tags = {tag for content in kept for tag in sense_tags[content]}
+        grammar = encode_grammar_tags(tag_meta[t] for t in kept_tags if t in tag_meta)
+        grammar_attr = f' {GRAMMAR_ATTR}="{grammar}"' if grammar else ""
 
-        # One sub-block per group: its own chips + italic tag line + gloss-list.
-        blocks: list[str] = []
-        for group in capped_groups:
-            group_tags: list[str] = []
-            group_tags_seen: set[str] = set()
-            for content in group:
-                for tag in sense_tags[content]:
-                    if tag not in group_tags_seen:
-                        group_tags_seen.add(tag)
-                        group_tags.append(tag)
-
-            merged = "".join(group)
-            item_count = merged.count('<li class="gloss-item"')
-
-            # Resolve first, then filter for display. Order is load-bearing: a
-            # suppressed tag must stay RESOLVED so it cannot fall through to
-            # `fallback_tags` below and reappear as a word inside the `<i>(...)`
-            # attribution line.
-            resolved_metas = [tag_meta[t] for t in group_tags if t in tag_meta]
-            chip_metas = [m for m in resolved_metas if not _is_jmdict_sense_index_tag(m)]
-            chip_metas.sort(key=lambda m: (m.ord, -m.score, m.name))
-            chips = "".join(
-                f'<span class="gloss-tag" data-category="{html.escape(m.category, quote=True)}"'
-                f' title="{html.escape(m.notes, quote=True)}">{html.escape(m.name)}</span>'
-                for m in chip_metas
-            )
-            fallback_tags = [t for t in group_tags if t not in tag_meta]
-            escaped_italic = html.escape(", ".join(fallback_tags + [dict_label]), quote=True)
-
-            blocks.append(
-                f'{chips}<i>({escaped_italic})</i><ul class="gloss-list" data-count="{item_count}">{merged}</ul>'
-            )
-
-        # data-has-styles gates the base sheet's data-sc-* gap-fillers OFF for
-        # dictionaries that ship a usable styles.css (glossary.css keys every
-        # gap-filler on `li[data-dictionary]:not([data-has-styles])`), so the
-        # dictionary's own scoped CSS governs its structured content — Yomitan
-        # parity. Accepted limitations: (a) non-empty scoped CSS != complete
-        # coverage — a partially sanitized or partially authored styles.css
-        # still stamps, so any hook it doesn't style renders bare (Yomitan
-        # gives such a dict no fallback either); (b) a pathological title
-        # containing </>/control chars has those stripped from its CSS scope
-        # selector (pre-existing css_string_escape fail-safe), so its own
-        # styles.css never matches its markup — such an entry is stamped and
-        # renders fully unstyled, consistently between fresh render and
-        # restyle. Real titles never trip it.
-        stamp = ' data-has-styles=""' if self._scoped_css else ""
+        escaped_attr = html.escape(self._display_name, quote=True)
+        escaped_id = html.escape(self.dict_id, quote=True)
         return (
             '<div class="yomitan-glossary">'
             '<ol data-count="1">'
-            f'<li data-dictionary="{escaped_attr}" data-dictionary-id="{escaped_id}"{stamp}>'
-            f"{''.join(blocks)}"
+            f'<li data-dictionary="{escaped_attr}" data-dictionary-id="{escaped_id}"{grammar_attr}>'
+            f"{inner}"
             "</li>"
             "</ol>"
             "</div>"

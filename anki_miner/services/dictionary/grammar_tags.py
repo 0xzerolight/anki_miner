@@ -54,7 +54,8 @@ def encode_grammar_tags(metas: Iterable[TagMeta]) -> str:
     return " ".join(sorted({token for meta in metas for token in _tokens(meta)}))
 
 
-def _first_block(definition_html: str) -> str:
+def first_block(definition_html: str) -> str:
+    """The first ``<li data-dictionary="…">`` block up to the next one; the whole HTML when it has none."""
     start = definition_html.find(_BLOCK_START)
     if start < 0:
         return definition_html
@@ -64,7 +65,7 @@ def _first_block(definition_html: str) -> str:
 
 def parse_grammar_attr(block_html: str) -> GrammarTags:
     """The genders and aspects the FIRST dictionary block's envelope names; empty sets when it names none."""
-    match = _ATTR_RE.search(_first_block(block_html))
+    match = _ATTR_RE.search(first_block(block_html))
     if match is None:
         return GrammarTags(frozenset(), frozenset())
     genders: set[str] = set()

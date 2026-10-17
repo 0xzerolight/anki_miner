@@ -1157,8 +1157,7 @@ class TestTagBankImport:
         space (U+00A0) and separates *distinct* tags with an ASCII space. If the
         importer splits on all whitespace, a name like ``priority\xa0form``
         shatters into ``priority``/``form`` fragments that never match their
-        tags-table chip and dump as garbled fallback words in the attribution
-        line. This affects ~31.5% of Jitendex entries.
+        tags-table row. This affects ~31.5% of Jitendex entries.
         """
         nbsp = "\u00a0"  # non-breaking space: nbsp WITHIN a name, ASCII space BETWEEN tags
         priority_form = f"priority{nbsp}form"
@@ -1190,16 +1189,14 @@ class TestTagBankImport:
         assert "priority form" not in tags  # ASCII-space variant = shattered
         assert "rarely used form" not in tags
 
-        # 2. End-to-end: each name renders as ONE chip, none as garbled fallback.
+        # 2. End-to-end: no tag reaches the card, whole or shattered.
         provider = IndexedDictProvider(result.dict_id, db, display_name="Test Dict")
         provider.load()
         rendered = provider.lookup("語")
         assert rendered is not None
-        assert f">{priority_form}</span>" in rendered
-        assert f">{rarely_form}</span>" in rendered
-        assert "(priority, form" not in rendered
-        assert "rarely, used" not in rendered
-        assert "<i>(Test Dict)</i>" in rendered
+        assert "a word" in rendered
+        assert "priority" not in rendered
+        assert "rarely" not in rendered
 
     def test_legacy_index_tag_meta_converted(self, tmp_path: Path):
         """A dict with no tag_bank files but an inline index.json tagMeta."""
@@ -1363,7 +1360,7 @@ class TestSequencedFlag:
     def test_a_sequenced_dictionary_keeps_its_sequence(self, tmp_path: Path):
         assert self._sequences(self._import(tmp_path, {"sequenced": True})) == [1, 1]
 
-    def test_each_unsequenced_homograph_renders_under_its_own_tag_line(self, tmp_path: Path):
+    def test_each_unsequenced_homograph_renders_as_its_own_sense(self, tmp_path: Path):
         db_path = self._import(tmp_path, {"sequenced": False})
         provider = IndexedDictProvider(db_path.parent.name, db_path, display_name="KRDICT EN")
         provider.load()
@@ -1372,9 +1369,8 @@ class TestSequencedFlag:
         finally:
             provider.close()
         assert rendered is not None
-        assert rendered.count('<ul class="gloss-list"') == 2
-        assert "<i>(Noun, ⭐⭐, KRDICT EN)</i>" in rendered
-        assert "<i>(Adverb, ⭐⭐⭐, KRDICT EN)</i>" in rendered
+        assert rendered.count('<li class="gloss-item">') == 2
+        assert "<i>" not in rendered
 
 
 class TestDictIdOverride:

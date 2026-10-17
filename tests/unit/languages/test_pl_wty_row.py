@@ -16,7 +16,7 @@ from anki_miner.services.dictionary.importers.yomitan_importer import import_yom
 from anki_miner.services.dictionary.providers.indexed_provider import IndexedDictProvider
 
 FIXTURE = json.loads((Path(__file__).parents[2] / "fixtures" / "pl" / "wty_row.json").read_text(encoding="utf-8"))
-_CHIP = re.compile(r'<span class="gloss-tag"[^>]*>[^<]*</span>')
+_CHIP = re.compile(r' data-am-grammar="[^"]*"')
 #: The head line gives these; the chips agree (plan P8, Addendum A).
 GENDERS = {"książka": "f", "stół": "m inan", "student": "m pers", "pies": "m anim"}
 #: Real wty-pl-en head lines: robić impf (perfective zrobić), zrobić pf (imperfective robić),
@@ -86,6 +86,7 @@ def test_the_gender_chip_gives_the_label(word):
 @pytest.mark.parametrize("word", sorted(GENDERS))
 def test_the_head_line_alone_gives_the_same_label(word):
     """Addendum A: the head-line parse skips ONE trailing animacy qualifier (stół m inan)."""
+    assert _CHIP.search(FIXTURE["rendered_html"][word])
     without_chips = _CHIP.sub("", FIXTURE["rendered_html"][word])
     assert "Grammar-content" in without_chips
     assert _gender(without_chips) == {"noun_gender": GENDERS[word]}

@@ -20,6 +20,7 @@ import re
 from typing import TYPE_CHECKING, Any
 
 from anki_miner.languages.profile import CardFieldSpec
+from anki_miner.services.dictionary.grammar_tags import first_block
 
 if TYPE_CHECKING:  # annotation-only, the ko/render.py pattern
     from anki_miner.config.config import AnkiMinerConfig
@@ -30,15 +31,16 @@ HANVIET_FIELD = CardFieldSpec(key="hanviet", capability="hanviet", placeholder="
 #: CJK Unified Ideographs, Extension A, Compatibility, and the supplementary planes (Ext B onward).
 _HANZI = "㐀-䶿一-鿿豈-﫿\U00020000-\U0003134f"
 _SINO_VIETNAMESE = re.compile(f"Sino-Vietnamese word from ([{_HANZI}]+)")
-#: Every dictionary row renders as one of these (yomitan_renderer); the definition lists them in rank order.
+#: A definition of several senses lists them as these, in rank order; a single sense is its block's bare body.
 _ROW_START = '<li class="gloss-item"'
+_BLOCK_START = '<li data-dictionary="'
 
 
 def _first_row(definition_html: str) -> str:
-    """The definition's first row, or ``""`` when it renders none."""
+    """The definition's first row: its first sense, or its first dictionary block when that holds one; else ``""``."""
     start = definition_html.find(_ROW_START)
     if start < 0:
-        return ""
+        return first_block(definition_html) if _BLOCK_START in definition_html else ""
     end = definition_html.find(_ROW_START, start + len(_ROW_START))
     return definition_html[start:] if end < 0 else definition_html[start:end]
 

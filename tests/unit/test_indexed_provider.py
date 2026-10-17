@@ -30,6 +30,29 @@ def _seed_db(db_path: Path, rows: list[DictRow], schema_version: int = SCHEMA_VE
     write_meta(db_path, {"schema_version": str(schema_version), "source_name": "Test"})
 
 
+def _seed_with_tags(db_path: Path, rows, tags, *, styles_css: str | None = None):
+    create_index(db_path)
+    bulk_insert(db_path, rows)
+    if tags:
+        write_tags(db_path, tags)
+    meta = {"schema_version": str(SCHEMA_VERSION), "source_name": "Test"}
+    if styles_css is not None:
+        meta["styles_css"] = styles_css
+    write_meta(db_path, meta)
+
+
+def _envelope(body: str, grammar: str = "", dictionary: str = "DictName", dict_id: str = "test-dict") -> str:
+    attr = f' data-am-grammar="{grammar}"' if grammar else ""
+    return (
+        '<div class="yomitan-glossary"><ol data-count="1">'
+        f'<li data-dictionary="{dictionary}" data-dictionary-id="{dict_id}"{attr}>{body}</li></ol></div>'
+    )
+
+
+def _senses(*bodies: str) -> str:
+    return '<ol class="gloss-list">' + "".join(f'<li class="gloss-item">{b}</li>' for b in bodies) + "</ol>"
+
+
 class TestIndexedDictProvider:
     def test_blob_styles_css_degrades_to_no_dictionary_css(self, tmp_path: Path):
         db = tmp_path / "test.sqlite"
@@ -63,14 +86,7 @@ class TestIndexedDictProvider:
         assert provider.is_available() is True
         assert provider.name == "DictName"
 
-        result = provider.lookup("食べる")
-        assert result is not None
-        assert '<div class="yomitan-glossary">' in result
-        assert '<ol data-count="1">' in result
-        assert '<li data-dictionary="DictName" data-dictionary-id="test-dict">' in result
-        assert '<ul class="gloss-list" data-count="1">' in result
-        assert "<i>(v1, expr, DictName)</i>" in result
-        assert '<li class="gloss-item">eat</li>' in result
+        assert provider.lookup("食べる") == _envelope("eat")
 
     def test_lookup_by_reading_fallback(self, tmp_path: Path):
         db = tmp_path / "test.sqlite"
@@ -88,56 +104,7 @@ class TestIndexedDictProvider:
         )
         provider = IndexedDictProvider("test-dict", db, display_name="Test")
         provider.load()
-        result = provider.lookup("たべる")
-        assert result is not None
-        assert '<li class="gloss-item">eat</li>' in result
-
-    def test_unrelated_lexemes_render_as_separate_sequence_groups(self, tmp_path: Path):
-        """Two different lexemes sharing a reading but with DIFFERENT sequences
-        (橋 seq1 / 箸 seq2) render as two sub-blocks, each with its OWN tag line,
-        inside one <li data-dictionary> — tags are no longer unioned across the
-        unrelated lexemes (plan item 5.1 sequence grouping)."""
-        db = tmp_path / "test.sqlite"
-        _seed_db(
-            db,
-            [
-                DictRow(
-                    term="橋",
-                    reading="はし",
-                    content='<li class="gloss-item">bridge</li>',
-                    tags="n common",
-                    sequence=1,
-                ),
-                DictRow(
-                    term="箸",
-                    reading="はし",
-                    content='<li class="gloss-item">chopsticks</li><li class="gloss-item">eating sticks</li>',
-                    tags="common food",
-                    sequence=2,
-                ),
-            ],
-        )
-        provider = IndexedDictProvider("test-dict", db, display_name="DictName")
-        provider.load()
-        result = provider.lookup("はし")
-
-        assert result is not None
-        # Still exactly one outer <li data-dictionary> envelope (CSS compat).
-        assert result.count("<li data-dictionary=") == 1
-        # Two per-group gloss-lists: bridge (1 item) and chopsticks (2 items).
-        assert '<ul class="gloss-list" data-count="1"><li class="gloss-item">bridge</li></ul>' in result
-        assert (
-            '<ul class="gloss-list" data-count="2">'
-            '<li class="gloss-item">chopsticks</li><li class="gloss-item">eating sticks</li></ul>'
-        ) in result
-        # Per-group tag lines — NOT unioned across the two lexemes.
-        assert "<i>(n, common, DictName)</i>" in result
-        assert "<i>(common, food, DictName)</i>" in result
-        # The old cross-lexeme union must NOT appear.
-        assert "<i>(n, common, food, DictName)</i>" not in result
-        # Bridge (seq1) sub-block precedes chopsticks (seq2) sub-block.
-        assert result.index("bridge") < result.index("chopsticks")
-        assert "<hr>" not in result
+        assert provider.lookup("たべる") == _envelope("eat", dictionary="Test")
 
     def test_lookup_miss_returns_none(self, tmp_path: Path):
         db = tmp_path / "test.sqlite"
@@ -167,34 +134,8 @@ class TestIndexedDictProvider:
         assert result is not None
         # Attribute: quote=True encodes & < > (and quotes)
         assert 'data-dictionary="A&amp;B&lt;c&gt;"' in result
-        # Italic line: same escaping
-        assert "<i>(A&amp;B&lt;c&gt;)</i>" in result
-        # Raw form must NOT appear unescaped in either spot
-        assert 'data-dictionary="A&B<c>"' not in result
-        assert "<i>(A&B<c>)</i>" not in result
-
-    def test_empty_tags_produces_italic_with_only_dict_name(self, tmp_path: Path):
-        db = tmp_path / "test.sqlite"
-        _seed_db(
-            db,
-            [
-                DictRow(
-                    term="x",
-                    reading=None,
-                    content='<li class="gloss-item">x</li>',
-                    tags="",
-                    sequence=1,
-                )
-            ],
-        )
-        provider = IndexedDictProvider("test-dict", db, display_name="DictName")
-        provider.load()
-        result = provider.lookup("x")
-
-        assert result is not None
-        assert "<i>(DictName)</i>" in result
-        # No leading comma
-        assert "<i>(, " not in result
+        # The raw form must NOT appear unescaped
+        assert "A&B<c>" not in result
 
     def test_schema_version_mismatch_marks_unavailable(self, tmp_path: Path):
         db = tmp_path / "test.sqlite"
@@ -246,7 +187,7 @@ class TestIndexedDictProvider:
         provider.load()
         result = provider.lookup("x")
         assert result is not None
-        assert '<li class="gloss-item">x</li>' in result
+        assert result == _envelope("x", dictionary="Test")
         provider.close()
         assert provider.is_available() is False
         assert provider.lookup("x") is None
@@ -379,7 +320,7 @@ class TestIndexedDictProvider:
         assert not error, f"Cross-thread lookup raised: {error}"
         assert len(result) == 1
         assert result[0] is not None
-        assert '<li class="gloss-item">eat</li>' in result[0]
+        assert result[0] == _envelope("eat", dictionary="Test")
 
 
 class TestIndexedDictProviderLookupMany:
@@ -545,8 +486,7 @@ class TestDedupBeforeCap:
         result = provider.lookup("打つ")
         assert result is not None
         assert result.count('<li class="gloss-item">') == _DISPLAY_LIMIT
-        # One sequence ⇒ one group ⇒ one gloss-list.
-        assert result.count('<ul class="gloss-list"') == 1
+        assert result.count('<ol class="gloss-list"') == 1
 
     def test_dedup_frees_slots_for_real_senses(self, tmp_path: Path):
         """Duplicate content collapses BEFORE the cap, so a real sense that a
@@ -573,55 +513,53 @@ class TestDedupBeforeCap:
 
 
 class TestTermBankRowBoundaries:
-    def test_three_senses_and_five_forms_count_as_four_rows(self, tmp_path: Path):
+    """One term-bank row is one sense, whatever it nests; a ``forms`` row (tagged as the importer stores it) is no sense."""
+
+    def test_three_senses_and_a_forms_row_show_three_senses(self, tmp_path: Path):
         db = tmp_path / "forms.sqlite"
-        contents = [render_glossary_entry([f"sense {i}"]) for i in range(3)]
-        contents.append(
-            render_glossary_entry(
-                ["捩れる", "捻れる", "拗れる", "捻じれる", "捩じれる"],
-                definition_tags=["forms"],
+        rows = [
+            DictRow(term="捻れる", reading="ひねれる", content=render_glossary_entry([f"sense {i}"]), sequence=1)
+            for i in range(3)
+        ]
+        rows.append(
+            DictRow(
+                term="捻れる",
+                reading="ひねれる",
+                content=render_glossary_entry(
+                    ["捩れる", "捻れる", "拗れる", "捻じれる", "捩じれる"], definition_tags=["forms"]
+                ),
+                tags="forms",
+                sequence=1,
             )
         )
-        _seed_db(
-            db,
-            [DictRow(term="捻れる", reading="ひねれる", content=content, sequence=1) for content in contents],
-        )
+        _seed_db(db, rows)
         provider = IndexedDictProvider("test-dict", db, display_name="JMdict")
         provider.load()
 
-        result = provider.lookup("捻れる")
+        assert provider.lookup("捻れる") == _envelope(_senses("sense 0", "sense 1", "sense 2"), dictionary="JMdict")
 
-        assert result is not None
-        assert '<ul class="gloss-list" data-count="4">' in result
-        assert result.count('<li class="gloss-item"') == 4
-        assert result.count('<li class="gloss-sc-li">') == 5
-
-    def test_one_sense_and_seven_forms_count_as_two_rows(self, tmp_path: Path):
+    def test_one_sense_and_a_forms_row_show_the_bare_sense(self, tmp_path: Path):
         db = tmp_path / "counter.sqlite"
-        contents = [
-            render_glossary_entry(["counter for months"]),
-            render_glossary_entry(
-                ["ヶ月（★）", "ヵ月（★）", "カ月", "か月", "ケ月", "箇月", "個月（🅁）"],
-                definition_tags=["forms"],
-            ),
-        ]
+        forms = render_glossary_entry(
+            ["ヶ月（★）", "ヵ月（★）", "カ月", "か月", "ケ月", "箇月", "個月（🅁）"], definition_tags=["forms"]
+        )
         _seed_db(
             db,
-            [DictRow(term="か月", reading="かげつ", content=content, sequence=1) for content in contents],
+            [
+                DictRow(
+                    term="か月", reading="かげつ", content=render_glossary_entry(["counter for months"]), sequence=1
+                ),
+                DictRow(term="か月", reading="かげつ", content=forms, tags="forms", sequence=1),
+            ],
         )
         provider = IndexedDictProvider("test-dict", db, display_name="JMdict")
         provider.load()
 
-        result = provider.lookup("か月")
+        assert provider.lookup("か月") == _envelope("counter for months", dictionary="JMdict")
 
-        assert result is not None
-        assert '<ul class="gloss-list" data-count="2">' in result
-        assert result.count('<li class="gloss-item"') == 2
-        assert result.count('<li class="gloss-sc-li">') == 7
-
-    def test_nested_forms_members_do_not_consume_row_cap(self, tmp_path: Path):
+    def test_nested_members_do_not_consume_row_cap(self, tmp_path: Path):
         db = tmp_path / "cap.sqlite"
-        contents = [render_glossary_entry([f"form {i}" for i in range(7)], definition_tags=["forms"])]
+        contents = [render_glossary_entry([f"member {i}" for i in range(7)])]
         contents.extend(render_glossary_entry([f"sense {i}"]) for i in range(5))
         _seed_db(
             db,
@@ -636,8 +574,8 @@ class TestTermBankRowBoundaries:
         result = provider.lookup("語")
 
         assert result is not None
-        assert '<ul class="gloss-list" data-count="5">' in result
         assert result.count('<li class="gloss-item"') == _DISPLAY_LIMIT
+        assert result.count("member ") == 7
         assert "sense 3" in result
         assert "sense 4" not in result
 
@@ -672,7 +610,7 @@ class TestKanaDedup:
         result = provider.lookup("にほん")
         assert result is not None
         # Gloss must appear exactly once in the rendered HTML
-        assert result.count('<li class="gloss-item">Japan</li>') == 1
+        assert result == _envelope("Japan")
 
     def test_kana_lookup_many_renders_gloss_once(self, tmp_path: Path):
         """lookup_many path also deduplicates identical content rows."""
@@ -694,7 +632,7 @@ class TestKanaDedup:
 
         result = provider.lookup_many([("にほん", None)])["にほん"]
         assert result is not None
-        assert result.count('<li class="gloss-item">Japan</li>') == 1
+        assert result == _envelope("Japan")
 
     def test_dedup_produces_same_result_as_single_lookup(self, tmp_path: Path):
         """lookup_many and lookup must agree after dedup (byte-identical)."""
@@ -750,36 +688,34 @@ class TestKanaDedup:
         """When a duplicate content row has extra tags, they must be UNIONed in."""
         db = tmp_path / "test.sqlite"
         # Two rows with SAME content but different tags (simulates double-keyed import)
-        _seed_db(
+        _seed_with_tags(
             db,
             [
                 DictRow(
                     term="日本語",
                     reading="にほんご",
                     content='<li class="gloss-item">Japanese</li>',
-                    tags="n lang",
+                    tags="n m",
                     sequence=1,
                 ),
                 DictRow(
                     term="にほんご",
                     reading=None,
                     content='<li class="gloss-item">Japanese</li>',
-                    tags="common",
+                    tags="f",
                     sequence=2,
                 ),
+            ],
+            [
+                TagMeta(name="m", category="gender-masculine", ord=0, notes="masculine", score=0.0),
+                TagMeta(name="f", category="gender-feminine", ord=0, notes="feminine", score=0.0),
             ],
         )
         provider = IndexedDictProvider("test-dict", db, display_name="DictName")
         provider.load()
 
-        result = provider.lookup("にほんご")
-        assert result is not None
-        # Content appears exactly once
-        assert result.count('<li class="gloss-item">Japanese</li>') == 1
-        # Tags from both rows should be unioned (n, lang, common)
-        assert "n" in result
-        assert "lang" in result
-        assert "common" in result
+        # Content appears exactly once; the grammar tags of both rows are unioned.
+        assert provider.lookup("にほんご") == _envelope("Japanese", grammar="gender:feminine gender:masculine")
 
 
 # ---------------------------------------------------------------------------
@@ -995,325 +931,191 @@ class TestDictionaryCss:
         assert "evil" not in out
 
 
-class TestHasStylesStamp:
-    """``data-has-styles`` gates the base sheet's data-sc-* gap-fillers.
-
-    The envelope is stamped iff the dictionary shipped usable (non-empty after
-    scoping/sanitizing) styles.css, so glossary.css's
-    ``li[data-dictionary]:not([data-has-styles])`` rules switch off exactly for
-    entries the dictionary styles itself.
-    """
-
-    def _seed(self, db_path: Path, *, styles_css: str | None, name: str = "Jitendex.org [2026-06-06]") -> None:
-        create_index(db_path)
-        bulk_insert(
-            db_path,
-            [DictRow(term="食べる", reading="たべる", content='<li class="gloss-item">eat</li>', sequence=1)],
-        )
-        meta = {"schema_version": str(SCHEMA_VERSION), "source_name": name}
-        if styles_css is not None:
-            meta["styles_css"] = styles_css
-        write_meta(db_path, meta)
-
-    def test_stamped_when_styles_css_present(self, tmp_path: Path):
-        db = tmp_path / "t.sqlite"
-        self._seed(db, styles_css='span[data-sc-class="tag"] { color: red }')
-        provider = IndexedDictProvider("jitendex", db, display_name="Jitendex.org [2026-06-06]")
-        assert provider.load() is True
-        out = provider.lookup("食べる")
-        assert out is not None
-        assert (
-            '<li data-dictionary="Jitendex.org [2026-06-06]" data-dictionary-id="jitendex" data-has-styles="">' in out
-        )
-
-    def test_unstamped_without_styles_css(self, tmp_path: Path):
-        db = tmp_path / "t.sqlite"
-        self._seed(db, styles_css=None)
-        provider = IndexedDictProvider("jitendex", db, display_name="Jitendex.org [2026-06-06]")
-        assert provider.load() is True
-        out = provider.lookup("食べる")
-        assert out is not None
-        assert '<li data-dictionary="Jitendex.org [2026-06-06]" data-dictionary-id="jitendex">' in out
-        assert "data-has-styles" not in out
-
-    def test_unstamped_when_sanitizer_rejects_styles_css(self, tmp_path: Path):
-        db = tmp_path / "t.sqlite"
-        self._seed(db, styles_css="a { background: url(http://evil/x.png) }")
-        provider = IndexedDictProvider("jitendex", db, display_name="Jitendex.org [2026-06-06]")
-        assert provider.load() is True
-        out = provider.lookup("食べる")
-        assert out is not None
-        assert '<li data-dictionary="Jitendex.org [2026-06-06]" data-dictionary-id="jitendex">' in out
-        assert "data-has-styles" not in out
-
-    def test_mixed_field_stamps_exactly_the_styled_envelope(self, tmp_path: Path):
-        styled_db = tmp_path / "styled.sqlite"
-        plain_db = tmp_path / "plain.sqlite"
-        self._seed(styled_db, styles_css="li { color: red }", name="Styled Dict")
-        self._seed(plain_db, styles_css=None, name="Plain Dict")
-        styled = IndexedDictProvider("styled", styled_db, display_name="Styled Dict")
-        plain = IndexedDictProvider("plain", plain_db, display_name="Plain Dict")
-        assert styled.load() is True
-        assert plain.load() is True
-        field = (styled.lookup("食べる") or "") + (plain.lookup("食べる") or "")
-        assert '<li data-dictionary="Styled Dict" data-dictionary-id="styled" data-has-styles="">' in field
-        assert '<li data-dictionary="Plain Dict" data-dictionary-id="plain">' in field
-        assert field.count("data-has-styles") == 1
-
-
 # ---------------------------------------------------------------------------
-# schema v3: tag chips + lazy tag-meta cache
+# _render: definitions only — no chips, no label, no forms row, markers only when plural
 # ---------------------------------------------------------------------------
 
+_GENDER_F = TagMeta(name="f", category="gender-feminine", ord=0, notes="feminine", score=0.0)
+_JMDICT_TAGS = [
+    TagMeta(name="n", category="partOfSpeech", ord=-3, notes="noun", score=0.0),
+    TagMeta(name="uk", category="", ord=0, notes="usually written in kana", score=0.0),
+]
+_STYLES_CSS = 'span[data-sc-class="tag"] { color: red }'
 
-class TestTagChips:
-    """A unioned tag with a tags-table row renders as a hover chip; tags with
-    no row keep the italic fallback (byte-identical to pre-v3)."""
 
-    def _seed_with_tags(self, db_path: Path, rows, tags):
-        create_index(db_path)
-        bulk_insert(db_path, rows)
-        if tags:
-            write_tags(db_path, tags)
-        write_meta(db_path, {"schema_version": str(SCHEMA_VERSION), "source_name": "Test"})
-
-    def test_tag_with_row_renders_as_chip(self, tmp_path: Path):
-        db = tmp_path / "t.sqlite"
-        self._seed_with_tags(
-            db,
-            [
-                DictRow(
-                    term="食べる", reading="たべる", content='<li class="gloss-item">eat</li>', tags="uk", sequence=1
-                )
-            ],
-            [TagMeta(name="uk", category="usage", ord=-2, notes="usually kana", score=0.0)],
+def _sense_rows(term: str, *glosses: str, forms_at: int | None = None, sequence: int = 1) -> list[DictRow]:
+    """One row per gloss in rank order; the row at ``forms_at`` is a ``forms`` row as the importer stores it."""
+    return [
+        DictRow(
+            term=term,
+            reading=None,
+            content=render_glossary_entry([gloss], definition_tags=["forms"] if i == forms_at else None),
+            tags="forms" if i == forms_at else "",
+            score=len(glosses) - i,
+            sequence=sequence,
         )
-        provider = IndexedDictProvider("test-dict", db, display_name="DictName")
-        provider.load()
-        result = provider.lookup("食べる")
-        assert result is not None
-        assert '<span class="gloss-tag" data-category="usage" title="usually kana">uk</span>' in result
-        # The chip tag no longer appears in the italic token line.
-        assert "<i>(DictName)</i>" in result
-        assert "uk," not in result
+        for i, gloss in enumerate(glosses)
+    ]
 
-    def test_tag_without_row_stays_in_italic(self, tmp_path: Path):
-        db = tmp_path / "t.sqlite"
-        # tags table empty → v1 has no row → italic fallback (pre-v3 output).
-        self._seed_with_tags(
-            db,
-            [DictRow(term="x", reading=None, content='<li class="gloss-item">x</li>', tags="v1 expr", sequence=1)],
-            [],
-        )
-        provider = IndexedDictProvider("test-dict", db, display_name="DictName")
-        provider.load()
-        result = provider.lookup("x")
-        assert result is not None
-        assert "<i>(v1, expr, DictName)</i>" in result
-        assert "gloss-tag" not in result
 
-    def test_mixed_chip_and_fallback(self, tmp_path: Path):
-        db = tmp_path / "t.sqlite"
-        self._seed_with_tags(
-            db,
-            [DictRow(term="x", reading=None, content='<li class="gloss-item">x</li>', tags="n custom", sequence=1)],
-            [TagMeta(name="n", category="partOfSpeech", ord=0, notes="noun", score=0.0)],
-        )
-        provider = IndexedDictProvider("test-dict", db, display_name="DictName")
-        provider.load()
-        result = provider.lookup("x")
-        assert result is not None
-        # 'n' has a row → chip; 'custom' has none → stays in italic with dict name.
-        assert '<span class="gloss-tag" data-category="partOfSpeech" title="noun">n</span>' in result
-        assert "<i>(custom, DictName)</i>" in result
+def _loaded(db: Path) -> IndexedDictProvider:
+    provider = IndexedDictProvider("test-dict", db, display_name="DictName")
+    assert provider.load() is True
+    return provider
 
-    def test_chips_sorted_by_ord_then_score_then_name(self, tmp_path: Path):
-        db = tmp_path / "t.sqlite"
-        self._seed_with_tags(
-            db,
-            [DictRow(term="x", reading=None, content='<li class="gloss-item">x</li>', tags="c a b", sequence=1)],
-            [
-                # ord governs first: a(ord2), b(ord1), c(ord1). Among ord1, higher
-                # score first (c score5 before b score0); then name.
-                TagMeta(name="a", category="", ord=2, notes="", score=0.0),
-                TagMeta(name="b", category="", ord=1, notes="", score=0.0),
-                TagMeta(name="c", category="", ord=1, notes="", score=5.0),
-            ],
-        )
-        provider = IndexedDictProvider("test-dict", db, display_name="D")
-        provider.load()
-        result = provider.lookup("x")
-        assert result is not None
-        pos_c = result.index(">c</span>")
-        pos_b = result.index(">b</span>")
-        pos_a = result.index(">a</span>")
-        # Expected order: c (ord1, score5) < b (ord1, score0) < a (ord2)
-        assert pos_c < pos_b < pos_a
 
-    def test_lookup_many_matches_lookup_with_chips(self, tmp_path: Path):
-        db = tmp_path / "t.sqlite"
-        self._seed_with_tags(
-            db,
-            [
-                DictRow(
-                    term="食べる", reading="たべる", content='<li class="gloss-item">eat</li>', tags="uk n", sequence=1
-                ),
-                DictRow(term="x", reading=None, content='<li class="gloss-item">x</li>', tags="custom", sequence=2),
-            ],
-            [
-                TagMeta(name="uk", category="usage", ord=-2, notes="kana", score=0.0),
-                TagMeta(name="n", category="pos", ord=0, notes="noun", score=0.0),
-            ],
-        )
-        provider = IndexedDictProvider("test-dict", db, display_name="D")
-        provider.load()
-        words = ["食べる", "x", "missing"]
-        batch = provider.lookup_many([(w, None) for w in words])
-        for w in words:
-            assert batch[w] == provider.lookup(w), f"mismatch for {w!r}"
+def test_render_single_sense_is_bare_body(tmp_path: Path):
+    db = tmp_path / "t.sqlite"
+    _seed_db(db, [DictRow(term="晩ご飯", reading=None, content=render_glossary_entry(["dinner"]), tags="n")])
 
-    def test_jmdict_sense_index_tags_are_suppressed(self, tmp_path: Path):
-        db = tmp_path / "t.sqlite"
-        self._seed_with_tags(
-            db,
-            [
-                DictRow(
-                    term="分る",
-                    reading="わかる",
-                    content='<li class="gloss-item">understand</li>',
-                    tags="1 v5r vi uk",
-                    sequence=1606560,
-                ),
-                DictRow(
-                    term="分る",
-                    reading="わかる",
-                    content='<li class="gloss-item">be known</li>',
-                    tags="2 v5r vi uk",
-                    sequence=1606560,
-                ),
-                DictRow(
-                    term="分る",
-                    reading="わかる",
-                    content='<li class="gloss-item">I know!</li>',
-                    tags="3 int",
-                    sequence=1606560,
-                ),
-                DictRow(
-                    term="分る",
-                    reading="わかる",
-                    content='<li class="gloss-item">other forms</li>',
-                    tags="forms",
-                    sequence=1606560,
-                ),
-            ],
-            [
-                TagMeta(name="1", category="", ord=-10, notes="JMdict Sense #1", score=0.0),
-                TagMeta(name="2", category="", ord=-10, notes="JMdict Sense #2", score=0.0),
-                TagMeta(name="3", category="", ord=-10, notes="JMdict Sense #3", score=0.0),
-                TagMeta(name="int", category="partOfSpeech", ord=-3, notes="interjection", score=0.0),
-                TagMeta(name="v5r", category="partOfSpeech", ord=-3, notes="Godan verb", score=0.0),
-                TagMeta(name="vi", category="partOfSpeech", ord=-3, notes="intransitive verb", score=0.0),
-                TagMeta(name="forms", category="", ord=0, notes="other forms", score=0.0),
-                TagMeta(name="uk", category="", ord=0, notes="usually written in kana", score=0.0),
-            ],
-        )
-        provider = IndexedDictProvider("test-dict", db, display_name="DictName")
-        provider.load()
+    assert _loaded(db).lookup("晩ご飯") == _envelope("dinner")
 
-        result = provider.lookup("分る")
 
-        assert result is not None
-        assert "JMdict Sense #" not in result
-        for name in ("1", "2", "3"):
-            assert f">{name}</span>" not in result
-        remaining_chips = [
-            '<span class="gloss-tag" data-category="partOfSpeech" title="interjection">int</span>',
-            '<span class="gloss-tag" data-category="partOfSpeech" title="Godan verb">v5r</span>',
-            '<span class="gloss-tag" data-category="partOfSpeech" title="intransitive verb">vi</span>',
-            '<span class="gloss-tag" data-category="" title="other forms">forms</span>',
-            '<span class="gloss-tag" data-category="" title="usually written in kana">uk</span>',
-        ]
-        positions = [result.index(chip) for chip in remaining_chips]
-        assert positions == sorted(positions)
-        assert "<i>(DictName)</i>" in result
-        assert provider.lookup_many([("分る", None)])["分る"] == result
+def test_render_forms_row_dropped_before_cap(tmp_path: Path):
+    db = tmp_path / "t.sqlite"
+    _seed_db(db, _sense_rows("語", "s0", "other forms", "s2", "s3", "s4", "s5", forms_at=1))
 
-    @pytest.mark.parametrize(
-        ("meta", "why"),
+    assert _loaded(db).lookup("語") == _envelope(_senses("s0", "s2", "s3", "s4", "s5"))
+
+
+def test_render_two_senses_numbered_no_count_attr(tmp_path: Path):
+    db = tmp_path / "t.sqlite"
+    _seed_db(db, _sense_rows("語", "word", "language"))
+
+    result = _loaded(db).lookup("語")
+
+    assert result is not None
+    assert '<ol class="gloss-list"><li class="gloss-item">word</li><li class="gloss-item">language</li></ol>' in result
+    assert result.count("data-count") == 1
+    assert '<ol data-count="1">' in result
+
+
+def test_render_groups_merge_in_order(tmp_path: Path):
+    """Sequence groups still order the senses (a lexeme's rows stay together), but render as ONE list."""
+    db = tmp_path / "t.sqlite"
+    _seed_db(
+        db,
         [
-            (TagMeta(name="1", category="frequent", ord=-10, notes="JMdict Sense #1", score=0.0), "category"),
-            (TagMeta(name="1", category="", ord=-3, notes="JMdict Sense #1", score=0.0), "ord"),
-            (TagMeta(name="1", category="", ord=-10, notes="JMdict Sense #1", score=7.0), "score"),
-            (TagMeta(name="1", category="", ord=-10, notes="JMdict Sense #2", score=0.0), "notes-mismatch"),
-            (TagMeta(name="１", category="", ord=-10, notes="JMdict Sense #１", score=0.0), "fullwidth-digit"),
+            DictRow(term="はし", reading=None, content=render_glossary_entry(["a"]), score=3, sequence=1),
+            DictRow(term="はし", reading=None, content=render_glossary_entry(["b"]), score=2, sequence=2),
+            DictRow(term="はし", reading=None, content=render_glossary_entry(["c"]), score=1, sequence=1),
         ],
     )
-    def test_only_the_complete_jmdict_signature_is_suppressed(self, tmp_path: Path, meta: TagMeta, why: str):
-        """Every clause of the predicate discriminates, not just `notes`.
 
-        The suppression is a deliberate divergence from Yomitan aimed at exactly
-        one dictionary's internal sense indices. Each clause is what keeps a
-        third-party dictionary's numeric tag (a JLPT level, a grade) visible, so
-        each clause needs its own witness — otherwise dropping one silently
-        widens the blast radius to dictionaries this was never meant to touch.
-        """
-        db = tmp_path / f"t-{why}.sqlite"
-        self._seed_with_tags(
-            db,
-            [DictRow(term="x", reading=None, content='<li class="gloss-item">x</li>', tags=meta.name, sequence=1)],
-            [meta],
-        )
-        provider = IndexedDictProvider("test-dict", db, display_name="DictName")
-        provider.load()
+    result = _loaded(db).lookup("はし")
 
-        result = provider.lookup("x")
+    assert result == _envelope(_senses("a", "c", "b"))
+    assert result.count('<ol class="gloss-list"') == 1
 
-        assert result is not None
-        assert f">{meta.name}</span>" in result, f"{why}: tag should still render"
-        assert "<i>(DictName)</i>" in result
 
-    def test_numeric_tag_without_jmdict_sense_notes_still_renders(self, tmp_path: Path):
-        db = tmp_path / "t.sqlite"
-        self._seed_with_tags(
-            db,
-            [DictRow(term="x", reading=None, content='<li class="gloss-item">x</li>', tags="1", sequence=1)],
-            [TagMeta(name="1", category="", ord=-10, notes="Level 1", score=0.0)],
-        )
-        provider = IndexedDictProvider("test-dict", db, display_name="DictName")
-        provider.load()
+def test_render_all_forms_rows_gives_none(tmp_path: Path):
+    db = tmp_path / "t.sqlite"
+    _seed_db(db, _sense_rows("語", "f0", forms_at=0) + _sense_rows("語", "f1", forms_at=0, sequence=2))
+    provider = _loaded(db)
 
-        result = provider.lookup("x")
+    assert provider.lookup("語") is None
+    assert provider.lookup_many([("語", None)])["語"] is None
 
-        assert result is not None
-        assert '<span class="gloss-tag" data-category="" title="Level 1">1</span>' in result
-        assert "<i>(DictName)</i>" in result
 
-    def test_chip_attrs_escaped(self, tmp_path: Path):
-        db = tmp_path / "t.sqlite"
-        self._seed_with_tags(
-            db,
-            [DictRow(term="x", reading=None, content='<li class="gloss-item">x</li>', tags="t", sequence=1)],
-            [TagMeta(name="t", category='c"&', ord=0, notes='a<b>"', score=0.0)],
-        )
-        provider = IndexedDictProvider("test-dict", db, display_name="D")
-        provider.load()
-        result = provider.lookup("x")
-        assert result is not None
-        assert 'data-category="c&quot;&amp;"' in result
-        assert 'title="a&lt;b&gt;&quot;"' in result
+def test_render_rows_with_only_dropped_content_give_none(tmp_path: Path):
+    references = (
+        '<li class="gloss-item"><div class="gloss-content"><ul class="gloss-sc-ul" data-sc-content="references">'
+        '<li class="gloss-sc-li">see 言葉</li></ul></div></li>'
+    )
+    db = tmp_path / "t.sqlite"
+    _seed_db(db, [DictRow(term="語", reading=None, content=references)])
 
-    def test_tag_cache_lazy_and_reused(self, tmp_path: Path):
-        db = tmp_path / "t.sqlite"
-        self._seed_with_tags(
-            db,
-            [DictRow(term="x", reading=None, content='<li class="gloss-item">x</li>', tags="uk", sequence=1)],
-            [TagMeta(name="uk", category="usage", ord=0, notes="kana", score=0.0)],
-        )
-        provider = IndexedDictProvider("test-dict", db, display_name="D")
-        provider.load()
-        assert provider._tag_cache is None  # not read until first render
-        provider.lookup("x")
-        assert provider._tag_cache is not None and "uk" in provider._tag_cache
+    assert _loaded(db).lookup("語") is None
+
+
+@pytest.mark.parametrize("styles_css", [None, _STYLES_CSS], ids=["unstyled", "styled"])
+def test_render_no_chips_no_label_no_stamp(tmp_path: Path, styles_css: str | None):
+    db = tmp_path / "t.sqlite"
+    _seed_with_tags(
+        db,
+        _sense_rows("語", "word", "language")
+        + [DictRow(term="語", reading=None, content=render_glossary_entry(["speech"]), tags="n uk custom")],
+        _JMDICT_TAGS,
+        styles_css=styles_css,
+    )
+    provider = _loaded(db)
+    assert bool(provider.dictionary_css) is (styles_css is not None)
+
+    result = provider.lookup("語")
+
+    assert result is not None
+    assert "gloss-tag" not in result
+    assert "<i>" not in result
+    assert "data-has-styles" not in result
+    assert "custom" not in result
+    assert result.count("DictName") == 1  # the envelope attribute, no attribution label
+
+
+def test_render_grammar_attr_only_when_grammar_tags(tmp_path: Path):
+    gendered = tmp_path / "gendered.sqlite"
+    _seed_with_tags(
+        gendered,
+        [DictRow(term="knjiga", reading=None, content=render_glossary_entry(["book"]), tags="n f")],
+        [_GENDER_F, *_JMDICT_TAGS],
+    )
+    jmdict = tmp_path / "jmdict.sqlite"
+    _seed_with_tags(
+        jmdict,
+        [DictRow(term="本", reading=None, content=render_glossary_entry(["book"]), tags="n uk")],
+        _JMDICT_TAGS,
+    )
+
+    assert _loaded(gendered).lookup("knjiga") == _envelope("book", grammar="gender:feminine")
+    assert _loaded(jmdict).lookup("本") == _envelope("book")
+
+
+def test_render_styled_dict_keeps_inner_verbatim(tmp_path: Path):
+    inner = (
+        '<ul class="gloss-sc-ul" data-sc-content="glossary"><li class="gloss-sc-li">dinner</li>'
+        '<li class="gloss-sc-li">evening meal</li></ul>'
+    )
+    row = DictRow(
+        term="晩ご飯", reading=None, content=f'<li class="gloss-item"><div class="gloss-content">{inner}</div></li>'
+    )
+    styled, plain = tmp_path / "styled.sqlite", tmp_path / "plain.sqlite"
+    _seed_with_tags(styled, [row], [], styles_css=_STYLES_CSS)
+    _seed_with_tags(plain, [row], [])
+
+    assert _loaded(styled).lookup("晩ご飯") == _envelope(inner)
+    assert _loaded(plain).lookup("晩ご飯") == _envelope(
+        '<ol class="gloss-glosses"><li>dinner</li><li>evening meal</li></ol>'
+    )
+
+
+def test_render_lookup_many_matches_lookup(tmp_path: Path):
+    db = tmp_path / "t.sqlite"
+    _seed_with_tags(
+        db,
+        [
+            DictRow(term="knjiga", reading=None, content=render_glossary_entry(["book"]), tags="n f", sequence=1),
+            DictRow(term="x", reading=None, content=render_glossary_entry(["x"]), tags="custom", sequence=2),
+        ],
+        [_GENDER_F, *_JMDICT_TAGS],
+    )
+    provider = _loaded(db)
+    words = ["knjiga", "x", "missing"]
+    batch = provider.lookup_many([(w, None) for w in words])
+    for w in words:
+        assert batch[w] == provider.lookup(w), f"mismatch for {w!r}"
+
+
+def test_tag_cache_lazy_and_reused(tmp_path: Path):
+    db = tmp_path / "t.sqlite"
+    _seed_with_tags(
+        db,
+        [DictRow(term="x", reading=None, content='<li class="gloss-item">x</li>', tags="uk", sequence=1)],
+        [TagMeta(name="uk", category="usage", ord=0, notes="kana", score=0.0)],
+    )
+    provider = IndexedDictProvider("test-dict", db, display_name="D")
+    provider.load()
+    assert provider._tag_cache is None  # not read until first render
+    provider.lookup("x")
+    assert provider._tag_cache is not None and "uk" in provider._tag_cache
 
 
 class TestTermsReadings:

@@ -129,5 +129,6 @@ def krdict(tmp_path: Path):
 def test_the_card_opens_on_the_basic_sense(krdict, word: str, first: str) -> None:
     rendered = krdict.lookup_many([(word, None)])[word]
     assert rendered is not None
-    first_row = rendered.split('<li class="gloss-item"')[1]
+    # Several senses are numbered gloss-items; a lone sense is the envelope's bare body.
+    first_row = rendered.split('<li class="gloss-item"')[1] if '<li class="gloss-item"' in rendered else rendered
     assert _GLOSSES.findall(first_row) == [first]

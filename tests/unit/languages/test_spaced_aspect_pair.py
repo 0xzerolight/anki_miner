@@ -9,12 +9,15 @@ import pytest
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.languages._spaced.grammar_hook import ASPECTS, DEFAULT_ASPECT_LABELS, GRAMMAR_FIELDS, GrammarTagHook
+from anki_miner.services.dictionary.grammar_tags import encode_grammar_tags
+from anki_miner.services.dictionary.storage import TagMeta
 
 CONFIG = AnkiMinerConfig()
 
 
 def chip(category: str, name: str) -> str:
-    return f'<span class="gloss-tag" data-category="{category}" title="{name}">{name}</span>'
+    """The ``data-am-grammar`` token(s) the provider writes for one dictionary tag; blank for a non-grammar tag."""
+    return encode_grammar_tags([TagMeta(name, category, 0, name, 0)]) + " "
 
 
 def html(chips: str, head: str | None = None) -> str:
@@ -25,10 +28,11 @@ def html(chips: str, head: str | None = None) -> str:
         'data-sc-content="details-entry-Grammar"><summary class="gloss-sc-summary" data-sc-content="summary-entry">'
         f'Grammar</summary><div class="gloss-sc-div" data-sc-content="Grammar-content">{head}</div></details></div>'
     )
+    tokens = " ".join(sorted(set(chips.split())))
+    attr = f' data-am-grammar="{tokens}"' if tokens else ""
     return (
-        '<div class="yomitan-glossary"><ol data-count="1"><li data-dictionary="wty" data-dictionary-id="wty">'
-        f'{chips}<i>(wty)</i><ul class="gloss-list" data-count="1"><li class="gloss-item">'
-        f'<div class="gloss-content">{grammar}</div></li></ul></li></ol></div>'
+        '<div class="yomitan-glossary"><ol data-count="1">'
+        f'<li data-dictionary="wty" data-dictionary-id="wty"{attr}>{grammar}</li></ol></div>'
     )
 
 

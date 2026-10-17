@@ -1,27 +1,31 @@
 """GrammarTagHook (spec §4.8, R17): noun gender, article and plural, and verb aspect, for the card back.
 
+The dictionary's gender and aspect tags ("chips") reach the hook as the first
+block's ``data-am-grammar`` envelope attribute (``grammar_tags``), written by the
+provider from every shown row's tags.
+
 Gender, in order (en plan D8): the token's ``morph`` ``Gender=`` — unless the
-first dictionary block carries gender chips that exclude it (a tagger error
-the dictionary contradicts: de ``Oma`` tagged Masc); exactly one gender chip
+first dictionary block carries gender tags that exclude it (a tagger error
+the dictionary contradicts: de ``Oma`` tagged Masc); exactly one gender tag
 (wty unions every row of a sequence, so ``See`` shows fem+masc+neut); the
 first ``Grammar-content`` head line's gender letter (``Fuchs m (…``).
 ``sources`` reorders those three rules: nl reads the dictionary first, because
 a diminutive ``hondje`` lemmatised to ``hond`` carries ``Gender=Neut`` and
-``hond``'s chips include an obsolete neuter row. The letter is matched on a
+``hond``'s tags include an obsolete neuter row. The letter is matched on a
 copy with combining marks dropped (E.10 D2: ``knjȉga f``); the plural is read
 from the unfolded NFC line so ``Füchse`` and ``élèves`` keep their marks,
 skipping qualifiers (``plural (uncommon) Ersätze``) and never capturing
 ``only``/``and``/``or``. With no single gender and no ``article_rule``, the
 article is the one every gender of the first gender-bearing source shares (nl
 ``koffie f or m`` → ``de``); an injective map never shares one. The rendered
-HTML never carries ``definitionTags`` except as those chips. Pure; never raises
+HTML never carries ``definitionTags`` except as that attribute. Pure; never raises
 on odd HTML; ``{}`` for a non-noun.
 
 Aspect (``aspect_pair``, Ruling S1) is the verb path of the same hook: the same
 three rules in the same ``sources`` order — ``morph`` ``Aspect=`` unless the
-first block's aspect chips exclude it; exactly one aspect chip (wty unions every
-row of a term, so both chips can be two lexemes: sh ``kupiti``; OpenRussian's
-uncategorised chips are read by title, ``both`` naming the two); the head line's
+first block's aspect tags exclude it; exactly one aspect tag (wty unions every
+row of a term, so both tags can be two lexemes: sh ``kupiti``; OpenRussian's
+uncategorised tags are read by their notes, ``both`` naming the two); the head line's
 closing aspect word(s) (``čìtati impf (…``, ``impf or pf``). The partner is the
 head line's opposite-aspect clause (``perfective pročìtati``), qualifiers
 dropped, kept verbatim unless the language passes ``partner_fold``: the D2 mark
@@ -41,6 +45,8 @@ from collections.abc import Callable, Mapping, Sequence
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Any
 
+from anki_miner.services.dictionary.grammar_tags import first_block, parse_grammar_attr
+
 if TYPE_CHECKING:  # annotation-only
     from anki_miner.config.config import AnkiMinerConfig
 
@@ -52,7 +58,6 @@ DEFAULT_GENDER_LABELS: Mapping[str, str] = MappingProxyType(
 _EMPTY: Mapping[str, str] = MappingProxyType({})
 
 _MORPH_GENDER = {"Masc": "masc", "Fem": "fem", "Neut": "neut", "Com": "common"}
-_CHIP_GENDER = {"masculine": "masc", "feminine": "fem", "neuter": "neut", "common": "common"}
 #: ``pl`` closes a plural-only noun's head (``Eltern pl (plural only)``); a language names its article under ``plural``.
 _HEAD_GENDER = {"m": "masc", "f": "fem", "n": "neut", "c": "common", "pl": "plural"}
 
@@ -67,33 +72,18 @@ DEFAULT_ASPECT_LABELS: Mapping[str, str] = MappingProxyType(
 )
 
 _MORPH_ASPECT = {"Imp": "impf", "Perf": "pf"}
-_CHIP_ASPECT = {"impf": "impf", "impf-only": "impf", "pf": "pf", "pf-only": "pf"}
 _HEAD_ASPECT = {"impf": "impf", "pf": "pf"}
 _OPPOSITE_ASPECT = {"impf": "pf", "pf": "impf"}
 #: The English word a wty head line names an aspect with: ``(…, perfective pročìtati)``.
 _HEAD_ASPECT_WORD = {"impf": "imperfective", "pf": "perfective"}
-_ASPECT_CHIP_RE = re.compile(r'<span class="gloss-tag" data-category="aspect"[^>]*>([^<]+)</span>')
-#: OpenRussian files its aspect tags (``pf``/``ipf``/``both``) with no category; the title names the aspect.
-_TITLE_ASPECTS = {"perfective": ("pf",), "imperfective": ("impf",), "perfective and imperfective": ("impf", "pf")}
-_TITLE_ASPECT_CHIP_RE = re.compile(r'<span class="gloss-tag" data-category="" title="([^"]+)"')
 _QUALIFIER_RE = re.compile(r"\([^()]*\)")
 #: pl motion verbs qualify the partner: ``imperfective determinate czytać``.
 _PARTNER_LEAD_WORDS = frozenset({"determinate", "indeterminate"})
 
-_BLOCK_START = '<li data-dictionary="'
-_CHIP_RE = re.compile(r'<span class="gloss-tag" data-category="gender-(masculine|feminine|neuter|common)"')
 _HEAD_RE = re.compile(r'data-sc-content="Grammar-content"[^>]*>(.*?)</div>', re.S)
 _TAG_RE = re.compile(r"<[^>]+>")
 #: de A2 + fr: qualifiers in parentheses are skipped; "plural only/and/or" is not a form.
 _PLURAL_RE = re.compile(r"\bplural\s+(?:\([^()]*\)\s+)*(?!(?:only|and|or)\b)([^\s,()]+)")
-
-
-def _first_block(definition_html: str) -> str:
-    start = definition_html.find(_BLOCK_START)
-    if start < 0:
-        return definition_html
-    end = definition_html.find(_BLOCK_START, start + len(_BLOCK_START))
-    return definition_html[start:] if end < 0 else definition_html[start:end]
 
 
 def _head_line(block: str) -> str:
@@ -314,7 +304,7 @@ class GrammarTagHook:
         return self._head_fold(head) if self._head_fold is not None else head
 
     def _gender(self, word: Any, block: str, head: str) -> str | None:
-        chip_genders = {_CHIP_GENDER[name] for name in _CHIP_RE.findall(block)}
+        chip_genders = parse_grammar_attr(block).genders
         for source in self._sources:
             if source == "morph":
                 morph_gender = _gender_from_morph(str(getattr(word, "morph", "") or ""))
@@ -336,7 +326,7 @@ class GrammarTagHook:
         disagree ends the search (``raam n or f or m`` prints nothing). Morph counts only when the chips do not
         exclude it, as in ``_gender``.
         """
-        chip_genders = frozenset(_CHIP_GENDER[name] for name in _CHIP_RE.findall(block))
+        chip_genders = parse_grammar_attr(block).genders
         for source in self._sources:
             if source == "morph":
                 genders = _morph_values(str(getattr(word, "morph", "") or ""))
@@ -362,9 +352,7 @@ class GrammarTagHook:
 
     def _aspect(self, word: Any, block: str, head: str) -> str | None:
         """The verb's aspect from the first source that answers, mirroring ``_gender``."""
-        chips = frozenset(_CHIP_ASPECT[name] for name in _ASPECT_CHIP_RE.findall(block) if name in _CHIP_ASPECT) | {
-            aspect for title in _TITLE_ASPECT_CHIP_RE.findall(block) for aspect in _TITLE_ASPECTS.get(title, ())
-        }
+        chips = parse_grammar_attr(block).aspects
         for source in self._sources:
             if source == "morph":
                 found = _morph_values(str(getattr(word, "morph", "") or ""), feature="Aspect", table=_MORPH_ASPECT)
@@ -380,7 +368,7 @@ class GrammarTagHook:
         return None
 
     def _render_aspect(self, word: Any) -> dict[str, str]:
-        block = _first_block(str(getattr(word, "definition_html", "") or ""))
+        block = first_block(str(getattr(word, "definition_html", "") or ""))
         head = self._head(block)
         aspect = self._aspect(word, block, head)
         if aspect is None:
@@ -398,7 +386,7 @@ class GrammarTagHook:
             return self._render_aspect(word)
         if pos not in self._noun_pos:
             return {}
-        block = _first_block(str(getattr(word, "definition_html", "") or ""))
+        block = first_block(str(getattr(word, "definition_html", "") or ""))
         head = self._head(block)
         out: dict[str, str] = {}
         if "noun_gender" in self._fields or "noun_article" in self._fields:

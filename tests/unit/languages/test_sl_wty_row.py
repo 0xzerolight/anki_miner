@@ -121,7 +121,7 @@ def test_a_biaspectual_slovene_verb_prints_no_aspect_at_all(verbs):
     """
     for term in ("videti", "iti"):
         html = verbs.lookup(term)
-        assert html is not None and html.count('data-category="aspect"') == 2
+        assert html is not None and 'data-am-grammar="aspect:impf aspect:pf"' in html
         assert _render(term, html, pos="VERB") == {}
         assert _render(term, html, morph="VerbForm=Inf", pos="VERB") == {}
 
