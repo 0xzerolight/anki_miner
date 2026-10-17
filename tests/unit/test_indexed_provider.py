@@ -52,8 +52,14 @@ def _envelope(body: str, grammar: str = "", dictionary: str = "DictName", dict_i
     )
 
 
-def _senses(*bodies: str) -> str:
-    return '<ol class="gloss-list">' + "".join(f'<li class="gloss-item">{b}</li>' for b in bodies) + "</ol>"
+def _gloss(text: str) -> str:
+    """A simple row's sense body: its one gloss as a one-item bullet list."""
+    return f'<ol class="gloss-glosses"><li>{text}</li></ol>'
+
+
+def _senses(*glosses: str) -> str:
+    """Numbered senses, one simple gloss each."""
+    return '<ol class="gloss-list">' + "".join(f'<li class="gloss-item">{_gloss(g)}</li>' for g in glosses) + "</ol>"
 
 
 class TestIndexedDictProvider:
@@ -89,7 +95,7 @@ class TestIndexedDictProvider:
         assert provider.is_available() is True
         assert provider.name == "DictName"
 
-        assert provider.lookup("食べる") == _envelope("eat")
+        assert provider.lookup("食べる") == _envelope(_gloss("eat"))
 
     def test_lookup_by_reading_fallback(self, tmp_path: Path):
         db = tmp_path / "test.sqlite"
@@ -107,7 +113,7 @@ class TestIndexedDictProvider:
         )
         provider = IndexedDictProvider("test-dict", db, display_name="Test")
         provider.load()
-        assert provider.lookup("たべる") == _envelope("eat", dictionary="Test")
+        assert provider.lookup("たべる") == _envelope(_gloss("eat"), dictionary="Test")
 
     def test_lookup_miss_returns_none(self, tmp_path: Path):
         db = tmp_path / "test.sqlite"
@@ -190,7 +196,7 @@ class TestIndexedDictProvider:
         provider.load()
         result = provider.lookup("x")
         assert result is not None
-        assert result == _envelope("x", dictionary="Test")
+        assert result == _envelope(_gloss("x"), dictionary="Test")
         provider.close()
         assert provider.is_available() is False
         assert provider.lookup("x") is None
@@ -323,7 +329,7 @@ class TestIndexedDictProvider:
         assert not error, f"Cross-thread lookup raised: {error}"
         assert len(result) == 1
         assert result[0] is not None
-        assert result[0] == _envelope("eat", dictionary="Test")
+        assert result[0] == _envelope(_gloss("eat"), dictionary="Test")
 
 
 class TestIndexedDictProviderLookupMany:
@@ -511,7 +517,7 @@ class TestDedupBeforeCap:
         # dup once + s0..s3 == 5 unique senses (naive LIMIT-5 pre-dedup would show
         # dup once + s0..s2 == 4). s3 surviving is the dedup-before-cap fix.
         assert result.count('<li class="gloss-item">') == _DISPLAY_LIMIT
-        assert result.count('<li class="gloss-item">dup</li>') == 1
+        assert result.count(f'<li class="gloss-item">{_gloss("dup")}</li>') == 1
         assert ">s3</li>" in result
 
 
@@ -558,7 +564,7 @@ class TestTermBankRowBoundaries:
         provider = IndexedDictProvider("test-dict", db, display_name="JMdict")
         provider.load()
 
-        assert provider.lookup("か月") == _envelope("counter for months", dictionary="JMdict")
+        assert provider.lookup("か月") == _envelope(_gloss("counter for months"), dictionary="JMdict")
 
     def test_nested_members_do_not_consume_row_cap(self, tmp_path: Path):
         db = tmp_path / "cap.sqlite"
@@ -613,7 +619,7 @@ class TestKanaDedup:
         result = provider.lookup("にほん")
         assert result is not None
         # Gloss must appear exactly once in the rendered HTML
-        assert result == _envelope("Japan")
+        assert result == _envelope(_gloss("Japan"))
 
     def test_kana_lookup_many_renders_gloss_once(self, tmp_path: Path):
         """lookup_many path also deduplicates identical content rows."""
@@ -635,7 +641,7 @@ class TestKanaDedup:
 
         result = provider.lookup_many([("にほん", None)])["にほん"]
         assert result is not None
-        assert result == _envelope("Japan")
+        assert result == _envelope(_gloss("Japan"))
 
     def test_dedup_produces_same_result_as_single_lookup(self, tmp_path: Path):
         """lookup_many and lookup must agree after dedup (byte-identical)."""
@@ -684,8 +690,8 @@ class TestKanaDedup:
 
         result = provider.lookup("はし")
         assert result is not None
-        assert '<li class="gloss-item">bridge</li>' in result
-        assert '<li class="gloss-item">chopsticks</li>' in result
+        assert f'<li class="gloss-item">{_gloss("bridge")}</li>' in result
+        assert f'<li class="gloss-item">{_gloss("chopsticks")}</li>' in result
 
     def test_dedup_still_unions_tags(self, tmp_path: Path):
         """When a duplicate content row has extra tags, they must be UNIONed in."""
@@ -718,7 +724,7 @@ class TestKanaDedup:
         provider.load()
 
         # Content appears exactly once; the grammar tags of both rows are unioned.
-        assert provider.lookup("にほんご") == _envelope("Japanese", grammar="gender:feminine gender:masculine")
+        assert provider.lookup("にほんご") == _envelope(_gloss("Japanese"), grammar="gender:feminine gender:masculine")
 
 
 # ---------------------------------------------------------------------------
@@ -971,7 +977,7 @@ def test_render_single_sense_is_bare_body(tmp_path: Path):
     db = tmp_path / "t.sqlite"
     _seed_db(db, [DictRow(term="晩ご飯", reading=None, content=render_glossary_entry(["dinner"]), tags="n")])
 
-    assert _loaded(db).lookup("晩ご飯") == _envelope("dinner")
+    assert _loaded(db).lookup("晩ご飯") == _envelope(_gloss("dinner"))
 
 
 def test_render_forms_row_dropped_before_cap(tmp_path: Path):
@@ -988,7 +994,7 @@ def test_render_two_senses_numbered_no_count_attr(tmp_path: Path):
     result = _loaded(db).lookup("語")
 
     assert result is not None
-    assert '<ol class="gloss-list"><li class="gloss-item">word</li><li class="gloss-item">language</li></ol>' in result
+    assert _senses("word", "language") in result
     assert result.count("data-count") == 1
     assert '<ol data-count="1">' in result
 
@@ -1096,8 +1102,8 @@ def test_render_grammar_attr_only_when_grammar_tags(tmp_path: Path):
         _JMDICT_TAGS,
     )
 
-    assert _loaded(gendered).lookup("knjiga") == _envelope("book", grammar="gender:feminine")
-    assert _loaded(jmdict).lookup("本") == _envelope("book")
+    assert _loaded(gendered).lookup("knjiga") == _envelope(_gloss("book"), grammar="gender:feminine")
+    assert _loaded(jmdict).lookup("本") == _envelope(_gloss("book"))
 
 
 def test_render_styled_dict_keeps_inner_verbatim(tmp_path: Path):
