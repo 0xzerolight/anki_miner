@@ -162,9 +162,8 @@ def collect_dictionary_css(config: AnkiMinerConfig) -> str:
     """Concatenate every enabled indexed dictionary's scoped ``styles.css``.
 
     Thin join over ``collect_dictionary_css_entries`` (byte-equivalent to the
-    pre-entries implementation; pinned by test). Used where an unfiltered
-    whole-config blob is still the right input (e.g. the restyler's
-    envelope-stamping gate).
+    pre-entries implementation; pinned by test). For callers that want one
+    unfiltered whole-config blob rather than per-field filtering.
     """
     return "\n\n".join(css for _, _, css in collect_dictionary_css_entries(config))
 
@@ -241,8 +240,8 @@ class DefinitionService:
         ``load()`` failed at run start contributes no CSS here (its CSS
         attribute stays empty), whereas the scan-based collector calls
         ``load()`` fresh each time and would retry. Callers with no
-        already-loaded chain (``card_restyler``, ``card_backfiller`` — once
-        per run) should keep using ``collect_dictionary_css_entries``.
+        already-loaded chain (``card_backfiller`` — once per run) should keep
+        using ``collect_dictionary_css_entries``.
         """
         self.ensure_loaded()
         entries: list[tuple[str, str, str]] = []

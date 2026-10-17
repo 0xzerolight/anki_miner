@@ -20,8 +20,8 @@
  *  - Every `var()` is defined here, carries a fallback, or is the
  *    renderer-stamped `--image`.
  *  - The first rule is the wrapper rule below: its minified form opens with
- *    card_style_block.OWNED_STYLE_MARKER, which is how card_restyler finds the
- *    block it owns. The minified core stays under 1 KiB.
+ *    card_style_block.OWNED_STYLE_MARKER, which is how refresh_style_block
+ *    (Card Backfill's Styling option) finds the block it owns. The minified core stays under 1 KiB.
  *  - `@am-group: images` / `@am-group: tables` mark the two optional regions.
  *    card_style_block.base_css appends a region only when the field contains
  *    `gloss-image` (images) or `<table`, `<details` or `<summary` (tables).

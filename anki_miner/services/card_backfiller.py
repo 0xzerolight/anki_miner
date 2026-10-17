@@ -1,13 +1,14 @@
 """Bulk-fill fields on existing miner cards from currently installed resources.
 
-The Card Backfill tool (Utilities → Card Backfill) generalizes the card restyler's
-enumerate → chunk → ``notesInfo`` → compute → ``updateNoteFields`` loop
-(``card_restyler.restyle_mined_cards``): after the user installs a pitch CSV,
-frequency sources, dictionaries, or an audio pack, it proposes values for pitch
-graph/text, frequency display/sort, definition, glossary, reading/furigana and
-word-audio fields that old cards are missing, plus the extra card fields the
-active language's profile declares (zh pinyin, measure word, traditional; ko
-hanja; …), rendered by that profile's own hooks.
+The Card Backfill tool (Utilities → Card Backfill) runs an enumerate → chunk →
+``notesInfo`` → compute → ``updateNoteFields`` loop over a note type's cards:
+after the user installs a pitch CSV, frequency sources, dictionaries, or an
+audio pack, it proposes values for pitch graph/text, frequency display/sort,
+definition, glossary, reading/furigana and word-audio fields that old cards are
+missing, plus the extra card fields the active language's profile declares (zh
+pinyin, measure word, traditional; ko hanja; …), rendered by that profile's own
+hooks. Its Styling option refreshes the embedded ``<style>`` block of the
+Definition/Glossary fields without touching their text (``_styling_changes``).
 
 Word audio is the one proposal that is not a pure local lookup: it fetches
 through ``config.expression_audio_chain`` during the scan, so the preview keeps
@@ -386,7 +387,7 @@ def _chunks(items: Sequence[_T], size: int) -> Iterator[Sequence[_T]]:
 
 
 def _field_value(fields: dict, name: str | None) -> str | None:
-    """Defensive field read (card_restyler idiom): None when absent/malformed."""
+    """Defensive field read: None when absent/malformed."""
     if not name:
         return None
     entry = fields.get(name)
@@ -600,8 +601,8 @@ def _scan_backfill_impl(
             identities.append((note_id, fields, mined_form))
 
         # Identity resolution and lookups serve the field groups only; a
-        # Styling-only scan skips both (Restyle's whole-collection pass stays
-        # seconds, not a tokenizer run per note).
+        # Styling-only scan skips both, so a whole-collection styling refresh
+        # stays seconds, not a tokenizer run per note.
         contexts: list[_NoteContext] = []
         definitions: list[str | None] = []
         glossaries: list[str | None] = []
@@ -1051,7 +1052,7 @@ def _compute_note_changes(
     # never-leading placement and no-ops on markup-less proposals). No
     # cross-field gate: the other field's styling is irrelevant to this one on
     # field-isolating note types, and a divergent block here would make the
-    # restyler churn backfilled cards forever.
+    # Styling refresh churn backfilled cards forever.
     for key in ("definition", "glossary"):
         if key in proposals:
             proposals[key] = attach_card_style_block(
@@ -1379,7 +1380,7 @@ def apply_backfill(
     never fatal.
 
     Cancellation is honored between chunks: committed chunks stay written and
-    tagged (the restyler precedent); partial counts are returned.
+    tagged; partial counts are returned.
     """
     log_summary(
         logger,

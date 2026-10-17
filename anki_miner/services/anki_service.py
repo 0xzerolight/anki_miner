@@ -50,7 +50,7 @@ logger = logging.getLogger(__name__)
 # Matches any hiragana, katakana, or CJK ideograph (kanji)
 _JAPANESE_RE = re.compile(r"[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF\u3400-\u4DBF]")
 
-# updateNoteFields batching. Restyled glossary fields run 10-20 KB each, so a
+# updateNoteFields batching. Styled glossary fields run 10-20 KB each, so a
 # count-only chunk of 500 notes can hit ~7-8 MB in one `multi` body and trip the
 # AnkiConnect oversized-body connection reset (mirrors anki_media_store's
 # _MEDIA_BATCH_MAX_BYTES). Bound each POST by cumulative serialized field bytes
@@ -661,7 +661,7 @@ class AnkiService:
         cardinality, surfaces as an ``AnkiConnectionError``; we then retry each
         note in its own tiny POST (like
         ``AnkiMediaStore._store_media_files_individually``) so one bad chunk
-        doesn't abort the whole restyle.
+        doesn't abort the whole backfill.
         """
         actions = [
             {"action": "updateNoteFields", "version": 6, "params": {"note": {"id": nid, "fields": fields}}}

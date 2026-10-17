@@ -9,7 +9,7 @@ CLICK
     implying coverage that does not exist.
 MENU
     ``menuBar`` actions are otherwise entirely outside the audited surface,
-    despite carrying the Setup Wizard and Restyle Mined Cards.
+    despite carrying the Setup Wizard.
 RESIZE
     The atlas builds each window at one fixed size; the issue #102 family is
     "the user DRAGS the window smaller", which resolves size policies

@@ -110,8 +110,8 @@ class TestBaseCss:
     def test_core_fits_one_kib(self):
         assert len(base_css("").encode()) <= 1024
 
-    def test_core_keeps_the_restyler_contract(self):
-        # card_restyler finds its own block by the leading marker and the
+    def test_core_keeps_the_refresh_contract(self):
+        # refresh_style_block finds its own block by the leading marker and the
         # ol[data-count] token, and splits the dict CSS tail at the first newline.
         core = base_css("")
         assert core.startswith(OWNED_STYLE_MARKER)

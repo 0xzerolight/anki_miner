@@ -4561,7 +4561,7 @@ class TestProbeRetry:
 
 
 class TestNoteFieldPrimitives:
-    """find_notes / notes_info / update_notes_fields (used by the Restyle tool)."""
+    """find_notes / notes_info / update_notes_fields (used by Card Backfill)."""
 
     def test_find_notes(self, test_config):
         service = AnkiService(test_config)

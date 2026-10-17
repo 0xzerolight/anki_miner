@@ -1158,8 +1158,8 @@ _JITENDEX_LIKE_ROW = render_glossary_entry(
     ids=["unstyled-one-sense", "unstyled-multi-sense", "styled-jitendex-like"],
 )
 def test_render_output_is_never_legacy_markup(tmp_path: Path, rows: list[DictRow], styles_css: str | None):
-    """Restyle skips every field ``is_legacy_markup`` flags, so a render that tripped
-    it would leave every newly mined card out of Restyle, silently."""
+    """Backfill's Styling option skips every field ``is_legacy_markup`` flags, so a
+    render that tripped it would leave every newly mined card out of it, silently."""
     db = tmp_path / "t.sqlite"
     _seed_with_tags(db, rows, [_GENDER_F, *_JMDICT_TAGS], styles_css=styles_css)
     provider = _loaded(db)

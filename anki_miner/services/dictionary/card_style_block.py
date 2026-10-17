@@ -137,9 +137,9 @@ def _minified_regions() -> tuple[tuple[str, str], ...]:
     """Ordered ``(group, minified_css)`` regions, empty regions dropped.
 
     Fails loudly on a group ``base_css`` has no probe for (it would never
-    embed) and on a core that breaks the restyler's contract: it must open
-    with ``OWNED_STYLE_MARKER``, carry the ``ol[data-count]`` token, and no
-    region may hold a newline (the restyler splits the block at the first one).
+    embed) and on a core that breaks ``refresh_style_block``'s contract: it must
+    open with ``OWNED_STYLE_MARKER``, carry the ``ol[data-count]`` token, and no
+    region may hold a newline (the refresh splits the block at the first one).
     """
     regions = []
     for group, raw in split_group_regions(load_glossary_css()):
@@ -181,7 +181,7 @@ def base_css(field_html: str) -> str:
 #: gives each such block the direction of its own first strong character: an
 #: Arabic or Hebrew example reads right-to-left, a Latin one stays left-to-right.
 #: Guarded by ``ol[data-count]`` like every glossary.css rule, one line, and free
-#: of ``[data-dictionary=...]`` selectors, so the restyler carries it verbatim as
+#: of ``[data-dictionary=...]`` selectors, so ``refresh_style_block`` carries it verbatim as
 #: part of the block tail and never reads it as a dictionary's own CSS.
 #: glossary.css itself is never edited (it is embedded in every card).
 RTL_GLOSSARY_CSS = '.yomitan-glossary ol[data-count] [data-sc-content="example-sentence-a"]{unicode-bidi:plaintext}'
@@ -194,8 +194,8 @@ def build_card_style_block(*, dict_css: str, card_html: str, direction: str = "l
     element. ``card_html`` is the ONE field's own miner-markup HTML and picks
     the optional base regions; it is a REQUIRED keyword so a caller can never
     silently fall back to a core-only block. Every writer (mining, backfill,
-    restyle) picks per field, or their outputs diverge and the restyler
-    rewrites fresh cards forever — and field-isolating note types (module
+    the Styling refresh) picks per field, or their outputs diverge and the
+    refresh rewrites fresh cards forever — and field-isolating note types (module
     docstring) never see the other field anyway. ``dict_css`` is the
     already-scoped per-dictionary CSS (filtered to this field via
     ``filter_dict_css_entries``), embedded verbatim. ``direction == "rtl"``
@@ -221,7 +221,7 @@ def build_card_style_block(*, dict_css: str, card_html: str, direction: str = "l
 _ENVELOPE_RE = re.compile(r'<li data-dictionary="([^"]*)"(?: data-dictionary-id="([^"]*)")?')
 
 # The miner-markup fingerprint a field must carry before any styling attaches.
-# Same probe the restyler uses to recognize miner fields; a field without it
+# Same probe Backfill's Styling option uses to recognize miner fields; a field without it
 # has nothing our CSS could style, and attaching a block to empty content
 # would emit a field-LEADING <style> — the head-hoist hazard (module docstring).
 _MINER_MARKUP_TOKENS = ("yomitan-glossary", "data-count")

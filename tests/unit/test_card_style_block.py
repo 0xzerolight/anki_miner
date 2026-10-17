@@ -33,16 +33,16 @@ def _optional_regions() -> dict[str, str]:
 
 
 class TestFullBaseSheet:
-    """Invariants the restyle refresh relies on to swap a stale embedded base in
+    """Invariants refresh_style_block relies on to swap a stale embedded base in
     place without corrupting the card."""
 
     def test_full_sheet_is_newline_free(self):
-        # The restyler splits the embedded block on the FIRST "\n" to separate the
+        # refresh_style_block splits the embedded block on the FIRST "\n" to separate the
         # base from dict_css; a newline in the base would break that boundary.
         assert "\n" not in base_css(EVERYTHING)
 
     def test_full_sheet_has_no_data_dictionary_literals(self):
-        # The restyler and filter_dict_css_entries read envelopes and dictionary
+        # refresh_style_block and filter_dict_css_entries read envelopes and dictionary
         # selectors out of a field; the base must carry neither.
         base = base_css(EVERYTHING)
         assert '[data-dictionary="' not in base
@@ -283,7 +283,7 @@ class TestRtlGlossaryCss:
 
     def test_the_rule_keeps_the_glossary_css_discipline(self):
         # Guarded by miner-only markup (never restyles a Yomitan export), one line
-        # (the restyler splits the block at the base's first newline), already
+        # (refresh_style_block splits the block at the base's first newline), already
         # minified, and no [data-dictionary=...] selector the dict-CSS filter could
         # mistake for a dictionary's own CSS.
         assert RTL_GLOSSARY_CSS.startswith(".yomitan-glossary ol[data-count] ")
