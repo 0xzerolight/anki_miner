@@ -3447,8 +3447,9 @@ No index files are deleted.</source>
     </message>
     <message numerus="yes">
         <source>%n field(s) keep the old definition layout, which Styling cannot update. Scan with Definitions or Glossary and Overwrite existing values to rebuild them.</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>%n field keeps the old definition layout, which Styling cannot update. Scan with Definitions or Glossary and Overwrite existing values to rebuild it.</numerusform>
+            <numerusform>%n fields keep the old definition layout, which Styling cannot update. Scan with Definitions or Glossary and Overwrite existing values to rebuild them.</numerusform>
         </translation>
     </message>
     <message numerus="yes">
