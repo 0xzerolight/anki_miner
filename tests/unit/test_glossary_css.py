@@ -1,107 +1,26 @@
-"""Tests for the universal glossary stylesheet (resources/glossary.css).
+"""Tests for the house glossary stylesheet (resources/glossary.css).
 
-The single always-on base sheet replaces the old preset registry. It must stay
-fully guarded by miner-only ``ol[data-count]`` markup (so it never restyles
-Yomitan-exported glossary HTML sharing a note type), keep its theme-agnostic
-palette (no ``.nightMode`` dependency; ``color-mix()`` only under ``@supports``),
-and carry the structured-content hooks our renderer emits.
+Seven structural rules plus the ``images`` and ``tables`` groups. Every rule is
+guarded by miner-only ``ol[data-count]`` markup so it never restyles
+Yomitan-exported glossary HTML sharing a note type; the sheet carries no
+``!important``, no nesting and no theme selectors, and the minified core rides
+every styled field, so it stays under 1 KiB.
 """
 
 import re
 from pathlib import Path
 
-from anki_miner.services.dictionary.card_style_block import base_css_variant
+from anki_miner.services.dictionary.card_style_block import (
+    OWNED_STYLE_MARKER,
+    _minify_css,
+    base_css,
+    split_group_regions,
+)
 from anki_miner.services.dictionary.card_style_presets import load_glossary_css
+from anki_miner.services.dictionary.sense_presentation import present_sense
+from tests.unit.test_sense_presentation import MULTI
 
 _NOTE_TYPES = Path(__file__).resolve().parents[1] / "fixtures" / "note_types"
-
-_SPEC_TOKEN_RE = re.compile(
-    r"""(?P<pe>::[-\w]+)
-      | (?P<pc>:[-\w]+)(?P<args>\()?
-      | (?P<id>\#(?:\\.|[-\w])+)
-      | (?P<cls>\.(?:\\.|[-\w])+)
-      | (?P<attr>\[(?:"[^"]*"|'[^']*'|[^\]])*\])
-      | (?P<type>[a-zA-Z][-\w]*)
-      | [\s>+~*&]+""",
-    re.VERBOSE,
-)
-
-
-def _split_top_level(text: str) -> list[str]:
-    """Split a selector list on commas outside parentheses."""
-    parts, depth, start = [], 0, 0
-    for i, ch in enumerate(text):
-        depth += ch == "("
-        depth -= ch == ")"
-        if ch == "," and depth == 0:
-            parts.append(text[start:i])
-            start = i + 1
-    return [*parts, text[start:]]
-
-
-def _specificity(selector: str) -> tuple[int, int, int]:
-    """(ids, classes+attributes+pseudo-classes, types+pseudo-elements) per Selectors 4.
-
-    ``:is()``/``:not()``/``:has()`` count their most specific argument, ``:where()``
-    counts nothing, and the legacy one-colon ``:before``/``:after`` count as
-    pseudo-elements. Enough for the selectors these tests compare; not a full parser.
-    """
-    a = b = c = 0
-    pos = 0
-    while pos < len(selector):
-        match = _SPEC_TOKEN_RE.match(selector, pos)
-        assert match, f"unparsed selector text at {selector[pos:]!r}"
-        pos = match.end()
-        if match["pe"] or match["pc"] in (":before", ":after"):
-            c += 1
-        elif match["pc"]:
-            inner = ""
-            if match["args"]:
-                depth, end = 1, pos
-                while depth:
-                    depth += {"(": 1, ")": -1}.get(selector[end], 0)
-                    end += 1
-                inner, pos = selector[pos : end - 1], end
-            if match["pc"] in (":is", ":not", ":has"):
-                da, db, dc = max(_specificity(arg.strip()) for arg in _split_top_level(inner))
-                a, b, c = a + da, b + db, c + dc
-            elif match["pc"] != ":where":
-                b += 1
-        elif match["id"]:
-            a += 1
-        elif match["cls"] or match["attr"]:
-            b += 1
-        elif match["type"]:
-            c += 1
-    return a, b, c
-
-
-def _lapis_separator_selector() -> str:
-    """Lapis's nested `" | "` separator rule, flattened the way CSS nesting resolves
-    it: `&` is `:is(<parent selector list>)`, which takes the list's MAX specificity."""
-    css = (_NOTE_TYPES / "lapis.css").read_text(encoding="utf-8")
-    block = re.search(r"/\* Format Definitions \*/\s*(?P<parents>[^{]*)\{(?P<body>.*?)\n\}", css, re.DOTALL)
-    assert block, "Lapis fixture lost its Format Definitions rule"
-    assert "&>li:not(:first-child)::before" in block["body"]
-    parents = " ".join(block["parents"].split())
-    return f":is({parents}) > li:not(:first-child)::before"
-
-
-def _senren_important_display_rules() -> list[tuple[str, str]]:
-    """Senren's `display: … !important` rules on the gloss list and its items, as
-    (selector, display value). Its Jitendex "Compact Mode Fix" lays the list out as a
-    flex row and relies on its own `li::after` " | " separator, which our cancel removes."""
-    css = _no_comments((_NOTE_TYPES / "senren.css").read_text(encoding="utf-8"))
-    found = []
-    for grp, decl in _iter_rules(css):
-        display = re.search(r"display:\s*([-\w]+)\s*!important", decl)
-        if not display:
-            continue
-        for sel in _split_top_level(grp):
-            sel = " ".join(sel.split())
-            if re.search(r'ul\[data-sc-content="glossary"\](\s*>\s*li)?$', sel):
-                found.append((sel, display[1]))
-    return found
 
 
 def _no_comments(css: str) -> str:
@@ -109,22 +28,9 @@ def _no_comments(css: str) -> str:
     return re.sub(r"/\*.*?\*/", "", css, flags=re.DOTALL)
 
 
-def _strip_supports(css: str) -> str:
-    """Drop `@supports … { … }` blocks (one nesting level) and comments."""
-    flat = _no_comments(css)
-    return re.sub(r"@supports[^{]*\{(?:[^{}]*\{[^{}]*\})*\s*\}", "", flat, flags=re.DOTALL)
-
-
 def _iter_rules(css: str):
-    """Yield (selector_group, declarations) for each top-level rule.
-
-    `@supports` wrappers are unwrapped (opener removed, dangling close skipped) so
-    the rules inside are checked as if top-level — the guard invariant holds for
-    them too.
-    """
-    flat = re.sub(r"/\*.*?\*/", "", css, flags=re.DOTALL)
-    flat = re.sub(r"@supports[^{]*\{", "", flat)
-    for block in flat.split("}"):
+    """Yield (selector_group, declarations) for each top-level rule."""
+    for block in _no_comments(css).split("}"):
         if "{" not in block:
             continue
         selector_group, declarations = block.split("{", 1)
@@ -133,761 +39,139 @@ def _iter_rules(css: str):
             yield selector_group, declarations
 
 
-class TestLoadGlossaryCss:
-    def test_non_empty(self):
-        assert load_glossary_css().strip()
+def _selectors(css: str):
+    for selector_group, declarations in _iter_rules(css):
+        for selector in selector_group.split(","):
+            yield selector.strip(), declarations
 
-    def test_carries_renderer_hooks(self):
-        css = load_glossary_css()
-        # Structural hooks the renderer emits (yomitan_renderer / indexed_provider).
-        assert ".yomitan-glossary" in css
-        assert "ul.gloss-list" in css
-        assert ".gloss-sc-ruby" in css
-        assert ".gloss-sc-rt" in css
-        assert ".gloss-image" in css
 
-    def test_carries_image_presentation_hooks(self):
+class TestSheetDiscipline:
+    def test_every_selector_guarded_by_miner_only_markup(self):
+        # `data-count` on the outer <ol> is the one marker only anki_miner emits;
+        # without it a rule would stack onto Yomitan-exported glossary HTML. The bare
+        # wrapper is the single exception, and it may set custom properties only.
+        seen = 0
+        for selector, declarations in _selectors(load_glossary_css()):
+            seen += 1
+            assert selector.startswith(".yomitan-glossary"), selector
+            if "ol[data-count]" in selector:
+                continue
+            assert selector == ".yomitan-glossary", f"{selector!r} lacks the ol[data-count] guard"
+            for decl in filter(None, (d.strip() for d in declarations.split(";"))):
+                assert decl.startswith("--"), f"the bare wrapper rule may only set custom properties: {decl!r}"
+        assert seen >= 7
+
+    def test_no_important_no_nesting_no_theme_selectors(self):
         css = _no_comments(load_glossary_css())
-        # Monochrome recolor: mask currentColor through the image alpha so black-
-        # stroke accent SVGs (sankoku8-class) are visible on dark note types.
+        assert "!important" not in css
+        assert ".nightMode" not in css
+        assert "prefers-color-scheme" not in css
+        depth = 0
+        for ch in css:
+            if ch == "{":
+                depth += 1
+                assert depth == 1, "nested block (CSS nesting or an at-rule wrapper)"
+            elif ch == "}":
+                depth -= 1
+                assert depth == 0, "unbalanced braces"
+        assert depth == 0
+
+    def test_every_custom_property_resolves(self):
+        # `--image` is stamped inline by the renderer on each recolor layer; any
+        # other var() must be defined in the sheet or carry its own fallback.
+        css = _no_comments(load_glossary_css())
+        uses = re.findall(r"var\(\s*(--[-\w]+)\s*([,)])", css)
+        assert uses, "the images group's var(--image) is gone"
+        for name, follow in uses:
+            if name == "--image" or follow == ",":
+                continue
+            assert re.search(rf"{re.escape(name)}\s*:", css), f"var({name}) is neither defined nor given a fallback"
+
+    def test_no_rule_subject_is_a_bare_type_selector(self):
+        # A bare `table`/`th`/`details` subject would match markup we did not emit and
+        # out-rank the note type on its own element; the renderer stamps a
+        # `gloss-sc-<tag>` class on every structured-content element instead.
+        for selector, _ in _selectors(load_glossary_css()):
+            subject = selector.split()[-1]
+            assert any(ch in subject for ch in ".#["), f"{selector!r} takes a bare type selector as its subject"
+
+    def test_group_markers_sit_between_complete_rules(self):
+        # base_css concatenates minified regions with no separator, which is only
+        # sound when every region boundary falls right after a `}`.
+        regions = split_group_regions(load_glossary_css())
+        assert [group for group, _ in regions] == ["core", "images", "core", "tables", "core"]
+        for group, raw in regions:
+            minified = _minify_css(raw)
+            assert not minified or minified.endswith("}"), f"{group!r} region ends mid-rule"
+        assert base_css('<img class="gloss-image"><table>') == _minify_css(load_glossary_css())
+
+
+class TestBaseCss:
+    def test_core_fits_one_kib(self):
+        assert len(base_css("").encode()) <= 1024
+
+    def test_core_keeps_the_restyler_contract(self):
+        # card_restyler finds its own block by the leading marker and the
+        # ol[data-count] token, and splits the dict CSS tail at the first newline.
+        core = base_css("")
+        assert core.startswith(OWNED_STYLE_MARKER)
+        assert "ol[data-count]" in core
+        assert "\n" not in core
+
+    def test_core_drops_the_outer_list_chrome(self):
+        # Kiku numbers the outer <ol> when the wrapper loses `list-style: none`.
+        assert ".yomitan-glossary > ol[data-count]{margin: 0;padding: 0;list-style: none;" in base_css("")
+
+    def test_core_draws_gloss_bullets_as_circles(self):
+        assert (
+            ".yomitan-glossary ol[data-count] ol.gloss-glosses{margin: 0.1em 0;padding-left: 1.4em;"
+            "list-style-type: circle;}" in base_css("")
+        )
+
+    def test_images_region_only_when_the_field_has_an_image(self):
+        assert ".gloss-image" not in base_css("")
+        assert ".gloss-image" in base_css('<img class="gloss-image" src="p.svg">')
+
+    def test_tables_region_on_table_details_or_summary(self):
+        assert ".gloss-sc-table" not in base_css("")
+        for markup in ("<table>", "<details>", "<summary>"):
+            css = base_css(markup)
+            assert ".gloss-sc-details" in css, markup
+            assert ".gloss-sc-table" in css, markup
+
+    def test_images_rules_keep_the_monochrome_recolor(self):
+        css = base_css('<img class="gloss-image">')
         assert "[data-appearance=monochrome]" in css
         assert "mask-image: var(--image)" in css
         assert "background-color: currentColor" in css
-        # The recolor layer must be inert for non-monochrome images.
-        assert ":not([data-appearance=monochrome]) .gloss-image-background" in css
-        # Pixel-art dictionaries opt into nearest-neighbor scaling.
-        assert "[data-image-rendering=pixelated]" in css
         assert "image-rendering: pixelated" in css
 
-    def test_carries_structured_content_hooks(self):
-        css = _no_comments(load_glossary_css())
-        # Generic data-sc-* hooks for dicts that ship no styles.css (Issue #87).
-        assert 'span[data-sc-class="tag"]' in css
-        assert '[data-sc-content="forms"] .gloss-sc-td' in css
-        # Exact-match, not |= : the box rule must not hit the -a/-b inner lines.
-        assert '[data-sc-content="example-sentence"]' in css
-        assert '[data-sc-content|="example-sentence"]' not in css
-
-    def test_wty_tag_spans_get_chip_style(self):
-        # Wiktionary (wty) rows tag a sense with `<span data-sc-content="tag">`
-        # inside `<div data-sc-content="tags">`, not Jitendex's `data-sc-class="tag"`.
-        # Unmatched, adjacent tags run together ("countfig"); they take the same
-        # gated chip rule.
-        chip = [grp for grp, _ in _iter_rules(load_glossary_css()) if 'span[data-sc-class="tag"]' in grp]
-        assert len(chip) == 1
-        selectors = [s.strip() for s in chip[0].split(",")]
-        gate = ".yomitan-glossary ol[data-count] li[data-dictionary]:not([data-has-styles])"
-        assert f'{gate} span[data-sc-content="tag"]' in selectors
-
-    def test_tree_shaken_gapfill_keeps_forms_ancestor_table_rules(self):
-        css = base_css_variant(frozenset({"sc-gapfill"}))
-        assert '[data-sc-content="forms"] .gloss-sc-table' in css
-        assert '[data-sc-content="forms"] .gloss-sc-th' in css
-        assert '[data-sc-content="forms"] .gloss-sc-td' in css
-
-    def test_carries_hover_tag_chip_rule(self):
-        css = _no_comments(load_glossary_css())
-        # indexed_provider emits unioned dictionary tags with a tags-table row as
-        # `<span class="gloss-tag">` chips joined with no separator; the sheet must
-        # style them (else they render as unstyled run-together text). Guarded by
-        # ol[data-count] like every miner rule (TestGlossaryYomitanLeak covers the
-        # guard invariant).
-        assert "ol[data-count] .gloss-tag" in css
-
-    def test_neutralizes_host_generated_content_on_sense_and_gloss_items(self):
-        # Cohabitation defense: a host note type's " | " list-item separator (e.g.
-        # Lapis's "Format Definitions" rule) must not bleed into our lists. The
-        # reset covers BOTH structural levels — the sense items (li.gloss-item)
-        # and the gloss items (li.gloss-sc-li) — since the host matches both via
-        # data-dictionary^="JMdict" and data-sc-content="glossary".
-        css = _no_comments(load_glossary_css())
-        for subject in (
-            "li.gloss-item::before",
-            "li.gloss-item::after",
-            "li.gloss-sc-li::before",
-            "li.gloss-sc-li::after",
-        ):
-            assert subject in css, f"missing separator neutralizer for {subject}"
-        reset = css[css.index("li.gloss-item::before") :]
-        assert "content: none" in reset[: reset.index("}")]
-        # The `li` type is load-bearing for the specificity floor that
-        # test_separator_cancel_outranks_lapis pins; a bare `.gloss-sc-li::before`
-        # drops a column and the host's " | " comes back.
-        assert ".gloss-sc-li::before" not in css.replace("li.gloss-sc-li::before", "")
-
-    def test_separator_cancel_outranks_lapis(self):
-        # ja-05: Lapis's nested `& > li:not(:first-child)::before` resolves `&` to
-        # `:is()` of its parent list, which takes the list's MAX specificity: the
-        # `.yomitan-glossary [data-dictionary^="JMdict"] ul:not([data-sc-content])`
-        # branch, (0,3,1). The separator is therefore (0,4,3), and a (0,3,3)
-        # neutralizer lost on every JMdict card. Ours must reach it; the tie then
-        # goes to our trailing block by source order.
-        lapis = _lapis_separator_selector()
-        assert _specificity(lapis) == (0, 4, 3)
-        cancel = [
-            sel.strip()
-            for grp, decl in _iter_rules(load_glossary_css())
-            if "content: none" in decl
-            for sel in grp.split(",")
-        ]
-        assert len(cancel) == 4
-        for selector in cancel:
-            assert _specificity(selector) >= _specificity(lapis), selector
-
-    def test_specificity_helper(self):
-        assert _specificity(".yomitan-glossary ol[data-count] li.gloss-item::before") == (0, 3, 3)
-        assert _specificity(":where(.yomitan-glossary) [data-dictionary^=JMdict] ul:not([data-sc-content])") == (
-            0,
-            2,
-            1,
-        )
-        assert _specificity(":is(a, .b #c) > li:not(:first-child):after") == (1, 2, 2)
-        assert _specificity("li:not(#\\#)") == (1, 0, 1)
+    def test_tables_rules_use_literal_colours(self):
+        # The --am-* tunables died with the old core; a note type's --amn-accent
+        # still wins where it is set. _minify_css tightens the commas.
+        css = base_css("<table>")
+        assert "border: 1px solid rgba(128,128,128,0.4)" in css
+        assert "color: var(--amn-accent,#4f7cff)" in css
+        assert "--am-" not in css
 
 
-class TestGlossaryYomitanLeak:
-    """Every selector must be guarded by miner-only ``ol[data-count]`` markup.
-
-    The one marker only anki_miner emits is ``data-count`` on the outer ``<ol>``;
-    without the guard the sheet would stack onto Yomitan-exported glossary HTML in
-    a shared note type (double indentation). The single allowed exception is the
-    bare ``.yomitan-glossary`` tunables block, which may set custom properties
-    only (inert on Yomitan cards, keeps user overrides working).
+class TestLapisListDodge:
+    """Lapis (and Anki Miner Note, which inherits it) has three list rules that the
+    gloss list must escape: "Format Definitions" flattens `ul[data-sc-content="glossary"]`
+    and any `ul:not([data-sc-content])` under a JMdict entry into a " | " run, and its
+    `--jitendex-format: "minimal"` mode hides every `[data-sc-content]` other than
+    `glossary`. An `<ol class="gloss-glosses">` with no `data-sc-content` matches none.
     """
 
-    def test_every_selector_guarded_by_miner_only_markup(self):
-        css = load_glossary_css()
-        for selector_group, declarations in _iter_rules(css):
-            for selector in selector_group.split(","):
-                selector = selector.strip()
-                if "ol[data-count]" in selector:
-                    continue
-                assert (
-                    selector == ".yomitan-glossary"
-                ), f"selector {selector!r} can match Yomitan-exported HTML (missing ol[data-count] guard)"
-                for decl in declarations.split(";"):
-                    decl = decl.strip()
-                    if decl:
-                        assert decl.startswith(
-                            "--"
-                        ), f"unguarded .yomitan-glossary rule must only set custom properties, found {decl!r}"
-
-
-class TestEnvelopeInlineAxisOwnership:
-    """Envelope rules must never spend the inline axis (Issue #93).
-
-    ``li[data-dictionary]`` is the one element the sheet shares with
-    Yomitan-aware note types: Senren's Dictionary Colorizer reserves
-    ``padding-left`` on it for a colored rail, and our former
-    ``padding: 0.1em 0`` shorthand out-specified that and zeroed it, sliding
-    the glossary under the rail. Rules whose SUBJECT (rightmost compound) is
-    the envelope may declare only block-axis box properties — with nothing
-    declared on the inline axis, no specificity can defeat the host's
-    ``padding-left``. Descendant rules (envelope as ancestor) are exempt:
-    their subjects are miner-only markup the host doesn't style.
-    """
-
-    _BANNED = re.compile(r"^(?:margin|padding)$|^(?:margin|padding)-(?:left|right|inline)")
-
-    def _envelope_rules(self, css):
-        """(selector, declarations) for rules whose rightmost compound is the
-        envelope. Compounds in this sheet never contain internal spaces, so a
-        whitespace split isolates the subject (``> i`` yields subject ``i``)."""
-        out = []
-        for selector_group, declarations in _iter_rules(css):
-            for selector in selector_group.split(","):
-                subject = selector.strip().split()[-1]
-                if "li[data-dictionary]" in subject:
-                    out.append((selector.strip(), declarations))
-        return out
-
-    def test_audit_matches_exactly_the_two_envelope_rules(self):
-        # Self-check against vacuous or over-broad matching: the sheet carries
-        # exactly two envelope-subject rules — the block-spacing rule and the
-        # gated compact-size rule. Reshaping selectors must update this pin.
-        rules = self._envelope_rules(load_glossary_css())
-        assert len(rules) == 2, f"expected exactly 2 envelope-subject rules, found {[s for s, _ in rules]}"
-
-    def test_envelope_rules_never_touch_inline_axis(self):
-        for selector, declarations in self._envelope_rules(load_glossary_css()):
-            for decl in declarations.split(";"):
-                prop = decl.split(":", 1)[0].strip()
-                if not prop:
-                    continue
-                assert not self._BANNED.match(prop), (
-                    f"envelope rule {selector!r} declares {prop!r} — the margin/"
-                    "padding shorthand and -left/-right/-inline properties are "
-                    "banned on the envelope (they clobber the host note type's "
-                    "inline-axis styling, Issue #93)"
-                )
-
-    def test_envelope_keeps_block_axis_spacing(self):
-        # The fix must not degrade into deleting the rule: the house vertical
-        # rhythm between dictionary blocks stays.
-        rules = self._envelope_rules(load_glossary_css())
-        assert any(
-            "padding-top" in decls and "padding-bottom" in decls for _, decls in rules
-        ), "envelope block-axis spacing (padding-top/bottom) lost"
-
-
-class TestAttributionLineCedesToHost:
-    """The attribution ``<i>`` rule must declare neither ``display`` nor ``color``.
-
-    ``<i>(part-of-speech…, Dictionary Name)</i>`` is Yomitan-conventional markup —
-    Yomitan's own Anki export emits the same element — which is why every
-    Yomitan-aware note type styles it by name. Senren declares ``display: block``
-    and a 40%-black colour on ``.definition-box .yomitan-glossary i`` /
-    ``.glossary-box .yomitan-glossary i``; Lapis declares a colour on
-    ``li[data-dictionary^="JMdict"] i``. Our gated rule sits at (0,4,3) and won
-    both, so the note type's own dictionary title rendered as our inline-block grey
-    chip instead (2026-09-09 note-type CSS audit, Finding A: the only contested
-    surface across Lapis, Senren and Kiku).
-
-    Withdrawing the contested declarations is the only thing a note-type stylesheet
-    cannot out-rank — the same settlement as Issue #93 for the ``li[data-dictionary]``
-    envelope and Android issue #5 for ``_MORA_LINE_STYLE``. Class-scoping is not
-    available: ``indexed_provider._render`` emits a CLASSLESS ``<i>``, so a class
-    would be a markup change and existing cards, whose bodies the restyler never
-    rewrites, would not get it. The uncontested typography stays — no note type
-    declares font-size, font-style or letter-spacing on this element.
-    """
-
-    _BANNED = frozenset({"display", "color"})
-
-    @staticmethod
-    def _attribution_rules(css):
-        return [
-            (sel.strip(), decl)
-            for grp, decl in _iter_rules(css)
-            for sel in grp.split(",")
-            if sel.strip().endswith("> i")
-        ]
-
-    def test_audit_matches_exactly_the_one_attribution_rule(self):
-        # Self-check against vacuous matching: reshaping the selector must update
-        # this pin rather than silently emptying the audit below.
-        rules = self._attribution_rules(load_glossary_css())
-        assert len(rules) == 1, f"expected exactly 1 attribution rule, found {[s for s, _ in rules]}"
-
-    def test_attribution_rule_declares_neither_display_nor_color(self):
-        for selector, declarations in self._attribution_rules(load_glossary_css()):
-            for decl in declarations.split(";"):
-                prop = decl.split(":", 1)[0].strip()
-                if not prop:
-                    continue
-                assert prop not in self._BANNED, (
-                    f"attribution rule {selector!r} declares {prop!r} — the note type owns the "
-                    "dictionary-title line (Senren sets display + colour on it, Lapis a colour), "
-                    "and no specificity we can spend loses to them. Withdraw instead."
-                )
-
-    def test_attribution_keeps_its_uncontested_typography(self):
-        # The fix must not degrade into deleting the rule: the small, upright label
-        # is what keeps the attribution from shouting on a note type that styles
-        # nothing here, and no audited note type declares any of these.
-        rules = self._attribution_rules(load_glossary_css())
-        decls = "".join(decl for _, decl in rules)
-        for prop in ("font-size", "font-style", "letter-spacing"):
-            assert prop in decls, f"attribution rule lost its uncontested {prop}"
-
-
-class TestGapFillerGate:
-    """Every data-sc-* presentation gap-filler must be gated to unstyled dicts.
-
-    The renderer stamps ``data-has-styles`` on the ``li[data-dictionary]``
-    envelope when the dictionary ships usable scoped CSS; gap-fillers must carry
-    the ``li[data-dictionary]:not([data-has-styles])`` anchor so they switch off
-    wholesale for such entries (the dictionary's own styles.css governs —
-    Yomitan parity). The anchor must be on the STAMPED element: a bare
-    ``li:not([data-has-styles])`` matches the inner ``li.gloss-item`` (which
-    never carries the stamp) and the gate is inert. It must also sit BEFORE the
-    hook — transposed after it, the selector targets a stamped descendant that
-    never exists and the gap-filler dies for unstyled dicts too.
-    """
-
-    _ANCHOR = "li[data-dictionary]:not([data-has-styles])"
-
-    def test_every_data_sc_selector_carries_anchored_gate(self):
-        css = load_glossary_css()
-        seen = 0
-        for selector_group, _ in _iter_rules(css):
-            for selector in selector_group.split(","):
-                selector = selector.strip()
-                if "data-sc-" not in selector:
-                    continue
-                seen += 1
-                assert self._ANCHOR in selector, f"data-sc rule missing the gate anchor: {selector!r}"
-                assert selector.index(self._ANCHOR) < selector.index(
-                    "data-sc-"
-                ), f"gate anchor transposed after the hook (semantically dead): {selector!r}"
-                assert (
-                    "li:not([data-has-styles])" not in selector
-                ), f"inert bare-li gate (matches inner li.gloss-item): {selector!r}"
-        assert seen >= 20, f"expected the full gap-filler set to be gated, found only {seen}"
-
-    def test_structural_rules_stay_ungated(self):
-        # The gate is for data-sc-* presentation gap-fillers only; structural
-        # rules (our own markup) must keep applying to styled dicts too.
-        # ``.gloss-tag`` is now split — its LAYOUT rule stays ungated but its pill
-        # VISUALS defer on styled cards — so its gating is pinned explicitly in
-        # TestHouseCosmeticsDeferOnStyledCards, not here.
-        css = _no_comments(load_glossary_css())
-        for token in ("ul.gloss-list", ".gloss-sc-ruby", ".gloss-image"):
-            start = css.index(token)
-            selector_start = css.rfind("}", 0, start) + 1
-            selector = css[selector_start:start]
-            assert self._ANCHOR not in selector, f"structural rule {token!r} wrongly gated"
-
-
-class TestHouseCosmeticsDeferOnStyledCards:
-    """anki_miner's house cosmetics (grey/shrunk attribution, compact block size,
-    grey sense ordinals, grey tag-chip pill) must defer on styled
-    (``data-has-styles``) entries so a Jitendex card matches Yomitan — which
-    embeds no base sheet into the Anki card, leaving note-type/dict CSS to govern.
-    Each cosmetic is gated ``li[data-dictionary]:not([data-has-styles])`` and is
-    NOT a data-sc hook (so TestGapFillerGate does not cover it).
-    """
-
-    _ANCHOR = "li[data-dictionary]:not([data-has-styles])"
-
-    def _selectors(self, css):
-        return [sel.strip() for grp, _ in _iter_rules(css) for sel in grp.split(",")]
-
-    def test_attribution_line_is_gated(self):
-        css = load_glossary_css()
-        i_rules = [s for s in self._selectors(css) if s.endswith("> i")]
-        assert i_rules, "attribution '> i' rule missing"
-        for sel in i_rules:
-            assert self._ANCHOR in sel, f"attribution rule not gated (greys styled cards): {sel!r}"
-
-    def test_block_font_size_relocated_off_outer_ol(self):
-        css = load_glossary_css()
-        for grp, decl in _iter_rules(css):
-            if grp.strip() == ".yomitan-glossary > ol[data-count]":
-                assert "font-size" not in decl, "block font-size must leave the ungated outer-ol rule"
-        # A gated size default (unstyled dicts only) must exist — not the attribution
-        # rule, not a data-sc gap-filler.
-        assert any(
-            self._ANCHOR in grp and "font-size" in decl and "> i" not in grp and "data-sc-" not in grp
-            for grp, decl in _iter_rules(css)
-        ), "gated block-size default for unstyled dicts missing"
-
-    def test_sense_ordinal_color_is_gated(self):
-        css = load_glossary_css()
-        marker_rules = [s for s in self._selectors(css) if "::marker" in s]
-        assert marker_rules, "::marker rule missing"
-        for sel in marker_rules:
-            assert self._ANCHOR in sel, f"::marker color not gated: {sel!r}"
-
-    def test_chip_pill_visuals_gated_layout_ungated(self):
-        css = load_glossary_css()
-        rules = [(grp.strip(), decl) for grp, decl in _iter_rules(css) if ".gloss-tag" in grp]
-        assert len(rules) >= 2, "expected .gloss-tag split into a layout rule and a gated visual rule"
-        layout = [(g, d) for g, d in rules if self._ANCHOR not in g]
-        visual = [(g, d) for g, d in rules if self._ANCHOR in g]
-        assert layout, "chip layout rule must stay ungated (preserve the no-separator join on styled cards)"
-        assert visual, "chip pill visuals must be gated (defer to plain text on styled cards)"
-        # Layout keeps the inline-block join; visual carries the grey pill.
-        assert any("display" in d for _, d in layout), "layout rule should keep display/join props"
-        assert any(("background" in d or "color" in d) for _, d in visual), "visual rule should carry pill paint"
-
-
-class TestGlossaryListYomitanDefault:
-    """The in-sense glossary list must render as Yomitan's DEFAULT bulleted block,
-    not the compact inline ' | ' layout (Yomitan compact-mode only). The gated
-    inline rules are removed so the structural ``.gloss-sc-ul`` disc block governs.
-    """
-
-    def test_no_inline_glossary_list_rule(self):
-        css = _no_comments(load_glossary_css())
-        assert 'data-sc-content="glossary"' not in css, (
-            "inline compact glossary-list rule must be gone so the structural "
-            ".gloss-sc-ul bulleted block governs (Yomitan default)"
-        )
-        assert 'content: " | "' not in css, "compact ' | ' separator must be removed"
-
-    def test_structural_disc_block_still_present(self):
-        css = _no_comments(load_glossary_css())
-        assert ".gloss-sc-ul" in css, "structural glossary-list rule (disc block) must remain"
-
-
-class TestHostListFlattenDefense:
-    """A note type built for native Yomitan/Jitendex JMdict (Lapis-class) ships a
-    "Format Definitions" rule that flattens our definition lists to an inline
-    " | "-separated run: `display:inline; list-style:none; padding-left:0!important;
-    > li:not(:first-child)::before { content:" | " }`, matching our markup via
-    `data-sc-content="glossary"` and `data-dictionary^="JMdict"`. The base sheet
-    must re-assert block layout so the numbered senses + bulleted glosses survive.
-
-    Defense split (by cascade cost):
-      * DISPLAY is restored ungated in core, with !important. Our cancel deletes the
-        host's " | " separators, so our layout must win wherever the cancel does: a
-        host that wins the layout alone (Senren's Jitendex `display: flex !important`)
-        leaves the glosses in a row with nothing between them ("to waveto shake");
-      * PADDING needs !important to beat the host's `padding-left:0!important`, and
-        is gated to unstyled dicts so it can never clobber a styled dict's own
-        padding (Yomitan parity);
-      * the " | " neutralizer is covered by
-        TestLoadGlossaryCss.test_neutralizes_host_generated_content_on_sense_and_gloss_items.
-    """
-
-    _GATE = "li[data-dictionary]:not([data-has-styles])"
-
-    def _decls_for(self, subject_selector: str) -> str:
-        """The declaration block of the first rule whose selector ends with
-        `subject_selector` (ungated core rules only — the gate is tested separately)."""
-        for grp, decl in _iter_rules(load_glossary_css()):
-            for sel in grp.split(","):
-                sel = sel.strip()
-                if sel.endswith(subject_selector) and self._GATE not in sel:
-                    return decl
-        raise AssertionError(f"no ungated rule with subject {subject_selector!r}")
-
-    def test_structural_lists_declare_block_display(self):
-        # display must be explicit (not left to the ul/li default) so a host
-        # display:inline cannot strip the markers, and !important so it is never
-        # weaker than the separator cancel. Ungated so styled dicts benefit.
-        assert "display: block !important" in self._decls_for("ul.gloss-list")
-        assert "display: block !important" in self._decls_for(".gloss-sc-ul")
-        assert "display: block !important" in self._decls_for(".gloss-sc-ol")
-        assert "display: list-item !important" in self._decls_for("li.gloss-item")
-        assert "display: list-item !important" in self._decls_for("li.gloss-sc-li")
-
-    def test_gloss_layout_holds_against_senren_jitendex_compact(self):
-        # Senren's own !important row layout must not out-rank our !important block
-        # layout: at equal specificity the tie goes to our trailing <style>.
-        senren = _senren_important_display_rules()
-        assert {value for _, value in senren} == {"flex", "block"}, senren
-        ours = {
-            "ul": (".gloss-sc-ul", "display: block !important"),
-            "li": ("li.gloss-sc-li", "display: list-item !important"),
-        }
-        for host_selector, _ in senren:
-            subject, declaration = ours["li" if host_selector.endswith("li") else "ul"]
-            assert declaration in self._decls_for(subject)
-            our_selector = next(
-                sel.strip()
-                for grp, decl in _iter_rules(load_glossary_css())
-                if declaration in decl
-                for sel in grp.split(",")
-                if sel.strip().endswith(subject)
-            )
-            assert _specificity(our_selector) >= _specificity(host_selector), (our_selector, host_selector)
-
-    def test_indent_defense_is_gated_and_important(self):
-        # padding-left !important, gated to unstyled dicts, on both list levels.
-        seen = {"ul.gloss-list": False, ".gloss-sc-ul": False}
-        for grp, decl in _iter_rules(load_glossary_css()):
-            if "padding-left: 1.35em !important" not in decl and "padding-left: 1.2em !important" not in decl:
-                continue
-            for sel in grp.split(","):
-                sel = sel.strip()
-                assert self._GATE in sel, f"indent-defense rule must be gated to unstyled dicts: {sel!r}"
-                if sel.endswith("ul.gloss-list"):
-                    seen["ul.gloss-list"] = True
-                if sel.endswith(".gloss-sc-ul"):
-                    seen[".gloss-sc-ul"] = True
-        assert all(seen.values()), f"missing gated !important padding for {[k for k, v in seen.items() if not v]}"
-
-    def test_defense_ships_in_the_plain_jmdict_tree_shaken_variant(self):
-        # Fail-if-wrong: the declarations must survive the per-card tree-shake a
-        # real unstamped plain-JMdict card gets — not merely exist in the sheet.
-        from anki_miner.services.dictionary.card_style_block import base_css_variant, css_witnesses
-
-        body = (
-            '<div class="yomitan-glossary"><ol data-count="1">'
-            '<li data-dictionary="JMdict [2026-06-28]">'
-            '<ul class="gloss-list" data-count="2"><li class="gloss-item"><div class="gloss-content">'
-            '<ul class="gloss-sc-ul" data-sc-content="glossary" style="list-style-type: circle">'
-            '<li class="gloss-sc-li">x</li></ul></div></li></ul></li></ol></div>'
-        )
-        witnesses = css_witnesses([body])
-        assert "unstyled-chrome" in witnesses, "unstamped plain-JMdict must witness unstyled-chrome"
-        variant = base_css_variant(witnesses)
-        assert "ul.gloss-list{display: block !important" in variant
-        assert "li.gloss-item{display: list-item !important" in variant
-        assert ".gloss-sc-ol{display: block !important" in variant
-        assert "li.gloss-sc-li{display: list-item !important" in variant
-        assert "li.gloss-sc-li::after{content: none" in variant
-        assert "padding-left: 1.35em !important" in variant
-        assert "padding-left: 1.2em !important" in variant
-
-
-class TestGroupPlacement:
-    """The @am-group tree-shaking partition (Issue #93) is only safe if every
-    rule sits in a group whose witness fires whenever the rule could match.
-
-    Forward lints guarantee no-under-inclusion (a group's rules can only match
-    markup its witness detects); the reverse core-exclusion lint guards the
-    size win (a forgotten marker silently leaves shed-able rules in the
-    always-embedded core, which no other automated check would catch).
-    """
-
-    _GATE = "li[data-dictionary]:not([data-has-styles])"
-
-    @staticmethod
-    def _grouped_rules():
-        """(group, selector, declarations) for every rule, via the real splitter."""
-        from anki_miner.services.dictionary.card_style_block import split_group_regions
-
-        out = []
-        for group, raw in split_group_regions(load_glossary_css()):
-            for selector_group, declarations in _iter_rules(raw):
-                for selector in selector_group.split(","):
-                    out.append((group, selector.strip(), declarations))
-        return out
-
-    @staticmethod
-    def _is_table_family(selector: str) -> bool:
-        # Word-boundary detection on the selector's rightmost compound — a bare
-        # substring check would read the "th" in `max-width` or the "table" in
-        # an attribute value. The rules are class-scoped to the renderer's
-        # `gloss-sc-<tag>` hooks; the bare type forms stay in the pattern so a
-        # regression back to them is still caught by the reverse core-exclusion lint.
-        subject = selector.split()[-1]
-        return bool(re.match(r"^\.?(?:gloss-sc-)?(table|th|td|details|summary)(?:\W|$)", subject)) or (
-            "gloss-sc-details" in selector
+    def test_lapis_still_ships_the_three_rules(self):
+        css = (_NOTE_TYPES / "lapis.css").read_text(encoding="utf-8")
+        assert 'ul[data-sc-content="glossary"]' in css
+        assert "ul:not([data-sc-content])" in css
+        assert (
+            '[data-jitendex-format~="minimal"] .definition [data-sc-content]:not([data-sc-content="glossary"])' in css
         )
 
-    def test_forward_unstyled_chrome_rules_all_gated(self):
-        rules = [(s, d) for g, s, d in self._grouped_rules() if g == "unstyled-chrome"]
-        assert rules, "unstyled-chrome group is empty"
-        for selector, _ in rules:
-            assert self._GATE in selector, f"ungated rule in unstyled-chrome: {selector!r}"
-
-    def test_forward_sc_gapfill_rules_gated_and_carry_data_sc(self):
-        rules = [(s, d) for g, s, d in self._grouped_rules() if g == "sc-gapfill"]
-        assert rules, "sc-gapfill group is empty"
-        for selector, _ in rules:
-            assert self._GATE in selector, f"ungated rule in sc-gapfill: {selector!r}"
-            assert "data-sc-" in selector, f"sc-gapfill rule without a data-sc- hook: {selector!r}"
-
-    def test_forward_images_rules_carry_witness_token(self):
-        rules = [(s, d) for g, s, d in self._grouped_rules() if g == "images"]
-        assert rules, "images group is empty"
-        for selector, _ in rules:
-            assert "gloss-image" in selector, f"images rule without gloss-image: {selector!r}"
-
-    def test_forward_tables_rules_are_table_family(self):
-        rules = [(s, d) for g, s, d in self._grouped_rules() if g == "tables"]
-        assert rules, "tables group is empty"
-        for selector, _ in rules:
-            assert self._is_table_family(selector), f"non-table rule in tables group: {selector!r}"
-
-    def test_reverse_core_carries_no_sheddable_rules(self):
-        # No data-sc-/gloss-image/table-family rule may sit in the always-
-        # embedded core — each must live in SOME witness-gated group. (No unique
-        # group per token: the forms-table rules legitimately carry BOTH
-        # data-sc- and table tokens and live in sc-gapfill, whose witness always
-        # fires when they could match.)
-        for group, selector, _ in self._grouped_rules():
-            if group != "core":
-                continue
-            assert "data-sc-" not in selector, f"data-sc- rule left in core: {selector!r}"
-            assert "gloss-image" not in selector, f"gloss-image rule left in core: {selector!r}"
-            assert not self._is_table_family(selector), f"table-family rule left in core: {selector!r}"
-
-    def test_core_keeps_structural_hooks(self):
-        # The always-embedded core must retain the structural rules styled cards
-        # rely on: the outer-ol layout, the gloss-tag LAYOUT split, the host
-        # ::before neutralizer, and the gloss-sc structural set.
-        core = "".join(d + s for g, s, d in self._grouped_rules() if g == "core")
-        for token in ("ol[data-count]", ".gloss-tag", "li.gloss-item::before", ".gloss-sc-ul", ".gloss-sc-ruby"):
-            assert token in core, f"structural token {token!r} left the core"
-
-    def test_gated_pill_visuals_in_unstyled_chrome_not_gapfill(self):
-        # The .gloss-tag PILL rule carries no data-sc- token: a tag-only card
-        # has chips but no data-sc- witness, so the pill must ride the
-        # unstyled-chrome group (its witness is the unstamped envelope).
-        pill = [
-            (g, s) for g, s, d in self._grouped_rules() if ".gloss-tag" in s and self._GATE in s and "data-sc-" not in s
-        ]
-        assert pill, "gated .gloss-tag pill rule missing"
-        for group, selector in pill:
-            assert group == "unstyled-chrome", f"pill rule {selector!r} in {group!r}"
-
-
-class TestScGapfillWitnessSync:
-    """The sc-gapfill witness (``_SC_GAPFILL_HOOKS`` in card_style_block) is a
-    hardcoded set of the ``data-sc-*`` hooks the sc-gapfill rules target, chosen
-    over runtime CSS parsing to keep regex risk off the production
-    false-negative path (Issue #93 follow-up). These tests are its honesty
-    guarantee: a hook present in the CSS but missing from the witness would
-    silently drop the group on a card that needs it — the forbidden false
-    negative — so drift must fail loudly in CI.
-    """
-
-    _NARROW = re.compile(r'data-sc-(content|class)(\|?=)"([\w-]+)"')
-    _BROAD = re.compile(r"data-sc-[a-z-]+")
-
-    @staticmethod
-    def _sc_gapfill_regions() -> str:
-        from anki_miner.services.dictionary.card_style_block import split_group_regions
-
-        return "".join(css for g, css in split_group_regions(load_glossary_css()) if g == "sc-gapfill")
-
-    def _derived_hooks(self, css: str) -> set[str]:
-        hooks = set()
-        for key, op, tok in self._NARROW.findall(css):
-            # `|=` matches the value OR a `value-` prefix → open-prefix literal
-            # (no closing quote); exact `=` → the full closing-quoted literal.
-            hooks.add(f'data-sc-{key}="{tok}' if op == "|=" else f'data-sc-{key}="{tok}"')
-        return hooks
-
-    def test_hook_set_equals_css_derived(self):
-        from anki_miner.services.dictionary.card_style_block import _SC_GAPFILL_HOOKS
-
-        derived = self._derived_hooks(_no_comments(self._sc_gapfill_regions()))
-        assert len(derived) >= 18, f"sc-gapfill hook set gutted? only {len(derived)} parsed"
-        assert derived == set(_SC_GAPFILL_HOOKS)
-
-    def test_every_data_sc_occurrence_is_parseable(self):
-        # Completeness net: the narrow parser must see EVERY `data-sc-` attribute
-        # in the regions. A future hook it cannot read (a different key like
-        # `data-sc-note`, a single-quoted value, a `~=`/`^=`/`*=`/`$=` operator,
-        # or a non-`[\w-]` value) would slip past the equality test above AND the
-        # runtime witness — so trip a loud count mismatch here that forces the
-        # author to broaden both the parser and the hook set.
-        css = _no_comments(self._sc_gapfill_regions())
-        assert len(self._BROAD.findall(css)) == len(self._NARROW.findall(css))
-
-    def test_every_css_hook_makes_the_witness_fire(self):
-        # Tie the CSS directly to css_witnesses (not just to the hardcoded set):
-        # every hook the sheet targets must witness the group, and every `|=`
-        # hook must also fire on a hyphen-suffixed value (the false-negative the
-        # closing-quoted form would cause).
-        from anki_miner.services.dictionary.card_style_block import css_witnesses
-
-        env = '<li data-dictionary="D">'
-        for key, op, tok in self._NARROW.findall(_no_comments(self._sc_gapfill_regions())):
-            assert "sc-gapfill" in css_witnesses([env + f'<span data-sc-{key}="{tok}"></span>']), (key, op, tok)
-            if op == "|=":
-                suffixed = env + f'<span data-sc-{key}="{tok}-x"></span>'
-                assert "sc-gapfill" in css_witnesses([suffixed]), (key, op, tok, "suffix")
-
-
-class TestThemeAgnostic:
-    """Theme-agnostic palette: no ``.nightMode``; ``color-mix()`` only guarded."""
-
-    def test_no_nightmode_or_scheme_dependency(self):
-        css = _no_comments(load_glossary_css())
-        assert ".nightMode" not in css
-        assert "prefers-color-scheme" not in css
-        assert "data-theme" not in css
-
-    def test_no_color_mix_outside_supports(self):
-        css = load_glossary_css()
-        assert "color-mix(" in css, "should use color-mix in an @supports block"
-        assert "color-mix(" not in _strip_supports(
-            css
-        ), "color-mix() used outside an @supports guard — older WebViews would lose the color entirely"
-
-    def test_muted_and_accent_take_note_type_hooks(self):
-        # No solid colour reads at 4.5:1 on both a light and a dark card, and theme
-        # selectors are banned here, so a note type (Anki Miner Note) supplies its
-        # per-theme value through --amn-*; today's value stays the fallback.
-        css = load_glossary_css()
-        assert "--am-muted: var(--amn-muted, rgba(128, 128, 128, 0.95));" in css
-        assert "--am-accent: var(--amn-accent, #4f7cff);" in css
-
-    def test_muted_text_never_color_mix_derived(self):
-        # Issue #87 Bug 2: --am-muted is body-text color applied to nested
-        # elements; a color-mix(currentColor …) value compounds to unreadable. It
-        # must never be redefined inside the @supports (color-mix) upgrade.
-        css = re.sub(r"/\*.*?\*/", "", load_glossary_css(), flags=re.DOTALL)
-        for block in re.findall(r"@supports[^{]*\{(?:[^{}]*\{[^{}]*\})*\s*\}", css, flags=re.DOTALL):
-            assert (
-                "--am-muted" not in block
-            ), "--am-muted redefined inside @supports — would reintroduce the currentColor opacity cascade"
-
-
-class TestCuratedExclusions:
-    """Yomitan rules keyed on DOM state our renderer never emits must be absent."""
-
-    def test_excluded_rule_groups_absent(self):
-        css = _no_comments(load_glossary_css())
-        for token in (
-            "data-browser",
-            "data-glossary-layout-mode",
-            "data-collapsed",
-            "data-collapsible",
-            ".entry",
-            ".definition-item",
-        ):
-            assert token not in css, f"curated-out token {token!r} leaked into glossary.css"
-
-
-class TestNoBareTypeSelectorSubjects:
-    """No rule may take a BARE type selector as its subject.
-
-    ``.yomitan-glossary ol[data-count] table`` matched any ``<table>`` inside our
-    glossary block — including markup we did not emit — and out-ranked the note
-    type's own ``table {}`` on an element the note type owns. Every
-    structured-content element the renderer emits carries ``class="gloss-sc-<tag>"``
-    (``yomitan_renderer._render_attrs``), so the subject names that class instead.
-    A subject qualified by a class, id or attribute is fine; a bare element name is
-    not.
-    """
-
-    # The attribution line is the one sanctioned exception: indexed_provider._render
-    # emits a CLASSLESS <i>, so classing it would be a MARKUP change that existing
-    # cards never receive (the restyler rewrites style blocks, not bodies).
-    _ALLOWED_BARE_SUBJECTS = {"i"}
-
-    def test_no_rule_subject_is_a_bare_type_selector(self):
-        for selector_group, _ in _iter_rules(load_glossary_css()):
-            for selector in selector_group.split(","):
-                subject = selector.strip().split()[-1]
-                if any(ch in subject for ch in ".#["):
-                    continue
-                assert subject in self._ALLOWED_BARE_SUBJECTS, (
-                    f"selector {selector.strip()!r} takes the bare type selector "
-                    f"{subject!r} as its subject: it matches markup we do not own and "
-                    "out-ranks the note type on its own element. Scope it to the "
-                    "renderer's gloss-sc-<tag> class."
-                )
-
-    def test_table_family_rules_target_the_renderer_classes(self):
-        css = _no_comments(load_glossary_css())
-        for token in (
-            ".gloss-sc-details",
-            ".gloss-sc-summary",
-            ".gloss-sc-table",
-            ".gloss-sc-th",
-            ".gloss-sc-td",
-        ):
-            assert token in css, f"table-family rule lost its {token} scope"
-        for bare in ("] table", "] th", "] td", "] details", "] summary"):
-            assert bare not in css, f"bare type selector {bare!r} back in the sheet"
-
-    def test_table_cohort_still_ships_the_table_rules(self):
-        # Fail-if-wrong: the renamed rules must survive the per-card tree-shake a
-        # real conjugation-table card gets, not merely exist in the sheet.
-        from anki_miner.services.dictionary.card_style_block import base_css_variant, css_witnesses
-
-        body = (
-            '<div class="yomitan-glossary"><ol data-count="1">'
-            '<li data-dictionary="D"><ul class="gloss-list" data-count="1">'
-            '<li class="gloss-item"><div class="gloss-content">'
-            '<details class="gloss-sc-details"><summary class="gloss-sc-summary">C</summary>'
-            '<table class="gloss-sc-table"><tbody class="gloss-sc-tbody">'
-            '<tr class="gloss-sc-tr"><th class="gloss-sc-th">a</th>'
-            '<td class="gloss-sc-td">b</td></tr></tbody></table>'
-            "</details></div></li></ul></li></ol></div>"
-        )
-        assert "tables" in css_witnesses([body])
-        variant = base_css_variant(css_witnesses([body]))
-        for token in (".gloss-sc-details{", ".gloss-sc-summary{", ".gloss-sc-table{"):
-            assert token in variant, f"{token!r} shed from the tables variant"
-
-    def test_summary_without_details_still_witnesses_the_tables_group(self):
-        # The renderer allows a bare <summary> node, and the summary rule now keys on
-        # .gloss-sc-summary. A witness that only probed "<details" would shed a style
-        # the card needs — the one forbidden tree-shake outcome.
-        from anki_miner.services.dictionary.card_style_block import css_witnesses
-
-        body = (
-            '<div class="yomitan-glossary"><ol data-count="1"><li data-dictionary="D">'
-            '<summary class="gloss-sc-summary">x</summary></li></ol></div>'
-        )
-        assert "tables" in css_witnesses([body])
+    def test_gloss_list_is_an_ol_without_data_sc_content(self):
+        body = present_sense(MULTI, styled=False)
+        assert body.startswith('<ol class="gloss-glosses"')
+        assert "data-sc-content" not in body

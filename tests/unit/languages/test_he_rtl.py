@@ -55,10 +55,7 @@ def test_the_service_threads_the_hebrew_direction_and_code():
 
 
 #: A field with miner markup, which is what ``attach_card_style_block`` will style at all.
-MINER_FIELD = (
-    '<div class="yomitan-glossary"><ol data-count="1">'
-    '<li data-dictionary="D" data-has-styles="">content</li></ol></div>'
-)
+MINER_FIELD = '<div class="yomitan-glossary"><ol data-count="1"><li data-dictionary="D">content</li></ol></div>'
 
 
 def _payload():

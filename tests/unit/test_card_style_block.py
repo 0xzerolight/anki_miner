@@ -6,89 +6,102 @@ from pathlib import Path
 
 import pytest
 
+from anki_miner.services.dictionary import card_style_block
 from anki_miner.services.dictionary.card_style_block import (
-    ALL_GROUPS,
     RTL_GLOSSARY_CSS,
+    _minified_regions,
     _minify_css,
     attach_card_style_block,
-    base_css_variant,
+    base_css,
     build_card_style_block,
-    css_witnesses,
     filter_dict_css_entries,
     split_group_regions,
 )
 from anki_miner.services.dictionary.card_style_presets import load_glossary_css
 
-# The card-body shapes the tree-shaking witnesses key on.
-UNSTAMPED = '<li data-dictionary="D">'
-STAMPED = '<li data-dictionary="D" data-has-styles="">'
+# A field carrying markup for both optional regions.
+IMAGE = '<img class="gloss-image" src="p.svg">'
+EVERYTHING = IMAGE + "<table>"
+
+
+def _optional_regions() -> dict[str, str]:
+    return {group: css for group, css in _minified_regions() if group != "core"}
 
 
 class TestFullBaseSheet:
-    """Invariants the restyle refresh (``card_restyler._refresh_base_sheet``) relies
-    on to swap a stale embedded base head in place without corrupting the card. The
-    whole sheet is now the all-groups variant ``base_css_variant(ALL_GROUPS)``."""
+    """Invariants the restyle refresh relies on to swap a stale embedded base in
+    place without corrupting the card."""
 
     def test_full_sheet_is_newline_free(self):
-        # The refresh splits the embedded head on the FIRST "\n" to separate base
-        # from dict_css; a newline in the base would break that boundary.
-        assert "\n" not in base_css_variant(ALL_GROUPS)
+        # The restyler splits the embedded block on the FIRST "\n" to separate the
+        # base from dict_css; a newline in the base would break that boundary.
+        assert "\n" not in base_css(EVERYTHING)
 
     def test_full_sheet_has_no_data_dictionary_literals(self):
-        # Refresh gates envelope stamping on the card's carried CSS; the base
-        # must carry neither a `[data-dictionary="…"]` selector (would
-        # over-stamp) nor a `<li data-dictionary=` literal (would witness).
-        base = base_css_variant(ALL_GROUPS)
+        # The restyler and filter_dict_css_entries read envelopes and dictionary
+        # selectors out of a field; the base must carry neither.
+        base = base_css(EVERYTHING)
         assert '[data-dictionary="' not in base
         assert "<li data-dictionary=" not in base
 
 
-class TestBaseCssVariants:
-    """Per-card tree-shaking (Issue #93): the base sheet is partitioned by
-    ``@am-group`` markers and only witness-hit groups embed."""
+class TestBaseCss:
+    """The minified core always embeds; ``images`` and ``tables`` join it only
+    when the field carries markup they style."""
 
-    def test_all_groups_reproduce_full_sheet_byte_for_byte(self):
+    def test_both_regions_reproduce_the_whole_sheet_byte_for_byte(self):
         # THE marker-boundary tripwire: region split + per-region minify +
         # empty-string join must equal the whole-sheet minify exactly. A marker
-        # placed mid-rule (or a join separator) breaks this first. RHS is the
-        # naive whole-sheet minify (the internal seam), so this is not a tautology.
-        assert base_css_variant(ALL_GROUPS) == _minify_css(load_glossary_css())
+        # placed mid-rule (or a join separator) breaks this first.
+        assert base_css(EVERYTHING) == _minify_css(load_glossary_css())
 
-    def test_every_variant_newline_free_and_carries_detection_token(self):
-        # Both properties are load-bearing for card_restyler: the first-"\n"
-        # head partition and the "ol[data-count]" head-detection token.
-        import itertools
+    @pytest.mark.parametrize("field", ["", IMAGE, "<table>", "<details>", "<summary>", EVERYTHING])
+    def test_every_variant_newline_free_and_carries_detection_token(self, field):
+        variant = base_css(field)
+        assert "\n" not in variant
+        assert "ol[data-count]" in variant
 
-        for r in range(len(ALL_GROUPS) + 1):
-            for combo in itertools.combinations(sorted(ALL_GROUPS), r):
-                variant = base_css_variant(frozenset(combo))
-                assert "\n" not in variant
-                assert "ol[data-count]" in variant
+    def test_core_only_for_a_plain_field(self):
+        core = "".join(css for group, css in _minified_regions() if group == "core")
+        assert base_css('<div class="yomitan-glossary"><ol data-count="1"><li>x</li></ol></div>') == core
 
-    def test_variants_strictly_smaller_than_full(self):
-        full = len(base_css_variant(ALL_GROUPS))
-        core = len(base_css_variant(frozenset()))
-        assert core < full
-        for group in ALL_GROUPS:
-            assert core < len(base_css_variant(frozenset({group}))) < full
+    def test_variants_strictly_between_core_and_full(self):
+        core = len(base_css(""))
+        full = len(base_css(EVERYTHING))
+        assert core < len(base_css(IMAGE)) < full
+        assert core < len(base_css("<details>")) < full
 
     def test_document_order_preserved(self):
-        # Cascade order among surviving rules must be document order: each
-        # group's css appears in the full sheet in the same relative position.
-        full = base_css_variant(ALL_GROUPS)
-        variant = base_css_variant(frozenset({"unstyled-chrome", "tables"}))
-        # The variant must be a subsequence of the full sheet at region
-        # granularity — verify by walking the full sheet.
-        pos = 0
-        for group, css in ((g, m) for g, m in _regions() if g in ("core", "unstyled-chrome", "tables")):
-            found = full.find(css, pos)
-            assert found != -1, f"region of {group!r} out of document order"
-            pos = found + len(css)
-            assert css in variant
+        # Cascade order among surviving rules must be document order.
+        regions = _optional_regions()
+        full = base_css(EVERYTHING)
+        assert full.index(regions["images"]) < full.index(regions["tables"])
+        assert base_css("<table>").endswith(regions["tables"])
 
-    def test_unknown_group_raises(self):
-        with pytest.raises(ValueError, match="unknown style groups"):
-            base_css_variant(frozenset({"nonsense"}))
+    @pytest.mark.parametrize(
+        ("field", "groups"),
+        [
+            ("", set()),
+            ('<span class="gloss-image-container">', {"images"}),
+            ("<table><tr><td>x</td></tr></table>", {"tables"}),
+            ("<details><summary>s</summary></details>", {"tables"}),
+            ('<summary class="gloss-sc-summary">x</summary>', {"tables"}),
+            (EVERYTHING, {"images", "tables"}),
+        ],
+    )
+    def test_regions_follow_literal_probes(self, field, groups):
+        assert {g for g, css in _optional_regions().items() if css in base_css(field)} == groups
+
+    def test_unknown_group_raises(self, monkeypatch):
+        monkeypatch.setattr(
+            card_style_block, "load_glossary_css", lambda: "a{}/* @am-group: nonsense */b{}/* @am-endgroup */"
+        )
+        _minified_regions.cache_clear()
+        try:
+            with pytest.raises(ValueError, match="unknown style group"):
+                base_css("")
+        finally:
+            _minified_regions.cache_clear()
 
     def test_marker_misuse_raises(self):
         with pytest.raises(ValueError, match="nested @am-group"):
@@ -97,98 +110,6 @@ class TestBaseCssVariants:
             split_group_regions("a{} /* @am-endgroup */")
         with pytest.raises(ValueError, match="unclosed"):
             split_group_regions("/* @am-group: images */ a{}")
-
-
-def _regions():
-    from anki_miner.services.dictionary.card_style_block import _minified_regions
-
-    return _minified_regions()
-
-
-class TestCssWitnesses:
-    """Witness detection is deliberately over-inclusive; under-inclusion (a
-    dropped group whose rules the card could match) is never allowed."""
-
-    def test_stamped_only_card_has_no_unstyled_witness(self):
-        assert css_witnesses([STAMPED]) == frozenset()
-
-    def test_unstamped_envelope_witnesses_chrome_only(self):
-        assert css_witnesses([UNSTAMPED]) == frozenset({"unstyled-chrome"})
-
-    def test_unstamped_with_structured_content_witnesses_gapfill(self):
-        html = UNSTAMPED + '<span data-sc-class="tag">x</span>'
-        assert css_witnesses([html]) == frozenset({"unstyled-chrome", "sc-gapfill"})
-
-    def test_outer_forms_item_witnesses_gapfill(self):
-        html = UNSTAMPED + '<li class="gloss-item" data-sc-content="forms">x</li>'
-        assert css_witnesses([html]) == frozenset({"unstyled-chrome", "sc-gapfill"})
-
-    def test_mixed_styled_and_unstyled_card_keeps_gapfill(self):
-        # A styled dict + JMdict-fallback card: the stamped envelope must NOT
-        # mask the unstamped one (per-envelope detection, not per-card).
-        html = STAMPED + "…</li>" + UNSTAMPED + '<i data-sc-content="info-gloss">n</i>'
-        assert css_witnesses([html]) == frozenset({"unstyled-chrome", "sc-gapfill"})
-
-    def test_stamped_card_with_structured_content_needs_no_gapfill(self):
-        # Gap-fillers are gated :not([data-has-styles]) — on an all-stamped card
-        # they cannot match, whatever data-sc content exists.
-        html = STAMPED + '<span data-sc-class="tag">x</span>'
-        assert css_witnesses([html]) == frozenset()
-
-    def test_image_and_table_witnesses_are_stamp_independent(self):
-        assert css_witnesses(['<span class="gloss-image-container">']) == frozenset({"images"})
-        assert css_witnesses(["<table><tr><td>x</td></tr></table>"]) == frozenset({"tables"})
-        assert css_witnesses(["<details><summary>s</summary></details>"]) == frozenset({"tables"})
-
-    def test_witnesses_union_across_fields(self):
-        # The <style> is card-wide: a witness in EITHER miner field counts.
-        assert css_witnesses([STAMPED, '<img class="gloss-image">']) == frozenset({"images"})
-
-    def test_plain_glossary_body_drops_gapfill(self):
-        # Issue #93 follow-up: a real unstyled JMdict card carries only
-        # ``data-sc-content="glossary"`` (core-styled) plus content types no
-        # sc-gapfill rule targets (``formsTable``/``antonyms``/``references``) and
-        # ``.gloss-tag`` chips. The OLD coarse ``"data-sc-" in html`` witness kept
-        # the ~4.6 KB group here for nothing; the precise witness must drop it.
-        html = (
-            UNSTAMPED
-            + '<span class="gloss-tag">n</span>'
-            + '<ul class="gloss-sc-ul" data-sc-content="glossary"><li>x</li></ul>'
-            + '<div data-sc-content="antonyms"></div>'
-            + '<table class="gloss-sc-table" data-sc-content="formsTable"></table>'
-        )
-        # ``<table`` still witnesses the generic ``tables`` group (independent) —
-        # the point is that ``sc-gapfill`` is absent.
-        assert "sc-gapfill" not in css_witnesses([html])
-
-    def test_exact_hook_does_not_collide_with_longer_value(self):
-        # The exact-``=`` hooks carry their closing quote, so ``formsTable`` /
-        # ``antonyms`` / a ``gloss-tag`` class must NOT fire ``forms`` / ``antonym``
-        # / ``tag`` (the bug that made a bare-substring witness fire everywhere).
-        html = UNSTAMPED + '<div data-sc-content="formsTable"></div><div data-sc-content="antonyms"></div>'
-        assert css_witnesses([html]) == frozenset({"unstyled-chrome"})
-
-    def test_gapfill_prefix_hook_matches_hyphenated_value(self):
-        # The ``|=`` selectors (``[data-sc-content|="frequency"]`` etc.) match the
-        # value OR a ``value-`` hyphen prefix. Dropping sc-gapfill on
-        # ``frequency-nf01`` would strip a needed style — the forbidden false
-        # negative — so the open-prefix hook must still fire.
-        for value in ("frequency", "frequency-nf01", "pitch-accent-2", "extra-info-note", "attribution-x"):
-            html = UNSTAMPED + f'<span data-sc-content="{value}"></span>'
-            assert "sc-gapfill" in css_witnesses([html]), value
-
-    def test_wty_tag_witnesses_the_chip_group(self):
-        # A wty tag (`data-sc-content="tag"`) must ship the sc-gapfill chip rule;
-        # its `data-sc-content="tags"` wrapper alone must not.
-        html = UNSTAMPED + '<div data-sc-content="tags"><span data-sc-content="tag">fig</span></div>'
-        assert css_witnesses([html]) == frozenset({"unstyled-chrome", "sc-gapfill"})
-        assert 'span[data-sc-content="tag"]' in base_css_variant(css_witnesses([html]))
-        assert css_witnesses([UNSTAMPED + '<div data-sc-content="tags"></div>']) == frozenset({"unstyled-chrome"})
-
-    def test_example_sentence_witnesses_gapfill(self):
-        # A Jitendex-style card keeps the group.
-        html = UNSTAMPED + '<div data-sc-content="example-sentence">…</div>'
-        assert css_witnesses([html]) == frozenset({"unstyled-chrome", "sc-gapfill"})
 
 
 class TestBuildCardStyleBlock:
@@ -223,24 +144,15 @@ class TestBuildCardStyleBlock:
         with pytest.raises(TypeError):
             build_card_style_block(dict_css="")  # type: ignore[call-arg]
 
-    def test_block_head_is_the_witness_selected_variant(self):
-        stamped_only = build_card_style_block(dict_css="", card_html=STAMPED)
-        everything = build_card_style_block(
-            dict_css="",
-            # ``info-gloss`` is a REAL sc-gapfill hook — a synthetic value (e.g.
-            # ``data-sc-content="x"``) no longer witnesses the group, so it would
-            # not reach ALL_GROUPS and this equality would silently weaken.
-            card_html=UNSTAMPED + '<i data-sc-content="info-gloss">' + '<img class="gloss-image">' + "<table>",
-        )
-        assert stamped_only == f"<style>{base_css_variant(frozenset())}</style>"
-        assert everything == f"<style>{base_css_variant(ALL_GROUPS)}</style>"
-        assert len(stamped_only) < len(everything)
+    def test_block_head_is_the_field_base(self):
+        plain = build_card_style_block(dict_css="", card_html="")
+        everything = build_card_style_block(dict_css="", card_html=EVERYTHING)
+        assert plain == f"<style>{base_css('')}</style>"
+        assert everything == f"<style>{base_css(EVERYTHING)}</style>"
+        assert len(plain) < len(everything)
 
 
-MINER_FIELD = (
-    '<div class="yomitan-glossary"><ol data-count="1">'
-    '<li data-dictionary="D" data-has-styles="">content</li></ol></div>'
-)
+MINER_FIELD = '<div class="yomitan-glossary"><ol data-count="1"><li data-dictionary="D">content</li></ol></div>'
 
 
 class TestFilterDictCssEntries:
@@ -262,6 +174,13 @@ class TestFilterDictCssEntries:
             'data-dictionary="Display Title" data-dictionary-id="stable-id"',
         )
         assert filter_dict_css_entries(field, [("stable-id", "Display Title", ".d{color:red}")]) == ".d{color:red}"
+
+    def test_grammar_attribute_does_not_hide_the_envelope(self):
+        field = MINER_FIELD.replace(
+            'data-dictionary="D"',
+            'data-dictionary="D" data-dictionary-id="d-id" data-am-grammar="gender:feminine"',
+        )
+        assert filter_dict_css_entries(field, [("d-id", "D", ".d{color:red}")]) == ".d{color:red}"
 
     def test_keeps_only_dicts_present_in_field(self):
         entries = [("d-id", "D", ".d{color:red}"), ("e-id", "E", ".e{color:blue}")]
@@ -318,31 +237,30 @@ class TestAttachCardStyleBlock:
 
     def test_no_css_dict_gets_base_only_block(self):
         # JMdict-class: dict ships no styles.css → filter keeps nothing → the
-        # field still carries the tree-shaken base sheet (gap-fillers included
-        # for its unstamped envelope).
+        # field still carries the base sheet.
         field = '<div class="yomitan-glossary"><ol data-count="1"><li data-dictionary="JMdict">x</li></ol></div>'
         out = attach_card_style_block(field, dict_css_entries=[])
         head = out.removeprefix(field)
-        assert head == f"<style>{base_css_variant(css_witnesses([field]))}</style>"
+        assert head == f"<style>{base_css(field)}</style>"
         assert "ol[data-count]" in head  # base sheet present
 
-    def test_witnesses_are_field_only(self):
-        # The variant is shaken against THIS field's html alone — per-field
+    def test_base_is_field_only(self):
+        # The base is picked against THIS field's html alone — per-field
         # self-containment (writer convergence depends on it).
         out = attach_card_style_block(MINER_FIELD, dict_css_entries=[])
-        assert out == MINER_FIELD + f"<style>{base_css_variant(css_witnesses([MINER_FIELD]))}</style>"
+        assert out == MINER_FIELD + f"<style>{base_css(MINER_FIELD)}</style>"
 
 
 class TestRtlGlossaryCss:
     """S21: an rtl language's block gains one rule AFTER base + dict CSS, inside the same <style>."""
 
     def test_rtl_appends_the_rule_after_base_and_dict_css(self):
-        base = base_css_variant(css_witnesses([MINER_FIELD]))
+        base = base_css(MINER_FIELD)
         out = build_card_style_block(dict_css=".d{color:red}", card_html=MINER_FIELD, direction="rtl")
         assert out == f"<style>{base}\n.d{{color:red}}\n{RTL_GLOSSARY_CSS}</style>"
 
     def test_rtl_without_dict_css(self):
-        base = base_css_variant(css_witnesses([MINER_FIELD]))
+        base = base_css(MINER_FIELD)
         out = build_card_style_block(dict_css="", card_html=MINER_FIELD, direction="rtl")
         assert out == f"<style>{base}\n{RTL_GLOSSARY_CSS}</style>"
 
@@ -352,7 +270,7 @@ class TestRtlGlossaryCss:
         )
 
     def test_attach_threads_the_direction(self):
-        base = base_css_variant(css_witnesses([MINER_FIELD]))
+        base = base_css(MINER_FIELD)
         out = attach_card_style_block(MINER_FIELD, dict_css_entries=[], direction="rtl")
         assert out == MINER_FIELD + f"<style>{base}\n{RTL_GLOSSARY_CSS}</style>"
 
@@ -362,8 +280,8 @@ class TestRtlGlossaryCss:
     def test_the_rule_keeps_the_glossary_css_discipline(self):
         # Guarded by miner-only markup (never restyles a Yomitan export), one line
         # (the restyler splits the block at the base's first newline), already
-        # minified, and no [data-dictionary=...] selector the restyler's stamping
-        # gate could mistake for a dictionary's own CSS.
+        # minified, and no [data-dictionary=...] selector the dict-CSS filter could
+        # mistake for a dictionary's own CSS.
         assert RTL_GLOSSARY_CSS.startswith(".yomitan-glossary ol[data-count] ")
         assert "\n" not in RTL_GLOSSARY_CSS
         assert _minify_css(RTL_GLOSSARY_CSS) == RTL_GLOSSARY_CSS

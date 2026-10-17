@@ -2,9 +2,10 @@
 
 Format under test: every mapped miner field carries its own TRAILING
 ``<style>`` block (per-field self-containment; a leading block is head-hoisted
-by DOMParser on JS note types and lost). The restyler migrates every historical
-format to it: pre-v2.7.8 bare bodies, v2.7.0–2.7.7 per-dict-``<style>`` bodies,
-and v2.7.8+ single-carrier LEADING blocks.
+by DOMParser on JS note types and lost). The restyler refreshes that block on
+current-markup fields, migrates a v2.7.8+ single-carrier LEADING block to the
+tail, and leaves legacy-markup fields (tag chips, ``<ul class="gloss-list">``)
+untouched.
 """
 
 from __future__ import annotations
@@ -16,19 +17,13 @@ import pytest
 
 from anki_miner.config import create_default_config
 from anki_miner.services import card_restyler
-from anki_miner.services.card_restyler import RestyleResult, restyle_mined_cards
+from anki_miner.services.card_restyler import RestyleResult, is_legacy_markup, restyle_mined_cards
 from anki_miner.services.dictionary.card_style_block import (
     OWNED_STYLE_MARKER,
     attach_card_style_block,
-    base_css_variant,
-    css_witnesses,
+    base_css,
 )
 from anki_miner.services.dictionary.dict_css_scope import scope_dict_css
-
-
-def _variant_for(html: str) -> str:
-    """The tree-shaken base head the restyler must embed for this (stamped) HTML."""
-    return base_css_variant(css_witnesses([html]))
 
 
 def _owned(css: str) -> str:
@@ -37,10 +32,7 @@ def _owned(css: str) -> str:
 
 # A miner card mined bare (markup, no <style>).
 BARE = '<div class="yomitan-glossary"><ol data-count="1"><li data-dictionary="X">x</li></ol></div>'
-BARE_STAMPED = BARE.replace('<li data-dictionary="X">', '<li data-dictionary="X" data-has-styles="">')
-# A v2.7.0–v2.7.7 dict-styled card: per-dict <style> (scoped, no base sheet) — the blocker case.
-# The envelope carries data-dictionary like every real legacy body, so the
-# stamping assertions below can't pass vacuously.
+# A v2.7.0–v2.7.7 dict-styled card: per-dict <style> (scoped, no base sheet).
 DICT_STYLED = (
     '<div class="yomitan-glossary">'
     '<style>.yomitan-glossary [data-dictionary="X"]{color:red}</style>'
@@ -50,6 +42,26 @@ DICT_STYLED = (
 YOMITAN_EXPORT = '<div class="yomitan-glossary"><ol><li>x</li></ol></div>'
 # A v2.7.8+ single-carrier card: LEADING base sheet (ol[data-count] selector).
 LEGACY_LEADING = f"<style>{_owned('.yomitan-glossary ol[data-count]{margin:0}')}</style>" + BARE
+# The clean glossary shape: numbered senses, a circle-bulleted gloss list.
+CURRENT_BODY = (
+    '<div class="yomitan-glossary"><ol data-count="1"><li data-dictionary="JMdict" data-dictionary-id="jmdict">'
+    '<ol class="gloss-list"><li class="gloss-item"><ol class="gloss-glosses" lang="en"><li>dinner</li>'
+    '<li>evening meal</li></ol></li><li class="gloss-item">supper</li></ol></li></ol></div>'
+)
+# A card mined before the clean shape: tag chips, a ul sense list, and the old
+# stamped envelope + embedded sheet.
+LEGACY_BODY = (
+    '<div class="yomitan-glossary"><ol data-count="1">'
+    '<li data-dictionary="JMdict [2026-06-28]" data-dictionary-id="jmdict" data-has-styles="">'
+    '<i>(<span class="gloss-tag" data-category="partOfSpeech" title="noun (common)">n</span>, JMdict [2026-06-28])</i>'
+    '<ul class="gloss-list" data-count="1"><li class="gloss-item"><div class="gloss-content">dinner</div></li></ul>'
+    "</li></ol></div>"
+)
+LEGACY_CARD = (
+    f"{LEGACY_BODY}<style>"
+    f"{_owned('.yomitan-glossary ol[data-count] ul.gloss-list{display: block !important;}')}"
+    '\n.yomitan-glossary [data-dictionary="JMdict [2026-06-28]"]{color:red}</style>'
+)
 
 
 def _cfg(**over):
@@ -76,12 +88,65 @@ def _no_disk_io(monkeypatch):
     monkeypatch.setattr(card_restyler, "collect_dictionary_css_entries", lambda config: [])
 
 
+class TestLegacyMarkup:
+    @pytest.mark.parametrize(
+        "body",
+        [
+            LEGACY_BODY,
+            '<li data-dictionary="X"><span class="gloss-tag" title="noun">n</span>x</li>',
+            '<li data-dictionary="X"><ul class="gloss-list" data-count="1"><li class="gloss-item">x</li></ul></li>',
+        ],
+        ids=["chips-and-ul", "chips-only", "ul-only"],
+    )
+    def test_detects_chips_or_the_ul_sense_list(self, body):
+        assert is_legacy_markup(body)
+
+    @pytest.mark.parametrize("body", [BARE, CURRENT_BODY, attach_card_style_block(CURRENT_BODY, dict_css_entries=[])])
+    def test_current_shape_is_not_legacy(self, body):
+        assert not is_legacy_markup(body)
+
+    def test_legacy_markup_field_is_skipped_and_counted(self):
+        # The current sheet styles neither chips nor the ul sense list, and the
+        # restyler never rewrites bodies: swapping the old block would strip the
+        # card's styling. Left byte-identical, counted as "left untouched".
+        assert card_restyler._restyle_field(LEGACY_CARD, []) != LEGACY_CARD  # the skip is what keeps it
+        svc = _svc([_note(1, LEGACY_CARD)])
+        result = restyle_mined_cards(svc, _cfg(), progress=None, is_cancelled=lambda: False)
+        assert (result.skipped_styled, result.restyled) == (1, 0)
+        assert result == RestyleResult(1, 0, 1, 0)
+        svc.update_notes_fields.assert_not_called()
+
+    def test_legacy_field_left_alone_while_its_current_sibling_refreshes(self):
+        cfg = _cfg()
+        def_field = cfg.anki_fields["definition"]
+        note = {
+            "noteId": 1,
+            "fields": {"Glossary": {"value": LEGACY_CARD}, def_field: {"value": CURRENT_BODY}},
+        }
+        svc = _svc([note])
+        result = restyle_mined_cards(svc, cfg)
+        assert result == RestyleResult(1, 1, 0, 0)
+        (updates,), _ = svc.update_notes_fields.call_args
+        assert updates == [(1, {def_field: f"{CURRENT_BODY}<style>{base_css(CURRENT_BODY)}</style>"})]
+
+    def test_current_markup_field_gets_fresh_base(self):
+        # New-shape body + stale block → the block is replaced by base_css(body)
+        # plus the carried dict CSS, verbatim.
+        tail = '.yomitan-glossary [data-dictionary="JMdict"]{color:red}'
+        stale = f"{CURRENT_BODY}<style>{_owned('STALE ol[data-count]{}')}\n{tail}</style>"
+        svc = _svc([_note(1, stale)])
+        result = restyle_mined_cards(svc, _cfg())
+        assert result == RestyleResult(1, 1, 0, 0)
+        (updates,), _ = svc.update_notes_fields.call_args
+        assert updates[0][1]["Glossary"] == f"{CURRENT_BODY}<style>{base_css(CURRENT_BODY)}\n{tail}</style>"
+
+
 class TestRestyleMinedCards:
     def test_owned_style_marker_is_exact(self):
         third_party = "<style>.vendor ol[data-count]{color:red}\n.keep{display:block}</style>"
         value = third_party + BARE
 
-        out = card_restyler._restyle_field(value, [], "")
+        out = card_restyler._restyle_field(value, [])
 
         assert out is not None
         assert third_party in out
@@ -105,11 +170,11 @@ class TestRestyleMinedCards:
         nid, fields = updates[0]
         assert nid == 1
         # Trailing, never leading: original body leads verbatim.
-        assert fields["Glossary"] == f"{BARE}<style>{_variant_for(BARE)}</style>"
+        assert fields["Glossary"] == f"{BARE}<style>{base_css(BARE)}</style>"
 
     def test_legacy_per_dict_style_is_restyled(self):
-        # Blocker fix: a per-dict <style> lacks the base sheet, so it must be restyled,
-        # NOT skipped as "already styled".
+        # A per-dict <style> lacks the base sheet, so it must be restyled, NOT
+        # skipped as "already styled".
         svc = _svc([_note(1, DICT_STYLED)])
         result = restyle_mined_cards(svc, _cfg())
         assert result.restyled == 1
@@ -126,16 +191,14 @@ class TestRestyleMinedCards:
     def test_leading_block_migrates_to_tail(self):
         # THE Kiku migration: a v2.7.8+ leading base head moves to the field
         # tail (a leading <style> is head-hoisted by DOMParser and lost), and
-        # the stale base swaps to this field's tree-shaken variant. BARE's
-        # envelope stays unstamped (no carried CSS), so its variant is
-        # core+unstyled-chrome — NOT the full sheet (Issue #93 shrink).
+        # the stale base swaps to this field's base.
         svc = _svc([_note(1, LEGACY_LEADING)])
         result = restyle_mined_cards(svc, _cfg())
         assert result.restyled == 1
         assert result.skipped_styled == 0
         (updates,), _ = svc.update_notes_fields.call_args
-        assert updates[0][1]["Glossary"] == f"{BARE}<style>{_variant_for(BARE)}</style>"
-        assert _variant_for(BARE) == base_css_variant(frozenset({"unstyled-chrome"}))
+        assert updates[0][1]["Glossary"] == f"{BARE}<style>{base_css(BARE)}</style>"
+        assert base_css(BARE) == base_css("")
 
     def test_current_format_card_skipped(self):
         # A card already carrying the CURRENT per-field trailing block is an
@@ -148,12 +211,9 @@ class TestRestyleMinedCards:
         assert result.skipped_styled == 1
         svc.update_notes_fields.assert_not_called()
 
-    def test_migration_preserves_dict_css_tail_and_stamps(self):
+    def test_migration_preserves_dict_css_tail(self):
         # A stale LEADING base with a per-dict dict_css tail: block moves to the
-        # tail, base swaps, tail preserved verbatim, and the card's own carried
-        # CSS stamps its envelope. Stamping must precede the variant pick: once
-        # X is stamped the card has no unstamped envelope, so the head shrinks
-        # to the CORE-ONLY variant.
+        # tail, base swaps, tail and body preserved verbatim.
         tail = '.yomitan-glossary [data-dictionary="X"]{color:red}'
         stale = f"<style>{_owned('STALE ol[data-count]{}')}\n{tail}</style>{BARE}"
         svc = _svc([_note(1, stale)])
@@ -161,14 +221,9 @@ class TestRestyleMinedCards:
         assert result.restyled == 1
         (updates,), _ = svc.update_notes_fields.call_args
         written = updates[0][1]["Glossary"]
-        assert written == f"{BARE_STAMPED}<style>{base_css_variant(frozenset())}\n{tail}</style>"
+        assert written == f"{BARE}<style>{base_css(BARE)}\n{tail}</style>"
 
-    def test_migration_rerun_converges_on_carried_css_stamping_shape(self):
-        # THE idempotency shape that breaks if witnesses are computed pre-stamp:
-        # run 1 stamps the envelope (carried CSS) AND picks the variant from the
-        # stamped body; run 2 must then be a pure no-op — a pre-stamp witness
-        # would see run 1's output stamped, pick a smaller variant, and rewrite
-        # forever.
+    def test_migration_rerun_converges(self):
         tail = '.yomitan-glossary [data-dictionary="X"]{color:red}'
         stale = f"<style>{_owned('STALE ol[data-count]{}')}\n{tail}</style>{BARE}"
         svc = _svc([_note(1, stale)])
@@ -182,8 +237,8 @@ class TestRestyleMinedCards:
         svc2.update_notes_fields.assert_not_called()
 
     def test_fresh_attach_then_rerun_converges(self):
-        # A legacy bare card gets the per-field slim block appended; feeding the
-        # written value back through the service is a no-op.
+        # A bare card gets the per-field block appended; feeding the written
+        # value back through the service is a no-op.
         svc = _svc([_note(1, BARE)])
         restyle_mined_cards(svc, _cfg())
         (updates,), _ = svc.update_notes_fields.call_args
@@ -193,12 +248,11 @@ class TestRestyleMinedCards:
         assert result2.restyled == 0
         assert result2.skipped_styled == 1
 
-    def test_witnesses_are_field_only(self):
-        # Isolation pin (replaces the old cross-field witness contract): a
-        # witness-bearing element present only in the note's OTHER mapped field
-        # must be ABSENT from this field's variant. Cross-field witnessing
-        # would diverge from mining's per-field blocks and rewrite fresh
-        # both-mapped cards forever.
+    def test_base_is_field_only(self):
+        # Isolation pin: an image present only in the note's OTHER mapped field
+        # must not pull the images region into this field's block. Cross-field
+        # selection would diverge from mining's per-field blocks and rewrite
+        # fresh both-mapped cards forever.
         cfg = _cfg()
         def_field = cfg.anki_fields["definition"]
         note = {
@@ -213,7 +267,7 @@ class TestRestyleMinedCards:
         assert result.restyled == 1
         (updates,), _ = svc.update_notes_fields.call_args
         written = updates[0][1]["Glossary"]
-        assert written == f"{BARE}<style>{base_css_variant(frozenset({'unstyled-chrome'}))}</style>"
+        assert written == f"{BARE}<style>{base_css('')}</style>"
         assert "gloss-image" not in written
 
     def test_both_mapped_fields_migrated_in_one_write(self):
@@ -237,15 +291,15 @@ class TestRestyleMinedCards:
         assert len(updates) == 1
         nid, fields = updates[0]
         assert nid == 1
-        expected = f"{BARE}<style>{_variant_for(BARE)}</style>"
+        expected = f"{BARE}<style>{base_css(BARE)}</style>"
         assert fields["Glossary"] == expected
         assert fields[def_field] == expected
 
-    def test_mine_then_restyle_is_noop_with_asymmetric_witnesses(self):
-        # Cross-writer idempotency with ASYMMETRIC per-field witnesses (the
-        # glossary carries a gloss-image, the definition does not) — symmetric
-        # fixtures would pass even under a cross-field-witness regression,
-        # leaving the field-only invariant unpinned.
+    def test_mine_then_restyle_is_noop_with_asymmetric_fields(self):
+        # Cross-writer idempotency with ASYMMETRIC fields (the glossary carries a
+        # gloss-image, the definition does not) — symmetric fixtures would pass
+        # even under a cross-field regression, leaving the field-only invariant
+        # unpinned.
         cfg = _cfg()
         def_field = cfg.anki_fields["definition"]
         gloss_body = (
@@ -264,12 +318,10 @@ class TestRestyleMinedCards:
         assert result == RestyleResult(1, 0, 1, 0)
         svc.update_notes_fields.assert_not_called()
 
-    def test_dict_styled_fresh_attach_stamps_and_converges(self, monkeypatch):
-        # Round-2 judge HIGH: the v2.7.0–2.7.7 DICT_STYLED cohort goes through
-        # fresh-attach — the envelope MUST be stamped (else the base sheet's
-        # gap-fillers out-specify the dict's own scoped CSS, re-opening #87)
-        # and a rerun must be a no-op. Current config also ships CSS for X, so
-        # the appended block carries it (filtered to this field's dicts).
+    def test_dict_styled_fresh_attach_converges(self, monkeypatch):
+        # The v2.7.0–2.7.7 DICT_STYLED cohort goes through fresh-attach: the body
+        # stays byte-identical (no envelope stamp), the appended block carries the
+        # current-config CSS for X, and a rerun is a no-op.
         scoped = '.yomitan-glossary [data-dictionary="X"] li{color:red}'
         monkeypatch.setattr(card_restyler, "collect_dictionary_css_entries", lambda config: [("x-id", "X", scoped)])
         svc = _svc([_note(1, DICT_STYLED)])
@@ -277,9 +329,7 @@ class TestRestyleMinedCards:
         assert result.restyled == 1
         (updates,), _ = svc.update_notes_fields.call_args
         written = updates[0][1]["Glossary"]
-        assert '<li data-dictionary="X" data-has-styles="">' in written
-        assert written.endswith("</style>")
-        assert scoped in written
+        assert written == f"{DICT_STYLED}<style>{base_css(DICT_STYLED)}\n{scoped}</style>"
         # Rerun: pure no-op.
         svc2 = _svc([_note(1, written)])
         result2 = restyle_mined_cards(svc2, _cfg())
@@ -339,8 +389,8 @@ class TestRestyleMinedCards:
         svc.update_notes_fields.assert_not_called()
 
     def test_counts_exact_tuple(self):
-        # A 5-note mix exercises every branch; migrated + fresh-attached fold
-        # into restyled.
+        # A 6-note mix exercises every branch; migrated + fresh-attached fold
+        # into restyled, legacy markup folds into skipped_styled.
         current = attach_card_style_block(BARE, dict_css_entries=[])
         notes = [
             _note(1, LEGACY_LEADING),  # leading base → migrated
@@ -348,10 +398,11 @@ class TestRestyleMinedCards:
             _note(3, current),  # current format → skipped_styled (idempotent)
             _note(4, YOMITAN_EXPORT),  # no data-count → skipped_no_markup
             _note(5, "<div>plain</div>"),  # not a miner card → skipped_no_markup
+            _note(6, LEGACY_CARD),  # legacy markup → skipped_styled (left untouched)
         ]
         svc = _svc(notes)
         result = restyle_mined_cards(svc, _cfg())
-        assert result == RestyleResult(5, 2, 1, 2)
+        assert result == RestyleResult(6, 2, 2, 2)
 
     def test_mixed_note_counts_restyled_once(self):
         # Per-note aggregation: one field changes, the other is already
@@ -392,7 +443,7 @@ class TestRestyleMinedCards:
         (updates,), _ = svc.update_notes_fields.call_args
         nid, fields = updates[0]
         assert nid == 1
-        assert fields[def_field] == f"{BARE}<style>{_variant_for(BARE)}</style>"
+        assert fields[def_field] == f"{BARE}<style>{base_css(BARE)}</style>"
 
     def test_no_writer_emits_leading_style(self):
         # Regression pin for the head-hoist hazard: whatever cohort goes in,
@@ -455,27 +506,24 @@ class TestRestyleMinedCards:
 
 class TestRestyleField:
     """Pure helper: migrate/refresh OUR block to the field tail, preserve the
-    dict_css tail + body verbatim; fresh-attach (stamp + append) otherwise.
-    Returns None only for malformed <style> structure."""
+    dict_css tail + body verbatim; fresh-attach otherwise. Returns None only
+    for malformed <style> structure."""
 
     @staticmethod
-    def _restyle(value, entries=(), current_dict_css=""):
-        return card_restyler._restyle_field(value, list(entries), current_dict_css)
+    def _restyle(value, entries=()):
+        return card_restyler._restyle_field(value, list(entries))
 
     @pytest.mark.parametrize(
-        ("body", "entries"),
-        [
-            (BARE, ()),
-            (BARE_STAMPED, (("x-id", "X", '.yomitan-glossary [data-dictionary="X"]{color:red}'),)),
-        ],
+        "entries",
+        [(), (("x-id", "X", '.yomitan-glossary [data-dictionary="X"]{color:red}'),)],
         ids=["no-dict-css", "dict-css"],
     )
-    def test_a_freshly_mined_rtl_field_is_already_current(self, body, entries):
+    def test_a_freshly_mined_rtl_field_is_already_current(self, entries):
         # Writer convergence (S21): the RTL rule rides the block tail, which the
         # restyler carries verbatim, so a restyle of a fresh RTL card is a no-op.
         from anki_miner.services.dictionary.card_style_block import RTL_GLOSSARY_CSS
 
-        mined = attach_card_style_block(body, dict_css_entries=list(entries), direction="rtl")
+        mined = attach_card_style_block(BARE, dict_css_entries=list(entries), direction="rtl")
         assert mined.endswith("\n" + RTL_GLOSSARY_CSS + "</style>")
         assert self._restyle(mined, entries) == mined
 
@@ -490,9 +538,9 @@ class TestRestyleField:
         tail = ".dictA{}\n.dictB{}"
         v = f"<style>{_owned('OLD ol[data-count]{}')}\n{tail}</style><div>body</div>"
         out = self._restyle(v)
-        # Body preserved byte-for-byte (no envelope → nothing to stamp), block
-        # at the tail with a freshly computed base + the verbatim dict tail.
-        assert out == f"<div>body</div><style>{base_css_variant(frozenset())}\n{tail}</style>"
+        # Body preserved byte-for-byte, block at the tail with a freshly
+        # computed base + the verbatim dict tail.
+        assert out == f"<div>body</div><style>{base_css('')}\n{tail}</style>"
 
     def test_current_trailing_format_is_fixpoint(self):
         v = attach_card_style_block(BARE, dict_css_entries=[])
@@ -500,141 +548,47 @@ class TestRestyleField:
 
     def test_pre_owned_marker_block_is_still_recognised(self):
         # Blocks minted before the owned-style marker open on the old literal
-        # `--am-muted` declaration. The base no longer starts that way (the marker
-        # leads, and --am-muted became a --amn-muted hook), so only
-        # card_restyler's legacy literal recognises them: replaced, never stacked.
+        # `--am-muted` declaration; only card_restyler's legacy literal
+        # recognises them: replaced, never stacked.
         old_head = ".yomitan-glossary{--am-muted: rgba(128,128,128,0.95);}.yomitan-glossary ol[data-count]{margin:0}"
         tail = '.yomitan-glossary [data-dictionary="X"]{color:red}'
         out = self._restyle(f"{BARE}<style>{old_head}\n{tail}</style>")
-        assert out == f"{BARE_STAMPED}<style>{_variant_for(BARE_STAMPED)}\n{tail}</style>"
+        assert out == f"{BARE}<style>{base_css(BARE)}\n{tail}</style>"
         assert out.count("<style>") == 1
 
-    def test_stamps_from_carried_tail_not_config(self):
-        # Head tail carries scoped CSS for X; the body's unstamped envelope
-        # stamps from the card's OWN carried CSS — entries/current config are
-        # NOT consulted on the extract path.
+    def test_carried_tail_wins_over_config(self):
+        # The extract path keeps the card's OWN carried CSS; entries/current
+        # config are NOT consulted.
         tail = '.yomitan-glossary [data-dictionary="X"]{color:red}'
         v = f"<style>{_owned('OLD ol[data-count]{}')}\n{tail}</style>{BARE}"
-        out = self._restyle(v, entries=[("y-id", "Y", ".y{}")], current_dict_css=".y{}")
-        assert out == f"{BARE_STAMPED}<style>{base_css_variant(frozenset())}\n{tail}</style>"
-        assert ".y{}" not in out  # carried CSS only, never re-collected
+        out = self._restyle(v, entries=[("x-id", "X", ".x{}")])
+        assert out == f"{BARE}<style>{base_css(BARE)}\n{tail}</style>"
+        assert ".x{}" not in out  # carried CSS only, never re-collected
 
     def test_fresh_attach_filters_current_config_to_field(self):
         entries = [("x-id", "X", ".x{color:red}"), ("y-id", "Y", ".y{color:blue}")]
-        out = self._restyle(BARE, entries=entries, current_dict_css=".x{color:red}\n\n.y{color:blue}")
-        assert out is not None
-        assert ".x{color:red}" in out
-        assert ".y{color:blue}" not in out  # Y has no envelope in this field
-        assert out.startswith(BARE_STAMPED) or out.startswith(BARE)
+        out = self._restyle(BARE, entries=entries)
+        assert out == f"{BARE}<style>{base_css(BARE)}\n.x{{color:red}}</style>"  # Y has no envelope here
 
     def test_fresh_attach_keeps_css_for_legacy_title_envelope(self):
         title = "Jitendex.org [2026-06-06]"
         value = BARE.replace('data-dictionary="X"', f'data-dictionary="{title}"')
         scoped = scope_dict_css("li {color:red}", "jitendex", title)
 
-        out = self._restyle(
-            value,
-            entries=[("jitendex", title, scoped)],
-            current_dict_css=scoped,
-        )
+        out = self._restyle(value, entries=[("jitendex", title, scoped)])
 
         assert out is not None
         assert 'data-dictionary-id="' not in value
         assert f'[data-dictionary="{title}"]:not([data-dictionary-id]) li {{color:red}}' in out
 
-    def test_fresh_attach_stamps_via_current_config_gate(self):
-        # The legacy-prepend gate: current config ships CSS for X → X's
-        # envelope is stamped even though the body carries no CSS of its own.
+    def test_body_is_never_rewritten(self):
+        # No envelope stamping: whatever CSS governs a dictionary, the body bytes
+        # come back verbatim ahead of the block.
         scoped = '.yomitan-glossary [data-dictionary="X"] li{color:red}'
-        out = self._restyle(BARE, entries=[("x-id", "X", scoped)], current_dict_css=scoped)
+        out = self._restyle(BARE, entries=[("x-id", "X", scoped)])
         assert out is not None
-        assert '<li data-dictionary="X" data-has-styles="">' in out
-
-
-class TestLegacyEnvelopeStamping:
-    """Legacy envelopes governed by scoped dictionary CSS get data-has-styles.
-
-    Without the stamp, the appended base sheet's gated gap-fillers apply and
-    out-specify the scoped dict CSS — reproducing the tiny+grey bug on the
-    restyle path. Assertions are always envelope-scoped, value-bearing
-    (``data-has-styles=""``): the base sheet itself contains the bare token
-    inside every ``:not([data-has-styles])`` gate, so whole-field token checks
-    would be vacuous.
-    """
-
-    def _written(self, svc):
-        (updates,), _ = svc.update_notes_fields.call_args
-        return updates[0][1]["Glossary"]
-
-    def test_dict_styled_envelope_stamped_from_own_style_block(self):
-        svc = _svc([_note(1, DICT_STYLED)])
-        assert 'data-has-styles=""' not in DICT_STYLED
-        result = restyle_mined_cards(svc, _cfg())
-        assert result.restyled == 1
-        assert '<li data-dictionary="X" data-has-styles="">' in self._written(svc)
-
-    def test_config_side_scoped_css_stamps_envelope(self, monkeypatch):
-        # Envelope with NO scoped block in its own body, but the current config
-        # contributes scoped CSS for that title into the appended block — the
-        # restyler injects that CSS, so the envelope must be gated too.
-        scoped = '.yomitan-glossary [data-dictionary="X"] li {color: red}'
-        monkeypatch.setattr(card_restyler, "collect_dictionary_css_entries", lambda config: [("x-id", "X", scoped)])
-        svc = _svc([_note(1, BARE)])
-        result = restyle_mined_cards(svc, _cfg())
-        assert result.restyled == 1
-        assert '<li data-dictionary="X" data-has-styles="">' in self._written(svc)
-
-    def test_unstyled_envelope_stays_unstamped(self):
-        svc = _svc([_note(1, BARE)])
-        result = restyle_mined_cards(svc, _cfg())
-        assert result.restyled == 1
-        # Assert on the <li> itself — the base sheet carries the bare token.
-        assert '<li data-dictionary="X">x' in self._written(svc)
-
-    def test_multi_envelope_body_stamps_exactly_the_styled_one(self):
-        body = (
-            '<div class="yomitan-glossary">'
-            '<style>.yomitan-glossary [data-dictionary="X"]{color:red}</style>'
-            '<ol data-count="1"><li data-dictionary="X">x</li></ol></div>'
-            '<div class="yomitan-glossary">'
-            '<ol data-count="1"><li data-dictionary="Y">y</li></ol></div>'
-        )
-        svc = _svc([_note(1, body)])
-        result = restyle_mined_cards(svc, _cfg())
-        assert result.restyled == 1
-        written = self._written(svc)
-        assert '<li data-dictionary="X" data-has-styles="">' in written
-        assert '<li data-dictionary="Y">y' in written
-
-    def test_escaped_titles_round_trip_through_membership_key(self):
-        # The crux of the restyler key: html.unescape(attr) -> css_string_escape
-        # must reproduce the scoped-CSS selector for names needing HTML escaping.
-        # Envelope built by the real renderer (_scoped_css="" -> faithful
-        # html.escape'd attribute, NO pre-stamp); scoped CSS built by the real
-        # scope_dict_css from the same display name.
-        import html
-
-        from anki_miner.services.dictionary.dict_css_scope import css_string_escape
-
-        for name in ("A&B Dictionary", 'The "Big" Dictionary'):
-            attr = html.escape(name, quote=True)
-            scoped = f'.yomitan-glossary [data-dictionary="{css_string_escape(name)}"] li {{ color: red }}'
-            value = (
-                f'<div class="yomitan-glossary"><style>{scoped}</style>'
-                f'<ol data-count="1"><li data-dictionary="{attr}">x</li></ol></div>'
-            )
-            assert f'<li data-dictionary="{attr}" data-has-styles="">' not in value
-            svc = _svc([_note(1, value)])
-            result = restyle_mined_cards(svc, _cfg())
-            assert result.restyled == 1
-            assert f'<li data-dictionary="{attr}" data-has-styles="">' in self._written(svc)
-
-    def test_stamping_is_idempotent(self):
-        # An already-stamped envelope doesn't match the legacy pattern (extra
-        # attribute before ">"), so re-stamping is a no-op.
-        stamped = '<li data-dictionary="X" data-has-styles="">x</li>'
-        out = card_restyler._stamp_styled_envelopes(stamped, '.yomitan-glossary [data-dictionary="X"] li {color: red}')
-        assert out == stamped
+        assert out.startswith(BARE + "<style>")
+        assert "data-has-styles" not in out
 
 
 def test_rejected_updates_reach_main_window_as_non_success(qtbot, patch_heavy_init, test_config, monkeypatch):

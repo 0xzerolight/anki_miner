@@ -2451,10 +2451,9 @@ class EpisodeProcessor:
         # entries ONCE per episode off the already-loaded provider chain
         # (DefinitionService.css_entries — no registry rescan, no per-dict
         # SQLite I/O; PB1) but attach a <style> block to EVERY mapped styled
-        # field inside the loop — tree-shaken against that field's own HTML
-        # and filtered to the dictionaries present in it (Issue #93;
-        # witness/variant scans are cheap cached string work; freshly rendered
-        # bodies are born stamped, so witnesses are already post-stamp). Each
+        # field inside the loop — its base regions picked by that field's own
+        # HTML and its dict CSS filtered to the dictionaries present in it
+        # (cheap substring checks over cached minified regions). Each
         # field must carry its own TRAILING block: JS-driven note types (Kiku)
         # keep fields in inert <template>s and re-inject them one at a time
         # through DOMParser→body.innerHTML, so a <style> in another field never

@@ -4684,10 +4684,10 @@ class TestGlossaryFetch:
         # no block — attach_card_style_block leaves it byte-identical.
         assert payload.definition == "1. to eat"
 
-    def test_style_block_tree_shaken_per_card(self, test_config, mock_services, tmp_path):
-        # Issue #93: the <style> head is witness-selected PER CARD — a card whose
-        # glossary carries an image embeds the images group, a plain stamped-dict
-        # card gets a smaller block — while dictionary CSS is collected once.
+    def test_style_block_base_follows_each_card(self, test_config, mock_services, tmp_path):
+        # The <style> base is picked PER CARD — a card whose glossary carries an
+        # image embeds the images region, a plain card gets the smaller core —
+        # while dictionary CSS is collected once.
         cfg = replace(test_config, anki_fields={**test_config.anki_fields, "glossary": "Glossary"})
         processor = build_processor(config=cfg, **mock_services)
         video, sub = self._seed_happy_path(mock_services, tmp_path)
@@ -4698,13 +4698,10 @@ class TestGlossaryFetch:
         mock_services["word_filter"].filter_unknown.return_value = words
         mock_services["media_extractor"].extract_media_batch.return_value = [(words[0], media), (words[1], media)]
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat", "1. to drink"]
-        plain = (
-            '<div class="yomitan-glossary"><ol data-count="1">'
-            '<li data-dictionary="X" data-has-styles="">plain</li></ol></div>'
-        )
+        plain = '<div class="yomitan-glossary"><ol data-count="1"><li data-dictionary="X">plain</li></ol></div>'
         with_image = (
             '<div class="yomitan-glossary"><ol data-count="1">'
-            '<li data-dictionary="X" data-has-styles=""><img class="gloss-image" src="p.svg"></li></ol></div>'
+            '<li data-dictionary="X"><img class="gloss-image" src="p.svg"></li></ol></div>'
         )
         mock_services["definition_service"].get_glossaries_batch.return_value = [plain, with_image]
         mock_services["definition_service"].css_entries.return_value = []
@@ -4717,8 +4714,8 @@ class TestGlossaryFetch:
         assert len(card_data) == 2
         head_plain = card_data[0].extra_fields["glossary"].split("<style>")[1]
         head_image = card_data[1].extra_fields["glossary"].split("<style>")[1]
-        assert "gloss-image" not in head_plain  # images group shaken off
-        assert "gloss-image" in head_image  # …but embedded where witnessed
+        assert "gloss-image" not in head_plain  # no image, no images region
+        assert "gloss-image" in head_image  # …but embedded where the field has one
         assert len(head_plain) < len(head_image)
 
     def test_glossary_miss_does_not_retry_unsafe_lemma(self, test_config, mock_services, tmp_path):

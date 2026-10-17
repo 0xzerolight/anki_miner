@@ -982,7 +982,7 @@ def _compute_note_changes(
         proposals["expression_furigana"] = html.escape(_format_furigana(ctx.mined_form, ctx.reading))
 
     # Style block: every freshly-proposed miner field carries its OWN trailing
-    # block, tree-shaken against that field alone and with its dict CSS
+    # block, its base picked against that field alone and with its dict CSS
     # filtered to the dictionaries present in it — byte-identical to what
     # mining would write (attach_card_style_block enforces the trailing /
     # never-leading placement and no-ops on markup-less proposals). No
