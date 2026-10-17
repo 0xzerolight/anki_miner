@@ -144,7 +144,7 @@ def test_import_lookup_roundtrip_matches_snapshot(tmp_path: Path) -> None:
     )
 
 
-def test_import_lookup_grouped_render_separates_sequences(tmp_path: Path) -> None:
+def test_import_lookup_grouped_render_merges_sequences_in_order(tmp_path: Path) -> None:
     """Full import→lookup snapshot for the 5.1 sequence-grouping path: two term
     entries sharing a reading (はし) but carrying DIFFERENT sequences (1 vs 2)
     render as two numbered senses of ONE list, in sequence order, inside one

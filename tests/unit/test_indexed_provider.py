@@ -9,6 +9,8 @@ from unittest.mock import patch
 import pytest
 
 from anki_miner.languages.registry import get_profile
+from anki_miner.services.card_restyler import is_legacy_markup
+from anki_miner.services.dictionary.card_style_block import attach_card_style_block
 from anki_miner.services.dictionary.providers.indexed_provider import (
     _DISPLAY_LIMIT,
     IndexedDictProvider,
@@ -1114,6 +1116,62 @@ def test_render_styled_dict_keeps_inner_verbatim(tmp_path: Path):
     assert _loaded(plain).lookup("晩ご飯") == _envelope(
         '<ol class="gloss-glosses"><li>dinner</li><li>evening meal</li></ol>'
     )
+
+
+_JITENDEX_LIKE_ROW = render_glossary_entry(
+    [
+        {
+            "type": "structured-content",
+            "content": [
+                {"tag": "span", "data": {"class": "tag", "content": "part-of-speech-info"}, "content": "noun"},
+                {
+                    "tag": "ul",
+                    "data": {"content": "glossary"},
+                    "lang": "en",
+                    "content": [{"tag": "li", "content": "dinner"}, {"tag": "li", "content": "evening meal"}],
+                },
+                {"tag": "ul", "data": {"content": "references"}, "content": [{"tag": "li", "content": "see 夕食"}]},
+            ],
+        }
+    ]
+)
+
+
+@pytest.mark.parametrize(
+    "rows,styles_css",
+    [
+        ([DictRow(term="語", reading=None, content=render_glossary_entry(["dinner"]), tags="n uk")], None),
+        (
+            [
+                DictRow(term="語", reading=None, content=render_glossary_entry(["dinner", "supper"]), tags="n f"),
+                DictRow(term="語", reading=None, content=render_glossary_entry(["evening meal"]), tags="uk"),
+            ],
+            None,
+        ),
+        (
+            [
+                DictRow(term="語", reading=None, content=_JITENDEX_LIKE_ROW, tags="n", score=2),
+                DictRow(term="語", reading=None, content=render_glossary_entry(["supper"]), tags="uk", score=1),
+            ],
+            _STYLES_CSS,
+        ),
+    ],
+    ids=["unstyled-one-sense", "unstyled-multi-sense", "styled-jitendex-like"],
+)
+def test_render_output_is_never_legacy_markup(tmp_path: Path, rows: list[DictRow], styles_css: str | None):
+    """Restyle skips every field ``is_legacy_markup`` flags, so a render that tripped
+    it would leave every newly mined card out of Restyle, silently."""
+    db = tmp_path / "t.sqlite"
+    _seed_with_tags(db, rows, [_GENDER_F, *_JMDICT_TAGS], styles_css=styles_css)
+    provider = _loaded(db)
+    assert bool(provider.dictionary_css) is (styles_css is not None)
+
+    rendered = provider.lookup("語")
+
+    assert rendered is not None
+    field = attach_card_style_block(rendered, dict_css_entries=[("test-dict", "DictName", provider.dictionary_css)])
+    assert not is_legacy_markup(rendered)
+    assert not is_legacy_markup(field)
 
 
 def test_render_lookup_many_matches_lookup(tmp_path: Path):

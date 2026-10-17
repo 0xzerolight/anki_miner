@@ -21,13 +21,14 @@ _HEAD_RE = re.compile(r'data-sc-content="Grammar-content"[^>]*>(.*?)</div>', re.
 
 
 def html(head: str) -> str:
+    """A one-sense wty entry as the provider renders it: the row body bare in the envelope,
+    no ``data-am-grammar`` (no gender tag), so only the head line can name the gender."""
     return (
         '<div class="yomitan-glossary"><ol data-count="1"><li data-dictionary="wty" data-dictionary-id="wty">'
-        '<i>(wty)</i><ul class="gloss-list" data-count="1"><li class="gloss-item"><div class="gloss-content">'
         '<div class="gloss-sc-div" data-sc-content="preamble"><details class="gloss-sc-details" '
         'data-sc-content="details-entry-Grammar"><summary class="gloss-sc-summary" data-sc-content="summary-entry">'
         f'Grammar</summary><div class="gloss-sc-div" data-sc-content="Grammar-content">{head}</div></details></div>'
-        "</div></li></ul></li></ol></div>"
+        "</li></ol></div>"
     )
 
 

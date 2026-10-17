@@ -3,9 +3,11 @@
 Format under test: every mapped miner field carries its own TRAILING
 ``<style>`` block (per-field self-containment; a leading block is head-hoisted
 by DOMParser on JS note types and lost). The restyler refreshes that block on
-current-markup fields, migrates a v2.7.8+ single-carrier LEADING block to the
+current-markup fields, moves a LEADING block on a current-markup field to the
 tail, and leaves legacy-markup fields (tag chips, ``<ul class="gloss-list">``)
-untouched.
+untouched, whatever block they carry. Real cards mined with a leading or a
+per-dictionary block carry legacy markup, so the fixtures for those paths are
+non-legacy bodies: the paths stay live for current-markup fields.
 """
 
 from __future__ import annotations
@@ -30,9 +32,9 @@ def _owned(css: str) -> str:
     return OWNED_STYLE_MARKER + "}" + css
 
 
-# A miner card mined bare (markup, no <style>).
+# A non-legacy body with no <style> (the fresh-attach path).
 BARE = '<div class="yomitan-glossary"><ol data-count="1"><li data-dictionary="X">x</li></ol></div>'
-# A v2.7.0–v2.7.7 dict-styled card: per-dict <style> (scoped, no base sheet).
+# A non-legacy body with a per-dictionary <style> (scoped, no base sheet).
 DICT_STYLED = (
     '<div class="yomitan-glossary">'
     '<style>.yomitan-glossary [data-dictionary="X"]{color:red}</style>'
@@ -40,8 +42,8 @@ DICT_STYLED = (
 )
 # A genuine Yomitan export: yomitan-glossary wrapper but NO data-count.
 YOMITAN_EXPORT = '<div class="yomitan-glossary"><ol><li>x</li></ol></div>'
-# A v2.7.8+ single-carrier card: LEADING base sheet (ol[data-count] selector).
-LEGACY_LEADING = f"<style>{_owned('.yomitan-glossary ol[data-count]{margin:0}')}</style>" + BARE
+# A non-legacy body behind a LEADING base block (ol[data-count] selector).
+LEADING_BLOCK = f"<style>{_owned('.yomitan-glossary ol[data-count]{margin:0}')}</style>" + BARE
 # The clean glossary shape: numbered senses, a circle-bulleted gloss list.
 CURRENT_BODY = (
     '<div class="yomitan-glossary"><ol data-count="1"><li data-dictionary="JMdict" data-dictionary-id="jmdict">'
@@ -116,6 +118,20 @@ class TestLegacyMarkup:
         assert result == RestyleResult(1, 0, 1, 0)
         svc.update_notes_fields.assert_not_called()
 
+    def test_legacy_card_with_a_leading_block_is_skipped_byte_identical(self):
+        # The single-carrier placement the Kiku head-hoist bug came from: legacy
+        # markup with its owned block LEADING the field. Moving the block would
+        # still swap the sheet that markup needs, so it is skipped like LEGACY_CARD.
+        leading = (
+            f"<style>{_owned('.yomitan-glossary ol[data-count] ul.gloss-list{display: block !important;}')}</style>"
+            f"{LEGACY_BODY}"
+        )
+        assert card_restyler._restyle_field(leading, []) != leading  # the skip is what keeps it
+        svc = _svc([_note(1, leading)])
+        result = restyle_mined_cards(svc, _cfg())
+        assert result == RestyleResult(1, 0, 1, 0)
+        svc.update_notes_fields.assert_not_called()
+
     def test_legacy_field_left_alone_while_its_current_sibling_refreshes(self):
         cfg = _cfg()
         def_field = cfg.anki_fields["definition"]
@@ -172,9 +188,9 @@ class TestRestyleMinedCards:
         # Trailing, never leading: original body leads verbatim.
         assert fields["Glossary"] == f"{BARE}<style>{base_css(BARE)}</style>"
 
-    def test_legacy_per_dict_style_is_restyled(self):
-        # A per-dict <style> lacks the base sheet, so it must be restyled, NOT
-        # skipped as "already styled".
+    def test_per_dict_style_body_is_restyled(self):
+        # A non-legacy body whose only <style> is a per-dictionary one lacks the
+        # base sheet, so it must be restyled, NOT skipped as "already styled".
         svc = _svc([_note(1, DICT_STYLED)])
         result = restyle_mined_cards(svc, _cfg())
         assert result.restyled == 1
@@ -189,10 +205,10 @@ class TestRestyleMinedCards:
         svc.update_notes_fields.assert_not_called()
 
     def test_leading_block_migrates_to_tail(self):
-        # THE Kiku migration: a v2.7.8+ leading base head moves to the field
-        # tail (a leading <style> is head-hoisted by DOMParser and lost), and
-        # the stale base swaps to this field's base.
-        svc = _svc([_note(1, LEGACY_LEADING)])
+        # A non-legacy body with a leading base block: the block moves to the
+        # field tail (a leading <style> is head-hoisted by DOMParser and lost),
+        # and the stale base swaps to this field's base.
+        svc = _svc([_note(1, LEADING_BLOCK)])
         result = restyle_mined_cards(svc, _cfg())
         assert result.restyled == 1
         assert result.skipped_styled == 0
@@ -258,7 +274,7 @@ class TestRestyleMinedCards:
         note = {
             "noteId": 1,
             "fields": {
-                "Glossary": {"value": LEGACY_LEADING},
+                "Glossary": {"value": LEADING_BLOCK},
                 def_field: {"value": '<img class="gloss-image" src="x.svg">'},
             },
         }
@@ -271,8 +287,8 @@ class TestRestyleMinedCards:
         assert "gloss-image" not in written
 
     def test_both_mapped_fields_migrated_in_one_write(self):
-        # Single-carrier-era both-mapped card: glossary carried the (leading)
-        # block, definition shipped naked. One restyle pass migrates the
+        # Both-mapped note of non-legacy bodies: the glossary carries a leading
+        # block, the definition none. One restyle pass migrates the
         # glossary block to its tail AND fresh-attaches a block to the
         # definition — batched as ONE update entry for the note.
         cfg = _cfg()
@@ -280,7 +296,7 @@ class TestRestyleMinedCards:
         note = {
             "noteId": 1,
             "fields": {
-                "Glossary": {"value": LEGACY_LEADING},
+                "Glossary": {"value": LEADING_BLOCK},
                 def_field: {"value": BARE},
             },
         }
@@ -319,9 +335,9 @@ class TestRestyleMinedCards:
         svc.update_notes_fields.assert_not_called()
 
     def test_dict_styled_fresh_attach_converges(self, monkeypatch):
-        # The v2.7.0–2.7.7 DICT_STYLED cohort goes through fresh-attach: the body
-        # stays byte-identical (no envelope stamp), the appended block carries the
-        # current-config CSS for X, and a rerun is a no-op.
+        # A non-legacy body with a per-dictionary block goes through fresh-attach:
+        # the body stays byte-identical (no envelope stamp), the appended block
+        # carries the current-config CSS for X, and a rerun is a no-op.
         scoped = '.yomitan-glossary [data-dictionary="X"] li{color:red}'
         monkeypatch.setattr(card_restyler, "collect_dictionary_css_entries", lambda config: [("x-id", "X", scoped)])
         svc = _svc([_note(1, DICT_STYLED)])
@@ -337,7 +353,7 @@ class TestRestyleMinedCards:
 
     def test_service_is_idempotent(self):
         # Feed a migrated card back through the service (same config) → no-op.
-        svc = _svc([_note(1, LEGACY_LEADING)])
+        svc = _svc([_note(1, LEADING_BLOCK)])
         restyle_mined_cards(svc, _cfg())
         (updates,), _ = svc.update_notes_fields.call_args
         refreshed_value = updates[0][1]["Glossary"]
@@ -348,8 +364,8 @@ class TestRestyleMinedCards:
         svc2.update_notes_fields.assert_not_called()
 
     def test_two_style_body_replaces_exactly_ours(self):
-        # A pre-v2.7.8-migrated card: its own per-dict <style> (inside the
-        # envelope) plus our base block. Exactly OUR block (the one whose inner
+        # A non-legacy body with its own per-dict <style> (inside the envelope)
+        # plus our base block. Exactly OUR block (the one whose inner
         # CSS holds the ol[data-count] token) is replaced/moved; the per-dict
         # block survives verbatim in the body.
         v = (
@@ -393,7 +409,7 @@ class TestRestyleMinedCards:
         # into restyled, legacy markup folds into skipped_styled.
         current = attach_card_style_block(BARE, dict_css_entries=[])
         notes = [
-            _note(1, LEGACY_LEADING),  # leading base → migrated
+            _note(1, LEADING_BLOCK),  # leading base → migrated
             _note(2, BARE),  # no base → fresh-attached
             _note(3, current),  # current format → skipped_styled (idempotent)
             _note(4, YOMITAN_EXPORT),  # no data-count → skipped_no_markup
@@ -454,7 +470,7 @@ class TestRestyleMinedCards:
         notes = [
             _note(1, BARE),
             _note(2, DICT_STYLED),
-            _note(3, LEGACY_LEADING),
+            _note(3, LEADING_BLOCK),
             _note(4, f"<style>{_owned('STALE ol[data-count]{}')}\n{tail}</style>{BARE}"),
         ]
         svc = _svc(notes)

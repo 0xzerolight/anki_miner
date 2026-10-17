@@ -26,30 +26,38 @@ from anki_miner.services.anki_note_builder import OPTIONAL_FIELD_KEYS
 
 CONFIG = AnkiMinerConfig()
 
+
+def _krdict(body: str) -> str:
+    """The provider envelope around one KRDICT sense: a single sense sits in it bare."""
+    return (
+        '<div class="yomitan-glossary"><ol data-count="1"><li data-dictionary="KRDICT EN" '
+        f'data-dictionary-id="krdict-en">{body}</li></ol></div>'
+    )
+
+
 # What IndexedDictProvider.lookup returns for KRDICT's hanja-keyed rows
-# (KO-EN.KRDICT.No.Examples.zip, krdict_ko-en_0924, imported with language="ko").
-# 學校 verbatim; the other two keep the headword span and trim the gloss.
-KRDICT_HAKGYO = (
-    '<div class="yomitan-glossary"><ol data-count="1"><li data-dictionary="KRDICT EN" '
-    'data-dictionary-id="krdict-en"><i>(Noun, ⭐⭐⭐, KRDICT EN)</i><ul class="gloss-list" data-count="1">'
-    '<li class="gloss-item"><div class="gloss-content"><span class="gloss-sc-span" lang="ko">'
+# (KO-EN.KRDICT.No.Examples.zip, krdict_ko-en_0924, imported with language="ko"):
+# one sense, so the row's body sits bare in the envelope, and its tags (Noun, ⭐⭐⭐)
+# set no data-am-grammar. 學校 verbatim; the other two keep the headword span and
+# trim the gloss.
+KRDICT_HAKGYO = _krdict(
+    '<span class="gloss-sc-span" lang="ko">'
     '<span class="gloss-sc-span" lang="ko" style="font-weight: bold">학교</span>'
     '<span class="gloss-sc-span" lang="ko"> 〔學校〕</span></span><div class="gloss-sc-div" lang="en">'
     '<div class="gloss-sc-div" lang="en"><span class="gloss-sc-span" lang="en">school</span></div>'
     '<div class="gloss-sc-div" lang="en">An institution where teachers teach students in accordance with a '
-    "certain purpose, curriculum, or policy, etc.</div></div></div></li></ul></li></ol></div>"
+    "certain purpose, curriculum, or policy, etc.</div></div>"
 )
-KRDICT_NAK = (
-    '<div class="gloss-content"><span class="gloss-sc-span" lang="ko">'
+KRDICT_NAK = _krdict(
+    '<span class="gloss-sc-span" lang="ko">'
     '<span class="gloss-sc-span" lang="ko" style="font-weight: bold">낙</span>'
     '<span class="gloss-sc-span" lang="ko"> 〔樂〕</span></span><div class="gloss-sc-div" lang="en">'
     '<div class="gloss-sc-div" lang="en"><span class="gloss-sc-span" lang="en">joy; pleasure; delight</span>'
-    "</div></div></div>"
+    "</div></div>"
 )
 #: An affix row: the headword carries KRDICT's hyphen, so it is no word to put on a front.
-KRDICT_MUL_AFFIX = (
-    '<i>(Affix, ⭐⭐, KRDICT EN)</i><ul class="gloss-list" data-count="1"><li class="gloss-item">'
-    '<div class="gloss-content"><span class="gloss-sc-span" lang="ko">'
+KRDICT_MUL_AFFIX = _krdict(
+    '<span class="gloss-sc-span" lang="ko">'
     '<span class="gloss-sc-span" lang="ko" style="font-weight: bold">-물</span>'
     '<span class="gloss-sc-span" lang="ko"> 〔物〕</span></span>'
 )

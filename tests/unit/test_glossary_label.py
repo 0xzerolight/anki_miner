@@ -36,6 +36,17 @@ def test_two_blocks_get_short_labels():
     assert '<li data-dictionary="JMdict [2026-10-16]" data-dictionary-id="jmd"><i>(JMdict)</i> ' in out
 
 
+def test_label_follows_an_open_tag_that_carries_grammar():
+    gendered = BLOCK_JITENDEX.replace(
+        'data-dictionary-id="jit">', 'data-dictionary-id="jit" data-am-grammar="gender:feminine">'
+    )
+    out = label_stacked([gendered, BLOCK_JMDICT])
+    assert (
+        '<li data-dictionary="Jitendex.org [2026-06-06]" data-dictionary-id="jit" data-am-grammar="gender:feminine">'
+        "<i>(Jitendex.org)</i> supper</li>"
+    ) in out
+
+
 def test_label_precedes_sense_list():
     assert '><i>(JMdict)</i> <ol class="gloss-list">' in label_stacked([BLOCK_JITENDEX, BLOCK_JMDICT_TWO_SENSES])
 

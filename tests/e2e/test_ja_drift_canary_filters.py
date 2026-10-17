@@ -169,8 +169,16 @@ _GLOSS_ITEM_RE = re.compile(r'<li class="gloss-item">(.*?)</li>')
 
 
 def _senses(field: str) -> list[str]:
-    """Every sense a rendered definition field carries, in order."""
-    return [sense for body in _ENVELOPE_RE.findall(field) for sense in _GLOSS_ITEM_RE.findall(body) or [body]]
+    """Every sense of a single-dictionary field (MainDefinition: first hit wins), in order.
+
+    Both patterns are non-greedy and nest-blind: a stacked field would run its
+    dictionaries' senses together, and a sense that holds a ``gloss-glosses`` list
+    would be cut at its first ``</li>``. This canary's senses are one gloss each.
+    """
+    senses: list[str] = []
+    for body in _ENVELOPE_RE.findall(field):
+        senses.extend(_GLOSS_ITEM_RE.findall(body) or [body])
+    return senses
 
 
 def _terms() -> dict[str, str]:
