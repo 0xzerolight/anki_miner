@@ -51,6 +51,9 @@ from __future__ import annotations
 import html
 import re
 
+from anki_miner.services.dictionary.glossary_label import display_title
+from anki_miner.services.dictionary.sense_presentation import SYNTHESIZED_LIST_ATTRS
+
 # The sheet is applied with ``QTextDocument.setDefaultStyleSheet`` and must precede
 # every ``setHtml``. Colors follow glossary.css's discipline — solid/rgba grays that
 # read on a light and a dark palette alike — rather than importing the Theme singleton
@@ -59,6 +62,11 @@ import re
 # ``list-style-type: none`` on the envelope ``<ol>`` resolves to Qt's
 # ``ListStyleUndefined`` (no marker drawn); that is what suppresses the stray "1."
 # the card envelope would otherwise leak into the pane.
+#
+# The envelope ``<li>``'s bottom margin only spaces a one-sense entry, whose body is
+# inline. A multi-sense envelope holds nothing but its ``gloss-list``, so Qt drops that
+# ``<li>`` and its margin with it; there the bold heading and the restarted sense
+# numbering are what set the entries apart.
 PREVIEW_CSS = """
 ol[data-count] { list-style-type: none; -qt-list-indent: 0; }
 li[data-dictionary] { margin-bottom: 12px; }
@@ -120,7 +128,7 @@ _REFERENCE_LABEL_RE = re.compile(r'(<span[^>]*\bdata-sc-content="reference-label
 # collapsed away. The separator BETWEEN chips is a normal space so the row can wrap.
 _NBSP = " "
 
-# A sense's glossary list, in either of the two forms a sense body carries:
+# A sense's glossary list, in any of the three forms a sense body carries:
 #
 # * ``<ol class="gloss-glosses">`` with bare ``<li>`` items — what ``present_sense``
 #   makes of an unstyled dictionary's row with two or more glosses.
@@ -129,12 +137,21 @@ _NBSP = " "
 #   Scoped to ``data-sc-content="glossary"`` on purpose: the same ``gloss-sc-ul``
 #   class also carries ``references``/``sense-groups``, and an unscoped match
 #   swallows the see-also block into the sense line ("immenselysee: 凄く …").
+# * ``<ul class="gloss-sc-ul" style="list-style-type: circle">`` with ``li.gloss-sc-li``
+#   items — the members list the renderer synthesizes for a row with several glossary
+#   members, which a styled dictionary's row keeps too (wty-pt-en ``dá``).
 #
-# Non-greedy up to the first closing tag is safe because a glossary list never nests
-# another list (``present_sense`` refuses to split one that holds block content).
-_GLOSSARY_UL_RE = re.compile(
-    r'<ul class="gloss-sc-ul"(?=[^>]*\sdata-sc-content="glossary")[^>]*>(.*?)</ul>'
-    r'|<ol class="gloss-glosses"[^>]*>(.*?)</ol>',
+# Each body runs to the first closing tag and may not open another list, so a list
+# that nests one is left as it is instead of being cut at the inner list's end (the
+# nested glossary list still collapses on its own). ``present_sense``'s block note
+# (``div.gloss-note``) right after the list is captured with it: once the list is
+# text, that block would leave its sense and render as an unindented line.
+_FLAT_LIST_BODY = r"((?:(?!<[ou]l[\s>]).)*?)"
+_GLOSS_LIST_RE = re.compile(
+    r'(?:<ul class="gloss-sc-ul"(?=[^>]*\sdata-sc-content="glossary")[^>]*>' + _FLAT_LIST_BODY + "</ul>"
+    r'|<ul class="gloss-sc-ul"' + re.escape(SYNTHESIZED_LIST_ATTRS) + ">" + _FLAT_LIST_BODY + "</ul>"
+    r'|<ol class="gloss-glosses"[^>]*>' + _FLAT_LIST_BODY + "</ol>)"
+    r'(?:<div class="gloss-note">(.*?)</div>)?',
     re.DOTALL,
 )
 _GLOSS_ITEM_RE = re.compile(r'<li(?: class="gloss-sc-li")?[^>]*>(.*?)</li>', re.DOTALL)
@@ -155,19 +172,23 @@ def _inline_glossaries(entry_html: str) -> str:
     """Collapse each sense's glossary list into comma-joined text in its own ``<li>``.
 
     This is the step that keeps the sense level alive: Qt drops an ``<li>`` holding
-    nothing but block elements, so a sense whose only child is a ``<ul>`` disappears
-    and its glosses merge into the surrounding list.
+    nothing but block elements, so a sense whose only child is a glossary list
+    (``ol.gloss-glosses`` or ``ul.gloss-sc-ul``) disappears and its glosses merge
+    into the surrounding list. A block note under the list becomes a line break
+    plus an inline note, so it stays inside the sense.
     """
 
     def replace(match: re.Match[str]) -> str:
-        body = match.group(1) if match.group(1) is not None else match.group(2)
+        body = match.group(1) or match.group(2) or match.group(3) or ""
         items = [item.strip() for item in _GLOSS_ITEM_RE.findall(body)]
         items = [item for item in items if item]
         if not items:
             return match.group(0)
-        return f'<span class="gloss-sc-span" data-sc-content="glossary">{", ".join(items)}</span>'
+        note = match.group(4)
+        note_html = f'<br><span class="gloss-note">{note}</span>' if note is not None else ""
+        return f'<span class="gloss-sc-span" data-sc-content="glossary">{", ".join(items)}</span>{note_html}'
 
-    return _GLOSSARY_UL_RE.sub(replace, entry_html)
+    return _GLOSS_LIST_RE.sub(replace, entry_html)
 
 
 def adapt_entry(entry_html: str) -> str:
@@ -186,11 +207,16 @@ def adapt_entry(entry_html: str) -> str:
 def to_preview_html(entries: list[tuple[str, str]]) -> str:
     """The pane body for ``DefinitionService.lookup_all_offline`` output.
 
-    Every entry is headed by its provider's name: the renderer prints no dictionary
-    label of its own (only a card field stacking two or more dictionaries gets one).
+    Each run of entries from one provider is headed once by its short name
+    (``display_title``, as a card field stacking two or more dictionaries labels
+    it): the renderer prints no dictionary label of its own, and a provider's exact
+    hit and its ladder hits arrive one after another.
     """
     parts: list[str] = []
+    previous: str | None = None
     for name, entry_html in entries:
-        parts.append(f'<p style="font-weight:bold">{html.escape(name)}</p>')
+        if name != previous:
+            parts.append(f'<p style="font-weight:bold">{html.escape(display_title(name))}</p>')
+            previous = name
         parts.append(adapt_entry(entry_html))
     return "".join(parts)

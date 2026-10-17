@@ -23,6 +23,8 @@ from anki_miner.services.dictionary.preview_html import (
 )
 
 NBSP = "\N{NO-BREAK SPACE}"
+#: What ``QTextBlock.text()`` holds for a ``<br>``.
+LINE_SEPARATOR = "\N{LINE SEPARATOR}"
 
 
 def envelope(body: str, name: str = "JMdict", dict_id: str = "jmdict-english") -> str:
@@ -75,6 +77,22 @@ JITENDEX_ENTRY = envelope(
     dict_id="jitendex",
 )
 
+# A styled dictionary also keeps the members list the renderer synthesizes for a row
+# with several plain glosses (wty-pt-en ``dá``): ``gloss-sc-ul`` with an inline circle
+# style and no ``data-sc-content``.
+MEMBERS_ENTRY = envelope(
+    senses(
+        '<ul class="gloss-sc-ul" style="list-style-type: circle">'
+        '<li class="gloss-sc-li">terrible</li><li class="gloss-sc-li">dreadful</li>'
+        "</ul>",
+        '<ul class="gloss-sc-ul" style="list-style-type: circle">'
+        '<li class="gloss-sc-li">awfully</li><li class="gloss-sc-li">very</li>'
+        "</ul>",
+    ),
+    name="wty-pt-en",
+    dict_id="wty-pt-en",
+)
+
 # Jitendex writes its own structured-content tags, flush against each other, with
 # the generic gloss-sc-span class.
 JITENDEX_TAGS = envelope(
@@ -95,7 +113,9 @@ WTY_TAGS = envelope(
     dict_id="wty-el-en",
 )
 
-BOTH_LIST_FORMS = pytest.mark.parametrize("entry", [JMDICT_ENTRY, JITENDEX_ENTRY], ids=["gloss-glosses", "gloss-sc-ul"])
+LIST_FORMS = pytest.mark.parametrize(
+    "entry", [JMDICT_ENTRY, JITENDEX_ENTRY, MEMBERS_ENTRY], ids=["gloss-glosses", "gloss-sc-ul", "members-ul"]
+)
 
 
 def document(document_html: str) -> QTextDocument:
@@ -169,6 +189,21 @@ class TestHeading:
         assert body.index(">JMdict</p>") < body.index('data-dictionary="JMdict"')
         assert body.index('data-dictionary="JMdict"') < body.index(">Jitendex</p>")
 
+    def test_consecutive_entries_of_one_provider_share_one_heading(self):
+        """An exact hit and its ladder hits come from one provider, one after another."""
+        body = to_preview_html([("JMdict", JMDICT_ENTRY), ("JMdict", SINGLE_NOTE_ENTRY), ("Jitendex", JITENDEX_ENTRY)])
+        assert body.count('<p style="font-weight:bold">') == 2
+        assert body.index("(rare)") < body.index(">Jitendex</p>")
+
+    def test_the_heading_is_the_short_title_a_stacked_card_field_shows(self):
+        body = to_preview_html([("JMdict [2026-10-16]", JMDICT_ENTRY)])
+        assert body.startswith('<p style="font-weight:bold">JMdict</p>')
+
+    def test_qt_restarts_the_sense_numbers_under_a_shared_heading(self, qapp):
+        laid_out = blocks(to_preview_html([("JMdict", JMDICT_ENTRY), ("JMdict", JMDICT_ENTRY)]))
+        assert [text for _, _, text in laid_out].count("JMdict") == 1
+        assert [marker for _, marker, _ in laid_out if marker[:1].isdigit()] == ["1.", "2.", "1.", "2."]
+
     def test_qt_lays_the_heading_out_above_the_senses(self, qapp):
         laid_out = blocks(to_preview_html([("JMdict", JMDICT_ENTRY)]))
         assert laid_out[0] == (None, "", "JMdict")
@@ -179,7 +214,7 @@ class TestSenseStructure:
     """Qt discards an ``<li>`` holding only block elements, so the sense level
     vanished and every gloss merged into one flat list."""
 
-    @BOTH_LIST_FORMS
+    @LIST_FORMS
     def test_glossary_items_are_inlined_into_their_sense(self, entry):
         adapted = adapt_entry(entry)
         assert "terrible, dreadful" in adapted
@@ -188,6 +223,21 @@ class TestSenseStructure:
     def test_a_single_sense_list_is_inlined_too(self):
         assert "terrible, dreadful" in adapt_entry(SINGLE_LIST_ENTRY)
 
+    def test_a_members_list_that_nests_lists_is_left_whole(self):
+        """Cut at the inner list's ``</ul>``, the members list would lose its last
+        member; left whole, only its nested glossary list collapses."""
+        nested = envelope(
+            '<ul class="gloss-sc-ul" style="list-style-type: circle">'
+            '<li class="gloss-sc-li"><ul class="gloss-sc-ul" data-sc-content="glossary">'
+            '<li class="gloss-sc-li">a</li><li class="gloss-sc-li">b</li></ul></li>'
+            '<li class="gloss-sc-li">c</li></ul>'
+        )
+        assert (
+            '<ul class="gloss-sc-ul" style="list-style-type: circle"><li class="gloss-sc-li">'
+            '<span class="gloss-sc-span" data-sc-content="glossary">a, b</span></li>'
+            '<li class="gloss-sc-li">c</li></ul>'
+        ) in adapt_entry(nested)
+
     def test_the_references_block_is_not_swallowed_into_the_sense_line(self):
         """``gloss-sc-ul`` also carries ``references``; an unscoped match produced
         ``awfully, very, immenselysee: 凄く``."""
@@ -195,12 +245,16 @@ class TestSenseStructure:
         assert 'data-sc-content="references"' in adapted
         assert "see:" not in adapted[: adapted.index('data-sc-content="references"')].rsplit("<ul", 1)[-1]
 
-    @BOTH_LIST_FORMS
+    @LIST_FORMS
     def test_qt_keeps_one_numbered_block_per_sense(self, qapp, entry):
-        numbered = [(marker, text) for _, marker, text in blocks(adapt_entry(entry)) if marker[:1].isdigit()]
+        numbered = [
+            (marker, text.split(LINE_SEPARATOR)[0])  # a note follows its glosses on a second line
+            for _, marker, text in blocks(adapt_entry(entry))
+            if marker[:1].isdigit()
+        ]
         assert numbered == [("1.", "terrible, dreadful"), ("2.", "awfully, very")]
 
-    @BOTH_LIST_FORMS
+    @LIST_FORMS
     def test_without_the_transform_qt_loses_the_senses(self, qapp, entry):
         """Pins the root cause: the raw markup flattens, which is why a stylesheet
         alone could not have fixed this."""
@@ -218,6 +272,15 @@ class TestNotes:
         assert text_color(adapted, "(rare)") == "#969696"
         assert text_color(adapted, "terrible ") != "#969696"
 
+    def test_a_block_note_stays_inside_its_sense(self, qapp):
+        """As a block under the inlined glosses, the note rendered as an unindented
+        line of its own, cut off from its sense."""
+        adapted = adapt_entry(JMDICT_ENTRY)
+        assert 'awfully, very</span><br><span class="gloss-note">colloquial</span></li>' in adapted
+        laid_out = [(marker, text) for _, marker, text in blocks(adapted)]
+        assert ("2.", f"awfully, very{LINE_SEPARATOR}colloquial") in laid_out
+        assert not any(text == "colloquial" for _, text in laid_out)
+
 
 class TestEnvelopeChrome:
     def test_the_card_envelope_ordinal_is_suppressed(self, qapp):
@@ -229,7 +292,7 @@ class TestEnvelopeChrome:
 
 
 class TestTransformContract:
-    @BOTH_LIST_FORMS
+    @LIST_FORMS
     def test_adapting_twice_changes_nothing(self, entry):
         once = adapt_entry(entry)
         assert adapt_entry(once) == once
