@@ -5,22 +5,27 @@ block (``EpisodeProcessor._phase5_create`` → ``attach_card_style_block``;
 trailing because a field-leading ``<style>`` is head-hoisted by DOMParser and
 dropped from ``body.innerHTML`` round-trips — see the card_style_block module
 docstring). Restyle brings a field's block up to date when re-mining is blocked
-by known-words dedup:
+by known-words dedup. Every path below applies only to a body WITHOUT legacy
+markup:
 
 - **Current cards** carry a trailing base sheet per field frozen at their
   mine/restyle time; a later ``glossary.css`` change refreshes it in place.
-- **v2.7.8+ single-carrier cards** carry a LEADING base sheet on one field only;
-  the block migrates to the field tail (preserving the card's own ``dict_css``
-  tail + HTML body byte-for-byte) and the other carrier field gains a fresh one.
+- **A LEADING base sheet** (the single-carrier placement, on one field only)
+  migrates to the field tail (preserving the card's own ``dict_css`` tail +
+  HTML body byte-for-byte) and the other carrier field gains a fresh one.
 - **Fields with no block** (bare or per-dict-``<style>`` bodies) gain a fresh
   trailing block.
 
 **Legacy-markup fields are left untouched** (``is_legacy_markup``: tag chips or
 the ``<ul class="gloss-list">`` sense list of cards mined before the clean
-glossary shape). The current sheet styles neither, and the restyler never
-rewrites card bodies, so swapping their old embedded sheet would strip their
-styling. Such a note counts as ``skipped_styled``; Card Backfill (overwrite
-Definitions/Glossary) is how the new look reaches it.
+glossary shape), whatever block they carry, leading or trailing. The current
+sheet styles neither, and the restyler never rewrites card bodies, so swapping
+their old embedded sheet would strip their styling. Such a field is never
+written, and its note counts as ``skipped_styled`` unless another of its
+carrier fields changed; Card Backfill (overwrite Definitions/Glossary) is how
+the new look reaches it. Real single-carrier and per-dict cards were all mined
+before the clean shape, so they land here: the paths above serve
+current-markup bodies.
 
 Every mapped miner field (glossary AND definition) is a styling carrier and is
 processed independently against its own markup — the same contract as
@@ -81,9 +86,9 @@ def _restyle_field(value: str, entries: list[tuple[str, str, str]]) -> str | Non
 
     **Extract/migrate** — the field carries OUR base block somewhere (a
     ``<style>`` whose inner CSS opens with the owned-style marker, or the older
-    ``--am-muted`` literal; a pre-v2.7.8-migrated card legitimately carries TWO
-    ``<style>``s, its own per-dict one inside the envelope plus ours). The block
-    is removed from wherever it sits (legacy head or current tail), its
+    ``--am-muted`` literal; a body may legitimately carry TWO ``<style>``s, its
+    own per-dict one inside the envelope plus ours). The block is removed from
+    wherever it sits (field head or tail), its
     ``dict_css`` tail (after the first ``\\n`` — the minified base is
     newline-free, pinned in ``card_style_block``) is preserved VERBATIM — never
     re-collected, so an uninstalled dictionary keeps its CSS — and the block is
@@ -113,8 +118,6 @@ def _restyle_field(value: str, entries: list[tuple[str, str, str]]) -> str | Non
         body = value
         dict_css = filter_dict_css_entries(body, entries)
     new_base = base_css(body)
-    if "\n" in new_base:
-        return None  # broken newline invariant — refuse to partition mid-base
     inner = f"{new_base}\n{dict_css}" if dict_css else new_base
     return f"{body}<style>{inner}</style>"
 

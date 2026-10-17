@@ -559,10 +559,11 @@ def write_tags(db_path: Path, tags: Iterable[TagMeta]) -> int:
 def read_tags(conn: sqlite3.Connection) -> dict[str, TagMeta]:
     """Return all tag-metadata rows keyed by tag name.
 
-    Consumed by the provider's lazy per-dictionary tag cache to expand tag
-    names into hover chips. A dictionary with no ``tag_bank`` / legacy
-    ``tagMeta`` simply yields an empty dict (every tag then falls back to the
-    italic token line).
+    Consumed by the provider's lazy per-dictionary tag cache, which feeds the
+    envelope's grammar attribute (``grammar_tags.encode_grammar_tags``) and the
+    commonness checks (``row_is_common``, ``commonness_aware``). A dictionary
+    with no ``tag_bank`` / legacy ``tagMeta`` simply yields an empty dict (no
+    tag then reaches the grammar attribute, and no row reads as common).
     """
     result: dict[str, TagMeta] = {}
     for name, category, ord_, notes, score in conn.execute("SELECT name, category, ord, notes, score FROM tags"):

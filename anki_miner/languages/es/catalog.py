@@ -5,7 +5,7 @@
 Wiktionary content extracted through kaikki.org, CC BY-SA 4.0; the zip's
 ``index.json`` carries ``attribution: https://kaikki.org/`` and
 ``sourceLanguage: es``. Its rows mark gender (``nieve f (plural nieves)``, a
-``gender-feminine`` tag chip), which the ``noun_gender`` field reads, and carry a
+``gender-feminine`` tag), which the ``noun_gender`` field reads, and carry a
 form-of row for nearly every clitic combination (``dámelo`` → ``dar``).
 
 **Not a row: wty-es-es** (the monolingual edition, same host, ``dict/es/es/``,

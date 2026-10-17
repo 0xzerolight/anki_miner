@@ -103,9 +103,9 @@ class IndexedDictProvider:
         # This dictionary's own styles.css, scoped to its glossary markup
         # (Issue #87), as a bare CSS string (no <style> wrapper). Empty unless
         # the dict shipped a styles.css that survived scoping; computed in
-        # load(). Concatenated by collect_dictionary_css and emitted in each
-        # card's per-card <style> block by build_card_style_block (assembled at
-        # the EpisodeProcessor._phase5_create seam).
+        # load(). Filtered per field by filter_dict_css_entries and emitted in
+        # each field's trailing <style> block by attach_card_style_block (for
+        # mining, at the EpisodeProcessor._phase5_create seam).
         self._scoped_css = ""
 
     @property
@@ -117,8 +117,9 @@ class IndexedDictProvider:
         """This dictionary's scoped styles.css (bare CSS, no <style> wrapper).
 
         Empty for JMdict and dicts imported before styles.css capture.
-        Concatenated by ``collect_dictionary_css`` into each card's per-card
-        ``<style>`` block; only valid after a successful ``load()``.
+        Filtered per field by ``filter_dict_css_entries`` and emitted in each
+        field's trailing ``<style>`` block by ``attach_card_style_block``; only
+        valid after a successful ``load()``.
         """
         return self._scoped_css
 
@@ -184,8 +185,8 @@ class IndexedDictProvider:
                     return False
 
             # Scope the dict's own styles.css (Issue #87) once. Stored bare (no
-            # <style> wrapper) and exposed via `dictionary_css`; collect_dictionary_css
-            # concatenates it into each card's per-card <style> block. Absent for
+            # <style> wrapper) and exposed via `dictionary_css`; filter_dict_css_entries
+            # picks it per field for that field's trailing <style> block. Absent for
             # JMdict and for dicts imported before styles.css capture.
             self._scoped_css = scope_dict_css(meta.get("styles_css", ""), self.dict_id, self._display_name)
             return True

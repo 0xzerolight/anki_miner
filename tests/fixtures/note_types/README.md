@@ -1,10 +1,9 @@
 # Note-type CSS fixtures
 
-A verbatim copy of a community Anki note type's shipped stylesheet, kept so the
-glossary-CSS cohabitation audit (`docs/superpowers/plans/2026-09-09-note-type-css-audit.md`)
-is reproducible and so `tests/unit/test_glossary_css.py` can check that the gloss list
-still escapes its list rules. It is an input to tests, not an assertion about the note
-type itself. Nothing here is loaded at runtime.
+A verbatim copy of a community Anki note type's shipped stylesheet, kept so
+`tests/unit/test_glossary_css.py` can check that the gloss list still escapes its list
+rules. It is an input to tests, not an assertion about the note type itself. Nothing
+here is loaded at runtime.
 
 Fetched 2026-09-09.
 

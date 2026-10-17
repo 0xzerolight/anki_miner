@@ -988,9 +988,7 @@ def _compute_note_changes(
     # never-leading placement and no-ops on markup-less proposals). No
     # cross-field gate: the other field's styling is irrelevant to this one on
     # field-isolating note types, and a divergent block here would make the
-    # restyler churn backfilled cards forever. Proposals are fresh renders, so
-    # they are born stamped — no stamping needed (that's the restyler's job
-    # for legacy bodies).
+    # restyler churn backfilled cards forever.
     for key in ("definition", "glossary"):
         if key in proposals:
             proposals[key] = attach_card_style_block(

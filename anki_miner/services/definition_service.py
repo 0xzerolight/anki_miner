@@ -1106,8 +1106,9 @@ class DefinitionService:
 
         ``fallback_context`` is ``get_definitions_batch``'s lookup-miss ladder:
         a word nothing answered retries the candidates, and every offline
-        provider's hit for the first candidate any of them answers is
-        concatenated. Absent (``None``) ⇒ no ladder.
+        provider's hit for the first candidate any of them answers is joined
+        like a direct hit, through ``label_stacked`` (labelled when two or more
+        stack). Absent (``None``) ⇒ no ladder.
 
         ``lemma_context`` mirrors ``get_definitions_batch``: word → token lemma,
         forwarded to batch-capable offline providers for the Rule A′ kana-front

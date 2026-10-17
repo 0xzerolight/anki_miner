@@ -45,7 +45,8 @@ def label_stacked(blocks: list[str]) -> str:
     """Join provider blocks; with two or more, name each block's dictionary.
 
     The label goes right after each block's envelope open tag. A block with no
-    envelope passes through unchanged.
+    envelope passes through unchanged. Not idempotent: call it once, on the raw
+    provider blocks, as its one call site does.
     """
     if len(blocks) < 2:
         return "".join(blocks)
