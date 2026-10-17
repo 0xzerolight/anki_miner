@@ -162,7 +162,15 @@ WHITELIST: tuple[str, ...] = ("しゃべる", "喋る", "コーヒー", "珈琲"
 #: but must never change.
 _PITCH_PATTERNS: tuple[str, ...] = ("0", "1", "2", "3")
 
-_GLOSS_RE = re.compile(r'<li class="gloss-item">(.*?)</li>')
+#: The dictionary envelope holds one sense bare, or several as a numbered
+#: ``gloss-list`` of ``gloss-item`` senses.
+_ENVELOPE_RE = re.compile(r"<li data-dictionary=[^>]*>(.*?)</li></ol></div>")
+_GLOSS_ITEM_RE = re.compile(r'<li class="gloss-item">(.*?)</li>')
+
+
+def _senses(field: str) -> list[str]:
+    """Every sense a rendered definition field carries, in order."""
+    return [sense for body in _ENVELOPE_RE.findall(field) for sense in _GLOSS_ITEM_RE.findall(body) or [body]]
 
 
 def _terms() -> dict[str, str]:
@@ -409,13 +417,13 @@ def test_the_baseline_still_carries_every_seam_it_was_built_for() -> None:
     # シャベル, whose gloss must not reach the card.
     shaberu = _note(baseline, "しゃべる")
     assert shaberu is not None
-    assert _GLOSS_RE.findall(shaberu["fields"]["MainDefinition"]) == ["to chat; to talk"]
+    assert _senses(shaberu["fields"]["MainDefinition"]) == ["to chat; to talk"]
 
     # fold_reading: コーヒー has no term row at all — 珈琲 is reachable only by
     # folding its katakana reading on both sides.
     coffee = _note(baseline, "コーヒー")
     assert coffee is not None
-    assert _GLOSS_RE.findall(coffee["fields"]["MainDefinition"]) == ["coffee"]
+    assert _senses(coffee["fields"]["MainDefinition"]) == ["coffee"]
 
     # MinedFormPolicy: the surface-mined noun 玉子 (lemma 卵) keeps both of its
     # lines as curator sentence candidates, which is decided by recomputing the
