@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:6f9163baa7a87e06 -->
+<!-- i18n-source: README.md sha256:7dd1b505cab496be -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -163,7 +163,7 @@ For et fullstendig utviklingsoppsett, se [CONTRIBUTING.md](../CONTRIBUTING.md).
 - Innebygd videoforhåndsvisning med libmpv – spill av scenen til et ord mens du kuraterer, eller finjuster undertekst-timingen med direkte avspilling.
 - Animerte skjermbilder (se eksempelkortene over).
 - Innstillingsprofiler – lagre navngitte konfigurasjoner og bytt mellom dem fra toppteksten.
-- Restil utvunnede kort – bruk den gjeldende kortstilen på nytt på kort du allerede har laget; kort fra eldre versjoner trenger Etterfyll kort i stedet (Hjelpemidler → Etterfyll kort).
+- Etterfyll kort – fyll inn manglende definisjoner, frekvens, tonehøydeaksent, lesninger og ordlyd på kort du allerede har laget, eller oppdater stilen deres (Hjelpemidler → Etterfyll kort).
 
 <details>
 <summary><strong>Innebygde temaer (29)</strong></summary>

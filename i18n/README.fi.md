@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:6f9163baa7a87e06 -->
+<!-- i18n-source: README.md sha256:7dd1b505cab496be -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -163,7 +163,7 @@ Täydelliset kehitysympäristön ohjeet: [CONTRIBUTING.md](../CONTRIBUTING.md).
 - Upotettu libmpv-videoesikatselu - toista sanan kohtaus kuratoinnin aikana tai hienosäädä tekstitysten ajoitusta toiston aikana.
 - Animoidut kuvakaappaukset (katso esimerkkikortit yllä).
 - Asetusprofiilit - tallenna nimettyjä kokoonpanoja ja vaihda niiden välillä yläpalkista.
-- Muotoile louhitut kortit uudelleen - käytä nykyistä korttityyliäsi jo tekemiisi kortteihin; vanhempien versioiden kortteihin tarvitaan sen sijaan Täydennys (Apuvälineet → Täydennys).
+- Täydennys - lisää jo tekemiisi kortteihin puuttuvat määritelmät, yleisyys, sävelkorko, lukutavat ja sanojen ääni tai päivitä korttien muotoilu (Apuvälineet → Täydennys).
 
 <details>
 <summary><strong>Sisäänrakennetut teemat (29)</strong></summary>

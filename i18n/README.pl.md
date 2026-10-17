@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:6f9163baa7a87e06 -->
+<!-- i18n-source: README.md sha256:7dd1b505cab496be -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -163,7 +163,7 @@ Pełną konfigurację środowiska programistycznego opisuje [CONTRIBUTING.md](..
 - Wbudowany podgląd wideo libmpv - odtwarzanie sceny słowa podczas wyboru słów lub korekta czasu napisów z podglądem na żywo.
 - Animowane zrzuty ekranu (zobacz przykładowe karty powyżej).
 - Profile ustawień - zapisywanie nazwanych konfiguracji i przełączanie między nimi z nagłówka.
-- Odśwież styl zebranych kart - ponowne zastosowanie bieżącego stylu kart do kart już utworzonych; karty ze starszych wersji wymagają zamiast tego narzędzia Uzupełnij karty (Przybornik → Uzupełnij karty).
+- Uzupełnij karty - uzupełnianie brakujących definicji, frekwencji, akcentu tonicznego, odczytów i audio słów na już utworzonych kartach albo odświeżenie ich stylu (Przybornik → Uzupełnij karty).
 
 <details>
 <summary><strong>Wbudowane motywy (29)</strong></summary>

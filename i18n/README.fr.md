@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:6f9163baa7a87e06 -->
+<!-- i18n-source: README.md sha256:7dd1b505cab496be -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -163,7 +163,7 @@ Pour une configuration de développement complète, consultez [CONTRIBUTING.md](
 - Aperçu vidéo libmpv intégré - lisez la scène d'un mot pendant la curation, ou ajustez le minutage des sous-titres avec une lecture en direct.
 - Captures d'écran animées (voir les exemples de cartes ci-dessus).
 - Profils de paramètres - enregistrez des configurations nommées et basculez entre elles depuis l'en-tête.
-- Redéfinir le style des cartes extraites - réappliquez le style actuel de vos cartes aux cartes déjà créées ; pour les cartes des versions précédentes, utilisez plutôt la Complétion (Utilitaires → Complétion).
+- Complétion - ajoutez aux cartes déjà créées les définitions, la fréquence, l'accent de hauteur, les lectures et l'audio de mot qui leur manquent, ou actualisez leur style (Utilitaires → Complétion).
 
 <details>
 <summary><strong>Thèmes intégrés (29)</strong></summary>

@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:6f9163baa7a87e06 -->
+<!-- i18n-source: README.md sha256:7dd1b505cab496be -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -163,7 +163,7 @@ anki_miner_gui
 - 内嵌 libmpv 视频预览 - 整理单词时播放该词所在的画面，或一边实时播放一边微调字幕时间。
 - 动画截图（见上方卡片示例）。
 - 设置配置档 - 保存具名配置，并从顶栏切换。
-- 重新设置挖词卡片样式 - 把当前的卡片样式重新应用到你已经生成的卡片；旧版本生成的卡片则需改用卡片字段补全（实用工具 → 卡片字段补全）。
+- 卡片字段补全 - 为你已经生成的卡片补全缺失的释义、词频、音调、读音和单词发音，或刷新卡片样式（实用工具 → 卡片字段补全）。
 
 <details>
 <summary><strong>内置主题（29 款）</strong></summary>

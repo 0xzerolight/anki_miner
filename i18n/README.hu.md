@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:6f9163baa7a87e06 -->
+<!-- i18n-source: README.md sha256:7dd1b505cab496be -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -163,7 +163,7 @@ A teljes fejlesztői környezet beállításáról lásd: [CONTRIBUTING.md](../C
 - Beépített libmpv videóelőnézet - egy szó jelenetének lejátszása válogatás közben, vagy a feliratidőzítés finomhangolása élő lejátszás mellett.
 - Animált képernyőképek (lásd a fenti példakártyákat).
 - Beállításprofilok - elnevezett konfigurációk mentése és váltás közöttük a fejlécből.
-- Gyűjtött kártyák stílusfrissítése - a jelenlegi kártyastílus újbóli alkalmazása a már elkészült kártyákra; a régebbi verziókból származó kártyákhoz helyette a Kártyapótlás kell (Segédeszközök → Kártyapótlás).
+- Kártyapótlás - a hiányzó definíciók, gyakoriság, hangmagassági hangsúly, olvasatok és szókiejtés pótlása a már elkészült kártyákon, vagy a kártyák stílusának frissítése (Segédeszközök → Kártyapótlás).
 
 <details>
 <summary><strong>Beépített témák (29)</strong></summary>

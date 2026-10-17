@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:6f9163baa7a87e06 -->
+<!-- i18n-source: README.md sha256:7dd1b505cab496be -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -163,7 +163,7 @@ Visą kūrimo aplinkos sąranką rasite [CONTRIBUTING.md](../CONTRIBUTING.md).
 - Įtaisyta libmpv vaizdo peržiūra - atrinkdami grokite žodžio sceną arba koreguokite subtitrų laiką gyvai atkuriant.
 - Animuotos ekrano kopijos (žr. kortelių pavyzdžius aukščiau).
 - Nustatymų profiliai - įrašykite pavadintas konfigūracijas ir perjunkite jas antraštėje.
-- Atnaujinti surinktų kortelių stilių - pritaikykite dabartinį kortelių stilių jau sukurtoms kortelėms; senesnių versijų kortelėms vietoj to naudokite įrankį Papildyti (Priemonės → Papildyti).
+- Papildyti - papildykite jau sukurtas korteles trūkstamomis apibrėžtimis, dažniu, priegaidėmis, skaitymais ir žodžių garsu arba atnaujinkite jų stilių (Priemonės → Papildyti).
 
 <details>
 <summary><strong>Įtaisytosios temos (29)</strong></summary>

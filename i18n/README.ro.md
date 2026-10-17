@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:6f9163baa7a87e06 -->
+<!-- i18n-source: README.md sha256:7dd1b505cab496be -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -163,7 +163,7 @@ Pentru configurarea completă a mediului de dezvoltare, consultați [CONTRIBUTIN
 - Previzualizare video libmpv încorporată - redați scena unui cuvânt în timpul selecției sau ajustați sincronizarea subtitrărilor cu redare în timp real.
 - Capturi de ecran animate (vedeți exemplele de carduri de mai sus).
 - Profiluri de setări - salvați configurații cu nume și comutați între ele din antet.
-- Restilizează cardurile extrase - reaplicați stilul actual al cardurilor pe cardurile deja create; pentru cardurile din versiunile mai vechi folosiți în schimb Completare carduri (Utilitare → Completare carduri).
+- Completare carduri - completați definiții, frecvență, accent tonal, citiri și audio pentru cuvinte pe cardurile deja create, acolo unde lipsesc, sau reîmprospătați-le stilul (Utilitare → Completare carduri).
 
 <details>
 <summary><strong>Teme încorporate (29)</strong></summary>
