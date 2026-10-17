@@ -52,8 +52,10 @@ JMDICT_ENTRY = envelope(
     )
 )
 
-# One sense, one gloss with an inline note: the envelope holds the bare body.
-SINGLE_NOTE_ENTRY = envelope('terrible <span class="gloss-note">(rare)</span>')
+# One sense, one gloss and a note: the envelope holds a one-item list with the note under it.
+SINGLE_NOTE_ENTRY = envelope(
+    '<ol class="gloss-glosses" lang="en"><li>terrible</li></ol><div class="gloss-note">rare</div>'
+)
 
 # One sense, several glosses: the envelope holds the list directly.
 SINGLE_LIST_ENTRY = envelope('<ol class="gloss-glosses" lang="en"><li>terrible</li><li>dreadful</li></ol>')
@@ -193,7 +195,7 @@ class TestHeading:
         """An exact hit and its ladder hits come from one provider, one after another."""
         body = to_preview_html([("JMdict", JMDICT_ENTRY), ("JMdict", SINGLE_NOTE_ENTRY), ("Jitendex", JITENDEX_ENTRY)])
         assert body.count('<p style="font-weight:bold">') == 2
-        assert body.index("(rare)") < body.index(">Jitendex</p>")
+        assert body.index(">rare<") < body.index(">Jitendex</p>")
 
     def test_the_heading_is_the_short_title_a_stacked_card_field_shows(self):
         body = to_preview_html([("JMdict [2026-10-16]", JMDICT_ENTRY)])
@@ -222,6 +224,14 @@ class TestSenseStructure:
 
     def test_a_single_sense_list_is_inlined_too(self):
         assert "terrible, dreadful" in adapt_entry(SINGLE_LIST_ENTRY)
+
+    def test_one_gloss_senses_keep_their_numbers(self, qapp):
+        """A sense's only gloss is a one-item list too; it collapses like any other."""
+        entry = envelope(
+            senses('<ol class="gloss-glosses"><li>terrible</li></ol>', '<ol class="gloss-glosses"><li>very</li></ol>')
+        )
+        numbered = [(marker, text) for _, marker, text in blocks(adapt_entry(entry)) if marker[:1].isdigit()]
+        assert numbered == [("1.", "terrible"), ("2.", "very")]
 
     def test_a_members_list_that_nests_lists_is_left_whole(self):
         """Cut at the inner list's ``</ul>``, the members list would lose its last
@@ -267,10 +277,11 @@ class TestNotes:
     def test_a_note_under_the_glosses_is_muted(self, qapp):
         assert text_color(adapt_entry(JMDICT_ENTRY), "colloquial") == "#969696"
 
-    def test_an_inline_note_is_muted_but_its_gloss_is_not(self, qapp):
+    def test_a_single_gloss_note_is_muted_but_its_gloss_is_not(self, qapp):
         adapted = adapt_entry(SINGLE_NOTE_ENTRY)
-        assert text_color(adapted, "(rare)") == "#969696"
-        assert text_color(adapted, "terrible ") != "#969696"
+        assert text_color(adapted, "rare") == "#969696"
+        assert text_color(adapted, f"terrible{LINE_SEPARATOR}") != "#969696"  # the <br> joins the gloss's run
+        assert blocks(adapted)[0][2] == f"terrible{LINE_SEPARATOR}rare"
 
     def test_a_block_note_stays_inside_its_sense(self, qapp):
         """As a block under the inlined glosses, the note rendered as an unindented

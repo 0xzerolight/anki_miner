@@ -163,21 +163,29 @@ WHITELIST: tuple[str, ...] = ("しゃべる", "喋る", "コーヒー", "珈琲"
 _PITCH_PATTERNS: tuple[str, ...] = ("0", "1", "2", "3")
 
 #: The dictionary envelope holds one sense bare, or several as a numbered
-#: ``gloss-list`` of ``gloss-item`` senses.
+#: ``gloss-list`` of ``gloss-item`` senses. Each of this canary's senses is one
+#: gloss: a one-item ``gloss-glosses`` list.
 _ENVELOPE_RE = re.compile(r"<li data-dictionary=[^>]*>(.*?)</li></ol></div>")
-_GLOSS_ITEM_RE = re.compile(r'<li class="gloss-item">(.*?)</li>')
+_SENSE_RE = re.compile(r'<ol class="gloss-glosses"><li>((?:(?!</li>).)*)</li></ol>')
+_SENSE_LIST_RE = re.compile(r'<ol class="gloss-list">(?:<li class="gloss-item">' + _SENSE_RE.pattern + "</li>)+</ol>")
 
 
 def _senses(field: str) -> list[str]:
-    """Every sense of a single-dictionary field (MainDefinition: first hit wins), in order.
+    """Every sense's gloss of a single-dictionary field (MainDefinition: first hit wins), in order.
 
-    Both patterns are non-greedy and nest-blind: a stacked field would run its
-    dictionaries' senses together, and a sense that holds a ``gloss-glosses`` list
-    would be cut at its first ``</li>``. This canary's senses are one gloss each.
+    The envelope pattern is non-greedy and nest-blind: a stacked field would run its
+    dictionaries' senses together. A body that is neither one one-gloss sense nor a
+    ``gloss-list`` of them comes back whole, so the comparison fails on its shape.
     """
     senses: list[str] = []
     for body in _ENVELOPE_RE.findall(field):
-        senses.extend(_GLOSS_ITEM_RE.findall(body) or [body])
+        single = _SENSE_RE.fullmatch(body)
+        if single:
+            senses.append(single.group(1))
+        elif _SENSE_LIST_RE.fullmatch(body):
+            senses.extend(_SENSE_RE.findall(body))
+        else:
+            senses.append(body)
     return senses
 
 

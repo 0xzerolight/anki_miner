@@ -25,9 +25,9 @@ Two things CSS alone cannot fix here:
 * **Tags carry no separator.** Jitendex and Wiktionary write their sense tags as
   flush ``<span>`` runs and let ``margin`` do the spacing — an inline-box property Qt
   drops, so the row reads ``adjectivekana``. The separator has to enter the markup.
-* **Qt discards an ``<li>`` whose content is purely a block element.** A sense with
-  several glosses is ``<li class="gloss-item">`` holding only its glossary list
-  (``ol.gloss-glosses``, or a styled dictionary's ``ul.gloss-sc-ul``), so the sense
+* **Qt discards an ``<li>`` whose content is purely a block element.** A sense is
+  ``<li class="gloss-item">`` holding only its glossary list (``ol.gloss-glosses``,
+  even for one gloss, or a styled dictionary's ``ul.gloss-sc-ul``), so the sense
   level vanishes and every gloss of every sense lands in a flat list. Inlining each
   sense's glossary list into its own ``<li>`` as text restores the level (and the
   sense numbering) in one substitution.
@@ -131,7 +131,7 @@ _NBSP = " "
 # A sense's glossary list, in any of the three forms a sense body carries:
 #
 # * ``<ol class="gloss-glosses">`` with bare ``<li>`` items — what ``present_sense``
-#   makes of an unstyled dictionary's row with two or more glosses.
+#   makes of an unstyled dictionary's glosses, a sense's only one included.
 # * ``<ul class="gloss-sc-ul" … data-sc-content="glossary">`` with ``li.gloss-sc-li``
 #   items — the stored row markup a dictionary with its own styles.css keeps.
 #   Scoped to ``data-sc-content="glossary"`` on purpose: the same ``gloss-sc-ul``

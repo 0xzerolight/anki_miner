@@ -6,9 +6,12 @@ anchored regexes over the renderer's own shapes pick out pieces, and every fragm
 it emits is a slice of the stored string. No HTML parser, no escape/unescape, no
 re-serialization — stored escapes, media paths and links come out byte-identical.
 
-A row is split into glosses only when it is nothing but lists this module
-recognises (the renderer's synthesized members list, or JMdict-style keyed lists).
-Anything else is returned verbatim as one gloss.
+Glosses are always a bullet list (``ol.gloss-glosses``), even a sense's only one;
+usage notes are a muted block under it. A row is split into glosses only when it is
+nothing but lists this module recognises (the renderer's synthesized members list,
+or JMdict-style keyed lists). A row with no block content (``_BLOCK_TAGS``) is one
+gloss: what the renderer emits for a one-member entry. Anything else is authored
+structure and is returned verbatim.
 """
 
 from __future__ import annotations
@@ -28,7 +31,8 @@ _NOTE_KEY = "notes"
 _DROPPED_KEYS = frozenset({"references", "antonyms", "sourceLanguages"})
 _RECOGNISED_KEYS = _GLOSS_KEYS | {_NOTE_KEY} | _DROPPED_KEYS
 
-# A recognised list never holds block content; one that does is authored structure.
+# A recognised list never holds block content, and a simple one-gloss row has none;
+# a row or list that does is authored structure.
 _BLOCK_TAGS = ("<ul", "<ol", "<div", "<table")
 
 _ROW_ITEM_RE = re.compile(r'<li class="gloss-item"[^>]*>(.*)</li>', re.DOTALL)
@@ -106,13 +110,20 @@ def _recognised_lists(inner: str) -> list[tuple[str, str, list[str]]] | None:
     return lists
 
 
+def _gloss_list(glosses: list[str], lang: str = "") -> str:
+    """The glosses as a ``gloss-glosses`` bullet list, one ``<li>`` each, even for one."""
+    return f"{GLOSSES_OPEN}{lang}>" + "".join(f"<li>{g}</li>" for g in glosses) + "</ol>"
+
+
 def present_sense(row_html: str, *, styled: bool) -> str:
     """One stored row as a sense BODY (no ``<li class="gloss-item">`` wrapper).
 
     ``styled`` keeps the row's own markup (unwrapped only). Otherwise a row made of
-    recognised lists becomes its glosses (bare text for one, a ``gloss-glosses`` list
-    for several) plus any notes; ``references``/``antonyms``/``sourceLanguages`` drop.
-    A JMdict XML ``<ol>`` row becomes its senses. Every other row passes through verbatim.
+    recognised lists becomes a ``gloss-glosses`` list of its glosses plus a
+    ``gloss-note`` block of any notes; ``references``/``antonyms``/``sourceLanguages``
+    drop. A row with no block content is one gloss, a one-item ``gloss-glosses`` list.
+    A JMdict XML ``<ol>`` row becomes its senses, each a one-item list. Every other
+    row passes through verbatim.
     """
     inner = _unwrap(row_html)
     if styled:
@@ -120,10 +131,17 @@ def present_sense(row_html: str, *, styled: bool) -> str:
 
     xml = _XML_SENSES_RE.fullmatch(inner)
     if xml and "<ol" not in inner[4:] and "<ul" not in inner:
-        senses = _XML_SENSE_RE.findall(xml.group(1))
+        senses = [str(s) for s in _XML_SENSE_RE.findall(xml.group(1))]
         if len(senses) == 1:
-            return str(senses[0])
-        return '<ol class="gloss-list">' + "".join(f'<li class="gloss-item">{s}</li>' for s in senses) + "</ol>"
+            return _gloss_list(senses)
+        return (
+            '<ol class="gloss-list">'
+            + "".join(f'<li class="gloss-item">{_gloss_list([s])}</li>' for s in senses)
+            + "</ol>"
+        )
+
+    if inner and not any(tag in inner for tag in _BLOCK_TAGS):
+        return _gloss_list([inner])
 
     lists = _recognised_lists(inner)
     if lists is None:
@@ -141,10 +159,7 @@ def present_sense(row_html: str, *, styled: bool) -> str:
         elif key == _NOTE_KEY:
             notes.extend(items)
 
-    note = "; ".join(notes)
-    if len(glosses) == 1:
-        return glosses[0] + (f' <span class="gloss-note">({note})</span>' if notes else "")
-    note_block = f'<div class="gloss-note">{note}</div>' if notes else ""
+    note_block = f'<div class="gloss-note">{"; ".join(notes)}</div>' if notes else ""
     if not glosses:
         return note_block
-    return f"{GLOSSES_OPEN}{lang}>" + "".join(f"<li>{g}</li>" for g in glosses) + f"</ol>{note_block}"
+    return _gloss_list(glosses, lang) + note_block
