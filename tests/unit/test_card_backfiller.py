@@ -30,6 +30,11 @@ from anki_miner.services.card_backfiller import (
     scan_backfill,
 )
 from anki_miner.services.definition_service import DefinitionService
+from anki_miner.services.dictionary.card_style_block import (
+    OWNED_STYLE_MARKER,
+    attach_card_style_block,
+    refresh_style_block,
+)
 from anki_miner.services.morphology import SyntheticToken
 from anki_miner.services.tagger import get_shared_tagger
 from anki_miner.services.validation_service import ValidationService
@@ -1901,3 +1906,144 @@ class TestScanProfileCardFields:
         # The ja pipeline renders its own fields inline and must never route
         # one through a hook; nothing here can change what a ja scan proposes.
         assert get_profile("ja").extra_card_fields == ()
+
+
+# ---------------------------------------------------------------------------
+# Styling option: refresh the embedded block, never the text
+# ---------------------------------------------------------------------------
+
+_DICT_ENTRIES = [("d-id", "D", "DICTCSS")]  # what _stub_tagger_and_style serves
+_STALE = f"{_GLOSS_HTML}<style>{OWNED_STYLE_MARKER}}}STALE ol[data-count]{{}}\nDICTCSS</style>"
+_CURRENT = attach_card_style_block(_GLOSS_HTML, dict_css_entries=_DICT_ENTRIES)
+_LEGACY = (
+    '<div class="yomitan-glossary"><ol data-count="1"><li data-dictionary="D">'
+    '<ul class="gloss-list" data-count="1"><li class="gloss-item">gloss</li></ul></li></ol></div>'
+    f"<style>{OWNED_STYLE_MARKER}}}OLD ol[data-count]{{}}</style>"
+)
+
+
+def _styling(keys=(), *, overwrite=False):
+    return BackfillOptions(field_keys=frozenset(keys), overwrite=overwrite, styling=True)
+
+
+class TestStylingOption:
+    def test_styling_only_proposes_refreshed_block_and_keeps_body(self, backfill_config):
+        anki = FakeAnkiService({1: _note(1, word="猫", Glossary=_STALE, definition="")})
+
+        plan = scan_backfill(anki, backfill_config, _services(), _styling())
+
+        (note,) = plan.notes
+        (change,) = note.changes
+        assert (change.field_key, change.field_name) == ("glossary", "Glossary")
+        assert change.new_value == refresh_style_block(_STALE, _DICT_ENTRIES)
+        assert change.new_value != _STALE
+        assert change.new_value.startswith(_GLOSS_HTML + "<style>")
+        assert change.expected == _STALE
+
+    @pytest.mark.parametrize("overwrite", [False, True])
+    def test_styling_ignores_overwrite_flag(self, backfill_config, overwrite):
+        anki = FakeAnkiService({1: _note(1, word="猫", Glossary=_STALE)})
+
+        plan = scan_backfill(anki, backfill_config, _services(), _styling(overwrite=overwrite))
+
+        assert _changes_by_key(plan, 1) == {"glossary": refresh_style_block(_STALE, _DICT_ENTRIES)}
+
+    def test_current_block_counts_identical(self, backfill_config):
+        anki = FakeAnkiService({1: _note(1, word="猫", Glossary=_CURRENT)})
+
+        plan = scan_backfill(anki, backfill_config, _services(), _styling())
+
+        assert plan.notes == ()
+        assert plan.identical_skips == 1
+
+    def test_legacy_markup_is_counted_not_changed(self, backfill_config):
+        anki = FakeAnkiService({1: _note(1, word="猫", Glossary=_LEGACY, definition=_LEGACY)})
+
+        plan = scan_backfill(anki, backfill_config, _services(), _styling())
+
+        assert plan.notes == ()
+        assert plan.legacy_markup_skips == 2
+        assert plan.identical_skips == 0
+
+    def test_definitions_overwrite_and_styling_write_the_field_once(self, backfill_config):
+        fresh = _GLOSS_HTML.replace("gloss", "cat")
+        defs = FakeDefinitionService(defs={"猫": fresh})
+        anki = FakeAnkiService({1: _note(1, word="猫", definition=_STALE)})
+
+        plan = scan_backfill(anki, backfill_config, _services(defs=defs), _styling({"definition"}, overwrite=True))
+
+        (note,) = plan.notes
+        assert [(c.field_key, c.expected) for c in note.changes] == [("definition", None)]
+        assert note.changes[0].new_value == attach_card_style_block(fresh, dict_css_entries=_DICT_ENTRIES)
+
+    def test_definitions_identical_and_styling_count_once(self, backfill_config):
+        defs = FakeDefinitionService(defs={"猫": _GLOSS_HTML})
+        anki = FakeAnkiService({1: _note(1, word="猫", definition=_CURRENT)})
+
+        plan = scan_backfill(anki, backfill_config, _services(defs=defs), _styling({"definition"}, overwrite=True))
+
+        assert plan.notes == ()
+        assert plan.identical_skips == 1
+
+    def test_styling_still_runs_when_definition_lookup_misses(self, backfill_config):
+        anki = FakeAnkiService({1: _note(1, word="猫", definition=_STALE)})
+
+        plan = scan_backfill(anki, backfill_config, _services(), _styling({"definition"}, overwrite=True))
+
+        (note,) = plan.notes
+        assert [(c.field_key, c.expected) for c in note.changes] == [("definition", _STALE)]
+
+    def test_styling_only_scan_never_tags_or_looks_up(self, backfill_config, monkeypatch):
+        tagged: list[str] = []
+        monkeypatch.setattr(
+            "anki_miner.services.card_backfiller.get_shared_tagger",
+            lambda: lambda text: tagged.append(text) or [],
+        )
+        looked_up: list[str] = []
+
+        class SpyDefinitions(FakeDefinitionService):
+            def get_definitions_batch(self, pairs, *args, **kwargs):
+                looked_up.append("definitions")
+                return super().get_definitions_batch(pairs, *args, **kwargs)
+
+            def get_glossaries_batch(self, pairs, *args, **kwargs):
+                looked_up.append("glossaries")
+                return super().get_glossaries_batch(pairs, *args, **kwargs)
+
+            def offline_term_readings(self, terms):
+                looked_up.append("readings")
+                return super().offline_term_readings(terms)
+
+        anki = FakeAnkiService({1: _note(1, word="猫", Glossary=_STALE), 2: _note(2, word="犬", Glossary=_STALE)})
+
+        plan = scan_backfill(anki, backfill_config, _services(defs=SpyDefinitions()), _styling())
+
+        assert len(plan.notes) == 2
+        assert tagged == []
+        assert looked_up == []
+
+    def test_unmapped_glossary_styles_definition_only(self, backfill_config):
+        cfg = replace(backfill_config, anki_fields={**backfill_config.anki_fields, "glossary": ""})
+        anki = FakeAnkiService({1: _note(1, word="猫", definition=_STALE, Glossary=_STALE)})
+
+        plan = scan_backfill(anki, cfg, _services(), _styling())
+
+        assert set(_changes_by_key(plan, 1)) == {"definition"}
+
+    def test_apply_drops_styling_change_when_field_edited_since_scan(self):
+        anki = RecordingAnkiService({1: _note(1, word="word1", Glossary="edited in Anki")})
+        change = FieldChange("glossary", "Glossary", "gloss", "NEW", expected=_STALE)
+
+        result = apply_backfill(anki, _plan([NotePlan(1, "word1", (change,))]))
+
+        assert result.skipped_stale == 1
+        assert anki.updates == []
+
+    def test_apply_writes_styling_change_in_fill_only_mode(self):
+        anki = RecordingAnkiService({1: _note(1, word="word1", Glossary=_STALE)})
+        change = FieldChange("glossary", "Glossary", "gloss", "NEW", expected=_STALE)
+
+        result = apply_backfill(anki, _plan([NotePlan(1, "word1", (change,))], overwrite=False))
+
+        assert anki.updates == [[(1, {"Glossary": "NEW"})]]
+        assert result.tagged == 1

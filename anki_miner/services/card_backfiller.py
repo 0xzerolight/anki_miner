@@ -63,7 +63,12 @@ from anki_miner.services.anki_note_builder import (
 )
 from anki_miner.services.backfill_audio import word_audio_candidates
 from anki_miner.services.definition_service import collect_dictionary_css_entries
-from anki_miner.services.dictionary.card_style_block import attach_card_style_block
+from anki_miner.services.dictionary.card_style_block import (
+    _MINER_MARKUP_TOKENS,
+    attach_card_style_block,
+    is_legacy_markup,
+    refresh_style_block,
+)
 from anki_miner.services.frequency.multi_frequency_service import harmonic_rank
 from anki_miner.services.frequency.render import render_frequency_html
 from anki_miner.services.morphology import extract_lemma
@@ -108,6 +113,13 @@ FIELD_GROUPS: dict[str, tuple[str, ...]] = {
     "reading": ("expression_reading", "expression_furigana"),
     "word_audio": ("expression_audio",),
 }
+# The Styling option. Not a field group: it fills nothing. Ticked, the scan
+# refreshes the embedded <style> block of these carrier fields
+# (refresh_style_block) and leaves their text alone, whatever Overwrite says.
+# The tab lists it among the field groups under this name, which is how
+# ``backfill_field_groups`` persists it, and gates it on these keys.
+STYLING_GROUP = "styling"
+STYLING_CARRIER_KEYS: tuple[str, ...] = ("definition", "glossary")
 _PITCH_KEYS = frozenset(FIELD_GROUPS["pitch"])
 _FREQ_KEYS = frozenset(FIELD_GROUPS["frequency"])
 # Keys whose stored value is a media reference rather than text. _is_empty
@@ -181,11 +193,17 @@ def definition_lookup_keys(config: AnkiMinerConfig, field_keys: Iterable[str]) -
 
 @dataclass(frozen=True)
 class BackfillOptions:
-    """User selections for one scan: resolved anki_fields keys + scope."""
+    """User selections for one scan: resolved anki_fields keys + scope.
+
+    ``styling`` is the Styling option: refresh the embedded ``<style>`` block of
+    the mapped ``STYLING_CARRIER_KEYS`` fields. It adds no field key and ignores
+    ``overwrite`` (it only ever replaces an existing block).
+    """
 
     field_keys: frozenset[str]
     deck: str | None = None
     overwrite: bool = False
+    styling: bool = False
 
 
 @dataclass(frozen=True)
@@ -202,6 +220,11 @@ class FieldChange:
     #: ``new_value`` holds the pre-upload name for the preview row and apply
     #: substitutes the confirmed one. None for every text field.
     media_path: Path | None = None
+    #: The exact stored value this change was computed from (Styling changes).
+    #: Apply writes it only while the field still holds exactly that value,
+    #: whatever Overwrite says: a refreshed block on a field edited since the
+    #: scan would undo the edit. None for every fill/overwrite change.
+    expected: str | None = None
 
 
 @dataclass(frozen=True)
@@ -237,6 +260,11 @@ class BackfillPlan:
     # so without this the whole group silently proposes nothing and the summary
     # reads as "already have values".
     absent_fields: tuple[str, ...] = ()
+    # Styling fields left alone because they still carry the definition layout
+    # from before the clean glossary shape (is_legacy_markup): the current sheet
+    # cannot style it, so only rebuilding the field (Definitions/Glossary with
+    # Overwrite) updates them.
+    legacy_markup_skips: int = 0
 
     @property
     def total_field_changes(self) -> int:
@@ -442,6 +470,7 @@ def scan_backfill(
         note_type=config.anki_note_type,
         fields=len(options.field_keys),
         overwrite=options.overwrite,
+        styling=options.styling,
         deck=options.deck,
     )
     with timed_phase("backfill-scan", logger):
@@ -496,8 +525,13 @@ def _scan_backfill_impl(
         unavailable.extend(sorted(selected & _MEDIA_KEYS))
         selected -= _MEDIA_KEYS
 
-    absent_fields = _preflight(anki_service, config, selected, word_field)
+    # The Styling option's carrier fields: preflighted like any selected field
+    # (a stale mapping is reported, not silently skipped), never looked up.
+    styling_keys = set(mapped_field_keys(config, STYLING_CARRIER_KEYS)) if options.styling else set()
+
+    absent_fields = _preflight(anki_service, config, selected | styling_keys, word_field)
     selected -= {key for key in selected if anki_fields[key] in absent_fields}
+    styling_keys -= {key for key in styling_keys if anki_fields[key] in absent_fields}
 
     query = f'note:"{_escape_anki_search(config.anki_note_type)}"'
     if options.deck:
@@ -508,8 +542,10 @@ def _scan_backfill_impl(
     # THIS name, so the ja branch must keep calling it here. config_language,
     # never the raw field — a whitelisted code with no registered profile yet
     # (ko) would otherwise reach get_tagger's ValueError and kill the scan.
+    # Only the field groups need a tagger (reading/lemma identity); Styling
+    # alone reads nothing but the stored fields, so it never loads an engine.
     language = config_language(config)
-    tagger = get_shared_tagger() if language == "ja" else get_tagger(language)
+    tagger = (get_shared_tagger() if language == "ja" else get_tagger(language)) if selected else None
     # The word-audio ladder, resolved once per scan like the tagger (mining's
     # 1B.9 shape: service_factory hands the same callable to
     # ChainedExpressionAudioFetcher). None is Japanese and keeps
@@ -535,12 +571,12 @@ def _scan_backfill_impl(
     # self-containment, matching EpisodeProcessor._phase5_create (the old
     # single-carrier "card-wide <style>" model broke JS note types that
     # render fields in isolation).
-    want_styling = bool(selected & {"definition", "glossary"}) or bool(hook_keys)
+    want_styling = bool(selected & {"definition", "glossary"}) or bool(hook_keys) or bool(styling_keys)
     dict_css_entries = collect_dictionary_css_entries(config) if want_styling else []
     definition_lookups = definition_lookup_keys(config, selected)
 
     scanned = skipped_no_identity = identical_skips = 0
-    guessed_reading_skips = 0
+    guessed_reading_skips = legacy_markup_skips = 0
     tagger_failures = TaggerFailures()
     note_plans: list[NotePlan] = []
 
@@ -563,70 +599,93 @@ def _scan_backfill_impl(
                 continue
             identities.append((note_id, fields, mined_form))
 
-        # The chunk's attested readings as one batch, the prefetch-then-emit
-        # shape mining uses — only for a profile whose reading tier asks for
-        # them, so no other language pays for the call.
-        attested_readings: dict[str, list[str]] = {}
-        if wants_attested_readings and identities:
-            attested_readings = definition_service.offline_term_readings([form for _id, _f, form in identities])
-
+        # Identity resolution and lookups serve the field groups only; a
+        # Styling-only scan skips both (Restyle's whole-collection pass stays
+        # seconds, not a tokenizer run per note).
         contexts: list[_NoteContext] = []
-        for note_id, fields, mined_form in identities:
-            contexts.append(
-                _resolve_context(
-                    note_id,
-                    fields,
-                    mined_form,
-                    anki_fields,
-                    tagger,
-                    tagger_failures,
-                    reading_support=reading_support,
-                    attested=tuple(attested_readings.get(mined_form) or ()),
-                )
-            )
+        definitions: list[str | None] = []
+        glossaries: list[str | None] = []
+        if selected:
+            # The chunk's attested readings as one batch, the prefetch-then-emit
+            # shape mining uses — only for a profile whose reading tier asks for
+            # them, so no other language pays for the call.
+            attested_readings: dict[str, list[str]] = {}
+            if wants_attested_readings and identities:
+                attested_readings = definition_service.offline_term_readings([form for _id, _f, form in identities])
 
-        definitions, glossaries = _chunk_definition_lookups(
-            definition_service,
-            contexts,
-            definition_lookups,
-            stacked_definition=profile.stacked_definition,
-            is_cancelled=is_cancelled,
-        )
+            for note_id, fields, mined_form in identities:
+                contexts.append(
+                    _resolve_context(
+                        note_id,
+                        fields,
+                        mined_form,
+                        anki_fields,
+                        tagger,
+                        tagger_failures,
+                        reading_support=reading_support,
+                        attested=tuple(attested_readings.get(mined_form) or ()),
+                    )
+                )
+
+            definitions, glossaries = _chunk_definition_lookups(
+                definition_service,
+                contexts,
+                definition_lookups,
+                stacked_definition=profile.stacked_definition,
+                is_cancelled=is_cancelled,
+            )
 
         # Progress and cancellation are per NOTE, not per chunk. Every other
         # proposal is a local lookup, so a chunk-boundary tick was invisible;
         # word audio is a network round trip per note, which turns a 500-note
         # chunk into minutes of frozen bar and a Cancel that does nothing until
         # the chunk ends.
-        base = scanned - len(contexts)
+        base = scanned - len(identities)
         cancelled = False
-        for idx, ctx in enumerate(contexts):
+        for idx, (note_id, fields, mined_form) in enumerate(identities):
             if is_cancelled and is_cancelled():
                 cancelled = True
                 break
-            changes, note_identicals, note_guessed = _compute_note_changes(
-                ctx,
-                config,
-                selected,
-                options,
-                pitch_service=pitch_service,
-                frequency_service=frequency_service,
-                definition=definitions[idx],
-                glossary=glossaries[idx],
-                dict_css_entries=dict_css_entries,
-                expression_audio_fetcher=expression_audio_fetcher,
-                tagger=tagger,
-                audio_candidates=audio_candidates,
-                style_direction=style_direction,
-                render_hooks=profile.render_hooks,
-                hook_keys=hook_keys,
-                raw_hook_keys=raw_hook_keys,
-                is_cancelled=is_cancelled,
-            )
-            identical_skips += note_identicals
-            guessed_reading_skips += note_guessed
+            changes: list[FieldChange] = []
+            settled: frozenset[str] = frozenset()
+            if selected:
+                changes, note_identicals, note_guessed, settled = _compute_note_changes(
+                    contexts[idx],
+                    config,
+                    selected,
+                    options,
+                    pitch_service=pitch_service,
+                    frequency_service=frequency_service,
+                    definition=definitions[idx],
+                    glossary=glossaries[idx],
+                    dict_css_entries=dict_css_entries,
+                    expression_audio_fetcher=expression_audio_fetcher,
+                    tagger=tagger,
+                    audio_candidates=audio_candidates,
+                    style_direction=style_direction,
+                    render_hooks=profile.render_hooks,
+                    hook_keys=hook_keys,
+                    raw_hook_keys=raw_hook_keys,
+                    is_cancelled=is_cancelled,
+                )
+                identical_skips += note_identicals
+                guessed_reading_skips += note_guessed
+            if styling_keys:
+                # A carrier the field-group pass already wrote (or found
+                # identical) carries a fresh block; styling it again would
+                # write it twice or count it twice.
+                style_changes, style_identicals, style_legacy = _styling_changes(
+                    fields,
+                    anki_fields,
+                    styling_keys - settled,
+                    dict_css_entries,
+                    direction=style_direction,
+                )
+                changes = [*changes, *style_changes]
+                identical_skips += style_identicals
+                legacy_markup_skips += style_legacy
             if changes:
-                note_plans.append(NotePlan(ctx.note_id, ctx.mined_form, tuple(changes)))
+                note_plans.append(NotePlan(note_id, mined_form, tuple(changes)))
             if progress:
                 progress(base + idx + 1, len(note_ids))
 
@@ -646,6 +705,7 @@ def _scan_backfill_impl(
         identical_skips=identical_skips,
         guessed_reading_skips=guessed_reading_skips,
         absent_fields=absent_fields,
+        legacy_markup_skips=legacy_markup_skips,
     )
     # The one line that tells a bug report which no-op this was: query matched
     # nothing, notes matched but every target was filled, or the mapping is
@@ -661,11 +721,13 @@ def _scan_backfill_impl(
         fields=plan.total_field_changes,
         word_audio=sum(1 for note in plan.notes for change in note.changes if change.media_path is not None),
         overwrite=options.overwrite,
+        styling=options.styling,
         absent=absent_fields,
         unavailable=unavailable,
         skipped_no_identity=skipped_no_identity,
         identical=identical_skips,
         guessed_reading=guessed_reading_skips,
+        legacy=legacy_markup_skips,
         reading_failures=tagger_failures.counts["reading"],
         lemma_failures=tagger_failures.counts["lemma"],
     )
@@ -949,13 +1011,15 @@ def _compute_note_changes(
     hook_keys: frozenset[str] = frozenset(),
     raw_hook_keys: frozenset[str] = frozenset(),
     is_cancelled: Callable[[], bool] | None = None,
-) -> tuple[list[FieldChange], int, int]:
+) -> tuple[list[FieldChange], int, int, frozenset[str]]:
     """Emit FieldChanges for one note under the fill/overwrite policy.
 
-    Returns ``(changes, identical_skips, guessed_reading_skips)`` — the second
-    element counts overwrite-mode fields skipped because the proposal matched
-    the stored value byte-for-byte, the third those skipped because the pitch
-    render would have come off a guessed reading (see the loop below).
+    Returns ``(changes, identical_skips, guessed_reading_skips, settled)`` — the
+    second element counts overwrite-mode fields skipped because the proposal
+    matched the stored value byte-for-byte, the third those skipped because the
+    pitch render would have come off a guessed reading (see the loop below),
+    and ``settled`` is every key this pass wrote or found identical, which the
+    Styling pass leaves alone.
     """
     anki_fields = config.anki_fields
     proposals: dict[str, str] = {}
@@ -1038,6 +1102,7 @@ def _compute_note_changes(
                 media_paths["expression_audio"] = audio_path
 
     changes: list[FieldChange] = []
+    settled: set[str] = set()
     identical_skips = 0
     guessed_reading_skips = 0
     for key in sorted(proposals):
@@ -1066,10 +1131,12 @@ def _compute_note_changes(
                 continue
             if new_value == current:
                 identical_skips += 1
+                settled.add(key)
                 continue
         elif not _is_fillable(key, current):
             continue
         changes.append(FieldChange(key, field_name, _display(current), new_value, media_paths.get(key)))
+        settled.add(key)
 
     # Erase a legacy 9999999 the lookup could not replace. Every other write
     # here is a value the code computed, so a word no source ranks proposes
@@ -1089,7 +1156,47 @@ def _compute_note_changes(
         if sort_field and current is not None and _is_legacy_freq_sentinel("frequency_sort", current):
             changes.append(FieldChange("frequency_sort", sort_field, _display(current), ""))
 
-    return changes, identical_skips, guessed_reading_skips
+    return changes, identical_skips, guessed_reading_skips, frozenset(settled)
+
+
+def _styling_changes(
+    fields: dict,
+    anki_fields: Mapping[str, str],
+    keys: Iterable[str],
+    dict_css_entries: list[tuple[str, str, str]],
+    *,
+    direction: str,
+) -> tuple[list[FieldChange], int, int]:
+    """The Styling option for one note: refresh each carrier field's block.
+
+    Returns ``(changes, identical_skips, legacy_markup_skips)``. A field without
+    miner markup (empty, hand-written, a genuine Yomitan export) is not ours to
+    style and is skipped silently; one with the pre-clean-glossary layout is
+    counted and left alone (``is_legacy_markup``); a malformed ``<style>``
+    structure is left alone. Each change carries its stored value as
+    ``expected`` so apply writes it only over exactly that value. Overwrite
+    plays no part: there is nothing to fill, only a block to refresh.
+    """
+    changes: list[FieldChange] = []
+    identical_skips = legacy_markup_skips = 0
+    for key in sorted(keys):
+        field_name = anki_fields.get(key)
+        if not field_name:
+            continue
+        current = _field_value(fields, field_name)
+        if not current or any(token not in current for token in _MINER_MARKUP_TOKENS):
+            continue
+        if is_legacy_markup(current):
+            legacy_markup_skips += 1
+            continue
+        refreshed = refresh_style_block(current, dict_css_entries, direction=direction)
+        if refreshed is None:
+            continue
+        if refreshed == current:
+            identical_skips += 1
+            continue
+        changes.append(FieldChange(key, field_name, _display(current), refreshed, expected=current))
+    return changes, identical_skips, legacy_markup_skips
 
 
 def _pitch_proposals(
@@ -1346,7 +1453,13 @@ def _apply_backfill_impl(
                 if current is None:
                     skipped_stale += 1
                     continue
-                if not overwrite and not _is_fillable(change.field_key, current):
+                if change.expected is not None:
+                    # A Styling change: compare-before-write, whatever Overwrite
+                    # says — the refreshed block was computed from this value.
+                    if current != change.expected:
+                        skipped_stale += 1
+                        continue
+                elif not overwrite and not _is_fillable(change.field_key, current):
                     skipped_stale += 1
                     continue
                 value = change.new_value
