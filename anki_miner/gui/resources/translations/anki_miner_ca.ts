@@ -2923,6 +2923,14 @@ No se suprimeix cap fitxer d'índex.</translation>
         <translation>Trieu en quina baralla i amb quin tipus de nota de l'Anki es creen les targetes noves.</translation>
     </message>
     <message>
+        <source>Card styling / CSS</source>
+        <translation>Estil de les targetes / CSS</translation>
+    </message>
+    <message>
+        <source>Apply a built-in card style or your own CSS.</source>
+        <translation>Apliqueu un estil de targeta integrat o el vostre propi CSS.</translation>
+    </message>
+    <message>
         <source>Furigana / readings</source>
         <translation>Furigana / lectures</translation>
     </message>
@@ -3111,8 +3119,8 @@ No se suprimeix cap fitxer d'índex.</translation>
         <translation>Reaplica l'estil a les targetes extretes</translation>
     </message>
     <message>
-        <source>Convert cards you mined earlier to the current card format, so your note type styles them -- Utilities → Card Backfill.</source>
-        <translation>Converteix les targetes que vau extreure abans al format de targeta actual, perquè el vostre tipus de nota els apliqui l'estil: Utilitats → Completa targetes.</translation>
+        <source>Re-apply the latest Anki Miner styling to cards you mined earlier -- Utilities → Card Backfill.</source>
+        <translation>Torna a aplicar l'estil més recent de l'Anki Miner a les targetes que vau extreure abans: Utilitats → Completa targetes.</translation>
     </message>
     <message>
         <source>System health check</source>
@@ -3329,6 +3337,10 @@ No se suprimeix cap fitxer d'índex.</translation>
         <translation>Sobreescriu els valors existents</translation>
     </message>
     <message>
+        <source>Overwritten cards may need to use Restyle cards… to refresh their styling.</source>
+        <translation>Pot ser que les targetes sobreescrites necessitin Reaplica l'estil… per actualitzar-ne l'estil.</translation>
+    </message>
+    <message>
         <source>Scan Anki (read-only)</source>
         <translation>Analitza l'Anki (només lectura)</translation>
     </message>
@@ -3337,8 +3349,8 @@ No se suprimeix cap fitxer d'índex.</translation>
         <translation>Reaplica l'estil…</translation>
     </message>
     <message>
-        <source>Convert every card of your note type to the current card format</source>
-        <translation>Converteix totes les targetes del vostre tipus de nota al format de targeta actual</translation>
+        <source>Refresh the dictionary styling on every card of your note type</source>
+        <translation>Actualitza l'estil del diccionari a totes les targetes del vostre tipus de nota</translation>
     </message>
     <message>
         <source>Cancel</source>
@@ -7222,12 +7234,12 @@ Paraules que s'afegiran: %3. Voleu continuar?</translation>
         <translation>Reaplica l'estil a les targetes extretes</translation>
     </message>
     <message>
-        <source>Converts your mined cards to the current card format, so your note type styles them.
+        <source>Re-applies the current built-in styling to your mined cards.
 
 Close Anki's card browser and note editor first — an open note can lose unsaved edits.
 
 Continue?</source>
-        <translation>Converteix les vostres targetes extretes al format de targeta actual, perquè el vostre tipus de nota els apliqui l'estil.
+        <translation>Torna a aplicar l'estil integrat actual a les vostres targetes extretes.
 
 Tanqueu primer el navegador de targetes i l'editor de notes de l'Anki: una nota oberta pot perdre els canvis no desats.
 

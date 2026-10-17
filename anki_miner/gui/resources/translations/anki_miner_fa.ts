@@ -2920,6 +2920,14 @@ No index files are deleted.</source>
         <translation>انتخاب کنید کارت‌های جدید در کدام دسته Anki و با کدام نوع یادداشت ساخته شوند.</translation>
     </message>
     <message>
+        <source>Card styling / CSS</source>
+        <translation>سبک کارت / CSS</translation>
+    </message>
+    <message>
+        <source>Apply a built-in card style or your own CSS.</source>
+        <translation>یک سبک کارت داخلی یا CSS خودتان را اعمال کنید.</translation>
+    </message>
+    <message>
         <source>Furigana / readings</source>
         <translation>فوریگانا / خوانش‌ها</translation>
     </message>
@@ -3108,8 +3116,8 @@ No index files are deleted.</source>
         <translation>تغییر سبک کارت‌های استخراج‌شده</translation>
     </message>
     <message>
-        <source>Convert cards you mined earlier to the current card format, so your note type styles them -- Utilities → Card Backfill.</source>
-        <translation>کارت‌هایی را که پیش‌تر استخراج کرده‌اید به قالب فعلی کارت تبدیل کنید تا نوع یادداشت شما سبک آن‌ها را تعیین کند — امکانات ← تکمیل کارت.</translation>
+        <source>Re-apply the latest Anki Miner styling to cards you mined earlier -- Utilities → Card Backfill.</source>
+        <translation>آخرین سبک Anki Miner را دوباره روی کارت‌هایی که پیش‌تر استخراج کرده‌اید اعمال کنید — امکانات ← تکمیل کارت.</translation>
     </message>
     <message>
         <source>System health check</source>
@@ -3326,6 +3334,10 @@ No index files are deleted.</source>
         <translation>بازنویسی مقادیر موجود</translation>
     </message>
     <message>
+        <source>Overwritten cards may need to use Restyle cards… to refresh their styling.</source>
+        <translation>کارت‌های بازنویسی‌شده ممکن است برای تازه‌سازی سبکشان به «تغییر سبک کارت‌ها…» نیاز داشته باشند.</translation>
+    </message>
+    <message>
         <source>Scan Anki (read-only)</source>
         <translation>پویش Anki (فقط خواندنی)</translation>
     </message>
@@ -3334,8 +3346,8 @@ No index files are deleted.</source>
         <translation>تغییر سبک کارت‌ها…</translation>
     </message>
     <message>
-        <source>Convert every card of your note type to the current card format</source>
-        <translation>تبدیل همه کارت‌های نوع یادداشت شما به قالب فعلی کارت</translation>
+        <source>Refresh the dictionary styling on every card of your note type</source>
+        <translation>تازه‌سازی سبک واژه‌نامه روی همه کارت‌های نوع یادداشت شما</translation>
     </message>
     <message>
         <source>Cancel</source>
@@ -7184,12 +7196,12 @@ Words to add: %3. Continue?</source>
         <translation>تغییر سبک کارت‌های استخراج‌شده</translation>
     </message>
     <message>
-        <source>Converts your mined cards to the current card format, so your note type styles them.
+        <source>Re-applies the current built-in styling to your mined cards.
 
 Close Anki's card browser and note editor first — an open note can lose unsaved edits.
 
 Continue?</source>
-        <translation>کارت‌های استخراج‌شده شما را به قالب فعلی کارت تبدیل می‌کند تا نوع یادداشت شما سبک آن‌ها را تعیین کند.
+        <translation>سبک داخلی فعلی را دوباره روی کارت‌های استخراج‌شده شما اعمال می‌کند.
 
 ابتدا مرورگر کارت و ویرایشگر یادداشت Anki را ببندید — یادداشتی که باز است ممکن است ویرایش‌های ذخیره‌نشده را از دست بدهد.
 

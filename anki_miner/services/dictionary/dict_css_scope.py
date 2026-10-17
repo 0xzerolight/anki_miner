@@ -35,10 +35,8 @@ resolves against the scoped parent selector — exactly as it does under Yomitan
 
 from __future__ import annotations
 
-import html as html_lib
 import logging
 import re
-from collections.abc import Iterable
 
 logger = logging.getLogger(__name__)
 
@@ -336,50 +334,3 @@ def _scope_at_rule(prelude: str, body: str | None, scopes: tuple[str, ...]) -> s
     if not inner:
         return ""
     return f"{prelude.strip()} {{\n{inner}\n}}"
-
-
-# Dictionary envelopes in a field body (internal markup or an exported card).
-# Restricted to ``<li`` so selectors inside a carried ``<style>`` never count.
-_ENVELOPE_RE = re.compile(r'<li data-dictionary="([^"]*)"(?: data-dictionary-id="([^"]*)")?')
-
-
-def is_internal_glossary(field_html: str) -> bool:
-    """Whether ``field_html`` carries Anki Miner's internal glossary markup.
-
-    Every release since v2.4.0 opens it with ``<div class="yomitan-glossary">``
-    then ``<ol data-count="1">``; an exported card (``anki_export``) and a
-    Yomitan-mined card carry no ``data-count`` on their ``<ol>``.
-    """
-    return bool(field_html) and "yomitan-glossary" in field_html and '<ol data-count="' in field_html
-
-
-def filter_dict_css_entries(field_html: str, entries: Iterable[tuple[str, str, str]]) -> str:
-    """Join the scoped CSS of exactly the dictionaries present in ``field_html``.
-
-    ``entries`` is ``collect_dictionary_css_entries`` output: ordered
-    ``(dict_id, display_name, scoped_css)`` triples, duplicates preserved. New
-    envelopes carrying ``data-dictionary-id`` match only by stable ID, preserving
-    same-title isolation. Legacy envelopes lacking that attribute match by their
-    ``html.unescape``d display title for back-compat.
-    """
-    envelopes = [
-        (html_lib.unescape(title), html_lib.unescape(dict_id) if dict_id else None)
-        for title, dict_id in _ENVELOPE_RE.findall(field_html)
-    ]
-    ids = {dict_id for _, dict_id in envelopes if dict_id is not None}
-    legacy_titles = {title for title, dict_id in envelopes if dict_id is None}
-    return "\n\n".join(css for dict_id, display_name, css in entries if dict_id in ids or display_name in legacy_titles)
-
-
-def attach_dict_css(field_html: str, *, dict_css_entries: Iterable[tuple[str, str, str]]) -> str:
-    """Return ``field_html`` with its dictionaries' scoped ``styles.css`` as one trailing ``<style>``.
-
-    Only the CSS of dictionaries present in the field is attached, and only to
-    internal miner markup. There is no base sheet: the note type styles the card,
-    as on a Yomitan-mined card (``anki_export`` moves the block inside the
-    exported ``<ol>``, where Yomitan puts it).
-    """
-    if not is_internal_glossary(field_html):
-        return field_html
-    css = filter_dict_css_entries(field_html, dict_css_entries)
-    return f"{field_html}<style>{css}</style>" if css.strip() else field_html

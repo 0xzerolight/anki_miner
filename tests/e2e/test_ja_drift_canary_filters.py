@@ -162,8 +162,7 @@ WHITELIST: tuple[str, ...] = ("しゃべる", "喋る", "コーヒー", "珈琲"
 #: but must never change.
 _PITCH_PATTERNS: tuple[str, ...] = ("0", "1", "2", "3")
 
-#: One definition of the exported card shape (anki_export): its gloss after the tag line.
-_GLOSS_RE = re.compile(r'<li data-dictionary="[^"]*"[^>]*>(?:<i>[^<]*</i> )?(.*?)</li>')
+_GLOSS_RE = re.compile(r'<li class="gloss-item">(.*?)</li>')
 
 
 def _terms() -> dict[str, str]:

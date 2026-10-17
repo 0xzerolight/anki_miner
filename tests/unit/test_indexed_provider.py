@@ -70,7 +70,7 @@ class TestIndexedDictProvider:
         assert '<li data-dictionary="DictName" data-dictionary-id="test-dict">' in result
         assert '<ul class="gloss-list" data-count="1">' in result
         assert "<i>(v1, expr, DictName)</i>" in result
-        assert '<li class="gloss-item" data-am-tags="v1, expr">eat</li>' in result
+        assert '<li class="gloss-item">eat</li>' in result
 
     def test_lookup_by_reading_fallback(self, tmp_path: Path):
         db = tmp_path / "test.sqlite"
@@ -90,7 +90,7 @@ class TestIndexedDictProvider:
         provider.load()
         result = provider.lookup("たべる")
         assert result is not None
-        assert '<li class="gloss-item" data-am-tags="">eat</li>' in result
+        assert '<li class="gloss-item">eat</li>' in result
 
     def test_unrelated_lexemes_render_as_separate_sequence_groups(self, tmp_path: Path):
         """Two different lexemes sharing a reading but with DIFFERENT sequences
@@ -125,13 +125,10 @@ class TestIndexedDictProvider:
         # Still exactly one outer <li data-dictionary> envelope (CSS compat).
         assert result.count("<li data-dictionary=") == 1
         # Two per-group gloss-lists: bridge (1 item) and chopsticks (2 items).
-        assert (
-            '<ul class="gloss-list" data-count="1"><li class="gloss-item" data-am-tags="n, common">bridge</li></ul>'
-            in result
-        )
+        assert '<ul class="gloss-list" data-count="1"><li class="gloss-item">bridge</li></ul>' in result
         assert (
             '<ul class="gloss-list" data-count="2">'
-            '<li class="gloss-item" data-am-tags="common, food">chopsticks</li><li class="gloss-item">eating sticks</li></ul>'
+            '<li class="gloss-item">chopsticks</li><li class="gloss-item">eating sticks</li></ul>'
         ) in result
         # Per-group tag lines — NOT unioned across the two lexemes.
         assert "<i>(n, common, DictName)</i>" in result
@@ -249,7 +246,7 @@ class TestIndexedDictProvider:
         provider.load()
         result = provider.lookup("x")
         assert result is not None
-        assert '<li class="gloss-item" data-am-tags="">x</li>' in result
+        assert '<li class="gloss-item">x</li>' in result
         provider.close()
         assert provider.is_available() is False
         assert provider.lookup("x") is None
@@ -382,7 +379,7 @@ class TestIndexedDictProvider:
         assert not error, f"Cross-thread lookup raised: {error}"
         assert len(result) == 1
         assert result[0] is not None
-        assert '<li class="gloss-item" data-am-tags="">eat</li>' in result[0]
+        assert '<li class="gloss-item">eat</li>' in result[0]
 
 
 class TestIndexedDictProviderLookupMany:
@@ -521,7 +518,7 @@ class TestDedupBeforeCap:
         result = provider.lookup("同")
         assert result is not None
         # Exactly _DISPLAY_LIMIT gloss-items rendered (the first 5 by sequence).
-        assert result.count('<li class="gloss-item"') == _DISPLAY_LIMIT
+        assert result.count('<li class="gloss-item">') == _DISPLAY_LIMIT
         present = [i for i in range(8) if f">m{i}</li>" in result]
         assert present == list(range(_DISPLAY_LIMIT))  # m0..m4 kept, m5..m7 dropped
 
@@ -547,7 +544,7 @@ class TestDedupBeforeCap:
         provider.load()
         result = provider.lookup("打つ")
         assert result is not None
-        assert result.count('<li class="gloss-item"') == _DISPLAY_LIMIT
+        assert result.count('<li class="gloss-item">') == _DISPLAY_LIMIT
         # One sequence ⇒ one group ⇒ one gloss-list.
         assert result.count('<ul class="gloss-list"') == 1
 
@@ -570,8 +567,8 @@ class TestDedupBeforeCap:
         assert result is not None
         # dup once + s0..s3 == 5 unique senses (naive LIMIT-5 pre-dedup would show
         # dup once + s0..s2 == 4). s3 surviving is the dedup-before-cap fix.
-        assert result.count('<li class="gloss-item"') == _DISPLAY_LIMIT
-        assert result.count('<li class="gloss-item" data-am-tags="">dup</li>') == 1
+        assert result.count('<li class="gloss-item">') == _DISPLAY_LIMIT
+        assert result.count('<li class="gloss-item">dup</li>') == 1
         assert ">s3</li>" in result
 
 
@@ -675,7 +672,7 @@ class TestKanaDedup:
         result = provider.lookup("にほん")
         assert result is not None
         # Gloss must appear exactly once in the rendered HTML
-        assert result.count('<li class="gloss-item" data-am-tags="n">Japan</li>') == 1
+        assert result.count('<li class="gloss-item">Japan</li>') == 1
 
     def test_kana_lookup_many_renders_gloss_once(self, tmp_path: Path):
         """lookup_many path also deduplicates identical content rows."""
@@ -697,7 +694,7 @@ class TestKanaDedup:
 
         result = provider.lookup_many([("にほん", None)])["にほん"]
         assert result is not None
-        assert result.count('<li class="gloss-item" data-am-tags="n">Japan</li>') == 1
+        assert result.count('<li class="gloss-item">Japan</li>') == 1
 
     def test_dedup_produces_same_result_as_single_lookup(self, tmp_path: Path):
         """lookup_many and lookup must agree after dedup (byte-identical)."""
@@ -746,8 +743,8 @@ class TestKanaDedup:
 
         result = provider.lookup("はし")
         assert result is not None
-        assert '<li class="gloss-item" data-am-tags="n">bridge</li>' in result
-        assert '<li class="gloss-item" data-am-tags="n">chopsticks</li>' in result
+        assert '<li class="gloss-item">bridge</li>' in result
+        assert '<li class="gloss-item">chopsticks</li>' in result
 
     def test_dedup_still_unions_tags(self, tmp_path: Path):
         """When a duplicate content row has extra tags, they must be UNIONed in."""
@@ -778,7 +775,7 @@ class TestKanaDedup:
         result = provider.lookup("にほんご")
         assert result is not None
         # Content appears exactly once
-        assert result.count('<li class="gloss-item" data-am-tags="common, n, lang">Japanese</li>') == 1
+        assert result.count('<li class="gloss-item">Japanese</li>') == 1
         # Tags from both rows should be unioned (n, lang, common)
         assert "n" in result
         assert "lang" in result
@@ -945,9 +942,9 @@ class TestIndexedDictProviderDatabaseErrorGuard:
 class TestDictionaryCss:
     """Per-dictionary styles.css exposed (scoped) via ``dictionary_css``.
 
-    The scoped CSS is attached per card field by
-    ``dict_css_scope.attach_dict_css``, never by ``_render``, which must never
-    emit a ``<style>`` block.
+    The scoped CSS is folded into the shared note-type managed block by
+    ``collect_dictionary_css`` — it is NOT injected per card. ``_render`` must
+    never emit a ``<style>`` block.
     """
 
     def _seed(self, db_path: Path, *, styles_css: str | None) -> None:
@@ -998,55 +995,70 @@ class TestDictionaryCss:
         assert "evil" not in out
 
 
-class TestCompactTagStamp:
-    """Yomitan compactTags plus shared-tag dedupe, stamped per definition for anki_export."""
+class TestHasStylesStamp:
+    """``data-has-styles`` gates the base sheet's data-sc-* gap-fillers.
 
-    @staticmethod
-    def _render(rows, tag_meta):
-        provider = IndexedDictProvider("d", Path("/nonexistent"), display_name="D")
-        provider._tag_cache = tag_meta
-        return provider._render(rows)
+    The envelope is stamped iff the dictionary shipped usable (non-empty after
+    scoping/sanitizing) styles.css, so glossary.css's
+    ``li[data-dictionary]:not([data-has-styles])`` rules switch off exactly for
+    entries the dictionary styles itself.
+    """
 
-    @staticmethod
-    def _item(gloss):
-        return f'<li class="gloss-item"><div class="gloss-content">{gloss}</div></li>'
+    def _seed(self, db_path: Path, *, styles_css: str | None, name: str = "Jitendex.org [2026-06-06]") -> None:
+        create_index(db_path)
+        bulk_insert(
+            db_path,
+            [DictRow(term="食べる", reading="たべる", content='<li class="gloss-item">eat</li>', sequence=1)],
+        )
+        meta = {"schema_version": str(SCHEMA_VERSION), "source_name": name}
+        if styles_css is not None:
+            meta["styles_css"] = styles_css
+        write_meta(db_path, meta)
 
-    def test_tags_on_every_definition_show_once(self):
-        meta = {
-            "⭐": TagMeta("⭐", "popular", -10, "common", 0.0),  # JMdict's popular tag sorts first
-            "v1": TagMeta("v1", "partOfSpeech", 0, "Ichidan verb", 0.0),
-            "vt": TagMeta("vt", "partOfSpeech", 0, "transitive", 0.0),
-        }
-        html = self._render([(self._item("eat"), "v1 vt ⭐", 1), (self._item("live on"), "v1 vt ⭐", 1)], meta)
-        assert 'data-am-tags="⭐, v1, vt"><div class="gloss-content">eat<' in html
-        assert 'data-am-tags=""><div class="gloss-content">live on<' in html
+    def test_stamped_when_styles_css_present(self, tmp_path: Path):
+        db = tmp_path / "t.sqlite"
+        self._seed(db, styles_css='span[data-sc-class="tag"] { color: red }')
+        provider = IndexedDictProvider("jitendex", db, display_name="Jitendex.org [2026-06-06]")
+        assert provider.load() is True
+        out = provider.lookup("食べる")
+        assert out is not None
+        assert (
+            '<li data-dictionary="Jitendex.org [2026-06-06]" data-dictionary-id="jitendex" data-has-styles="">' in out
+        )
 
-    def test_repeated_part_of_speech_drops_but_new_misc_tag_shows(self):
-        meta = {
-            "n": TagMeta("n", "partOfSpeech", 0, "noun", 0.0),
-            "uk": TagMeta("uk", "misc", 0, "usually kana", 0.0),
-            "col": TagMeta("col", "misc", 0, "colloquial", 0.0),
-        }
-        rows = [(self._item("a"), "n uk", 1), (self._item("b"), "n col", 1), (self._item("c"), "n", 2)]
-        html = self._render(rows, meta)
-        assert 'data-am-tags="n, uk"><div class="gloss-content">a<' in html  # first of its group
-        assert 'data-am-tags="col"><div class="gloss-content">b<' in html  # n shared in group
-        assert 'data-am-tags=""><div class="gloss-content">c<' in html  # same POS as previous
+    def test_unstamped_without_styles_css(self, tmp_path: Path):
+        db = tmp_path / "t.sqlite"
+        self._seed(db, styles_css=None)
+        provider = IndexedDictProvider("jitendex", db, display_name="Jitendex.org [2026-06-06]")
+        assert provider.load() is True
+        out = provider.lookup("食べる")
+        assert out is not None
+        assert '<li data-dictionary="Jitendex.org [2026-06-06]" data-dictionary-id="jitendex">' in out
+        assert "data-has-styles" not in out
 
-    def test_changed_part_of_speech_is_kept(self):
-        meta = {"n": TagMeta("n", "partOfSpeech", 0, "noun", 0.0), "vs": TagMeta("vs", "partOfSpeech", 0, "suru", 0.0)}
-        html = self._render([(self._item("a"), "n", None), (self._item("b"), "vs", None)], meta)
-        assert 'data-am-tags="n"><div class="gloss-content">a<' in html
-        assert 'data-am-tags="vs"><div class="gloss-content">b<' in html
+    def test_unstamped_when_sanitizer_rejects_styles_css(self, tmp_path: Path):
+        db = tmp_path / "t.sqlite"
+        self._seed(db, styles_css="a { background: url(http://evil/x.png) }")
+        provider = IndexedDictProvider("jitendex", db, display_name="Jitendex.org [2026-06-06]")
+        assert provider.load() is True
+        out = provider.lookup("食べる")
+        assert out is not None
+        assert '<li data-dictionary="Jitendex.org [2026-06-06]" data-dictionary-id="jitendex">' in out
+        assert "data-has-styles" not in out
 
-    def test_label_is_attribute_escaped(self):
-        assert 'data-am-tags="x&quot;&lt;y"' in self._render([(self._item("a"), 'x"<y', None)], {})
-
-    def test_envelope_is_never_stamped_with_has_styles(self):
-        provider = IndexedDictProvider("d", Path("/nonexistent"), display_name="D")
-        provider._tag_cache = {}
-        provider._scoped_css = '.yomitan-glossary [data-dictionary-id="d"] b{}'
-        assert "data-has-styles" not in provider._render([(self._item("a"), "", None)])
+    def test_mixed_field_stamps_exactly_the_styled_envelope(self, tmp_path: Path):
+        styled_db = tmp_path / "styled.sqlite"
+        plain_db = tmp_path / "plain.sqlite"
+        self._seed(styled_db, styles_css="li { color: red }", name="Styled Dict")
+        self._seed(plain_db, styles_css=None, name="Plain Dict")
+        styled = IndexedDictProvider("styled", styled_db, display_name="Styled Dict")
+        plain = IndexedDictProvider("plain", plain_db, display_name="Plain Dict")
+        assert styled.load() is True
+        assert plain.load() is True
+        field = (styled.lookup("食べる") or "") + (plain.lookup("食べる") or "")
+        assert '<li data-dictionary="Styled Dict" data-dictionary-id="styled" data-has-styles="">' in field
+        assert '<li data-dictionary="Plain Dict" data-dictionary-id="plain">' in field
+        assert field.count("data-has-styles") == 1
 
 
 # ---------------------------------------------------------------------------

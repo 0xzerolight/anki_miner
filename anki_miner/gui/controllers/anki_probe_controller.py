@@ -1,8 +1,8 @@
-"""AnkiConnect probe workers for the Settings tab (fields / decks / note types).
+"""AnkiConnect probe workers for the Settings tab (fields / decks / styling).
 
 Extracted from ``SettingsTab`` (T-66). Owns the short-lived AnkiConnect worker
-threads — fetch note-type fields for "Fill in automatically", fetch the deck and
-note-type lists — and surfaces their live handles through
+threads — fetch note-type fields for "Fill in automatically", fetch deck list, and the card-styling write +
+read-only probe — and surfaces their live handles through
 :meth:`iter_close_workers` so ``MainWindow.closeEvent`` can route each through
 its single join policy (the tab's ``iter_close_workers`` delegates here).
 
@@ -41,7 +41,7 @@ class AnkiProbeController:
             worker threads (the settings tab), preserving lifetime and
             modality semantics.
         anki_panel: Source of the note-type / URL inputs and target of the
-            field-list status feedback.
+            field-list + styling status feedback.
         filtering_panel: Target of the fetched deck list (excluded-decks
             picker, Issue #38).
         sentences_panel: Owner of "Bold target word in sentence", which a fill

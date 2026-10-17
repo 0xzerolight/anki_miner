@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:59bb362dc4da97e4 -->
+<!-- i18n-source: README.md sha256:ecd0ab0242935ee3 -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -163,7 +163,7 @@ anki_miner_gui
 - Xem trước video bằng libmpv nhúng - phát cảnh phim của một từ trong lúc chọn lọc, hoặc tinh chỉnh thời gian phụ đề với phát trực tiếp.
 - Ảnh chụp màn hình động (xem thẻ ví dụ ở trên).
 - Hồ sơ cài đặt - lưu các cấu hình có tên và chuyển đổi giữa chúng từ thanh tiêu đề.
-- Tạo lại kiểu cho thẻ đã khai thác - chuyển những thẻ bạn đã tạo sang định dạng thẻ hiện tại (Tiện ích → Điền dữ liệu còn thiếu cho thẻ).
+- Tạo lại kiểu cho thẻ đã khai thác - áp dụng lại kiểu thẻ hiện tại của bạn cho những thẻ bạn đã tạo (Tiện ích → Điền dữ liệu còn thiếu cho thẻ).
 
 <details>
 <summary><strong>Chủ đề tích hợp sẵn (29)</strong></summary>

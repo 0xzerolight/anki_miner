@@ -10,6 +10,7 @@ from anki_miner.config import AnkiMinerConfig, ChainEntry
 from anki_miner.languages.registry import get_profile
 from anki_miner.services.definition_service import (
     DefinitionService,
+    collect_dictionary_css,
     collect_dictionary_css_entries,
 )
 from anki_miner.services.dictionary.providers import indexed_provider as indexed_provider_module
@@ -109,22 +110,17 @@ class TestHasUsableOfflineProvider:
         registry.load.assert_not_called()
 
 
-def _joined_css(config: AnkiMinerConfig) -> str:
-    """Every entry's scoped CSS joined in chain order, the shape these tests read."""
-    return "\n\n".join(css for _, _, css in collect_dictionary_css_entries(config))
-
-
 class TestCollectDictionaryCss:
-    """``collect_dictionary_css_entries`` is the Yomitan ``_getCustomCss`` analog: each
-    enabled indexed dict's scoped ``styles.css`` in chain order."""
+    """``collect_dictionary_css`` is the Yomitan ``_getCustomCss`` analog: each
+    enabled indexed dict's scoped ``styles.css`` concatenated in chain order."""
 
     def test_empty_for_no_chain(self, tmp_path: Path):
-        assert _joined_css(_config(tmp_path)) == ""
+        assert collect_dictionary_css(_config(tmp_path)) == ""
 
     def test_concatenates_scoped_css_in_chain_order(self, tmp_path: Path):
         _seed_dict(tmp_path, "a-dict", "A", styles_css="span { color: red }")
         _seed_dict(tmp_path, "b-dict", "B", styles_css="span { color: blue }")
-        css = _joined_css(
+        css = collect_dictionary_css(
             _config(
                 tmp_path,
                 ChainEntry(kind="indexed", dict_id="a-dict", enabled=True),
@@ -139,7 +135,7 @@ class TestCollectDictionaryCss:
     def test_skips_disabled_dict(self, tmp_path: Path):
         _seed_dict(tmp_path, "a-dict", "A", styles_css="span { color: red }")
         _seed_dict(tmp_path, "b-dict", "B", styles_css="span { color: blue }")
-        css = _joined_css(
+        css = collect_dictionary_css(
             _config(
                 tmp_path,
                 ChainEntry(kind="indexed", dict_id="a-dict", enabled=True),
@@ -151,12 +147,14 @@ class TestCollectDictionaryCss:
 
     def test_skips_dict_without_styles(self, tmp_path: Path):
         _seed_dict(tmp_path, "a-dict", "A", styles_css=None)
-        assert _joined_css(_config(tmp_path, ChainEntry(kind="indexed", dict_id="a-dict", enabled=True))) == ""
+        assert (
+            collect_dictionary_css(_config(tmp_path, ChainEntry(kind="indexed", dict_id="a-dict", enabled=True))) == ""
+        )
 
     def test_distinct_titles_stay_isolated(self, tmp_path: Path):
         _seed_dict(tmp_path, "a-dict", "A", styles_css="span { color: red }")
         _seed_dict(tmp_path, "b-dict", "B", styles_css="span { color: blue }")
-        css = _joined_css(
+        css = collect_dictionary_css(
             _config(
                 tmp_path,
                 ChainEntry(kind="indexed", dict_id="a-dict", enabled=True),
@@ -178,7 +176,7 @@ class TestCollectDictionaryCss:
         _seed_dict(tmp_path, "a-dict", "Same", styles_css="span { color: red }")
         _seed_dict(tmp_path, "b-dict", "Same", styles_css="span { color: blue }")
 
-        css = _joined_css(
+        css = collect_dictionary_css(
             _config(
                 tmp_path,
                 ChainEntry(kind="indexed", dict_id="a-dict", enabled=True),
@@ -216,6 +214,19 @@ class TestCollectDictionaryCssEntries:
             )
         )
         assert [(dict_id, display_name) for dict_id, display_name, _ in entries] == [("b-dict", "B")]
+
+    def test_collect_dictionary_css_is_join_of_entries(self, tmp_path: Path):
+        # Byte-equivalence pin: the string collector is exactly the "\n\n" join
+        # of the entries' CSS — the two can never drift.
+        _seed_dict(tmp_path, "a-dict", "A", styles_css="span { color: red }")
+        _seed_dict(tmp_path, "b-dict", "B", styles_css="span { color: blue }")
+        config = _config(
+            tmp_path,
+            ChainEntry(kind="indexed", dict_id="a-dict", enabled=True),
+            ChainEntry(kind="indexed", dict_id="b-dict", enabled=True),
+        )
+        entries = collect_dictionary_css_entries(config)
+        assert collect_dictionary_css(config) == "\n\n".join(css for _, _, css in entries)
 
 
 class TestCssEntries:

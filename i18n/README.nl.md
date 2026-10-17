@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:59bb362dc4da97e4 -->
+<!-- i18n-source: README.md sha256:ecd0ab0242935ee3 -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -163,7 +163,7 @@ Voor een volledige ontwikkelomgeving, zie [CONTRIBUTING.md](../CONTRIBUTING.md).
 - Ingebouwd videovoorbeeld met libmpv - speel de scène van een woord af tijdens het selecteren, of verschuif de ondertiteltiming terwijl de video speelt.
 - Geanimeerde schermafbeeldingen (zie de voorbeeldkaarten hierboven).
 - Instellingenprofielen - sla benoemde configuraties op en wissel ertussen vanuit de kop van het venster.
-- Geminede kaarten opnieuw opmaken - zet kaarten die je al hebt gemaakt om naar het huidige kaartformaat (Hulpmiddelen → Aanvullen).
+- Geminede kaarten opnieuw opmaken - pas je huidige kaartopmaak opnieuw toe op kaarten die je al hebt gemaakt (Hulpmiddelen → Aanvullen).
 
 <details>
 <summary><strong>Ingebouwde thema's (29)</strong></summary>

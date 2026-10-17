@@ -2923,6 +2923,14 @@ Es werden keine Indexdateien gelöscht.</translation>
         <translation>Auswählen, in welchem Anki-Stapel und Notiztyp neue Karten erstellt werden.</translation>
     </message>
     <message>
+        <source>Card styling / CSS</source>
+        <translation>Kartengestaltung / CSS</translation>
+    </message>
+    <message>
+        <source>Apply a built-in card style or your own CSS.</source>
+        <translation>Einen integrierten Kartenstil oder eigenes CSS anwenden.</translation>
+    </message>
+    <message>
         <source>Furigana / readings</source>
         <translation>Furigana / Lesungen</translation>
     </message>
@@ -3111,8 +3119,8 @@ Es werden keine Indexdateien gelöscht.</translation>
         <translation>Gesammelte Karten neu gestalten</translation>
     </message>
     <message>
-        <source>Convert cards you mined earlier to the current card format, so your note type styles them -- Utilities → Card Backfill.</source>
-        <translation>Früher gesammelte Karten in das aktuelle Kartenformat umwandeln, damit Ihr Notiztyp sie gestaltet — Werkzeuge → Karten-Nachbefüllung.</translation>
+        <source>Re-apply the latest Anki Miner styling to cards you mined earlier -- Utilities → Card Backfill.</source>
+        <translation>Die aktuelle Anki-Miner-Gestaltung erneut auf früher gesammelte Karten anwenden — Werkzeuge → Karten-Nachbefüllung.</translation>
     </message>
     <message>
         <source>System health check</source>
@@ -3329,6 +3337,10 @@ Es werden keine Indexdateien gelöscht.</translation>
         <translation>Vorhandene Werte überschreiben</translation>
     </message>
     <message>
+        <source>Overwritten cards may need to use Restyle cards… to refresh their styling.</source>
+        <translation>Überschriebene Karten benötigen eventuell „Karten neu gestalten…“, um ihre Gestaltung zu aktualisieren.</translation>
+    </message>
+    <message>
         <source>Scan Anki (read-only)</source>
         <translation>Anki durchsuchen (nur lesen)</translation>
     </message>
@@ -3337,8 +3349,8 @@ Es werden keine Indexdateien gelöscht.</translation>
         <translation>Karten neu gestalten…</translation>
     </message>
     <message>
-        <source>Convert every card of your note type to the current card format</source>
-        <translation>Jede Karte Ihres Notiztyps in das aktuelle Kartenformat umwandeln</translation>
+        <source>Refresh the dictionary styling on every card of your note type</source>
+        <translation>Die Wörterbuch-Gestaltung auf jeder Karte Ihres Notiztyps aktualisieren</translation>
     </message>
     <message>
         <source>Cancel</source>
@@ -7222,12 +7234,12 @@ Hinzuzufügende Wörter: %3. Fortfahren?</translation>
         <translation>Gesammelte Karten neu gestalten</translation>
     </message>
     <message>
-        <source>Converts your mined cards to the current card format, so your note type styles them.
+        <source>Re-applies the current built-in styling to your mined cards.
 
 Close Anki's card browser and note editor first — an open note can lose unsaved edits.
 
 Continue?</source>
-        <translation>Wandelt Ihre gesammelten Karten in das aktuelle Kartenformat um, damit Ihr Notiztyp sie gestaltet.
+        <translation>Wendet die aktuelle integrierte Gestaltung erneut auf Ihre gesammelten Karten an.
 
 Schließen Sie zuerst Ankis Kartenbrowser und Notizeditor — eine geöffnete Notiz kann ungespeicherte Änderungen verlieren.
 

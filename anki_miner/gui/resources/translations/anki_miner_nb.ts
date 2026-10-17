@@ -2923,6 +2923,14 @@ Ingen indeksfiler slettes.</translation>
         <translation>Velg hvilken Anki-kortstokk og notattype nye kort opprettes i.</translation>
     </message>
     <message>
+        <source>Card styling / CSS</source>
+        <translation>Kortstil / CSS</translation>
+    </message>
+    <message>
+        <source>Apply a built-in card style or your own CSS.</source>
+        <translation>Bruk en innebygd kortstil eller din egen CSS.</translation>
+    </message>
+    <message>
         <source>Furigana / readings</source>
         <translation>Furigana / lesinger</translation>
     </message>
@@ -3111,8 +3119,8 @@ Ingen indeksfiler slettes.</translation>
         <translation>Restil utvunnede kort</translation>
     </message>
     <message>
-        <source>Convert cards you mined earlier to the current card format, so your note type styles them -- Utilities → Card Backfill.</source>
-        <translation>Konverter kort du har utvunnet tidligere til det gjeldende kortformatet, slik at notattypen din bestemmer stilen deres – Hjelpemidler → Etterfyll kort.</translation>
+        <source>Re-apply the latest Anki Miner styling to cards you mined earlier -- Utilities → Card Backfill.</source>
+        <translation>Bruk den nyeste Anki Miner-stilen på nytt på kort du har utvunnet tidligere – Hjelpemidler → Etterfyll kort.</translation>
     </message>
     <message>
         <source>System health check</source>
@@ -3329,6 +3337,10 @@ Ingen indeksfiler slettes.</translation>
         <translation>Overskriv eksisterende verdier</translation>
     </message>
     <message>
+        <source>Overwritten cards may need to use Restyle cards… to refresh their styling.</source>
+        <translation>Overskrevne kort kan trenge Restil kort… for å oppdatere stilen.</translation>
+    </message>
+    <message>
         <source>Scan Anki (read-only)</source>
         <translation>Skann Anki (skrivebeskyttet)</translation>
     </message>
@@ -3337,8 +3349,8 @@ Ingen indeksfiler slettes.</translation>
         <translation>Restil kort…</translation>
     </message>
     <message>
-        <source>Convert every card of your note type to the current card format</source>
-        <translation>Konverter alle kort med notattypen din til det gjeldende kortformatet</translation>
+        <source>Refresh the dictionary styling on every card of your note type</source>
+        <translation>Oppdater ordbokstilen på alle kort med notattypen din</translation>
     </message>
     <message>
         <source>Cancel</source>
@@ -7222,12 +7234,12 @@ Ord som legges til: %3. Vil du fortsette?</translation>
         <translation>Restil utvunnede kort</translation>
     </message>
     <message>
-        <source>Converts your mined cards to the current card format, so your note type styles them.
+        <source>Re-applies the current built-in styling to your mined cards.
 
 Close Anki's card browser and note editor first — an open note can lose unsaved edits.
 
 Continue?</source>
-        <translation>Konverterer de utvunnede kortene dine til det gjeldende kortformatet, slik at notattypen din bestemmer stilen deres.
+        <translation>Bruker den gjeldende innebygde stilen på nytt på de utvunnede kortene dine.
 
 Lukk «Bla gjennom»-vinduet og notatredigeringen i Anki først – et åpent notat kan miste ulagrede endringer.
 

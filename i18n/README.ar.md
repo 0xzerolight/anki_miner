@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:59bb362dc4da97e4 -->
+<!-- i18n-source: README.md sha256:ecd0ab0242935ee3 -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -165,7 +165,7 @@ anki_miner_gui
 - معاينة فيديو مضمّنة عبر libmpv - شغّل مشهد الكلمة أثناء التنقيح، أو اضبط توقيت الترجمة مع تشغيل مباشر.
 - لقطات شاشة متحركة (انظر أمثلة البطاقات أعلاه).
 - ملفات تعريف الإعدادات - احفظ إعدادات مسمّاة وبدّل بينها من الترويسة.
-- إعادة تنسيق البطاقات المستخرجة - حوّل البطاقات التي أنشأتها مسبقًا إلى صيغة البطاقات الحالية (مرافق ← إكمال البطاقات).
+- إعادة تنسيق البطاقات المستخرجة - أعد تطبيق تنسيق البطاقات الحالي على البطاقات التي أنشأتها مسبقًا (مرافق ← إكمال البطاقات).
 
 <details>
 <summary><strong>السمات المدمجة (29)</strong></summary>

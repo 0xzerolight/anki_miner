@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:59bb362dc4da97e4 -->
+<!-- i18n-source: README.md sha256:ecd0ab0242935ee3 -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -163,7 +163,7 @@ anki_miner_gui
 - 埋め込み libmpv による動画プレビュー - キュレーション中に単語のシーンを再生したり、再生を見ながら字幕のタイミングを微調整したりできます。
 - アニメーションするスクリーンショット（上のカードの例を参照）。
 - 設定プロファイル - 名前を付けた設定を保存し、ヘッダーから切り替えられます。
-- マイニングしたカードのスタイルを再適用 - すでに作成済みのカードを現在のカード形式に変換します（ユーティリティ → カードの一括補完）。
+- マイニングしたカードのスタイルを再適用 - 現在のカードスタイルを、すでに作成済みのカードに適用し直します（ユーティリティ → カードの一括補完）。
 
 <details>
 <summary><strong>組み込みテーマ（29 種類）</strong></summary>

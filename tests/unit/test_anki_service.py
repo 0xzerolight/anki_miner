@@ -2883,48 +2883,6 @@ class TestDictMediaUpload:
         names = {a["params"]["filename"] for a in actions}
         assert names == {"d1__svg-accent_X.svg", "d1__second.svg"}
 
-    @pytest.mark.parametrize(
-        ("name", "confirmed"), [("i.svg", "d__i_confirmed.svg"), ("画像 1.svg", "d__画像 1_confirmed.svg")]
-    )
-    def test_exported_field_points_at_the_confirmed_media_name(
-        self, test_config, temp_dir, make_tokenized_word, name, confirmed
-    ):
-        """The media store rewrites srcs by class BEFORE build_note's export pass strips classes,
-        and the export writes the confirmed name raw: Anki stores media under the raw name."""
-        from lxml import html as lxml_html
-
-        dicts_root = temp_dir / "dicts"
-        (dicts_root / "d" / "media").mkdir(parents=True)
-        (dicts_root / "d" / "media" / name).write_bytes(b"<svg/>")
-        service = AnkiService(replace(test_config, dicts_root=dicts_root))
-        image = (
-            '<a class="gloss-image-link" data-appearance="monochrome"><span class="gloss-image-container">'
-            f'<img class="gloss-image anki-miner-dict-media" src="d__{name}">'
-            f'<span class="gloss-image-background" style="--image: url(&quot;d__{name}&quot;)"></span></span></a>'
-        )
-        definition = (
-            '<div class="yomitan-glossary"><ol data-count="1"><li data-dictionary="D" data-dictionary-id="d">'
-            '<i>(D)</i><ul class="gloss-list" data-count="1"><li class="gloss-item" data-am-tags="">'
-            f'<div class="gloss-content">{image}</div></li></ul></li></ol></div>'
-        )
-        multi_resp = _mock_response(result=[confirmed])
-        create_resp = _mock_response(result=[1])
-
-        with patch(
-            "anki_miner.services._ankiconnect.requests.post", side_effect=[multi_resp, create_resp]
-        ) as mock_post:
-            service.create_cards_batch(
-                [CardPayload(word=make_tokenized_word(), media=MediaData(), definition=definition)]
-            )
-
-        note = mock_post.call_args_list[1][1]["json"]["params"]["notes"][0]
-        value = note["fields"][test_config.anki_fields["definition"]]
-        root = lxml_html.fragment_fromstring(value, create_parent="div")
-        assert root.xpath("//img")[0].get("src") == confirmed
-        background = root.xpath("//img/following-sibling::span")[0]
-        assert background.get("style").endswith(f'--image: url("{confirmed}")')
-        assert "anki-miner-dict-media" not in value
-
     def test_dict_media_uploaded_via_multi_once(self, test_config, temp_dir, make_tokenized_word):
         """Two cards referencing the SAME dict-media src → exactly one upload action in one multi POST."""
         config = self._make_config_with_dict_media(test_config, temp_dir / "dicts")

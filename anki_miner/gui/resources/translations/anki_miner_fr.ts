@@ -2923,6 +2923,14 @@ Aucun fichier d'index n'est supprimé.</translation>
         <translation>Choisissez dans quel paquet Anki et quel type de note les nouvelles cartes sont créées.</translation>
     </message>
     <message>
+        <source>Card styling / CSS</source>
+        <translation>Style des cartes / CSS</translation>
+    </message>
+    <message>
+        <source>Apply a built-in card style or your own CSS.</source>
+        <translation>Applique un style de carte intégré ou votre propre CSS.</translation>
+    </message>
+    <message>
         <source>Furigana / readings</source>
         <translation>Furigana / lectures</translation>
     </message>
@@ -3111,8 +3119,8 @@ Aucun fichier d'index n'est supprimé.</translation>
         <translation>Réappliquer le style aux cartes extraites</translation>
     </message>
     <message>
-        <source>Convert cards you mined earlier to the current card format, so your note type styles them -- Utilities → Card Backfill.</source>
-        <translation>Convertissez les cartes que vous avez extraites précédemment au format de carte actuel, afin que votre type de note leur applique son style — Utilitaires → Complétion des cartes.</translation>
+        <source>Re-apply the latest Anki Miner styling to cards you mined earlier -- Utilities → Card Backfill.</source>
+        <translation>Réappliquez le dernier style d'Anki Miner aux cartes que vous avez extraites précédemment — Utilitaires → Complétion des cartes.</translation>
     </message>
     <message>
         <source>System health check</source>
@@ -3329,6 +3337,10 @@ Aucun fichier d'index n'est supprimé.</translation>
         <translation>Écraser les valeurs existantes</translation>
     </message>
     <message>
+        <source>Overwritten cards may need to use Restyle cards… to refresh their styling.</source>
+        <translation>Les cartes écrasées peuvent nécessiter « Redéfinir le style des cartes… » pour actualiser leur style.</translation>
+    </message>
+    <message>
         <source>Scan Anki (read-only)</source>
         <translation>Analyser Anki (lecture seule)</translation>
     </message>
@@ -3337,8 +3349,8 @@ Aucun fichier d'index n'est supprimé.</translation>
         <translation>Redéfinir le style des cartes…</translation>
     </message>
     <message>
-        <source>Convert every card of your note type to the current card format</source>
-        <translation>Convertir toutes les cartes de votre type de note au format de carte actuel</translation>
+        <source>Refresh the dictionary styling on every card of your note type</source>
+        <translation>Actualiser le style du dictionnaire sur toutes les cartes de votre type de note</translation>
     </message>
     <message>
         <source>Cancel</source>
@@ -7222,12 +7234,12 @@ Mots à ajouter : %3. Continuer ?</translation>
         <translation>Redéfinir le style des cartes extraites</translation>
     </message>
     <message>
-        <source>Converts your mined cards to the current card format, so your note type styles them.
+        <source>Re-applies the current built-in styling to your mined cards.
 
 Close Anki's card browser and note editor first — an open note can lose unsaved edits.
 
 Continue?</source>
-        <translation>Convertit vos cartes extraites au format de carte actuel, afin que votre type de note leur applique son style.
+        <translation>Réapplique le style intégré actuel à vos cartes extraites.
 
 Fermez d'abord le navigateur de cartes et l'éditeur de notes d'Anki — une note ouverte peut perdre des modifications non enregistrées.
 

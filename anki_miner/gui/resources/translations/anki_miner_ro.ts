@@ -2926,6 +2926,14 @@ Nu se șterge niciun fișier index.</translation>
         <translation>Alegeți pachetul Anki și tipul de notă în care se creează cardurile noi.</translation>
     </message>
     <message>
+        <source>Card styling / CSS</source>
+        <translation>Stilul cardurilor / CSS</translation>
+    </message>
+    <message>
+        <source>Apply a built-in card style or your own CSS.</source>
+        <translation>Aplicați un stil de card încorporat sau propriul CSS.</translation>
+    </message>
+    <message>
         <source>Furigana / readings</source>
         <translation>Furigana / citiri</translation>
     </message>
@@ -3114,8 +3122,8 @@ Nu se șterge niciun fișier index.</translation>
         <translation>Restilizează cardurile extrase</translation>
     </message>
     <message>
-        <source>Convert cards you mined earlier to the current card format, so your note type styles them -- Utilities → Card Backfill.</source>
-        <translation>Convertiți cardurile extrase anterior în formatul de card actual, astfel încât tipul de notă să le stabilească stilul -- Utilitare → Completare carduri.</translation>
+        <source>Re-apply the latest Anki Miner styling to cards you mined earlier -- Utilities → Card Backfill.</source>
+        <translation>Reaplicați cel mai recent stil Anki Miner cardurilor extrase anterior -- Utilitare → Completare carduri.</translation>
     </message>
     <message>
         <source>System health check</source>
@@ -3332,6 +3340,10 @@ Nu se șterge niciun fișier index.</translation>
         <translation>Suprascrie valorile existente</translation>
     </message>
     <message>
+        <source>Overwritten cards may need to use Restyle cards… to refresh their styling.</source>
+        <translation>Cardurile suprascrise pot necesita Restilizează cardurile… pentru a-și reîmprospăta stilul.</translation>
+    </message>
+    <message>
         <source>Scan Anki (read-only)</source>
         <translation>Scanează Anki (doar citire)</translation>
     </message>
@@ -3340,8 +3352,8 @@ Nu se șterge niciun fișier index.</translation>
         <translation>Restilizează cardurile…</translation>
     </message>
     <message>
-        <source>Convert every card of your note type to the current card format</source>
-        <translation>Convertește fiecare card al tipului de notă în formatul de card actual</translation>
+        <source>Refresh the dictionary styling on every card of your note type</source>
+        <translation>Reîmprospătează stilul dicționarului pe fiecare card al tipului de notă</translation>
     </message>
     <message>
         <source>Cancel</source>
@@ -7260,12 +7272,12 @@ Cuvinte de adăugat: %3. Continuați?</translation>
         <translation>Restilizează cardurile extrase</translation>
     </message>
     <message>
-        <source>Converts your mined cards to the current card format, so your note type styles them.
+        <source>Re-applies the current built-in styling to your mined cards.
 
 Close Anki's card browser and note editor first — an open note can lose unsaved edits.
 
 Continue?</source>
-        <translation>Convertește cardurile extrase în formatul de card actual, astfel încât tipul de notă să le stabilească stilul.
+        <translation>Reaplică stilul încorporat actual cardurilor extrase.
 
 Închideți mai întâi browserul de carduri și editorul de note din Anki — o notă deschisă poate pierde modificările nesalvate.
 

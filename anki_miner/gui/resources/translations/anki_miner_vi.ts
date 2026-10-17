@@ -2920,6 +2920,14 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Chọn bộ thẻ Anki và loại ghi chú mà thẻ mới được tạo trong đó.</translation>
     </message>
     <message>
+        <source>Card styling / CSS</source>
+        <translation>Tạo kiểu thẻ / CSS</translation>
+    </message>
+    <message>
+        <source>Apply a built-in card style or your own CSS.</source>
+        <translation>Áp dụng kiểu thẻ có sẵn hoặc CSS tùy chỉnh riêng.</translation>
+    </message>
+    <message>
         <source>Furigana / readings</source>
         <translation>Furigana / cách đọc</translation>
     </message>
@@ -3108,8 +3116,8 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Định dạng lại thẻ đã khai thác</translation>
     </message>
     <message>
-        <source>Convert cards you mined earlier to the current card format, so your note type styles them -- Utilities → Card Backfill.</source>
-        <translation>Chuyển đổi các thẻ đã khai thác trước đây sang định dạng thẻ hiện tại để loại ghi chú của bạn tạo kiểu cho chúng — Tiện ích → Điền dữ liệu còn thiếu cho thẻ.</translation>
+        <source>Re-apply the latest Anki Miner styling to cards you mined earlier -- Utilities → Card Backfill.</source>
+        <translation>Áp dụng lại kiểu định dạng Anki Miner mới nhất cho các thẻ đã khai thác trước đây — Tiện ích → Điền dữ liệu còn thiếu cho thẻ.</translation>
     </message>
     <message>
         <source>System health check</source>
@@ -3326,6 +3334,10 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Ghi đè giá trị hiện có</translation>
     </message>
     <message>
+        <source>Overwritten cards may need to use Restyle cards… to refresh their styling.</source>
+        <translation>Thẻ bị ghi đè có thể cần dùng Tạo lại kiểu thẻ… để làm mới kiểu định dạng.</translation>
+    </message>
+    <message>
         <source>Scan Anki (read-only)</source>
         <translation>Quét Anki (chỉ đọc)</translation>
     </message>
@@ -3334,8 +3346,8 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Tạo lại kiểu thẻ…</translation>
     </message>
     <message>
-        <source>Convert every card of your note type to the current card format</source>
-        <translation>Chuyển đổi mọi thẻ thuộc loại ghi chú của bạn sang định dạng thẻ hiện tại</translation>
+        <source>Refresh the dictionary styling on every card of your note type</source>
+        <translation>Làm mới kiểu định dạng từ điển trên mọi thẻ thuộc loại ghi chú của bạn</translation>
     </message>
     <message>
         <source>Cancel</source>
@@ -7184,12 +7196,12 @@ Số từ sẽ thêm: %3. Tiếp tục?</translation>
         <translation>Tạo lại kiểu cho thẻ đã khai thác</translation>
     </message>
     <message>
-        <source>Converts your mined cards to the current card format, so your note type styles them.
+        <source>Re-applies the current built-in styling to your mined cards.
 
 Close Anki's card browser and note editor first — an open note can lose unsaved edits.
 
 Continue?</source>
-        <translation>Chuyển đổi các thẻ bạn đã khai thác sang định dạng thẻ hiện tại để loại ghi chú của bạn tạo kiểu cho chúng.
+        <translation>Áp dụng lại kiểu dáng tích hợp hiện tại cho các thẻ bạn đã khai thác.
 
 Hãy đóng trình duyệt thẻ và trình sửa ghi chú của Anki trước — một ghi chú đang mở có thể mất các chỉnh sửa chưa lưu.
 

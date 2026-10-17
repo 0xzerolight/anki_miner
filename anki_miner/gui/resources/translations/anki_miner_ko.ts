@@ -2920,6 +2920,14 @@ No index files are deleted.</source>
         <translation>새 카드를 만들 Anki 덱과 노트 유형을 선택합니다.</translation>
     </message>
     <message>
+        <source>Card styling / CSS</source>
+        <translation>카드 스타일 / CSS</translation>
+    </message>
+    <message>
+        <source>Apply a built-in card style or your own CSS.</source>
+        <translation>기본 제공 카드 스타일이나 직접 작성한 CSS를 적용합니다.</translation>
+    </message>
+    <message>
         <source>Furigana / readings</source>
         <translation>후리가나 / 읽기</translation>
     </message>
@@ -3108,8 +3116,8 @@ No index files are deleted.</source>
         <translation>마이닝한 카드 스타일 다시 적용</translation>
     </message>
     <message>
-        <source>Convert cards you mined earlier to the current card format, so your note type styles them -- Utilities → Card Backfill.</source>
-        <translation>이전에 마이닝한 카드를 현재 카드 형식으로 변환하여 노트 유형의 스타일이 적용되도록 합니다. 유틸리티 → 카드 보충에서 사용하세요.</translation>
+        <source>Re-apply the latest Anki Miner styling to cards you mined earlier -- Utilities → Card Backfill.</source>
+        <translation>이전에 마이닝한 카드에 최신 Anki Miner 스타일을 다시 적용합니다. 유틸리티 → 카드 보충에서 사용하세요.</translation>
     </message>
     <message>
         <source>System health check</source>
@@ -3326,6 +3334,10 @@ No index files are deleted.</source>
         <translation>기존 값 덮어쓰기</translation>
     </message>
     <message>
+        <source>Overwritten cards may need to use Restyle cards… to refresh their styling.</source>
+        <translation>덮어쓴 카드는 카드 스타일 다시 적용…으로 스타일을 새로 고쳐야 할 수 있습니다.</translation>
+    </message>
+    <message>
         <source>Scan Anki (read-only)</source>
         <translation>Anki 검사(읽기 전용)</translation>
     </message>
@@ -3334,8 +3346,8 @@ No index files are deleted.</source>
         <translation>카드 스타일 다시 적용…</translation>
     </message>
     <message>
-        <source>Convert every card of your note type to the current card format</source>
-        <translation>노트 유형의 모든 카드를 현재 카드 형식으로 변환합니다</translation>
+        <source>Refresh the dictionary styling on every card of your note type</source>
+        <translation>노트 유형의 모든 카드에서 사전 스타일을 새로 고칩니다</translation>
     </message>
     <message>
         <source>Cancel</source>
@@ -7184,12 +7196,12 @@ Words to add: %3. Continue?</source>
         <translation>마이닝한 카드 스타일 다시 적용</translation>
     </message>
     <message>
-        <source>Converts your mined cards to the current card format, so your note type styles them.
+        <source>Re-applies the current built-in styling to your mined cards.
 
 Close Anki's card browser and note editor first — an open note can lose unsaved edits.
 
 Continue?</source>
-        <translation>마이닝한 카드를 현재 카드 형식으로 변환하여 노트 유형의 스타일이 적용되도록 합니다.
+        <translation>현재 기본 제공 스타일을 마이닝한 카드에 다시 적용합니다.
 
 먼저 Anki의 카드 브라우저와 노트 편집기를 닫으세요. 노트가 열려 있으면 저장하지 않은 편집 내용이 사라질 수 있습니다.
 

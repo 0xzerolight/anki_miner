@@ -553,38 +553,3 @@ class TestCardFrontOverride:
         built = build_note(self._payload({CARD_FRONT_KEY: ""}), _config(), set())
         assert built.note["fields"][word_field] == "學校"
         assert built == build_note(self._payload({}), _config(), set())
-
-
-class TestYomitanExport:
-    """Definition and glossary leave build_note in Yomitan's Anki-export shape (anki_export)."""
-
-    _INTERNAL = (
-        '<div class="yomitan-glossary"><ol data-count="1"><li data-dictionary="D" data-dictionary-id="d"><i>(D)</i>'
-        '<ul class="gloss-list" data-count="1"><li class="gloss-item" data-am-tags="n">'
-        '<div class="gloss-content">cat</div></li></ul>'
-        '</li></ol></div><style>.yomitan-glossary [data-dictionary-id="d"] b{}</style>'
-    )
-    _EXPORTED = (
-        '<div style="text-align: left;" class="yomitan-glossary"><ol>'
-        '<li data-dictionary="D" data-dictionary-id="d"><i>(n, D)</i> cat</li>'
-        '<style>.yomitan-glossary [data-dictionary-id="d"] b{}</style></ol></div>'
-    )
-
-    def test_definition_and_glossary_are_exported(self):
-        config = _config(definition="Meaning", glossary="Glossary")
-        item = CardPayload(
-            word=_word(), media=MediaData(), definition=self._INTERNAL, extra_fields={"glossary": self._INTERNAL}
-        )
-        fields = build_note(item, config, set()).note["fields"]
-        assert fields["Meaning"] == self._EXPORTED
-        assert fields["Glossary"] == self._EXPORTED
-
-    def test_rtl_direction_reaches_the_pass(self):
-        inner = '<div class="gloss-sc-div" data-sc-content="example-sentence-a">x</div>'
-        item = CardPayload(word=_word(), media=MediaData(), definition=self._INTERNAL.replace(">cat<", f">{inner}<"))
-        fields = build_note(item, _config(definition="Meaning"), set(), content_direction="rtl").note["fields"]
-        assert "unicode-bidi: plaintext;" in fields["Meaning"]
-
-    def test_plain_definition_is_untouched(self):
-        fields = build_note(_payload(_word()), _config(definition="Meaning"), set()).note["fields"]
-        assert fields["Meaning"] == "to return home"

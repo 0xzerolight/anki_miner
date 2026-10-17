@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:59bb362dc4da97e4 -->
+<!-- i18n-source: README.md sha256:ecd0ab0242935ee3 -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -163,7 +163,7 @@ Para a configuração completa de desenvolvimento, veja [CONTRIBUTING.md](../CON
 - Pré-visualização de vídeo embutida com libmpv - reproduza a cena de uma palavra durante a seleção, ou ajuste o tempo da legenda com reprodução em tempo real.
 - Capturas de tela animadas (veja os exemplos de cartões acima).
 - Perfis de configurações - salve perfis com nomes e alterne entre eles pelas abas.
-- Reestilize Cartões Minerados - converta os cartões que você já criou para o formato de cartão atual (Utilitários → Completar cartões).
+- Reestilize Cartões Minerados - aplique o estilo atual dos seus cartões aos cartões que você já criou (Utilitários → Completar cartões).
 
 <details>
 <summary><strong>Temas Inclusos (29)</strong></summary>

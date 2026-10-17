@@ -17,6 +17,7 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.utils.content_text import apply_content_font
 from anki_miner.languages.registry import get_profile
 from anki_miner.languages.switching import switch_language
+from anki_miner.services.dictionary.card_style_block import RTL_GLOSSARY_CSS, attach_card_style_block
 
 
 def _word(*letters: str) -> str:
@@ -53,15 +54,14 @@ def test_the_service_threads_the_hebrew_direction_and_code():
     assert (service._content_direction, service._content_lang) == ("rtl", "he")
 
 
-#: A definition in internal miner markup whose structured content holds an example sentence.
+#: A field with miner markup, which is what ``attach_card_style_block`` will style at all.
 MINER_FIELD = (
-    '<div class="yomitan-glossary"><ol data-count="1"><li data-dictionary="D"><i>(D)</i>'
-    '<ul class="gloss-list" data-count="1"><li class="gloss-item" data-am-tags=""><div class="gloss-content">'
-    '<div class="gloss-sc-div" data-sc-content="example-sentence-a">x</div></div></li></ul></li></ol></div>'
+    '<div class="yomitan-glossary"><ol data-count="1">'
+    '<li data-dictionary="D" data-has-styles="">content</li></ol></div>'
 )
 
 
-def _payload(definition: str = "dog"):
+def _payload():
     from anki_miner.models.card_payload import CardPayload
     from anki_miner.models.media import MediaData
     from anki_miner.models.word import TokenizedWord
@@ -77,7 +77,7 @@ def _payload(definition: str = "dog"):
         pos="NOUN",
         expression_reading="POINTED",
     )
-    return CardPayload(word=word, media=MediaData(), definition=definition)
+    return CardPayload(word=word, media=MediaData(), definition="dog")
 
 
 def test_the_built_note_wraps_the_word_and_leaves_the_reading_alone():
@@ -100,15 +100,11 @@ def test_a_left_to_right_build_is_the_legacy_note():
     assert "dir=" not in legacy[config.anki_fields["sentence"]]
 
 
-def test_the_exported_example_sentence_takes_plaintext_bidi_only_when_rtl():
-    from anki_miner.services.anki_note_builder import build_note
-
-    config = switch_language(AnkiMinerConfig(), "he")
-    definition_field = config.anki_fields["definition"]
-    rtl = build_note(_payload(MINER_FIELD), config, set(), content_direction="rtl").note["fields"]
-    ltr = build_note(_payload(MINER_FIELD), config, set()).note["fields"]
-    assert "unicode-bidi: plaintext;" in rtl[definition_field]
-    assert "unicode-bidi" not in ltr[definition_field]
+def test_the_glossary_block_takes_the_rtl_example_sentence_rule():
+    ltr = attach_card_style_block(MINER_FIELD, dict_css_entries=[])
+    rtl = attach_card_style_block(MINER_FIELD, dict_css_entries=[], direction="rtl")
+    assert RTL_GLOSSARY_CSS in rtl
+    assert RTL_GLOSSARY_CSS not in ltr
 
 
 def test_the_seam_reads_the_direction_off_the_profile_and_nothing_else():

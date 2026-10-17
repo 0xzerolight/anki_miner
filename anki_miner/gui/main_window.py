@@ -1804,12 +1804,15 @@ class MainWindow(ScreenIssueHost, QMainWindow):
             self.reveal_capability(CapabilityTarget("video", "single"))
 
     def restyle_mined_cards(self) -> None:
-        """Restyle entry point: convert already-mined cards to the Yomitan card format.
+        """Restyle entry point: re-apply the built-in glossary styling to already-mined cards.
 
         Reached from the Restyle button on Utilities -> Card Backfill (the
-        backfill tab's ``restyle_requested`` signal); see
-        :func:`card_restyler.restyle_mined_cards`. Runs off-thread via
-        ``BackgroundTaskController`` (joined at close).
+        backfill tab's ``restyle_requested`` signal). Idempotent and
+        content-preserving: prepends the self-contained ``<style>`` block to
+        cards that lack the base sheet, and refreshes the embedded base head
+        in place on cards that already carry one — so a styling change reaches
+        existing cards (see :func:`card_restyler.restyle_mined_cards`). Runs
+        off-thread via ``BackgroundTaskController`` (joined at close).
         """
         from anki_miner.services.card_restyler import RestyleResult
 
@@ -1817,8 +1820,8 @@ class MainWindow(ScreenIssueHost, QMainWindow):
             self,
             self.tr("Restyle Mined Cards"),
             self.tr(
-                "Converts your mined cards to the current card format, so your note type styles them."
-                "\n\nClose Anki's card browser and note editor first — an open note can lose unsaved edits."
+                "Re-applies the current built-in styling to your mined cards.\n\nClose Anki's "
+                "card browser and note editor first — an open note can lose unsaved edits."
                 "\n\nContinue?"
             ),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,

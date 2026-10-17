@@ -4,14 +4,8 @@ from __future__ import annotations
 
 import time
 from html.parser import HTMLParser
-from pathlib import Path
 
-from anki_miner.services.dictionary.dict_css_scope import (
-    attach_dict_css,
-    filter_dict_css_entries,
-    is_internal_glossary,
-    scope_dict_css,
-)
+from anki_miner.services.dictionary.dict_css_scope import scope_dict_css
 
 TITLE = "Jitendex.org [2026-06-06]"
 SCOPE = '.yomitan-glossary [data-dictionary-id="Jitendex.org [2026-06-06]"]'
@@ -249,109 +243,3 @@ def test_a_raw_newline_ends_a_string_so_a_smuggled_rule_is_scoped():
     scope = '.yomitan-glossary [data-dictionary-id="evil-dict"]'
     assert f"{scope} .card, {scope} body {{background: red !important;}}" in out
     assert "\n} .card" not in out
-
-
-MINER_FIELD = (
-    '<div class="yomitan-glossary"><ol data-count="1">'
-    '<li data-dictionary="D" data-has-styles="">content</li></ol></div>'
-)
-
-
-class TestFilterDictCssEntries:
-    def test_same_title_new_dicts_stay_isolated_by_id(self):
-        field = MINER_FIELD.replace(
-            'data-dictionary="D"',
-            'data-dictionary="Same Title" data-dictionary-id="a-dict"',
-        )
-        entries = [
-            ("a-dict", "Same Title", ".a{color:red}"),
-            ("b-dict", "Same Title", ".b{color:blue}"),
-        ]
-
-        assert filter_dict_css_entries(field, entries) == ".a{color:red}"
-
-    def test_stable_id_matches_when_display_title_differs(self):
-        field = MINER_FIELD.replace(
-            'data-dictionary="D"',
-            'data-dictionary="Display Title" data-dictionary-id="stable-id"',
-        )
-        assert filter_dict_css_entries(field, [("stable-id", "Display Title", ".d{color:red}")]) == ".d{color:red}"
-
-    def test_keeps_only_dicts_present_in_field(self):
-        entries = [("d-id", "D", ".d{color:red}"), ("e-id", "E", ".e{color:blue}")]
-        assert filter_dict_css_entries(MINER_FIELD, entries) == ".d{color:red}"
-
-    def test_html_escaped_title_round_trips(self):
-        # The renderer writes the envelope attr with html.escape; the filter must
-        # recover the pre-escape title. css_string_escape matching would MISS
-        # this dict and silently drop its stylesheet — the forbidden outcome.
-        title = 'A&B "quoted"'
-        field = '<div class="yomitan-glossary"><ol data-count="1"><li data-dictionary="A&amp;B &quot;quoted&quot;">x</li></ol></div>'
-        assert filter_dict_css_entries(field, [("ab-id", title, ".ab{}")]) == ".ab{}"
-
-    def test_duplicate_display_names_both_kept(self):
-        entries = [("one-id", "D", ".one{}"), ("two-id", "D", ".two{}")]
-        assert filter_dict_css_entries(MINER_FIELD, entries) == ".one{}\n\n.two{}"
-
-    def test_no_match_yields_empty(self):
-        assert filter_dict_css_entries(MINER_FIELD, [("other-id", "Other", ".o{}")]) == ""
-
-
-_FIELD = (
-    '<div class="yomitan-glossary"><ol data-count="1">'
-    '<li data-dictionary="Jitendex" data-dictionary-id="jit"><i>(Jitendex)</i>'
-    '<ul class="gloss-list" data-count="1"><li class="gloss-item"><div class="gloss-content">x</div></li></ul>'
-    "</li></ol></div>"
-)
-_ENTRIES = [
-    ("jit", "Jitendex", '.yomitan-glossary [data-dictionary-id="jit"] b{color:red}'),
-    ("other", "Other", '.yomitan-glossary [data-dictionary-id="other"] b{color:blue}'),
-]
-_YOMITAN = (
-    '<div style="text-align: left;" class="yomitan-glossary"><ol><li data-dictionary="Jitendex">x</li></ol></div>'
-)
-
-
-class TestIsInternalGlossary:
-    def test_internal_markup_since_v240(self):
-        assert is_internal_glossary(_FIELD)
-
-    def test_exported_yomitan_and_prose_are_not(self):
-        for value in ("", "plain", _YOMITAN, "prose naming data-count and yomitan-glossary"):
-            assert not is_internal_glossary(value)
-
-
-class TestAttachDictCss:
-    def test_appends_only_present_dictionaries_css_as_one_trailing_block(self):
-        assert attach_dict_css(_FIELD, dict_css_entries=_ENTRIES) == (
-            _FIELD + '<style>.yomitan-glossary [data-dictionary-id="jit"] b{color:red}</style>'
-        )
-
-    def test_no_css_for_present_dictionaries_returns_field_unchanged(self):
-        assert attach_dict_css(_FIELD, dict_css_entries=_ENTRIES[1:]) == _FIELD
-
-    def test_field_without_internal_markup_is_untouched(self):
-        for value in ("", "plain text", _YOMITAN):
-            assert attach_dict_css(value, dict_css_entries=_ENTRIES) == value
-
-
-class TestNoNoteTypeCssWrite:
-    """The whole point of the self-contained model: Anki Miner never writes note-type CSS."""
-
-    def test_ankiservice_has_no_model_styling_methods(self):
-        from anki_miner.services.anki_service import AnkiService
-
-        assert not hasattr(AnkiService, "get_model_styling")
-        assert not hasattr(AnkiService, "update_model_styling")
-
-    def test_no_updatemodelstyling_anywhere_in_production_source(self):
-        import anki_miner
-
-        root = Path(anki_miner.__file__).parent
-        offenders = [
-            str(p.relative_to(root))
-            for p in root.rglob("*.py")
-            if "updateModelStyling" in p.read_text(encoding="utf-8")
-            or "update_model_styling" in p.read_text(encoding="utf-8")
-        ]
-        assert offenders == [], f"note-type CSS write path resurfaced in {offenders}"

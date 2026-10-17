@@ -30,8 +30,6 @@ from anki_miner.services.card_backfiller import (
     scan_backfill,
 )
 from anki_miner.services.definition_service import DefinitionService
-from anki_miner.services.dictionary.anki_export import to_yomitan_export
-from anki_miner.services.dictionary.dict_css_scope import attach_dict_css
 from anki_miner.services.morphology import SyntheticToken
 from anki_miner.services.tagger import get_shared_tagger
 from anki_miner.services.validation_service import ValidationService
@@ -49,9 +47,6 @@ _SVG_GRAPH = '<svg viewBox="0 0 100 40"><circle cx="5" cy="5" r="4"/><path d="M0
 # dict-CSS filter keys on the data-dictionary envelope title ("D" matches the
 # stubbed collect_dictionary_css_entries below).
 _GLOSS_HTML = '<div class="yomitan-glossary"><ol data-count="1"><li data-dictionary="D">gloss</li></ol></div>'
-# What mining writes for _GLOSS_HTML: its dictionary's CSS attached, then the
-# Yomitan export shape (build_note's pass, which a backfill runs itself).
-_GLOSS_EXPORTED = to_yomitan_export(attach_dict_css(_GLOSS_HTML, dict_css_entries=[("d-id", "D", "DICTCSS")]))
 
 
 _DEFAULT_NOTE_FIELDS = [
@@ -843,18 +838,22 @@ class TestScanDefinitionGlossary:
         assert _changes_by_key(plan, 2)["definition"] == "definition:はじく"
         assert calls == [[("弾く", "ひく")], [("弾く", "はじく")]]
 
-    def test_glossary_proposal_is_what_mining_writes(self, backfill_config):
+    def test_glossary_proposal_gets_trailing_style_block(self, backfill_config):
         anki = FakeAnkiService({1: _note(1, word="猫", ExpressionReading="ねこ", Glossary="", definition="")})
         defs = FakeDefinitionService(glossaries={"猫": _GLOSS_HTML})
         plan = scan_backfill(anki, backfill_config, _services(defs=defs), _options({"glossary"}))
-        # Dict CSS filtered to the dict present in the field, trailing inside
-        # the exported <ol> (a leading <style> is head-hoisted on JS note types).
-        assert _changes_by_key(plan, 1)["glossary"] == _GLOSS_EXPORTED
-        assert _GLOSS_EXPORTED.endswith("<style>DICTCSS</style></ol></div>")
+        value = _changes_by_key(plan, 1)["glossary"]
+        # Trailing, never leading (leading is head-hoisted by DOMParser on JS
+        # note types); dict CSS filtered to the dict present in the field.
+        assert value.startswith(_GLOSS_HTML)
+        assert value.endswith("</style>")
+        assert value.count("<style>") == 1
+        assert "DICTCSS" in value
 
-    def test_dict_css_attached_even_when_other_field_already_styled(self, backfill_config):
-        # Per-field self-containment: a styled definition field never styles
-        # the glossary field on field-isolating note types.
+    def test_block_attached_even_when_other_field_already_styled(self, backfill_config):
+        # Per-field self-containment: the OLD cross-field gate ("other field
+        # already holds the base sheet") is gone — a styled definition field
+        # never styles the glossary field on field-isolating note types.
         anki = FakeAnkiService(
             {
                 1: _note(
@@ -864,10 +863,12 @@ class TestScanDefinitionGlossary:
         )
         defs = FakeDefinitionService(glossaries={"猫": _GLOSS_HTML})
         plan = scan_backfill(anki, backfill_config, _services(defs=defs), _options({"glossary"}))
-        assert _changes_by_key(plan, 1)["glossary"] == _GLOSS_EXPORTED
+        value = _changes_by_key(plan, 1)["glossary"]
+        assert value.startswith(_GLOSS_HTML)
+        assert value.endswith("</style>")
 
-    def test_overwrite_of_styled_carrier_writes_the_fresh_field(self, backfill_config):
-        """Overwrite replaces a styled field outright: the old block does not survive."""
+    def test_overwrite_of_styled_carrier_reattaches_single_fresh_block(self, backfill_config):
+        """Overwrite replaces a styled field: one fresh trailing block, no double sheet."""
         anki = FakeAnkiService(
             {
                 1: _note(
@@ -881,48 +882,49 @@ class TestScanDefinitionGlossary:
         )
         defs = FakeDefinitionService(glossaries={"猫": _GLOSS_HTML})
         plan = scan_backfill(anki, backfill_config, _services(defs=defs), _options({"glossary"}, overwrite=True))
-        assert _changes_by_key(plan, 1)["glossary"] == _GLOSS_EXPORTED
+        value = _changes_by_key(plan, 1)["glossary"]
+        assert value.startswith(_GLOSS_HTML)
+        assert value.count("<style>") == 1
+        assert value.endswith("</style>")
 
     def test_definition_proposal_styled_when_glossary_unmapped(self, backfill_config):
         config = replace(backfill_config, anki_fields={**backfill_config.anki_fields, "glossary": ""})
         anki = FakeAnkiService({1: _note(1, word="猫", ExpressionReading="ねこ", definition="")})
         defs = FakeDefinitionService(defs={"猫": _GLOSS_HTML})
         plan = scan_backfill(anki, config, _services(defs=defs), _options({"definition"}))
-        assert _changes_by_key(plan, 1)["definition"] == _GLOSS_EXPORTED
+        value = _changes_by_key(plan, 1)["definition"]
+        assert value.startswith(_GLOSS_HTML)
+        assert value.endswith("</style>")
 
-    def test_both_proposed_fields_each_get_their_own_css(self, backfill_config):
+    def test_both_proposed_fields_each_get_their_own_block(self, backfill_config):
         # Backfill bytes must equal fresh-mine bytes: with both miner fields
-        # proposed, EACH carries its own trailing dict CSS.
+        # proposed, EACH carries its own trailing block.
         anki = FakeAnkiService({1: _note(1, word="猫", ExpressionReading="ねこ", Glossary="", definition="")})
         defs = FakeDefinitionService(defs={"猫": _GLOSS_HTML}, glossaries={"猫": _GLOSS_HTML})
         plan = scan_backfill(anki, backfill_config, _services(defs=defs), _options({"definition", "glossary"}))
         changes = _changes_by_key(plan, 1)
         for key in ("definition", "glossary"):
-            assert changes[key] == _GLOSS_EXPORTED
+            assert changes[key].startswith(_GLOSS_HTML)
+            assert changes[key].endswith("</style>")
+            assert changes[key].count("<style>") == 1
 
-    def test_rtl_profile_proposals_get_the_example_sentence_bidi(self, backfill_config, monkeypatch):
+    def test_rtl_profile_proposals_end_with_the_rtl_rule(self, backfill_config, monkeypatch):
         # Backfill bytes must equal fresh-mine bytes for an rtl language too.
         from anki_miner.languages.registry import get_profile as real_get_profile
         from anki_miner.services import card_backfiller
+        from anki_miner.services.dictionary.card_style_block import RTL_GLOSSARY_CSS
 
         ja = real_get_profile("ja")
         rtl = replace(ja, content_style=replace(ja.content_style, direction="rtl"))
         monkeypatch.setattr(card_backfiller, "get_profile", lambda code: rtl)
-        gloss = (
-            '<div class="yomitan-glossary"><ol data-count="1"><li data-dictionary="D"><i>(D)</i>'
-            '<ul class="gloss-list" data-count="1"><li class="gloss-item" data-am-tags=""><div class="gloss-content">'
-            '<div class="gloss-sc-div" data-sc-content="example-sentence-a">x</div></div></li></ul></li></ol></div>'
-        )
         anki = FakeAnkiService({1: _note(1, word="猫", ExpressionReading="ねこ", Glossary="", definition="")})
-        defs = FakeDefinitionService(defs={"猫": gloss}, glossaries={"猫": gloss})
+        defs = FakeDefinitionService(defs={"猫": _GLOSS_HTML}, glossaries={"猫": _GLOSS_HTML})
         plan = scan_backfill(anki, backfill_config, _services(defs=defs), _options({"definition", "glossary"}))
         changes = _changes_by_key(plan, 1)
-        expected = to_yomitan_export(
-            attach_dict_css(gloss, dict_css_entries=[("d-id", "D", "DICTCSS")]), direction="rtl"
-        )
-        assert "unicode-bidi: plaintext;" in expected
         for key in ("definition", "glossary"):
-            assert changes[key] == expected
+            assert changes[key].startswith(_GLOSS_HTML)
+            assert changes[key].endswith("\n" + RTL_GLOSSARY_CSS + "</style>")
+            assert changes[key].count("<style>") == 1
 
     def test_markupless_definition_gets_no_block(self, backfill_config):
         # A plain-text proposal (no miner markup) is written verbatim — a block
@@ -1704,11 +1706,9 @@ class TestScanProfileCardFields:
             _options({"measure_word", "definition"}),
         )
         changes = _changes_by_key(plan, 1)
-        # The hook parsed the internal markup; the field is written exported.
         assert changes["measure_word"] == "家"
-        assert changes["definition"] == to_yomitan_export(
-            attach_dict_css(gloss, dict_css_entries=[("d-id", "D", "DICTCSS")])
-        )
+        assert changes["definition"].startswith(gloss)
+        assert changes["definition"].endswith("</style>")
 
     def test_a_plain_text_hook_field_is_escaped_the_way_a_mined_card_escapes_it(self, zh_backfill_config):
         # build_note inserts a raw_html field verbatim and html.escape()s every

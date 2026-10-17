@@ -2923,6 +2923,14 @@ Indeksitiedostoja ei poisteta.</translation>
         <translation>Valitse, mihin Anki-pakkaan ja millä muistiinpanotyypillä uudet kortit luodaan.</translation>
     </message>
     <message>
+        <source>Card styling / CSS</source>
+        <translation>Korttien tyyli / CSS</translation>
+    </message>
+    <message>
+        <source>Apply a built-in card style or your own CSS.</source>
+        <translation>Käytä sisäänrakennettua korttityyliä tai omaa CSS:ää.</translation>
+    </message>
+    <message>
         <source>Furigana / readings</source>
         <translation>Furigana / lukutavat</translation>
     </message>
@@ -3111,8 +3119,8 @@ Indeksitiedostoja ei poisteta.</translation>
         <translation>Muotoile louhitut kortit uudelleen</translation>
     </message>
     <message>
-        <source>Convert cards you mined earlier to the current card format, so your note type styles them -- Utilities → Card Backfill.</source>
-        <translation>Muunna aiemmin louhimasi kortit nykyiseen korttimuotoon, jotta muistiinpanotyyppisi määrää niiden tyylin -- Apuvälineet → Täydennys.</translation>
+        <source>Re-apply the latest Anki Miner styling to cards you mined earlier -- Utilities → Card Backfill.</source>
+        <translation>Käytä aiemmin louhimiisi kortteihin uusinta Anki Miner -tyyliä -- Apuvälineet → Täydennys.</translation>
     </message>
     <message>
         <source>System health check</source>
@@ -3329,6 +3337,10 @@ Indeksitiedostoja ei poisteta.</translation>
         <translation>Korvaa olemassa olevat arvot</translation>
     </message>
     <message>
+        <source>Overwritten cards may need to use Restyle cards… to refresh their styling.</source>
+        <translation>Korvattujen korttien tyyli on ehkä päivitettävä toiminnolla Muotoile kortit uudelleen….</translation>
+    </message>
+    <message>
         <source>Scan Anki (read-only)</source>
         <translation>Käy läpi Anki (vain luku)</translation>
     </message>
@@ -3337,8 +3349,8 @@ Indeksitiedostoja ei poisteta.</translation>
         <translation>Muotoile kortit uudelleen…</translation>
     </message>
     <message>
-        <source>Convert every card of your note type to the current card format</source>
-        <translation>Muunna muistiinpanotyyppisi jokainen kortti nykyiseen korttimuotoon</translation>
+        <source>Refresh the dictionary styling on every card of your note type</source>
+        <translation>Päivitä sanakirjan tyyli muistiinpanotyyppisi jokaisessa kortissa</translation>
     </message>
     <message>
         <source>Cancel</source>
@@ -7222,12 +7234,12 @@ Lisättäviä sanoja: %3. Jatketaanko?</translation>
         <translation>Muotoile louhitut kortit uudelleen</translation>
     </message>
     <message>
-        <source>Converts your mined cards to the current card format, so your note type styles them.
+        <source>Re-applies the current built-in styling to your mined cards.
 
 Close Anki's card browser and note editor first — an open note can lose unsaved edits.
 
 Continue?</source>
-        <translation>Muuntaa louhitut korttisi nykyiseen korttimuotoon, jotta muistiinpanotyyppisi määrää niiden tyylin.
+        <translation>Käyttää louhittuihin kortteihisi uudelleen nykyistä sisäänrakennettua tyyliä.
 
 Sulje ensin Ankin korttiselain ja muistiinpanoeditori — avoinna oleva muistiinpano voi menettää tallentamattomia muokkauksia.
 

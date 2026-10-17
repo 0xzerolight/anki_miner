@@ -119,9 +119,10 @@ def collect_dictionary_css_entries(config: AnkiMinerConfig) -> list[tuple[str, s
     the list is ORDERED with duplicates preserved: ``display_name`` is not
     guaranteed unique across providers, so this is deliberately not a dict.
 
-    The result feeds each dictionary field's trailing ``<style>`` via
-    ``dict_css_scope.attach_dict_css``, filtered to the dictionaries present in
-    that field (Issue #93).
+    The result feeds each styled field's self-contained trailing ``<style>``
+    block via ``card_style_block.attach_card_style_block`` at the
+    ``EpisodeProcessor._phase5_create`` seam — this collection runs once per
+    episode; blocks are assembled per card/field (Issue #93).
 
     Does light per-dictionary SQLite I/O (registry scan + ``read_meta`` +
     ``open_readonly`` via each provider's ``load()``), so it runs off the GUI
@@ -154,6 +155,17 @@ def collect_dictionary_css_entries(config: AnkiMinerConfig) -> list[tuple[str, s
             if isinstance(dict_id, str):
                 entries.append((dict_id, provider.name, css.strip()))
     return entries
+
+
+def collect_dictionary_css(config: AnkiMinerConfig) -> str:
+    """Concatenate every enabled indexed dictionary's scoped ``styles.css``.
+
+    Thin join over ``collect_dictionary_css_entries`` (byte-equivalent to the
+    pre-entries implementation; pinned by test). Used where an unfiltered
+    whole-config blob is still the right input (e.g. the restyler's
+    envelope-stamping gate).
+    """
+    return "\n\n".join(css for _, _, css in collect_dictionary_css_entries(config))
 
 
 def preferred_dictionaries(words: Iterable[TokenizedWord]) -> dict[str, str]:
