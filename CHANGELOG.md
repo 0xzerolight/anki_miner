@@ -7,6 +7,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [Unreleased]
 
 ### Added
+
+### Changed
+
+### Fixed
+
+### Removed
+
+## [3.10.0] - 2026-10-18
+
+Vocabulary tracking in Analytics, known words you can browse, import and export, and card definitions without the clutter. Analytics shows the whole mining history by period, opens or deletes a past run's cards, and charts the known-words count and frequency coverage by rank band. Manage Known Words… lists every known word with its source, imports Kindle, Lute and LWT files and exports CSV, and Anki Miner keeps a daily backup of its databases and settings. Reading → Text fetches web articles, Reading → Novels takes PDF books, StarDict and CSV/TSV files work as dictionaries, `.lrc` lyrics work as subtitles, and Audiobook Sync takes a shelf of books in one run. New installs pick the clearest sentence for each word, skip openings, endings and signs, even out audio volume and crop manga pictures to the speech bubble; existing installs keep these off. Some changes alter card output: the Definition and Glossary fields hold definitions only, one card per sentence moves a word to another line instead of skipping it, EPUB copyright and contents pages are no longer mined, Video OCR leaves out lines with none of the mining language's letters, and Condense joins lines less than a second apart.
+
+### Added
 - **Show or delete a past run's cards (Analytics → Mining History).** Select a run and press Show in Anki to open its notes in Anki's browser, or Delete this run's cards… to remove them. The confirmation says how many of the run's cards are still in Anki and how many have been reviewed. Runs mined before this version kept no card list, so both buttons are disabled for them.
 - **Whole mining history in Analytics.** The history covers every run, with a period (all time, last 7 or 30 days, last 12 months), grouping by day, week or month, a bar chart of cards per period and Export CSV….
 - **Known-words count in Analytics.** A Known Words card shows how many words Anki Miner treats as known in the current mining language and how that number changed over time. It is counted while Anki is running, at most once every ten minutes, and again after a run or a change of mining language.
