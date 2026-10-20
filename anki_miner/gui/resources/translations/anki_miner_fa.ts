@@ -8401,6 +8401,10 @@ No index files are deleted.</source>
         <translation>‏%1 مورد که از قبل در صف بود رد شد.</translation>
     </message>
     <message>
+        <source>Cannot mine %1: %2</source>
+        <translation>استخراج از ⁨%1⁩ ممکن نیست: %2</translation>
+    </message>
+    <message>
         <source>Resolving playlist…</source>
         <translation>در حال بررسی فهرست پخش…</translation>
     </message>
@@ -14082,8 +14086,8 @@ Sort by it to work through a long recording in order — then highlight the rows
         <translation>در حال بررسی ویدیوها…</translation>
     </message>
     <message>
-        <source>None of the videos can be mined. Each row says why.</source>
-        <translation>هیچ‌یک از ویدیوها قابل استخراج نیست. دلیل در هر ردیف آمده است.</translation>
+        <source>None of the videos can be mined. The Activity Log says why.</source>
+        <translation>هیچ‌یک از ویدیوها قابل استخراج نیست. دلیل در گزارش فعالیت آمده است.</translation>
     </message>
     <message>
         <source>Interrupted when Anki Miner closed</source>

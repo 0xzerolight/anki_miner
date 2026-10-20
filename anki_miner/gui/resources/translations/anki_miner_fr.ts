@@ -8440,6 +8440,10 @@ Aucun fichier d'index n'est supprimé.</translation>
         <translation>%1 ignorés (déjà en file d'attente).</translation>
     </message>
     <message>
+        <source>Cannot mine %1: %2</source>
+        <translation>Impossible d'extraire %1 : %2</translation>
+    </message>
+    <message>
         <source>Resolving playlist…</source>
         <translation>Résolution de la liste de lecture…</translation>
     </message>
@@ -14132,8 +14136,8 @@ Triez selon cette colonne pour parcourir un long enregistrement dans l'ordre —
         <translation>Vérification des vidéos…</translation>
     </message>
     <message>
-        <source>None of the videos can be mined. Each row says why.</source>
-        <translation>Aucune vidéo ne peut être extraite. Chaque élément en indique la raison.</translation>
+        <source>None of the videos can be mined. The Activity Log says why.</source>
+        <translation>Aucune vidéo ne peut être extraite. Le Journal d'activité en indique la raison.</translation>
     </message>
     <message>
         <source>Interrupted when Anki Miner closed</source>

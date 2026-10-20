@@ -8401,6 +8401,10 @@ No index files are deleted.</source>
         <translation>이미 대기열에 있는 항목 %1개를 건너뛰었습니다.</translation>
     </message>
     <message>
+        <source>Cannot mine %1: %2</source>
+        <translation>마이닝할 수 없음: %1: %2</translation>
+    </message>
+    <message>
         <source>Resolving playlist…</source>
         <translation>재생 목록 확인 중…</translation>
     </message>
@@ -14082,8 +14086,8 @@ Sort by it to work through a long recording in order — then highlight the rows
         <translation>동영상 확인 중…</translation>
     </message>
     <message>
-        <source>None of the videos can be mined. Each row says why.</source>
-        <translation>마이닝할 수 있는 동영상이 없습니다. 각 행에 이유가 표시됩니다.</translation>
+        <source>None of the videos can be mined. The Activity Log says why.</source>
+        <translation>마이닝할 수 있는 동영상이 없습니다. 활동 로그에 이유가 표시됩니다.</translation>
     </message>
     <message>
         <source>Interrupted when Anki Miner closed</source>

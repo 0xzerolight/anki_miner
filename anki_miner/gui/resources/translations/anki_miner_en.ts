@@ -8407,6 +8407,10 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Cannot mine %1: %2</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Resolving playlist…</source>
         <translation type="unfinished" />
     </message>
@@ -14077,7 +14081,7 @@ Sort by it to work through a long recording in order — then highlight the rows
         <translation type="unfinished" />
     </message>
     <message>
-        <source>None of the videos can be mined. Each row says why.</source>
+        <source>None of the videos can be mined. The Activity Log says why.</source>
         <translation type="unfinished" />
     </message>
     <message>

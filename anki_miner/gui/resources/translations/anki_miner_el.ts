@@ -8440,6 +8440,10 @@ No index files are deleted.</source>
         <translation>Παραλείφθηκαν %1 που υπάρχουν ήδη στην ουρά.</translation>
     </message>
     <message>
+        <source>Cannot mine %1: %2</source>
+        <translation>Δεν είναι δυνατή η εξόρυξη από %1: %2</translation>
+    </message>
+    <message>
         <source>Resolving playlist…</source>
         <translation>Ανάλυση λίστας αναπαραγωγής…</translation>
     </message>
@@ -14132,8 +14136,8 @@ Sort by it to work through a long recording in order — then highlight the rows
         <translation>Έλεγχος βίντεο…</translation>
     </message>
     <message>
-        <source>None of the videos can be mined. Each row says why.</source>
-        <translation>Δεν μπορεί να γίνει εξόρυξη σε κανένα βίντεο. Κάθε γραμμή αναφέρει την αιτία.</translation>
+        <source>None of the videos can be mined. The Activity Log says why.</source>
+        <translation>Δεν μπορεί να γίνει εξόρυξη σε κανένα βίντεο. Το Αρχείο δραστηριότητας αναφέρει την αιτία.</translation>
     </message>
     <message>
         <source>Interrupted when Anki Miner closed</source>

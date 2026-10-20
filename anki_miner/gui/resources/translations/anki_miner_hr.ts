@@ -8479,6 +8479,10 @@ Ne briše se nijedna datoteka indeksa.</translation>
         <translation>Preskočeno jer su već u redu čekanja: %1.</translation>
     </message>
     <message>
+        <source>Cannot mine %1: %2</source>
+        <translation>Nije moguće prikupiti %1: %2</translation>
+    </message>
+    <message>
         <source>Resolving playlist…</source>
         <translation>Razrješavanje popisa za reprodukciju…</translation>
     </message>
@@ -14182,8 +14186,8 @@ Razvrstajte po ovome da biste redom prošli kroz dugu snimku — zatim označite
         <translation>Provjera videozapisa…</translation>
     </message>
     <message>
-        <source>None of the videos can be mined. Each row says why.</source>
-        <translation>Nijedan videozapis ne može se prikupiti. Svaki redak navodi razlog.</translation>
+        <source>None of the videos can be mined. The Activity Log says why.</source>
+        <translation>Nijedan videozapis ne može se prikupiti. Zapisnik aktivnosti navodi razlog.</translation>
     </message>
     <message>
         <source>Interrupted when Anki Miner closed</source>

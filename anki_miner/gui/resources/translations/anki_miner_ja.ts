@@ -8401,6 +8401,10 @@ No index files are deleted.</source>
         <translation>すでにキューにある %1 件をスキップしました。</translation>
     </message>
     <message>
+        <source>Cannot mine %1: %2</source>
+        <translation>%1 はマイニングできません: %2</translation>
+    </message>
+    <message>
         <source>Resolving playlist…</source>
         <translation>プレイリストを取得中…</translation>
     </message>
@@ -14082,8 +14086,8 @@ Sort by it to work through a long recording in order — then highlight the rows
         <translation>動画を確認中…</translation>
     </message>
     <message>
-        <source>None of the videos can be mined. Each row says why.</source>
-        <translation>マイニングできる動画がありません。理由は各項目に表示されています。</translation>
+        <source>None of the videos can be mined. The Activity Log says why.</source>
+        <translation>マイニングできる動画がありません。理由はアクティビティログに表示されています。</translation>
     </message>
     <message>
         <source>Interrupted when Anki Miner closed</source>

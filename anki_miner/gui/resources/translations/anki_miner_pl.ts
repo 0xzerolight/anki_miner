@@ -8479,6 +8479,10 @@ No index files are deleted.</source>
         <translation>Pominięto już obecne w kolejce: %1.</translation>
     </message>
     <message>
+        <source>Cannot mine %1: %2</source>
+        <translation>Nie można zbierać z %1: %2</translation>
+    </message>
+    <message>
         <source>Resolving playlist…</source>
         <translation>Rozwijanie playlisty…</translation>
     </message>
@@ -14182,8 +14186,8 @@ Sortuj według tej kolumny, aby przejść przez długie nagranie po kolei — po
         <translation>Sprawdzanie filmów…</translation>
     </message>
     <message>
-        <source>None of the videos can be mined. Each row says why.</source>
-        <translation>Z żadnego filmu nie można zbierać. Przyczyna jest podana w każdym wierszu.</translation>
+        <source>None of the videos can be mined. The Activity Log says why.</source>
+        <translation>Z żadnego filmu nie można zbierać. Przyczynę podaje Dziennik aktywności.</translation>
     </message>
     <message>
         <source>Interrupted when Anki Miner closed</source>

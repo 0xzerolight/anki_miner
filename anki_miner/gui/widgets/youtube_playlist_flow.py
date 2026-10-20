@@ -628,6 +628,17 @@ class PlaylistAddController:
         """Shared transition into PROBE_ERROR with consistent fields."""
         if self._shutdown_started:
             return  # late signal after shutdown: see _on_probe_done
+        # The row shows the reason only on hover (D31), so the Activity log is
+        # where it is read. A picker flip that re-reaches the same verdict
+        # (set_subtitle_source) is not a new failure and is not logged again.
+        if not (item.status is YouTubeItemStatus.PROBE_ERROR and item.error_message == message):
+            self._callbacks.log_error(
+                tr_format(
+                    QCoreApplication.translate("PlaylistAddController", "Cannot mine %1: %2"),
+                    item.url,
+                    message,
+                )
+            )
         item.status = YouTubeItemStatus.PROBE_ERROR
         item.error_message = message
         self._callbacks.refresh_row(item)

@@ -8596,6 +8596,10 @@ No index files are deleted.</source>
         <translation>تم تخطي %1 موجودة مسبقًا في قائمة الانتظار.</translation>
     </message>
     <message>
+        <source>Cannot mine %1: %2</source>
+        <translation>لا يمكن الاستخراج من ⁨%1⁩: %2</translation>
+    </message>
+    <message>
         <source>Resolving playlist…</source>
         <translation>جارٍ تحليل قائمة التشغيل…</translation>
     </message>
@@ -14332,8 +14336,8 @@ Sort by it to work through a long recording in order — then highlight the rows
         <translation>جارٍ التحقق من الفيديوهات…</translation>
     </message>
     <message>
-        <source>None of the videos can be mined. Each row says why.</source>
-        <translation>لا يمكن الاستخراج من أي من الفيديوهات. يذكر كل صف السبب.</translation>
+        <source>None of the videos can be mined. The Activity Log says why.</source>
+        <translation>لا يمكن الاستخراج من أي من الفيديوهات. يذكر سجل النشاط السبب.</translation>
     </message>
     <message>
         <source>Interrupted when Anki Miner closed</source>

@@ -8440,6 +8440,10 @@ Inga indexfiler raderas.</translation>
         <translation>Hoppade över %1 som redan finns i kön.</translation>
     </message>
     <message>
+        <source>Cannot mine %1: %2</source>
+        <translation>%1 kan inte samlas in: %2</translation>
+    </message>
+    <message>
         <source>Resolving playlist…</source>
         <translation>Hämtar spellistan…</translation>
     </message>
@@ -14132,8 +14136,8 @@ Sortera efter den för att gå igenom en lång inspelning i ordning – markera 
         <translation>Kontrollerar videor…</translation>
     </message>
     <message>
-        <source>None of the videos can be mined. Each row says why.</source>
-        <translation>Ingen av videorna kan samlas in. Varje rad visar varför.</translation>
+        <source>None of the videos can be mined. The Activity Log says why.</source>
+        <translation>Ingen av videorna kan samlas in. Aktivitetsloggen visar varför.</translation>
     </message>
     <message>
         <source>Interrupted when Anki Miner closed</source>

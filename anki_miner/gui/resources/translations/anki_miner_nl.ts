@@ -8440,6 +8440,10 @@ Er worden geen indexbestanden verwijderd.</translation>
         <translation>%1 overgeslagen die al in de wachtrij stonden.</translation>
     </message>
     <message>
+        <source>Cannot mine %1: %2</source>
+        <translation>%1 kan niet worden gemined: %2</translation>
+    </message>
+    <message>
         <source>Resolving playlist…</source>
         <translation>Afspeellijst ophalen…</translation>
     </message>
@@ -14132,8 +14136,8 @@ Sorteer erop om een lange opname op volgorde door te werken — markeer dan de r
         <translation>Video's controleren…</translation>
     </message>
     <message>
-        <source>None of the videos can be mined. Each row says why.</source>
-        <translation>Geen van de video's kan worden gemined. Elke rij vermeldt waarom.</translation>
+        <source>None of the videos can be mined. The Activity Log says why.</source>
+        <translation>Geen van de video's kan worden gemined. Het Activiteitenlogboek vermeldt waarom.</translation>
     </message>
     <message>
         <source>Interrupted when Anki Miner closed</source>

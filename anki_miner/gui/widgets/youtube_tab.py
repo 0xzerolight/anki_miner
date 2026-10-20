@@ -409,7 +409,9 @@ class YouTubeTab(YtdlpAvailabilityMixin, _ListQueueMiningTabBase):
         self.progress_widget.reset()
         self._recompute_buttons()
         if not any(i.status is YouTubeItemStatus.READY for i in self._queue.all_items()):
-            self.show_screen_issue(ScreenIssue(summary=self.tr("None of the videos can be mined. Each row says why.")))
+            self.show_screen_issue(
+                ScreenIssue(summary=self.tr("None of the videos can be mined. The Activity Log says why."))
+            )
             return
         self._start_run()
 

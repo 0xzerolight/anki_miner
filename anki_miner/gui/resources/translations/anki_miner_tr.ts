@@ -8401,6 +8401,10 @@ Hiçbir dizin dosyası silinmez.</translation>
         <translation>Sırada zaten bulunan %1 öğe atlandı.</translation>
     </message>
     <message>
+        <source>Cannot mine %1: %2</source>
+        <translation>Toplanamıyor: %1: %2</translation>
+    </message>
+    <message>
         <source>Resolving playlist…</source>
         <translation>Oynatma listesi çözümleniyor…</translation>
     </message>
@@ -14082,8 +14086,8 @@ Uzun bir kaydı sırayla ilerlemek için buna göre sıralayın — ardından ka
         <translation>Videolar denetleniyor…</translation>
     </message>
     <message>
-        <source>None of the videos can be mined. Each row says why.</source>
-        <translation>Videoların hiçbiri toplanamıyor. Her satır nedenini belirtiyor.</translation>
+        <source>None of the videos can be mined. The Activity Log says why.</source>
+        <translation>Videoların hiçbiri toplanamıyor. Etkinlik Günlüğü nedenini belirtiyor.</translation>
     </message>
     <message>
         <source>Interrupted when Anki Miner closed</source>

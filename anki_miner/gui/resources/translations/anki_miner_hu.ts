@@ -8401,6 +8401,10 @@ Indexfájl nem törlődik.</translation>
         <translation>Kihagyva, már a sorban: %1.</translation>
     </message>
     <message>
+        <source>Cannot mine %1: %2</source>
+        <translation>Nem gyűjthető – %1: %2</translation>
+    </message>
+    <message>
         <source>Resolving playlist…</source>
         <translation>Lejátszási lista feloldása…</translation>
     </message>
@@ -14082,8 +14086,8 @@ Ez alapján rendezve sorban haladhat végig egy hosszú felvételen — majd jel
         <translation>Videók ellenőrzése…</translation>
     </message>
     <message>
-        <source>None of the videos can be mined. Each row says why.</source>
-        <translation>Egyik videó sem gyűjthető. Az okot minden sor jelzi.</translation>
+        <source>None of the videos can be mined. The Activity Log says why.</source>
+        <translation>Egyik videó sem gyűjthető. Az okot a Tevékenységnapló jelzi.</translation>
     </message>
     <message>
         <source>Interrupted when Anki Miner closed</source>

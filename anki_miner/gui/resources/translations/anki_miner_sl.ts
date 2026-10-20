@@ -8518,6 +8518,10 @@ Nobena datoteka indeksa ne bo izbrisana.</translation>
         <translation>Preskočeno, že v čakalni vrsti: %1.</translation>
     </message>
     <message>
+        <source>Cannot mine %1: %2</source>
+        <translation>Iz %1 ni mogoče zbirati: %2</translation>
+    </message>
+    <message>
         <source>Resolving playlist…</source>
         <translation>Razreševanje seznama predvajanja …</translation>
     </message>
@@ -14232,8 +14236,8 @@ Razvrstite po tem stolpcu, da dolg posnetek obdelate po vrsti — nato označite
         <translation>Preverjanje videov …</translation>
     </message>
     <message>
-        <source>None of the videos can be mined. Each row says why.</source>
-        <translation>Iz nobenega videa ni mogoče zbirati. Razlog je naveden v vsaki vrstici.</translation>
+        <source>None of the videos can be mined. The Activity Log says why.</source>
+        <translation>Iz nobenega videa ni mogoče zbirati. Razlog je naveden v Dnevniku dejavnosti.</translation>
     </message>
     <message>
         <source>Interrupted when Anki Miner closed</source>

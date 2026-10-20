@@ -8440,6 +8440,10 @@ No index files are deleted.</source>
         <translation>דולגו %1 שכבר בתור.</translation>
     </message>
     <message>
+        <source>Cannot mine %1: %2</source>
+        <translation>לא ניתן לכרות את ⁨%1⁩: ⁨%2⁩</translation>
+    </message>
+    <message>
         <source>Resolving playlist…</source>
         <translation>מתבצע פענוח של רשימת ההשמעה…</translation>
     </message>
@@ -14132,8 +14136,8 @@ Sort by it to work through a long recording in order — then highlight the rows
         <translation>בדיקת סרטונים…</translation>
     </message>
     <message>
-        <source>None of the videos can be mined. Each row says why.</source>
-        <translation>אף אחד מהסרטונים אינו ניתן לכרייה. כל שורה מציינת את הסיבה.</translation>
+        <source>None of the videos can be mined. The Activity Log says why.</source>
+        <translation>אף אחד מהסרטונים אינו ניתן לכרייה. יומן הפעילות מציין את הסיבה.</translation>
     </message>
     <message>
         <source>Interrupted when Anki Miner closed</source>

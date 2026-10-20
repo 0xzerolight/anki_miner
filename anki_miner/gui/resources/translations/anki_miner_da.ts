@@ -8440,6 +8440,10 @@ Ingen indeksfiler slettes.</translation>
         <translation>Sprang %1 over, som allerede er i køen.</translation>
     </message>
     <message>
+        <source>Cannot mine %1: %2</source>
+        <translation>%1 kan ikke udvindes: %2</translation>
+    </message>
+    <message>
         <source>Resolving playlist…</source>
         <translation>Indlæser afspilningsliste…</translation>
     </message>
@@ -14132,8 +14136,8 @@ Sortér efter det for at arbejde dig gennem en lang optagelse i rækkefølge —
         <translation>Kontrollerer videoer…</translation>
     </message>
     <message>
-        <source>None of the videos can be mined. Each row says why.</source>
-        <translation>Ingen af videoerne kan udvindes. Hver række fortæller hvorfor.</translation>
+        <source>None of the videos can be mined. The Activity Log says why.</source>
+        <translation>Ingen af videoerne kan udvindes. Aktivitetsloggen fortæller hvorfor.</translation>
     </message>
     <message>
         <source>Interrupted when Anki Miner closed</source>

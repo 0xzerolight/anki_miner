@@ -8401,6 +8401,10 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Đã bỏ qua %1 vì đã có trong hàng đợi.</translation>
     </message>
     <message>
+        <source>Cannot mine %1: %2</source>
+        <translation>Không thể khai thác %1: %2</translation>
+    </message>
+    <message>
         <source>Resolving playlist…</source>
         <translation>Đang phân giải danh sách phát…</translation>
     </message>
@@ -14082,8 +14086,8 @@ Sắp xếp theo cột này để duyệt hết một bản thu dài theo thứ 
         <translation>Đang kiểm tra video…</translation>
     </message>
     <message>
-        <source>None of the videos can be mined. Each row says why.</source>
-        <translation>Không video nào có thể khai thác. Mỗi mục đều ghi lý do.</translation>
+        <source>None of the videos can be mined. The Activity Log says why.</source>
+        <translation>Không video nào có thể khai thác. Nhật ký hoạt động ghi lý do.</translation>
     </message>
     <message>
         <source>Interrupted when Anki Miner closed</source>

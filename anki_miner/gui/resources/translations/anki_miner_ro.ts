@@ -8479,6 +8479,10 @@ Nu se șterge niciun fișier index.</translation>
         <translation>Omise: %1 (deja în coadă).</translation>
     </message>
     <message>
+        <source>Cannot mine %1: %2</source>
+        <translation>Nu se poate extrage %1: %2</translation>
+    </message>
+    <message>
         <source>Resolving playlist…</source>
         <translation>Se rezolvă lista de redare…</translation>
     </message>
@@ -14182,8 +14186,8 @@ Sortați după această coloană pentru a parcurge în ordine o înregistrare lu
         <translation>Se verifică videoclipurile…</translation>
     </message>
     <message>
-        <source>None of the videos can be mined. Each row says why.</source>
-        <translation>Niciunul dintre videoclipuri nu poate fi extras. Fiecare rând arată motivul.</translation>
+        <source>None of the videos can be mined. The Activity Log says why.</source>
+        <translation>Niciunul dintre videoclipuri nu poate fi extras. Jurnalul de activitate arată motivul.</translation>
     </message>
     <message>
         <source>Interrupted when Anki Miner closed</source>

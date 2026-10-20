@@ -8401,6 +8401,10 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Melewati %1 yang sudah ada dalam antrean.</translation>
     </message>
     <message>
+        <source>Cannot mine %1: %2</source>
+        <translation>%1 tidak dapat di-mining: %2</translation>
+    </message>
+    <message>
         <source>Resolving playlist…</source>
         <translation>Menyelesaikan playlist…</translation>
     </message>
@@ -14082,8 +14086,8 @@ Urutkan berdasarkan kolom ini untuk menelusuri rekaman panjang secara berurutan 
         <translation>Memeriksa video…</translation>
     </message>
     <message>
-        <source>None of the videos can be mined. Each row says why.</source>
-        <translation>Tidak ada video yang dapat di-mining. Setiap item menjelaskan alasannya.</translation>
+        <source>None of the videos can be mined. The Activity Log says why.</source>
+        <translation>Tidak ada video yang dapat di-mining. Log Aktivitas menjelaskan alasannya.</translation>
     </message>
     <message>
         <source>Interrupted when Anki Miner closed</source>

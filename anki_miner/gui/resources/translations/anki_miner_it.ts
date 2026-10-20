@@ -8440,6 +8440,10 @@ Nessun file indice viene eliminato.</translation>
         <translation>Saltati %1 già in coda.</translation>
     </message>
     <message>
+        <source>Cannot mine %1: %2</source>
+        <translation>Impossibile estrarre %1: %2</translation>
+    </message>
+    <message>
         <source>Resolving playlist…</source>
         <translation>Risoluzione della playlist…</translation>
     </message>
@@ -14132,8 +14136,8 @@ Ordina in base a questa colonna per affrontare in ordine una registrazione lunga
         <translation>Controllo dei video…</translation>
     </message>
     <message>
-        <source>None of the videos can be mined. Each row says why.</source>
-        <translation>Nessuno dei video può essere estratto. Ogni elemento indica il motivo.</translation>
+        <source>None of the videos can be mined. The Activity Log says why.</source>
+        <translation>Nessuno dei video può essere estratto. Il Registro attività indica il motivo.</translation>
     </message>
     <message>
         <source>Interrupted when Anki Miner closed</source>

@@ -8479,6 +8479,10 @@ No index files are deleted.</source>
         <translation>Пропущено: %1 уже в очереди.</translation>
     </message>
     <message>
+        <source>Cannot mine %1: %2</source>
+        <translation>Нельзя майнить %1: %2</translation>
+    </message>
+    <message>
         <source>Resolving playlist…</source>
         <translation>Разрешение плейлиста…</translation>
     </message>
@@ -14182,8 +14186,8 @@ Sort by it to work through a long recording in order — then highlight the rows
         <translation>Проверка видео…</translation>
     </message>
     <message>
-        <source>None of the videos can be mined. Each row says why.</source>
-        <translation>Ни одно из видео нельзя майнить. Причина указана у каждого элемента.</translation>
+        <source>None of the videos can be mined. The Activity Log says why.</source>
+        <translation>Ни одно из видео нельзя майнить. Причина указана в журнале активности.</translation>
     </message>
     <message>
         <source>Interrupted when Anki Miner closed</source>

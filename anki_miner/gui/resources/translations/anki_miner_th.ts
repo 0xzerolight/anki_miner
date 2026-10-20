@@ -8401,6 +8401,10 @@ No index files are deleted.</source>
         <translation>ข้าม %1 รายการที่อยู่ในคิวแล้ว</translation>
     </message>
     <message>
+        <source>Cannot mine %1: %2</source>
+        <translation>ขุดคำจาก %1 ไม่ได้: %2</translation>
+    </message>
+    <message>
         <source>Resolving playlist…</source>
         <translation>กำลังอ่านเพลย์ลิสต์…</translation>
     </message>
@@ -14082,8 +14086,8 @@ Sort by it to work through a long recording in order — then highlight the rows
         <translation>กำลังตรวจสอบวิดีโอ…</translation>
     </message>
     <message>
-        <source>None of the videos can be mined. Each row says why.</source>
-        <translation>ไม่มีวิดีโอใดที่ขุดคำได้ แต่ละแถวระบุเหตุผลไว้</translation>
+        <source>None of the videos can be mined. The Activity Log says why.</source>
+        <translation>ไม่มีวิดีโอใดที่ขุดคำได้ บันทึกกิจกรรมระบุเหตุผลไว้</translation>
     </message>
     <message>
         <source>Interrupted when Anki Miner closed</source>

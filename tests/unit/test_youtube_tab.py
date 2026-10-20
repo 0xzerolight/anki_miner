@@ -405,6 +405,15 @@ class TestProbeOutcomes:
         assert item.error_message == "yt-dlp exploded"
         assert not tab.mine_button.isEnabled()
 
+    def test_probe_error_reason_reaches_the_activity_log(self, tab):
+        """The row shows the reason only on hover (D31); the log must carry it."""
+        tab._add_flow.add_urls(["https://youtu.be/abc"])
+        item = tab._queue.all_items()[-1]
+
+        tab._add_flow._on_probe_error(item, "YouTube requires login")
+
+        assert "Cannot mine https://youtu.be/abc: YouTube requires login" in tab.log_widget.text_edit.toPlainText()
+
     def test_probe_error_with_ready_sibling_keeps_buttons_enabled(self, tab):
         # First item ready
         _add_ready_item(tab, "https://youtu.be/ok")
@@ -1631,6 +1640,7 @@ class TestPlaylistEntryProbes:
 
         assert items[2].status == YouTubeItemStatus.PROBE_ERROR
         assert items[2].error_message == "yt-dlp exploded"
+        assert f"Cannot mine {items[2].url}: yt-dlp exploded" in tab.log_widget.text_edit.toPlainText()
 
     def test_removed_row_mid_probe_skipped(self, tab):
         items = self._expand(tab)
@@ -1863,6 +1873,27 @@ class TestSubtitleSourceSweep:
 
         assert item.status == YouTubeItemStatus.PROBE_ERROR
         assert item.error_message == "Live streams are not supported."
+
+    def test_an_unchanged_verdict_is_logged_once(self, tab):
+        """A picker flip that reaches the same refusal is not a new failure."""
+        tab._add_flow.set_subtitle_source("captions")
+        item = tab._queue.add("https://youtu.be/live")
+        tab._render_new_item(item)
+        tab._add_flow._on_probe_done(item, _make_video_info(is_live=True))
+
+        tab._add_flow.set_subtitle_source("transcribe")
+        tab._add_flow.set_subtitle_source("auto")
+
+        assert tab.log_widget.text_edit.toPlainText().count("Live streams are not supported.") == 1
+
+    def test_a_new_refusal_after_a_flip_is_logged(self, tab):
+        item = self._refused_item(tab)
+        tab._add_flow.set_subtitle_source("transcribe")
+
+        tab._add_flow.set_subtitle_source("captions")
+
+        text = tab.log_widget.text_edit.toPlainText()
+        assert text.count(f"Cannot mine {item.url}: No Japanese subtitles available for this video.") == 2
 
     def test_a_failed_probe_is_not_resurrected(self, tab):
         """No VideoInfo means yt-dlp itself failed; ASR cannot fix that."""

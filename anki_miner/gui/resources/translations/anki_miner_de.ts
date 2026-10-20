@@ -8440,6 +8440,10 @@ Es werden keine Indexdateien gelöscht.</translation>
         <translation>%1 bereits in der Warteschlange übersprungen.</translation>
     </message>
     <message>
+        <source>Cannot mine %1: %2</source>
+        <translation>%1 kann nicht gesammelt werden: %2</translation>
+    </message>
+    <message>
         <source>Resolving playlist…</source>
         <translation>Wiedergabeliste wird aufgelöst…</translation>
     </message>
@@ -14132,8 +14136,8 @@ Danach sortieren, um eine lange Aufnahme der Reihe nach durchzuarbeiten — dann
         <translation>Videos werden geprüft…</translation>
     </message>
     <message>
-        <source>None of the videos can be mined. Each row says why.</source>
-        <translation>Keines der Videos kann gesammelt werden. Jeder Eintrag nennt den Grund.</translation>
+        <source>None of the videos can be mined. The Activity Log says why.</source>
+        <translation>Keines der Videos kann gesammelt werden. Das Aktivitätsprotokoll nennt den Grund.</translation>
     </message>
     <message>
         <source>Interrupted when Anki Miner closed</source>

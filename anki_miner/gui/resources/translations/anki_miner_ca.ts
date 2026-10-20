@@ -8440,6 +8440,10 @@ No se suprimeix cap fitxer d'índex.</translation>
         <translation>S'han omès %1 que ja eren a la cua.</translation>
     </message>
     <message>
+        <source>Cannot mine %1: %2</source>
+        <translation>No es pot extreure %1: %2</translation>
+    </message>
+    <message>
         <source>Resolving playlist…</source>
         <translation>S'està resolent la llista de reproducció…</translation>
     </message>
@@ -14132,8 +14136,8 @@ Ordeneu per aquesta columna per recórrer un enregistrament llarg en ordre; desp
         <translation>S'estan comprovant els vídeos…</translation>
     </message>
     <message>
-        <source>None of the videos can be mined. Each row says why.</source>
-        <translation>No es pot extreure cap dels vídeos. Cada fila n'explica el motiu.</translation>
+        <source>None of the videos can be mined. The Activity Log says why.</source>
+        <translation>No es pot extreure cap dels vídeos. El Registre d'activitat n'explica el motiu.</translation>
     </message>
     <message>
         <source>Interrupted when Anki Miner closed</source>

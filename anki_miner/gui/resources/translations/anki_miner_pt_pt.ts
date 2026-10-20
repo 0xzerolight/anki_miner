@@ -8440,6 +8440,10 @@ Nenhum ficheiro de índice é eliminado.</translation>
         <translation>Ignorados %1 que já estavam na fila.</translation>
     </message>
     <message>
+        <source>Cannot mine %1: %2</source>
+        <translation>Não é possível minerar %1: %2</translation>
+    </message>
+    <message>
         <source>Resolving playlist…</source>
         <translation>A resolver a lista de reprodução…</translation>
     </message>
@@ -14132,8 +14136,8 @@ Ordene por esta coluna para percorrer uma gravação longa por ordem — depois 
         <translation>A verificar os vídeos…</translation>
     </message>
     <message>
-        <source>None of the videos can be mined. Each row says why.</source>
-        <translation>Nenhum dos vídeos pode ser minerado. Cada linha indica o motivo.</translation>
+        <source>None of the videos can be mined. The Activity Log says why.</source>
+        <translation>Nenhum dos vídeos pode ser minerado. O Registo de atividade indica o motivo.</translation>
     </message>
     <message>
         <source>Interrupted when Anki Miner closed</source>

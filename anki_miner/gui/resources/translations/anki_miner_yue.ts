@@ -8401,6 +8401,10 @@ No index files are deleted.</source>
         <translation>略過咗 %1 個已經喺隊列入面嘅項目。</translation>
     </message>
     <message>
+        <source>Cannot mine %1: %2</source>
+        <translation>採集唔到 %1：%2</translation>
+    </message>
+    <message>
         <source>Resolving playlist…</source>
         <translation>解析緊播放清單…</translation>
     </message>
@@ -14082,8 +14086,8 @@ Sort by it to work through a long recording in order — then highlight the rows
         <translation>檢查緊影片…</translation>
     </message>
     <message>
-        <source>None of the videos can be mined. Each row says why.</source>
-        <translation>冇一條影片可以採集。每行都有寫原因。</translation>
+        <source>None of the videos can be mined. The Activity Log says why.</source>
+        <translation>冇一條影片可以採集。活動日誌有寫原因。</translation>
     </message>
     <message>
         <source>Interrupted when Anki Miner closed</source>

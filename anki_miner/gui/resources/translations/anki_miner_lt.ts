@@ -8479,6 +8479,10 @@ Indekso failai neištrinami.</translation>
         <translation>Praleista, jau yra eilėje: %1.</translation>
     </message>
     <message>
+        <source>Cannot mine %1: %2</source>
+        <translation>Negalima rinkti %1: %2</translation>
+    </message>
+    <message>
         <source>Resolving playlist…</source>
         <translation>Išskleidžiamas grojaraštis…</translation>
     </message>
@@ -14182,8 +14186,8 @@ Rikiuokite pagal tai, kad ilgą įrašą peržiūrėtumėte iš eilės — tada 
         <translation>Tikrinami vaizdo įrašai…</translation>
     </message>
     <message>
-        <source>None of the videos can be mined. Each row says why.</source>
-        <translation>Nė iš vieno vaizdo įrašo rinkti negalima. Kiekvienoje eilutėje nurodyta priežastis.</translation>
+        <source>None of the videos can be mined. The Activity Log says why.</source>
+        <translation>Nė iš vieno vaizdo įrašo rinkti negalima. Priežastis nurodyta veiklos žurnale.</translation>
     </message>
     <message>
         <source>Interrupted when Anki Miner closed</source>

@@ -8479,6 +8479,10 @@ No index files are deleted.</source>
         <translation>Пропущено вже наявні в черзі: %1.</translation>
     </message>
     <message>
+        <source>Cannot mine %1: %2</source>
+        <translation>Неможливо видобути %1: %2</translation>
+    </message>
+    <message>
         <source>Resolving playlist…</source>
         <translation>Отримання списку відтворення…</translation>
     </message>
@@ -14182,8 +14186,8 @@ Sort by it to work through a long recording in order — then highlight the rows
         <translation>Перевірка відео…</translation>
     </message>
     <message>
-        <source>None of the videos can be mined. Each row says why.</source>
-        <translation>Жодне з відео неможливо видобути. Причину вказано в кожному рядку.</translation>
+        <source>None of the videos can be mined. The Activity Log says why.</source>
+        <translation>Жодне з відео неможливо видобути. Причину вказано в журналі дій.</translation>
     </message>
     <message>
         <source>Interrupted when Anki Miner closed</source>

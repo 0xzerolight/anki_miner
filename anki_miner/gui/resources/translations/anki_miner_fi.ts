@@ -8440,6 +8440,10 @@ Indeksitiedostoja ei poisteta.</translation>
         <translation>Ohitettiin %1, jotka ovat jo jonossa.</translation>
     </message>
     <message>
+        <source>Cannot mine %1: %2</source>
+        <translation>Kohdetta %1 ei voi louhia: %2</translation>
+    </message>
+    <message>
         <source>Resolving playlist…</source>
         <translation>Selvitetään soittolistaa…</translation>
     </message>
@@ -14132,8 +14136,8 @@ Lajittele sen mukaan käydäksesi pitkän tallenteen läpi järjestyksessä — 
         <translation>Tarkistetaan videoita…</translation>
     </message>
     <message>
-        <source>None of the videos can be mined. Each row says why.</source>
-        <translation>Yhtään videota ei voi louhia. Syy näkyy kullakin rivillä.</translation>
+        <source>None of the videos can be mined. The Activity Log says why.</source>
+        <translation>Yhtään videota ei voi louhia. Syy näkyy tapahtumalokissa.</translation>
     </message>
     <message>
         <source>Interrupted when Anki Miner closed</source>
