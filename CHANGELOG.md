@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Changed
 
 ### Fixed
+- **"Align captions to audio" no longer moves YouTube captions to the wrong place (Settings → YouTube) (#137).** YouTube's own automatic captions are now mined as fetched: its recognizer timed them from this very audio, and their rolling cues cover about 90% of the running time, so the aligners had nothing to lock onto. ffsubsync's split mode moved most lines by seconds up to a minute and stretched the track by 25/23.976, a ratio the validator accepts as a framerate fix. Manual and auto-dub captions still align, with ffsubsync's framerate search off: captions fetched with their video share its timebase, so no ratio can be right. An `--api fetch` that skips alignment ends at stage 2.
 
 ### Removed
 

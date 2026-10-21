@@ -4303,9 +4303,17 @@ class EpisodeProcessor:
         workspace: Path,
         cancel_event: threading.Event,
         fetch_progress_cb: Callable[[str, float | None], None] | None,
+        sub_mode: SubMode,
     ) -> FetchedMedia | None:
         """``youtube_postfetch.align_fetched``, its step named for ``fetch_progress_cb``."""
-        return align_fetched(self.config, fetched, workspace, cancel_event, self._fetch_step_report(fetch_progress_cb))
+        return align_fetched(
+            self.config,
+            fetched,
+            workspace,
+            cancel_event,
+            self._fetch_step_report(fetch_progress_cb),
+            sub_mode=sub_mode,
+        )
 
     def process_youtube_url(
         self,
@@ -4481,7 +4489,7 @@ class EpisodeProcessor:
                 if cancel_event.is_set():
                     return self._make_cancelled_result(start_time)
                 with timed_phase("youtube-align", logger):
-                    aligned = self._align_fetched(fetched, workspace, cancel_event, fetch_progress_cb)
+                    aligned = self._align_fetched(fetched, workspace, cancel_event, fetch_progress_cb, sub_mode)
                 if aligned is None:
                     return self._make_cancelled_result(start_time)
                 fetched = aligned

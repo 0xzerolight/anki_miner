@@ -110,6 +110,7 @@ def sync_with_ffsubsync(
     *,
     split_mode: bool = True,
     split_penalty: float = 8.0,
+    fix_framerate: bool = True,
     reference_stream: str | None = None,
     cancel_event: threading.Event | None = None,
     log_cb: Callable[[str], None] | None = None,
@@ -121,6 +122,11 @@ def sync_with_ffsubsync(
     a low-confidence sync comes back rejected rather than silently written.
     Never raises: a crashed, cancelled or timed-out child is a failed
     candidate, and the caller falls through to the next engine.
+
+    ``fix_framerate=False`` pins the scale at 1.0 for a subtitle timed against
+    this very stream. Left on, split mode scores every candidate ratio by raw
+    speech overlap after the quality gate has run, so on dense captions the
+    longest stretch (25/23.976) wins unchecked.
     """
     engine = "ffsubsync (single offset)" if not split_mode else "ffsubsync"
 
@@ -141,6 +147,9 @@ def sync_with_ffsubsync(
     ]
     if split_mode:
         argv += ["--split-penalty", str(split_penalty)]
+    if not fix_framerate:
+        # Both: the first drops the six fixed ratios, the second the one inferred from the two lengths.
+        argv += ["--no-fix-framerate", "--skip-infer-framerate-ratio"]
     if reference_stream is not None:
         argv += ["--reference-stream", reference_stream]
 

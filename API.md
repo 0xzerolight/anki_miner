@@ -244,7 +244,7 @@ The fetch file has `schema` (`1`), `run_dir`, `profile` and `language` as in the
 | `run_id` | required |
 | `youtube_url` | required: one video's link. A playlist link gives `BAD_RUN_FILE` |
 | `youtube_subtitle_source` | `auto` (captions, else transcribe), `captions` (refuse a video without them) or `transcribe`; left out, the profile's |
-| `youtube_align_captions` | `true` aligns downloaded captions with the audio; left out, the profile's |
+| `youtube_align_captions` | `true` aligns downloaded captions with the audio, except YouTube's own automatic captions, which are timed from it; left out, the profile's |
 
 Per episode it probes the video, downloads it with its subtitle into `fetch-<n>/`, transcribes or aligns, and writes `fetch-<n>.json`: `video_file`, `subtitle_file` (absolute paths), `sub_source` (`manual`, `auto` for YouTube's automatic captions, or `generated` for a transcription), `video_id`, `title`, `duration` (whole seconds), and the `episode_name_override`, `series_name_override` and `source_label_override` a YouTube run in the window sets. Mine the files with an episode that sets those three, so its cards read like the window's YouTube cards.
 - Fetching a `run_id` again downloads again, into the next `fetch-<n>/`. It first removes every `fetch-<n>/` in that run folder with no `fetch-<n>.json`, so keep the json while you need its folder.

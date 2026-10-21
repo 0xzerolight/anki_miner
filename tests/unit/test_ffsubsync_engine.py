@@ -155,6 +155,29 @@ class TestSupervisedParent:
 
         assert make_parser().parse_args(_child_argv(captured[0])).split_penalty is None
 
+    @pytest.mark.parametrize(("kwargs", "searched"), [({}, True), ({"fix_framerate": False}, False)])
+    def test_fix_framerate_off_pins_the_scale(self, cfg, paths, kwargs, searched):
+        """Off: neither the fixed ratios nor one inferred from the two lengths is tried."""
+        from ffsubsync.ffsubsync import make_parser
+
+        reference, in_sub, out = paths
+        captured: list[list[str]] = []
+
+        def _run(command: Any, **kw: Any) -> SupervisedResult:
+            captured.append([str(part) for part in command])
+            Path(out).touch()
+            return _supervised(_verdict_line())
+
+        with (
+            patch(_RESOLVE_FFMPEG, return_value="ffmpeg"),
+            patch(_RUN_SUPERVISED, side_effect=_run),
+        ):
+            sync_with_ffsubsync(cfg, reference, in_sub, out, **kwargs)
+
+        args = make_parser().parse_args(_child_argv(captured[0]))
+        assert args.no_fix_framerate is not searched
+        assert args.skip_infer_framerate_ratio is not searched
+
     def test_split_mode_off_reports_single_offset_engine_label(self, cfg, paths):
         """Matches alass_engine's `no_split` convention: label carries the mode, not just the tool."""
         reference, in_sub, out = paths

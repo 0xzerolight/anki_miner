@@ -248,8 +248,10 @@ def test_a_transcribed_subtitle_is_generated(monkeypatch, tmp_path) -> None:
 def test_alignment_follows_the_episode_over_the_profile(monkeypatch, tmp_path) -> None:
     _use(monkeypatch, _Fetcher())
     aligned: list[Path] = []
+    modes: list[str] = []
 
-    def fake(config, fetched, workspace, cancel_event, report):
+    def fake(config, fetched, workspace, cancel_event, report, *, sub_mode):
+        modes.append(sub_mode)
         out = workspace / "abcdefghijk.ja.retimed.srt"
         out.write_text("y", encoding="utf-8")
         aligned.append(out)
@@ -258,6 +260,16 @@ def test_alignment_follows_the_episode_over_the_profile(monkeypatch, tmp_path) -
     monkeypatch.setattr(fetch, "align_fetched", fake)
     assert _run(tmp_path, youtube_align_captions=True)["ok"]
     assert _record(tmp_path)["subtitle_file"] == str(aligned[0])
+    assert modes == ["manual_only"]  # the route the probe resolved, so align_fetched can skip native auto-captions
+
+
+def test_native_auto_captions_are_not_aligned(monkeypatch, tmp_path) -> None:
+    """YouTube timed them from this very audio (#137): no align stage, the fetched file as is."""
+    _use(monkeypatch, _Fetcher(replace(INFO, has_manual_ja_subs=False, has_auto_ja_subs=True)))
+    assert _run(tmp_path, youtube_align_captions=True)["ok"]
+    assert _record(tmp_path)["sub_source"] == "auto"
+    assert _record(tmp_path)["subtitle_file"].endswith("abcdefghijk.ja.srt")
+    assert json.loads((tmp_path / "yt-1" / "progress.json").read_text(encoding="utf-8"))["stage"] == 2
 
 
 def test_a_cancel_file_cancels_the_run_and_is_removed(monkeypatch, tmp_path) -> None:

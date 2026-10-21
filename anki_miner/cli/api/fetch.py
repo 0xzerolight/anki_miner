@@ -50,7 +50,7 @@ from anki_miner.exceptions.youtube import (
     YtdlpNotFoundError,
 )
 from anki_miner.gui.utils.service_factory import create_youtube_fetcher
-from anki_miner.models.youtube import FetchedMedia, SubtitleSource, VideoInfo
+from anki_miner.models.youtube import FetchedMedia, SubMode, SubtitleSource, VideoInfo
 from anki_miner.services.asr.model_availability import usable_model_installed
 from anki_miner.services.media_extractor import MediaExtractorService
 from anki_miner.services.youtube_fetcher import classify_probe_result
@@ -192,7 +192,7 @@ def _fetch(
     if cancel.is_set():
         raise ApiError(CANCELLED, _CANCELLED)
     align = config.youtube_align_captions if episode.align_captions is None else episode.align_captions
-    fetched = _subtitle(config, fetched, workspace, cancel, progress, align=align)
+    fetched = _subtitle(config, fetched, workspace, cancel, progress, align=align, sub_mode=sub_mode)
     if cancel.is_set():
         raise ApiError(CANCELLED, _CANCELLED)
     return info, fetched
@@ -206,6 +206,7 @@ def _subtitle(
     progress: ProgressFile,
     *,
     align: bool,
+    sub_mode: SubMode,
 ) -> FetchedMedia:
     """Transcription for a caption-less download, else alignment when asked: process_youtube_url's order."""
     if fetched.subtitle_file is None:
@@ -222,8 +223,12 @@ def _subtitle(
         return fetched
     if not align:
         return fetched
-    progress.on_stage(3, _STAGES, "align")
-    aligned = align_fetched(config, fetched, workspace, cancel, _percent(progress))
+
+    def stage(_step: object, _fraction: float | None) -> None:
+        # Opened by align_fetched itself: native auto-captions come back unaligned and end at stage 2.
+        progress.on_stage(3, _STAGES, "align")
+
+    aligned = align_fetched(config, fetched, workspace, cancel, stage, sub_mode=sub_mode)
     if aligned is None:
         raise ApiError(CANCELLED, _CANCELLED)
     return aligned

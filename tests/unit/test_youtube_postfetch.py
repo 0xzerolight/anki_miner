@@ -65,10 +65,11 @@ def test_no_speech_is_an_error(test_config, video, tmp_path, monkeypatch) -> Non
         )
 
 
+@pytest.mark.parametrize("sub_mode", ["manual_only", "auto_dub"])
 @pytest.mark.parametrize(
     ("ok", "cancelled", "expect"), [(True, False, "retimed"), (False, False, "kept"), (False, True, None)]
 )
-def test_alignment(test_config, video, tmp_path, monkeypatch, ok, cancelled, expect) -> None:
+def test_alignment(test_config, video, tmp_path, monkeypatch, ok, cancelled, expect, sub_mode) -> None:
     from anki_miner.services import subtitle_retimer
     from anki_miner.services.subtitle_retimer import RetimeOutcome
 
@@ -76,6 +77,8 @@ def test_alignment(test_config, video, tmp_path, monkeypatch, ok, cancelled, exp
     captions.write_text("x", encoding="utf-8")
 
     def fake(config, video_path, in_sub, out_sub, **kwargs):
+        # The captions were timed against this very stream: no framerate ratio can be right.
+        assert kwargs["fix_framerate"] is False
         if ok:
             out_sub.write_text("y", encoding="utf-8")
         return RetimeOutcome(ok=ok, cancelled=cancelled)
@@ -88,6 +91,7 @@ def test_alignment(test_config, video, tmp_path, monkeypatch, ok, cancelled, exp
         tmp_path,
         threading.Event(),
         lambda step, fraction: steps.append(step),
+        sub_mode=sub_mode,
     )
     if expect is None:
         assert result is None
@@ -95,3 +99,28 @@ def test_alignment(test_config, video, tmp_path, monkeypatch, ok, cancelled, exp
         assert result is not None
         assert result.subtitle_file == (tmp_path / "abc.ja.retimed.srt" if expect == "retimed" else captions)
     assert steps == ["aligning"]
+
+
+def test_native_auto_captions_are_not_aligned(test_config, video, tmp_path, monkeypatch) -> None:
+    """YouTube timed them from this very audio; the aligners only find false optima on them (#137)."""
+    from anki_miner.services import subtitle_retimer
+
+    captions = tmp_path / "abc.ja.srt"
+    captions.write_text("x", encoding="utf-8")
+    called: list[int] = []
+    monkeypatch.setattr(subtitle_retimer, "retime_subtitle", lambda *a, **k: called.append(1))
+    fetched = FetchedMedia(video, captions, "auto")
+    steps: list = []
+
+    result = youtube_postfetch.align_fetched(
+        test_config,
+        fetched,
+        tmp_path,
+        threading.Event(),
+        lambda step, fraction: steps.append(step),
+        sub_mode="auto_only",
+    )
+
+    assert result == fetched
+    assert called == []
+    assert steps == []

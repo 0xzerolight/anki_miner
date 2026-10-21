@@ -3951,7 +3951,7 @@ class TestProcessYoutubeUrlAlignment:
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
         mock_services["anki_service"].create_cards_batch.return_value = [1]
 
-    def _processor(self, test_config, mock_services, tmp_path, *, subtitle_file, sub_source="auto"):
+    def _processor(self, test_config, mock_services, tmp_path, *, subtitle_file, sub_source="manual"):
         video_file = tmp_path / "abc123.mp4"
         video_file.touch()
         fetcher = MagicMock()
@@ -3996,7 +3996,7 @@ class TestProcessYoutubeUrlAlignment:
             url="https://youtu.be/abc123",
             video_id="abc123",
             workspace=tmp_path,
-            sub_mode="auto_only",
+            sub_mode="manual_only",
             cancel_event=threading.Event(),
             on_fetched=seen.append,
             align_captions=True,
@@ -4020,7 +4020,7 @@ class TestProcessYoutubeUrlAlignment:
             url="https://youtu.be/abc123",
             video_id="abc123",
             workspace=tmp_path,
-            sub_mode="auto_only",
+            sub_mode="manual_only",
             cancel_event=threading.Event(),
             on_fetched=seen.append,
             align_captions=True,
@@ -4047,7 +4047,7 @@ class TestProcessYoutubeUrlAlignment:
             url="https://youtu.be/abc123",
             video_id="abc123",
             workspace=tmp_path,
-            sub_mode="auto_only",
+            sub_mode="manual_only",
             cancel_event=threading.Event(),
             align_captions=True,
         )
@@ -4086,6 +4086,28 @@ class TestProcessYoutubeUrlAlignment:
 
         assert called == []
 
+    def test_native_auto_captions_are_mined_as_fetched(self, test_config, mock_services, tmp_path, monkeypatch):
+        """YouTube timed them from this very audio; the aligners only find false optima on them (#137)."""
+        from anki_miner.services.subtitle_retimer import RetimeOutcome
+
+        self._pipeline(mock_services)
+        called: list[int] = []
+        self._patch_retime(monkeypatch, RetimeOutcome(ok=True), on_call=lambda *a: called.append(1))
+        captions = self._captions(tmp_path)
+        processor = self._processor(test_config, mock_services, tmp_path, subtitle_file=captions, sub_source="auto")
+
+        processor.process_youtube_url(
+            url="https://youtu.be/abc123",
+            video_id="abc123",
+            workspace=tmp_path,
+            sub_mode="auto_only",
+            cancel_event=threading.Event(),
+            align_captions=True,
+        )
+
+        assert called == []
+        mock_services["subtitle_parser"].parse_subtitle_file.assert_called_once_with(captions, None)
+
     def test_alignment_is_off_by_default(self, test_config, mock_services, tmp_path, monkeypatch):
         from anki_miner.services.subtitle_retimer import RetimeOutcome
 
@@ -4098,7 +4120,7 @@ class TestProcessYoutubeUrlAlignment:
             url="https://youtu.be/abc123",
             video_id="abc123",
             workspace=tmp_path,
-            sub_mode="auto_only",
+            sub_mode="manual_only",
             cancel_event=threading.Event(),
         )
 
@@ -4115,7 +4137,7 @@ class TestProcessYoutubeUrlAlignment:
             url="https://youtu.be/abc123",
             video_id="abc123",
             workspace=tmp_path,
-            sub_mode="auto_only",
+            sub_mode="manual_only",
             cancel_event=threading.Event(),
             align_captions=True,
         )
@@ -4135,7 +4157,7 @@ class TestProcessYoutubeUrlAlignment:
             url="https://youtu.be/abc123",
             video_id="abc123",
             workspace=tmp_path,
-            sub_mode="auto_only",
+            sub_mode="manual_only",
             cancel_event=threading.Event(),
             fetch_progress_cb=lambda label, frac: reported.append((label, frac)),
             align_captions=True,

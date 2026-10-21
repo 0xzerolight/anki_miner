@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING, Literal
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions.youtube import TranscriptionFailedError, TranscriptionProducedNothingError
 from anki_miner.languages.registry import config_language, get_profile
-from anki_miner.models.youtube import FetchedMedia
+from anki_miner.models.youtube import FetchedMedia, SubMode
 
 if TYPE_CHECKING:
     from anki_miner.services.media_extractor import MediaExtractorService
@@ -80,11 +80,19 @@ def align_fetched(
     workspace: Path,
     cancel_event: threading.Event,
     report: StepReport | None = None,
+    *,
+    sub_mode: SubMode,
 ) -> FetchedMedia | None:
     """Retime fetched captions against the video's own audio.
 
     Returns None when the alignment was cancelled — the outcome carries that
     fact, so the caller never has to re-read the event to learn it.
+
+    YouTube's own auto-captions (``auto_only``) come back as fetched: the
+    recognizer timed them from this very audio, and their rolling cues cover
+    about 90% of the running time, so the aligners have nothing to lock onto
+    and land on false optima (#137). ``auto_dub`` captions still align: they
+    were timed to the original-language audio, and the mined track is the dub.
 
     Best-effort by contract: ``retime_subtitle`` never raises for content or
     tool reasons — every failure comes back as a falsy ``RetimeOutcome`` with
@@ -99,6 +107,9 @@ def align_fetched(
 
     if fetched.subtitle_file is None:  # pragma: no cover - callers gate on this
         return fetched
+    if sub_mode == "auto_only":
+        logger.info("YouTube caption alignment skipped: the auto-captions were timed from this audio")
+        return fetched
     if report is not None:
         report("aligning", None)
     source = fetched.subtitle_file
@@ -108,6 +119,9 @@ def align_fetched(
         fetched.video_file,
         source,
         out_sub,
+        # The captions were timed against this very stream, so no framerate
+        # ratio can be right; a searched one is a false optimum (#137).
+        fix_framerate=False,
         cancel_event=cancel_event,
         log_cb=logger.debug,
     )

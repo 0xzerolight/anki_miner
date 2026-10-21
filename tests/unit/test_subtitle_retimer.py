@@ -158,6 +158,22 @@ class TestEngineChain:
         assert [call.get("split_mode", True) for call in ffs_calls] == [True, False]
         assert _cue_starts(out_sub) == [s + 400 for s in _starts()]
 
+    @pytest.mark.parametrize(("kwargs", "expected"), [({}, True), ({"fix_framerate": False}, False)])
+    def test_fix_framerate_reaches_both_ffsubsync_runs(self, cfg, video, in_sub, out_sub, kwargs, expected):
+        ffs_calls: list[dict[str, Any]] = []
+
+        def _ffs(config, reference, sub, out, **kw):
+            ffs_calls.append(kw)
+            return SyncResult(ok=False, engine="ffsubsync", detail="failed")
+
+        with (
+            patch(_FFS, side_effect=_ffs),
+            patch(_ALASS, side_effect=_fake_engine(ok=False, engine="alass")),
+        ):
+            retime_subtitle(cfg, video, in_sub, out_sub, **kwargs)
+
+        assert [call["fix_framerate"] for call in ffs_calls] == [expected, expected]
+
     def test_all_engines_fail_keeps_original(self, cfg, video, in_sub, out_sub):
         before = in_sub.read_bytes()
         with (

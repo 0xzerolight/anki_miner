@@ -119,6 +119,7 @@ def retime_subtitle(
     out_sub: Path,
     *,
     reference_override: ReferenceOverride | None = None,
+    fix_framerate: bool = True,
     cancel_event: threading.Event | None = None,
     log_cb: Callable[[str], None] | None = None,
 ) -> RetimeOutcome:
@@ -138,6 +139,9 @@ def retime_subtitle(
             suffix). Passing *in_sub* here overwrites it with no copy kept.
         reference_override: Explicit user pick of the reference track; None
             auto-selects (embedded subtitle preferred, audio fallback).
+        fix_framerate: Let ffsubsync correct a framerate mismatch. False for a
+            subtitle timed against this very stream (fetched captions), where
+            no ratio can be right; alass never guesses one.
         cancel_event: Checked between pipeline steps; alass runs are killed
             mid-flight, an in-process ffsubsync run finishes first.
         log_cb: Called with human-readable progress/decision lines.
@@ -201,7 +205,9 @@ def retime_subtitle(
 
         attempts: list[str] = []
         alass_missing = False
-        for label, runner in _engine_chain(config, sub_reference=sub_reference, cancel_event=cancel_event):
+        for label, runner in _engine_chain(
+            config, sub_reference=sub_reference, fix_framerate=fix_framerate, cancel_event=cancel_event
+        ):
             if _cancelled(cancel_event):
                 return RetimeOutcome(
                     ok=False,
@@ -315,15 +321,24 @@ def retime_subtitle(
             tmp_dir.rmdir()
 
 
-def _engine_chain(config, *, sub_reference: bool, cancel_event: threading.Event | None):
+def _engine_chain(config, *, sub_reference: bool, fix_framerate: bool, cancel_event: threading.Event | None):
     """Yield ``(label, runner)`` pairs in the order they should be tried."""
 
     def run_ffsubsync(reference: Path, in_sub: Path, out: Path, log_cb) -> SyncResult:
-        return sync_with_ffsubsync(config, reference, in_sub, out, cancel_event=cancel_event, log_cb=log_cb)
+        return sync_with_ffsubsync(
+            config, reference, in_sub, out, fix_framerate=fix_framerate, cancel_event=cancel_event, log_cb=log_cb
+        )
 
     def run_ffsubsync_offset(reference: Path, in_sub: Path, out: Path, log_cb) -> SyncResult:
         return sync_with_ffsubsync(
-            config, reference, in_sub, out, split_mode=False, cancel_event=cancel_event, log_cb=log_cb
+            config,
+            reference,
+            in_sub,
+            out,
+            split_mode=False,
+            fix_framerate=fix_framerate,
+            cancel_event=cancel_event,
+            log_cb=log_cb,
         )
 
     def run_alass_split(reference: Path, in_sub: Path, out: Path, log_cb) -> SyncResult:
