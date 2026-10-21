@@ -56,8 +56,18 @@ JA_AUDIO = AudioDefaults(
 )
 
 
+#: The profile's ``script`` and the parser's bilingual-cue gate: one instance.
+_JA_SCRIPT = JaScriptSupport()
+
+
 def _create_parser(*args: Any, **kwargs: Any) -> SubtitleParserService:
-    """Build the unchanged JA parser (module attribute, so tests can patch it)."""
+    """Build the JA parser (module attribute, so tests can patch it).
+
+    YouTube lyric captions put a romaji line under the Japanese one, and the
+    flattened cue becomes the card's Sentence: the script gate drops that line,
+    as it drops a bilingual cue's English line in the other non-Latin languages.
+    """
+    kwargs.setdefault("has_target_script", _JA_SCRIPT.contains_target_script)
     return SubtitleParserService(*args, **kwargs)
 
 
@@ -78,7 +88,7 @@ def build_profile() -> LanguageProfile:
         lookup=JaLookupStrategy(),
         reading=JaReadingSupport(),
         sentence_annotator=JaSentenceAnnotator(),
-        script=JaScriptSupport(),
+        script=_JA_SCRIPT,
         audio_track_codes=JAPANESE_LANGUAGE_CODES,
         import_encodings=("utf-8-sig", "cp932", "euc_jp"),
         scoped_defaults=_scoped_defaults(),

@@ -215,7 +215,8 @@ def test_display_parsers_follow_the_profile_factory(test_config, monkeypatch):
             calls.append((config, kwargs))
 
     create_profile_parser(test_config, _Recorder)
-    assert calls == [(test_config, {})]  # ja: the caller's own class, same call shape
+    # ja: the caller's own class, with the script gate ja's factory adds
+    assert calls == [(test_config, {"has_target_script": get_profile("ja").script.contains_target_script})]
 
     zh_parser = object()
     register_stub_profile(monkeypatch, "zh", create_parser=lambda config, **kwargs: zh_parser)

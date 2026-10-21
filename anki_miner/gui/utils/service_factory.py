@@ -790,9 +790,10 @@ def _create_subtitle_parser(config: AnkiMinerConfig, **lookups: Any) -> Subtitle
     Dispatch is gated on the factory *object*, never on ``config.language``, the
     way ``_lookup_kwarg`` gates on the strategy object. For the ja profile the
     construction stays the literal ``SubtitleParserService(...)`` call this
-    module has always made: ja's ``_create_parser`` is a bare forward to the
-    same class, so the two branches build the same object, but only the direct
-    call reaches this module's ``SubtitleParserService`` attribute — which
+    module has always made: ja's ``_create_parser`` forwards to the same class
+    with ja's script gate, which this branch passes too, so the two build the
+    same object, but only the direct call reaches this module's
+    ``SubtitleParserService`` attribute — which
     ``test_batch_queue_worker.test_one_subtitle_parser_service_for_the_whole_queue``
     patches to count the parsers a queue run builds. A profile-routed ja build
     bypasses that patch and the run looks parser-less.
@@ -800,10 +801,10 @@ def _create_subtitle_parser(config: AnkiMinerConfig, **lookups: Any) -> Subtitle
     Every profile returns the same concrete class (the factories inject
     policies, they do not subclass), which is what the ``cast`` records.
     """
-    factory = get_profile(config_language(config)).create_parser
-    if factory is get_profile("ja").create_parser:
-        return SubtitleParserService(config, **lookups)
-    return cast(SubtitleParserService, factory(config, **lookups))
+    profile = get_profile(config_language(config))
+    if profile.create_parser is get_profile("ja").create_parser:
+        return SubtitleParserService(config, has_target_script=profile.script.contains_target_script, **lookups)
+    return cast(SubtitleParserService, profile.create_parser(config, **lookups))
 
 
 def create_line_parser(config: AnkiMinerConfig) -> SubtitleParserService:
@@ -823,13 +824,14 @@ def create_profile_parser(
 
     Cue text shown in the curator and matched by a line expansion must be cleaned
     exactly as mining cleans it, so a non-ja language gets its profile factory's
-    seams. ja keeps the caller's own class and call shape: the display sites
-    import ``SubtitleParserService`` themselves and their tests patch that name.
+    seams. ja keeps the caller's own class, with the script gate its factory
+    adds: the display sites import ``SubtitleParserService`` themselves and their
+    tests patch that name.
     """
-    factory = get_profile(config_language(config)).create_parser
-    if factory is get_profile("ja").create_parser:
-        return ja_parser_cls(config)
-    return cast(SubtitleParserService, factory(config))
+    profile = get_profile(config_language(config))
+    if profile.create_parser is get_profile("ja").create_parser:
+        return ja_parser_cls(config, has_target_script=profile.script.contains_target_script)
+    return cast(SubtitleParserService, profile.create_parser(config))
 
 
 def create_services(

@@ -104,7 +104,7 @@ def test_scoped_defaults_are_the_config_defaults(profile):
         assert profile.scoped_defaults[name] == getattr(base, name), name
 
 
-def test_create_parser_delegates_to_the_subtitle_parser_service(monkeypatch):
+def test_create_parser_delegates_to_the_subtitle_parser_service(profile, monkeypatch):
     seen = {}
 
     class _Fake:
@@ -116,7 +116,10 @@ def test_create_parser_delegates_to_the_subtitle_parser_service(monkeypatch):
     config = AnkiMinerConfig()
     parser = get_profile("ja").create_parser(config, term_lookup=None)
     assert isinstance(parser, _Fake)
-    assert seen == {"args": (config,), "kwargs": {"term_lookup": None}}
+    assert seen == {
+        "args": (config,),
+        "kwargs": {"term_lookup": None, "has_target_script": profile.script.contains_target_script},
+    }
 
 
 def test_mined_form_delegates_to_select_mined_form(profile):

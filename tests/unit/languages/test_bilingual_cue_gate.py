@@ -27,3 +27,33 @@ def test_a_russian_bilingual_cue_keeps_its_english_line_out_of_the_sentence(tmp_
     srt = tmp_path / "bilingual.srt"
     srt.write_text("1\n00:00:01,000 --> 00:00:03,000\nЯ сейчас иду домой\nI am going home now.\n\n", encoding="utf-8")
     assert {w.sentence for w in parser.parse_subtitle_file(srt)} == {"Я сейчас иду домой"}
+
+
+def _ja_parsers():
+    """Every way a ja parser is built: the profile factory and service_factory's two literal branches."""
+    from anki_miner.gui.utils import service_factory
+    from anki_miner.services.subtitle_parser import SubtitleParserService
+
+    return {
+        "profile": lambda config: get_profile("ja").create_parser(config),
+        "run": service_factory.create_line_parser,
+        "display": lambda config: service_factory.create_profile_parser(config, SubtitleParserService),
+    }
+
+
+@pytest.mark.parametrize("builder", ["profile", "run", "display"])
+def test_a_japanese_cue_keeps_its_romaji_line_out_of_the_sentence(builder, tmp_path):
+    """YouTube lyric captions put a romaji line under the Japanese one."""
+    srt = tmp_path / "romaji.srt"
+    srt.write_text(
+        "1\n00:00:01,000 --> 00:00:03,000\n今日も学校に行く\nkyou mo gakkou ni iku\n\n"
+        "2\n00:00:04,000 --> 00:00:06,000\n明日は休みだ\n\n"
+        "3\n00:00:07,000 --> 00:00:09,000\nSee you\ntomorrow\n\n",
+        encoding="utf-8",
+    )
+    parser = _ja_parsers()[builder](AnkiMinerConfig())
+    assert [text for _, _, text in parser.parse_raw_entries(srt)] == [
+        "今日も学校に行く",
+        "明日は休みだ",
+        "See you tomorrow",
+    ]

@@ -3,7 +3,8 @@
 The seam is the same shape as the normalisation one (``test_normalize_seam``):
 ``clean_subtitle_text`` takes the predicate, the parser stores it, the zh
 factory opts in, and the reading-tab loader gets the value the parser holds.
-Every other language, ja included, passes nothing and stays byte-identical.
+ja and the other non-Latin languages opt in the same way; a Latin-script
+language passes nothing and keeps every line.
 """
 
 from __future__ import annotations
@@ -106,13 +107,13 @@ class TestTheZhParser:
         assert "喜欢" in {word.mined_form for word in zh_parser.parse_subtitle_file(path)}
 
 
-class TestEveryOtherLanguage:
-    def test_the_ja_parser_keeps_both_lines_of_a_bilingual_cue(self, test_config, tmp_path: Path) -> None:
+class TestJapanese:
+    def test_the_ja_parser_drops_the_english_line_of_a_bilingual_cue(self, test_config, tmp_path: Path) -> None:
         parser = _create_subtitle_parser(test_config)
         path = _srt(tmp_path, "ja.srt", "りんごを食べた\nI ate an apple")
 
-        assert parser.has_target_script is None
-        assert _texts(parser, path) == ["りんごを食べた I ate an apple"]
+        assert parser.has_target_script == get_profile("ja").script.contains_target_script
+        assert _texts(parser, path) == ["りんごを食べた"]
 
 
 class TestTheFactorySeam:

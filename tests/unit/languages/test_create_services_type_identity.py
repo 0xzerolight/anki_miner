@@ -308,6 +308,9 @@ JA_PARSER_KEYWORDS = {
     "form_lookup",
     # R1: the run's whitelist probe (None when no whitelist is honoured).
     "force_include",
+    # The bilingual-cue gate ja's own factory adds: a romaji line under the
+    # Japanese one stays out of the Sentence.
+    "has_target_script",
 }
 
 
