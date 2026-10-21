@@ -1,10 +1,15 @@
-"""One event pass for every reader: karaoke bursts (MS-12), songs, signs and drawings (F-08, SK-19)."""
+"""One event pass for every reader: karaoke bursts (MS-12), songs, signs and drawings (F-08, SK-19), rolling captions."""
 
 from __future__ import annotations
 
 import pysubs2
 
-from anki_miner.services.subtitle_cleaner import collapse_frame_bursts, drop_non_dialogue_events, mining_events
+from anki_miner.services.subtitle_cleaner import (
+    clamp_rolling_ends,
+    collapse_frame_bursts,
+    drop_non_dialogue_events,
+    mining_events,
+)
 
 
 def _ev(start: int, end: int, text: str, style: str = "Default", *, comment: bool = False) -> pysubs2.SSAEvent:
@@ -124,6 +129,71 @@ class TestDropNonDialogueEvents:
         assert drop_non_dialogue_events([]) == []
 
 
+#: The first cues of a YouTube auto-caption track (#137): each line stays on
+#: screen until the line after next appears.
+_ROLLING = [(199, 6640), (3959, 8719), (6640, 11200), (8719, 13759), (11200, 15960)]
+
+
+def _rolling() -> list[pysubs2.SSAEvent]:
+    return [_ev(start, end, f"Line {i}") for i, (start, end) in enumerate(_ROLLING)]
+
+
+class TestClampRollingEnds:
+    def test_a_rolling_track_ends_each_cue_at_the_next_start(self):
+        out = clamp_rolling_ends(_rolling())
+
+        assert [(event.start, event.end) for event in out] == [
+            (199, 3959),
+            (3959, 6640),
+            (6640, 8719),
+            (8719, 11200),
+            (11200, 15960),
+        ]
+
+    def test_a_track_without_overlaps_is_unchanged(self):
+        lines = [_ev(0, 1000, "One"), _ev(1200, 2000, "Two"), _ev(2000, 3000, "Three")]
+
+        assert _spans(clamp_rolling_ends(lines)) == _spans(lines)
+
+    def test_a_few_overlapping_lines_are_left_alone(self):
+        """Two speakers talking over each other once is dialogue, not a rolling track."""
+        lines = [_ev(0, 1000, "A"), _ev(1500, 3500, "B"), _ev(3000, 4000, "C"), _ev(4500, 5000, "D")]
+
+        assert _spans(clamp_rolling_ends(lines)) == _spans(lines)
+
+    def test_same_start_twins_are_not_rolling(self):
+        """A dual-language file shows each line twice from one start; neither clamps the other to nothing."""
+        lines = [_ev(0, 2000, "こんにちは"), _ev(0, 2000, "Hello"), _ev(2500, 4000, "またね"), _ev(2500, 4000, "Bye")]
+
+        assert _spans(clamp_rolling_ends(lines)) == _spans(lines)
+
+    def test_cues_sharing_a_start_in_a_rolling_track_end_at_the_next_later_start(self):
+        events = _rolling()
+        events.insert(1, _ev(199, 6640, "Twin"))
+
+        out = clamp_rolling_ends(events)
+
+        assert [(event.start, event.end) for event in out[:2]] == [(199, 3959), (199, 3959)]
+
+    def test_events_keep_their_order(self):
+        events = list(reversed(_rolling()))
+
+        out = clamp_rolling_ends(events)
+
+        assert [event.plaintext for event in out] == [event.plaintext for event in events]
+        assert [(event.start, event.end) for event in out][-1] == (199, 3959)
+
+    def test_the_input_events_are_not_changed(self):
+        events = _rolling()
+
+        clamp_rolling_ends(events)
+
+        assert [(event.start, event.end) for event in events] == _ROLLING
+
+    def test_no_events(self):
+        assert clamp_rolling_ends([]) == []
+
+
 class TestMiningEvents:
     _DIALOGUE = [_ev(0, 1000, "One"), _ev(1000, 2000, "Two"), _ev(2000, 3000, "Three")]
     # Twenty frames would outnumber the three dialogue lines if styles were
@@ -149,3 +219,8 @@ class TestMiningEvents:
         events = [_ev(0, 1000, "Note to the editor", comment=True), _ev(0, 1000, "Hi")]
 
         assert [event.plaintext for event in mining_events(events, skip_non_dialogue=False)] == ["Hi"]
+
+    def test_a_rolling_track_reaches_the_readers_clamped(self):
+        out = mining_events(_rolling(), skip_non_dialogue=False)
+
+        assert [event.end for event in out] == [3959, 6640, 8719, 11200, 15960]

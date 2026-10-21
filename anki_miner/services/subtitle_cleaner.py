@@ -43,6 +43,7 @@ __all__ = [
     "OP_ED_CHAPTER_RE",
     "CleanedForAlignment",
     "SkipRanges",
+    "clamp_rolling_ends",
     "clean_for_alignment",
     "clean_reference",
     "collapse_frame_bursts",
@@ -493,17 +494,49 @@ def drop_non_dialogue_events(events: Sequence[pysubs2.SSAEvent]) -> list[pysubs2
     return kept
 
 
+def clamp_rolling_ends(events: Sequence[pysubs2.SSAEvent]) -> list[pysubs2.SSAEvent]:
+    """End each cue of a rolling caption track where the next cue starts (#137).
+
+    YouTube's auto-captions keep a line on screen until the line after next
+    appears, so a cue's end is when it leaves the screen, not when its speech
+    ends, and every clip cut from it carried about two seconds of the next
+    line. A track is rolling when more than half of its start-ordered
+    transitions overlap (YouTube's measure 96%, ordinary subtitles almost
+    none); each of its cues then ends no later than the next strictly later
+    start, so lines sharing a start (a dual-language file's twins) never clamp
+    each other to nothing. Any other track comes back as it is. Order is kept;
+    *events* is not changed.
+    """
+    ordered = sorted(events, key=lambda event: event.start)
+    overlapping = sum(1 for a, b in zip(ordered, ordered[1:], strict=False) if a.start < b.start < a.end)
+    if overlapping * 2 <= len(ordered) - 1:
+        return list(events)
+    starts = sorted({event.start for event in events})
+    next_start = dict(zip(starts, starts[1:], strict=False))
+    result: list[pysubs2.SSAEvent] = []
+    for event in events:
+        later = next_start.get(event.start)
+        if later is not None and event.end > later:
+            event = event.copy()
+            event.end = later
+        result.append(event)
+    return result
+
+
 def mining_events(events: Sequence[pysubs2.SSAEvent], *, skip_non_dialogue: bool) -> list[pysubs2.SSAEvent]:
     """The cues mining, Condense and Readability read from a loaded file.
 
     Comment events go, karaoke and animated-sign bursts collapse (MS-12, always),
     and with *skip_non_dialogue* (``config.skip_opening_ending``, F-08) songs,
     signs and drawings go too. The collapse runs first, so a karaoke opening's
-    hundreds of frames cannot make its style the file's main style.
+    hundreds of frames cannot make its style the file's main style. A rolling
+    caption track then has its cue ends pulled in to the next cue's start
+    (:func:`clamp_rolling_ends`), judged on the dialogue that is left.
     """
     spoken = [event for event in events if getattr(event, "is_comment", None) is not True]
     collapsed = collapse_frame_bursts(spoken)
-    return drop_non_dialogue_events(collapsed) if skip_non_dialogue else collapsed
+    dialogue = drop_non_dialogue_events(collapsed) if skip_non_dialogue else collapsed
+    return clamp_rolling_ends(dialogue)
 
 
 #: Chapter titles that mark an opening, ending, preview or credits (F-08,
