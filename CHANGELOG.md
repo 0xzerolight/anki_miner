@@ -11,13 +11,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Changed
 
 ### Fixed
+
+### Removed
+
+## [3.10.1] - 2026-10-22
+
+YouTube caption timing and two Japanese fixes. "Align captions to audio" no longer moves YouTube's automatic captions, clips cut from them no longer run into the next line, and the Activity Log says why a link cannot be mined. Romaji lines under Japanese lyric captions stay out of the card's sentence, and a known 〜する verb such as 愛する now covers 愛される, 愛すべき and 愛せない. Some changes alter card output: clips from YouTube's automatic captions are shorter, sentences leave out their romaji lines, and 愛される or 愛せない is mined as 愛する.
+
+### Fixed
 - **"Align captions to audio" no longer moves YouTube captions to the wrong place (Settings → YouTube) (#137).** YouTube's own automatic captions are now mined as fetched: its recognizer timed them from this very audio, and their rolling cues cover about 90% of the running time, so the aligners had nothing to lock onto. ffsubsync's split mode moved most lines by seconds up to a minute and stretched the track by 25/23.976, a ratio the validator accepts as a framerate fix. Manual and auto-dub captions still align, with ffsubsync's framerate search off: captions fetched with their video share its timebase, so no ratio can be right. An `--api fetch` that skips alignment ends at stage 2.
 - **Clips from YouTube's automatic captions no longer run into the next line (#137).** Those captions roll: each line stays on screen until the line after next appears, so a cue's end is when it leaves the screen, not when its speech ends, and every clip carried about two seconds of the following line. A subtitle in which more than half the cues overlap the next one now has each cue end where the next starts. Ordinary subtitles, which barely overlap, and dual-language files, whose twin lines share a start, are read as before. Applies wherever the file came from: a YouTube run, or a caption file saved by Utilities → Download and mined in Video → Single.
 - **Romaji lines under Japanese captions no longer reach the card's sentence.** YouTube lyric captions often put a romaji line under each Japanese line, and the whole cue became the Sentence, SentenceFurigana and SentenceReading. In a cue of two or more lines, a line with no kana or kanji is now left out, as a bilingual cue's English line already was for Chinese, Korean and the other non-Latin languages; a cue with no Japanese line at all is kept whole. Applies to Video, YouTube, Reading and the Word Curator preview.
 - **A known 〜する verb now covers its 〜される, 〜すべき and 〜せない forms.** With 愛する known, 愛される, 愛すべき and 愛せない were still mined, as 愛す and 愛せる cards: UniDic gives one-kanji する verbs (愛する, 罰する, 課する, 達する and the like) a separate 〜す or 〜せる dictionary form in those forms. They now card as the 〜する verb, as 保てる already cards as 保つ. An existing 愛す card does not block a new 愛する one.
 - **The Activity Log says why a YouTube link cannot be mined (Video → YouTube).** Since the queue rows became one line, the reason a link was refused (a live stream, no subtitles in the mining language, a yt-dlp error) showed only in the row's tooltip, while the banner said each row says why. Each refusal is now written to the Activity Log once, and the banner points there.
-
-### Removed
 
 ## [3.10.0] - 2026-10-18
 
