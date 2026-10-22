@@ -25,14 +25,27 @@ BASELINE = REPO_ROOT / "scripts" / "artifact_size_baseline.json"
 TOLERANCE_PCT = 10.0
 
 
-def compare(observed: dict[str, int], baseline: dict[str, int], tolerance_pct: float) -> tuple[list[str], list[str]]:
-    """Return (report_lines, failures). An unknown artifact is news, not a fault."""
+def compare(
+    observed: dict[str, int],
+    baseline: dict[str, int],
+    tolerance_pct: float,
+    built: set[str] | None = None,
+) -> tuple[list[str], list[str]]:
+    """Return (report_lines, failures). An unknown artifact is news, not a fault.
+
+    *built* names the artifacts this run had a build leg for. A baseline artifact
+    outside it was not selected (a ``linux-windows`` dry run builds no mac leg),
+    so its absence is reported, not failed. None expects every baseline artifact.
+    """
     lines: list[str] = []
     failures: list[str] = []
     for name in sorted(set(observed) | set(baseline)):
         now = observed.get(name)
         was = baseline.get(name)
         if now is None:
+            if built is not None and name not in built:
+                lines.append(f"{name}: not built in this run")
+                continue
             failures.append(f"{name}: absent from this run (baseline {was} bytes)")
             continue
         if was is None:
@@ -76,6 +89,34 @@ def fetch_sizes(repo: str, run_id: str) -> dict[str, int]:
     return sizes
 
 
+def built_artifacts(job_names: list[str], artifact_names: list[str]) -> set[str]:
+    """The artifacts a run had a build leg for.
+
+    A matrix job is named ``build (<os>, <artifact_name>, ...)`` from its matrix
+    values, so a leg's artifact is one of the values in its name. GitHub cuts a
+    long name short with ``...`` (the Intel mac leg's), so the ``)`` may be gone.
+    """
+    values: set[str] = set()
+    for job in job_names:
+        if job.startswith("build ("):
+            values.update(job[len("build (") :].removesuffix(")").split(", "))
+    return {name for name in artifact_names if name in values}
+
+
+def fetch_built(repo: str, run_id: str) -> set[str]:
+    """``built_artifacts`` for a run, against ``.github/release-matrix.json``."""
+    import json
+
+    jobs = subprocess.run(
+        ["gh", "api", "--paginate", f"repos/{repo}/actions/runs/{run_id}/jobs", "--jq", ".jobs[].name"],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.splitlines()
+    matrix = json.loads((REPO_ROOT / ".github" / "release-matrix.json").read_text(encoding="utf-8"))
+    return built_artifacts(jobs, [entry["artifact_name"] for entry in matrix])
+
+
 def main(argv: list[str] | None = None) -> int:
     import json
 
@@ -95,7 +136,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     baseline = json.loads(BASELINE.read_text(encoding="utf-8")) if BASELINE.exists() else {}
-    lines, failures = compare(observed, baseline, TOLERANCE_PCT)
+    lines, failures = compare(observed, baseline, TOLERANCE_PCT, fetch_built(args.repo, args.run_id))
     for line in lines:
         print(f"  {line}")
     if not baseline:

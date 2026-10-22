@@ -37,3 +37,36 @@ def test_a_missing_artifact_fails():
     _lines, failures = sizes.compare({}, {"AnkiMiner-Windows-x86_64": 100}, 10.0)
     assert len(failures) == 1
     assert "AnkiMiner-Windows-x86_64" in failures[0]
+
+
+def test_an_unselected_leg_is_reported_not_failed():
+    """A linux-windows dry run builds no mac leg; the baseline still lists it."""
+    baseline = {"AnkiMiner-Linux-x86_64": 100, "AnkiMiner-macOS-arm64": 100}
+    lines, failures = sizes.compare({"AnkiMiner-Linux-x86_64": 100}, baseline, 10.0, {"AnkiMiner-Linux-x86_64"})
+    assert failures == []
+    assert any("AnkiMiner-macOS-arm64" in line and "not built" in line for line in lines)
+
+
+def test_a_selected_leg_with_no_artifact_still_fails():
+    _lines, failures = sizes.compare({}, {"AnkiMiner-Windows-x86_64": 100}, 10.0, {"AnkiMiner-Windows-x86_64"})
+    assert len(failures) == 1
+    assert "AnkiMiner-Windows-x86_64" in failures[0]
+
+
+def test_built_artifacts_reads_the_matrix_job_names():
+    jobs = [
+        "setup",
+        "ci-gate",
+        "build (ubuntu-22.04, AnkiMiner-Linux-x86_64, Linux-x86_64, .[asr], 1)",
+        "build (windows-latest, AnkiMiner-Windows-x86_64, Windows-x86_64, .[asr], 1)",
+        "release",
+    ]
+    names = ["AnkiMiner-Linux-x86_64", "AnkiMiner-Windows-x86_64", "AnkiMiner-macOS-arm64", "AnkiMiner-macOS-x86_64"]
+    assert sizes.built_artifacts(jobs, names) == {"AnkiMiner-Linux-x86_64", "AnkiMiner-Windows-x86_64"}
+
+
+def test_built_artifacts_reads_a_name_github_cut_short():
+    jobs = ["build (macos-15-intel, AnkiMiner-macOS-x86_64, macOS-x86_64, ., 1, libmp3lame libopus libwebp lib..."]
+    assert sizes.built_artifacts(jobs, ["AnkiMiner-macOS-x86_64", "AnkiMiner-macOS-arm64"]) == {
+        "AnkiMiner-macOS-x86_64"
+    }
