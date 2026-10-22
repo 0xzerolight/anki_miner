@@ -326,11 +326,11 @@ def extract_orth_base(word_token) -> str:
     return str(orth_base)
 
 
-# Potential-verb paradigm (godan e-row + ら抜き) and adjective ク-form pairs:
-# (derived orthBase suffix, base lemma suffix). Mirrors the potential rules in
-# japanese_transforms.py (the "potential" transform); kept as data here because
-# mining folds a HEADWORD (orthBase→lemma), not running the deinflection
-# engine on text.
+# Potential-verb paradigm (godan e-row + ら抜き), adjective ク-form pairs and the
+# one-kanji サ変 alternants (愛す/愛せる←愛する): (derived orthBase suffix, base
+# lemma suffix). Mirrors the potential rules in japanese_transforms.py (the
+# "potential" transform); kept as data here because mining folds a HEADWORD
+# (orthBase→lemma), not running the deinflection engine on text.
 _FOLD_SUFFIX_PAIRS = (
     ("える", "う"),
     ("ける", "く"),
@@ -342,6 +342,8 @@ _FOLD_SUFFIX_PAIRS = (
     ("める", "む"),
     ("れる", "る"),
     ("し", "い"),
+    ("す", "する"),
+    ("せる", "する"),
 )
 
 
@@ -349,10 +351,11 @@ def mining_base(word_token) -> str:
     """orthBase for the card front, folded to lemma for derived sub-lemma entries.
 
     unidic gives potential verbs (保てる←保つ), ra-nuki forms (見れる←見る),
-    archaic i-adjective bases (良し←良い) and classical 連体形 ク-stems
-    (美しき: orthBase 美し←美しい) their own orthBase while lemma points at the
-    parent headword. Mining orthBase makes a 保てる card distinct from an
-    existing 保つ card; folding to lemma dedupes them. Applies only to 動詞 /
+    archaic i-adjective bases (良し←良い), classical 連体形 ク-stems
+    (美しき: orthBase 美し←美しい) and the godan/potential forms of one-kanji サ変
+    verbs (愛される/愛すべき: 愛す, 愛せない: 愛せる ← 愛する) their own orthBase
+    while lemma points at the parent headword. Mining orthBase makes a 保てる card
+    distinct from an existing 保つ card; folding to lemma dedupes them. Applies only to 動詞 /
     形容詞 — the only POS whose mined_form reads orth_base (select_mined_form).
 
     Trigger: the lemma reading (lForm) and orthBase reading (kanaBase) diverge,

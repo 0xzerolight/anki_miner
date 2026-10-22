@@ -133,6 +133,11 @@ class TestMiningBaseFold:
             # compound + katakana verbs
             ("取り戻せる", "取り戻す", "トリモドス", "トリモドセル"),
             ("サボれる", "サボる", "サボル", "サボレル"),
+            # one-kanji サ変 alternants
+            ("愛す", "愛する", "アイスル", "アイス"),
+            ("愛せる", "愛する", "アイスル", "アイセル"),
+            ("罰す", "罰する", "バッスル", "バッス"),
+            ("接せる", "接する", "セッスル", "セッセル"),
         ],
     )
     def test_folds_verb(self, orth_base, lemma, l_form, kana_base):
@@ -170,6 +175,8 @@ class TestMiningBaseGuard:
             # modern→archaic じる/ずる
             ("信じる", "信ずる", "シンズル", "シンジル"),
             ("感じる", "感ずる", "カンズル", "カンジル"),
+            # サ変 alternant onto a different-kanji lemma
+            ("哀す", "愛する", "アイスル", "アイス"),
         ],
     )
     def test_blocks_canonicalizing_lemma(self, orth_base, lemma, l_form, kana_base):
@@ -212,6 +219,36 @@ class TestMiningBaseNoTrigger:
         fall back to extract_lemma and never crash."""
         token = SyntheticToken("走り出す", "動詞", "一般", "走り出す", "ハシリダス")
         assert mining_base(token) == "走り出す"
+
+
+@pytest.mark.skipif(not _fugashi_available(), reason="fugashi/unidic-lite not installed")
+class TestMiningBaseSahenAlternant:
+    """One-kanji サ変 verbs fold their 〜す/〜せる orthBase onto the 〜する lemma.
+
+    unidic-lite reads 愛される as godan 愛さ (orthBase 愛す) and 愛せない as ichidan
+    愛せ (orthBase 愛せる), both with lemma 愛する, so a known 愛する card did not
+    block them."""
+
+    @pytest.mark.parametrize(
+        ("sentence", "surface", "orth_base", "lemma"),
+        [
+            ("みんなに愛される", "愛さ", "愛す", "愛する"),
+            ("もう愛せない", "愛せ", "愛せる", "愛する"),
+            ("罰すべき人", "罰す", "罰す", "罰する"),
+        ],
+    )
+    def test_alternant_folds_to_suru(self, sentence, surface, orth_base, lemma):
+        token = _real_token(sentence, surface)
+        assert token.feature.orthBase == orth_base
+        assert mining_base(token) == lemma
+
+    def test_godan_lemma_keeps_su(self):
+        # 訳す is its own unidic lemma (readings equal): no 〜する to fold onto.
+        assert mining_base(_real_token("英語に訳される", "訳さ")) == "訳す"
+
+    def test_godan_potential_still_folds_to_su(self):
+        # 略せる's lemma is 略す, so the godan ('せる','す') pair wins, not 〜する.
+        assert mining_base(_real_token("もう略せない", "略せ")) == "略す"
 
 
 @pytest.mark.skipif(not _fugashi_available(), reason="fugashi/unidic-lite not installed")
