@@ -68,6 +68,14 @@ def test_the_cedilla_table_maps_one_code_point_to_one():
         ("carte\u00a0bună", "carte bună"),
         ("căr\u00adți", "cărți"),  # a soft hyphen splits no word
         ("S-a dus într-un autobuz.", "S-a dus într-un autobuz."),  # hyphens stay
+        # letters Romanian never writes: cp1250 / ISO-8859-16 text read as cp1252, and OCR's ă
+        ("s\u00e3 nu", "să nu"),
+        ("\u00bai", "și"),
+        ("a\u00fei", "ați"),
+        ("\u00aaTEFAN", "ȘTEFAN"),
+        ("\u00deARA", "ȚARA"),
+        ("dac\u00e5", "dacă"),
+        ("\u00c3", "Ă"),
     ],
 )
 def test_normalize_composes_folds_cedillas_and_cleans_spaces(text, normalized):

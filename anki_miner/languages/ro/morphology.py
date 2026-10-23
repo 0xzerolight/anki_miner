@@ -12,6 +12,14 @@ with cedillas drops content-word lemma accuracy from 91.7 % to 84.2 %, and the f
 calls the tagger without ``normalize``: 93 % of the OpenSubtitles list's cedilla-or-comma occurrences are
 cedillas.
 
+``ro_normalize`` also reads the letters Romanian never writes as the ones they stand for: U+00E3/U+00E5/U+01CE
+(a with tilde, ring, caron) as ``ă``, U+00BA/U+00AA (the ordinal indicators) as ``ș``/``Ș`` and U+00FE/U+00DE
+(thorn) as ``ț``/``Ț``, capitals alike. A cp1250 or ISO-8859-16 file read as cp1252 and saved as UTF-8 writes
+``să și ați`` with those letters (the mis-encoded ``să`` is 0.43 % as common as ``să`` in OpenSubtitles ro),
+and Video/Manga OCR reads ``ă`` as the tilde or ring a. Unread, such words find no definition: a mojibake file
+mined 302 cards against 464 clean, and 464 identical ones with the fold; OCR fronts with a misread ``ă`` went
+from 22 to 0. Only ``normalize`` reads them; the key fold and the tagger copy keep the one-to-one cedilla table.
+
 ``RO_EXCLUDED_SUBTYPES``: the RRT MSD tags the attribute ruler maps to an allowed UPOS that are never
 vocabulary: ``Rc`` (``ca``, ``iar``, ``decat``: conjunctive adverbs, SCONJ/CCONJ in other treebanks) and the
 abbreviation tags (``km``, ``dl``, ``UE`` -> ``Uniunea_Europeana``). ``Rp`` (``mai``, ``foarte``), ``Rw``
@@ -87,7 +95,25 @@ RO_GRAMMAR_SOURCES: tuple[str, ...] = ("chips", "head")
 #: Legacy cedilla -> standard comma-below (R35, D5). The key fold, ``normalize`` and the tagger copy share it.
 RO_CEDILLA_FOLD: Mapping[str, str] = MappingProxyType({"\u015f": "ș", "\u0163": "ț", "\u015e": "Ș", "\u0162": "Ț"})
 _CEDILLA_TABLE = str.maketrans(dict(RO_CEDILLA_FOLD))
-_NORMALIZE_TABLE = str.maketrans({"\u00a0": " ", "\u00ad": None, **RO_CEDILLA_FOLD})
+#: ``normalize`` only: the cedillas plus the mojibake and OCR letters Romanian never writes (a tilde, ring or caron
+#: -> ă; the ordinal indicators -> ș Ș; thorn -> ț Ț).
+_NORMALIZE_TABLE = str.maketrans(
+    {
+        "\u00a0": " ",
+        "\u00ad": None,
+        **RO_CEDILLA_FOLD,
+        "\u00e3": "ă",
+        "\u00c3": "Ă",
+        "\u00e5": "ă",
+        "\u00c5": "Ă",
+        "\u01ce": "ă",
+        "\u01cd": "Ă",
+        "\u00ba": "ș",
+        "\u00aa": "Ș",
+        "\u00fe": "ț",
+        "\u00de": "Ț",
+    }
+)
 
 #: Romanian speaker cues (``STEFAN:``, ``MARIA:``): the Latin rule with the letters Latin-1's A-Th lacks.
 #: The filter runs after ``ro_normalize``, so a cedilla label already arrives comma-below.
@@ -106,7 +132,8 @@ def ro_fold_cedilla(text: str) -> str:
 
 
 def ro_normalize(text: str) -> str:
-    """S5 for Romanian: NFC; NBSP -> space; soft hyphens removed; cedillas -> comma-below (R35)."""
+    """S5 for Romanian: NFC; NBSP -> space; soft hyphens removed; cedillas -> comma-below (R35); mojibake and
+    OCR letters Romanian never writes -> ă ș ț."""
     return unicodedata.normalize("NFC", text).translate(_NORMALIZE_TABLE)
 
 
