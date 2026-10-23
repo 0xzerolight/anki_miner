@@ -10,9 +10,9 @@ from anki_miner.languages._spaced.keys import CasefoldDictKeys, spaced_dedup_fol
 from anki_miner.languages._spaced.pos import UPOS_ALLOWED
 from anki_miner.languages._spaced.script import (
     BRACKETS_PATTERN,
-    DIALOGUE_DASH_PATTERN,
     LATIN_SPEAKER_PATTERN,
     MUSIC_PATTERN,
+    NORDIC_DIALOGUE_DASH_PATTERN,
     PARENS_PATTERN,
 )
 from anki_miner.languages._spaced.sentence import sentence_rules
@@ -155,6 +155,8 @@ def test_the_abbreviations_drive_the_splitter(text, sentences):
         ("ION: Da.", "Da."),
         ("[ușă trântită] ♪ Salut ♪", "Salut"),
         ("- Bună. - Salut.", "Bună. Salut."),  # Netflix ro: hyphen plus space
+        ("-Unde ești? -Aici.", "Unde ești? Aici."),  # unspaced turns
+        ("-5 grade afară.", "-5 grade afară."),  # a negative number is no turn
         ("E bine – chiar foarte bine.", "E bine – chiar foarte bine."),
         ("Atenție: trenul pleacă!", "Atenție: trenul pleacă!"),
     ],
@@ -164,10 +166,11 @@ def test_the_romanian_sdh_default_strips_its_fixture(cue, kept):
     assert " ".join(compiled.sub("", cue).split()) == kept
 
 
-def test_the_latin_speaker_rule_misses_romanian_capitals_and_ours_is_the_only_change():
+def test_the_romanian_default_is_the_latin_one_with_our_speaker_rule_and_the_unspaced_dash():
+    """The Latin speaker rule misses Romanian capitals, and Romanian writes unspaced turns (the pl/lt shape)."""
     import re
 
     assert re.match(LATIN_SPEAKER_PATTERN, "ȘTEFAN: Bună.") is None
     assert "Ș" in RO_SPEAKER_PATTERN and "\u015e" not in RO_SPEAKER_PATTERN
-    parts = (BRACKETS_PATTERN, PARENS_PATTERN, MUSIC_PATTERN, RO_SPEAKER_PATTERN, DIALOGUE_DASH_PATTERN)
+    parts = (BRACKETS_PATTERN, PARENS_PATTERN, MUSIC_PATTERN, RO_SPEAKER_PATTERN, NORDIC_DIALOGUE_DASH_PATTERN)
     assert "|".join(parts) == RO_SUBTITLE_REGEX

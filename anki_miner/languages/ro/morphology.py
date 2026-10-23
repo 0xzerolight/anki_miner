@@ -32,6 +32,10 @@ aminti`` meet the mined ``bucura`` and ``aminti``. A cedilla ``a-și`` folds thr
 UD RRT has no neuter, so the model tags ``scaun`` Masc and ``scaunele`` Fem. The dictionary's chip or head
 line leads, and the hook's own labels name all three genders, which no article pair can.
 
+``RO_SUBTITLE_REGEX``: the Latin parts with the Romanian speaker rule and the unspaced dash rule (the pl/lt
+shape). ``-Unde ești? -Aici.``: spaCy keeps ``-Unde`` one token, so the spaced-only rule lost the turn's
+first word, 31 of 162 fronts in the probe's dialogue.
+
 ``main_verb_pos``: with no morphologizer, the attribute ruler gives each tag its majority UPOS in training,
 and 11 main-verb tags (``Vmip1s``, ``Vmip3s``, ``Vmg`` ...) come out AUX: 590 of 1,729 gold VERB tokens in
 the RRT test set would be dropped as auxiliaries. Every RRT auxiliary is a ``Va`` tag, so a ``Vm`` tag lifts
@@ -45,7 +49,12 @@ from collections.abc import Mapping
 from types import MappingProxyType
 
 from anki_miner.languages._spaced.pos import UPOS_ALLOWED
-from anki_miner.languages._spaced.script import BRACKETS_PATTERN, DIALOGUE_DASH_PATTERN, MUSIC_PATTERN, PARENS_PATTERN
+from anki_miner.languages._spaced.script import (
+    BRACKETS_PATTERN,
+    MUSIC_PATTERN,
+    NORDIC_DIALOGUE_DASH_PATTERN,
+    PARENS_PATTERN,
+)
 from anki_miner.languages.token import LanguageToken
 
 #: The model package the tokenizer loads and the availability probe looks for.
@@ -80,9 +89,11 @@ _NORMALIZE_TABLE = str.maketrans({"\u00a0": " ", "\u00ad": None, **RO_CEDILLA_FO
 #: Romanian speaker cues (``STEFAN:``, ``MARIA:``): the Latin rule with the letters Latin-1's A-Th lacks.
 #: The filter runs after ``ro_normalize``, so a cedilla label already arrives comma-below.
 RO_SPEAKER_PATTERN = r"^[A-ZÀ-ÖØ-ÞĂȘȚ]" r"[A-ZÀ-ÖØ-ÞĂȘȚ0-9 .'-]*" r"[A-ZÀ-ÖØ-ÞĂȘȚ]:\s*"
-#: The S10 default for Romanian: the Latin parts with the Romanian speaker rule. No inline flags.
+#: The S10 default for Romanian: the Latin parts with the Romanian speaker rule and the unspaced dash rule
+#: (``-Unde ești? -Aici.``: spaCy keeps ``-Unde`` one token, so the spaced-only rule lost the word in 23 of 30
+#: probe cues). No inline flags.
 RO_SUBTITLE_REGEX = "|".join(
-    (BRACKETS_PATTERN, PARENS_PATTERN, MUSIC_PATTERN, RO_SPEAKER_PATTERN, DIALOGUE_DASH_PATTERN)
+    (BRACKETS_PATTERN, PARENS_PATTERN, MUSIC_PATTERN, RO_SPEAKER_PATTERN, NORDIC_DIALOGUE_DASH_PATTERN)
 )
 
 
