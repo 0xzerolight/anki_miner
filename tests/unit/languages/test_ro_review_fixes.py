@@ -1,10 +1,12 @@
-"""Romanian review fixes: verb fronts from wty-ro-en's form rows (ROM-06), „…” quotes in Reading (ROM-07).
+"""Romanian review fixes: fronts from wty-ro-en's form rows (ROM-06, A1-01/02/05), „…” quotes in Reading (ROM-07).
 
 ROM-06: wty-ro-en keys a form row without diacritics and stores the real spelling as its reading (``lasa`` / ``lasă``
--> ``lăsa``), so the Romanian keys declare the reading column for the form lookup, and the parser runs the
-shared form-of repair with ``front_pos={"VERB"}``. The index below holds the rows wty-ro-en holds for these keys
-(term, reading, tags and named targets; the glosses cut), written and read through the Romanian keys. The
-tagger is module-scoped because the autouse conftest fixture clears the tagger cache around every test.
+-> ``lăsa``), so the Romanian keys declare the reading column for the form lookup. The parser runs three passes over
+those rows: a verb the tagger lemmatised to a non-verb headword (``Pot`` -> ``pot`` "pot") takes the one verb its
+surface's form rows name (A1-02); the shared form-of repair fronts the headword of any content word (A1-01); and a
+line-initial or lowercase PROPN takes a lowercase, nameless headword (A1-05). The index below holds the rows wty-ro-en
+holds for these keys (term, reading, tags and named targets; the glosses cut), written and read through the Romanian
+keys. The tagger is module-scoped because the autouse conftest fixture clears the tagger cache around every test.
 """
 
 from __future__ import annotations
@@ -14,11 +16,13 @@ import dataclasses
 import pytest
 
 from anki_miner.config import AnkiMinerConfig
-from anki_miner.languages._spaced.form_of import FormOfLemmaPass
+from anki_miner.languages._spaced.form_of import FormOfLemmaPass, OrderedPasses
 from anki_miner.languages._spaced.keys import CasefoldDictKeys
+from anki_miner.languages._spaced.pos import UPOS_ALLOWED
 from anki_miner.languages._spaced.sentence import sentence_rules
 from anki_miner.languages.registry import get_profile
 from anki_miner.languages.ro.morphology import RO_ABBREVIATIONS, ro_fold_cedilla
+from anki_miner.languages.ro.parser import RomanianPropnRecovery, RomanianVerbHomographPass
 from anki_miner.languages.token import LanguageToken
 from anki_miner.services.dictionary import storage
 from anki_miner.services.dictionary.storage import DictRow
@@ -59,9 +63,50 @@ WTY_RO = [
     _lemma("minți", "v"),
     _form_of("intelegi", "înțelegi", "înțelege"),
     _lemma("înțelege", "v"),
-    _form_of("carti", "cărți", "carte"),
-    _lemma("carte", "n"),
+    _form_of("carti", "cărți", "carte", "carte", "carte"),
+    _lemma("carte", "n fem"),
+    _form_of("carte", None, "cartă", "cartă", "cartă"),
     _lemma("pace", "n"),
+    # A1-01: noun and adverb fronts. ``tată`` is lemmatised ``tat``, whose rows name only ``țâță`` and ``tot``.
+    _form_of("garile", "gările", "gară"),
+    _lemma("gară", "n fem"),
+    _form_of("gara", None, "gară", "gară"),
+    _lemma("tată", "n masc"),
+    _form_of("tat", "țâț", "țâță", "țâță", "țâță"),
+    _form_of("tat", "tăt", "tot", "tot", "tot"),
+    _form_of("cheile", None, "cheie"),
+    _lemma("cheie", "adj fem indecl masc neut"),
+    _lemma("cheie", "n fem"),
+    _lemma("cheie", "name masc"),
+    _lemma("aseară", "adv"),
+    _form_of("aseara", "aseară", "asară"),
+    _lemma("asară", "adv"),
+    # A1-02: verbs lemmatised to a noun headword, and ``vii``, whose rows name three lemmas.
+    _lemma("pot", "n neut"),
+    _form_of("pot", None, "putea", "putea"),
+    _lemma("putea", "v"),
+    _lemma("sun", "n neut obs"),
+    _form_of("sun", None, "suna", "suna"),
+    _lemma("suna", "v"),
+    _form_of("vii", None, "vie", "vie", "vie"),
+    _form_of("vii", None, "viu"),
+    _form_of("vii", None, "veni"),
+    _lemma("viu", "adj masc neut"),
+    _form_of("viu", None, "vie", "vie"),
+    _lemma("vie", "n fem"),
+    _form_of("vie", None, "viu"),
+    _lemma("veni", "v"),
+    _form_of("vine", None, "vână", "vână", "vână"),
+    _form_of("vine", None, "veni"),
+    # A1-05: a cue-initial verb tagged PROPN, and names.
+    _form_of("astept", "aștept", "aștepta", "aștepta"),
+    _lemma("aștepta", "v"),
+    _lemma("viorel", "adj masc neut"),
+    _lemma("ionel", "name masc"),
+    _lemma("ion", "n masc"),
+    _lemma("ion", "name masc"),
+    _form_of("ion", None, "Ioana"),
+    _form_of("ion", None, "Ioan"),
 ]
 
 
@@ -121,10 +166,12 @@ def test_a_diacritic_surface_reaches_its_form_row_through_the_reading(conn, form
     assert storage.term_rows(conn, ["lasă"], keys=exact_term_keys) == {}
 
 
-def test_the_parser_runs_the_verb_front_repair(monkeypatch):
+def test_the_parser_runs_the_verb_homograph_the_content_front_and_the_propn_passes_in_order(monkeypatch):
     injected = _injected(monkeypatch)
-    assert isinstance(injected, FormOfLemmaPass)
-    assert injected._front_pos == frozenset({"VERB"})  # noqa: SLF001
+    assert isinstance(injected, OrderedPasses)
+    homograph, content, propn = injected._passes  # noqa: SLF001 - the order is the contract
+    assert isinstance(homograph, RomanianVerbHomographPass) and isinstance(propn, RomanianPropnRecovery)
+    assert isinstance(content, FormOfLemmaPass) and content._front_pos == frozenset(UPOS_ALLOWED)  # noqa: SLF001
 
 
 @pytest.mark.parametrize(
@@ -145,11 +192,68 @@ def test_a_headword_keeps_its_front(monkeypatch, tagger, forms):
     assert _fronts(monkeypatch, tagger, forms, "Lasă-mă în pace!")["pace"] == ("pace", "NOUN")
 
 
-def test_a_noun_target_keeps_the_token_s_own_front(monkeypatch, forms):
-    """Only a ``v`` lemma row makes a front: ``cărți``'s form row names the noun ``carte``."""
+def test_a_noun_target_makes_the_front(monkeypatch, forms):
+    """Any content lemma row makes a front: ``cărți``'s form row names the noun ``carte``."""
     token = LanguageToken(surface="cărți", pos1="NOUN", lemma="cărț")
     _injected(monkeypatch)([token], None, forms)
-    assert (token.feature.lemma, token.feature.pos1) == ("cărț", "NOUN")
+    assert (token.feature.lemma, token.feature.pos1) == ("carte", "NOUN")
+
+
+@pytest.mark.parametrize(
+    ("line", "surface", "front"),
+    [
+        ("Verificăm gările și aeroportul.", "gările", ("gară", "NOUN")),
+        ("Și tu, tată.", "tată", ("tată", "NOUN")),  # tagged VERB ``tat``
+        ("Unde ai fost aseară?", "aseară", ("aseară", "ADV")),  # tagged VERB ``asear``
+    ],
+)
+def test_real_noun_and_adverb_fronts(monkeypatch, tagger, forms, line, surface, front):
+    assert _fronts(monkeypatch, tagger, forms, line)[surface] == front
+
+
+def test_a_plural_fronts_its_singular(monkeypatch, tagger, forms):
+    """``cheie``'s first lemma row is its adjective sense, so the front's class is ADJ (a known residual)."""
+    assert _fronts(monkeypatch, tagger, forms, "Ai văzut cheile mele?")["cheile"][0] == "cheie"
+
+
+@pytest.mark.parametrize(
+    ("line", "surface", "front"),
+    [
+        ("Pot să plătesc cu cardul?", "Pot", "putea"),  # ``pot`` is a noun headword (pot)
+        ("Am uitat să sun la bunica.", "sun", "suna"),  # ``sun`` is an obsolete noun headword
+    ],
+)
+def test_a_verb_lemmatised_to_a_noun_headword_takes_the_verb_its_surface_names(
+    monkeypatch, tagger, forms, line, surface, front
+):
+    assert _fronts(monkeypatch, tagger, forms, line)[surface] == (front, "VERB")
+
+
+def test_a_verb_whose_surface_names_several_lemmas_keeps_its_front(monkeypatch, forms):
+    """``vii``'s form rows name ``vie``, ``viu`` and ``veni``: the pass never picks the verb among them."""
+    token = LanguageToken(surface="vii", pos1="VERB", lemma="viu")
+    _injected(monkeypatch)([token], None, forms)
+    assert (token.feature.lemma, token.feature.pos1) == ("viu", "VERB")
+
+
+def test_a_verb_headword_lemma_is_untouched(monkeypatch, tagger, forms):
+    """``vine`` also names the noun ``vână``; its lemma ``veni`` is a verb headword, so nothing reads it."""
+    assert _fronts(monkeypatch, tagger, forms, "Mi-a spus că vine mâine.")["vine"] == ("veni", "VERB")
+
+
+def test_a_cue_initial_verb_tagged_propn_is_recovered(monkeypatch, tagger, forms):
+    assert _fronts(monkeypatch, tagger, forms, "Aștept, nu mă grăbesc.")["Aștept"] == ("aștepta", "VERB")
+
+
+def test_a_mid_line_capitalised_propn_stays_a_name(monkeypatch, tagger, forms):
+    """``Viorel`` has only the adjective row ``viorel``; a capital mid-line is a name, whatever the rows say."""
+    fronts = _fronts(monkeypatch, tagger, forms, "Costel, Ionel și Viorel sunt verișori.")
+    assert fronts["Viorel"] == ("Viorel", "PROPN") and fronts["Ionel"] == ("Ionel", "PROPN")
+
+
+def test_a_cue_initial_name_with_a_name_row_stays_a_name(monkeypatch, tagger, forms):
+    """``ion`` is a noun (ion) as well as the name ``Ion``: its name row keeps the token PROPN."""
+    assert _fronts(monkeypatch, tagger, forms, "Ion a venit acasă.")["Ion"] == ("Ion", "PROPN")
 
 
 def test_no_dictionary_leaves_the_tokens_as_the_tagger_built_them(monkeypatch, tagger):
