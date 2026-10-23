@@ -11,6 +11,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Changed
 
 ### Fixed
+- **Romanian cards front the dictionary form of every content word.** Inflected nouns, adjectives and adverbs now take the headword their Wiktionary form row names (`cheile` → `cheie`, `tat` → `tată`, `asear` → `aseară`), as verbs already did. A verb the model lemmatised to a look-alike noun takes the one verb its form rows name (`Pot` → `putea`, `sun` → `suna`, `vin` → `veni`). Line-initial words the model tagged as names are mined again (`Aștept`, `Fugi`, `Mama`), while names stay out. The OpenSubtitles list is lemmatised the same way, so a list downloaded again ranks `școală`, `mâncare` and `baie` under their headwords.
+- **Romanian subtitles and decks mine cleaner cards.** A known deck front written as a reflexive citation (`a se bucura`, `a-și aminti`) now marks the verb known. Unspaced dialogue dashes (`-Unde ești? -Aici.`) are stripped like spaced ones. Mis-encoded `ã`, `º` and `þ` in subtitles and OCR text read as `ă`, `ș` and `ț`. Lone letters and clitic pieces from YouTube captions (`s a`, `v am`, `Ce-am`) no longer become cards. Gender comes only from the dictionary, so interjections and verbs no longer show the tagger's agreement gender.
 
 ### Removed
 
