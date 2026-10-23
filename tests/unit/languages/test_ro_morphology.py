@@ -46,7 +46,7 @@ def test_the_pos_gate_model_and_gender_tables():
     assert RO_MODEL_PACKAGE == "ro_core_news_sm"
     assert RO_ALLOWED_POS == UPOS_ALLOWED
     assert RO_EXCLUDED_SUBTYPES == ("Rc", "Ya", "Yn", "Ynfsoy", "Ynfsry", "Ynmsoy", "Ynmsry", "Yr")
-    assert RO_GRAMMAR_SOURCES == ("chips", "head", "morph")  # the hook's own labels name all three genders
+    assert RO_GRAMMAR_SOURCES == ("chips", "head")  # UD RRT has no neuter: the model's gender never decides
     assert frozenset({"a", "un", "o", "niște", "se", "a-și", "a-i"}) == RO_LEADING_WORDS
 
 

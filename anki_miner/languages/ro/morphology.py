@@ -30,7 +30,10 @@ aminti`` meet the mined ``bucura`` and ``aminti``. A cedilla ``a-și`` folds thr
 
 ``RO_GRAMMAR_SOURCES``: Romanian has neuter nouns (masculine in the singular, feminine in the plural) and
 UD RRT has no neuter, so the model tags ``scaun`` Masc and ``scaunele`` Fem. The dictionary's chip or head
-line leads, and the hook's own labels name all three genders, which no article pair can.
+line decides, and the hook's own labels name all three genders, which no article pair can. The model's
+morph never does: it answered only where the shown entry had no single gender, and there it was the
+agreement gender of a non-noun (``hai``, ``diseară``, ``frige``) or the masculine of a neuter (``timp``,
+``ceai``); 30 of 33 such genders were wrong or misleading.
 
 ``RO_SUBTITLE_REGEX``: the Latin parts with the Romanian speaker rule and the unspaced dash rule (the pl/lt
 shape). ``-Unde ești? -Aici.``: spaCy keeps ``-Unde`` one token, so the spaced-only rule lost the turn's
@@ -79,7 +82,7 @@ RO_ABBREVIATIONS: frozenset[str] = frozenset(
 #: Leading words a deck front carries that the mined lemma never does (S3, E.1 D18), reflexives included.
 RO_LEADING_WORDS: frozenset[str] = frozenset({"a", "un", "o", "niște", "se", "a-și", "a-i"})
 
-RO_GRAMMAR_SOURCES: tuple[str, ...] = ("chips", "head", "morph")
+RO_GRAMMAR_SOURCES: tuple[str, ...] = ("chips", "head")
 
 #: Legacy cedilla -> standard comma-below (R35, D5). The key fold, ``normalize`` and the tagger copy share it.
 RO_CEDILLA_FOLD: Mapping[str, str] = MappingProxyType({"\u015f": "ș", "\u0163": "ț", "\u015e": "Ș", "\u0162": "Ț"})
