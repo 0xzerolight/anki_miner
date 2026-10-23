@@ -1,4 +1,4 @@
-"""Romanian data tables: the cedilla fold, normalize, the main-verb pass, the comparison fold, abbreviations, SDH."""
+"""Romanian data tables: the cedilla fold, normalize, the tagger passes, the comparison fold, abbreviations, SDH."""
 
 from __future__ import annotations
 
@@ -10,9 +10,9 @@ from anki_miner.languages._spaced.keys import CasefoldDictKeys, spaced_dedup_fol
 from anki_miner.languages._spaced.pos import UPOS_ALLOWED
 from anki_miner.languages._spaced.script import (
     BRACKETS_PATTERN,
-    DIALOGUE_DASH_PATTERN,
     LATIN_SPEAKER_PATTERN,
     MUSIC_PATTERN,
+    NORDIC_DIALOGUE_DASH_PATTERN,
     PARENS_PATTERN,
 )
 from anki_miner.languages._spaced.sentence import sentence_rules
@@ -26,6 +26,7 @@ from anki_miner.languages.ro.morphology import (
     RO_MODEL_PACKAGE,
     RO_SPEAKER_PATTERN,
     RO_SUBTITLE_REGEX,
+    clitic_piece_pos,
     main_verb_pos,
     ro_fold_cedilla,
     ro_normalize,
@@ -46,8 +47,8 @@ def test_the_pos_gate_model_and_gender_tables():
     assert RO_MODEL_PACKAGE == "ro_core_news_sm"
     assert RO_ALLOWED_POS == UPOS_ALLOWED
     assert RO_EXCLUDED_SUBTYPES == ("Rc", "Ya", "Yn", "Ynfsoy", "Ynfsry", "Ynmsoy", "Ynmsry", "Yr")
-    assert RO_GRAMMAR_SOURCES == ("chips", "head", "morph")  # the hook's own labels name all three genders
-    assert frozenset({"a", "un", "o", "niște"}) == RO_LEADING_WORDS
+    assert RO_GRAMMAR_SOURCES == ("chips", "head")  # UD RRT has no neuter: the model's gender never decides
+    assert frozenset({"a", "un", "o", "niște", "se", "a-și", "a-i"}) == RO_LEADING_WORDS
 
 
 def test_the_cedilla_table_maps_one_code_point_to_one():
@@ -68,6 +69,14 @@ def test_the_cedilla_table_maps_one_code_point_to_one():
         ("carte\u00a0bună", "carte bună"),
         ("căr\u00adți", "cărți"),  # a soft hyphen splits no word
         ("S-a dus într-un autobuz.", "S-a dus într-un autobuz."),  # hyphens stay
+        # letters Romanian never writes: cp1250 / ISO-8859-16 text read as cp1252, and OCR's ă
+        ("s\u00e3 nu", "să nu"),
+        ("\u00bai", "și"),
+        ("a\u00fei", "ați"),
+        ("\u00aaTEFAN", "ȘTEFAN"),
+        ("\u00deARA", "ȚARA"),
+        ("dac\u00e5", "dacă"),
+        ("\u00c3", "Ă"),
     ],
 )
 def test_normalize_composes_folds_cedillas_and_cleans_spaces(text, normalized):
@@ -88,6 +97,13 @@ def test_the_key_fold_is_symmetric_across_both_spellings():
         ("niște mere", "mere"),
         ("ni\u015fte mere", "mere"),  # a cedilla deck front
         ("\u015etiin\u0163ă", STIINTA),
+        ("a se bucura", "bucura"),  # a reflexive citation meets the mined verb
+        ("A se bucura", "bucura"),
+        ("a-și aminti", "aminti"),
+        ("a-\u015fi aminti", "aminti"),  # the cedilla a-și folds through the key fold
+        ("a-i păsa", "păsa"),
+        ("se", "se"),
+        ("a se", "se"),
         ("a", "a"),
         ("carte", "carte"),
     ],
@@ -96,7 +112,9 @@ def test_the_fold_meets_the_mined_lemma(front, folded):
     assert FOLD(front) == folded
 
 
-@pytest.mark.parametrize("text", ["o carte", "a a merge", "ni\u015fte", "  ", "Un  Scaun!", CEDILLA_STIINTA])
+@pytest.mark.parametrize(
+    "text", ["o carte", "a a merge", "ni\u015fte", "  ", "Un  Scaun!", CEDILLA_STIINTA, "a se bucura"]
+)
 def test_the_fold_is_idempotent(text):
     assert FOLD(FOLD(text)) == FOLD(text)
 
@@ -110,6 +128,19 @@ def test_main_verb_tags_leave_the_auxiliary_class():
     ]
     assert main_verb_pos(tokens) is tokens
     assert [token.feature.pos1 for token in tokens] == ["VERB", "AUX", "VERB", ""]
+
+
+def test_lone_letters_and_hyphen_pieces_leave_the_content_classes():
+    tokens = [
+        LanguageToken("s", "NOUN", "Ncms-n", "s"),  # caption ``s a`` for ``s-a``
+        LanguageToken("e", "VERB", "Vmip3s", "fi"),  # the one-letter copula stays a verb
+        LanguageToken("Ce-", "NOUN", "Ncmpry", "ce"),
+        LanguageToken("-te", "NOUN", "Ncms-n", "tu"),
+        LanguageToken("cărți", "NOUN", "Ncfp-n", "carte"),
+        LanguageToken("-5", "NUM", "Mc-s-d", "-5"),
+    ]
+    assert clitic_piece_pos(tokens) is tokens
+    assert [token.feature.pos1 for token in tokens] == ["X", "VERB", "PRON", "PRON", "NOUN", "NUM"]
 
 
 def test_abbreviations_come_from_spacy_romanian_plus_titles_minus_real_words():
@@ -146,6 +177,8 @@ def test_the_abbreviations_drive_the_splitter(text, sentences):
         ("ION: Da.", "Da."),
         ("[ușă trântită] ♪ Salut ♪", "Salut"),
         ("- Bună. - Salut.", "Bună. Salut."),  # Netflix ro: hyphen plus space
+        ("-Unde ești? -Aici.", "Unde ești? Aici."),  # unspaced turns
+        ("-5 grade afară.", "-5 grade afară."),  # a negative number is no turn
         ("E bine – chiar foarte bine.", "E bine – chiar foarte bine."),
         ("Atenție: trenul pleacă!", "Atenție: trenul pleacă!"),
     ],
@@ -155,10 +188,11 @@ def test_the_romanian_sdh_default_strips_its_fixture(cue, kept):
     assert " ".join(compiled.sub("", cue).split()) == kept
 
 
-def test_the_latin_speaker_rule_misses_romanian_capitals_and_ours_is_the_only_change():
+def test_the_romanian_default_is_the_latin_one_with_our_speaker_rule_and_the_unspaced_dash():
+    """The Latin speaker rule misses Romanian capitals, and Romanian writes unspaced turns (the pl/lt shape)."""
     import re
 
     assert re.match(LATIN_SPEAKER_PATTERN, "ȘTEFAN: Bună.") is None
     assert "Ș" in RO_SPEAKER_PATTERN and "\u015e" not in RO_SPEAKER_PATTERN
-    parts = (BRACKETS_PATTERN, PARENS_PATTERN, MUSIC_PATTERN, RO_SPEAKER_PATTERN, DIALOGUE_DASH_PATTERN)
+    parts = (BRACKETS_PATTERN, PARENS_PATTERN, MUSIC_PATTERN, RO_SPEAKER_PATTERN, NORDIC_DIALOGUE_DASH_PATTERN)
     assert "|".join(parts) == RO_SUBTITLE_REGEX

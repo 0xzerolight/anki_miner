@@ -96,8 +96,9 @@ def test_the_dictionary_neuter_leads_the_models_agreement_gender():
     assert _gender(_CHIP.sub("", html), morph="Definite=Ind|Gender=Masc|Number=Sing") == {"noun_gender": "neuter"}
 
 
-def test_the_morph_gender_is_the_last_resort():
+def test_the_model_morph_never_names_the_gender():
+    """UD RRT has no neuter, and on a non-noun the morph is agreement gender: only the dictionary decides."""
     stub = FIXTURE["rendered_html"][CARTI]  # a form-of stub: no grammar tags, no head line
     assert "Grammar-content" not in stub and "data-am-grammar" not in stub
-    assert _gender(stub, morph="Case=Acc,Nom|Definite=Ind|Gender=Fem|Number=Plur") == {"noun_gender": "feminine"}
+    assert _gender(stub, morph="Case=Acc,Nom|Definite=Ind|Gender=Fem|Number=Plur") == {}
     assert _gender(stub) == {}

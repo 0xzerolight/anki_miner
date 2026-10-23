@@ -12,6 +12,14 @@ with cedillas drops content-word lemma accuracy from 91.7 % to 84.2 %, and the f
 calls the tagger without ``normalize``: 93 % of the OpenSubtitles list's cedilla-or-comma occurrences are
 cedillas.
 
+``ro_normalize`` also reads the letters Romanian never writes as the ones they stand for: U+00E3/U+00E5/U+01CE
+(a with tilde, ring, caron) as ``ă``, U+00BA/U+00AA (the ordinal indicators) as ``ș``/``Ș`` and U+00FE/U+00DE
+(thorn) as ``ț``/``Ț``, capitals alike. A cp1250 or ISO-8859-16 file read as cp1252 and saved as UTF-8 writes
+``să și ați`` with those letters (the mis-encoded ``să`` is 0.43 % as common as ``să`` in OpenSubtitles ro),
+and Video/Manga OCR reads ``ă`` as the tilde or ring a. Unread, such words find no definition: a mojibake file
+mined 302 cards against 464 clean, and 464 identical ones with the fold; OCR fronts with a misread ``ă`` went
+from 22 to 0. Only ``normalize`` reads them; the key fold and the tagger copy keep the one-to-one cedilla table.
+
 ``RO_EXCLUDED_SUBTYPES``: the RRT MSD tags the attribute ruler maps to an allowed UPOS that are never
 vocabulary: ``Rc`` (``ca``, ``iar``, ``decat``: conjunctive adverbs, SCONJ/CCONJ in other treebanks) and the
 abbreviation tags (``km``, ``dl``, ``UE`` -> ``Uniunea_Europeana``). ``Rp`` (``mai``, ``foarte``), ``Rw``
@@ -24,14 +32,32 @@ dot, with spaCy's own diacritic-less variants (``samd``, ``s.a.m.d``, ``st``) an
 a name (``Dl. Popescu``) that the model has no exception for, so only the sentence splitter reads them. The
 vocative ``dle`` ends sentences and is not listed.
 
+``RO_LEADING_WORDS``: the article, the infinitive's ``a`` and the reflexive a deck front carries and the
+mined lemma never does (S3, the de ``sich``/nl ``zich``/fr ``se`` shape): ``a se bucura`` and ``a-și
+aminti`` meet the mined ``bucura`` and ``aminti``. A cedilla ``a-și`` folds through the key fold first.
+
 ``RO_GRAMMAR_SOURCES``: Romanian has neuter nouns (masculine in the singular, feminine in the plural) and
 UD RRT has no neuter, so the model tags ``scaun`` Masc and ``scaunele`` Fem. The dictionary's chip or head
-line leads, and the hook's own labels name all three genders, which no article pair can.
+line decides, and the hook's own labels name all three genders, which no article pair can. The model's
+morph never does: it answered only where the shown entry had no single gender, and there it was the
+agreement gender of a non-noun (``hai``, ``diseară``, ``frige``) or the masculine of a neuter (``timp``,
+``ceai``); 30 of 33 such genders were wrong or misleading.
+
+``RO_SUBTITLE_REGEX``: the Latin parts with the Romanian speaker rule and the unspaced dash rule (the pl/lt
+shape). ``-Unde ești? -Aici.``: spaCy keeps ``-Unde`` one token, so the spaced-only rule lost the turn's
+first word, 31 of 162 fronts in the probe's dialogue.
 
 ``main_verb_pos``: with no morphologizer, the attribute ruler gives each tag its majority UPOS in training,
 and 11 main-verb tags (``Vmip1s``, ``Vmip3s``, ``Vmg`` ...) come out AUX: 590 of 1,729 gold VERB tokens in
 the RRT test set would be dropped as auxiliaries. Every RRT auxiliary is a ``Va`` tag, so a ``Vm`` tag lifts
 the token back to VERB (19 left behind, 7 of 615 auxiliaries lifted).
+
+``clitic_piece_pos``: a hyphen clitic split off its host (``Ce-`` in ``Ce-am``, ``-te`` in ``Oprește-te``)
+and a lone letter (YouTube captions write ``s-a``/``v-am`` as ``s a``/``v am``; the interjection ``A,``)
+come out NOUN (the letters ``Ncms-n``) and were mined as ``ce``, ``tu`` and "the Nth letter of the Romanian alphabet". A
+content token with a hyphen edge is a pronoun piece (PRON), and a one-letter NOUN/ADJ/ADV/PROPN is X. No
+real verb piece carries the hyphen (``Dă``/``-mi``), and the one-letter copula ``e`` (VERB, mined ``fi``)
+is left alone. On 5 YouTube tracks (1,973 lines) 14 junk fronts go and no right card is lost.
 """
 
 from __future__ import annotations
@@ -41,7 +67,12 @@ from collections.abc import Mapping
 from types import MappingProxyType
 
 from anki_miner.languages._spaced.pos import UPOS_ALLOWED
-from anki_miner.languages._spaced.script import BRACKETS_PATTERN, DIALOGUE_DASH_PATTERN, MUSIC_PATTERN, PARENS_PATTERN
+from anki_miner.languages._spaced.script import (
+    BRACKETS_PATTERN,
+    MUSIC_PATTERN,
+    NORDIC_DIALOGUE_DASH_PATTERN,
+    PARENS_PATTERN,
+)
 from anki_miner.languages.token import LanguageToken
 
 #: The model package the tokenizer loads and the availability probe looks for.
@@ -63,22 +94,42 @@ RO_ABBREVIATIONS: frozenset[str] = frozenset(
     }
 )  # fmt: skip
 
-#: Leading words a deck front carries that the mined lemma never does (S3, E.1 D18).
-RO_LEADING_WORDS: frozenset[str] = frozenset({"a", "un", "o", "niște"})
+#: Leading words a deck front carries that the mined lemma never does (S3, E.1 D18), reflexives included.
+RO_LEADING_WORDS: frozenset[str] = frozenset({"a", "un", "o", "niște", "se", "a-și", "a-i"})
 
-RO_GRAMMAR_SOURCES: tuple[str, ...] = ("chips", "head", "morph")
+RO_GRAMMAR_SOURCES: tuple[str, ...] = ("chips", "head")
 
 #: Legacy cedilla -> standard comma-below (R35, D5). The key fold, ``normalize`` and the tagger copy share it.
 RO_CEDILLA_FOLD: Mapping[str, str] = MappingProxyType({"\u015f": "ș", "\u0163": "ț", "\u015e": "Ș", "\u0162": "Ț"})
 _CEDILLA_TABLE = str.maketrans(dict(RO_CEDILLA_FOLD))
-_NORMALIZE_TABLE = str.maketrans({"\u00a0": " ", "\u00ad": None, **RO_CEDILLA_FOLD})
+#: ``normalize`` only: the cedillas plus the mojibake and OCR letters Romanian never writes (a tilde, ring or caron
+#: -> ă; the ordinal indicators -> ș Ș; thorn -> ț Ț).
+_NORMALIZE_TABLE = str.maketrans(
+    {
+        "\u00a0": " ",
+        "\u00ad": None,
+        **RO_CEDILLA_FOLD,
+        "\u00e3": "ă",
+        "\u00c3": "Ă",
+        "\u00e5": "ă",
+        "\u00c5": "Ă",
+        "\u01ce": "ă",
+        "\u01cd": "Ă",
+        "\u00ba": "ș",
+        "\u00aa": "Ș",
+        "\u00fe": "ț",
+        "\u00de": "Ț",
+    }
+)
 
 #: Romanian speaker cues (``STEFAN:``, ``MARIA:``): the Latin rule with the letters Latin-1's A-Th lacks.
 #: The filter runs after ``ro_normalize``, so a cedilla label already arrives comma-below.
 RO_SPEAKER_PATTERN = r"^[A-ZÀ-ÖØ-ÞĂȘȚ]" r"[A-ZÀ-ÖØ-ÞĂȘȚ0-9 .'-]*" r"[A-ZÀ-ÖØ-ÞĂȘȚ]:\s*"
-#: The S10 default for Romanian: the Latin parts with the Romanian speaker rule. No inline flags.
+#: The S10 default for Romanian: the Latin parts with the Romanian speaker rule and the unspaced dash rule
+#: (``-Unde ești? -Aici.``: spaCy keeps ``-Unde`` one token, so the spaced-only rule lost the word in 23 of 30
+#: probe cues). No inline flags.
 RO_SUBTITLE_REGEX = "|".join(
-    (BRACKETS_PATTERN, PARENS_PATTERN, MUSIC_PATTERN, RO_SPEAKER_PATTERN, DIALOGUE_DASH_PATTERN)
+    (BRACKETS_PATTERN, PARENS_PATTERN, MUSIC_PATTERN, RO_SPEAKER_PATTERN, NORDIC_DIALOGUE_DASH_PATTERN)
 )
 
 
@@ -88,7 +139,8 @@ def ro_fold_cedilla(text: str) -> str:
 
 
 def ro_normalize(text: str) -> str:
-    """S5 for Romanian: NFC; NBSP -> space; soft hyphens removed; cedillas -> comma-below (R35)."""
+    """S5 for Romanian: NFC; NBSP -> space; soft hyphens removed; cedillas -> comma-below (R35); mojibake and
+    OCR letters Romanian never writes -> ă ș ț."""
     return unicodedata.normalize("NFC", text).translate(_NORMALIZE_TABLE)
 
 
@@ -97,4 +149,20 @@ def main_verb_pos(tokens: list[LanguageToken]) -> list[LanguageToken]:
     for token in tokens:
         if token.feature.pos1 == "AUX" and token.feature.pos2.startswith("Vm"):
             token.feature.pos1 = "VERB"
+    return tokens
+
+
+#: The classes a hyphen piece or a lone letter is mis-tagged into. VERB has a one-letter member, the copula ``e``.
+_HYPHEN_PIECE_POS = frozenset({"NOUN", "ADJ", "ADV", "VERB", "PROPN"})
+_LONE_LETTER_POS = frozenset({"NOUN", "ADJ", "ADV", "PROPN"})
+
+
+def clitic_piece_pos(tokens: list[LanguageToken]) -> list[LanguageToken]:
+    """``build_spacy_tagger`` post-pass after ``main_verb_pos``: a hyphen-edged piece is PRON, a lone letter X."""
+    for token in tokens:
+        surface, feature = token.surface, token.feature
+        if feature.pos1 in _HYPHEN_PIECE_POS and len(surface) > 1 and (surface[0] == "-" or surface[-1] == "-"):
+            feature.pos1 = "PRON"
+        elif feature.pos1 in _LONE_LETTER_POS and len(surface) == 1 and surface.isalpha():
+            feature.pos1 = "X"
     return tokens
