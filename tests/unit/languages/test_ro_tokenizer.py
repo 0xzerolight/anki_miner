@@ -1,4 +1,4 @@
-"""The Romanian tokenizer: cedilla copy, main verbs, the capitalised-lemma opt-in, clitics (real model)."""
+"""The Romanian tokenizer: cedilla copy, main verbs, capitalised-lemma opt-in, clitics, lone letters (real model)."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ import pytest
 
 from anki_miner.languages._spaced.morphology import CAPITALISED_LEMMA_POS
 from anki_miner.languages._spaced.tokenizer import _splits_letter_hyphen_letter, load_spacy_model
-from anki_miner.languages.ro.morphology import RO_MODEL_PACKAGE
+from anki_miner.languages.ro.morphology import RO_ALLOWED_POS, RO_MODEL_PACKAGE
 from anki_miner.languages.ro.tokenizer import RO_RELEMMATISE_POS, build_tagger
 from anki_miner.services.tagger import LockedTagger
 
@@ -148,6 +148,36 @@ def test_hyphen_clitics_split_at_the_tokenizer(romanian, text, surfaces, content
     tokens = romanian(text)
     assert [t.surface for t in tokens] == surfaces
     assert {t.surface for t in tokens if t.feature.pos1 in CONTENT} == content
+
+
+@pytest.mark.parametrize(
+    ("text", "surface"),
+    [
+        ("S a defectat mașina.", "S"),  # YouTube captions write s-a as ``s a``
+        ("Nu știu ce s a întâmplat.", "s"),
+        ("Mulțumesc că v ați abonat.", "v"),
+        ("A, mulțumesc frumos!", "A"),  # an interjection, not the verb's a
+        ("Ce-am făcut?", "Ce-"),
+        ("Oprește-te!", "-te"),
+        ("Hai, du-te!", "-te"),
+    ],
+)
+def test_lone_letters_and_clitic_pieces_are_not_mined(romanian, text, surface):
+    by_surface = {t.surface: t.feature for t in romanian(text)}
+    assert by_surface[surface].pos1 not in RO_ALLOWED_POS
+
+
+def test_the_one_letter_copula_stays_a_verb(romanian):
+    by_surface = {t.surface: t.feature for t in romanian("E frig aici.")}
+    assert (by_surface["E"].pos1, by_surface["E"].lemma) == ("VERB", "fi")
+
+
+def test_the_clitic_pass_runs_after_the_main_verb_lift(raw, romanian):
+    """``-Știu`` arrives AUX ``Vmip1s``: lifted to VERB first, then the hyphen edge files it as a piece."""
+    (glued,) = [t for t in raw("-Știu că vine.") if t.text == "-Știu"]
+    assert (glued.pos_, glued.tag_) == ("AUX", "Vmip1s")
+    by_surface = {t.surface: t.feature for t in romanian("-Știu că vine.")}
+    assert by_surface["-Știu"].pos1 == "PRON"
 
 
 def test_the_clitic_split_is_spacy_romanian_prefix_stripping_not_an_infix():

@@ -2,8 +2,10 @@
 
 No parser (no separable verbs) and no hyphen join (spaCy Romanian has no letter-hyphen-letter infix; clitics
 such as ``s-a`` split by prefix stripping). The model tags a comma-below copy of the line
-(``RO_CEDILLA_FOLD``), the main-verb post-pass lifts ``Vm`` tags out of AUX, and the S8 abbreviation set
-prunes the ``rom.``/``ian.``/``ex.`` exceptions.
+(``RO_CEDILLA_FOLD``), the main-verb post-pass lifts ``Vm`` tags out of AUX, the clitic-piece post-pass then
+files hyphen-edged pieces (``Ce-``, ``-te``) as PRON and lone caption letters (``s a`` for ``s-a``) as X, and
+the S8 abbreviation set prunes the ``rom.``/``ian.``/``ex.`` exceptions. The clitic pass runs second because a
+glued ``-Știu`` arrives AUX and is a VERB only once lifted.
 
 Romanian opts in to the shared capitalised-lemma repair (Ruling S2, variant R): its edit-tree lemmatiser
 returns a capitalised inflected word unchanged (``Cărțile``, ``Mergem``) - the first word of most subtitle
@@ -21,6 +23,7 @@ from anki_miner.languages.ro.morphology import (
     RO_ABBREVIATIONS,
     RO_CEDILLA_FOLD,
     RO_MODEL_PACKAGE,
+    clitic_piece_pos,
     main_verb_pos,
 )
 from anki_miner.services.tagger import LockedTagger
@@ -34,7 +37,7 @@ def build_tagger() -> LockedTagger:
     return build_spacy_tagger(
         RO_MODEL_PACKAGE,
         tag_char_map=RO_CEDILLA_FOLD,
-        post_passes=(main_verb_pos,),
+        post_passes=(main_verb_pos, clitic_piece_pos),
         abbreviations=RO_ABBREVIATIONS,
         relemmatise_capitalised=True,
         relemmatise_pos=RO_RELEMMATISE_POS,

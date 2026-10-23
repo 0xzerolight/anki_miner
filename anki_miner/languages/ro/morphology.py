@@ -51,6 +51,13 @@ first word, 31 of 162 fronts in the probe's dialogue.
 and 11 main-verb tags (``Vmip1s``, ``Vmip3s``, ``Vmg`` ...) come out AUX: 590 of 1,729 gold VERB tokens in
 the RRT test set would be dropped as auxiliaries. Every RRT auxiliary is a ``Va`` tag, so a ``Vm`` tag lifts
 the token back to VERB (19 left behind, 7 of 615 auxiliaries lifted).
+
+``clitic_piece_pos``: a hyphen clitic split off its host (``Ce-`` in ``Ce-am``, ``-te`` in ``Oprește-te``)
+and a lone letter (YouTube captions write ``s-a``/``v-am`` as ``s a``/``v am``; the interjection ``A,``)
+come out NOUN (the letters ``Ncms-n``) and were mined as ``ce``, ``tu`` and "the Nth letter of the Romanian alphabet". A
+content token with a hyphen edge is a pronoun piece (PRON), and a one-letter NOUN/ADJ/ADV/PROPN is X. No
+real verb piece carries the hyphen (``Dă``/``-mi``), and the one-letter copula ``e`` (VERB, mined ``fi``)
+is left alone. On 5 YouTube tracks (1,973 lines) 14 junk fronts go and no right card is lost.
 """
 
 from __future__ import annotations
@@ -142,4 +149,20 @@ def main_verb_pos(tokens: list[LanguageToken]) -> list[LanguageToken]:
     for token in tokens:
         if token.feature.pos1 == "AUX" and token.feature.pos2.startswith("Vm"):
             token.feature.pos1 = "VERB"
+    return tokens
+
+
+#: The classes a hyphen piece or a lone letter is mis-tagged into. VERB has a one-letter member, the copula ``e``.
+_HYPHEN_PIECE_POS = frozenset({"NOUN", "ADJ", "ADV", "VERB", "PROPN"})
+_LONE_LETTER_POS = frozenset({"NOUN", "ADJ", "ADV", "PROPN"})
+
+
+def clitic_piece_pos(tokens: list[LanguageToken]) -> list[LanguageToken]:
+    """``build_spacy_tagger`` post-pass after ``main_verb_pos``: a hyphen-edged piece is PRON, a lone letter X."""
+    for token in tokens:
+        surface, feature = token.surface, token.feature
+        if feature.pos1 in _HYPHEN_PIECE_POS and len(surface) > 1 and (surface[0] == "-" or surface[-1] == "-"):
+            feature.pos1 = "PRON"
+        elif feature.pos1 in _LONE_LETTER_POS and len(surface) == 1 and surface.isalpha():
+            feature.pos1 = "X"
     return tokens

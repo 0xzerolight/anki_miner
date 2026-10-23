@@ -1,4 +1,4 @@
-"""Romanian data tables: the cedilla fold, normalize, the main-verb pass, the comparison fold, abbreviations, SDH."""
+"""Romanian data tables: the cedilla fold, normalize, the tagger passes, the comparison fold, abbreviations, SDH."""
 
 from __future__ import annotations
 
@@ -26,6 +26,7 @@ from anki_miner.languages.ro.morphology import (
     RO_MODEL_PACKAGE,
     RO_SPEAKER_PATTERN,
     RO_SUBTITLE_REGEX,
+    clitic_piece_pos,
     main_verb_pos,
     ro_fold_cedilla,
     ro_normalize,
@@ -127,6 +128,19 @@ def test_main_verb_tags_leave_the_auxiliary_class():
     ]
     assert main_verb_pos(tokens) is tokens
     assert [token.feature.pos1 for token in tokens] == ["VERB", "AUX", "VERB", ""]
+
+
+def test_lone_letters_and_hyphen_pieces_leave_the_content_classes():
+    tokens = [
+        LanguageToken("s", "NOUN", "Ncms-n", "s"),  # caption ``s a`` for ``s-a``
+        LanguageToken("e", "VERB", "Vmip3s", "fi"),  # the one-letter copula stays a verb
+        LanguageToken("Ce-", "NOUN", "Ncmpry", "ce"),
+        LanguageToken("-te", "NOUN", "Ncms-n", "tu"),
+        LanguageToken("cărți", "NOUN", "Ncfp-n", "carte"),
+        LanguageToken("-5", "NUM", "Mc-s-d", "-5"),
+    ]
+    assert clitic_piece_pos(tokens) is tokens
+    assert [token.feature.pos1 for token in tokens] == ["X", "VERB", "PRON", "PRON", "NOUN", "NUM"]
 
 
 def test_abbreviations_come_from_spacy_romanian_plus_titles_minus_real_words():
