@@ -47,7 +47,7 @@ def test_the_pos_gate_model_and_gender_tables():
     assert RO_ALLOWED_POS == UPOS_ALLOWED
     assert RO_EXCLUDED_SUBTYPES == ("Rc", "Ya", "Yn", "Ynfsoy", "Ynfsry", "Ynmsoy", "Ynmsry", "Yr")
     assert RO_GRAMMAR_SOURCES == ("chips", "head", "morph")  # the hook's own labels name all three genders
-    assert frozenset({"a", "un", "o", "niște"}) == RO_LEADING_WORDS
+    assert frozenset({"a", "un", "o", "niște", "se", "a-și", "a-i"}) == RO_LEADING_WORDS
 
 
 def test_the_cedilla_table_maps_one_code_point_to_one():
@@ -88,6 +88,13 @@ def test_the_key_fold_is_symmetric_across_both_spellings():
         ("niște mere", "mere"),
         ("ni\u015fte mere", "mere"),  # a cedilla deck front
         ("\u015etiin\u0163ă", STIINTA),
+        ("a se bucura", "bucura"),  # a reflexive citation meets the mined verb
+        ("A se bucura", "bucura"),
+        ("a-și aminti", "aminti"),
+        ("a-\u015fi aminti", "aminti"),  # the cedilla a-și folds through the key fold
+        ("a-i păsa", "păsa"),
+        ("se", "se"),
+        ("a se", "se"),
         ("a", "a"),
         ("carte", "carte"),
     ],
@@ -96,7 +103,9 @@ def test_the_fold_meets_the_mined_lemma(front, folded):
     assert FOLD(front) == folded
 
 
-@pytest.mark.parametrize("text", ["o carte", "a a merge", "ni\u015fte", "  ", "Un  Scaun!", CEDILLA_STIINTA])
+@pytest.mark.parametrize(
+    "text", ["o carte", "a a merge", "ni\u015fte", "  ", "Un  Scaun!", CEDILLA_STIINTA, "a se bucura"]
+)
 def test_the_fold_is_idempotent(text):
     assert FOLD(FOLD(text)) == FOLD(text)
 

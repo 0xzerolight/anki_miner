@@ -24,6 +24,10 @@ dot, with spaCy's own diacritic-less variants (``samd``, ``s.a.m.d``, ``st``) an
 a name (``Dl. Popescu``) that the model has no exception for, so only the sentence splitter reads them. The
 vocative ``dle`` ends sentences and is not listed.
 
+``RO_LEADING_WORDS``: the article, the infinitive's ``a`` and the reflexive a deck front carries and the
+mined lemma never does (S3, the de ``sich``/nl ``zich``/fr ``se`` shape): ``a se bucura`` and ``a-și
+aminti`` meet the mined ``bucura`` and ``aminti``. A cedilla ``a-și`` folds through the key fold first.
+
 ``RO_GRAMMAR_SOURCES``: Romanian has neuter nouns (masculine in the singular, feminine in the plural) and
 UD RRT has no neuter, so the model tags ``scaun`` Masc and ``scaunele`` Fem. The dictionary's chip or head
 line leads, and the hook's own labels name all three genders, which no article pair can.
@@ -63,8 +67,8 @@ RO_ABBREVIATIONS: frozenset[str] = frozenset(
     }
 )  # fmt: skip
 
-#: Leading words a deck front carries that the mined lemma never does (S3, E.1 D18).
-RO_LEADING_WORDS: frozenset[str] = frozenset({"a", "un", "o", "niște"})
+#: Leading words a deck front carries that the mined lemma never does (S3, E.1 D18), reflexives included.
+RO_LEADING_WORDS: frozenset[str] = frozenset({"a", "un", "o", "niște", "se", "a-și", "a-i"})
 
 RO_GRAMMAR_SOURCES: tuple[str, ...] = ("chips", "head", "morph")
 
