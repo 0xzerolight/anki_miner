@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Added
 
 ### Changed
+- **Romanian verb cards front the citation infinitive, `a vorbi`.** Learner dictionaries and decks write Romanian verbs this way (`a fi`, `a avea`), and the `a` tells a verb from its look-alike noun (`a suna` / `sun`). Only the card front changes: the dictionary, the frequency list, word audio and known-word matching still read `vorbi`, so a deck's `a vorbi` still marks the mined `vorbi` known. Card Backfill now looks a note fronted `a vorbi`, `a se bucura` or `o carte` up as its bare word. Existing cards keep their front. A reflexive is not told apart from the subtitle line: `se bucură` fronts `a bucura`.
 
 ### Fixed
 - **Romanian cards front the dictionary form of every content word.** Inflected nouns, adjectives and adverbs now take the headword their Wiktionary form row names (`cheile` → `cheie`, `tat` → `tată`, `asear` → `aseară`), as verbs already did. A verb the model lemmatised to a look-alike noun takes the one verb its form rows name (`Pot` → `putea`, `sun` → `suna`, `vin` → `veni`). Line-initial words the model tagged as names are mined again (`Aștept`, `Fugi`, `Mama`), while names stay out. The OpenSubtitles list is lemmatised the same way, so a list downloaded again ranks `școală`, `mâncare` and `baie` under their headwords.
