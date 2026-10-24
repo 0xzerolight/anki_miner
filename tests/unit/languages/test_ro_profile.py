@@ -121,13 +121,27 @@ def test_a_one_word_front_gains_no_citation_rung():
     assert get_profile("ro").lookup.candidates("a", "", None) == []
 
 
-@pytest.mark.parametrize(
-    ("pos", "mined", "front"),
-    [("VERB", "vorbi", {"card_front": "a vorbi"}), ("NOUN", "carte", {}), ("ADJ", "bun", {}), ("VERB", "", {})],
+#: wty-ro-en's rendered head lines, as phase 5 hands the hook the card's definition.
+VORBI = (
+    '<details><summary>Grammar</summary><div data-sc-content="Grammar-content">a vorbi (third-person singular'
+    " present vorbește, past participle vorbit) 4th conjugation</div></details><li>to speak</li>"
 )
-def test_a_verb_card_fronts_its_citation_infinitive(pos, mined, front):
+HAIDE = "<details><summary>Etymology</summary><div>Borrowed from Ottoman Turkish.</div></details><li>come on</li>"
+
+
+@pytest.mark.parametrize(
+    ("pos", "mined", "definition", "front"),
+    [
+        ("VERB", "vorbi", VORBI, {"card_front": "a vorbi"}),
+        ("VERB", "haide", HAIDE, {}),  # ``Haideți`` tagged a verb: the entry is an interjection's
+        ("VERB", "vorb", VORBI, {}),  # ``a vorbi`` is no citation of ``vorb``
+        ("NOUN", "carte", "<li>a carte</li>", {}),
+        ("VERB", "", VORBI, {}),
+    ],
+)
+def test_a_verb_card_fronts_the_citation_its_definition_gives(pos, mined, definition, front):
     """``a vorbi``, as learner dictionaries and an Început-style deck write it; ``mined_form`` stays ``vorbi``."""
-    word = SimpleNamespace(pos=pos, mined_form=mined)
+    word = SimpleNamespace(pos=pos, mined_form=mined, definition_html=definition)
     assert RomanianInfinitiveFront().render(word, config=AnkiMinerConfig()) == front
 
 
