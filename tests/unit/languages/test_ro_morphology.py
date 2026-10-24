@@ -143,6 +143,13 @@ def test_lone_letters_and_hyphen_pieces_leave_the_content_classes():
     assert [token.feature.pos1 for token in tokens] == ["X", "VERB", "PRON", "PRON", "NOUN", "NUM"]
 
 
+def test_the_bare_i_of_ce_i_is_the_copula():
+    """``Ce-i asta?``: the host keeps the hyphen (``Ce-``), and the model tags ``i`` a verb lemmatised ``i``."""
+    token = LanguageToken("i", "VERB", "Vmip3s----y", "i")
+    clitic_piece_pos([token])
+    assert (token.feature.pos1, token.feature.lemma) == ("VERB", "fi")
+
+
 def test_abbreviations_come_from_spacy_romanian_plus_titles_minus_real_words():
     from spacy.lang.ro.tokenizer_exceptions import TOKENIZER_EXCEPTIONS
 

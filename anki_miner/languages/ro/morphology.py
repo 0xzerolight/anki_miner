@@ -57,7 +57,9 @@ and a lone letter (YouTube captions write ``s-a``/``v-am`` as ``s a``/``v am``; 
 come out NOUN (the letters ``Ncms-n``) and were mined as ``ce``, ``tu`` and "the Nth letter of the Romanian alphabet". A
 content token with a hyphen edge is a pronoun piece (PRON), and a one-letter NOUN/ADJ/ADV/PROPN is X. No
 real verb piece carries the hyphen (``Dă``/``-mi``), and the one-letter copula ``e`` (VERB, mined ``fi``)
-is left alone. On 5 YouTube tracks (1,973 lines) 14 junk fronts go and no right card is lost.
+is left alone. On 5 YouTube tracks (1,973 lines) 14 junk fronts go and no right card is lost. The other copula
+clitic, ``-i`` in ``Ce-i``/``Unde-i``/``Nu-i``, arrives bare, since its host keeps the hyphen (``Ce-``), and
+tagged VERB with the lemma ``i``, which fronted "the eleventh letter of the Romanian alphabet": it is ``fi``.
 """
 
 from __future__ import annotations
@@ -165,4 +167,6 @@ def clitic_piece_pos(tokens: list[LanguageToken]) -> list[LanguageToken]:
             feature.pos1 = "PRON"
         elif feature.pos1 in _LONE_LETTER_POS and len(surface) == 1 and surface.isalpha():
             feature.pos1 = "X"
+        elif feature.pos1 == "VERB" and surface.lower() == "i":
+            feature.lemma = "fi"
     return tokens
