@@ -22,7 +22,12 @@ from anki_miner.languages._spaced.pos import UPOS_ALLOWED
 from anki_miner.languages._spaced.sentence import sentence_rules
 from anki_miner.languages.registry import get_profile
 from anki_miner.languages.ro.morphology import RO_ABBREVIATIONS, ro_fold_cedilla
-from anki_miner.languages.ro.parser import RomanianPropnRecovery, RomanianVerbHomographPass
+from anki_miner.languages.ro.parser import (
+    RomanianHomographPass,
+    RomanianNonHeadwordFront,
+    RomanianPropnRecovery,
+    ro_row_targets,
+)
 from anki_miner.languages.token import LanguageToken
 from anki_miner.services.dictionary import storage
 from anki_miner.services.dictionary.storage import DictRow
@@ -43,6 +48,15 @@ def _form_of(term: str, reading: str | None, *targets: str) -> DictRow:
 
 def _lemma(term: str, tags: str) -> DictRow:
     return DictRow(term=term, reading=None, content=f"<div>{term}</div>", tags=tags)
+
+
+def _glosses(term: str, tags: str, *glosses: str) -> DictRow:
+    """A headword row in the stored shape of a wty-ro-en sense list (``<ol data-sc-content="glosses">``)."""
+    items = [{"tag": "li", "content": gloss} for gloss in glosses]
+    content = render_glossary_entry(
+        [{"type": "structured-content", "content": {"tag": "ol", "data": {"content": "glosses"}, "content": items}}]
+    )
+    return DictRow(term=term, reading=None, content=content, tags=tags)
 
 
 #: wty-ro-en's rows for the keys the lines below read. ``lasa`` also keys ``lașă`` (a form of ``laș``), so only
@@ -107,6 +121,57 @@ WTY_RO = [
     _lemma("ion", "name masc"),
     _form_of("ion", None, "Ioana"),
     _form_of("ion", None, "Ioan"),
+    # Inflection glosses: kaikki files these forms as headwords as well as by their form row.
+    _glosses("vorbim", "v pl", "first-person plural present indicative of vorbi: we speak"),
+    _form_of("vorbim", None, "vorbi"),
+    _glosses("vorbești", "v sg", "second-person singular present indicative of vorbi: you speak"),
+    _form_of("vorbesti", "vorbești", "vorbi"),
+    _lemma("vorbi", "v"),
+    _glosses("fii", "n pl", "plural of fiu: sons"),
+    _glosses("fii", "v sg", "second-person singular imperative of fi: be"),
+    _form_of("fii", None, "fi", "fi"),
+    _form_of("fii", None, "fie", "fie", "fie"),
+    _form_of("fii", None, "fiu", "fiu"),
+    _lemma("fi", "v"),
+    _lemma("fiu", "n masc"),
+    _glosses("mită", "n fem", "bribe"),
+    # Lemmas no headword (or only a name) whose surface names several targets, one of them of the token's class.
+    _form_of("scapi", None, "scap", "scap"),
+    _form_of("scapi", None, "scăpa", "scăpa"),
+    _lemma("scap", "n masc"),
+    _lemma("scăpa", "v"),
+    _form_of("tii", "ții", "ținea"),
+    _form_of("tii", "ții", "ține"),
+    _form_of("tinea", "ținea", "ține"),
+    _lemma("ține", "v"),
+    _lemma("uite", "intj"),
+    _form_of("uite", None, "uita"),
+    _form_of("ui", None, "u", "u"),
+    _form_of("ui", None, "vui", "vui"),
+    _lemma("uita", "v"),
+    _lemma("sucești", "name masc"),
+    _form_of("sucesti", "sucești", "suci"),
+    _form_of("sucesc", None, "suci", "suci"),
+    _lemma("suci", "v"),
+    _form_of("prostule", None, "prost"),
+    _lemma("prostu", "name masc"),
+    _lemma("prost", "adj"),
+    _form_of("vina", None, "vână"),
+    _form_of("vina", None, "veni"),
+    _form_of("vina", None, "vină", "vină"),
+    _form_of("vina", None, "vâna"),
+    _lemma("vână", "n fem"),
+    _lemma("vină", "n fem"),
+    _lemma("vâna", "v"),
+    # Lemmas a headword of another class only: ``taci`` -> ``tacă`` (silence), ``noaptea`` (at night).
+    _form_of("taci", None, "tacă"),
+    _form_of("taci", None, "tăcea", "tăcea", "tăcea"),
+    _lemma("tacă", "n fem"),
+    _form_of("taca", "tacă", "tăcea"),
+    _lemma("tăcea", "v"),
+    _lemma("noaptea", "adv"),
+    _form_of("noaptea", None, "noapte", "noapte"),
+    _lemma("noapte", "n fem"),
 ]
 
 
@@ -166,12 +231,14 @@ def test_a_diacritic_surface_reaches_its_form_row_through_the_reading(conn, form
     assert storage.term_rows(conn, ["lasă"], keys=exact_term_keys) == {}
 
 
-def test_the_parser_runs_the_verb_homograph_the_content_front_and_the_propn_passes_in_order(monkeypatch):
+def test_the_parser_runs_the_homograph_the_content_front_the_non_headword_and_the_propn_passes_in_order(monkeypatch):
     injected = _injected(monkeypatch)
     assert isinstance(injected, OrderedPasses)
-    homograph, content, propn = injected._passes  # noqa: SLF001 - the order is the contract
-    assert isinstance(homograph, RomanianVerbHomographPass) and isinstance(propn, RomanianPropnRecovery)
+    homograph, content, non_headword, propn = injected._passes  # noqa: SLF001 - the order is the contract
+    assert isinstance(homograph, RomanianHomographPass) and isinstance(propn, RomanianPropnRecovery)
+    assert isinstance(non_headword, RomanianNonHeadwordFront)
     assert isinstance(content, FormOfLemmaPass) and content._front_pos == frozenset(UPOS_ALLOWED)  # noqa: SLF001
+    assert content._row_targets is ro_row_targets  # noqa: SLF001
 
 
 @pytest.mark.parametrize(
@@ -254,6 +321,75 @@ def test_a_mid_line_capitalised_propn_stays_a_name(monkeypatch, tagger, forms):
 def test_a_cue_initial_name_with_a_name_row_stays_a_name(monkeypatch, tagger, forms):
     """``ion`` is a noun (ion) as well as the name ``Ion``: its name row keeps the token PROPN."""
     assert _fronts(monkeypatch, tagger, forms, "Ion a venit acasă.")["Ion"] == ("Ion", "PROPN")
+
+
+def _front(monkeypatch, forms, surface: str, pos1: str, lemma: str) -> tuple[str, str]:
+    """One token as ``ro_core_news_sm`` tagged it on a real subtitle line, through the parser's passes."""
+    token = LanguageToken(surface=surface, pos1=pos1, lemma=lemma)
+    _injected(monkeypatch)([token], None, forms)
+    return token.feature.lemma, token.feature.pos1
+
+
+def test_an_inflection_gloss_reads_as_the_form_row_it_is(conn):
+    rows = storage.term_rows(conn, ["vorbim", "fii", "mită"], keys=KEYS)
+    read = {key: [ro_row_targets(content, tags) for content, tags in found] for key, found in rows.items()}
+    assert read["vorbim"] == [["vorbi"], ["vorbi"]]
+    assert read["fii"] == [["fiu"], ["fi"], ["fi", "fi"], ["fie", "fie", "fie"], ["fiu", "fiu"]]
+    assert read["mită"] == [None]
+
+
+@pytest.mark.parametrize(
+    ("surface", "lemma", "front"),
+    [
+        ("vorbim", "vorbim", "vorbi"),  # ``Vorbim mâine.``
+        ("vorbești", "vorbest", "vorbi"),  # ``Ce vorbești acolo?``
+        ("fii", "fii", "fi"),  # ``Fii atent!``: the glosses name ``fiu`` and ``fi``, the verb is ``fi``
+    ],
+)
+def test_a_form_kaikki_files_as_a_headword_fronts_its_lemma(monkeypatch, forms, surface, lemma, front):
+    assert _front(monkeypatch, forms, surface, "VERB", lemma) == (front, "VERB")
+
+
+@pytest.mark.parametrize(
+    ("surface", "pos1", "lemma", "front"),
+    [
+        ("scapi", "VERB", "scapi", ("scăpa", "VERB")),  # ``să scapi de el``: ``scap`` is a noun
+        ("ții", "VERB", "ția", ("ține", "VERB")),  # ``Te ții de școală.``: ``ținea`` is no headword
+        ("uite", "VERB", "ui", ("uita", "VERB")),  # ``Ia uite!``: the surface's interjection row is no front
+        ("sucești", "VERB", "sucesc", ("suci", "VERB")),  # the surface is also a village
+        ("prostule", "NOUN", "prostu", ("prost", "ADJ")),  # the lemma is only a surname
+    ],
+)
+def test_a_lemma_no_word_files_takes_the_target_of_its_class(monkeypatch, forms, surface, pos1, lemma, front):
+    assert _front(monkeypatch, forms, surface, pos1, lemma) == front
+
+
+def test_two_targets_of_the_token_s_class_keep_the_token(monkeypatch, forms):
+    """``vina`` names the verbs ``veni`` and ``vâna`` (and two nouns): nothing tells them apart."""
+    assert _front(monkeypatch, forms, "vina", "VERB", "vina") == ("vina", "VERB")
+
+
+def test_a_noun_lemmatised_to_an_adverb_headword_takes_the_noun_its_surface_names(monkeypatch, forms):
+    """``toată noaptea``: wty-ro-en files ``noaptea`` only as the adverb "at night"."""
+    assert _front(monkeypatch, forms, "noaptea", "NOUN", "noaptea") == ("noapte", "NOUN")
+
+
+def test_the_tagger_s_own_lemma_counts_among_the_surface_s_targets(monkeypatch, forms):
+    """``Taci!`` names ``tacă`` (silence) and ``tăcea``: the tagger's ``tacă`` is one of them, so nothing picks.
+
+    Not counting it fronted ``tăcea`` here, but the same reading made ``dragă domnule`` ``draga`` and ``ați atins
+    limita`` the verb ``limita``.
+    """
+    assert _front(monkeypatch, forms, "taci", "VERB", "tacă") == ("tacă", "VERB")
+
+
+def test_a_closed_class_lemma_is_left_to_its_word():
+    """``peste zece ani`` tagged ADV keeps the preposition: its form row names the noun ``pestă``."""
+    rows = {"peste": [("<div>peste</div>", "prep"), (_form_of("peste", None, "pestă").content, "non-lemma")]}
+    rows["pestă"] = [("<div>pestă</div>", "n fem")]
+    token = LanguageToken(surface="peste", pos1="ADV", lemma="peste")
+    RomanianNonHeadwordFront()([token], None, lambda keys: {key: rows[key] for key in keys if key in rows})
+    assert (token.feature.lemma, token.feature.pos1) == ("peste", "ADV")
 
 
 def test_no_dictionary_leaves_the_tokens_as_the_tagger_built_them(monkeypatch, tagger):
