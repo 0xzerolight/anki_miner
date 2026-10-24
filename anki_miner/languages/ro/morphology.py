@@ -35,6 +35,8 @@ vocative ``dle`` ends sentences and is not listed.
 ``RO_LEADING_WORDS``: the article, the infinitive's ``a`` and the reflexive a deck front carries and the
 mined lemma never does (S3, the de ``sich``/nl ``zich``/fr ``se`` shape): ``a se bucura`` and ``a-și
 aminti`` meet the mined ``bucura`` and ``aminti``. A cedilla ``a-și`` folds through the key fold first.
+``citation_rung`` drops the same words for a lookup that misses, so a note looked up by its front (Card Backfill)
+finds ``vorbi`` for this profile's own verb front ``a vorbi`` and for a deck's ``a se bucura``.
 
 ``RO_GRAMMAR_SOURCES``: Romanian has neuter nouns (masculine in the singular, feminine in the plural) and
 UD RRT has no neuter, so the model tags ``scaun`` Masc and ``scaunele`` Fem. The dictionary's chip or head
@@ -98,6 +100,17 @@ RO_ABBREVIATIONS: frozenset[str] = frozenset(
 
 #: Leading words a deck front carries that the mined lemma never does (S3, E.1 D18), reflexives included.
 RO_LEADING_WORDS: frozenset[str] = frozenset({"a", "un", "o", "niște", "se", "a-și", "a-i"})
+
+
+def citation_rung(word: str, surface: str) -> list[str]:
+    """``LatinLookupStrategy`` rung: a front written with its leading words (``a vorbi``, ``o carte``) offers the word."""
+    del surface  # the front carries the words; a token surface never does
+    tokens = word.split()
+    lead = 0
+    while len(tokens) - lead > 1 and tokens[lead].casefold() in RO_LEADING_WORDS:
+        lead += 1
+    return [" ".join(tokens[lead:])] if lead else []
+
 
 RO_GRAMMAR_SOURCES: tuple[str, ...] = ("chips", "head")
 

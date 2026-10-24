@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import tomllib
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -30,6 +31,7 @@ from anki_miner.languages.ro.morphology import (
     RO_SUBTITLE_REGEX,
     ro_normalize,
 )
+from anki_miner.languages.ro.render import RomanianInfinitiveFront
 from anki_miner.languages.switching import switch_language
 from anki_miner.services.frequency import mode_probe, source_importer
 
@@ -62,8 +64,9 @@ def test_the_profile_is_built_from_the_shared_substrate():
     )
     assert "wiktionary_audio" not in profile.capabilities  # Stage W is not built (DECIDED 6)
     assert profile.extra_card_fields == (POS_FIELD, NOUN_GENDER_FIELD)
-    assert [type(hook) for hook in profile.render_hooks] == [PosHook, GrammarTagHook]
+    assert [type(hook) for hook in profile.render_hooks] == [PosHook, GrammarTagHook, RomanianInfinitiveFront]
     assert profile.render_hooks[1].field_names() == ("noun_gender",)
+    assert profile.render_hooks[2].field_names() == ()
     assert profile.unavailable_reason is not None and profile.unavailable_reason() is None
     assert profile.pos_defaults.excluded_subtypes == RO_EXCLUDED_SUBTYPES
     assert profile.smoke_sentence == "Studentul a citit o carte interesantă ieri."
@@ -103,6 +106,29 @@ def test_the_lookup_ladder_is_the_surface_then_its_casefold():
     lookup = get_profile("ro").lookup
     assert lookup.candidates("carte", "Cărțile", None) == [("Cărțile", 0), ("cărțile", 0)]
     assert lookup.candidates("cărți", "", None) == []  # the PROBE word shape: no cedilla rung (E.2.8)
+
+
+@pytest.mark.parametrize(
+    ("front", "verb"),
+    [("a vorbi", "vorbi"), ("a se bucura", "bucura"), ("a-și aminti", "aminti"), ("A fi", "fi"), ("o carte", "carte")],
+)
+def test_a_citation_front_looks_up_its_bare_word(front, verb):
+    """Card Backfill looks a note up by its front: ``a vorbi`` (this profile's verb cards, Început-style decks)."""
+    assert (verb, 0) in get_profile("ro").lookup.candidates(front, "", None)
+
+
+def test_a_one_word_front_gains_no_citation_rung():
+    assert get_profile("ro").lookup.candidates("a", "", None) == []
+
+
+@pytest.mark.parametrize(
+    ("pos", "mined", "front"),
+    [("VERB", "vorbi", {"card_front": "a vorbi"}), ("NOUN", "carte", {}), ("ADJ", "bun", {}), ("VERB", "", {})],
+)
+def test_a_verb_card_fronts_its_citation_infinitive(pos, mined, front):
+    """``a vorbi``, as learner dictionaries and an Început-style deck write it; ``mined_form`` stays ``vorbi``."""
+    word = SimpleNamespace(pos=pos, mined_form=mined)
+    assert RomanianInfinitiveFront().render(word, config=AnkiMinerConfig()) == front
 
 
 def test_the_parser_is_the_spaced_factory_with_the_verb_front_repair():

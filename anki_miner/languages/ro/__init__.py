@@ -31,10 +31,12 @@ from anki_miner.languages.ro.morphology import (
     RO_LEADING_WORDS,
     RO_MODEL_PACKAGE,
     RO_SUBTITLE_REGEX,
+    citation_rung,
     ro_fold_cedilla,
     ro_normalize,
 )
 from anki_miner.languages.ro.parser import create_parser
+from anki_miner.languages.ro.render import RomanianInfinitiveFront
 
 __all__ = ["build_profile"]
 
@@ -84,7 +86,7 @@ def build_profile() -> LanguageProfile:
         display_name="Română",
         create_parser=create_parser,
         mined_form=SpacedMinedForm(),
-        lookup=LatinLookupStrategy(),
+        lookup=LatinLookupStrategy(extra_rungs=(citation_rung,)),
         reading=None,
         sentence_annotator=None,
         script=LatinScript(),
@@ -126,6 +128,7 @@ def build_profile() -> LanguageProfile:
         render_hooks=(
             PosHook(),
             GrammarTagHook(("noun_gender",), sources=RO_GRAMMAR_SOURCES),
+            RomanianInfinitiveFront(),
         ),
         content_style=SPACED_CONTENT_STYLE,
         unavailable_reason=spaced_missing_reason("ro", "Romanian", RO_MODEL_PACKAGE),
