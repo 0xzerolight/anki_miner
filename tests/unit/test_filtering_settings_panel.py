@@ -214,7 +214,7 @@ def test_known_words_db_checkbox_names_the_effect(qtbot):
     assert panel.use_known_words_db_checkbox.text() == "Keep words known after their cards are deleted"
     tip = panel.use_known_words_db_checkbox.toolTip()
     expected_tip = (
-        "Words stay known after their Anki cards are deleted or moved to an excluded deck. "
+        "Words stay known after their Anki cards are deleted, suspended or moved to an excluded deck. "
         "Rebuild (in Manage Known Words) forgets them."
     )
     assert tip == expected_tip

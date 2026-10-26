@@ -2624,6 +2624,14 @@ No index files are deleted.</source>
         <translation>等揀咗嘅牌組唔算已知，入面啲詞語仍然可以採集。</translation>
     </message>
     <message>
+        <source>Ignore suspended cards</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Words whose only Anki cards are suspended count as unknown, so they can be mined again.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Mark words as known by hand</source>
         <translation>手動將詞語標記為已知</translation>
     </message>
@@ -5844,8 +5852,8 @@ No files on disk are deleted.</source>
         <translation>卡片刪除之後保留已知詞語</translation>
     </message>
     <message>
-        <source>Words stay known after their Anki cards are deleted or moved to an excluded deck. Rebuild (in Manage Known Words) forgets them.</source>
-        <translation>Anki 卡片被刪除或者搬去排除咗嘅牌組之後，詞語仍然算已知。（喺「管理已知詞語」入面）重建會清除佢哋。</translation>
+        <source>Words stay known after their Anki cards are deleted, suspended or moved to an excluded deck. Rebuild (in Manage Known Words) forgets them.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Manage Known Words…</source>
@@ -5882,6 +5890,14 @@ No files on disk are deleted.</source>
     <message>
         <source>Remove</source>
         <translation>移除</translation>
+    </message>
+    <message>
+        <source>Ignore suspended cards</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Words whose only Anki cards are suspended count as unknown: they can be mined again, and Readability and i+1 treat them as new. A note with any unsuspended card still counts as known.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Word Lists</source>

@@ -43,7 +43,7 @@ def test_the_reviewed_query_keeps_the_deck_exclusions(test_config):
 
 
 def test_a_suspended_but_reviewed_card_still_counts_as_known(test_config):
-    """Ruling C1: many users suspend cards they know, so suspension never un-knows a word."""
+    """Ruling C1: many users suspend cards they know, so by default suspension never un-knows a word."""
     query = AnkiService(test_config)._build_reviewed_query()
 
     assert "is:suspended" not in query

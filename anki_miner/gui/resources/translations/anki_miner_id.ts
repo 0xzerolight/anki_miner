@@ -2624,6 +2624,14 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Hentikan dek tertentu dianggap sebagai dikenal sehingga katanya tetap dapat di-mining.</translation>
     </message>
     <message>
+        <source>Ignore suspended cards</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Words whose only Anki cards are suspended count as unknown, so they can be mined again.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Mark words as known by hand</source>
         <translation>Tandai kata sebagai dikenal secara manual</translation>
     </message>
@@ -5844,8 +5852,8 @@ Tidak ada berkas di disk yang dihapus.</translation>
         <translation>Tetap anggap kata dikenal setelah kartunya dihapus</translation>
     </message>
     <message>
-        <source>Words stay known after their Anki cards are deleted or moved to an excluded deck. Rebuild (in Manage Known Words) forgets them.</source>
-        <translation>Kata tetap dikenal setelah kartu Anki-nya dihapus atau dipindahkan ke dek yang dikecualikan. Bangun Ulang (di Kelola Kata yang Dikenal) melupakannya.</translation>
+        <source>Words stay known after their Anki cards are deleted, suspended or moved to an excluded deck. Rebuild (in Manage Known Words) forgets them.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Manage Known Words…</source>
@@ -5882,6 +5890,14 @@ Tidak ada berkas di disk yang dihapus.</translation>
     <message>
         <source>Remove</source>
         <translation>Hapus</translation>
+    </message>
+    <message>
+        <source>Ignore suspended cards</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Words whose only Anki cards are suspended count as unknown: they can be mined again, and Readability and i+1 treat them as new. A note with any unsuspended card still counts as known.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Word Lists</source>

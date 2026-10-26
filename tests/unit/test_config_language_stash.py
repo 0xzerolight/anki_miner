@@ -167,6 +167,7 @@ def test_pre_change_config_loads_every_field_unchanged(isolated_config_file):
         "video_ocr_region",
         "video_ocr_models_root",
         "known_from_reviewed_cards",
+        "ignore_suspended_cards",
         "sync_anki_after_run",
         "normalize_audio_loudness",
         "crop_manga_to_text",

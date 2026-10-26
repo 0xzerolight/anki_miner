@@ -2043,7 +2043,7 @@ class EpisodeProcessor:
         # Within-run duplicate collapse. mined_form collisions under the
         # language's comparison fold (profile.dedup_fold: de Essen/essen, zh
         # 頭髮/头发) are one card identity, as they are to known words, the word
-        # lists, excluded-deck admission and Anki's in-batch check, so they
+        # lists, scanned-vocabulary admission and Anki's in-batch check, so they
         # collapse here too (P4); raw when the language has no fold. Orthographic aliases need a
         # dictionary identity instead: exact-term sequence + contextual reading,
         # scoped by dictionary. Never use the normal term-OR-reading lookup here;

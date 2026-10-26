@@ -2627,6 +2627,14 @@ Er worden geen indexbestanden gewist.</translation>
         <translation>Voorkomen dat gekozen stapels als bekend tellen, zodat hun woorden nog gemined kunnen worden.</translation>
     </message>
     <message>
+        <source>Ignore suspended cards</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Words whose only Anki cards are suspended count as unknown, so they can be mined again.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Mark words as known by hand</source>
         <translation>Woorden handmatig als bekend markeren</translation>
     </message>
@@ -5882,8 +5890,8 @@ Er worden geen bestanden van de schijf gewist.</translation>
         <translation>Woorden bekend houden nadat hun kaarten zijn verwijderd</translation>
     </message>
     <message>
-        <source>Words stay known after their Anki cards are deleted or moved to an excluded deck. Rebuild (in Manage Known Words) forgets them.</source>
-        <translation>Woorden blijven bekend nadat hun Anki-kaarten zijn verwijderd of naar een uitgesloten stapel zijn verplaatst. Herbouwen (in Bekende woorden beheren) vergeet ze.</translation>
+        <source>Words stay known after their Anki cards are deleted, suspended or moved to an excluded deck. Rebuild (in Manage Known Words) forgets them.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Manage Known Words…</source>
@@ -5920,6 +5928,14 @@ Er worden geen bestanden van de schijf gewist.</translation>
     <message>
         <source>Remove</source>
         <translation>Verwijderen</translation>
+    </message>
+    <message>
+        <source>Ignore suspended cards</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Words whose only Anki cards are suspended count as unknown: they can be mined again, and Readability and i+1 treat them as new. A note with any unsuspended card still counts as known.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Word Lists</source>

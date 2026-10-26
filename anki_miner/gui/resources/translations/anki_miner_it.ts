@@ -2627,6 +2627,14 @@ Nessun file indice viene eliminato.</translation>
         <translation>Impedisci a mazzi scelti di contare come conosciuti, così le loro parole possono comunque essere estratte.</translation>
     </message>
     <message>
+        <source>Ignore suspended cards</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Words whose only Anki cards are suspended count as unknown, so they can be mined again.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Mark words as known by hand</source>
         <translation>Segna le parole come conosciute a mano</translation>
     </message>
@@ -5882,8 +5890,8 @@ Nessun file sul disco viene eliminato.</translation>
         <translation>Mantieni conosciute le parole dopo l'eliminazione delle loro carte</translation>
     </message>
     <message>
-        <source>Words stay known after their Anki cards are deleted or moved to an excluded deck. Rebuild (in Manage Known Words) forgets them.</source>
-        <translation>Le parole restano conosciute dopo che le loro carte Anki sono state eliminate o spostate in un mazzo escluso. La ricostruzione (in Gestisci parole conosciute) le dimentica.</translation>
+        <source>Words stay known after their Anki cards are deleted, suspended or moved to an excluded deck. Rebuild (in Manage Known Words) forgets them.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Manage Known Words…</source>
@@ -5920,6 +5928,14 @@ Nessun file sul disco viene eliminato.</translation>
     <message>
         <source>Remove</source>
         <translation>Rimuovi</translation>
+    </message>
+    <message>
+        <source>Ignore suspended cards</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Words whose only Anki cards are suspended count as unknown: they can be mined again, and Readability and i+1 treat them as new. A note with any unsuspended card still counts as known.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Word Lists</source>

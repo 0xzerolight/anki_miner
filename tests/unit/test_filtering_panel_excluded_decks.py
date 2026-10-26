@@ -119,3 +119,28 @@ def test_loading_an_empty_list_over_decks_shows_the_empty_line(qtbot):
     assert panel.excluded_decks_list.isHidden()
     assert not panel.excluded_decks_empty_label.isHidden()
     assert panel.remove_deck_button.isHidden()
+
+
+def test_ignore_suspended_cards_round_trips_and_defaults_off(qtbot):
+    from anki_miner.config import AnkiMinerConfig
+
+    panel = FilteringSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.load_from_config(AnkiMinerConfig())
+    assert not panel.ignore_suspended_cards_checkbox.isChecked()
+
+    panel.load_from_config(AnkiMinerConfig(ignore_suspended_cards=True))
+    assert panel.ignore_suspended_cards_checkbox.isChecked()
+    assert panel.contribute(AnkiMinerConfig()).ignore_suspended_cards is True
+
+    panel.ignore_suspended_cards_checkbox.setChecked(False)
+    assert panel.contribute(AnkiMinerConfig(ignore_suspended_cards=True)).ignore_suspended_cards is False
+
+
+def test_settings_search_finds_ignore_suspended_cards(qtbot):
+    panel = FilteringSettingsPanel()
+    qtbot.addWidget(panel)
+    anchors = {anchor.stable_id: anchor for anchor in panel.setting_anchors()}
+
+    anchor = anchors["filtering.ignore_suspended_cards_checkbox"]
+    assert any("suspended" in text for text in anchor.search_text())

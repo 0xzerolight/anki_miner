@@ -2627,6 +2627,14 @@ No index files are deleted.</source>
         <translation>חפיסות שנבחרו לא ייחשבו כמוכרות, כך שעדיין אפשר לכרות את המילים שלהן.</translation>
     </message>
     <message>
+        <source>Ignore suspended cards</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Words whose only Anki cards are suspended count as unknown, so they can be mined again.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Mark words as known by hand</source>
         <translation>סימון מילים כמוכרות ידנית</translation>
     </message>
@@ -5882,8 +5890,8 @@ No files on disk are deleted.</source>
         <translation>להשאיר מילים מוכרות לאחר מחיקת הכרטיסים שלהן</translation>
     </message>
     <message>
-        <source>Words stay known after their Anki cards are deleted or moved to an excluded deck. Rebuild (in Manage Known Words) forgets them.</source>
-        <translation>מילים נשארות מוכרות לאחר שכרטיסי Anki שלהן נמחקים או מועברים לחפיסה מוחרגת. בנייה מחדש (בניהול מילים מוכרות) שוכחת אותן.</translation>
+        <source>Words stay known after their Anki cards are deleted, suspended or moved to an excluded deck. Rebuild (in Manage Known Words) forgets them.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Manage Known Words…</source>
@@ -5920,6 +5928,14 @@ No files on disk are deleted.</source>
     <message>
         <source>Remove</source>
         <translation>להסיר</translation>
+    </message>
+    <message>
+        <source>Ignore suspended cards</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Words whose only Anki cards are suspended count as unknown: they can be mined again, and Readability and i+1 treat them as new. A note with any unsuspended card still counts as known.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Word Lists</source>

@@ -832,6 +832,17 @@ CAPABILITIES: tuple[Capability, ...] = (
         keywords=("exclude deck", "ignore deck", "deck exclusion", "subdeck"),
     ),
     Capability(
+        id="ignore-suspended",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Ignore suspended cards"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Words whose only Anki cards are suspended count as unknown, so they can be mined again.",
+        ),
+        category=_CAT_FILTERING,
+        target=CapabilityTarget("settings", "filtering"),
+        keywords=("suspended", "suspend", "ignore suspended", "premade deck"),
+    ),
+    Capability(
         id="user-known-list",
         title=QT_TRANSLATE_NOOP("Capabilities", "Mark words as known by hand"),
         description=QT_TRANSLATE_NOOP(

@@ -245,7 +245,7 @@ class FilteringSettingsPanel(FormPanel):
         self.use_known_words_db_checkbox = QCheckBox(self.tr("Keep words known after their cards are deleted"))
         self.use_known_words_db_checkbox.setToolTip(
             self.tr(
-                "Words stay known after their Anki cards are deleted or moved to an "
+                "Words stay known after their Anki cards are deleted, suspended or moved to an "
                 "excluded deck. Rebuild (in Manage Known Words) forgets them."
             )
         )
@@ -337,6 +337,18 @@ class FilteringSettingsPanel(FormPanel):
             # clear() resets the model without a rowsRemoved.
             list_model.modelReset.connect(self._sync_excluded_decks)
         self._sync_excluded_decks()
+
+        # Off by default (ruling C1: many users suspend cards they already
+        # know). On, the known-words scan drops all-suspended notes exactly as it
+        # drops an excluded deck, for mining and scoring alike.
+        self.ignore_suspended_cards_checkbox = QCheckBox(self.tr("Ignore suspended cards"))
+        self.ignore_suspended_cards_checkbox.setToolTip(
+            self.tr(
+                "Words whose only Anki cards are suspended count as unknown: they can be mined again, and "
+                "Readability and i+1 treat them as new. A note with any unsuspended card still counts as known."
+            )
+        )
+        self.add_field("", self.ignore_suspended_cards_checkbox)
 
         # Word Lists section. The chosen file IS the switch (D15 item 1):
         # choosing a file turns the list on, clearing it turns it off. The two
@@ -818,6 +830,7 @@ class FilteringSettingsPanel(FormPanel):
         self.set_use_known_words_db(config.use_known_words_db)
         self.set_match_kana_variants(config.known_words_match_kana_variants)
         self.set_excluded_decks(config.excluded_decks)
+        self.ignore_suspended_cards_checkbox.setChecked(config.ignore_suspended_cards)
         self.set_excluded_wordsets(config.excluded_wordsets)
         # T-11: always set (including '' for None) so Reset-to-Defaults clears
         # the selector; without this the stale path stays visible and the next
@@ -848,6 +861,7 @@ class FilteringSettingsPanel(FormPanel):
             use_known_words_db=self.get_use_known_words_db(),
             known_words_match_kana_variants=self.get_match_kana_variants(),
             excluded_decks=self.get_excluded_decks(),
+            ignore_suspended_cards=self.ignore_suspended_cards_checkbox.isChecked(),
             excluded_wordsets=self.get_excluded_wordsets(),
             blacklist_path=self.get_blacklist_path(),
             use_blacklist=self.get_use_blacklist(),

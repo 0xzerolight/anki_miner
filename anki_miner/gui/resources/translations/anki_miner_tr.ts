@@ -2624,6 +2624,14 @@ Hiçbir dizin dosyası silinmez.</translation>
         <translation>Seçilen destelerin bilinen sayılmasını engelleyin; böylece kelimeleri yine toplanabilir.</translation>
     </message>
     <message>
+        <source>Ignore suspended cards</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Words whose only Anki cards are suspended count as unknown, so they can be mined again.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Mark words as known by hand</source>
         <translation>Kelimeleri elle bilinen olarak işaretle</translation>
     </message>
@@ -5844,8 +5852,8 @@ Diskteki hiçbir dosya silinmez.</translation>
         <translation>Kartları silindikten sonra da kelimeleri bilinen say</translation>
     </message>
     <message>
-        <source>Words stay known after their Anki cards are deleted or moved to an excluded deck. Rebuild (in Manage Known Words) forgets them.</source>
-        <translation>Anki kartları silindikten veya hariç tutulan bir desteye taşındıktan sonra da kelimeler bilinen kalır. Yeniden oluşturma (Bilinen kelimeleri yönet içinde) onları unutur.</translation>
+        <source>Words stay known after their Anki cards are deleted, suspended or moved to an excluded deck. Rebuild (in Manage Known Words) forgets them.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Manage Known Words…</source>
@@ -5882,6 +5890,14 @@ Diskteki hiçbir dosya silinmez.</translation>
     <message>
         <source>Remove</source>
         <translation>Kaldır</translation>
+    </message>
+    <message>
+        <source>Ignore suspended cards</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Words whose only Anki cards are suspended count as unknown: they can be mined again, and Readability and i+1 treat them as new. A note with any unsuspended card still counts as known.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Word Lists</source>

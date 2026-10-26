@@ -2630,6 +2630,14 @@ Indekso failai neištrinami.</translation>
         <translation>Pasirinktos kaladės nebus laikomos žinomomis, todėl jų žodžius vis tiek bus galima rinkti.</translation>
     </message>
     <message>
+        <source>Ignore suspended cards</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Words whose only Anki cards are suspended count as unknown, so they can be mined again.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Mark words as known by hand</source>
         <translation>Žymėti žodžius kaip žinomus rankiniu būdu</translation>
     </message>
@@ -5920,8 +5928,8 @@ Failai diske neištrinami.</translation>
         <translation>Laikyti žodžius žinomais ištrynus jų korteles</translation>
     </message>
     <message>
-        <source>Words stay known after their Anki cards are deleted or moved to an excluded deck. Rebuild (in Manage Known Words) forgets them.</source>
-        <translation>Žodžiai lieka žinomi, kai jų Anki kortelės ištrinamos ar perkeliamos į neįtrauktą kaladę. Perkūrimas (lange „Tvarkyti žinomus žodžius“) juos pamiršta.</translation>
+        <source>Words stay known after their Anki cards are deleted, suspended or moved to an excluded deck. Rebuild (in Manage Known Words) forgets them.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Manage Known Words…</source>
@@ -5958,6 +5966,14 @@ Failai diske neištrinami.</translation>
     <message>
         <source>Remove</source>
         <translation>Šalinti</translation>
+    </message>
+    <message>
+        <source>Ignore suspended cards</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Words whose only Anki cards are suspended count as unknown: they can be mined again, and Readability and i+1 treat them as new. A note with any unsuspended card still counts as known.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Word Lists</source>

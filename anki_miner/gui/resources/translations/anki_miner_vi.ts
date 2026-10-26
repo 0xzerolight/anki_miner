@@ -2624,6 +2624,14 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Ngăn các bộ thẻ đã chọn được tính là đã biết để các từ của chúng vẫn có thể được khai thác.</translation>
     </message>
     <message>
+        <source>Ignore suspended cards</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Words whose only Anki cards are suspended count as unknown, so they can be mined again.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Mark words as known by hand</source>
         <translation>Đánh dấu từ là đã biết theo cách thủ công</translation>
     </message>
@@ -5844,8 +5852,8 @@ Không có tệp nào trên ổ đĩa bị xóa.</translation>
         <translation>Giữ từ ở trạng thái đã biết sau khi thẻ của chúng bị xóa</translation>
     </message>
     <message>
-        <source>Words stay known after their Anki cards are deleted or moved to an excluded deck. Rebuild (in Manage Known Words) forgets them.</source>
-        <translation>Từ vẫn được coi là đã biết sau khi thẻ Anki của chúng bị xóa hoặc chuyển sang bộ thẻ bị loại trừ. Dựng lại (trong Quản lý từ đã biết) sẽ quên chúng.</translation>
+        <source>Words stay known after their Anki cards are deleted, suspended or moved to an excluded deck. Rebuild (in Manage Known Words) forgets them.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Manage Known Words…</source>
@@ -5882,6 +5890,14 @@ Không có tệp nào trên ổ đĩa bị xóa.</translation>
     <message>
         <source>Remove</source>
         <translation>Gỡ bỏ</translation>
+    </message>
+    <message>
+        <source>Ignore suspended cards</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Words whose only Anki cards are suspended count as unknown: they can be mined again, and Readability and i+1 treat them as new. A note with any unsuspended card still counts as known.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Word Lists</source>

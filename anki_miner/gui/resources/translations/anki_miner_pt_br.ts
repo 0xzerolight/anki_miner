@@ -2627,6 +2627,14 @@ Nenhum arquivo de índice é excluído.</translation>
         <translation>Impedir que baralhos escolhidos contem como conhecidos para que suas palavras ainda possam ser mineradas.</translation>
     </message>
     <message>
+        <source>Ignore suspended cards</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Words whose only Anki cards are suspended count as unknown, so they can be mined again.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Mark words as known by hand</source>
         <translation>Marcar palavras como conhecidas manualmente</translation>
     </message>
@@ -5882,8 +5890,8 @@ Nenhum arquivo no disco é excluído.</translation>
         <translation>Manter as palavras como conhecidas após apagar seus cartões</translation>
     </message>
     <message>
-        <source>Words stay known after their Anki cards are deleted or moved to an excluded deck. Rebuild (in Manage Known Words) forgets them.</source>
-        <translation>As palavras continuam conhecidas depois que os cartões delas no Anki são excluídos ou movidos para um baralho excluído. Reconstruir (em Gerenciar Palavras Conhecidas) as esquece.</translation>
+        <source>Words stay known after their Anki cards are deleted, suspended or moved to an excluded deck. Rebuild (in Manage Known Words) forgets them.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Manage Known Words…</source>
@@ -5920,6 +5928,14 @@ Nenhum arquivo no disco é excluído.</translation>
     <message>
         <source>Remove</source>
         <translation>Remover</translation>
+    </message>
+    <message>
+        <source>Ignore suspended cards</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Words whose only Anki cards are suspended count as unknown: they can be mined again, and Readability and i+1 treat them as new. A note with any unsuspended card still counts as known.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Word Lists</source>

@@ -2630,6 +2630,14 @@ Nijedna datoteka indeksa neće biti izbrisana.</translation>
         <translation>Spriječite da se odabrani špilovi računaju kao poznati kako bi se njihove riječi i dalje mogle prikupljati.</translation>
     </message>
     <message>
+        <source>Ignore suspended cards</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Words whose only Anki cards are suspended count as unknown, so they can be mined again.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Mark words as known by hand</source>
         <translation>Ručno označavanje riječi kao poznatih</translation>
     </message>
@@ -5920,8 +5928,8 @@ Nijedna datoteka na disku neće biti izbrisana.</translation>
         <translation>Zadrži riječi poznatima nakon brisanja njihovih kartica</translation>
     </message>
     <message>
-        <source>Words stay known after their Anki cards are deleted or moved to an excluded deck. Rebuild (in Manage Known Words) forgets them.</source>
-        <translation>Riječi ostaju poznate nakon što se njihove Anki kartice izbrišu ili premjeste u izuzeti špil. Ponovna izgradnja (u Upravljanju poznatim riječima) ih zaboravlja.</translation>
+        <source>Words stay known after their Anki cards are deleted, suspended or moved to an excluded deck. Rebuild (in Manage Known Words) forgets them.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Manage Known Words…</source>
@@ -5958,6 +5966,14 @@ Nijedna datoteka na disku neće biti izbrisana.</translation>
     <message>
         <source>Remove</source>
         <translation>Ukloni</translation>
+    </message>
+    <message>
+        <source>Ignore suspended cards</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Words whose only Anki cards are suspended count as unknown: they can be mined again, and Readability and i+1 treat them as new. A note with any unsuspended card still counts as known.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Word Lists</source>

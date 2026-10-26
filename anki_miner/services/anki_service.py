@@ -279,8 +279,8 @@ class AnkiService:
         # the media store after each upload pass.
         self.last_media_store_failures: int = 0
         # Why each payload of the last create_cards_batch call did not become a
-        # note, by mined_form: "duplicate" (the pre-add probe or the excluded-
-        # deck admission refused it), "refused" (the probe cleared it but its
+        # note, by mined_form: "duplicate" (the pre-add probe or the scanned-
+        # vocabulary admission refused it), "refused" (the probe cleared it but its
         # addNotes slot came back null) or "uncertain" (its addNotes request
         # failed in flight, so Anki may hold it). A payload in neither this nor
         # last_created_mined_forms was never submitted (a Stop, or an earlier
@@ -528,20 +528,40 @@ class AnkiService:
         metacharacters (``*`` = any run, ``_`` = any single char, which Anki
         treats as wildcards even inside ``deck:"..."``) are escaped so a name
         like ``Core_2k`` matches literally instead of over-excluding ``CoreX2k``.
+
+        ``ignore_suspended_cards`` appends ``-is:suspended``. ``findNotes`` maps
+        card matches to their notes, so a note drops out only when every one of
+        its cards is suspended (or in an excluded deck).
         """
         query = "deck:*"
         for deck in self.config.excluded_decks:
             query += f' -deck:"{escape_anki_search(deck)}"'
+        if self.config.ignore_suspended_cards:
+            query += " -is:suspended"
         logger.debug("Anki vocab query: query=%s", query)
         return query
+
+    def _scan_is_narrowed(self) -> bool:
+        """Whether the vocab query leaves out notes Anki's duplicate rule still sees.
+
+        Excluded decks and ignored suspended cards both keep words mineable that
+        Anki would refuse as collection duplicates, so card creation then admits
+        notes against the scanned vocabulary instead (see
+        :meth:`_admit_against_scanned_vocabulary`). ``allow_duplicate_cards``
+        already lets every note past that rule.
+        """
+        return bool(
+            (self.config.excluded_decks or self.config.ignore_suspended_cards) and not self.config.allow_duplicate_cards
+        )
 
     def _build_reviewed_query(self) -> str:
         """The vocab query narrowed to notes with a card reviewed at least once (F-01).
 
         ``findNotes`` maps card matches to their notes, so a note qualifies when
-        at least one of its cards is not new. No ``-is:suspended`` clause: a
-        card reviewed and later suspended still counts as known (owner ruling
-        C1; many users suspend cards they already know).
+        at least one of its cards is not new. No ``-is:suspended`` clause of its
+        own: a card reviewed and later suspended still counts as known (owner
+        ruling C1; many users suspend cards they already know) unless
+        ``ignore_suspended_cards`` put one in the vocab query.
         """
         return self._build_vocab_query() + " -is:new"
 
@@ -981,9 +1001,9 @@ class AnkiService:
             )
 
         not_created: dict[str, str] = {}
-        excluded_deck_admission = bool(self.config.excluded_decks and not self.config.allow_duplicate_cards)
-        if excluded_deck_admission:
-            candidate_payloads, refused = self._admit_against_excluded_decks(word_data_list)
+        scanned_vocabulary_admission = self._scan_is_narrowed()
+        if scanned_vocabulary_admission:
+            candidate_payloads, refused = self._admit_against_scanned_vocabulary(word_data_list)
             skipped_duplicates = len(refused)
             not_created.update(dict.fromkeys(refused, "duplicate"))
         else:
@@ -1036,11 +1056,11 @@ class AnkiService:
                 # Probe each chunk only after the prior chunk's addNotes response.
                 # A repeated first field crossing the 100-note boundary then sees
                 # the first note in Anki and is rejected before any of its media is
-                # uploaded. Excluded-deck admission deliberately permits collection
+                # uploaded. Scanned-vocabulary admission deliberately permits collection
                 # duplicates, but still validates every locally admitted note with
                 # duplicates allowed so bad fields fail before media side effects.
                 probe_notes = [self._build_note(item, set()).note for item in candidate_batch]
-                if excluded_deck_admission:
+                if scanned_vocabulary_admission:
                     self._validate_notes_addible(probe_notes)
                     batch = candidate_batch
                 else:
@@ -1076,7 +1096,7 @@ class AnkiService:
                     if built.used_bold_fallback:
                         bold_fallback += 1
                     note = built.note
-                    if excluded_deck_admission:
+                    if scanned_vocabulary_admission:
                         note["options"] = {"allowDuplicate": True}
                     notes.append(note)
 
@@ -1215,13 +1235,13 @@ class AnkiService:
         """The mined forms :meth:`create_cards_batch` would refuse as duplicates, adding nothing.
 
         The ``--api`` dry run's duplicate check, the branch create_cards_batch
-        takes: excluded-deck admission when it applies (those notes are then
+        takes: scanned-vocabulary admission when it applies (those notes are then
         added with duplicates allowed, never probed), else the per-note probe,
         whose note options keep ``allow_duplicate_cards``' deck scope. Raises
         ``AnkiConnectionError`` when Anki does not answer.
         """
-        if self.config.excluded_decks and not self.config.allow_duplicate_cards:
-            return set(self._admit_against_excluded_decks(word_data_list)[1])
+        if self._scan_is_narrowed():
+            return set(self._admit_against_scanned_vocabulary(word_data_list)[1])
         notes = [self._build_note(item, set()).note for item in word_data_list]
         flags = self._probe_duplicates(notes) if notes else []
         return {item.word.mined_form for item, dup in zip(word_data_list, flags, strict=True) if dup}
@@ -1235,13 +1255,15 @@ class AnkiService:
         self.last_media_store_failures = 0
         self.last_not_created = {}
 
-    def _admit_against_excluded_decks(self, word_data_list: list[CardPayload]) -> tuple[list[CardPayload], list[str]]:
-        """Admit payloads whose first field is absent from the non-excluded collection.
+    def _admit_against_scanned_vocabulary(
+        self, word_data_list: list[CardPayload]
+    ) -> tuple[list[CardPayload], list[str]]:
+        """Admit payloads whose first field is absent from the scanned vocabulary.
 
         Returns the admitted payloads, in order, and the refused payloads' mined forms.
         """
-        # The normal Phase-2 admission query deliberately excludes these
-        # decks. Reuse that same answer here, then allow admitted notes past
+        # The normal Phase-2 admission query deliberately leaves out the
+        # excluded decks and, when ignored, all-suspended notes. Reuse that same answer here, then allow admitted notes past
         # Anki's collection-wide duplicate rule. Keep a local seen set so
         # one run still submits a given first field at most once.
         # This answer authorizes bypassing Anki's collection-wide duplicate

@@ -231,6 +231,7 @@ def test_moved_capability_targets_track_the_anchor_that_owns_the_control(tab):
         ("best-sentence", "sentences.pick_best_sentence_checkbox"),
         ("skip-opening-ending", "sentences.skip_opening_ending_checkbox"),
         ("known-from-reviewed", "filtering.known_from_reviewed_cards_checkbox"),
+        ("ignore-suspended", "filtering.ignore_suspended_cards_checkbox"),
         ("sync-after-run", "anki.sync_anki_after_run_checkbox"),
         ("sentence-audio", "media.loudness_checkbox"),
         ("screenshots", "media.crop_manga_checkbox"),

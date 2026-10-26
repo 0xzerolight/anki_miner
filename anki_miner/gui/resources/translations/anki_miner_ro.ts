@@ -2630,6 +2630,14 @@ Nu se șterge niciun fișier index.</translation>
         <translation>Pachetele alese nu mai contează drept cunoscute, astfel încât cuvintele lor pot fi totuși extrase.</translation>
     </message>
     <message>
+        <source>Ignore suspended cards</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Words whose only Anki cards are suspended count as unknown, so they can be mined again.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Mark words as known by hand</source>
         <translation>Marchează manual cuvinte drept cunoscute</translation>
     </message>
@@ -5920,8 +5928,8 @@ Nu se șterge niciun fișier de pe disc.</translation>
         <translation>Păstrează cuvintele cunoscute după ștergerea cardurilor lor</translation>
     </message>
     <message>
-        <source>Words stay known after their Anki cards are deleted or moved to an excluded deck. Rebuild (in Manage Known Words) forgets them.</source>
-        <translation>Cuvintele rămân cunoscute după ce cardurile lor Anki sunt șterse sau mutate într-un pachet exclus. Reconstruirea (din Gestionează cuvintele cunoscute) le uită.</translation>
+        <source>Words stay known after their Anki cards are deleted, suspended or moved to an excluded deck. Rebuild (in Manage Known Words) forgets them.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Manage Known Words…</source>
@@ -5958,6 +5966,14 @@ Nu se șterge niciun fișier de pe disc.</translation>
     <message>
         <source>Remove</source>
         <translation>Elimină</translation>
+    </message>
+    <message>
+        <source>Ignore suspended cards</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Words whose only Anki cards are suspended count as unknown: they can be mined again, and Readability and i+1 treat them as new. A note with any unsuspended card still counts as known.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Word Lists</source>

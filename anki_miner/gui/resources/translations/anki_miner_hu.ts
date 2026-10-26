@@ -2624,6 +2624,14 @@ Indexfájl nem törlődik.</translation>
         <translation>A kiválasztott paklik ne számítsanak ismertnek, így szavaik továbbra is gyűjthetők.</translation>
     </message>
     <message>
+        <source>Ignore suspended cards</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Words whose only Anki cards are suspended count as unknown, so they can be mined again.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Mark words as known by hand</source>
         <translation>Szavak kézi ismertnek jelölése</translation>
     </message>
@@ -5844,8 +5852,8 @@ A lemezről nem törlődik fájl.</translation>
         <translation>A szavak ismertek maradnak a kártyáik törlése után</translation>
     </message>
     <message>
-        <source>Words stay known after their Anki cards are deleted or moved to an excluded deck. Rebuild (in Manage Known Words) forgets them.</source>
-        <translation>A szavak ismertek maradnak, ha az Anki-kártyáikat törlik vagy kizárt pakliba helyezik. Az Újraépítés (az Ismert szavak kezelése alatt) elfelejti őket.</translation>
+        <source>Words stay known after their Anki cards are deleted, suspended or moved to an excluded deck. Rebuild (in Manage Known Words) forgets them.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Manage Known Words…</source>
@@ -5882,6 +5890,14 @@ A lemezről nem törlődik fájl.</translation>
     <message>
         <source>Remove</source>
         <translation>Eltávolítás</translation>
+    </message>
+    <message>
+        <source>Ignore suspended cards</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Words whose only Anki cards are suspended count as unknown: they can be mined again, and Readability and i+1 treat them as new. A note with any unsuspended card still counts as known.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Word Lists</source>

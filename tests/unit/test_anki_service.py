@@ -5286,7 +5286,7 @@ def test_duplicate_fronts_runs_create_cards_batchs_own_probe(test_config, monkey
 def test_duplicate_fronts_under_excluded_decks_is_the_admission_alone(test_config, monkeypatch) -> None:
     """create_cards_batch adds admitted notes with duplicates allowed and never probes them."""
     service = AnkiService(replace(test_config, excluded_decks=("Old",), allow_duplicate_cards=False))
-    monkeypatch.setattr(service, "_admit_against_excluded_decks", lambda payloads: (payloads[1:], ["本"]))
+    monkeypatch.setattr(service, "_admit_against_scanned_vocabulary", lambda payloads: (payloads[1:], ["本"]))
 
     def no_probe(notes):
         raise AssertionError("probed under excluded-deck admission")

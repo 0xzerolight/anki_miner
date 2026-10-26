@@ -2627,6 +2627,14 @@ Inga indexfiler raderas.</translation>
         <translation>Hindra valda kortlekar från att räknas som kända så att deras ord fortfarande kan samlas in.</translation>
     </message>
     <message>
+        <source>Ignore suspended cards</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Words whose only Anki cards are suspended count as unknown, so they can be mined again.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Mark words as known by hand</source>
         <translation>Markera ord som kända för hand</translation>
     </message>
@@ -5882,8 +5890,8 @@ Inga filer på disken raderas.</translation>
         <translation>Behåll ord som kända efter att deras kort raderats</translation>
     </message>
     <message>
-        <source>Words stay known after their Anki cards are deleted or moved to an excluded deck. Rebuild (in Manage Known Words) forgets them.</source>
-        <translation>Ord förblir kända efter att deras Anki-kort raderats eller flyttats till en undantagen kortlek. Bygg om (under Hantera kända ord) glömmer dem.</translation>
+        <source>Words stay known after their Anki cards are deleted, suspended or moved to an excluded deck. Rebuild (in Manage Known Words) forgets them.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Manage Known Words…</source>
@@ -5920,6 +5928,14 @@ Inga filer på disken raderas.</translation>
     <message>
         <source>Remove</source>
         <translation>Ta bort</translation>
+    </message>
+    <message>
+        <source>Ignore suspended cards</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Words whose only Anki cards are suspended count as unknown: they can be mined again, and Readability and i+1 treat them as new. A note with any unsuspended card still counts as known.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Word Lists</source>

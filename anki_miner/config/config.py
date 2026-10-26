@@ -280,6 +280,12 @@ class AnkiMinerConfig:
     # decks (and their subdecks) are dropped from the findNotes query, so their
     # words are NOT treated as already-known. Empty tuple = scan the whole collection.
     excluded_decks: tuple[str, ...] = field(default_factory=tuple)
+    # When True, a note whose cards are all suspended drops out of the same
+    # findNotes query, so its word is mineable again and scores as unknown, like
+    # a word in an excluded deck. Off by default (ruling C1: many users suspend
+    # cards they already know), and off for a saved config that predates the
+    # field. Portable, not language-scoped.
+    ignore_suspended_cards: bool = False
 
     # Media extraction settings
     audio_padding: float = 0.3  # Seconds to add before/after subtitle timing

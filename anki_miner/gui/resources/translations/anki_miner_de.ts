@@ -2627,6 +2627,14 @@ Es werden keine Indexdateien gelöscht.</translation>
         <translation>Verhindern, dass gewählte Stapel als bekannt gelten, damit ihre Wörter weiterhin gesammelt werden können.</translation>
     </message>
     <message>
+        <source>Ignore suspended cards</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Words whose only Anki cards are suspended count as unknown, so they can be mined again.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Mark words as known by hand</source>
         <translation>Wörter manuell als bekannt markieren</translation>
     </message>
@@ -5882,8 +5890,8 @@ Es werden keine Dateien von der Festplatte gelöscht.</translation>
         <translation>Wörter nach dem Löschen ihrer Karten als bekannt behalten</translation>
     </message>
     <message>
-        <source>Words stay known after their Anki cards are deleted or moved to an excluded deck. Rebuild (in Manage Known Words) forgets them.</source>
-        <translation>Wörter bleiben bekannt, nachdem ihre Anki-Karten gelöscht oder in einen ausgeschlossenen Stapel verschoben wurden. Der Neuaufbau (unter Bekannte Wörter verwalten) vergisst sie.</translation>
+        <source>Words stay known after their Anki cards are deleted, suspended or moved to an excluded deck. Rebuild (in Manage Known Words) forgets them.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Manage Known Words…</source>
@@ -5920,6 +5928,14 @@ Es werden keine Dateien von der Festplatte gelöscht.</translation>
     <message>
         <source>Remove</source>
         <translation>Entfernen</translation>
+    </message>
+    <message>
+        <source>Ignore suspended cards</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Words whose only Anki cards are suspended count as unknown: they can be mined again, and Readability and i+1 treat them as new. A note with any unsuspended card still counts as known.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Word Lists</source>
