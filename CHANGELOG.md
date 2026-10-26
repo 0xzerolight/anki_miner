@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [Unreleased]
 
 ### Added
+- **Ignore suspended cards (Settings → Word Filters → Excluded Decks).** Off by default. On, a word whose only Anki cards are suspended counts as unknown, as a word in an excluded deck does: it can be mined again, and Readability and the i+1 rule treat it as new. A note with any unsuspended card still counts as known. With "Keep words known after their cards are deleted" on, words cached before stay known until Rebuild in Manage Known Words.
 
 ### Changed
 - **Romanian verb cards front the citation infinitive, `a vorbi`.** Learner dictionaries and decks write Romanian verbs this way (`a fi`, `a avea`), and the `a` tells a verb from its look-alike noun (`a suna` / `sun`). The `a` is added only when the card's Wiktionary definition cites the verb that way, so a word the tagger took for a verb (`haide`, the auxiliary `va`) keeps its bare front. Only the card front changes: the dictionary, the frequency list, word audio and known-word matching still read `vorbi`, so a deck's `a vorbi` still marks the mined `vorbi` known. Card Backfill now looks a note fronted `a vorbi`, `a se bucura` or `o carte` up as its bare word. Existing cards keep their front. A reflexive is not told apart from the subtitle line: `se bucură` fronts `a bucura`.
