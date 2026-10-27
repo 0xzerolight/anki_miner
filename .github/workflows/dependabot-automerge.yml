@@ -1,8 +1,9 @@
 name: Dependabot auto-merge
 
-# Queues dependabot PRs for GitHub's native auto-merge. The merge only happens
-# once the required status checks on the main ruleset pass, so CI is the gate --
-# this workflow just presses the button so a green bump does not sit for days.
+# Queues dependabot and pre-commit.ci PRs for GitHub's native auto-merge. The
+# merge only happens once the required status checks on the main ruleset pass,
+# so CI is the gate -- this workflow just presses the button so a green bump
+# does not sit for days.
 #
 # Requires "Allow auto-merge" on the repository and at least one branch rule on
 # main; auto-merge is unavailable on an unprotected branch.
@@ -27,6 +28,17 @@ jobs:
       # Every dependabot PR is queued, majors included -- the required checks
       # decide. To carve out majors (the gh-actions group can move release.yml),
       # add: steps.metadata.outputs.update-type != 'version-update:semver-major'
+      - name: Enable auto-merge
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: gh pr merge --auto --merge "$PR_URL"
+
+  pre-commit-ci:
+    if: github.event.pull_request.user.login == 'pre-commit-ci[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
       - name: Enable auto-merge
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
