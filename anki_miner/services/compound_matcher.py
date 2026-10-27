@@ -82,6 +82,18 @@ _INFLECTABLE_POS1 = frozenset({"動詞", "形容詞"})
 # raw surface join and ship an inflected card front.
 _NON_CONTENT_POS1 = frozenset({"助詞", "助動詞", "記号", "補助記号", "空白"})
 
+# The one exception: a word + particle that JMdict lists as an adverb, expression,
+# pronoun or conjunction of its own (本当に, 誰も, 一人で, 今まで, 心から), as
+# Yomitan's longest match reads it. は, が, を and の stay out (今日は is the
+# greeting, 彼の a phrase), and so does a word something modifies: その時に and
+# 行く時に are the noun 時 with its case particle, not the adverb 時に. A span
+# with a verb or adjective in it is that word inflected (急いで), never the entry.
+_ADVERBIAL_PARTICLES = frozenset({"に", "も", "で", "か", "から", "まで", "や", "でも", "しか"})
+_ADVERBIAL_TAGS = frozenset({"adv", "exp", "pn", "conj"})
+
+# A dictionary entry's tags, by headword (JMdict's adv, exp, n, …).
+EntryTagsLookup = Callable[[list[str]], dict[str, set[str]]]
+
 # Over-merge guards. Deliberately module constants, not config: the char cap is
 # a safety bound and should not be a user footgun; the token cap bounds
 # candidate generation. 16 chars (was 12; Yomitan's point-scan default is 10)
@@ -150,6 +162,20 @@ def _c_form(token) -> str:
     return str(c_form) if c_form and c_form != "*" else ""
 
 
+def _modifies(token) -> bool:
+    """Whether ``token`` modifies the noun after it.
+
+    の, a pre-noun adjective (その), an adnominal form (行く), or a noun or
+    suffix the noun continues (30分|後, 昨年|末).
+    """
+    pos1 = _pos1(token)
+    if pos1 == "助詞":
+        return bool(token.surface == "の")
+    if pos1 in ("連体詞", "名詞", "接尾辞"):
+        return True
+    return pos1 in ("動詞", "形容詞", "助動詞") and _c_form(token).startswith("連体形")
+
+
 def _tail_reading(token, kind: str) -> str:
     """The span tail's reading: its base-form kana for a deinflected (kind A) span."""
     if kind == "A":
@@ -177,9 +203,13 @@ class CompoundDictionaryMatcher:
         max_span_chars: int | None = None,
         force_include: Callable[[str], bool] | None = None,
         reading_lookup: ReadingsLookup | None = None,
+        entry_tags: EntryTagsLookup | None = None,
     ) -> None:
         self._lookup = term_lookup
         self._rule = inclusion_rule
+        # Tags of a word + particle headword (_ADVERBIAL_TAGS); None ⇒ no such span.
+        self._entry_tags = entry_tags
+        self._tags_cache: dict[str, set[str]] = {}
         # The run's whitelist probe (the parser's own): an attested span whose
         # synthetic the gate refuses still merges when its headword is
         # whitelisted and its tags are rescuable (R1); the parser then rescues it.
@@ -224,6 +254,8 @@ class CompoundDictionaryMatcher:
                             continue
                         if not self._reading_fits(tokens[i : j + 1], candidate, kind):
                             continue
+                        if not self._can_end(tokens[j]) and not self._adverbial_fits(tokens, i, j, candidate):
+                            continue
                         synthetic = self._build_synthetic(tokens[i : j + 1], candidate, kind)
                         # Never consume tokens for a word the gate would then drop.
                         if self._rule.should_include(synthetic) or self._whitelisted(synthetic, candidate):
@@ -239,6 +271,29 @@ class CompoundDictionaryMatcher:
                 merged.append(token)
                 i += 1
         return merged
+
+    def _adverbial_fits(self, tokens: list, start: int, end: int, headword: str) -> bool:
+        """Whether a span ending on a particle is a word of its own here (本当に, not その時に)."""
+        if self._entry_tags is None or (start > 0 and _modifies(tokens[start - 1])):
+            return False
+        # A verb's te-form is the verb (回収を急いでいます), a suffix or pre-noun
+        # adjective heads a phrase, not a word (神様に, その下に), and so does a
+        # nominalizing の (何なのか).
+        if _pos1(tokens[start]) in ("接尾辞", "連体詞") or any(
+            _pos1(token) in _INFLECTABLE_POS1 or _pos2(token) == "準体助詞" for token in tokens[start : end + 1]
+        ):
+            return False
+        if headword not in self._tags_cache:
+            if len(self._tags_cache) >= _EXIST_CACHE_CAP:
+                self._tags_cache.clear()
+            self._tags_cache[headword] = self._entry_tags([headword]).get(headword, set())
+        return bool(self._tags_cache[headword] & _ADVERBIAL_TAGS)
+
+    def _can_end_span(self, token) -> bool:
+        """Whether a span may end at ``token``: a content token, or an adverbial particle when tags are wired."""
+        if self._can_end(token):
+            return True
+        return self._entry_tags is not None and _pos1(token) == "助詞" and token.surface in _ADVERBIAL_PARTICLES
 
     def _whitelisted(self, synthetic, headword: str) -> bool:
         """Whether the whitelist rescues a synthetic the inclusion gate refuses (R1)."""
@@ -319,7 +374,7 @@ class CompoundDictionaryMatcher:
                 # Span-end rule: non-content ends are not candidate endpoints,
                 # but the span may still extend past them (気に|する|な: the
                 # (0..2) span ending on する is reachable through the な).
-                if self._can_end(tail):
+                if self._can_end_span(tail):
                     out[(i, j)] = self._candidate_for_tail(prefix, tail, joined, tokens[i])
                 prefix = joined
                 source_end = tail_span[1]

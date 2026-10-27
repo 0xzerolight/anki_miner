@@ -685,6 +685,8 @@ class TestResolveReadingOverride:
             ("日本", "にっぽん", "にほん"),
             ("日本語", "にっぽんご", "にほんご"),
             ("日本人", "にっぽんじん", "にほんじん"),
+            ("何も", "なんも", "なにも"),
+            ("何もかも", "なんもかも", "なにもかも"),
         ],
     )
     def test_listed_pairs_are_corrected(self, spelling, derived, expected):

@@ -300,6 +300,52 @@ class TestExpressionAcrossParticle:
                     assert not token.surface.endswith(("た", "て", "な", "だ"))
 
 
+class TestAdverbialParticleEnd:
+    """A word + particle JMdict lists as an adverb, expression, pronoun or conjunction merges."""
+
+    TAGS = {"本当に": {"adv"}, "時に": {"adv", "conj"}, "急いで": {"adv"}, "神様": {"n"}}
+
+    def _matcher(self, dictionary, tags=TAGS):
+        return CompoundDictionaryMatcher(
+            lambda terms: dictionary & set(terms),
+            _rule(),
+            entry_tags=None if tags is None else (lambda terms: {t: tags.get(t, set()) for t in terms}),
+        )
+
+    def test_merges_an_adverb_ending_on_a_particle(self):
+        tokens = [_tok("本当", "名詞", "普通名詞", kana="ホントウ"), _tok("に", "助詞", "格助詞", kana="ニ")]
+        out = self._matcher({"本当に"}).merge_line("本当に", tokens)
+        assert [t.surface for t in out] == ["本当に"]
+
+    def test_no_tags_wired_keeps_the_particle_out(self):
+        tokens = [_tok("本当", "名詞", "普通名詞", kana="ホントウ"), _tok("に", "助詞", "格助詞", kana="ニ")]
+        out = self._matcher({"本当に"}, tags=None).merge_line("本当に", tokens)
+        assert [t.surface for t in out] == ["本当", "に"]
+
+    def test_a_modified_noun_keeps_its_case_particle(self):
+        # その時に: 時 is the noun その modifies, not the adverb 時に.
+        tokens = [
+            _tok("その", "連体詞", kana="ソノ"),
+            _tok("時", "名詞", "普通名詞", kana="トキ"),
+            _tok("に", "助詞", "格助詞", kana="ニ"),
+        ]
+        out = self._matcher({"時に"}).merge_line("その時に", tokens)
+        assert [t.surface for t in out] == ["その", "時", "に"]
+
+    def test_a_te_form_stays_the_verb(self):
+        tokens = [
+            _tok("急い", "動詞", "一般", lemma="急ぐ", kana="イソイ", orth_base="急ぐ", c_form="連用形-イ音便"),
+            _tok("で", "助詞", "接続助詞", kana="デ"),
+        ]
+        out = self._matcher({"急いで"}).merge_line("急いで", tokens)
+        assert [t.surface for t in out] == ["急い", "で"]
+
+    def test_a_noun_entry_does_not_take_the_particle(self):
+        tokens = [_tok("神様", "名詞", "普通名詞", kana="カミサマ"), _tok("に", "助詞", "格助詞", kana="ニ")]
+        out = self._matcher({"神様に"}).merge_line("神様に", tokens)
+        assert [t.surface for t in out] == ["神様", "に"]
+
+
 class TestLongestMatchAndGreedyScan:
     def test_longest_wins(self):
         tokens = [

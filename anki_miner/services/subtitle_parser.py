@@ -759,6 +759,7 @@ class SubtitleParserService:
                 # Memoized single-headword probe; the cache it reads is created
                 # later in __init__, before any line is merged.
                 reading_lookup=self._attested_readings if reading_lookup is not None else None,
+                entry_tags=self._entry_tags if form_lookup is not None else None,
             )
         # Masu-stem nominalization (see services/masu_stem_nominalizer.py).
         # Shares the same memoized probe; None when no dict is wired, so the
@@ -1009,6 +1010,13 @@ class SubtitleParserService:
         """Return cached exact-headword readings, probing once on cache miss."""
         self._prefetch_attested_readings([headword])
         return self._attested_readings_cache.get(headword, [])
+
+    def _entry_tags(self, terms: list[str]) -> dict[str, set[str]]:
+        """Each term's dictionary entry tags (adv, exp, n, …), for the compound matcher."""
+        if self._form_lookup is None:
+            return {}
+        rows = self._form_lookup(terms)
+        return {term: {tag for _content, tags in found for tag in tags.split()} for term, found in rows.items()}
 
     def _furigana(self, s: str) -> str:
         """Return generate_furigana(s, tagger), memoized within the current parse pass."""
