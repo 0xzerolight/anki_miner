@@ -8,7 +8,10 @@ also records what was left out and why.
 
 A word row keys on the card front and the pos1 unidic-lite gives the word in a
 sentence, so a listed homograph under another tag stays out: その the
-pre-noun adjective (その日) is listed, その the filler is not.
+pre-noun adjective (その日) is listed, その the filler is not. A ``kanji`` row
+is the kana spelling of a word JMdict writes in kanji (わたし, おなか): such a
+spelling is as often the tail of a longer kana word (ご|ちそう, お|しまい), so
+the parser still checks it against the window around it.
 
 A join row names a word the tagger cuts apart (いつ|も, どう|いう), which
 ``LexicalJoiner`` joins back; the merged token then matches on its front alone.
@@ -35,6 +38,8 @@ class KanaWords(NamedTuple):
     words: frozenset[tuple[str, str]]
     joins: dict[tuple[str, ...], KanaJoin]
     joined: frozenset[str]
+    #: The word rows that spell a kanji-written word in kana.
+    kanji_spelled: frozenset[tuple[str, str]]
 
 
 @cache
@@ -42,19 +47,29 @@ def kana_words() -> KanaWords:
     """The bundled list, read once."""
     text = files("anki_miner.resources.kana_words").joinpath("ja.tsv").read_text(encoding="utf-8")
     words: set[tuple[str, str]] = set()
+    kanji_spelled: set[tuple[str, str]] = set()
     joins: dict[tuple[str, ...], KanaJoin] = {}
     for line in text.splitlines():
         if not line.strip() or line.startswith("#"):
             continue
-        form, pos1, *join = line.split("\t")
-        if join:
-            joins[tuple(join[0].split("|"))] = KanaJoin(form, pos1, join[1:] == ["start"])
-        else:
-            words.add((form, pos1))
-    return KanaWords(frozenset(words), joins, frozenset(row.headword for row in joins.values()))
+        form, pos1, *rest = line.split("\t")
+        if rest and rest[0] != "kanji":
+            joins[tuple(rest[0].split("|"))] = KanaJoin(form, pos1, rest[1:] == ["start"])
+            continue
+        words.add((form, pos1))
+        if rest:
+            kanji_spelled.add((form, pos1))
+    return KanaWords(
+        frozenset(words), joins, frozenset(row.headword for row in joins.values()), frozenset(kanji_spelled)
+    )
 
 
 def is_listed(front: str, pos1: str, *, merged: bool) -> bool:
     """Whether a kana card front is on the list: a join's headword for a merged token, else with its pos1."""
     listed = kana_words()
     return front in listed.joined if merged else (front, pos1) in listed.words
+
+
+def is_kanji_spelled(front: str, pos1: str) -> bool:
+    """Whether a listed word row spells a word JMdict writes in kanji (わたし, おなか)."""
+    return (front, pos1) in kana_words().kanji_spelled

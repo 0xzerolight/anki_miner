@@ -5,13 +5,23 @@ from dataclasses import replace
 import pytest
 
 from anki_miner.models.reading import ReadingUnit
-from anki_miner.services.kana_words import is_listed, kana_words
+from anki_miner.services.kana_words import is_kanji_spelled, is_listed, kana_words
 from anki_miner.services.subtitle_parser import SubtitleParserService
 
 
 def _mine(test_config, *lines):
     """Card fronts of ``lines`` with every front attested, as a full JMdict would."""
     service = SubtitleParserService(test_config, kana_attest_lookup=lambda forms: dict.fromkeys(forms, True))
+    units = [ReadingUnit(text=line, index=i, location_label="t") for i, line in enumerate(lines)]
+    words, _index, _counts = service.parse_text_units(units, want_line_index=False)
+    return [word.mined_form for word in words]
+
+
+def _mine_attested(test_config, attested, *lines):
+    """Card fronts of ``lines`` with only ``attested`` in the dictionary, so a window can miss."""
+    service = SubtitleParserService(
+        test_config, kana_attest_lookup=lambda forms: {form: form in attested for form in forms}
+    )
     units = [ReadingUnit(text=line, index=i, location_label="t") for i, line in enumerate(lines)]
     words, _index, _counts = service.parse_text_units(units, want_line_index=False)
     return [word.mined_form for word in words]
@@ -58,10 +68,38 @@ class TestList:
         assert joins[("で", "も")] == ("でも", "接続詞", True)
         assert joins[("いつ", "も")] == ("いつも", "副詞", False)
 
+    @pytest.mark.parametrize(
+        ("front", "pos1"), [("わたし", "代名詞"), ("じっと", "副詞"), ("おなか", "名詞"), ("べんとう", "名詞")]
+    )
+    def test_lists_the_kana_spelling_of_a_kanji_written_word(self, front, pos1):
+        assert is_listed(front, pos1, merged=False)
+        assert is_kanji_spelled(front, pos1)
+
+    def test_a_kana_written_word_is_no_kanji_spelling(self):
+        assert not is_kanji_spelled("もう", "副詞")
+
+    @pytest.mark.parametrize("front", ["かげん", "したく", "しずく"])
+    def test_leaves_out_a_three_mora_kana_spelling_of_a_kanji_noun(self, front):
+        # As often the tail of a longer kana word (いい|かげん) or a given name.
+        assert not is_listed(front, "名詞", merged=False)
+
 
 class TestMining:
     def test_mines_a_listed_adverb(self, test_config):
         assert "もう" in _mine(test_config, "もう行こう")
+
+    def test_mines_the_kana_spelling_of_a_kanji_written_word(self, test_config):
+        attested = {"わたし", "本", "おなか", "空く"}
+        assert {"わたし", "おなか"} <= set(_mine_attested(test_config, attested, "わたしの本", "おなかが空いた"))
+
+    def test_a_kanji_spelling_inside_a_longer_kana_word_is_not_mined(self, test_config):
+        # お|べんとう: the window おべんとう is a word, so べんとう alone is its tail.
+        assert "べんとう" not in _mine_attested(test_config, {"べんとう", "おべんとう"}, "おべんとうを食べる")
+
+    def test_joins_a_pronoun_and_its_plural(self, test_config):
+        fronts = _mine(test_config, "おれたちは行く")
+        assert "おれたち" in fronts
+        assert "おれ" not in fronts
 
     def test_mines_a_pronoun_before_a_particle_it_could_join(self, test_config):
         # これは is an attested window: the lexicalized-window reject that keeps

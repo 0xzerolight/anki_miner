@@ -30,7 +30,7 @@ from anki_miner.services.deinflection import (
     find_highlight_end_with_trace,
     resolve_dictionary_form,
 )
-from anki_miner.services.kana_words import is_listed
+from anki_miner.services.kana_words import is_kanji_spelled, is_listed
 from anki_miner.services.lexical_joiner import LexicalJoiner
 from anki_miner.services.lrc_format import register_lrc_format
 from anki_miner.services.masu_stem_nominalizer import MasuStemNominalizer
@@ -185,11 +185,13 @@ _KANA_RECOVER_POS1: frozenset[str] = frozenset({"動詞", "形容詞", "形状�
 _KANA_RECOVER_REJECT_POS2: frozenset[str] = frozenset({"助動詞語幹", "非自立可能"})
 
 # How _kana_recovery brought a hiragana word back: by the content gate, or by
-# name from the kana word list (services/kana_words.py). Only a recovered word
-# takes the U4 window reject: a listed word's longer expressions are listed
-# spans, merged or joined before the word is ever judged alone.
+# name from the kana word list (services/kana_words.py). A recovered word takes
+# the U4 window reject, and so does a listed kana spelling of a kanji-written
+# word (ご|ちそう, お|しまい); a word JMdict writes in kana does not, as its
+# longer expressions are listed spans, merged or joined before it is judged alone.
 _KANA_RECOVERED = "recovered"
 _KANA_LISTED = "listed"
+_KANA_LISTED_SPELLING = "listed spelling"
 
 #: The not-mined reason each preference gate reports. REJECT_STRUCTURE is absent
 #: on purpose: particles, auxiliaries, symbols and debris are never a word the user seeks.
@@ -2715,7 +2717,7 @@ class SubtitleParserService:
             return not self._ellipsis_reject(word_token, text, tok_start, tok_end)
         how = self._kana_recovery(word_token)
         if how is not None:
-            if how == _KANA_RECOVERED and self._rejected_by_lexicalized_window(word_token, tokens):
+            if how != _KANA_LISTED and self._rejected_by_lexicalized_window(word_token, tokens):
                 return False
             return not self._ellipsis_reject(word_token, text, tok_start, tok_end)
         if not self._whitelist_rescues(word_token, text, tok_start, tok_end, tokens, raw_tokens):
@@ -2994,7 +2996,7 @@ class SubtitleParserService:
         return self._kana_recovery(word_token) is not None
 
     def _kana_recovery(self, word_token) -> str | None:
-        """How an otherwise-rejected hiragana word comes back: ``_KANA_RECOVERED``, ``_KANA_LISTED`` or None.
+        """How an otherwise-rejected hiragana word comes back: ``_KANA_RECOVERED``, ``_KANA_LISTED``, ``_KANA_LISTED_SPELLING`` or None.
 
         Gate (ALL must hold; cheap checks first so the SQLite probe is the last
         resort and only distinct tokens ever reach it):
@@ -3074,4 +3076,6 @@ class SubtitleParserService:
         self._probe_time_s += time.perf_counter() - probe_start
         if not attested:
             return None
-        return _KANA_RECOVERED if recoverable else _KANA_LISTED
+        if recoverable:
+            return _KANA_RECOVERED
+        return _KANA_LISTED_SPELLING if not merged and is_kanji_spelled(form, pos1) else _KANA_LISTED
