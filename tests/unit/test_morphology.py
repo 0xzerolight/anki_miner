@@ -672,6 +672,7 @@ class TestResolveReadingOverride:
             ("仏", "ふつ", "ほとけ"),
             ("マズい", "まじい", "まずい"),
             ("込む", "ごむ", "こむ"),
+            ("私", "わたくし", "わたし"),
         ],
     )
     def test_listed_pairs_are_corrected(self, spelling, derived, expected):
@@ -688,6 +689,7 @@ class TestResolveReadingOverride:
             ("込む", "こむ"),  # already-correct reading is not remapped
             ("飲み込む", "のみこむ"),  # compound reads fine; spelling not in table
             ("マズい", "まずい"),  # corrected reading passes through unchanged
+            ("私", "わたし"),  # already-correct reading is not remapped
             ("時間", "じかん"),  # unrelated spelling
         ],
     )

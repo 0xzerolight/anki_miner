@@ -174,11 +174,15 @@ def resolve_special_reading(head_surface: str, next_surface: str | None) -> str 
 #       form 不味い reads correctly and is untouched.
 #   (込む, ごむ) → こむ: the isolated 込む verb misreads as the loanword ゴム
 #       (rubber); compounds (飲み込む→のみこむ) read correctly and are untouched.
+#   (私, わたくし) → わたし: UniDic emits ワタクシ for 私 in every context, so
+#       every 私 card read わたくし; the formal-speech sense loss is accepted, and
+#       わたし matches the ワタシ fold in models/word.py.
 _READING_OVERRIDES: dict[tuple[str, str], str] = {
     ("一日", "ついたち"): "いちにち",
     ("仏", "ふつ"): "ほとけ",
     ("マズい", "まじい"): "まずい",
     ("込む", "ごむ"): "こむ",
+    ("私", "わたくし"): "わたし",
 }
 
 

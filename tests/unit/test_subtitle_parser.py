@@ -6817,13 +6817,13 @@ class TestRepeatedKanaRunReject:
 
 
 class TestCuratedReadingOverride:
-    """Curated reading corrections for unidic-lite misreadings (一日/仏/マズい/込む).
+    """Curated reading corrections for unidic-lite misreadings (一日/仏/マズい/込む/私).
 
     Real fugashi/unidic through ``parse_text_units`` — the reading-tab mining
     path. Each case pins the WRONG pre-fix reading/furigana (asserted ``!=`` the
     correction) so the override is proven to FIRE, and both ``_emit_word``
     landing sites are covered: the ``mined == surface`` branch (standalone マズい,
-    一日, 仏, 込む) and the headword-derived else-branch (inflected マズかった,
+    一日, 仏, 込む, 私) and the headword-derived else-branch (inflected マズかった,
     込んだ). A spelling not in the table stays byte-identical.
     """
 
@@ -6904,6 +6904,15 @@ class TestCuratedReadingOverride:
         assert w.expression_reading == "こむ"  # pre-fix: ごむ
         assert w.expression_furigana == "込[こ]む"  # pre-fix: 込[ご]む
         assert w.lemma_reading == "こむ"
+
+    def test_watashi_pronoun_mined_surface_branch(self, test_config):
+        # 私 (代名詞): unidic-lite reads it ワタクシ in every context.
+        w = self._emit(test_config, "私は行く")["私"]
+        assert w.expression_reading == "わたし"  # pre-fix: わたくし
+        assert w.expression_furigana == "私[わたし]"  # pre-fix: 私[わたくし]
+        assert w.lemma_reading == "わたし"
+        assert w.sentence_reading == "わたしはいく"
+        assert w.sentence_furigana == "私[わたし]は 行[い]く"
 
     def test_unlisted_compound_is_byte_identical(self, test_config):
         # 飲み込む reads correctly (のみこむ) and its spelling is not in the table:
