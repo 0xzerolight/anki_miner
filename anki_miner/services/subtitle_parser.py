@@ -3021,7 +3021,11 @@ class SubtitleParserService:
         if recoverable:
             if not self._inclusion_rule.content_gate_ok(word_token):
                 return None
-        elif not self._inclusion_rule.structural_ok(word_token):
+        # A listed word overrides allowed_pos and the interjection skip, never
+        # an excluded subtype: a kana given name (さくら 固有名詞) stays out.
+        elif not self._inclusion_rule.structural_ok(word_token) or (
+            getattr(word_token.feature, "pos2", None) in self._inclusion_rule.excluded_subtypes
+        ):
             return None
         orth_base = self._mining_base(word_token)
         resolved_front = self._resolve_front(word_token, orth_base, surface, 0, len(surface))

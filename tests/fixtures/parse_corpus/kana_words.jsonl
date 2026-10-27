@@ -6,4 +6,6 @@
 {"id":"kl06","sentence":"でも、行く","expected":["でも","行く"],"category":"kana-words","note":"Line-start join row: で+も opening a clause is the conjunction."}
 {"id":"kl07","sentence":"学校でも行く","expected":["学校","行く"],"category":"kana-words","note":"でも is anchored on purpose: inside a clause で+も are particles and stay unjoined."}
 {"id":"kl08","sentence":"どういう人なの","expected":["どういう","人"],"category":"kana-words","note":"Join row: どう alone would be the wrong word."}
+{"id":"kl10","sentence":"雨のため中止だ","expected":["雨","ため","中止"],"category":"kana-words","note":"Listed formal noun: 名詞 is outside kana recovery's POS backstop."}
+{"id":"kl11","sentence":"ねこが好き","expected":["ねこ","好き"],"category":"kana-words","note":"A two-kana noun listed by name (the short list)."}
 {"id":"kl09","sentence":"もしかして恋人","expected":["もしかして","恋人"],"category":"kana-words","note":"Join row over four tokens (もし|か|し|て)."}

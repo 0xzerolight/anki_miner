@@ -1301,14 +1301,30 @@ class TestKanaWordRecovery:
         assert lookup.calls == []
 
     @pytest.mark.parametrize(("surface", "lemma"), [("こと", "事"), ("もの", "物"), ("ため", "為")])
-    def test_does_not_recover_formal_noun(self, test_config, surface, lemma):
-        # 名詞 formal nouns pass content_gate_ok but are blocked by the POS
-        # backstop {動詞,形容詞,形状詞}; the probe must not even be consulted.
-        lookup = _attest_lookup(surface)  # attested — proves the POS gate, not the dict, drops it
+    def test_recovers_listed_formal_noun(self, test_config, surface, lemma):
+        # 名詞 is outside the POS backstop {動詞,形容詞,形状詞}; the kana word
+        # list names the formal nouns, and the probe still attests them.
+        lookup = _attest_lookup(surface)
         service = self._service(test_config, lookup)
         token = _make_token(surface, "名詞", pos2="普通名詞", lemma=lemma, orth_base=surface)
+        assert service._should_include_word(token) is True
+        assert lookup.calls == [[surface]]
+
+    def test_does_not_recover_unlisted_noun(self, test_config):
+        # ねた is the tail of まねた as often as a word: two-kana nouns are listed
+        # only by name, and the probe is never consulted for an unlisted one.
+        lookup = _attest_lookup("ねた")
+        service = self._service(test_config, lookup)
+        token = _make_token("ねた", "名詞", pos2="普通名詞", lemma="ねた", orth_base="ねた")
         assert service._should_include_word(token) is False
-        assert lookup.calls == []  # POS gate short-circuits before the lookup
+        assert lookup.calls == []
+
+    def test_listed_noun_keeps_the_excluded_subtype(self, test_config):
+        # A kana given name tagged 固有名詞 stays out even when its spelling is listed.
+        lookup = _attest_lookup("ねこ")
+        service = self._service(test_config, lookup)
+        token = _make_token("ねこ", "名詞", pos2="固有名詞", lemma="ねこ", orth_base="ねこ")
+        assert service._should_include_word(token) is False
 
     @pytest.mark.parametrize(
         ("surface", "pos1", "lemma"),

@@ -18,7 +18,14 @@ def _mine(test_config, *lines):
 class TestList:
     @pytest.mark.parametrize(
         ("front", "pos1"),
-        [("もう", "副詞"), ("この", "連体詞"), ("それ", "代名詞"), ("しかし", "接続詞")],
+        [
+            ("もう", "副詞"),
+            ("この", "連体詞"),
+            ("それ", "代名詞"),
+            ("しかし", "接続詞"),
+            ("こと", "名詞"),
+            ("おにぎり", "名詞"),
+        ],
     )
     def test_lists_a_kana_word_under_its_tag(self, front, pos1):
         assert is_listed(front, pos1, merged=False)
@@ -29,6 +36,8 @@ class TestList:
             ("その", "感動詞"),  # the filler, unlike その日's pre-noun adjective
             ("ある", "動詞"),  # the auxiliary-capable verb
             ("けど", "接続詞"),  # the particle's conjunction reading
+            ("さえ", "名詞"),  # a particle a carrier sentence tags as a noun
+            ("ねた", "名詞"),  # a two-kana noun off the short list (まね|た)
             ("いつも", "副詞"),  # a join: listed only as the merged token
         ],
     )

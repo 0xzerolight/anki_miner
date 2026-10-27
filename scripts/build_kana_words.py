@@ -32,48 +32,46 @@ _USUALLY_KANA = "word usually written using kana alone"
 
 #: The unidic pos1 tags whose kana words are listed. 動詞/形容詞/形状詞 stay out:
 #: kana recovery already brings those back by attestation.
-WORD_POS1: tuple[str, ...] = ("副詞", "代名詞", "連体詞", "接続詞")
+WORD_POS1: tuple[str, ...] = ("副詞", "代名詞", "連体詞", "接続詞", "名詞")
+
+#: The only two-kana nouns listed. A two-kana noun is as often a piece of a
+#: longer word the tagger split (まね|た → ねた, や|つら, すり|ガラス) or a
+#: particle or suffix (さえ, ほど, たち), so the short ones are named instead.
+SHORT_NOUNS: frozenset[str] = frozenset(
+    {"こと", "もの", "ため", "うち", "はず", "せい", "やつ", "まま", "ほか", "よそ", "そば", "だめ", "みな"}
+    | {"ひと", "いぬ", "ねこ", "ごみ", "くそ"}
+)
 
 #: Sentences a candidate is tagged in; any single-token tag it gets counts.
 CARRIERS: tuple[str, ...] = ("{}、それは違う。", "彼は{}来た。", "{}がある。", "それは{}だ。", "「{}」と言った。")
 
-#: Candidates left out, by reason.
-EXCLUDED: dict[str, str] = {
+#: Rows left out, by (form, pos1) and reason.
+EXCLUDED: dict[tuple[str, str], str] = {
     # Conjunction readings of particles: in a line the tagger gives these the
     # 接続詞 tag only where they open it, and the card would teach the particle.
-    "から": "particle",
-    "が": "particle",
-    "けど": "particle",
-    "けれど": "particle",
-    "たら": "particle",
-    "して": "particle",
-    "じゃ": "particle",
-    "つつ": "particle",
-    "たって": "particle",
-    "かと": "particle",
+    **dict.fromkeys((("から", "接続詞"), ("が", "接続詞"), ("けど", "接続詞"), ("けれど", "接続詞")), "particle"),
+    **dict.fromkeys((("たら", "接続詞"), ("して", "接続詞"), ("じゃ", "接続詞")), "particle"),
+    **dict.fromkeys((("つつ", "副詞"), ("たって", "副詞"), ("かと", "副詞")), "particle"),
+    # Particles a carrier tags 名詞: the noun reading (鴨, 仮名) is rare in a line,
+    # the particle constant.
+    **dict.fromkeys((("かも", "名詞"), ("かな", "名詞"), ("とも", "名詞"), ("かね", "名詞")), "particle"),
+    **dict.fromkeys((("なし", "名詞"), ("たか", "名詞"), ("しな", "名詞")), "particle"),
+    # Requests after て (見てごらん, 待ってちょうだい).
+    **dict.fromkeys((("ごらん", "名詞"), ("ちょうだい", "名詞")), "auxiliary"),
+    # 嫌々 'reluctantly' in a line is mostly the interjection いやいや 'no, no'.
+    ("いやいや", "名詞"): "interjection",
     # Suffixes, grammar nouns and nouns a carrier tags 副詞.
-    "ころ": "suffix",
-    "ごろ": "suffix",
-    "ごと": "suffix",
-    "よう": "grammar",
-    "まま": "noun",
-    "ついで": "noun",
-    "ばか": "noun",
-    "がん": "noun",
-    "ばら": "noun",
-    "じゃり": "noun",
+    **dict.fromkeys((("ころ", "副詞"), ("ごろ", "副詞"), ("ごと", "副詞")), "suffix"),
+    ("よう", "副詞"): "grammar",
+    **dict.fromkeys((("まま", "副詞"), ("ついで", "副詞"), ("ばか", "副詞"), ("がん", "副詞")), "noun"),
+    **dict.fromkeys((("ばら", "副詞"), ("じゃり", "副詞")), "noun"),
     # Verb stems and interjections a carrier tags 副詞.
-    "どく": "verb",
-    "むく": "verb",
-    "ぶつ": "verb",
-    "いや": "interjection",
-    "よし": "interjection",
+    **dict.fromkeys((("どく", "副詞"), ("むく", "副詞"), ("ぶつ", "副詞")), "verb"),
+    **dict.fromkeys((("いや", "副詞"), ("よし", "副詞")), "interjection"),
     # Archaic, or not a word to learn.
-    "たれ": "archaic",
-    "さる": "archaic",
-    "かく": "archaic",
-    "ちんちん": "vulgar",
-    "にゃー": "animal sound",
+    **dict.fromkeys((("たれ", "代名詞"), ("さる", "連体詞"), ("かく", "副詞"), ("ゆえ", "名詞")), "archaic"),
+    ("ちんちん", "副詞"): "vulgar",
+    ("にゃー", "副詞"): "animal sound",
 }
 
 #: Words the tagger cuts apart: (headword, pos1, tokens, line start only). Kana
@@ -99,6 +97,8 @@ JOINS: tuple[tuple[str, str, str, bool], ...] = (
     ("もしかしたら", "副詞", "もし|か|し|たら", False),
     ("もしかすると", "副詞", "もし|か|する|と", False),
     ("どうも", "副詞", "どう|も", False),
+    ("ために", "名詞", "ため|に", False),
+    ("やけに", "副詞", "やけ|に", False),
     ("かどうか", "副詞", "か|どう|か", False),
     ("いつも", "副詞", "いつ|も", False),
     ("いつか", "副詞", "いつ|か", False),
@@ -168,7 +168,12 @@ def build(jmdict: Path) -> list[str]:
     if missing:
         raise SystemExit(f"not JMdict spellings: {', '.join(missing)}")
     words = sorted(
-        (form, pos1) for form in candidates - EXCLUDED.keys() for pos1 in _single_token_tags(form) if pos1 in WORD_POS1
+        (form, pos1)
+        for form in candidates
+        for pos1 in _single_token_tags(form)
+        if pos1 in WORD_POS1
+        and (form, pos1) not in EXCLUDED
+        and not (pos1 == "名詞" and len(form) == 2 and form not in SHORT_NOUNS)
     )
     lines = [f"{form}\t{pos1}" for form, pos1 in words]
     lines += ["\t".join((form, pos1, tokens, *(["start"] if start else []))) for form, pos1, tokens, start in JOINS]
