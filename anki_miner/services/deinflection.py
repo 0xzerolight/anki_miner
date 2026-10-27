@@ -339,7 +339,7 @@ def find_highlight_end_with_trace(
     if not targets:
         return tok_end, ()
 
-    deinflector = get_japanese_deinflector()
+    deinflector = get_highlight_deinflector()
     mask = deinflector.mask_for_ctype(getattr(feature, "cType", None))
     additional_mask = mask
     if (
@@ -443,7 +443,7 @@ def resolve_dictionary_form(
     """
     if term_rules_lookup is None or not inflected_surface or not orth_base:
         return orth_base
-    deinflector = get_japanese_deinflector()
+    deinflector = get_highlight_deinflector()
     candidates = {
         (result.text, result.conditions)
         for result in deinflector.transform(inflected_surface)
@@ -550,3 +550,48 @@ def get_japanese_deinflector() -> Deinflector:
     from anki_miner.services.japanese_transforms import CONDITIONS, TRANSFORMS
 
     return Deinflector(CONDITIONS, TRANSFORMS)
+
+
+def _te_auxiliary_transforms() -> list[dict[str, Any]]:
+    """て / で + the auxiliary verbs Yomitan's table has no transform for, back to the te-form.
+
+    Modelled on the table's own ``-いる`` rules, with each auxiliary's own
+    conjugation class as the condition, so the chain goes on past it:
+    教えてもらえます is ``-て, -もらう, potential, -ます``. The same set as
+    monosashi's deinflection supplements (its SPEC §4.1).
+    """
+    from anki_miner.services.japanese_transforms import suffix_inflection
+
+    def te(auxiliaries: list[str], condition: str) -> list[dict[str, Any]]:
+        return [suffix_inflection(t + aux, t, [condition], ["-て"]) for aux in auxiliaries for t in ("て", "で")]
+
+    return [
+        {"id": "-みる", "name": "-みる", "rules": te(["みる"], "v1")},
+        {"id": "-くる", "name": "-くる", "rules": te(["くる", "来る"], "vk")},
+        # Contracted いく too: てく, and てった / てってる whole, since the table
+        # undoes った to く only for 行く itself. A bare てって would read the
+        # quotative って after a te-form (待ってって) as the verb.
+        {
+            "id": "-いく",
+            "name": "-いく",
+            "rules": [*te(["いく", "行く", "ゆく", "く"], "v5"), *te(["った"], "-た"), *te(["ってる"], "v1p")],
+        },
+        {"id": "-ある", "name": "-ある", "rules": te(["ある"], "v5")},
+        {"id": "-あげる", "name": "-あげる", "rules": te(["あげる", "上げる"], "v1")},
+        {"id": "-くれる", "name": "-くれる", "rules": te(["くれる", "呉れる"], "v1")},
+        {"id": "-もらう", "name": "-もらう", "rules": te(["もらう", "貰う"], "v5")},
+        {"id": "-ほしい", "name": "-ほしい", "rules": te(["ほしい", "欲しい"], "adj-i")},
+    ]
+
+
+@lru_cache(maxsize=1)
+def get_highlight_deinflector() -> Deinflector:
+    """The Yomitan table plus て + auxiliary verbs, for a mined verb's span and front.
+
+    A learner reads 教えてくれた as one verb, so its highlight runs to the end
+    of the chain, as it already does through ている, てしまう and ておく, which
+    the table has. The dictionary lookup ladder keeps the table alone.
+    """
+    from anki_miner.services.japanese_transforms import CONDITIONS, TRANSFORMS
+
+    return Deinflector(CONDITIONS, [*TRANSFORMS, *_te_auxiliary_transforms()])

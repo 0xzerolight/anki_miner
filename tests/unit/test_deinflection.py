@@ -12,6 +12,7 @@ from anki_miner.services.deinflection import (
     conditions_match,
     find_highlight_end,
     find_highlight_end_with_trace,
+    get_highlight_deinflector,
     get_japanese_deinflector,
 )
 from anki_miner.services.tagger import get_shared_tagger
@@ -381,6 +382,24 @@ class TestJapaneseChainVectors:
     def test_non_rule_auxiliaries_do_not_reach_target(self, candidate, target):
         assert not _reaches(candidate, target, 0)
 
+    @pytest.mark.parametrize(
+        ("candidate", "target", "condition"),
+        [
+            ("見てみる", "見る", "v1"),
+            ("食べていく", "食べる", "v1"),
+            ("走っていった", "走る", "v5"),
+            ("食べてくる", "食べる", "v1"),
+            ("書いてあれば", "書く", "v5"),
+            ("買ってくれた", "買う", "v5"),
+            ("教えてもらえます", "教える", "v1"),
+            ("取ってほしい", "取る", "v5"),
+        ],
+    )
+    def test_highlight_table_reaches_through_te_auxiliaries(self, candidate, target, condition):
+        deinflector = get_highlight_deinflector()
+        mask = deinflector.condition_flags(condition)
+        assert any(r.text == target and r.conditions & mask for r in deinflector.transform(candidate))
+
     def test_ctype_mask_rejects_cross_conjugation_coincidence(self):
         # した reaches する only with vs conditions; a v5 mask (as if the
         # mined token were a godan verb) must reject that chain.
@@ -521,8 +540,8 @@ class TestFindHighlightEnd:
         ]
         assert find_highlight_end(text, tokens, 2, 4, tokens[2]) == 7
 
-    def test_benefactive_stops_at_te_form(self):
-        # No てくれる rule upstream: longest valid candidate is 買って.
+    def test_benefactive_runs_through_the_te_auxiliary_chain(self):
+        # Upstream has no てくれる rule; the highlight table does: 買ってくれた is one verb.
         text = "買ってくれた"
         tokens = [
             _tok("買っ", "動詞", lemma="買う", orth_base="買う", ctype="五段-ワア行"),
@@ -530,7 +549,7 @@ class TestFindHighlightEnd:
             _tok("くれ", "動詞", lemma="くれる", orth_base="くれる", ctype="下一段-ラ行"),
             _tok("た", "助動詞"),
         ]
-        assert find_highlight_end(text, tokens, 0, 2, tokens[0]) == 3
+        assert find_highlight_end(text, tokens, 0, 2, tokens[0]) == 6
 
     def test_non_verb_pos_short_circuits(self):
         text = "刑務所だ"

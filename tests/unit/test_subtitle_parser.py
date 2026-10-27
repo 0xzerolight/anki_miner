@@ -3411,10 +3411,9 @@ class TestSurfaceOffsetsAndBolding:
             ("値段が高かった", "高い", "<b>高かった</b>"),
             # Auxiliary chains (user-confirmed full-Yomitan behavior).
             ("海で泳いでいた", "泳ぐ", "<b>泳いでいた</b>"),
-            # Non-rule stops: upstream has no benefactive/てみる/ていく
-            # rules, so the span ends at the last valid chain point.
-            ("本を買ってくれた", "買う", "<b>買って</b>"),
-            ("食べていく", "食べる", "<b>食べて</b>"),
+            # て + くれる / いく: upstream has no rule, the highlight table does.
+            ("本を買ってくれた", "買う", "<b>買ってくれた</b>"),
+            ("食べていく", "食べる", "<b>食べていく</b>"),
         ],
     )
     def test_bolds_full_inflected_form(self, tmp_path, sentence, lemma, expected_bold):
