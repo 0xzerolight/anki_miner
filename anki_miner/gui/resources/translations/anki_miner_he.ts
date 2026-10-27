@@ -2675,6 +2675,14 @@ No index files are deleted.</source>
         <translation>השמטת מילים שנכתבות ללא קאנג'י; “דילוג על כל המילים בקאנה בלבד (כולל מעורבות)” משאיר חפיסה של קאנג'י בלבד.</translation>
     </message>
     <message>
+        <source>Mine numbers with their counters</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Card 3本 or 4人 as one word, read with its sound changes (さんぼん, よにん) and defined by the counter.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Blacklist / whitelist words</source>
         <translation>רשימה שחורה / לבנה של מילים</translation>
     </message>
@@ -6012,6 +6020,18 @@ No files on disk are deleted.</source>
     <message>
         <source>Skip every word written without kanji, including words that mix hiragana and katakana.</source>
         <translation>דילוג על כל מילה שנכתבת ללא קאנג'י, כולל מילים שמשלבות הירגנה וקטקנה.</translation>
+    </message>
+    <message>
+        <source>Numbers</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mine numbers with their counters</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Make a card for a number and its counter, read with its sound changes (3本 さんぼん, 4人 よにん), defined by the counter. One card per number.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Reading</source>

@@ -578,6 +578,22 @@ class TestGetDefinitionsBatchFastPath:
         assert results == ["definition:ひく", "definition:はじく"]
         assert calls == [[("弾く", "ひく")], [("弾く", "はじく")]]
 
+    def test_number_counter_front_takes_its_counter_entry_by_the_counter_reading(self, test_config):
+        # No dictionary lists 4人; its counter 人 read にん is the 'counter for
+        # people' entry, where 人 read ひと or よにん would lead on 'person'.
+        calls: list[list[tuple[str, str | None]]] = []
+        provider = make_batch_provider("reading-aware")
+
+        def lookup_many(pairs, scope_homographs=True):
+            calls.append(list(pairs))
+            return {word: f"{word}:{reading}" for word, reading in pairs if word == "人"}
+
+        provider.lookup_many.side_effect = lookup_many
+        service = DefinitionService(test_config, providers=[provider])
+
+        assert service.get_definitions_batch([("4人", "よにん")]) == ["人:にん"]
+        assert calls == [[("4人", "よにん")], [("人", "にん")]]
+
     def test_lemma_context_forwarded_to_offline_batch_providers(self, test_config):
         """The token lemma reaches lookup_many so the storage-side Rule A' scope
         can prefer the right lexeme for a kana front (ゆう → 言う, not 有/夕)."""

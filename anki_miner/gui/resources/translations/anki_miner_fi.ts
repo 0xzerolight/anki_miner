@@ -2675,6 +2675,14 @@ Indeksitiedostoja ei poisteta.</translation>
         <translation>Pudota pois ilman kanjeja kirjoitetut sanat; ”Ohita kaikki pelkällä kanalla kirjoitetut sanat (myös sekamuotoiset)” jättää jäljelle vain kanjipakan.</translation>
     </message>
     <message>
+        <source>Mine numbers with their counters</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Card 3本 or 4人 as one word, read with its sound changes (さんぼん, よにん) and defined by the counter.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Blacklist / whitelist words</source>
         <translation>Esto- ja sallittujen luettelot</translation>
     </message>
@@ -6012,6 +6020,18 @@ Levyltä ei poisteta tiedostoja.</translation>
     <message>
         <source>Skip every word written without kanji, including words that mix hiragana and katakana.</source>
         <translation>Ohita kaikki ilman kanjeja kirjoitetut sanat, myös hiraganaa ja katakanaa sekoittavat sanat.</translation>
+    </message>
+    <message>
+        <source>Numbers</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mine numbers with their counters</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Make a card for a number and its counter, read with its sound changes (3本 さんぼん, 4人 よにん), defined by the counter. One card per number.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Reading</source>

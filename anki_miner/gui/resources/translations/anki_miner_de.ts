@@ -2675,6 +2675,14 @@ Es werden keine Indexdateien gelöscht.</translation>
         <translation>Ohne Kanji geschriebene Wörter verwerfen; „Alle reinen Kana-Wörter überspringen (auch gemischte)“ ergibt einen reinen Kanji-Stapel.</translation>
     </message>
     <message>
+        <source>Mine numbers with their counters</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Card 3本 or 4人 as one word, read with its sound changes (さんぼん, よにん) and defined by the counter.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Blacklist / whitelist words</source>
         <translation>Wörter auf die Sperr-/Freigabeliste setzen</translation>
     </message>
@@ -6012,6 +6020,18 @@ Es werden keine Dateien von der Festplatte gelöscht.</translation>
     <message>
         <source>Skip every word written without kanji, including words that mix hiragana and katakana.</source>
         <translation>Jedes ohne Kanji geschriebene Wort überspringen, auch Wörter, die Hiragana und Katakana mischen.</translation>
+    </message>
+    <message>
+        <source>Numbers</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mine numbers with their counters</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Make a card for a number and its counter, read with its sound changes (3本 さんぼん, 4人 よにん), defined by the counter. One card per number.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Reading</source>

@@ -249,6 +249,7 @@ def test_chinese_hides_the_japanese_only_entries() -> None:
 
     assert not shown & {
         "kana-only-exclude",
+        "number-counters",
         "kana-variant-known",
         "name-wordsets",
         "furigana",

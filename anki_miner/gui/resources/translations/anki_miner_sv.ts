@@ -2675,6 +2675,14 @@ Inga indexfiler raderas.</translation>
         <translation>Utelämna ord som skrivs utan kanji; ”Hoppa över alla ord med enbart kana (även blandade)” ger en kortlek med enbart kanji.</translation>
     </message>
     <message>
+        <source>Mine numbers with their counters</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Card 3本 or 4人 as one word, read with its sound changes (さんぼん, よにん) and defined by the counter.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Blacklist / whitelist words</source>
         <translation>Svartlista / vitlista ord</translation>
     </message>
@@ -6012,6 +6020,18 @@ Inga filer på disken raderas.</translation>
     <message>
         <source>Skip every word written without kanji, including words that mix hiragana and katakana.</source>
         <translation>Hoppa över alla ord som skrivs utan kanji, även ord som blandar hiragana och katakana.</translation>
+    </message>
+    <message>
+        <source>Numbers</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mine numbers with their counters</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Make a card for a number and its counter, read with its sound changes (3本 さんぼん, 4人 よにん), defined by the counter. One card per number.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Reading</source>

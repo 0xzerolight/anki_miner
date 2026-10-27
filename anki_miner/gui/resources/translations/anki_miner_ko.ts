@@ -2672,6 +2672,14 @@ No index files are deleted.</source>
         <translation>한자 없이 쓴 단어를 제외합니다. “가나만 쓴 단어 모두 건너뛰기(혼합 포함)”를 사용하면 한자 단어만 남은 덱이 됩니다.</translation>
     </message>
     <message>
+        <source>Mine numbers with their counters</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Card 3本 or 4人 as one word, read with its sound changes (さんぼん, よにん) and defined by the counter.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Blacklist / whitelist words</source>
         <translation>단어 블랙리스트 / 화이트리스트</translation>
     </message>
@@ -5974,6 +5982,18 @@ No files on disk are deleted.</source>
     <message>
         <source>Skip every word written without kanji, including words that mix hiragana and katakana.</source>
         <translation>히라가나와 가타카나를 섞어 쓴 단어를 포함하여 한자 없이 쓴 모든 단어를 건너뜁니다.</translation>
+    </message>
+    <message>
+        <source>Numbers</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mine numbers with their counters</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Make a card for a number and its counter, read with its sound changes (3本 さんぼん, 4人 よにん), defined by the counter. One card per number.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Reading</source>

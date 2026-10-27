@@ -453,6 +453,20 @@ class FilteringSettingsPanel(FormPanel):
         )
         self.add_field("", self.script_type_combo, anchor_text=self._script_type_search_text)
 
+        # Number + counter cards (services/number_counters.py). Japanese only: the
+        # counter table and its sound changes are Japanese.
+        self.add_section(self.tr("Numbers"))
+        self._numbers_section_label = self._active_section_label
+        self.number_counters_checkbox = QCheckBox(self.tr("Mine numbers with their counters"))
+        self.add_field(
+            "",
+            self.number_counters_checkbox,
+            helper=self.tr(
+                "Make a card for a number and its counter, read with its sound changes "
+                "(3本 さんぼん, 4人 よにん), defined by the counter. One card per number."
+            ),
+        )
+
         # Option-driven script filters. The Korean pair binds to the SAME two
         # language-scoped booleans the Script Type combo above uses, and the
         # mapping is counter-intuitive (hangul-only -> exclude_hiragana_only_words), so the
@@ -499,11 +513,12 @@ class FilteringSettingsPanel(FormPanel):
         # field never leaves a dangling caption behind.
         self._language_gate_pairs.extend(
             (w, "kana_filters")
-            for cb in (self.script_type_combo, self.match_kana_variants_checkbox)
+            for cb in (self.script_type_combo, self.match_kana_variants_checkbox, self.number_counters_checkbox)
             for w in field_row_widgets(self, cb)
         )
-        if self._script_type_section_label is not None:
-            self._language_gate_pairs.append((self._script_type_section_label, "kana_filters"))
+        for section_label in (self._script_type_section_label, self._numbers_section_label):
+            if section_label is not None:
+                self._language_gate_pairs.append((section_label, "kana_filters"))
         # The option-driven rows join the same list. This is a cross product,
         # not a per-option pairing: every checkbox here is paired with EVERY
         # capability in _OPTION_DRIVEN_FILTER_CAPABILITIES, because
@@ -840,6 +855,7 @@ class FilteringSettingsPanel(FormPanel):
         self.set_blacklist_path(config.blacklist_path if config.use_blacklist else None)
         self.set_whitelist_path(config.whitelist_path if config.use_whitelist else None)
         self.set_script_type(bool(config.exclude_hiragana_only_words), bool(config.exclude_katakana_only_words))
+        self.number_counters_checkbox.setChecked(config.mine_number_counters)
         # Same two booleans, read through whichever language's option named them.
         for option_id, checkbox in self.script_filter_checkboxes.items():
             checkbox.setChecked(bool(getattr(config, self._script_filter_fields[option_id])))
@@ -869,6 +885,7 @@ class FilteringSettingsPanel(FormPanel):
             use_whitelist=self.get_use_whitelist(),
             exclude_hiragana_only_words=self.get_exclude_hiragana_only_words(),
             exclude_katakana_only_words=self.get_exclude_katakana_only_words(),
+            mine_number_counters=self.number_counters_checkbox.isChecked(),
             reading_min_occurrence=self.get_reading_min_occurrence(),
         )
         # Language-scoped rows contribute only while their capability is present.

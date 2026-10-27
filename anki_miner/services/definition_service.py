@@ -14,6 +14,7 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import AnkiMinerException
 from anki_miner.interfaces import ProgressCallback
 from anki_miner.services.dictionary.glossary_label import label_stacked
+from anki_miner.services.number_counters import counter_entry, counter_of
 from anki_miner.services.subtitle_parser import _differs_by_okurigana_only
 from anki_miner.utils.i18n import tr_format
 from anki_miner.utils.logging_ext import capped, log_summary
@@ -334,6 +335,10 @@ class DefinitionService:
                 seen.add(text)
                 candidates.append((text, conditions))
 
+        # A number + counter card (4人) is in no dictionary; its counter's entry is.
+        counter = counter_of(word)
+        if counter is not None:
+            _add(counter, 0)
         if orth_base and (orth_base == word or _differs_by_okurigana_only(word, orth_base)):
             _add(orth_base, 0)
         _add(katakana_to_hiragana(word), 0)
@@ -633,6 +638,20 @@ class DefinitionService:
                 if cancelled:
                     break
                 remaining = still_remaining
+
+        # A number + counter card (4人) is in no dictionary: it takes its
+        # counter's entry, looked up with the counter's own reading so the
+        # counter sense leads (人 にん 'counter for people', not 人 ひと).
+        counter_pairs = {pair: entry for pair in remaining if (entry := counter_entry(pair[0])) is not None}
+        if counter_pairs and not cancellation_requested():
+            entries: list[tuple[str, str | None]] = list(dict.fromkeys(counter_pairs.values()))
+            found = dict(zip(entries, self.get_definitions_batch(entries, is_cancelled=is_cancelled), strict=True))
+            for pair, entry in counter_pairs.items():
+                html = found[entry]
+                if html:
+                    resolved[pair] = html
+                    hits_by_provider["counter"] += 1
+            remaining = [pair for pair in remaining if pair not in resolved]
 
         # Miss-only fallback: for words the whole chain left unresolved, retry
         # deinflection/variant candidates against offline providers. Gated on

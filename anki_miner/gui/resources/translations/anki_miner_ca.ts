@@ -2675,6 +2675,14 @@ No se suprimeix cap fitxer d'índex.</translation>
         <translation>Descarta les paraules escrites sense kanji; «Omet totes les paraules només en kana (incloses les mixtes)» deixa una baralla només de kanji.</translation>
     </message>
     <message>
+        <source>Mine numbers with their counters</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Card 3本 or 4人 as one word, read with its sound changes (さんぼん, よにん) and defined by the counter.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Blacklist / whitelist words</source>
         <translation>Llista negra / llista blanca de paraules</translation>
     </message>
@@ -6012,6 +6020,18 @@ No se suprimeix cap fitxer del disc.</translation>
     <message>
         <source>Skip every word written without kanji, including words that mix hiragana and katakana.</source>
         <translation>Omet totes les paraules escrites sense kanji, incloses les que barregen hiragana i katakana.</translation>
+    </message>
+    <message>
+        <source>Numbers</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mine numbers with their counters</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Make a card for a number and its counter, read with its sound changes (3本 さんぼん, 4人 よにん), defined by the counter. One card per number.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Reading</source>

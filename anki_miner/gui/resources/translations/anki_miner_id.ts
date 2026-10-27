@@ -2672,6 +2672,14 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Buang kata yang ditulis tanpa kanji; “Lewati semua kata khusus kana (termasuk campuran)” menyisakan dek khusus kanji.</translation>
     </message>
     <message>
+        <source>Mine numbers with their counters</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Card 3本 or 4人 as one word, read with its sound changes (さんぼん, よにん) and defined by the counter.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Blacklist / whitelist words</source>
         <translation>Daftar hitam / daftar putih kata</translation>
     </message>
@@ -5974,6 +5982,18 @@ Tidak ada berkas di disk yang dihapus.</translation>
     <message>
         <source>Skip every word written without kanji, including words that mix hiragana and katakana.</source>
         <translation>Lewati setiap kata yang ditulis tanpa kanji, termasuk kata yang mencampur hiragana dan katakana.</translation>
+    </message>
+    <message>
+        <source>Numbers</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mine numbers with their counters</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Make a card for a number and its counter, read with its sound changes (3本 さんぼん, 4人 よにん), defined by the counter. One card per number.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Reading</source>

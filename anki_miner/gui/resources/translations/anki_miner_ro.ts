@@ -2678,6 +2678,14 @@ Nu se șterge niciun fișier index.</translation>
         <translation>Elimină cuvintele scrise fără kanji; „Omite toate cuvintele doar în kana (inclusiv mixte)” lasă un pachet doar cu kanji.</translation>
     </message>
     <message>
+        <source>Mine numbers with their counters</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Card 3本 or 4人 as one word, read with its sound changes (さんぼん, よにん) and defined by the counter.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Blacklist / whitelist words</source>
         <translation>Listă neagră / listă albă de cuvinte</translation>
     </message>
@@ -6050,6 +6058,18 @@ Nu se șterge niciun fișier de pe disc.</translation>
     <message>
         <source>Skip every word written without kanji, including words that mix hiragana and katakana.</source>
         <translation>Omite toate cuvintele scrise fără kanji, inclusiv cele care combină hiragana și katakana.</translation>
+    </message>
+    <message>
+        <source>Numbers</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mine numbers with their counters</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Make a card for a number and its counter, read with its sound changes (3本 さんぼん, 4人 よにん), defined by the counter. One card per number.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Reading</source>

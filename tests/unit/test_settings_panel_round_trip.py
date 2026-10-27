@@ -116,6 +116,7 @@ def _non_default_save_config(tmp_path: Path) -> AnkiMinerConfig:
         deduplicate_sentences=True,  # default is False
         exclude_hiragana_only_words=True,
         exclude_katakana_only_words=True,
+        mine_number_counters=True,  # default is False
         use_i_plus_one_filter=False,
         max_sentence_duration_seconds=8.0,
         max_sentence_chars=50,
@@ -188,6 +189,7 @@ _SAVE_PATH_FIELDS = frozenset(
         "use_whitelist",
         "exclude_hiragana_only_words",
         "exclude_katakana_only_words",
+        "mine_number_counters",
         "reading_min_occurrence",
         # SentencesSettingsPanel
         "subtitle_regex_filter",
@@ -385,6 +387,7 @@ class TestSavePathRoundTrip:
             "use_whitelist",
             "exclude_hiragana_only_words",
             "exclude_katakana_only_words",
+            "mine_number_counters",
             "reading_min_occurrence",
         ):
             assert getattr(result, field_name) == getattr(original, field_name), field_name

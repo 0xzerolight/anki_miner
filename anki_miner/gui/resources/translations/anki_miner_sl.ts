@@ -2681,6 +2681,14 @@ Nobena datoteka indeksa ne bo izbrisana.</translation>
         <translation>Izpustite besede, zapisane brez kandžijev; „Preskoči vse besede samo v kani (tudi mešane)“ pusti komplet samo s kandžiji.</translation>
     </message>
     <message>
+        <source>Mine numbers with their counters</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Card 3本 or 4人 as one word, read with its sound changes (さんぼん, よにん) and defined by the counter.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Blacklist / whitelist words</source>
         <translation>Črni / beli seznam besed</translation>
     </message>
@@ -6088,6 +6096,18 @@ Nobena datoteka na disku ne bo izbrisana.</translation>
     <message>
         <source>Skip every word written without kanji, including words that mix hiragana and katakana.</source>
         <translation>Preskoči vse besede, zapisane brez kandžijev, vključno z besedami, ki mešajo hiragano in katakano.</translation>
+    </message>
+    <message>
+        <source>Numbers</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mine numbers with their counters</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Make a card for a number and its counter, read with its sound changes (3本 さんぼん, 4人 よにん), defined by the counter. One card per number.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Reading</source>

@@ -2675,6 +2675,14 @@ Ingen indeksfiler slettes.</translation>
         <translation>Fjern ord, der er skrevet uden kanji; “Spring alle ord kun med kana over (også blandede)” giver et kortsæt kun med kanji.</translation>
     </message>
     <message>
+        <source>Mine numbers with their counters</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Card 3本 or 4人 as one word, read with its sound changes (さんぼん, よにん) and defined by the counter.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Blacklist / whitelist words</source>
         <translation>Bloker / tillad ord</translation>
     </message>
@@ -6012,6 +6020,18 @@ Ingen filer på disken slettes.</translation>
     <message>
         <source>Skip every word written without kanji, including words that mix hiragana and katakana.</source>
         <translation>Spring alle ord over, der er skrevet uden kanji, også ord, der blander hiragana og katakana.</translation>
+    </message>
+    <message>
+        <source>Numbers</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mine numbers with their counters</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Make a card for a number and its counter, read with its sound changes (3本 さんぼん, 4人 よにん), defined by the counter. One card per number.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Reading</source>

@@ -903,6 +903,18 @@ CAPABILITIES: tuple[Capability, ...] = (
         requires="kana_filters",
     ),
     Capability(
+        id="number-counters",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Mine numbers with their counters"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Card 3本 or 4人 as one word, read with its sound changes (さんぼん, よにん) and defined by the counter.",
+        ),
+        category=_CAT_FILTERING,
+        target=CapabilityTarget("settings", "filtering"),
+        keywords=("number", "counter", "josuushi", "助数詞", "3人", "reading"),
+        requires="kana_filters",
+    ),
+    Capability(
         id="word-lists",
         title=QT_TRANSLATE_NOOP("Capabilities", "Blacklist / whitelist words"),
         description=QT_TRANSLATE_NOOP(

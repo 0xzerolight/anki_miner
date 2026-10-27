@@ -553,6 +553,12 @@ class AnkiMinerConfig:
     exclude_hiragana_only_words: bool = False
     exclude_katakana_only_words: bool = False
 
+    # Number + counter cards (3人 read よにん; services/number_counters.py). Off
+    # by default: it mints one card per number, which most learners don't want.
+    # Japanese only (Word Filters shows it under the kana filters); the parser
+    # reads it, so it is in PARSE_RELEVANT_CONFIG_FIELDS.
+    mine_number_counters: bool = False
+
     # Language-scoped display/content preferences (multi-language transition).
     # Deliberately generic rather than zh-prefixed: they are carried per
     # language by LANGUAGE_SCOPED_FIELDS, so ja/ko keep "" / False and zh gets

@@ -173,6 +173,7 @@ def test_pre_change_config_loads_every_field_unchanged(isolated_config_file):
         "crop_manga_to_text",
         "pick_best_sentence",
         "skip_opening_ending",
+        "mine_number_counters",
     }
     assert loaded.script_variant == "" and loaded.reading_tone_color is False
 

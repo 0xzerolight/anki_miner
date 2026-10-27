@@ -59,6 +59,7 @@ from anki_miner.services.morphology import (
     resolve_attested_reading,
     resolve_reading_override,
 )
+from anki_miner.services.number_counters import merge_number_counters
 from anki_miner.services.reading.ruby_hints import apply_author_ruby
 from anki_miner.services.subtitle_cleaner import midpoint_in_ranges, mining_events
 from anki_miner.services.tagger import get_shared_tagger
@@ -124,6 +125,8 @@ PARSE_RELEVANT_CONFIG_FIELDS = (
     # Songs, signs and drawings leave the loaded events, so the cached line
     # states differ with it (F-08).
     "skip_opening_ending",
+    # A number and its counter merge into one cached token (3人).
+    "mine_number_counters",
 )
 
 # Dictionary-attested compound matching (Yomitan longest-match principle):
@@ -710,6 +713,8 @@ class SubtitleParserService:
             rescuable_tags=frozenset(get_profile(language).pos_defaults.rescuable_tags),
         )
         self._force_include = force_include
+        # Settings → Word Filters → Mine numbers with counters (3人 → よにん).
+        self._number_counters: bool = config.mine_number_counters
         # The same test Anki's vocabulary scan keeps fronts by: a rescued front
         # outside the mining language's script could never read as known again.
         self._rescue_script = get_profile(language).script.contains_target_script
@@ -1396,6 +1401,10 @@ class SubtitleParserService:
             merged_tokens = self._name_matcher.merge_line(text, merged_tokens)
         if self._compound_matcher is not None:
             merged_tokens = self._compound_matcher.merge_line(text, merged_tokens)
+        # After the matcher, so a longer attested word keeps its number (一生一度
+        # stays whole rather than losing 一度).
+        if self._number_counters:
+            merged_tokens = merge_number_counters(text, merged_tokens)
         # AFTER the matcher on purpose: a token already covered by an attested
         # compound (ご存じ) is a 名詞 synthetic by now, so this pass skips it and
         # the two can never fight over the same token.
@@ -2695,6 +2704,10 @@ class SubtitleParserService:
         front. The count loops pass none, and it never changes the verdict
         (T-38). Fragment guards and window rejects record nothing.
         """
+        # A number + counter (3人, ３つ) the setting merged: 数詞 is an excluded
+        # subtype and ３つ has no kanji, so it is taken before the gate.
+        if getattr(getattr(word_token, "feature", None), "number_counter", False) is True:
+            return not self._ellipsis_reject(word_token, text, tok_start, tok_end)
         rejection = self._inclusion_rule.rejection(word_token)
         if rejection is None:
             if self._is_katakana_run_fragment(word_token, text, tok_start, tok_end):

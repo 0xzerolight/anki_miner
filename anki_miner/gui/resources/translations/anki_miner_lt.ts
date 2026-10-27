@@ -2678,6 +2678,14 @@ Indekso failai neištrinami.</translation>
         <translation>Atmeskite žodžius, parašytus be kandži; „Praleisti visus tik kana rašomus žodžius (ir mišrius)“ palieka kaladę tik su kandži.</translation>
     </message>
     <message>
+        <source>Mine numbers with their counters</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Card 3本 or 4人 as one word, read with its sound changes (さんぼん, よにん) and defined by the counter.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Blacklist / whitelist words</source>
         <translation>Juodasis / baltasis žodžių sąrašas</translation>
     </message>
@@ -6050,6 +6058,18 @@ Failai diske neištrinami.</translation>
     <message>
         <source>Skip every word written without kanji, including words that mix hiragana and katakana.</source>
         <translation>Praleisti visus žodžius, parašytus be kandži, įskaitant žodžius, kuriuose maišomos hiragana ir katakana.</translation>
+    </message>
+    <message>
+        <source>Numbers</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mine numbers with their counters</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Make a card for a number and its counter, read with its sound changes (3本 さんぼん, 4人 よにん), defined by the counter. One card per number.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Reading</source>
