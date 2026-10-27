@@ -383,6 +383,7 @@ include-package-data = true
 [tool.setuptools.package-data]
 "anki_miner.services.dictionary.resources" = ["*.css"]
 "anki_miner.resources.wordsets" = ["*.txt"]
+"anki_miner.resources.kana_words" = ["*.tsv", "*.txt"]
 "anki_miner.gui.resources.translations" = ["*.ts", "*.qm"]
 # Persian light-verb and colloquial tables: first-party derived data the fa
 # tokenizer reads at build time (not part of the language pack, which holds only

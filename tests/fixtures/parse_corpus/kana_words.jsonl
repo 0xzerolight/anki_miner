@@ -1,0 +1,9 @@
+{"id":"kl01","sentence":"もう行こう","expected":["もう","行く"],"category":"kana-words","note":"Listed adverb: the script gate drops pure hiragana, the kana word list names もう."}
+{"id":"kl02","sentence":"これは本だ","expected":["これ","本"],"category":"kana-words","note":"これは is anchored on purpose: a listed word skips the lexicalized-window reject, or every これは line loses これ."}
+{"id":"kl03","sentence":"この本はとても高い","expected":["この","本","とても","高い"],"category":"kana-words","note":"Pre-noun adjective and adverb, both listed."}
+{"id":"kl04","sentence":"しかし雨が降った","expected":["しかし","雨","降る"],"category":"kana-words","note":"Listed conjunction: 接続詞 is no allowed_pos tag."}
+{"id":"kl05","sentence":"いつも笑う","expected":["いつも","笑う"],"category":"kana-words","note":"Join row: unidic cuts いつ+も; いつ alone would be the wrong word."}
+{"id":"kl06","sentence":"でも、行く","expected":["でも","行く"],"category":"kana-words","note":"Line-start join row: で+も opening a clause is the conjunction."}
+{"id":"kl07","sentence":"学校でも行く","expected":["学校","行く"],"category":"kana-words","note":"でも is anchored on purpose: inside a clause で+も are particles and stay unjoined."}
+{"id":"kl08","sentence":"どういう人なの","expected":["どういう","人"],"category":"kana-words","note":"Join row: どう alone would be the wrong word."}
+{"id":"kl09","sentence":"もしかして恋人","expected":["もしかして","恋人"],"category":"kana-words","note":"Join row over four tokens (もし|か|し|て)."}

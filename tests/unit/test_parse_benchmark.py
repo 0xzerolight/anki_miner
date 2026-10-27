@@ -161,6 +161,7 @@ _EXPECTED_CATEGORIES = {
     "plain-causative",
     "reading-gate",
     "lexical-join",
+    "kana-words",
 }
 
 

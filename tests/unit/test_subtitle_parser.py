@@ -1283,6 +1283,16 @@ class TestKanaWordRecovery:
         assert service._should_include_word(token) is True
         assert lookup.calls == [["すごい"]]
 
+    def test_auxiliary_tagged_homograph_does_not_cache_away_the_main_verb(self, test_config):
+        # ていれる tags いれ 非自立可能 and お茶をいれる tags it 一般: same surface
+        # and pos1, opposite verdicts, so the memo must keep them apart.
+        lookup = _attest_lookup("いれる")
+        service = self._service(test_config, lookup)
+        aux = _make_token("いれ", "動詞", pos2="非自立可能", lemma="入れる", orth_base="いれる")
+        main = _make_token("いれ", "動詞", pos2="一般", lemma="入れる", orth_base="いれる")
+        assert service._should_include_word(aux) is False
+        assert service._should_include_word(main) is True
+
     def test_does_not_recover_only_prolonged_sound_marks(self, test_config):
         lookup = _attest_lookup("すごい")
         service = self._service(test_config, lookup)

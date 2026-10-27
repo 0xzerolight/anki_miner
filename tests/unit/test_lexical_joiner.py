@@ -2,6 +2,8 @@
 
 from unittest.mock import MagicMock
 
+import pytest
+
 from anki_miner.services.compound_matcher import CompoundSyntheticToken
 from anki_miner.services.lexical_joiner import LexicalJoiner
 
@@ -191,6 +193,36 @@ def test_line_without_table_words_needs_no_lookup():
     tokens = [_tok("猫", "名詞"), _tok("が", "助詞")]
     assert _joiner(set(), calls).join_line("猫が", tokens) is tokens
     assert calls == []
+
+
+def test_joins_a_kana_word_list_row_anywhere():
+    tokens = [_tok("猫", "名詞"), _tok("は", "助詞"), _tok("いつ", "代名詞"), _tok("も", "助詞"), _tok("寝る", "動詞")]
+    out = _joiner({"いつも"}).join_line("猫はいつも寝る", tokens)
+    assert [t.surface for t in out] == ["猫", "は", "いつも", "寝る"]
+    assert (out[2].feature.pos1, out[2].feature.lemma) == ("副詞", "いつも")
+
+
+def test_a_kana_row_joins_whatever_the_allowed_pos():
+    # 接続詞 is no allowed_pos tag; the list names its words.
+    tokens = [_tok("で", "助詞"), _tok("も", "助詞"), _tok("、", "補助記号"), _tok("行く", "動詞")]
+    out = _joiner({"でも"}, allowed_pos=frozenset({"名詞"})).join_line("でも、行く", tokens)
+    assert [t.surface for t in out] == ["でも", "、", "行く"]
+    assert out[0].feature.pos1 == "接続詞"
+
+
+@pytest.mark.parametrize(
+    ("text", "before", "joined"),
+    [
+        ("でも", (), True),
+        ("うん、でも", (("うん", "感動詞"), ("、", "補助記号")), True),
+        ("うん でも", (("うん", "感動詞"),), True),
+        ("学校でも", (("学校", "名詞"),), False),
+    ],
+)
+def test_a_line_start_row_joins_only_opening_a_clause(text, before, joined):
+    tokens = [*(_tok(surface, pos1) for surface, pos1 in before), _tok("で", "助詞"), _tok("も", "助詞")]
+    out = _joiner({"でも"}).join_line(text, tokens)
+    assert ("でも" in [t.surface for t in out]) is joined
 
 
 def test_input_tokens_never_mutated():

@@ -384,6 +384,18 @@ _ANCHOR_HEADWORDS: tuple[str, ...] = (
     "詰まらない",
     "時に",
     "残らず",
+    # kana-words: listed kana words, plus これは and でも attested on purpose so
+    # only the list's own rules keep これ and leave 学校でも unjoined
+    "もう",
+    "これ",
+    "これは",
+    "この",
+    "とても",
+    "しかし",
+    "いつも",
+    "でも",
+    "どういう",
+    "もしかして",
 )
 
 # Yomitan `ruleIdentifiers` per fixture headword. A real term bank ships these,

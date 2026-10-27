@@ -343,6 +343,16 @@ def test_anchor_meets_front_remap_floor() -> None:
     assert mine_lite_anchor("神を恐る") == {"神", "恐れる"}
 
 
+def test_anchor_meets_kana_words_floor() -> None:
+    results = _scored()
+    b_kw = results["b-lite-anchor"].by_category["kana-words"]
+    # これは and でも are attested on purpose: junk here means a listed word
+    # took the lexicalized-window reject back, or a line-start join fired
+    # inside a clause (学校でも); a miss means a listed word or join was lost.
+    assert recall(b_kw) == 1.0, f"strategy (b) kana-words recall {recall(b_kw)} below 1.0"
+    assert junk_rate(b_kw) == 0.0, f"strategy (b) kana-words junk_rate {junk_rate(b_kw)} above 0.0"
+
+
 def test_orthbase_meets_kana_runs_floor() -> None:
     results = _scored()
     # V8 pins strategy (a), NOT (b): the merged-token junk (獅子+子 → シシシ, 3-run シ)
@@ -415,7 +425,7 @@ def test_anchor_meets_masu_stem_nominal_floor() -> None:
     assert junk_rate(b_ms) == 0.0, f"(b) masu-stem-nominal junk_rate {junk_rate(b_ms)} above 0.0"
     # The bug itself: dict-free keeps unidic's 差し入れる, the anchor mines the noun.
     assert mine_lite_orthbase("これ、差し入れ みんなで食べてよ") == {"差し入れる", "食べる"}
-    assert mine_lite_anchor("これ、差し入れ みんなで食べてよ") == {"差し入れ", "食べる"}
+    assert mine_lite_anchor("これ、差し入れ みんなで食べてよ") == {"これ", "差し入れ", "食べる"}
     # Neighbour allow-list: 帰り/笑い/動き are all attested, so these can only
     # stay verbs while the gate holds.
     assert mine_lite_anchor("帰り ましょう") == {"帰る"}

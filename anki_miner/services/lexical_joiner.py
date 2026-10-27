@@ -24,6 +24,7 @@ from __future__ import annotations
 from typing import Callable, NamedTuple
 
 from anki_miner.services.compound_matcher import CompoundDictionaryMatcher, CompoundSyntheticToken, _pos1
+from anki_miner.services.kana_words import kana_words
 from anki_miner.services.morphology import extract_orth_base, extract_reading
 
 # Batch term-OR-reading probe (DefinitionService.has_offline_definitions).
@@ -84,6 +85,8 @@ _NEGATIVE_ADJECTIVES: dict[str, str] = {
 
 _GRAMMAR_POS1 = frozenset({"助詞", "助動詞"})
 _MAX_FIXED_TOKENS = max(len(key) for key in _FIXED_JOINS)
+_MAX_KANA_TOKENS = max(len(key) for key in kana_words().joins)
+_CLAUSE_BREAK_POS1 = frozenset({"補助記号", "記号"})
 
 # 思わず read as a negated verb, not the adverb: followed by に (思わずに
 # 'without thinking') or after とは/とも (そうとは思わず 'not thinking so'). A bare
@@ -98,6 +101,11 @@ class _Join(NamedTuple):
     end: int  # inclusive
     headword: str
     pos1: str
+    # A kana word list row (services/kana_words.py): joined whatever the run's
+    # allowed_pos, as the list names its words; line_start rows only where they
+    # open a line or clause.
+    listed: bool = False
+    line_start: bool = False
 
 
 def _negated_verb_context(tokens: list, start: int, end: int) -> bool:
@@ -133,6 +141,26 @@ def _negative_adjective(tokens: list, i: int) -> _Join | None:
     return _Join(i, i + 1, headword, "形容詞")
 
 
+def _kana_join(tokens: list, i: int) -> _Join | None:
+    """The longest kana word list join starting at ``tokens[i]``."""
+    joins = kana_words().joins
+    for size in range(min(_MAX_KANA_TOKENS, len(tokens) - i), 1, -1):
+        row = joins.get(tuple(token.surface for token in tokens[i : i + size]))
+        if row is not None:
+            return _Join(i, i + size - 1, row.headword, row.pos1, listed=True, line_start=row.line_start)
+    return None
+
+
+def _opens_clause(tokens: list, spans: dict[int, tuple[int, int]], i: int) -> bool:
+    """Whether ``tokens[i]`` opens its line or clause: first, after punctuation, or after a space."""
+    if i == 0:
+        return True
+    if _pos1(tokens[i - 1]) in _CLAUSE_BREAK_POS1:
+        return True
+    left, right = spans.get(i - 1), spans.get(i)
+    return left is None or right is None or left[1] != right[0]
+
+
 def _contiguous(spans: dict[int, tuple[int, int]], start: int, end: int) -> bool:
     """Whether tokens ``start..end`` sit side by side in the source (no space between)."""
     for k in range(start, end):
@@ -161,11 +189,16 @@ class LexicalJoiner:
         cache shares them) and returns the input object when nothing joins.
         One batched lookup per line covers every headword not seen before.
         """
-        joins = [join for join in self._find(tokens) if join.pos1 in self._allowed_pos]
+        joins = [join for join in self._find(tokens) if join.listed or join.pos1 in self._allowed_pos]
         if not joins:
             return tokens
         spans = CompoundDictionaryMatcher._source_spans(text, tokens)
-        joins = [join for join in joins if _contiguous(spans, join.start, join.end)]
+        joins = [
+            join
+            for join in joins
+            if _contiguous(spans, join.start, join.end)
+            and not (join.line_start and not _opens_clause(tokens, spans, join.start))
+        ]
         unknown = sorted({join.headword for join in joins} - self._attested.keys())
         if unknown:
             hits = self._lookup(unknown)
@@ -201,7 +234,7 @@ class LexicalJoiner:
         found: list[_Join] = []
         i = 0
         while i < len(tokens) - 1:
-            join = _fixed_join(tokens, i) or _negative_adjective(tokens, i)
+            join = _fixed_join(tokens, i) or _negative_adjective(tokens, i) or _kana_join(tokens, i)
             if join is None:
                 i += 1
             else:

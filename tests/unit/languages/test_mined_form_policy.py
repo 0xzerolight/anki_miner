@@ -21,7 +21,7 @@ import pytest
 from anki_miner.languages.registry import get_profile
 from anki_miner.models import LineLemmas, TokenizedWord
 from anki_miner.models.word import select_mined_form
-from anki_miner.services.subtitle_parser import SubtitleParserService
+from anki_miner.services.subtitle_parser import _KANA_RECOVERED, SubtitleParserService
 from anki_miner.services.word_filter import WordFilterService
 
 
@@ -193,7 +193,7 @@ def test_kana_recovery_probe_ignores_the_injected_policy(test_config, tmp_path):
             mined_form_policy=policy,
         )
 
-    assert service._probe_kana_recovery(token, "形状詞", "きれい") is True
+    assert service._probe_kana_recovery(token, "形状詞", "きれい", True, False) == _KANA_RECOVERED
     # The static's answer was probed, and the policy was never asked.
     assert probed == [["きれい"]]
     assert policy.calls == []

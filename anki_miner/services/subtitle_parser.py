@@ -30,6 +30,7 @@ from anki_miner.services.deinflection import (
     find_highlight_end_with_trace,
     resolve_dictionary_form,
 )
+from anki_miner.services.kana_words import is_listed
 from anki_miner.services.lexical_joiner import LexicalJoiner
 from anki_miner.services.lrc_format import register_lrc_format
 from anki_miner.services.masu_stem_nominalizer import MasuStemNominalizer
@@ -162,7 +163,8 @@ TokenMerger = Any
 # POS backstop for kana recovery: only inflectional content words are recovered
 # from the pure-hiragana script gate. Deliberately EXCLUDES 名詞 — formal nouns
 # こと/もの/ため clear content_gate_ok but are grammar noise as bare kana — and
-# 副詞/代名詞 (kana adverbs/pronouns are overwhelmingly fragments).
+# 副詞/代名詞 (kana adverbs/pronouns are overwhelmingly fragments). The kana
+# word list (services/kana_words.py) names the ones that are words (もう, これ).
 _KANA_RECOVER_POS1: frozenset[str] = frozenset({"動詞", "形容詞", "形状詞"})
 
 # Auxiliary pos2 subtypes rejected even inside _KANA_RECOVER_POS1. Both classes
@@ -178,6 +180,13 @@ _KANA_RECOVER_POS1: frozenset[str] = frozenset({"動詞", "形容詞", "形状�
 #   either. Kanji-spelled 非自立可能 tokens (見る, 来る) are untouched — they pass
 #   should_include and never reach this path.
 _KANA_RECOVER_REJECT_POS2: frozenset[str] = frozenset({"助動詞語幹", "非自立可能"})
+
+# How _kana_recovery brought a hiragana word back: by the content gate, or by
+# name from the kana word list (services/kana_words.py). Only a recovered word
+# takes the U4 window reject: a listed word's longer expressions are listed
+# spans, merged or joined before the word is ever judged alone.
+_KANA_RECOVERED = "recovered"
+_KANA_LISTED = "listed"
 
 #: The not-mined reason each preference gate reports. REJECT_STRUCTURE is absent
 #: on purpose: particles, auxiliaries, symbols and debris are never a word the user seeks.
@@ -814,7 +823,7 @@ class SubtitleParserService:
         # is deterministic per (surface, pos1), so _should_include_word runs it
         # once per distinct token instead of once per occurrence (count_lemmas is
         # a hot path: tens of thousands of tokens). Caches misses too.
-        self._kana_recover_cache: dict[tuple[str, str], bool] = {}
+        self._kana_recover_cache: dict[tuple[str, str, bool, bool], str | None] = {}
         # U4 lexicalized-window attestation memo (see _rejected_by_lexicalized_window).
         # Keyed on the JOINED WINDOW STRING, never on (surface, pos1): the window
         # verdict is context-dependent, so the same recovery candidate can be
@@ -2624,10 +2633,10 @@ class SubtitleParserService:
 
         Tokens the pure morphology rule accepts (kanji / katakana loanwords) pass
         straight through. Anything it rejects gets ONE more chance:
-        ``_recover_kana_content_word`` re-admits a pure-hiragana 動詞/形容詞/形状詞
-        whose mined-form card front is an attested dictionary headword — recovering
-        real kana vocabulary (きれい, すごい, わかる) that the script gate drops by
-        default. count_lemmas and both mining passes call this method, so the
+        ``_recover_kana_content_word`` re-admits a pure-hiragana 動詞/形容詞/形状詞,
+        or a word on the kana word list, whose mined-form card front is an attested
+        dictionary headword — recovering real kana vocabulary (きれい, すごい, わかる,
+        もう, この) that the script gate drops by default. count_lemmas and both mining passes call this method, so the
         recovery is identical across count and mine (the T-38 parity guard).
         """
         if self._inclusion_rule.should_include(word_token):
@@ -2666,7 +2675,9 @@ class SubtitleParserService:
           (hiragana content word — pure hiragana once prolonged-sound marks are
           set aside for the script check, e.g. すげー — attested as its own
           front). On a recovery acceptance, apply the U4 lexicalized-window
-          reject (``_rejected_by_lexicalized_window``). Recovery surfaces are
+          reject (``_rejected_by_lexicalized_window``); a word taken by name
+          from the kana word list skips it, as これは would reject これ.
+          Recovery surfaces are
           never all-katakana, so the katakana guard can never fire on this
           branch.
         - both reject → last-chance ``_whitelist_rescues`` (R1): a token of a
@@ -2689,8 +2700,9 @@ class SubtitleParserService:
             if self._is_katakana_run_fragment(word_token, text, tok_start, tok_end):
                 return False
             return not self._ellipsis_reject(word_token, text, tok_start, tok_end)
-        if self._recover_kana_content_word(word_token):
-            if self._rejected_by_lexicalized_window(word_token, tokens):
+        how = self._kana_recovery(word_token)
+        if how is not None:
+            if how == _KANA_RECOVERED and self._rejected_by_lexicalized_window(word_token, tokens):
                 return False
             return not self._ellipsis_reject(word_token, text, tok_start, tok_end)
         if not self._whitelist_rescues(word_token, text, tok_start, tok_end, tokens, raw_tokens):
@@ -2946,48 +2958,56 @@ class SubtitleParserService:
         )
 
     def _recover_kana_content_word(self, word_token) -> bool:
-        """Whether an otherwise-rejected hiragana content word is recoverable.
+        """Whether an otherwise-rejected hiragana content word is recoverable."""
+        return self._kana_recovery(word_token) is not None
+
+    def _kana_recovery(self, word_token) -> str | None:
+        """How an otherwise-rejected hiragana word comes back: ``_KANA_RECOVERED``, ``_KANA_LISTED`` or None.
 
         Gate (ALL must hold; cheap checks first so the SQLite probe is the last
         resort and only distinct tokens ever reach it):
 
         1. A reading-capable offline probe is wired — else safe-degrade to no
            recovery (``None`` ⇒ today's behavior).
-        2. ``pos1 ∈ {動詞, 形容詞, 形状詞}`` and ``pos2 ∉ {助動詞語幹, 非自立可能}``
-           — the junk backstop that excludes 名詞 formal nouns (こと/もの/ため),
-           grammaticalized 形状詞 auxiliaries (よう/みたい in ようだ/みたいな) and
-           auxiliary-capable verbs (いる/ある/くれる in ている/てくれる)
-           content_gate_ok alone would let through.
-        3. Removing ``ー`` leaves non-empty pure hiragana — the script gate also
+        2. Removing ``ー`` leaves non-empty pure hiragana — the script gate also
            drops colloquial hiragana words containing the prolonged-sound mark.
            Removal is only for this check; cache/mining/attestation keep the
            original surface.
-        4. ``content_gate_ok`` passes and the mined-form card front is attested
-           (memoized per ``(surface, pos1)`` — steps 4+ run once per distinct
-           token, never per occurrence).
+        3. Either ``pos1 ∈ {動詞, 形容詞, 形状詞}`` and ``pos2 ∉ {助動詞語幹,
+           非自立可能}`` (recovered) — the junk backstop that excludes 名詞 formal
+           nouns (こと/もの/ため), grammaticalized 形状詞 auxiliaries (よう/みたい in
+           ようだ/みたいな) and auxiliary-capable verbs (いる/ある/くれる in
+           ている/てくれる) content_gate_ok alone would let through — or the card
+           front is on the kana word list (listed: もう, この, いつも).
+        4. A recovered word passes ``content_gate_ok``, a listed one
+           ``structural_ok``, and the mined-form card front is attested
+           (memoized per token shape — steps 4+ run once per distinct token,
+           never per occurrence).
         """
         if self._kana_attest_lookup is None:
-            return False
-        feature = getattr(word_token, "feature", None)
-        pos1 = getattr(feature, "pos1", None)
-        if pos1 not in _KANA_RECOVER_POS1:
-            return False
-        if getattr(feature, "pos2", None) in _KANA_RECOVER_REJECT_POS2:
-            # ようだ/みたいな stems + いる/ある-class auxiliary-capable verbs —
-            # grammar, not vocabulary. See constant for the full rationale.
-            return False
+            return None
         surface = word_token.surface
         if not _is_kana_candidate(surface):
-            return False
-        key = (surface, pos1)
+            return None
+        feature = getattr(word_token, "feature", None)
+        pos1 = getattr(feature, "pos1", None)
+        if not isinstance(pos1, str):
+            return None
+        # ようだ/みたいな stems + いる/ある-class auxiliary-capable verbs are
+        # grammar, not vocabulary; the list names the few words among them.
+        recoverable = pos1 in _KANA_RECOVER_POS1 and getattr(feature, "pos2", None) not in _KANA_RECOVER_REJECT_POS2
+        merged = getattr(word_token, "compound", False) is True
+        # recoverable is part of the key: the auxiliary-capable つける (気をつける)
+        # and the main verb つける share surface and pos1 but not the verdict.
+        key = (surface, pos1, recoverable, merged)
         if key not in self._kana_recover_cache:
             if len(self._kana_recover_cache) >= _FRONT_CACHE_CAP:
                 self._kana_recover_cache.clear()
-            self._kana_recover_cache[key] = self._probe_kana_recovery(word_token, pos1, surface)
+            self._kana_recover_cache[key] = self._probe_kana_recovery(word_token, pos1, surface, recoverable, merged)
         return self._kana_recover_cache[key]
 
-    def _probe_kana_recovery(self, word_token, pos1: str, surface: str) -> bool:
-        """content_gate_ok + term-OR-reading attestation of the mined-form front.
+    def _probe_kana_recovery(self, word_token, pos1: str, surface: str, recoverable: bool, merged: bool) -> str | None:
+        """The content gate (recovered) or list membership (listed), then attestation of the front.
 
         The form probed is the exact card front ``_emit_word`` would mint
         (``_resolve_front`` then ``select_mined_form``): the surface for 形状詞
@@ -2996,17 +3016,24 @@ class SubtitleParserService:
         never reads ``entries.score`` (uniformly 0 on the bundled dict).
         """
         lookup = self._kana_attest_lookup
-        if lookup is None:  # unreachable via _recover_kana_content_word; narrows for mypy
-            return False
-        if not self._inclusion_rule.content_gate_ok(word_token):
-            return False
+        if lookup is None:  # unreachable via _kana_recovery; narrows for mypy
+            return None
+        if recoverable:
+            if not self._inclusion_rule.content_gate_ok(word_token):
+                return None
+        elif not self._inclusion_rule.structural_ok(word_token):
+            return None
         orth_base = self._mining_base(word_token)
         resolved_front = self._resolve_front(word_token, orth_base, surface, 0, len(surface))
         lemma = self._extract_lemma(word_token)
         form = select_mined_form(pos1, resolved_front, lemma, surface)
         if not form:
-            return False
+            return None
+        if not recoverable and not is_listed(form, pos1, merged=merged):
+            return None
         probe_start = time.perf_counter()
-        result = bool(lookup([form]).get(form))
+        attested = bool(lookup([form]).get(form))
         self._probe_time_s += time.perf_counter() - probe_start
-        return result
+        if not attested:
+            return None
+        return _KANA_RECOVERED if recoverable else _KANA_LISTED
