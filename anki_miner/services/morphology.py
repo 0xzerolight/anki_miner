@@ -839,6 +839,10 @@ def _merge_noun_suffixes(tokens: list, attest: AttestLookup | None = None) -> li
             except AttributeError:
                 _guard("_merge_noun_suffixes#3")
                 head_pos2 = "普通名詞"
+            # An attested merge is a dictionary word, not the name its head is
+            # (日本+人 → 日本人), so the proper-noun gate must not drop it.
+            if head_pos2 == "固有名詞" and attested is not None and surf in attested:
+                head_pos2 = "普通名詞"
             try:
                 head_lemma = extract_lemma(head)
             except AttributeError:

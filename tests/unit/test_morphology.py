@@ -811,6 +811,19 @@ class TestMergeCompoundSuffixesAttestGate:
         )
         assert [t.surface for t in merged] == ["入院中"]
 
+    def test_attested_merge_of_a_proper_noun_head_is_a_common_noun(self):
+        # 日本 (固有名詞) + 人 → 日本人, a dictionary word the proper-noun gate must not drop.
+        merged = merge_compound_suffixes(
+            [_token_pos2("日本", "名詞", "固有名詞"), _suffix_token("人", "ジン")],
+            attest=self._attest({"日本人"}),
+        )
+        assert [(t.surface, t.feature.pos2) for t in merged] == [("日本人", "普通名詞")]
+
+    def test_ungated_merge_of_a_proper_noun_head_keeps_the_tag(self):
+        # Without a dictionary nothing proves 田中さん is a word: it stays a name.
+        merged = merge_compound_suffixes([_token_pos2("田中", "名詞", "固有名詞"), _suffix_token("さん", "サン")])
+        assert [(t.surface, t.feature.pos2) for t in merged] == [("田中さん", "固有名詞")]
+
     # --- prefix pass: bail vs mint ----------------------------------------
 
     def test_prefix_bails_when_unattested(self):
