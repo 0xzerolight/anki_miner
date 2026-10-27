@@ -6746,6 +6746,22 @@ class TestEllipsisTruncationGuard:
         assert service._is_ellipsis_truncation_fragment(tok, text, start, end) is False
         assert self._mine("ここで待って…") == {"待つ"}
 
+    # --- Keep: the restart after an ellipsis is a whole word; only the piece before it is cut. ---
+
+    def test_single_char_restart_after_ellipsis_survives(self):
+        service = self._service()
+        text, spans = self._spans(service, "ボ……僕の名前を……")
+        tok, start, end = self._find(spans, "僕")
+        assert service._is_ellipsis_truncation_fragment(tok, text, start, end) is False
+        assert "僕" in self._mine("ボ……僕の名前を……")
+
+    def test_cut_form_verb_after_ellipsis_survives(self):
+        service = self._service()
+        text, spans = self._spans(service, "先生……待って……")
+        tok, start, end = self._find(spans, "待っ")
+        assert service._is_ellipsis_truncation_fragment(tok, text, start, end) is False
+        assert "待つ" in self._mine("先生……待って……")
+
     # --- Keep: 意志推量形 is not a cut form even when it abuts the ellipsis. ---
 
     def test_non_cut_conjugation_survives(self):

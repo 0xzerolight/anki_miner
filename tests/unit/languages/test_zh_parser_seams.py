@@ -26,6 +26,8 @@ from anki_miner.services.subtitle_parser import SubtitleParserService
 #: one character long and sits right against the first of them.
 ZH_STUTTER = "钱…钱不见了…全都没了。"
 YUE_STUTTER = "錢…錢唔見咗…全部冇晒。"
+# The guard keeps a restart after an ellipsis, so only a cut piece shows it running.
+ZH_CUT = "钱…不见了…全都没了。"
 
 #: 大家好。 with 大 written as the Kangxi radical U+2F24, the substitution OCR
 #: and legacy sources make.
@@ -95,7 +97,7 @@ class TestTheEllipsisGuardSeam:
 
     def test_an_explicit_argument_still_wins(self) -> None:
         """A default, not a per-language constant: asked for, the guard runs."""
-        assert _mine(_parser("zh", ellipsis_fragment_guard=True), ZH_STUTTER) == {"不见", "全都", "没"}
+        assert _mine(_parser("zh", ellipsis_fragment_guard=True), ZH_CUT) == {"不见", "全都", "没"}
 
 
 class TestTheCompoundMatcherSeam:

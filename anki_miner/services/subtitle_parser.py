@@ -2904,8 +2904,10 @@ class SubtitleParserService:
 
         Post-acceptance REJECT layer shared by BOTH ``_mine_token`` branches and,
         unlike the U4/U5 rejects, DICT-FREE (positional + POS/cForm only) so it
-        fires on the video path too. Rejects only a token DIRECTLY abutting an
-        ellipsis char (``…``/``‥``) that also matches one truncation signal:
+        fires on the video path too. Rejects only a token DIRECTLY followed by an
+        ellipsis char (``…``/``‥``) that also matches one truncation signal. The
+        cut-off piece is always left of the ellipsis; the word after it is the
+        restart, complete (ボ……僕 drops ボ and keeps 僕, ……待って keeps 待つ):
 
         (a) a 動詞/形容詞 stranded in a cut conjugation — its ``cForm`` PREFIX is
             one of 連用形/未然形/語幹/仮定形 (欲し…→欲する). unidic emits hyphenated
@@ -2917,15 +2919,14 @@ class SubtitleParserService:
             STUTTER line of ≥2 ellipsis groups (合…/タ… イガ…). ``……`` is one
             group, so a single trailing 夢…… survives.
 
-        Adjacency is SET membership; the line-edge sentinel "" (a token at a line
-        boundary) is not a member, so a boundary token is never falsely adjacent.
+        Adjacency is SET membership; the line-edge sentinel "" (a token at the
+        line end) is not a member, so a boundary token is never falsely adjacent.
         Deliberate recall loss (plan ledger): trailing 連用中止法 (飲み…→飲む) and
         single-char content nouns in ≥2-group lines (声, 年) — all common words
         mined elsewhere.
         """
-        left = text[tok_start - 1] if tok_start > 0 else ""
         right = text[tok_end] if tok_end < len(text) else ""
-        if left not in _ELLIPSIS_CHARS and right not in _ELLIPSIS_CHARS:
+        if right not in _ELLIPSIS_CHARS:
             return False
         feature = getattr(word_token, "feature", None)
         # (a) severed inflectional tail of a verb/adjective.
