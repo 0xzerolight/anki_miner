@@ -70,7 +70,8 @@ EXCLUDED: dict[tuple[str, str], str] = {
     **dict.fromkeys((("いや", "副詞"), ("よし", "副詞")), "interjection"),
     # Archaic, or not a word to learn.
     **dict.fromkeys((("たれ", "代名詞"), ("さる", "連体詞"), ("かく", "副詞"), ("ゆえ", "名詞")), "archaic"),
-    ("ちんちん", "副詞"): "vulgar",
+    **dict.fromkeys((("ちんちん", "副詞"), ("ちんちん", "名詞")), "vulgar"),
+    ("きちがい", "名詞"): "slur",
     ("にゃー", "副詞"): "animal sound",
 }
 

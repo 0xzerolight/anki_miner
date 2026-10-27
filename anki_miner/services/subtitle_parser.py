@@ -828,7 +828,7 @@ class SubtitleParserService:
         # is deterministic per (surface, pos1), so _should_include_word runs it
         # once per distinct token instead of once per occurrence (count_lemmas is
         # a hot path: tens of thousands of tokens). Caches misses too.
-        self._kana_recover_cache: dict[tuple[str, str, bool, bool], str | None] = {}
+        self._kana_recover_cache: dict[tuple[str, str, str | None, bool], str | None] = {}
         # U4 lexicalized-window attestation memo (see _rejected_by_lexicalized_window).
         # Keyed on the JOINED WINDOW STRING, never on (surface, pos1): the window
         # verdict is context-dependent, so the same recovery candidate can be
@@ -3027,11 +3027,13 @@ class SubtitleParserService:
             return None
         # ようだ/みたいな stems + いる/ある-class auxiliary-capable verbs are
         # grammar, not vocabulary; the list names the few words among them.
-        recoverable = pos1 in _KANA_RECOVER_POS1 and getattr(feature, "pos2", None) not in _KANA_RECOVER_REJECT_POS2
+        pos2 = getattr(feature, "pos2", None)
+        recoverable = pos1 in _KANA_RECOVER_POS1 and pos2 not in _KANA_RECOVER_REJECT_POS2
         merged = getattr(word_token, "compound", False) is True
-        # recoverable is part of the key: the auxiliary-capable つける (気をつける)
-        # and the main verb つける share surface and pos1 but not the verdict.
-        key = (surface, pos1, recoverable, merged)
+        # pos2 is part of the key: the auxiliary-capable つける (気をつける) and the
+        # main verb つける share surface and pos1 but not the verdict, nor do the
+        # noun ちどり and the name ちどり (固有名詞, an excluded subtype).
+        key = (surface, pos1, pos2, merged)
         if key not in self._kana_recover_cache:
             if len(self._kana_recover_cache) >= _FRONT_CACHE_CAP:
                 self._kana_recover_cache.clear()

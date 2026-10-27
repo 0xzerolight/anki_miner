@@ -1326,6 +1326,15 @@ class TestKanaWordRecovery:
         token = _make_token("ねこ", "名詞", pos2="固有名詞", lemma="ねこ", orth_base="ねこ")
         assert service._should_include_word(token) is False
 
+    def test_a_name_reading_does_not_cache_away_the_listed_noun(self, test_config):
+        # unidic tags ちどり 固有名詞 in one line and 普通名詞 in the next: the
+        # verdict must not depend on which line came first.
+        service = self._service(test_config, _attest_lookup("ねこ"))
+        name = _make_token("ねこ", "名詞", pos2="固有名詞", lemma="ねこ", orth_base="ねこ")
+        noun = _make_token("ねこ", "名詞", pos2="普通名詞", lemma="ねこ", orth_base="ねこ")
+        assert service._should_include_word(name) is False
+        assert service._should_include_word(noun) is True
+
     @pytest.mark.parametrize(
         ("surface", "pos1", "lemma"),
         [("って", "助詞", "って"), ("の", "助詞", "の"), ("けど", "接続詞", "けれど")],

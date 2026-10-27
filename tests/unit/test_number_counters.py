@@ -72,6 +72,7 @@ def test_rejects_what_is_not_a_numeral(text):
         (4, "円", "よえん"),
         (10_000, "円", "いちまんえん"),
         (3, "つ", "みっつ"),
+        (4, "名", "よんめい"),
     ],
 )
 def test_reads_the_counter_with_its_sound_changes(number, counter, reading):
@@ -99,12 +100,16 @@ def test_the_setting_is_parse_relevant():
     assert "mine_number_counters" in PARSE_RELEVANT_CONFIG_FIELDS
 
 
-def _mine(test_config, on, *lines):
+def _words(test_config, on, *lines):
     config = replace(test_config, mine_number_counters=on)
     service = SubtitleParserService(config, kana_attest_lookup=lambda forms: dict.fromkeys(forms, True))
     units = [ReadingUnit(text=line, index=i, location_label="t") for i, line in enumerate(lines)]
     words, _index, _counts = service.parse_text_units(units, want_line_index=False)
-    return {word.mined_form: word.expression_reading for word in words}
+    return words
+
+
+def _mine(test_config, on, *lines):
+    return {word.mined_form: word.expression_reading for word in _words(test_config, on, *lines)}
 
 
 class TestMining:
@@ -127,3 +132,14 @@ class TestMining:
 
     def test_never_merges_across_a_space(self, test_config):
         assert "一人" not in _mine(test_config, True, "一 人")
+
+    @pytest.mark.parametrize(("line", "wrong"), [("1,500円です", "500円"), ("1.5時間", "5時間"), ("第3回", "3回")])
+    def test_never_merges_the_tail_of_a_longer_number(self, test_config, line, wrong):
+        # unidic splits 1,500 and 1.5 at the separator and 第3回 after 第.
+        assert wrong not in _mine(test_config, True, line)
+
+    def test_the_sentence_reads_the_counter_as_the_card_does(self, test_config):
+        word = next(w for w in _words(test_config, True, "ペンが三本ある") if w.mined_form == "三本")
+        assert word.expression_reading == "さんぼん"
+        assert "三本[さんぼん]" in word.sentence_furigana
+        assert "さんぼん" in word.sentence_reading

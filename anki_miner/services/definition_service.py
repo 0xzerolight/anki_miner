@@ -641,8 +641,15 @@ class DefinitionService:
 
         # A number + counter card (4人) is in no dictionary: it takes its
         # counter's entry, looked up with the counter's own reading so the
-        # counter sense leads (人 にん 'counter for people', not 人 ひと).
-        counter_pairs = {pair: entry for pair in remaining if (entry := counter_entry(pair[0])) is not None}
+        # counter sense leads (人 にん 'counter for people', not 人 ひと). Only
+        # where the language's ladder has the counter rung (ja): zh's 三本 is not
+        # a Japanese counter word.
+        counter_pairs = {
+            pair: entry
+            for pair in remaining
+            if (entry := counter_entry(pair[0])) is not None
+            and any(text == entry[0] for text, _conditions in self.fallback_candidates(pair[0], "", None))
+        }
         if counter_pairs and not cancellation_requested():
             entries: list[tuple[str, str | None]] = list(dict.fromkeys(counter_pairs.values()))
             found = dict(zip(entries, self.get_definitions_batch(entries, is_cancelled=is_cancelled), strict=True))
@@ -1272,6 +1279,11 @@ class DefinitionService:
         """
         self.ensure_loaded()
         candidates = self.fallback_candidates(word, "", None)
+        # The counter rung stands in for a number + counter word no dictionary
+        # lists (4人); a listed one (一人, 十分) keeps its own entries alone.
+        counter = counter_of(word)
+        if counter is not None and self.has_offline_definitions([word]).get(word):
+            candidates = [candidate for candidate in candidates if candidate[0] != counter]
         pair: list[tuple[str, str | None]] = [(word, None)]
         token_kwargs = _token_kwargs(pair, {word: lemma} if lemma else None, {word: pos} if pos else None)
         fallback_kwargs = {"pos": pos} if pos else {}

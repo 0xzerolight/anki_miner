@@ -1,5 +1,7 @@
 """Tests for the kana word list: kana-only words the parser mines by name."""
 
+from dataclasses import replace
+
 import pytest
 
 from anki_miner.models.reading import ReadingUnit
@@ -80,6 +82,37 @@ class TestMining:
 
     def test_still_drops_the_auxiliary_verb(self, test_config):
         assert "いる" not in _mine(test_config, "見ている")
+
+    @pytest.mark.parametrize(
+        ("line", "front", "pieces"),
+        [("そのまま帰る", "そのまま", {"その", "まま"}), ("これから行く", "これから", {"これ"})],
+    )
+    def test_mines_a_kana_compound_whole(self, test_config, line, front, pieces):
+        fronts = _mine(test_config, line)
+        assert front in fronts
+        assert not pieces & set(fronts)
+
+    def test_drops_the_light_verb_after_a_noun(self, test_config):
+        assert "する" not in _mine(test_config, "毎日勉強する")
+
+    def test_counts_what_it_mines(self, test_config, tmp_path):
+        # T-38: the curator's occurrence count and the mined cards see the same
+        # fronts, across listed words, kana joins, place names and counters.
+        lines = ["もう行こう", "これは本だ", "いつも笑う", "でも、行く", "雨のため中止", "4人で日本に行く"]
+        srt = tmp_path / "parity.srt"
+        srt.write_text(
+            "\n".join(f"{i + 1}\n00:00:0{i},000 --> 00:00:0{i},900\n{line}\n" for i, line in enumerate(lines)),
+            encoding="utf-8",
+        )
+        service = SubtitleParserService(
+            replace(test_config, mine_number_counters=True),
+            kana_attest_lookup=lambda forms: dict.fromkeys(forms, True),
+            term_common_lookup=lambda terms: {term: term == "日本" for term in terms},
+        )
+        units = [ReadingUnit(text=line, index=i, location_label="t") for i, line in enumerate(lines)]
+        _words, _index, counter = service.parse_text_units(units, want_line_index=False)
+        assert {"もう", "これ", "いつも", "でも", "ため", "4人", "日本"} <= set(counter)
+        assert service.count_fronts(srt) == counter
 
     def test_an_unattested_listed_word_is_not_mined(self, test_config):
         service = SubtitleParserService(test_config, kana_attest_lookup=lambda forms: dict.fromkeys(forms, False))

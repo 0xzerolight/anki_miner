@@ -594,6 +594,17 @@ class TestGetDefinitionsBatchFastPath:
         assert service.get_definitions_batch([("4人", "よにん")]) == ["人:にん"]
         assert calls == [[("4人", "よにん")], [("人", "にん")]]
 
+    def test_counter_entry_only_where_the_ladder_has_the_counter_rung(self, test_config):
+        # zh's 三本 is no Japanese counter word: a ladder without the rung keeps it a miss.
+        class NoCounterLadder:
+            def candidates(self, word, orth_base, ctype):
+                return []
+
+        provider = make_batch_provider("zh", table={"本": "book"})
+        service = DefinitionService(test_config, providers=[provider], lookup=NoCounterLadder())
+
+        assert service.get_definitions_batch([("三本", "sān běn")]) == [None]
+
     def test_lemma_context_forwarded_to_offline_batch_providers(self, test_config):
         """The token lemma reaches lookup_many so the storage-side Rule A' scope
         can prefer the right lexeme for a kana front (ゆう → 言う, not 有/夕)."""
@@ -1208,6 +1219,16 @@ class TestLookupAllOffline:
         provider.lookup_fallback.assert_called_with("cand", 0, pos="VERB")
         service.lookup_all_offline("word")
         provider.lookup_fallback.assert_called_with("cand", 0)
+
+    def test_counter_rung_only_for_a_number_word_no_dictionary_lists(self, test_config):
+        # 一人 has its own entry, so the pane leaves out 人's (-ian, person);
+        # 4人 has none, so 人's entry is its definition.
+        provider = make_batch_provider("jmdict", table={"一人": "<div>one person</div>"})
+        provider.lookup_fallback.side_effect = lambda w, c, **kw: f"<div>{w}</div>" if w == "人" else None
+        service = DefinitionService(test_config, providers=[provider])
+
+        assert service.lookup_all_offline("一人") == [("jmdict", "<div>one person</div>")]
+        assert service.lookup_all_offline("4人") == [("jmdict", "<div>人</div>")]
 
 
 def _profile_provider(tmp_path: Path, code: str, rows: list[DictRow]) -> IndexedDictProvider:

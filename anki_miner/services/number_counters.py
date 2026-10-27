@@ -6,8 +6,8 @@ card. With the setting on, ``merge_number_counters`` joins a numeral and the
 counter after it into one token whose front is the line's own spelling (4人,
 一個, ３本) and whose reading takes the counter's sound changes (よにん,
 いっこ, さんぼん), which no per-token kana can give. A counter outside the
-table, or a number the table cannot read (a decimal, a 1,000 with a comma),
-leaves the line as it was.
+table, or a number the table cannot read (a decimal, a 1,000 with a comma, an
+ordinal 第3回), leaves the line as it was.
 
 The card's definition is the counter's own entry: ``counter_of`` names it for
 the dictionary lookup ladder, as no dictionary lists 4人 itself.
@@ -25,6 +25,7 @@ _KANJI_DIGITS = {"〇": 0, "零": 0, "一": 1, "二": 2, "三": 3, "四": 4, "�
 _KANJI_UNITS = {"十": 10, "百": 100, "千": 1000}
 _KANJI_BIG = {"万": 10_000}
 _MAX_NUMBER = 100_000_000
+_DIGIT_SEPARATORS = frozenset({",", "，", ".", "．"})
 
 _ONES = {1: "いち", 2: "に", 3: "さん", 4: "よん", 5: "ご", 6: "ろく", 7: "なな", 8: "はち", 9: "きゅう"}
 _HUNDREDS = {
@@ -97,6 +98,7 @@ _COUNTERS: dict[str, _Counter] = {
     "週間": _Counter("しゅうかん", _GEMINATE_ST),
     "点": _Counter("てん", _GEMINATE_ST),
     "人": _Counter("にん", endings={"よん": "よ"}, exact={1: "ひとり", 2: "ふたり"}),
+    "名": _Counter("めい"),
     "年": _Counter("ねん", endings={"よん": "よ"}),
     "年間": _Counter("ねんかん", endings={"よん": "よ"}),
     "円": _Counter("えん", endings={"よん": "よ"}),
@@ -278,7 +280,8 @@ def merge_number_counters(text: str, tokens: list) -> list:
     across it. The merged token
     carries its reading locked, so the dictionary pass keeps the counter's sound
     changes, and ``number_counter`` on its feature, which the parser's
-    acceptance reads.
+    acceptance reads. A numeral right after 第 or after a digit separator
+    (1,|500, 1.|5) continues a number and starts no merge.
     """
     spans: dict[int, tuple[int, int]] = {}
     index = 0
@@ -296,11 +299,20 @@ def merge_number_counters(text: str, tokens: list) -> list:
         """3分の1 is a third, not three minutes."""
         return counter == "分" and after < len(tokens) and tokens[after].surface == "の"
 
+    def inside_number(i: int) -> bool:
+        """Numeral i continues a number: 三百|五十, 1,|500 or 1.|5 split at the separator, 第|3回."""
+        if i == 0 or not touching(i - 1):
+            return False
+        before = tokens[i - 1]
+        if _is_numeral(before) or before.surface == "第":
+            return True
+        return before.surface in _DIGIT_SEPARATORS and i > 1 and _is_numeral(tokens[i - 2]) and touching(i - 2)
+
     out: list = []
     i = 0
     while i < len(tokens):
         token = tokens[i]
-        if not _is_numeral(token) or (i > 0 and _is_numeral(tokens[i - 1]) and touching(i - 1)):
+        if not _is_numeral(token) or inside_number(i):
             out.append(token)
             i += 1
             continue
@@ -336,6 +348,9 @@ def merge_number_counters(text: str, tokens: list) -> list:
             kana_locked=True,
         )
         merged.feature.number_counter = True
+        # The table reading is attested: the sentence furigana and reading take
+        # it too (replace_overridden_spans), not unidic's per-token さん|ぽん.
+        merged.feature.kana_attested = True
         out.append(merged)
         i = consumed
     return out
