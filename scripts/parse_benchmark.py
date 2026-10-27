@@ -398,6 +398,10 @@ _ANCHOR_HEADWORDS: tuple[str, ...] = (
     "もしかして",
     "ため",
     "ねこ",
+    # place-names: common places, and 秋葉原 attested but not common
+    "北海道",
+    "パリ",
+    "秋葉原",
 )
 
 # Yomitan `ruleIdentifiers` per fixture headword. A real term bank ships these,
@@ -443,7 +447,7 @@ _ANCHOR_READINGS: dict[str, str] = {
     "詰まらない": "つまらない",
 }
 
-_ANCHOR_COMMON_HEADWORDS = frozenset({"やる"})
+_ANCHOR_COMMON_HEADWORDS = frozenset({"やる", "北海道", "パリ"})
 
 _ANCHOR_DICT_ID = "anchor-fixture"
 _anchor_service: SubtitleParserService | None = None

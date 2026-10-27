@@ -162,6 +162,7 @@ _EXPECTED_CATEGORIES = {
     "reading-gate",
     "lexical-join",
     "kana-words",
+    "place-names",
 }
 
 

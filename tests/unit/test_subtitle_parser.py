@@ -7278,7 +7278,7 @@ class TestWhitelistParseRescue:
     Structure stays absolute: particles, the kana-recovery aux reject and the
     fragment guards. The rescue matches the card front only."""
 
-    def _invoke(self, tmp_path, test_config, text, tokens, fn, *, whitelist=None, dictionary=None):
+    def _invoke(self, tmp_path, test_config, text, tokens, fn, *, whitelist=None, dictionary=None, common=None):
         sub_file = tmp_path / "rescue.srt"
         sub_file.write_text("stub", encoding="utf-8")
         mock_line = MagicMock()
@@ -7293,6 +7293,8 @@ class TestWhitelistParseRescue:
             kwargs["force_include"] = whitelist
         if dictionary is not None:
             kwargs["term_lookup"] = _lookup_for(dictionary)
+        if common is not None:
+            kwargs["term_common_lookup"] = lambda terms: {term: term in common for term in terms}
         with (
             patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
             patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
@@ -7320,6 +7322,25 @@ class TestWhitelistParseRescue:
 
     def test_no_predicate_keeps_the_parse_gates(self, tmp_path, test_config):
         assert self._fronts(tmp_path, test_config, "太郎は", self._name_line()) == []
+
+    def _place_line(self, surface, pos3):
+        place = _make_token(surface, "名詞", "固有名詞", lemma=surface, kana="ニホン")
+        place.feature.pos3 = pos3
+        return [place, _make_token("は", "助詞", "係助詞", lemma="は")]
+
+    def test_rescues_a_common_place_name_without_a_whitelist(self, tmp_path, test_config):
+        fronts = self._fronts(tmp_path, test_config, "日本は", self._place_line("日本", "地名"), common={"日本"})
+        assert fronts == ["日本"]
+
+    def test_place_name_the_dictionary_does_not_mark_common_stays_dropped(self, tmp_path, test_config):
+        # 秋葉原 is a JMnedict name only: no commonness-aware dictionary marks it common.
+        fronts = self._fronts(tmp_path, test_config, "秋葉原は", self._place_line("秋葉原", "地名"), common=set())
+        assert fronts == []
+
+    def test_common_person_name_stays_dropped(self, tmp_path, test_config):
+        # Only pos3 地名 is a word to learn; a 人名 spelling JMdict marks common is still a name.
+        fronts = self._fronts(tmp_path, test_config, "誠は", self._place_line("誠", "人名"), common={"誠"})
+        assert fronts == []
 
     def test_rescues_a_whitelisted_pure_hiragana_adverb(self, tmp_path, test_config):
         tokens = [_make_token("ちょっと", "副詞", "一般", lemma="一寸", orth_base="ちょっと")]

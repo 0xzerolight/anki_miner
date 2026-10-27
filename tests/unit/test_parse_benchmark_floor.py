@@ -353,6 +353,15 @@ def test_anchor_meets_kana_words_floor() -> None:
     assert junk_rate(b_kw) == 0.0, f"strategy (b) kana-words junk_rate {junk_rate(b_kw)} above 0.0"
 
 
+def test_anchor_meets_place_names_floor() -> None:
+    results = _scored()
+    b_pn = results["b-lite-anchor"].by_category["place-names"]
+    # 秋葉原 is attested but not common on purpose: junk here means the rescue
+    # stopped asking the dictionary whether a place is an everyday word.
+    assert recall(b_pn) == 1.0, f"strategy (b) place-names recall {recall(b_pn)} below 1.0"
+    assert junk_rate(b_pn) == 0.0, f"strategy (b) place-names junk_rate {junk_rate(b_pn)} above 0.0"
+
+
 def test_orthbase_meets_kana_runs_floor() -> None:
     results = _scored()
     # V8 pins strategy (a), NOT (b): the merged-token junk (獅子+子 → シシシ, 3-run シ)

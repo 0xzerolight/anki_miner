@@ -2747,19 +2747,38 @@ class SubtitleParserService:
     ) -> bool:
         """Whether the run's whitelist rescues a token every inclusion path rejected (R1).
 
-        Cheap checks first: no whitelist, a tag the profile never rescues, or a
-        kana surface in the recovery's aux reject (いる/ある in ている)
-        (``_rescue_eligible``). Then the card front, resolved exactly as
-        emission resolves it, must be on the list. The lexicalized-window probe
-        (I/O) runs last, for whitelisted tokens only.
+        Cheap checks first: no whitelist and no commonness probe, a tag the
+        profile never rescues, or a kana surface in the recovery's aux reject
+        (いる/ある in ている) (``_rescue_eligible``). Then the card front,
+        resolved exactly as emission resolves it, must be on the list or be a
+        common place name (``_common_place_name``). The lexicalized-window probe
+        (I/O) runs last, for rescued tokens only.
         """
-        if self._force_include is None or not self._rescue_eligible(word_token):
+        if (self._force_include is None and self._term_common_lookup is None) or not self._rescue_eligible(word_token):
             return False
         kana = _is_kana_candidate(word_token.surface)
         mined = self._card_front(word_token, text, tok_start, tok_end, raw_tokens)
-        if not self._rescue_script(mined) or not self._force_include(mined):
+        if not self._rescue_script(mined):
+            return False
+        if not (self._force_include is not None and self._force_include(mined)) and not self._common_place_name(
+            word_token, mined
+        ):
             return False
         return not (kana and self._rejected_by_lexicalized_window(word_token, tokens))
+
+    def _common_place_name(self, word_token, front: str) -> bool:
+        """Whether a 固有名詞 place token is also an everyday dictionary word (日本, 北海道, パリ).
+
+        The place name is a word the learner needs, as a person's name is not:
+        only pos3 地名, and only a front a commonness-aware dictionary marks
+        common, which JMdict does for its own place entries and never for a
+        JMnedict-only name (秋葉原).
+        """
+        feature = getattr(word_token, "feature", None)
+        if getattr(feature, "pos2", None) != "固有名詞" or getattr(feature, "pos3", None) != "地名":
+            return False
+        common = self._memoized_term_common([front])
+        return bool(common and common.get(front))
 
     def _ellipsis_reject(self, word_token, text: str, tok_start: int, tok_end: int) -> bool:
         """The U8 guard, or ``False`` outright for a parser that closed the seam.

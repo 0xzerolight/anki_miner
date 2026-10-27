@@ -1,0 +1,3 @@
+{"id":"pn01","sentence":"北海道は寒い","expected":["北海道","寒い"],"category":"place-names","note":"固有名詞/地名 that the anchor dictionary marks common: a place word to learn."}
+{"id":"pn02","sentence":"パリに行く","expected":["パリ","行く"],"category":"place-names","note":"Katakana place name, common in the anchor dictionary."}
+{"id":"pn03","sentence":"秋葉原で買う","expected":["買う"],"category":"place-names","note":"秋葉原 is anchored but not common (JMnedict-only in a real chain): the place stays out."}
