@@ -110,6 +110,12 @@ class TestBlocked:
         tokens[1] = _tok("早い", "形容詞", "一般", kana="ハヤイ")
         self._blocked(tokens)
 
+    def test_appearance_sou_neighbour_blocks(self):
+        """落ち|そう — the 様態 そう (形状詞 / 助動詞語幹) takes only a verb stem."""
+        tokens = _sashiire()
+        tokens[1] = _tok("そう", "形状詞", "助動詞語幹", lemma="そう-様態", kana="ソウ")
+        self._blocked(tokens)
+
     def test_punctuation_neighbour_blocks(self):
         tokens = _sashiire()
         tokens[1] = _tok("。", "補助記号", "句点", kana="。")

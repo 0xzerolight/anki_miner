@@ -53,6 +53,10 @@ TermLookup = Callable[[list[str]], set[str]]
 # verb second halves), 接続詞 (連用中止法), and every tag unidic may add later.
 _NOMINALIZING_NEIGHBOUR_POS1 = frozenset({"名詞", "代名詞", "副詞", "形状詞", "連体詞", "接頭辞", "感動詞"})
 
+# The appearance そう after a stem (落ち|そう, "about to fall") is 形状詞 / 助動詞語幹:
+# an allowed neighbour POS, but one only a verb stem takes, so it blocks.
+_VERBAL_NEIGHBOUR_POS2 = "助動詞語幹"
+
 # Bound stems (し, 見, 出し, つけ, 願い) are 動詞 / 非自立可能. They head no
 # standalone noun, and several are attested as headwords in their own right, so
 # without this guard 気を|つけ or お|願い would be rewritten out from under the
@@ -108,8 +112,10 @@ class MasuStemNominalizer:
         surface = getattr(token, "surface", "")
         if len(surface) < _MIN_SURFACE_LEN:
             return False
-        next_pos1 = getattr(getattr(next_token, "feature", None), "pos1", None)
-        return next_pos1 in _NOMINALIZING_NEIGHBOUR_POS1
+        next_feature = getattr(next_token, "feature", None)
+        if getattr(next_feature, "pos2", None) == _VERBAL_NEIGHBOUR_POS2:
+            return False
+        return getattr(next_feature, "pos1", None) in _NOMINALIZING_NEIGHBOUR_POS1
 
     @staticmethod
     def _nominalize(token) -> SyntheticToken:
