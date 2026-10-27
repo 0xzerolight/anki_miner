@@ -422,6 +422,24 @@ class TestFindHighlightEnd:
         ]
         assert find_highlight_end(text, tokens, 2, 4, tokens[2]) == 5
 
+    def test_verb_extends_over_appearance_sou(self):
+        # 動き|そう: そう is 形状詞 / 助動詞語幹, deinflected by the table's -そう.
+        text = "動きそう"
+        tokens = [
+            _tok("動き", "動詞", lemma="動く", orth_base="動く", ctype="五段-カ行"),
+            _tok("そう", "形状詞", lemma="そう-様態"),
+        ]
+        assert find_highlight_end(text, tokens, 0, 2, tokens[0]) == 4
+
+    def test_adjective_extends_over_nominal_suffix(self):
+        # 温か|さ: さ is 接尾辞, deinflected by the table's -さ.
+        text = "温かさ"
+        tokens = [
+            _tok("温か", "形容詞", lemma="温かい", orth_base="温かい", ctype="形容詞"),
+            _tok("さ", "接尾辞"),
+        ]
+        assert find_highlight_end(text, tokens, 0, 2, tokens[0]) == 3
+
     def test_window_stops_at_punctuation(self):
         text = "種を蒔いた。"
         tokens = [

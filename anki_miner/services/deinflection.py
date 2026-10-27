@@ -258,7 +258,9 @@ class Deinflector:
 # Window-stop bounds for find_highlight_end (candidate-COUNT bounds only;
 # the deinflection validator is the correctness guarantee).
 _EXTENDABLE_POS1 = ("動詞", "形容詞")
-_INFLECTIONAL_TAIL_POS1 = frozenset({"助動詞", "助詞", "動詞", "形容詞"})
+# 形状詞 and 接尾辞 carry the appearance そう and the nominal さ/がる (動き|そう,
+# 温か|さ, 恥ずかし|がら|ない), which the table deinflects as -そう, -さ and -がる.
+_INFLECTIONAL_TAIL_POS1 = frozenset({"助動詞", "助詞", "動詞", "形容詞", "形状詞", "接尾辞"})
 # 食べさせられたくありませんでした has a supported 14-char tail after 食べ.
 _WINDOW_CAP_CHARS = 14
 
@@ -318,7 +320,7 @@ def find_highlight_end_with_trace(
 
     Window stops (bounds only, never the correctness guarantee): a
     following raw token must be adjacent in ``text``, pure hiragana,
-    inflectional POS (助動詞/助詞/動詞/形容詞 — a 名詞 like こと stops the
+    inflectional POS (助動詞/助詞/動詞/形容詞/形状詞/接尾辞 — a 名詞 like こと stops the
     window), and within ``tok_end + _WINDOW_CAP_CHARS`` chars.
     """
     feature = getattr(token, "feature", None)
