@@ -177,12 +177,36 @@ def resolve_special_reading(head_surface: str, next_surface: str | None) -> str 
 #   (私, わたくし) → わたし: UniDic emits ワタクシ for 私 in every context, so
 #       every 私 card read わたくし; the formal-speech sense loss is accepted, and
 #       わたし matches the ワタシ fold in models/word.py.
+#   (私たち/私達, わたくしたち) → わたしたち: the merged front carries the same
+#       ワタクシ head, which the 私 entry (keyed on the bare spelling) misses.
+#   (明日, あす) → あした, (その後, そのご) → そのあと: UniDic emits the formal
+#       variant (アス always; ゴ before a comma); a card takes JMdict's first
+#       reading, and the formal-register loss is accepted as for 私.
+#   (何, なん) → なに, (何か, なんか) → なにか: UniDic emits ナン for 何 in every
+#       context, 何を and 何が included; the card shows the headword reading, and
+#       the なん of 何だ/何で is accepted as lost.
+#   (言う, ゆう) → いう, (そう言う, そうゆう) → そういう: UniDic reads 言う ユウ
+#       after そう; a kanji 言う never reads ゆう on a card.
+#   (蛙, かわず) → かえる: UniDic emits the poetic カワズ in every context.
+#   (日本語/日本人, にっぽん…) → にほん…: UniDic reads 日本 ニッポン, and the
+#       dictionary attests both readings, so the merge keeps the rarer one.
 _READING_OVERRIDES: dict[tuple[str, str], str] = {
     ("一日", "ついたち"): "いちにち",
     ("仏", "ふつ"): "ほとけ",
     ("マズい", "まじい"): "まずい",
     ("込む", "ごむ"): "こむ",
     ("私", "わたくし"): "わたし",
+    ("私たち", "わたくしたち"): "わたしたち",
+    ("私達", "わたくしたち"): "わたしたち",
+    ("明日", "あす"): "あした",
+    ("その後", "そのご"): "そのあと",
+    ("何", "なん"): "なに",
+    ("何か", "なんか"): "なにか",
+    ("言う", "ゆう"): "いう",
+    ("そう言う", "そうゆう"): "そういう",
+    ("蛙", "かわず"): "かえる",
+    ("日本語", "にっぽんご"): "にほんご",
+    ("日本人", "にっぽんじん"): "にほんじん",
 }
 
 
@@ -605,6 +629,9 @@ def attest_merged_readings(tokens: list, reading_lookup: ReadingLookup | None) -
             chosen = min(folded, key=lambda r: _edit_distance(r, concat))
         if chosen is None:
             continue
+        # The curated table outranks an attested concatenation of a misread head
+        # (私たち: ワタクシ+タチ is a listed reading, but not the one a card wants).
+        chosen = resolve_reading_override(tok.surface, chosen) or chosen
         if chosen == concat:
             tok.feature.kana_attested = True
             continue

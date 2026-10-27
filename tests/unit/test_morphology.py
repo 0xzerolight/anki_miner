@@ -673,6 +673,17 @@ class TestResolveReadingOverride:
             ("マズい", "まじい", "まずい"),
             ("込む", "ごむ", "こむ"),
             ("私", "わたくし", "わたし"),
+            ("私たち", "わたくしたち", "わたしたち"),
+            ("私達", "わたくしたち", "わたしたち"),
+            ("明日", "あす", "あした"),
+            ("その後", "そのご", "そのあと"),
+            ("何", "なん", "なに"),
+            ("何か", "なんか", "なにか"),
+            ("言う", "ゆう", "いう"),
+            ("そう言う", "そうゆう", "そういう"),
+            ("蛙", "かわず", "かえる"),
+            ("日本語", "にっぽんご", "にほんご"),
+            ("日本人", "にっぽんじん", "にほんじん"),
         ],
     )
     def test_listed_pairs_are_corrected(self, spelling, derived, expected):
@@ -1021,6 +1032,14 @@ class TestAttestMergedReadings:
         tok = out[0]
         assert tok.feature.kana == "バカヂカラ"
         assert getattr(tok.feature, "kana_attested", False) is True
+        assert getattr(tok.feature, "kana_overridden", False) is True
+
+    def test_curated_override_outranks_attested_concat(self):
+        # ニッポン+ジン is a listed reading of 日本人, but the curated table wants にほんじん.
+        tokens = self._merged("日本", "ニッポン", "人", "ジン")
+        out = attest_merged_readings(tokens, lambda ts: {"日本人": ["にほんじん", "にっぽんじん"]})
+        tok = out[0]
+        assert tok.feature.kana == "ニホンジン"
         assert getattr(tok.feature, "kana_overridden", False) is True
 
     def test_keep_when_concat_attested(self):

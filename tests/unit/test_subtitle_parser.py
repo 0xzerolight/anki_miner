@@ -6817,7 +6817,7 @@ class TestRepeatedKanaRunReject:
 
 
 class TestCuratedReadingOverride:
-    """Curated reading corrections for unidic-lite misreadings (一日/仏/マズい/込む/私).
+    """Curated reading corrections for unidic-lite misreadings (一日/仏/マズい/込む/私/明日/何/蛙/言う).
 
     Real fugashi/unidic through ``parse_text_units`` — the reading-tab mining
     path. Each case pins the WRONG pre-fix reading/furigana (asserted ``!=`` the
@@ -6913,6 +6913,21 @@ class TestCuratedReadingOverride:
         assert w.lemma_reading == "わたし"
         assert w.sentence_reading == "わたしはいく"
         assert w.sentence_furigana == "私[わたし]は 行[い]く"
+
+    @pytest.mark.parametrize(
+        "text,front,reading,wrong",
+        [
+            ("明日は雨だ", "明日", "あした", "あす"),
+            ("何を食べたい", "何", "なに", "なん"),
+            ("蛙が鳴く", "蛙", "かえる", "かわず"),
+            ("そう言うな", "言う", "いう", "ゆう"),
+        ],
+    )
+    def test_everyday_reading_replaces_unidic_variant(self, test_config, text, front, reading, wrong):
+        w = self._emit(test_config, text)[front]
+        assert w.expression_reading == reading  # pre-fix: wrong
+        assert wrong not in w.sentence_reading
+        assert w.lemma_reading == reading
 
     def test_unlisted_compound_is_byte_identical(self, test_config):
         # 飲み込む reads correctly (のみこむ) and its spelling is not in the table:
