@@ -19,13 +19,16 @@ def _tok(surface, pos1, pos2=None, lemma=None, kana=None, orth_base=None, c_form
     return token
 
 
-def _nominalizer(dictionary, spy=None):
+def _nominalizer(dictionary, spy=None, tags=None):
     def lookup(terms):
         if spy is not None:
             spy.append(list(terms))
         return dictionary & set(terms)
 
-    return MasuStemNominalizer(lookup)
+    def form_lookup(terms):
+        return {t: [("", tags[t])] for t in terms if t in tags}
+
+    return MasuStemNominalizer(lookup, form_lookup if tags is not None else None)
 
 
 def _sashiire():
@@ -74,6 +77,18 @@ class TestFires:
             assert out[0].feature.pos1 == "名詞", pos1
 
 
+class TestNaAdjectiveBeforeSou:
+    def test_na_adjective_stem_before_appearance_sou_becomes_nominal(self):
+        """人が好き|そう — unidic reads 好き as 好く's stem; the card is the adjective 好き."""
+        tokens = [
+            _tok("好き", "動詞", "一般", lemma="好く", kana="スキ", orth_base="好く", c_form="連用形-一般"),
+            _tok("そう", "形状詞", "助動詞語幹", lemma="そう-様態", kana="ソウ"),
+        ]
+        out = _nominalizer({"好き"}, tags={"好き": "1 adj-na n ⭐ ichi"}).rewrite_line(tokens)
+        assert isinstance(out[0], SyntheticToken)
+        assert out[0].feature.lemma == "好き"
+
+
 class TestBlocked:
     def _blocked(self, tokens, dictionary={"差し入れ"}):  # noqa: B006 - read-only
         out = _nominalizer(dictionary).rewrite_line(tokens)
@@ -111,10 +126,18 @@ class TestBlocked:
         self._blocked(tokens)
 
     def test_appearance_sou_neighbour_blocks(self):
-        """落ち|そう — the 様態 そう (形状詞 / 助動詞語幹) takes only a verb stem."""
+        """落ち|そう — the 様態 そう (形状詞 / 助動詞語幹) takes no plain noun."""
         tokens = _sashiire()
         tokens[1] = _tok("そう", "形状詞", "助動詞語幹", lemma="そう-様態", kana="ソウ")
         self._blocked(tokens)
+
+    def test_appearance_sou_after_a_noun_only_stem_blocks(self):
+        tokens = [
+            _tok("落ち", "動詞", "一般", lemma="落ちる", kana="オチ", orth_base="落ちる", c_form="連用形-一般"),
+            _tok("そう", "形状詞", "助動詞語幹", lemma="そう-様態", kana="ソウ"),
+        ]
+        out = _nominalizer({"落ち"}, tags={"落ち": "1 n ⭐ news6k"}).rewrite_line(tokens)
+        assert out is tokens
 
     def test_punctuation_neighbour_blocks(self):
         tokens = _sashiire()

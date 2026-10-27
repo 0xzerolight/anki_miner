@@ -41,7 +41,7 @@ from __future__ import annotations
 
 from typing import Callable
 
-from anki_miner.services.morphology import SyntheticToken, extract_reading
+from anki_miner.services.morphology import FormLookup, SyntheticToken, extract_reading
 
 # Batch existence probe: the subset of the input strings that exist as exact
 # offline-dictionary headwords (DefinitionService.offline_terms_exist).
@@ -54,8 +54,11 @@ TermLookup = Callable[[list[str]], set[str]]
 _NOMINALIZING_NEIGHBOUR_POS1 = frozenset({"名詞", "代名詞", "副詞", "形状詞", "連体詞", "接頭辞", "感動詞"})
 
 # The appearance そう after a stem (落ち|そう, "about to fall") is 形状詞 / 助動詞語幹:
-# an allowed neighbour POS, but one only a verb stem takes, so it blocks.
-_VERBAL_NEIGHBOUR_POS2 = "助動詞語幹"
+# an allowed neighbour POS, but it takes a verb stem or a na-adjective, never a
+# plain noun. So it blocks unless the dictionary tags the stem adj-na: 好き|そう
+# is the adjective 好き, while 落ち and 動き are nouns only.
+_APPEARANCE_NEIGHBOUR_POS2 = "助動詞語幹"
+_NA_ADJECTIVE_TAG = "adj-na"
 
 # Bound stems (し, 見, 出し, つけ, 願い) are 動詞 / 非自立可能. They head no
 # standalone noun, and several are attested as headwords in their own right, so
@@ -76,8 +79,9 @@ class MasuStemNominalizer:
     across the merge gate, the compound matcher and this pass.
     """
 
-    def __init__(self, term_lookup: TermLookup) -> None:
+    def __init__(self, term_lookup: TermLookup, form_lookup: FormLookup | None = None) -> None:
         self._lookup = term_lookup
+        self._form_lookup = form_lookup
 
     def rewrite_line(self, tokens: list) -> list:
         """Return a token list with nominalized masu-stems replaced.
@@ -93,6 +97,10 @@ class MasuStemNominalizer:
 
         attested = self._lookup(sorted({tokens[i].surface for i in indexes}))
         firing = {i for i in indexes if tokens[i].surface in attested}
+        before_sou = {i for i in firing if _is_appearance_sou(tokens[i + 1])}
+        if before_sou:
+            na_adjectives = self._na_adjectives({tokens[i].surface for i in before_sou})
+            firing = {i for i in firing if i not in before_sou or tokens[i].surface in na_adjectives}
         if not firing:
             return tokens
 
@@ -112,10 +120,15 @@ class MasuStemNominalizer:
         surface = getattr(token, "surface", "")
         if len(surface) < _MIN_SURFACE_LEN:
             return False
-        next_feature = getattr(next_token, "feature", None)
-        if getattr(next_feature, "pos2", None) == _VERBAL_NEIGHBOUR_POS2:
-            return False
-        return getattr(next_feature, "pos1", None) in _NOMINALIZING_NEIGHBOUR_POS1
+        next_pos1 = getattr(getattr(next_token, "feature", None), "pos1", None)
+        return next_pos1 in _NOMINALIZING_NEIGHBOUR_POS1
+
+    def _na_adjectives(self, surfaces: set[str]) -> set[str]:
+        """The surfaces the dictionary tags adj-na; none without a form lookup."""
+        if self._form_lookup is None:
+            return set()
+        rows = self._form_lookup(sorted(surfaces))
+        return {s for s, entries in rows.items() if any(_NA_ADJECTIVE_TAG in tags.split() for _, tags in entries)}
 
     @staticmethod
     def _nominalize(token) -> SyntheticToken:
@@ -140,3 +153,7 @@ class MasuStemNominalizer:
             kana=extract_reading(token),
             kana_locked=True,
         )
+
+
+def _is_appearance_sou(token) -> bool:
+    return getattr(getattr(token, "feature", None), "pos2", None) == _APPEARANCE_NEIGHBOUR_POS2

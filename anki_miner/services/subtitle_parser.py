@@ -749,7 +749,7 @@ class SubtitleParserService:
         # no-dict output stays byte-identical to pre-fix behavior.
         self._masu_stem_nominalizer: MasuStemNominalizer | None = None
         if self._attest is not None:
-            self._masu_stem_nominalizer = MasuStemNominalizer(self._attest)
+            self._masu_stem_nominalizer = MasuStemNominalizer(self._attest, self._form_lookup)
         # Grammar-cut words (思わず, 実は, くだらない; see services/lexical_joiner.py).
         # Attested through the term-OR-reading probe because the kana adjectives
         # are JMdict readings; None without one keeps the no-dict output unchanged.
