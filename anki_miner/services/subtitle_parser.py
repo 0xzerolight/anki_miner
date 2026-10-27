@@ -1625,7 +1625,7 @@ class SubtitleParserService:
         duration: float,
         sentence_furigana: str,
         sentence_reading: str,
-        seen_mined_forms: set[str],
+        seen_mined_forms: set[str] | None,
     ) -> TokenizedWord | None:
         """Build the ``TokenizedWord`` for one included token, mined_form-deduped.
 
@@ -1657,9 +1657,11 @@ class SubtitleParserService:
         # are distinct card fronts driving distinct definition/frequency/audio/
         # known-word lookups, so lemma-keyed dedup silently dropped the second
         # variant. mined_form is the identity every other stage already uses.
-        if mined in seen_mined_forms:
-            return None
-        seen_mined_forms.add(mined)
+        # None keeps every occurrence (parse_text_units' every_occurrence).
+        if seen_mined_forms is not None:
+            if mined in seen_mined_forms:
+                return None
+            seen_mined_forms.add(mined)
 
         if self._reading_support is not None:
             # An injected ReadingSupport owns the reading fields outright. The
@@ -1896,7 +1898,7 @@ class SubtitleParserService:
     def _emit_line_words_and_index(
         self,
         line_state: tuple[str, list[Any], list[Any], float, float, float],
-        seen_mined_forms: set[str],
+        seen_mined_forms: set[str] | None,
         *,
         collect_index: bool,
         rejects: dict[str, NotMinedReason] | None = None,
@@ -2186,6 +2188,7 @@ class SubtitleParserService:
         *,
         subtitle_cleanup: bool = False,
         count_by_lemma: bool = False,
+        every_occurrence: bool = False,
     ) -> tuple[list[TokenizedWord], list[LineLemmas] | None, collections.Counter[str]]:
         """Parse reading-tab text units into mining words, index, and lemma counts.
 
@@ -2230,11 +2233,16 @@ class SubtitleParserService:
             count_by_lemma: Key ``counts`` by lemma (``count_lemmas``
                 semantics) instead of card front. Readability sets it, so a
                 book scores on a subtitle file's basis.
+            every_occurrence: Emit a word for every mined occurrence, each
+                with its own span, instead of one per card front. For callers
+                that score segmentation (the monosashi benchmark adapter),
+                where a word's second occurrence in a sentence is a unit too.
 
         Returns:
             ``(words, line_index, counts)``. ``words`` is mined_form-deduped
             (first-occurrence-wins across the whole call, like the subtitle
-            entrypoints); ``line_index`` is the ``LineLemmas`` list when
+            entrypoints) unless ``every_occurrence``; ``line_index`` is the
+            ``LineLemmas`` list when
             ``want_line_index`` else ``None``; ``counts`` maps card front
             (``mined_form``), or lemma with ``count_by_lemma``, → total
             included occurrences (``count_fronts`` / ``count_lemmas``
@@ -2248,7 +2256,7 @@ class SubtitleParserService:
 
         all_words: list[TokenizedWord] = []
         line_index: list[LineLemmas] = []
-        seen_mined_forms: set[str] = set()
+        seen_mined_forms: set[str] | None = None if every_occurrence else set()
         counts: collections.Counter[str] = collections.Counter()
         rejects: dict[str, NotMinedReason] = {}
         # SK-31: a book's own furigana (ReadingUnit.ruby, EPUB only) replaces the
@@ -2315,7 +2323,8 @@ class SubtitleParserService:
             if line_lemmas_entry is not None:
                 line_index.append(line_lemmas_entry)
 
-        self.last_parse_rejects = _unmined_rejects(rejects, seen_mined_forms)
+        fronts = seen_mined_forms if seen_mined_forms is not None else {word.mined_form for word in all_words}
+        self.last_parse_rejects = _unmined_rejects(rejects, fronts)
         self._log_parse_probe_timing()
         return all_words, (line_index if want_line_index else None), counts
 

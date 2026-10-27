@@ -112,6 +112,18 @@ class TestParseTextUnits:
         assert counter == Counter({"本": 1, "読む": 1})
         assert "気がする" not in counter
 
+    def test_every_occurrence_keeps_a_repeated_word(self, tmp_path):
+        """One word per card front by default; every_occurrence emits each, at its own span."""
+        text = "猫が猫を見る"
+        service = SubtitleParserService(AnkiMinerConfig(media_temp_folder=tmp_path / "media"))
+        units = [ReadingUnit(text=text, index=0, location_label="p.0")]
+
+        once, _index, _counts = service.parse_text_units(units, want_line_index=False)
+        every, _index, _counts = service.parse_text_units(units, want_line_index=False, every_occurrence=True)
+
+        assert [w.mined_form for w in once] == ["猫", "見る"]
+        assert [(w.mined_form, w.surface_start) for w in every] == [("猫", 0), ("猫", 2), ("見る", 4)]
+
     def test_unit_text_is_sentence_verbatim(self, tmp_path):
         """Unit text (multiple sentences, no re-windowing) reaches every word's sentence field."""
         text = "猫が魚を食べる。犬が走る。"
