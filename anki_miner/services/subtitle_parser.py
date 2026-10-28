@@ -2181,6 +2181,47 @@ class SubtitleParserService:
         self._warn_if_nothing_mined(subtitle_file, all_words, subtitle_offset)
         return all_words, line_index
 
+    def reading_sentence(self, text: str, *, subtitle_cleanup: bool = False) -> str:
+        """A reading unit's text as :meth:`parse_text_units` stores it: its card sentence ("" when emptied).
+
+        Reading/OCR text needs the same pre-tokenization JP normalization the
+        subtitle path gets via clean_subtitle_text: mokuro OCR emits Kangxi
+        radicals (⼝) and halfwidth katakana (ﾊﾟｿｺﾝ) that mis-tokenize into
+        garbage otherwise. Order mirrors clean_subtitle_text
+        (normalize_for_tokenization then standardize_kanji_variants); an
+        injected normaliser replaces exactly that pair, as it does there. The
+        markup strip / regex filter it also runs apply to the subtitle-cue kind
+        only (``subtitle_cleanup``). No tagger is needed.
+        """
+        if self._normalize is None:
+            text = standardize_kanji_variants(normalize_for_tokenization(text))
+        else:
+            text = self._normalize(text)
+        if subtitle_cleanup:
+            # Reading→Subtitles per-cue cleanup remains here for synthetic
+            # ReadingUnit callers and is idempotent when the loader already
+            # stripped the cue.
+            text = self._apply_text_filter(strip_inline_annotations(text))
+        return text
+
+    def reading_entries(
+        self, units: Sequence[ReadingUnit], *, subtitle_cleanup: bool = False
+    ) -> list[tuple[float, float, str]]:
+        """The reading counterpart of :meth:`parse_raw_entries`: ``(index, index, sentence)`` per unit.
+
+        Each sentence is the one :meth:`parse_text_units` gives that unit's
+        words, at the dummy time it gives them (the unit index), so
+        ``find_cue_index`` locates a reading word's unit and ``expand_word_lines``
+        merges its neighbours. A unit the cleanup empties is left out, as the
+        parse skips it.
+        """
+        entries = []
+        for unit in units:
+            text = self.reading_sentence(unit.text, subtitle_cleanup=subtitle_cleanup)
+            if text:
+                entries.append((float(unit.index), float(unit.index), text))
+        return entries
+
     def parse_text_units(
         self,
         units: Sequence[ReadingUnit],
@@ -2267,31 +2308,13 @@ class SubtitleParserService:
         author_ruby = get_profile(self._tagger_language).takes_author_ruby
 
         for unit in units:
-            # Reading/OCR text needs the same pre-tokenization JP normalization
-            # the subtitle path gets via clean_subtitle_text: mokuro OCR emits
-            # Kangxi radicals (⼝) and halfwidth katakana (ﾊﾟｿｺﾝ) that mis-tokenize
-            # into garbage otherwise. The normalized text is stored as the card
-            # sentence and tokenized as _tokenizer_text(text): the same string for
-            # Japanese, the no-break spaces folded for every other language (one
-            # character for one, so offsets carry over), as on the subtitle path.
-            # Order mirrors clean_subtitle_text (normalize_for_tokenization then
-            # standardize_kanji_variants); the markup strip / regex filter it also
-            # runs are applied just below, subtitle-cue kind only
-            # (subtitle_cleanup). An injected normaliser replaces exactly that
-            # pair, as it does in clean_subtitle_text.
-            text = (
-                standardize_kanji_variants(normalize_for_tokenization(unit.text))
-                if self._normalize is None
-                else self._normalize(unit.text)
-            )
-            if subtitle_cleanup:
-                # Reading→Subtitles per-cue cleanup remains here for synthetic
-                # ReadingUnit callers and is idempotent when the loader already
-                # stripped the cue.
-                text = strip_inline_annotations(text)
-                text = self._apply_text_filter(text)
-                if not text:
-                    continue
+            # The card sentence; tokenized as _tokenizer_text(text): the same
+            # string for Japanese, the no-break spaces folded for every other
+            # language (one character for one, so offsets carry over), as on the
+            # subtitle path.
+            text = self.reading_sentence(unit.text, subtitle_cleanup=subtitle_cleanup)
+            if not text:
+                continue
             # Dummy timing: the index is both start and end (duration 0.0). No
             # re-windowing exists — the normalized unit text is the card sentence.
             line_state = self._build_line_state(text, float(unit.index), float(unit.index))
