@@ -345,6 +345,10 @@ dev = [
     "pytest-timeout>=2.3.0",
     "black>=26.3.1",
     "mypy>=1.15.0",
+    # PyQt6 6.12.0's stubs put `/` after `*args` (QtGui.pyi: drawPolygon,
+    # setPoints, …), a syntax error mypy can't skip. The runtime is fine, so this
+    # caps the dev env only. Drop it once a fixed PyQt6 release ships.
+    "PyQt6!=6.12.0",
     "ruff>=0.9.0",
     "types-requests>=2.31.0",
     "pre-commit>=4.0.0",
