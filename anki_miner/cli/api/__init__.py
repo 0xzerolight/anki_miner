@@ -3,8 +3,9 @@
 Each call writes exactly one JSON verdict line to fd 1 and exits 0; any other
 exit is a crash. ``mine`` (but not a dry run), ``settings-import`` and ``setup``
 hold the run lock: ``mine`` runs beside an idle window; ``settings-import`` and
-``setup`` refuse any window. ``render``, ``media``, ``fetch``, ``check``,
-``version``, ``profiles`` and ``settings-export`` run at any time. The log goes to ``anki_miner.api.log``
+``setup`` refuse any window. ``render``, ``media``, ``check``, ``version``,
+``profiles``, ``settings-export`` and the job commands (``fetch`` and the others
+in ``jobs.py``) run at any time. The log goes to ``anki_miner.api.log``
 (installed by ``cli.entry`` before this runs).
 """
 
@@ -15,7 +16,7 @@ import contextlib
 import json
 import logging
 import threading
-from collections.abc import Iterator, Sequence
+from collections.abc import Callable, Iterator, Sequence
 from pathlib import Path
 from typing import NoReturn
 
@@ -29,6 +30,7 @@ from anki_miner.cli.api.contract import (
     COMMANDS,
     FEATURES,
     INTERNAL,
+    JOB_COMMANDS,
     ApiError,
 )
 from anki_miner.cli.entry import _prepare_process, _private_stdout
@@ -71,7 +73,8 @@ def build_parser() -> argparse.ArgumentParser:
     setup.add_argument("--language", required=True)
     setup.add_argument("--progress", type=Path, required=True)
     setup.add_argument("--profile")
-    commands.add_parser("fetch").add_argument("fetch_file", type=Path)
+    for name in JOB_COMMANDS:
+        commands.add_parser(name).add_argument("file", type=Path)
     return parser
 
 
@@ -131,8 +134,8 @@ def _dispatch(args: argparse.Namespace) -> dict[str, object]:
         return _ok("settings-import", result=result)
     if args.command == "setup":
         return _setup(args)
-    if args.command == "fetch":
-        return _fetch(args)
+    if args.command in JOB_COMMANDS:
+        return _job(args.command, args.file)
     return _run(args)
 
 
@@ -199,16 +202,24 @@ def _setup(args: argparse.Namespace) -> dict[str, object]:
     return {**verdict, "ok": not outcome.failed}
 
 
-def _fetch(args: argparse.Namespace) -> dict[str, object]:
-    """fetch: no lock (it writes only its run folders); SIGINT/SIGTERM stop the current run and every later one."""
-    from anki_miner.cli.api import fetch, files
+def _job(command: str, file: Path) -> dict[str, object]:
+    """A job command (``jobs.py``): no lock, as each writes only its run folders and the files it names;
+    SIGINT/SIGTERM stop the current run and every later one."""
     from anki_miner.cli.entry import _cancel_on_signals
 
-    job = files.parse_fetch_file(files.read_json_file(args.fetch_file))
     cancel = threading.Event()
     with _cancel_on_signals(cancel):
-        verdicts = fetch.fetch_runs(job, cancel)
-    return {**_ok(args.command, runs=verdicts), "ok": all(v["ok"] for v in verdicts)}
+        verdicts = _job_call(command)(file, cancel)
+    return {**_ok(command, runs=verdicts), "ok": all(v["ok"] for v in verdicts)}
+
+
+def _job_call(command: str) -> Callable[[Path, threading.Event], list[dict[str, object]]]:
+    """The command's ``call``. Static imports, one per command: the frozen app bundles only what its imports name."""
+    if command == "fetch":
+        from anki_miner.cli.api import fetch
+
+        return fetch.call
+    raise AssertionError(f"not a job command: {command}")
 
 
 def _ok(command: str | None, **fields: object) -> dict[str, object]:

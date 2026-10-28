@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-from anki_miner.cli.api import fetch, files
+from anki_miner.cli.api import fetch, files, jobs
 from anki_miner.cli.api.contract import ApiError
 from anki_miner.exceptions.youtube import (
     BotDetectionError,
@@ -74,7 +74,7 @@ class _Fetcher:
 def tools(monkeypatch):
     monkeypatch.setattr(fetch, "ytdlp_available", lambda config: True)
     monkeypatch.setattr(fetch, "binary_available", lambda resolved: True)
-    monkeypatch.setattr(fetch, "usable_model_installed", lambda config: True)
+    monkeypatch.setattr(fetch, "speech_problem", lambda config: None)
     monkeypatch.setattr(fetch, "MediaExtractorService", lambda config: object())
 
 
@@ -83,7 +83,7 @@ def _use(monkeypatch, fetcher: _Fetcher) -> _Fetcher:
     return fetcher
 
 
-def _job(tmp_path: Path, **episode) -> files.FetchFile:
+def _job(tmp_path: Path, **episode) -> files.JobsFile[files.FetchEpisode]:
     return files.parse_fetch_file(
         {
             "schema": 1,
@@ -202,7 +202,7 @@ def test_a_tool_lost_during_the_download_is_setup_error(monkeypatch, tmp_path, e
 
 def test_a_probe_failure_after_a_cancel_is_cancelled(monkeypatch, tmp_path) -> None:
     cancel = threading.Event()
-    monkeypatch.setattr(fetch, "CancelWatcher", lambda folder, cancel_all: contextlib.nullcontext(cancel))
+    monkeypatch.setattr(jobs, "CancelWatcher", lambda folder, cancel_all: contextlib.nullcontext(cancel))
 
     class _Probe(_Fetcher):
         def probe_metadata(self, url):
@@ -222,7 +222,7 @@ def test_a_cancel_as_the_download_ends_stops_before_transcription(monkeypatch, t
 
 
 def test_transcription_without_the_speech_model_is_setup_error(monkeypatch, tmp_path) -> None:
-    monkeypatch.setattr(fetch, "usable_model_installed", lambda config: False)
+    monkeypatch.setattr(fetch, "speech_problem", lambda config: "The speech model large-v3 is not installed.")
     fetcher = _use(monkeypatch, _Fetcher())
     verdict = _run(tmp_path, youtube_subtitle_source="transcribe")
     assert verdict["error"] == "SETUP_ERROR" and "speech model" in verdict["message"] and fetcher.fetches == []

@@ -30,7 +30,7 @@ from anki_miner.services.asr import _engine, ggml_model_installer, model_manager
 if TYPE_CHECKING:
     from anki_miner.config.config import AnkiMinerConfig
 
-__all__ = ["usable_model_installed"]
+__all__ = ["usable_model_installed", "whisper_cpp_route_ready"]
 
 
 logger = logging.getLogger(__name__)
@@ -44,6 +44,11 @@ def usable_model_installed(config: AnkiMinerConfig) -> bool:
     """
     if model_manager.is_downloaded(config.asr_model, config.asr_models_root):
         return True
+    return whisper_cpp_route_ready(config)
+
+
+def whisper_cpp_route_ready(config: AnkiMinerConfig) -> bool:
+    """Whether the whisper.cpp route alone can transcribe: a device that routes there, its backend and the ggml pair."""
     if config.asr_device not in ("vulkan", "auto"):
         return False
     try:

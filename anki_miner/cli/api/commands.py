@@ -6,7 +6,8 @@ from pathlib import Path
 
 from anki_miner.cli.api import settings
 from anki_miner.cli.api.contract import BAD_ARGUMENTS, ApiError
-from anki_miner.cli.api.fetch import NO_SPEECH_MODEL, NO_YTDLP
+from anki_miner.cli.api.fetch import NO_YTDLP
+from anki_miner.cli.api.readiness import NO_SPEECH_MODEL
 from anki_miner.gui.utils.config_manager import GUIConfigManager
 from anki_miner.languages.registry import get_profile
 from anki_miner.services.asr.model_availability import usable_model_installed

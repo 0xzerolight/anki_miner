@@ -18,6 +18,8 @@ COMMANDS = (
     "setup",
     "fetch",
 )
+#: Commands that turn files into files, one run per episode (``jobs.py``): ``<name> FILE``.
+JOB_COMMANDS = ("fetch",)
 #: What this build adds beyond 3.5.0's API, by stable name (API.md, "version"). One name per
 #: addition, appended when it ships; a caller checks a name instead of comparing versions.
 FEATURES = (
@@ -48,6 +50,12 @@ MINING_FAILED = "MINING_FAILED"  # not in the proposal: the pipeline returned a 
 CANCELLED = "CANCELLED"  # a run, or a whole call (setup)
 YOUTUBE_REFUSED = "YOUTUBE_REFUSED"  # fetch: a video Video -> YouTube refuses before downloading
 FETCH_FAILED = "FETCH_FAILED"  # fetch: the probe, download or subtitle step failed
+SOURCE_UNREADABLE = "SOURCE_UNREADABLE"  # a book, text, manga volume or web article that does not load
+AUDIO_UNREADABLE = "AUDIO_UNREADABLE"  # an audio file that does not open
+OCR_FAILED = "OCR_FAILED"  # ocr: mokuro failed on a volume
+TRACK_NOT_FOUND = "TRACK_NOT_FOUND"  # no subtitle track has that index
+TRACK_NOT_TEXT = "TRACK_NOT_TEXT"  # extract: an image track (PGS, VobSub) has no text to copy
+TRACK_NOT_IMAGE = "TRACK_NOT_IMAGE"  # video-ocr: a text track needs no OCR (extract copies it)
 INTERNAL = "INTERNAL"
 
 

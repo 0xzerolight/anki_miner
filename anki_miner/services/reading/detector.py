@@ -69,6 +69,22 @@ _BOOK_EXTS: tuple[str, ...] = (".epub", ".txt", ".pdf")
 _BOOK_KIND_BY_EXT: dict[str, Literal["epub", "txt", "pdf"]] = {".epub": "epub", ".txt": "txt", ".pdf": "pdf"}
 
 
+def source_kind(path: Path) -> Literal["manga", "book", "subtitle"] | None:
+    """What :func:`detect` reads *path* as, by its name alone; None for a path it refuses.
+
+    A manga path (``.mokuro``, an archive, a folder) may still fail
+    :func:`detect` when its OCR data is missing.
+    """
+    suffix = path.suffix.lower()
+    if suffix == ".mokuro" or suffix in _ARCHIVE_EXTS or path.is_dir():
+        return "manga"
+    if suffix in _BOOK_EXTS:
+        return "book"
+    if suffix in _SUBTITLE_EXTS:
+        return "subtitle"
+    return None
+
+
 def detect(
     path: Path,
     *,
