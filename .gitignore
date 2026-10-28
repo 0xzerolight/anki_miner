@@ -103,3 +103,5 @@ sdd/
 uv.lock
 # git worktrees for isolated feature work (superpowers:using-git-worktrees)
 .worktrees/
+# empty Anki collections that test or Anki runs drop in the repo root
+collection.anki2*
