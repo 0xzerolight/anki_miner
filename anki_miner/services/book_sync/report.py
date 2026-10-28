@@ -138,3 +138,19 @@ def unheard_gaps(timings: Sequence[SentenceTiming], known: Collection[int] = fro
                 gaps.append(UnheardGap(run_first, i - 1, before.end, after.start))
                 run_first = None
     return gaps
+
+
+def book_unheard(gaps: Iterable[UnheardGap], timed: Collection[int]) -> list[tuple[int, int]]:
+    """A book's unheard sentences over all its files, as ``(first, last)`` runs in book order.
+
+    Each file's gaps leave out what earlier files timed, but a later file can
+    still time one of them (a passage read out of order, MS-24): the book's
+    ``timed`` (its cursor's, once every file is done) is taken out again here.
+    """
+    runs: list[tuple[int, int]] = []
+    for i in sorted({i for gap in gaps for i in range(gap.first, gap.last + 1)} - set(timed)):
+        if runs and i == runs[-1][1] + 1:
+            runs[-1] = (runs[-1][0], i)
+        else:
+            runs.append((i, i))
+    return runs
