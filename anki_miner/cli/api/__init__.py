@@ -219,6 +219,10 @@ def _job_call(command: str) -> Callable[[Path, threading.Event], list[dict[str, 
         from anki_miner.cli.api import fetch
 
         return fetch.call
+    if command == "extract":
+        from anki_miner.cli.api import extract
+
+        return extract.call
     raise AssertionError(f"not a job command: {command}")
 
 
