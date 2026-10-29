@@ -4,7 +4,14 @@ Another program can run Anki Miner without its window. One `mine` call takes an 
 
 `mine` writes to Anki only the words it is given. Anki Miner's known-words list and statistics are never touched: the calling program keeps its own record of what the user knows and mined.
 
-Requirements: Anki running with the AnkiConnect add-on, an offline dictionary, and ffmpeg (bundled with the installers); `fetch` also needs yt-dlp. Sources are video episodes (a video file and a subtitle file), including YouTube videos that `fetch` downloads first; audiobooks, books and manga are not supported yet.
+Requirements: Anki running with the AnkiConnect add-on, an offline dictionary, and ffmpeg (bundled with the installers). `fetch` also needs yt-dlp; `transcribe` and `sync` need the speech model, `ocr` needs mokuro and `video-ocr` its OCR engine, which `setup` installs.
+
+Sources:
+- video episodes (a video file and a subtitle file), including YouTube videos that `fetch` downloads first;
+- audiobook episodes (an audio file and a subtitle file);
+- books, text, subtitle files and manga volumes, mined without media.
+
+Other commands get a source ready for `mine`: `inspect` says what a source is and what it still needs, `extract` copies a subtitle track out of a video, `transcribe` and `video-ocr` make a subtitle where there is none, `retime` fits a subtitle to its video, `sync` times a book to its audiobook, and `ocr` reads a manga volume.
 
 ## Calling it
 
@@ -25,8 +32,15 @@ AnkiMiner --api settings-export --language CODE --out FILE [--profile ID]
 AnkiMiner --api settings-import FILE --language CODE (--name NAME | --profile ID)
 AnkiMiner --api render RUN_FILE
 AnkiMiner --api media MEDIA_FILE
-AnkiMiner --api setup --language CODE --progress FILE [--profile ID]
+AnkiMiner --api setup --language CODE --progress FILE [--profile ID] [--speech-model [--model NAME]] [--ocr]
 AnkiMiner --api fetch FETCH_FILE
+AnkiMiner --api inspect INSPECT_FILE
+AnkiMiner --api extract EXTRACT_FILE
+AnkiMiner --api transcribe TRANSCRIBE_FILE
+AnkiMiner --api video-ocr VIDEO_OCR_FILE
+AnkiMiner --api retime RETIME_FILE
+AnkiMiner --api sync SYNC_FILE
+AnkiMiner --api ocr OCR_FILE
 ```
 
 Each call writes one JSON line to stdout: its verdict. Exit code 0 means the verdict was written; any other exit code is a crash.
@@ -41,12 +55,14 @@ A verdict:
 
 ```json
 {"schema": 1, "command": "mine", "ok": true, "error": null, "message": null,
- "runs": [{"run_id": "job-1234-ep05", "ok": true, "error": null, "message": null, "file": "result-1.json"}]}
+ "runs": [{"run_id": "job-1234-ep05", "ok": true, "error": null, "message": null, "file": "result-1.json",
+           "failure_is_transient": false}]}
 ```
 
 - A call refused as a whole has `ok: false`, an `error` code, a `message` and `runs: []`.
 - With several runs, `ok` is false if any run failed. Each run carries its own `error` and `message`, and the top-level `error` stays null.
-- `check`, `version`, `profiles`, `settings-import` and `setup` put their answer in `result`.
+- A run's `failure_is_transient` is true when running it again later can get past its failure: a dropped connection, a web article or YouTube video that could not be fetched for now.
+- `check`, `version`, `profiles`, `settings-import`, `setup` and `inspect` put their answer in `result`.
 
 `mine` runs one at a time, and beside an open window that is not mining. It gives `BUSY` in two cases, and the `message` says which:
 - the Anki Miner window is mining, or its Word Curator is open;
@@ -58,7 +74,7 @@ A run beside the window does not stop the window from mining. If both add the sa
 
 A dry run, `render` and `media` take no lock.
 
-`check`, `version`, `profiles`, `settings-export` and `fetch` run at any time. On Windows every call holds the app's mutex, so the installer waits for it.
+`check`, `version`, `profiles`, `settings-export`, `inspect` and the commands that make files (`fetch`, `extract`, `transcribe`, `video-ocr`, `retime`, `sync`, `ocr`) run at any time, beside the window too. On Windows every call holds the app's mutex, so the installer waits for it.
 
 ## The run folder
 
@@ -66,16 +82,17 @@ A dry run, `render` and `media` take no lock.
 
 | File | Written by | Content |
 |---|---|---|
-| `progress.json` | mine, render, fetch | the current stage while a run works |
+| `progress.json` | mine, render, and the commands that make files | the current stage while a run works |
 | `result-<n>.json` | mine | one per `mine` of that `run_id`; `n` counts up from 1 |
 | `render-<n>.json` | render | one per `render` of that `run_id` |
 | `render-<n>/` | render | the media its fields name; the caller deletes them |
 | `media-<n>.json` | media | one per `media` of that `run_id` |
 | `media-<n>/` | media | the clips and pictures it cut; the caller deletes them |
-| `fetch-<n>.json` | fetch | one per successful `fetch` of that `run_id`; names the files below |
-| `fetch-<n>/` | fetch | the downloaded video and subtitle; kept until the caller deletes them |
-| `cancel` | the caller | stops a `mine`, `render` or `fetch` run (see Cancelling) |
-| `media/` | mine, render, fetch | temporary clips and pictures of a `mine` or `render`, and the audio a `fetch` transcribes, removed before it ends |
+| `<command>-<n>.json` | fetch, extract, transcribe, video-ocr, retime, sync, ocr | one per run of that `run_id` that ended; names the files below |
+| `<command>-<n>/` | fetch, extract, transcribe, video-ocr, retime, sync | the files the run made; kept until the caller deletes them |
+| `inspect-<n>.json` | inspect | a source's unit list |
+| `cancel` | the caller | stops a `mine`, `render` or file-making run (see Cancelling) |
+| `media/` | mine, render, and the commands that make files | a run's temporary files, removed before it ends |
 
 A run folder serves one call at a time: calls on the same `run_id` share its `progress.json`, `cancel` file and `media/`. Calls on different `run_id`s can run side by side.
 
@@ -116,7 +133,9 @@ An episode:
 | Key | Value |
 |---|---|
 | `run_id` | required |
-| `video_file`, `subtitle_file` | required paths; a relative path is taken from the folder `mine` runs in |
+| `video_file`, `subtitle_file` | a video episode's files; a relative path is taken from the folder `mine` runs in |
+| `audio_file`, `subtitle_file` | instead, an audiobook episode's files (see Audiobooks) |
+| `reading_file` | instead, a book, text, subtitle file, manga volume or web address mined without media (see Books, text and manga) |
 | `words` | required: the words to mine (below) |
 | `subtitle_offset` | seconds added to every subtitle time; `0` when left out (the profile's offset is not used) |
 | `audio_track_override` | 0-based audio track, or `null` to find the mining language's track |
@@ -125,6 +144,8 @@ An episode:
 | `series_name_override`, `episode_name_override` | instead of the video's folder and file names |
 | `tags` | added to the profile's tags on this episode's cards |
 
+An episode names exactly one of `video_file`, `audio_file` and `reading_file`.
+
 A word:
 
 | Key | Value |
@@ -132,13 +153,14 @@ A word:
 | `word` | required: the word's card front (`mined_form`), or its dictionary form |
 | `line_start` | the start of the line to use, in seconds, as written in the subtitle file |
 | `line_text` | text the line to use contains |
+| `unit_index` | a reading source's unit, as `inspect` lists it (reading episodes only) |
 | `line_expansion` | `[before, after]`: the lines merged into the sentence and the clip |
 | `surface` | the word as written on its line, when it differs from `word` (走り出した for 走り出す) |
 | `reading` | its reading, to choose among dictionary entries |
 
 - **Matching the word.** `word` is compared after Unicode NFC normalization. It names the word whose card front equals it, else one whose dictionary form does, else one that matches through the fold: the comparison the language uses for one card per run (Chinese Simplified and Traditional, letter case). 头发 names 頭髮 on a Traditional subtitle, and the card keeps the subtitle's spelling. With a line named, only words on that line count (see Choosing the line); with none, it is the first such word, on its own line.
 - **Choosing the line.** A word can be mined from any line it appears on.
-  - `line_start` names the line starting nearest to it; a tie goes to the earlier line. `line_text` names the first line containing it, compared after the cleaning the subtitle lines get (markup, speaker tags, furigana readings, the profile's text filter) and NFKC normalization, with whitespace ignored, so a whole line copied from the file matches. With both, `line_start` wins.
+  - `line_start` names the line starting nearest to it; a tie goes to the earlier line. A reading source names its unit with `unit_index` instead (see Books, text and manga). `line_text` names the first line containing it, compared after the cleaning the subtitle lines get (markup, speaker tags, furigana readings, the profile's text filter) and NFKC normalization, with whitespace ignored, so a whole line copied from the file matches. With both, `line_start` wins.
   - On the named line the word is the one whose card front equals `word`, else whose dictionary form does, else that matches through the fold.
   - When the episode produces no such word on that line, the run makes the word from the line: it finds `surface` (else `word`) in the line, compared as `line_text` is, first match. The card's front is `word` (through the fold, the line's spelling, or the episode's own front when only a surface matched); its reading is `reading`, else the one the episode or the parser gives the word, else the dictionary's when it has only one; its sentence, clip and picture are that line's, the match in bold when bold is on. The row says `from_line: true`. A word the dictionary check or the merge removed is never made from a line. Not in the line: `not_found`.
   - With neither key, or a `line_text` no line contains, the word keeps its own line: its first in the episode.
@@ -153,7 +175,7 @@ Before any episode runs, `mine` checks:
 - the Anki deck, note type and field mapping;
 - the offline dictionary.
 
-A failure refuses the call with `SETUP_ERROR`, or with `ANKI_UNREACHABLE` when Anki does not answer. Per episode, a video that does not open gives `VIDEO_UNREADABLE`, and a subtitle file that cannot be read, the secondary one included, gives `SUBTITLE_UNREADABLE`; the other episodes still run.
+A failure refuses the call with `SETUP_ERROR`, or with `ANKI_UNREACHABLE` when Anki does not answer. Per episode, a video that does not open gives `VIDEO_UNREADABLE`, an audio file `AUDIO_UNREADABLE`, a reading source `SOURCE_UNREADABLE`, and a subtitle file that cannot be read, the secondary one included, gives `SUBTITLE_UNREADABLE`; the other episodes still run. A call whose episodes are all reading sources needs no ffmpeg.
 
 Episodes run one at a time, and each run's `result-<n>.json` is written as it ends, before the next starts. Nothing is retried: mine the same `run_id` again with any subset of the words. The media is cut again, and a word Anki now has comes back `duplicate` (with `allow_duplicate_cards` on, a word already in the run's deck).
 
@@ -167,10 +189,10 @@ Episodes run one at a time, and each run's `result-<n>.json` is written as it en
  "error": null, "message": null, "media_store_failures": 0,
  "words": [{"word": "約束", "mined_form": "約束", "status": "created", "note_id": 1727000000001,
             "from_line": false, "media_missing": [], "line_start": 812.3, "sentence": "…",
-            "start": 812.3, "end": 815.0, "filter": null},
+            "start": 812.3, "end": 815.0, "unit_index": null, "location": null, "filter": null},
            {"word": "頑張る", "mined_form": null, "status": "not_found", "note_id": null,
             "from_line": false, "media_missing": [], "line_start": null, "sentence": null,
-            "start": null, "end": null, "filter": null}]}
+            "start": null, "end": null, "unit_index": null, "location": null, "filter": null}]}
 ```
 
 - `outcome` is `success`, `failed` or `cancelled`. `error` and `message` say why a run failed.
@@ -197,11 +219,52 @@ Episodes run one at a time, and each run's `result-<n>.json` is written as it en
 - `line_start` is the start of the chosen line as written in the subtitle file.
 - `from_line` is `true` for a word made from its named line.
 - `sentence`, `start` and `end` are the merged sentence and its window in the video, without the audio padding.
+- `unit_index` and `location` are a reading word's unit and its location (`p.12`, a chapter title, `¶3`); `null` for video and audio episodes, where a reading word has `line_start`, `start` and `end` null instead.
 - Every key is always present. `filter` is `duplicate-expression` on a `not_found` word that the merge of words sharing one dictionary entry removed, with `mined_form` set to the word it merged into; otherwise `null`.
+
+## Audiobooks
+
+An episode with `audio_file` (`.m4b`, `.mp3`, `.m4a`, `.aac`, `.ogg`, `.opus`, `.flac`, `.wav`) and `subtitle_file` is mined as the Audiobooks tab mines one:
+- the clip is cut from the audio;
+- the picture is the file's embedded cover, or none when it has none;
+- left out, `series_name_override` is `Audio` and `episode_name_override` is the file's name without its extension.
+
+It takes every key a video episode takes. An audio file that does not open gives `AUDIO_UNREADABLE`. Its subtitle can come from `sync` (a book read aloud) or `transcribe`. `render`, a dry run and `media` take `audio_file` too.
+
+## Books, text and manga
+
+An episode with `reading_file` mines what Reading mines, without a clip:
+- a book: `.epub`, `.txt` (Aozora too) or `.pdf` (its text layer);
+- a subtitle file with no video: `.srt`, `.ass`, `.ssa`, `.vtt`, `.smi`, `.lrc`;
+- a manga volume: a `.mokuro` file, or a `.cbz`/`.zip` or page folder with its `.mokuro` beside it (`ocr` makes one);
+- a web address (`http://` or `https://`), whose article is fetched and read as text.
+
+A path of any other kind gives `BAD_RUN_FILE`. A reading episode also takes `source_label_override`, `series_name_override`, `episode_name_override` and `tags`. `subtitle_file`, `subtitle_offset`, `audio_track_override`, `secondary_subtitle_file`, `secondary_subtitle_offset` and a word's `line_start` give `BAD_RUN_FILE`.
+
+The lines are the source's units, numbered from 0 in order: a book's or a text's sentences, a subtitle file's cues, a manga page's text blocks. `inspect` lists them.
+- `unit_index` names a unit, and wins over `line_text`. A unit past the source's end gives `not_found`.
+- `line_text` names the first unit containing it, compared as for subtitle lines.
+- With neither, the word keeps its first unit.
+- A word the source does not produce on its named unit is made from it, as from a subtitle line.
+- `line_expansion` merges neighbouring units into the sentence, stopping only at the source's ends: units have no times, so there is no 30-second limit. Left out, units are not merged.
+
+Each card has the sentence and no clip.
+- **Picture:** a manga card's picture is the crop of its text block on the page, even when the profile shows the whole page. A book's is its cover (EPUB). Text, PDF and subtitle sources have none.
+- **Source:** reads `<title> @ <location>` as Reading's cards do, `<location>` being the unit's. `source_label_override` replaces `<title>`.
+- **Merged units:** a card keeps its named unit's picture and location when `line_expansion` merges others in.
+- **Repeats:** every named word is mined however few times the source holds it.
+
+A source that does not load gives `SOURCE_UNREADABLE`, with the reason:
+- a damaged file, or a PDF with no text layer;
+- a folder holding several volumes (name one);
+- a volume with no `.mokuro` yet ("Run ocr on it first");
+- a web article that could not be fetched (`failure_is_transient` says whether running again later can get past it).
+
+A cancel while the source loads stops the run, and its result lists every word `not_attempted`. A unit's index stays the same for the same file, language and app version; a web article's can change with the page.
 
 ## A dry run
 
-`dry_run: true` runs the same file without cutting media or writing anything to Anki, and needs neither Anki nor ffmpeg. It does not open the video either, so a `video_file` that does not open shows up only on a real `mine`. It runs any time, beside calls on other `run_id`s. Each word the run would mine comes back `ready`, `no_definition` (a word made from its line that no offline dictionary defines) or, when Anki answers, `duplicate`; the others as for `mine`. The result file says `"dry_run": true`.
+`dry_run: true` runs the same file without cutting media or writing anything to Anki, and needs neither Anki nor ffmpeg. It does not open the video or audio either, so a `video_file` or `audio_file` that does not open shows up only on a real `mine`. It runs any time, beside calls on other `run_id`s. Each word the run would mine comes back `ready`, `no_definition` (a word made from its line that no offline dictionary defines) or, when Anki answers, `duplicate`; the others as for `mine`. The result file says `"dry_run": true`.
 
 ## render
 
@@ -209,7 +272,7 @@ Episodes run one at a time, and each run's `result-<n>.json` is written as it en
 
 ## media
 
-`media` cuts a clip and a picture for each line it is given. The media file:
+`media` cuts a clip and a picture for each line it is given, or, for a reading source, gives each unit's text and picture. The media file:
 
 | Key | Value |
 |---|---|
@@ -226,12 +289,16 @@ An episode:
 | Key | Value |
 |---|---|
 | `run_id` | required |
-| `video_file`, `subtitle_file` | required paths, as for `mine` |
+| `video_file`, `subtitle_file` | a video episode's files, as for `mine` |
+| `audio_file`, `subtitle_file` | instead, an audiobook episode's |
+| `reading_file` | instead, a reading source, as for `mine` |
 | `lines` | required: the lines to cut |
 | `subtitle_offset` | seconds added to every subtitle time; `0` when left out |
 | `audio_track_override` | 0-based audio track, or `null` to find the mining language's track |
 
-Each line is a `line_start` and an optional `line_expansion`, chosen and merged as for `mine`. `media` needs no parse, no dictionary and no Anki, and runs any time. It takes no `cancel` file, and a signal ends it without a verdict. `media-<n>.json` lists per line its `line_start`, `start`, `end`, `text`, `picture` and `audio` (paths in the run folder, `null` when that cut failed). The files are `media-<n>/<k>.<ext>`, `k` being the line's place in `lines`, from 1. `still_height` and `audio_bitrate` are whole numbers of 1 or more. Without ffmpeg or ffprobe the call gives `SETUP_ERROR`; per episode, a video that does not open gives `VIDEO_UNREADABLE`, and a subtitle that cannot be read or has no lines gives `SUBTITLE_UNREADABLE`.
+Each line is a `line_start` (a reading source: a `unit_index`) and an optional `line_expansion`, chosen and merged as for `mine`. `media` needs no parse, no dictionary and no Anki, and runs any time. It takes no `cancel` file, and a signal ends it without a verdict. `media-<n>.json` lists per line its `line_start`, `start`, `end`, `unit_index`, `location`, `text`, `picture` and `audio` (paths in the run folder, `null` when that cut failed).
+- **Audiobook:** the picture is the audio's embedded cover.
+- **Reading source:** a line has its `unit_index`, `location`, `text` and `picture`, which is a manga unit's crop or a book's cover. Its `audio` is `null`, and it needs no ffmpeg. `still_height` does not apply: the picture is the card's. A unit past the source's end gives a line of `null`s but its `unit_index`. The files are `media-<n>/<k>.<ext>`, `k` being the line's place in `lines`, from 1. `still_height` and `audio_bitrate` are whole numbers of 1 or more. Without ffmpeg or ffprobe the call gives `SETUP_ERROR`. Per episode, a video that does not open gives `VIDEO_UNREADABLE`, an audio file `AUDIO_UNREADABLE`, a reading source `SOURCE_UNREADABLE`, and a subtitle that cannot be read or has no lines `SUBTITLE_UNREADABLE`.
 
 ## fetch
 
@@ -249,12 +316,177 @@ The fetch file has `schema` (`1`), `run_dir`, `profile` and `language` as in the
 Per episode it probes the video, downloads it with its subtitle into `fetch-<n>/`, transcribes or aligns, and writes `fetch-<n>.json`: `video_file`, `subtitle_file` (absolute paths), `sub_source` (`manual`, `auto` for YouTube's automatic captions, or `generated` for a transcription), `video_id`, `title`, `duration` (whole seconds), and the `episode_name_override`, `series_name_override` and `source_label_override` a YouTube run in the window sets. Mine the files with an episode that sets those three, so its cards read like the window's YouTube cards.
 - Fetching a `run_id` again downloads again, into the next `fetch-<n>/`. It first removes every `fetch-<n>/` in that run folder with no `fetch-<n>.json`, so keep the json while you need its folder.
 - `progress.json` stages are probing, downloading, then transcribing or aligning; a run that does neither ends at stage 2 of 3. `done` and `total` count percent while downloading and transcribing, and stay 0 while probing and aligning. A `cancel` file stops the run as for `mine`.
-- Each run verdict also carries `failure_is_transient`: true for a YouTube login wall, a locked browser cookie database and a timeout, which running again later can get past.
+- `failure_is_transient` is true for a YouTube login wall, a locked browser cookie database and a timeout, which running again later can get past.
 - Per run: `YOUTUBE_REFUSED`, `FETCH_FAILED`, `SETUP_ERROR` (the speech model a transcription needs, or yt-dlp or ffmpeg lost mid-call) and `CANCELLED`. A missing yt-dlp or ffmpeg refuses the whole call with `SETUP_ERROR`.
+
+## Commands that make files
+
+`extract`, `transcribe`, `video-ocr`, `retime`, `sync` and `ocr` work as `fetch` does:
+- Each file has `schema` (`1`), `run_dir`, `profile` and `language` as in the run file, and `episodes`, each with a `run_id` and the keys in its section.
+- Per episode, a run writes `<command>-<n>.json` when it ends, and puts the files it makes in `<command>-<n>/` beside it. `ocr` writes beside the volume instead.
+- A run that fails or is cancelled writes no json, and its folder goes.
+- Running a `run_id` again writes the next number; a `<command>-<n>/` with no json beside it is removed first.
+- Paths in the json are absolute.
+- Each run verdict carries `failure_is_transient`.
+- Nothing goes to Anki and no lock is held.
+- `progress.json` and `cancel` work as for `mine`; each section gives the stages.
+
+## inspect
+
+`inspect INSPECT_FILE` says what Anki Miner makes of each source, before any long job. The file has:
+- `schema` (`1`), `language` and, optionally, `profile`;
+- `run_dir`, required when a source asks for its units;
+- `sources`: each `{"path": …}` (a file, a folder or a web address), with an optional `"units": true` and a `run_id`.
+
+`result` is `{"sources": [ … ]}`, one entry per source, in order. Every key is always present:
+
+| Key | Value |
+|---|---|
+| `path` | as given |
+| `kind` | `book` (`.epub`, `.txt`, `.pdf`, a web article), `manga`, `subtitle`, `audio` or `video` |
+| `title`, `series`, `episode` | what `mine` labels its cards with; a manga volume's `episode` is the volume |
+| `cover` | a book's cover, an audio file's embedded picture, a manga volume's page images |
+| `units` | how many units a reading source has; `null` for audio and video |
+| `chapters` | a book's chapter map: each chapter's `title` and the `index` of its first unit; `[]` when the book names none, and for other kinds |
+| `needs` | `["ocr"]` for a manga volume with no `.mokuro` yet (its `units` is 0), else `[]` |
+| `warnings` | what loading the source noted (a text-only volume, an unmatched page…) |
+| `duration` | seconds, for audio and video |
+| `tracks` | for audio and video, each subtitle and audio stream (below) |
+| `file` | the unit list's file name, or `null` |
+| `error`, `message` | a source that does not load: its code and why. Every other key but `path` is then `null` |
+
+A track has:
+- `index`: the stream's index, what `extract` and `video-ocr` take;
+- `position`: its place among the tracks of its kind, from 0. An audio track's is `mine`'s `audio_track_override`;
+- `kind` (`subtitle` or `audio`), `codec`, `language`, `title` and `default`;
+- `forced`: `null` for audio;
+- `text`: `false` for an image subtitle track such as PGS or VobSub; `null` for audio.
+
+With `"units": true`, `inspect` writes `<run_dir>/<run_id>/inspect-<n>.json`: `{"schema": 1, "run_id": …, "units": [{"index": 0, "location": "一", "text": "吾輩は猫である。"}, …]}`. `index` is `mine`'s `unit_index`, and `text` sent as `line_text` names its unit.
+
+A source's error is one of these; the call's `ok` stays true:
+- `SOURCE_UNREADABLE`: a reading source;
+- `AUDIO_UNREADABLE`;
+- `VIDEO_UNREADABLE`: a video file with no video in it;
+- `BAD_RUN_FILE`: a file `inspect` does not read.
+
+It needs no Anki and no lock, runs any time, and writes only the unit lists asked for. SIGINT or SIGTERM ends the call with `CANCELLED`.
+
+## extract
+
+`extract EXTRACT_FILE` copies a subtitle track out of a video, as stored, for `mine`. An episode has `video_file` and `track` (the stream `index` `inspect` lists).
+- It writes `extract-<n>/<video name>.<language>.<ext>`. An ASS track stays `.ass`, SubRip `.srt` and WebVTT `.vtt`; MP4 text and other text codecs become `.srt`. Without a language tag, the name has no language part.
+- `extract-<n>.json` has:
+  - `subtitle_file`;
+  - `language`: `null` when untagged;
+  - `codec`: the track's;
+  - `warning`: ffmpeg's note when the copy finished from a damaged source, which may be cut short; else `null`.
+- Per run:
+  - `VIDEO_UNREADABLE`: the video does not open, or the copy failed;
+  - `TRACK_NOT_FOUND`: no subtitle track has that index;
+  - `TRACK_NOT_TEXT`: an image track, which `video-ocr` reads;
+  - `CANCELLED`.
+- Without ffmpeg or ffprobe, the call gives `SETUP_ERROR`.
+- `progress.json` has one stage.
+
+## transcribe
+
+`transcribe TRANSCRIBE_FILE` makes a subtitle from speech, as Utilities → Generate does. An episode has `video_file` or `audio_file`.
+- It listens in the mining language and writes `transcribe-<n>/<file name>.srt`. `transcribe-<n>.json` has `subtitle_file` and `status`: `generated`, or `no_speech`, with `subtitle_file` `null` and no file.
+- Stages: extracting, then transcribing (`done`/`total` in percent). A file transcribed before with the same model and language reuses that transcript.
+- The call gives `SETUP_ERROR` when any of these is missing or unusable:
+  - the speech model, including one that cannot transcribe the language (Cantonese needs `large-v3`);
+  - ffmpeg or ffprobe.
+- Per run:
+  - `VIDEO_UNREADABLE` or `AUDIO_UNREADABLE`: the file does not open, or has no audio to extract;
+  - `CANCELLED`.
+
+## video-ocr
+
+`video-ocr VIDEO_OCR_FILE` reads subtitles off the picture, as Utilities → Video OCR does. An episode's `video_file` is one of:
+- a video with subtitles burned into the picture. Its optional `region` is a frame fraction, such as `{"x": 0, "y": 0.75, "w": 1, "h": 0.25}`; left out, it is the region drawn in Utilities → Video OCR;
+- a video with `track`: the `index` of an image subtitle track (PGS, VobSub), as `inspect` lists it;
+- a `.sup` file, or a VobSub `.idx` with its `.sub` beside it.
+
+An image track or file is read whole. These give `BAD_RUN_FILE`:
+- `region` or `track` with a `.sup` or `.idx`;
+- `region` and `track` together;
+- a picture episode with no `region` when the profile has none either.
+
+Output and errors:
+- It writes `video-ocr-<n>/<file name>.srt`. `video-ocr-<n>.json` has:
+  - `subtitle_file`;
+  - `status`: `generated`, or `no_text` with `subtitle_file` `null`;
+  - `lines`: how many cues.
+- One stage; `done`/`total` are percent of the video's length.
+- The call gives `SETUP_ERROR` when:
+  - Video OCR is not installed for the language (`setup --ocr` installs it);
+  - ffmpeg or ffprobe is missing.
+- Per run:
+  - `VIDEO_UNREADABLE`: the video or file does not open or decode;
+  - `TRACK_NOT_FOUND`;
+  - `TRACK_NOT_IMAGE`: a text track, which `extract` copies;
+  - `SETUP_ERROR`: the OCR engine does not start on this computer;
+  - `CANCELLED`.
+
+## retime
+
+`retime RETIME_FILE` fits a subtitle made for another release to its video, as Utilities → Retime does. An episode has `video_file` and `subtitle_file`. An optional `reference_subtitle` is another subtitle already timed to that video, such as another language's.
+- **Reference:** without `reference_subtitle`, the subtitle is fitted to the video's own dialogue text track when it has one, else to its audio.
+- **Engines:** tried in turn until a fit passes Anki Miner's checks: `ffsubsync`, `alass`, `alass (single offset)`, `ffsubsync (single offset)`.
+- **Output:** `retime-<n>/<subtitle file name>`, in the subtitle's own format; the original is never changed.
+- **`retime-<n>.json`** has:
+  - `subtitle_file`;
+  - `status`: `retimed`, or `no_fit` with `subtitle_file` `null` and the reason in `message`;
+  - `engine`: which one fit;
+  - `offset_seconds`: the one shift, when the whole subtitle moved together; negative is earlier;
+  - `framerate_scale`: ffsubsync's (`1.0` when none); `null` for alass;
+  - `block_shifts_seconds`: alass's shift per block; `[]` otherwise.
+- **Progress:** one stage, without a count.
+- **Errors per run:**
+  - `VIDEO_UNREADABLE`;
+  - `SUBTITLE_UNREADABLE`: the subtitle or the reference cannot be read, or has no lines;
+  - `CANCELLED`.
+- **Call errors:** without ffmpeg or ffprobe, `SETUP_ERROR`.
+
+## sync
+
+`sync SYNC_FILE` times a book to its audiobook, as Utilities → Audiobook Sync does: the book's own sentences become the audiobook's subtitles. An episode has `book` (`.epub` or `.txt`) and `audio`: one file, or a list of chapter files in reading order.
+- Each audio file gets its own subtitle, `sync-<n>/<audio file name>.srt`, timed from the start of that file. Mine each audio file with its own subtitle.
+- `sync-<n>.json` holds `files` and the report.
+- `files`, one entry per audio file, in order:
+  - `audio_file` and `subtitle_file`;
+  - `status`: `synced`, `no_speech`, or `no_match` (speech that matched no sentence);
+  - `cues`: each cue's number `n` in its file, and the `index` of its unit in the book (`inspect`'s index, `mine`'s `unit_index`).
+- The report, for the book as a whole:
+  - `sentence_pct`: sentences timed, out of those from the first timed to the last;
+  - `audio_pct`: speech inside cues, out of all speech;
+  - `grade`: by the weaker of the two; A from 90, B from 75, C from 50, else D;
+  - `unheard`: the units the narrator skipped between timed ones, each `{"first": …, "last": …}`.
+- `sentence_pct`, `audio_pct` and `grade` are `null` when nothing was timed. A grade of C or D usually means another edition or the wrong book.
+- Stages: two per audio file, transcribing (`done`/`total` in percent) and aligning.
+- The call gives `SETUP_ERROR` without the speech model, ffmpeg or ffprobe.
+- Per run:
+  - `SOURCE_UNREADABLE`: the book;
+  - `AUDIO_UNREADABLE`: any of the audio files, checked before the first is transcribed;
+  - `CANCELLED`.
+
+## ocr
+
+`ocr OCR_FILE` reads a manga volume with mokuro, as Utilities → Manga OCR does. An episode has `volume`: a folder of page images, a `.cbz` or a `.zip`.
+- It writes `<volume>.mokuro` beside the volume, replacing one already there. mokuro keeps its page cache in `_ocr/` there too, so a cancelled volume resumes on the next call.
+- `ocr-<n>.json` has `mokuro_file`, `pages` (the pages in the `.mokuro`) and `pages_failed` (page images it could not read).
+- One stage; `done`/`total` are percent of pages.
+- The call gives `SETUP_ERROR` when Manga OCR is not installed for the language (`setup --ocr` installs it).
+- Per run:
+  - `OCR_FAILED`: mokuro failed, or wrote no `.mokuro`;
+  - `SETUP_ERROR`: mokuro does not start;
+  - `CANCELLED`.
+- Then mine the volume, or its `.mokuro`, as a `reading_file`.
 
 ## Progress and cancelling
 
-While a run works, `progress.json` holds `{"schema": 1, "run_id": …, "stage": 3, "stages": 5, "done": 12, "total": 26}`. The stages are parsing, filtering, media, definitions and cards.
+While a run works, `progress.json` holds `{"schema": 1, "run_id": …, "stage": 3, "stages": 5, "done": 12, "total": 26}`. For `mine`, the stages are parsing, filtering, media, definitions and cards; the other commands give theirs in their sections.
 
 To stop a run, create an empty file named `cancel` in its folder. The run stops at its next step, reports `CANCELLED`, and Anki Miner deletes the file. Only that run stops; a call with several runs moves on to the next. A `cancel` that arrives after the run's last step leaves its result as it is; the file is still deleted.
 
@@ -266,23 +498,29 @@ A call starts by deleting the `progress.json` and `cancel` files an earlier call
 |---|---|---|
 | `BUSY` | call | the window is mining, or another run is working; for `settings-import` and `setup`, any open window |
 | `BAD_ARGUMENTS` | call | the command line does not parse, or names an unknown language or an `--out` or `--progress` folder that does not exist; for `settings-import`, a FILE it cannot apply, a name it refuses or the active profile; for `setup`, a language the profile has never used |
-| `BAD_RUN_FILE` | call | the run file, media file or fetch file is not valid JSON or breaks the rules above |
+| `BAD_RUN_FILE` | call | a command's file is not valid JSON or breaks the rules above |
 | `PROFILE_UNREADABLE` | call | the profile does not exist or cannot be read |
-| `SETUP_ERROR` | call, run | language pack, dictionary index, ffmpeg, deck, note type, fields or offline dictionary; for fetch, yt-dlp, ffmpeg or the speech model |
+| `SETUP_ERROR` | call, run | language pack, dictionary index, ffmpeg, deck, note type, fields or offline dictionary; for fetch, yt-dlp, ffmpeg or the speech model; for transcribe and sync, the speech model; for video-ocr and ocr, their OCR engine |
 | `ANKI_UNREACHABLE` | call, run | AnkiConnect does not answer |
 | `VIDEO_UNREADABLE` | run | the video does not open |
+| `AUDIO_UNREADABLE` | run | the audio file does not open |
+| `SOURCE_UNREADABLE` | run | a book, text, subtitle file, manga volume or web article does not load |
 | `SUBTITLE_UNREADABLE` | run | the subtitle file, or the secondary one, cannot be read |
 | `MINING_FAILED` | run | the run itself failed; `message` says why |
 | `YOUTUBE_REFUSED` | run | fetch: a live stream, a video over the profile's length limit, an age-restricted video without cookies, or no captions with `captions` |
 | `FETCH_FAILED` | run | fetch: probing, downloading or transcribing failed; see `failure_is_transient` |
-| `CANCELLED` | call, run | stopped by a `cancel` file or a signal, or `setup` stopped by a signal |
+| `OCR_FAILED` | run | ocr: mokuro failed on the volume |
+| `TRACK_NOT_FOUND` | run | no subtitle track has that index |
+| `TRACK_NOT_TEXT` | run | extract: an image track, which `video-ocr` reads |
+| `TRACK_NOT_IMAGE` | run | video-ocr: a text track, which `extract` copies |
+| `CANCELLED` | call, run | stopped by a `cancel` file or a signal; for `setup` and `inspect`, the whole call |
 | `INTERNAL` | call, run | an unexpected error; details are in the log |
 
 `message` carries the English text. Codes never change; new ones may be added.
 
 ## check, version, profiles, settings-export, settings-import
 
-`check --language CODE [--profile ID]` puts `{"ready": false, "items": [...]}` in `result`, one item per check. The items are `anki`, `deck`, `note_type`, `fields`, `dictionary`, `resources` (dictionary or frequency indexes that need re-importing), `language_pack`, `ffmpeg`, `ffprobe` and `yt_dlp`, then `speech_model` unless the profile's YouTube subtitles are Captions only. `yt_dlp` and `speech_model` are for `fetch` and do not count toward `ready`. Each item has `name`, `ok` and `message` (null when ok). When Anki does not answer, `deck`, `note_type` and `fields` are reported as not checked.
+`check --language CODE [--profile ID]` puts `{"ready": false, "items": [...]}` in `result`, one item per check. The items are `anki`, `deck`, `note_type`, `fields`, `dictionary`, `resources` (dictionary or frequency indexes that need re-importing), `language_pack`, `ffmpeg`, `ffprobe`, `yt_dlp`, `speech_model` (the model and an engine that runs it, for `fetch`, `transcribe` and `sync`), `ocr` (Manga OCR: mokuro, and the language's text recognizer where it uses one) and `video_ocr` (Video OCR's engine and the language's models). `yt_dlp`, `speech_model`, `ocr` and `video_ocr` do not count toward `ready`: `mine` needs none of them. Each item has `name`, `ok` and `message` (null when ok). When Anki does not answer, `deck`, `note_type` and `fields` are reported as not checked.
 
 `version` puts `{"schema": 1, "app": "3.5.0", "commands": [...], "features": [...]}` in `result`. `features` names each addition this build has (table below).
 
@@ -301,6 +539,18 @@ A call starts by deleting the `progress.json` and `cancel` files an earlier call
 | `setup` | the `setup` command |
 | `fetch` | the `fetch` command, `fetch-<n>.json`, and `check`'s `yt_dlp` and `speech_model` |
 | `beside-window` | `mine` runs beside an open window that is not mining |
+| `reading` | `reading_file` episodes (books, text, subtitle files, web articles), `unit_index`, and the rows' `unit_index` and `location` |
+| `manga` | `reading_file` takes a manga volume, and `media` gives its crops |
+| `audio-episodes` | `audio_file` episodes in `mine`, `render`, a dry run and `media` |
+| `inspect` | the `inspect` command |
+| `tracks` | the `extract` command |
+| `transcribe` | the `transcribe` command |
+| `video-ocr` | the `video-ocr` command |
+| `retime` | the `retime` command |
+| `sync` | the `sync` command |
+| `ocr` | the `ocr` command |
+| `setup-speech-ocr` | `setup`'s `--speech-model`, `--model` and `--ocr`, and its `cancel` file |
+| `check-speech-ocr` | `check` always reports `speech_model`, and reports `ocr` and `video_ocr` |
 
 `profiles` puts `{"profiles": [{"id": "anime", "name": "Anime", "active": true}, …]}` in `result`. Before the user has created any profile, the list holds one, `default`.
 
@@ -326,11 +576,25 @@ A call starts by deleting the `progress.json` and `cancel` files an earlier call
 - A resource already installed is not downloaded again; it is switched on if the profile does not use it yet.
 - While it works, FILE (its folder must exist) holds `{"schema": 1, "item": "jmdict-english", "stage": 2, "stages": 4, "done": 1048576, "total": 20971520}`. `item` is a resource `id` or `language_pack`; `done` and `total` are bytes while downloading. While a frequency or pitch list installs they count the files or terms it reads; for a dictionary, `done` counts the entries written and `total` stays 0.
 - `result`: `{"language": "ja", "profile": "default", "language_pack": {"status": "not_needed", "message": null}, "resources": [{"id": "jmdict-english", "kind": "dict", "name": "JMdict", "status": "installed", "message": null}, …]}`. `status` is `installed`, `already_installed`, `not_needed` (language pack only), `failed` (`message` says why) or `not_attempted`.
-- `ok` is false when an item failed; the top-level `error` stays null. SIGINT or SIGTERM stops the item in flight with `CANCELLED`. That item is `not_attempted`, and a download cut short resumes on the next call; what finished stays installed and switched on.
+- `--speech-model` also installs what transcription needs (`transcribe`, `sync`, and `fetch` without captions), as Settings → Transcription & Alignment would on this computer:
+  - the speech engine, when the app needs it;
+  - the model: `--model large-v3` (about 3 GB) or `small` (about 0.5 GB), left out the profile's. Cantonese needs `large-v3`;
+  - the part for an NVIDIA or Vulkan graphics card.
+- After a successful download, `--model` becomes the profile's model.
+- `--ocr` installs Manga OCR (mokuro, and the language's text recognizer where it uses one) and Video OCR (its engine and the language's models), as Utilities → Manga OCR and → Video OCR do.
+- With them, `result` adds:
+  - `"speech_model": {"name": "large-v3", "status": …, "message": …}`;
+  - `"ocr": {"status": …, "message": …}`;
+  - `"video_ocr": {"status": …, "message": …}`.
+- A language without Manga or Video OCR (Hebrew, Vietnamese, Cantonese) has that item `failed`.
+- While these install, `item` is `speech_model`, `ocr` or `video_ocr`. `done` and `total` count bytes while a part downloads. They stay 0 while the Whisper model downloads (it reports no size) and while mokuro installs.
+- `ok` is false when an item failed; the top-level `error` stays null.
+- A `cancel` file in FILE's folder stops setup, as SIGINT or SIGTERM do. setup deletes FILE and that `cancel` file when it starts.
+- A stop ends the item in flight with `CANCELLED`, and that item is `not_attempted`. A download cut short resumes on the next call; what finished stays installed and switched on. The Whisper model's download cannot stop midway: a cancel takes effect when it ends.
 
 ## Differences from the proposal
 
-This build implements the v7 proposal's "First" list and the next requests (Z-1 to Z-13; Z-9 is held back). Where it took a request's smaller version or changed it, the bullets below say so.
+This build implements the v7 proposal's "First" list, the next requests (Z-1 to Z-13) and round 2 (Z-9, Z-14 to Z-25). Where it took a request's smaller version or changed it, the bullets below say so.
 
 - Of the "First" list it takes the full word matching (card front, then dictionary form) and the full word statuses, and the "Smaller version" of the setup codes: all six are one `SETUP_ERROR`. `profiles` is its own command.
 - `filter` (v7 and Z-6) names only the merge: with every named word whitelisted and a named line made into a word (see Choosing the line), no other step after the parse can leave one `not_found`.
@@ -350,6 +614,19 @@ This build implements the v7 proposal's "First" list and the next requests (Z-1 
 - `media` (Z-10) files go to `media-<n>/`, not `media/`, which a `mine` removes when it ends.
 - `setup` (Z-11) also takes `--profile`. CODE can differ from the profile's mining language only when the profile has used it, and `result` gives every item a `status`, not only what was installed.
 - The fold that `word` matches through (Z-12) is the language's one-card-per-run comparison, so it covers letter case too.
+- A reading card's Source reads `<title> @ <location>`, as Reading's cards do (Z-9). An audiobook card's picture is the file's embedded cover (Z-16).
+- `mine`, `render` and `media` run verdicts also carry `failure_is_transient`.
+- `sync` (Z-17) writes one subtitle per audio file, under `files`, each with its own `cues`, because a subtitle's times belong to one file. `unheard` gives `first` and `last` unit indices.
+- `transcribe`, `video-ocr` and `retime` report a `status`; `retime` (Z-25) has no `ok`.
+- `retime` keeps the subtitle's name and format. Without a reference, it prefers the video's own dialogue track to its audio.
+- `extract` (Z-24) adds `warning`, and writes text codecs other than ASS, SubRip and WebVTT as SubRip.
+- `inspect` (Z-19) also lists audio tracks, with each track's `position`.
+- `inspect`'s `needs` names only `ocr`: the speech model is a computer's, not a source's, and `check` reports it.
+- An `inspect` unit list needs a `run_id`. `chapters` is for books only.
+- `check` and `setup` (Z-20, Z-22) report Manga OCR (`ocr`) and Video OCR (`video_ocr`) apart, as they use different engines; `--ocr` installs both.
+- Long jobs count `done`/`total` in percent, not pages or audio seconds. The Whisper model's download has no byte count.
+- `video-ocr` (Z-21) takes a region per episode, else the profile's. With neither, the call is refused.
+- `ocr` (Z-15) replaces an existing `.mokuro`, and resumes a cancelled volume from mokuro's page cache.
 
 ## Example (Python)
 
