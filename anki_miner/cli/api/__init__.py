@@ -223,6 +223,10 @@ def _job_call(command: str) -> Callable[[Path, threading.Event], list[dict[str, 
         from anki_miner.cli.api import extract
 
         return extract.call
+    if command == "video-ocr":
+        from anki_miner.cli.api import video_ocr
+
+        return video_ocr.call
     raise AssertionError(f"not a job command: {command}")
 
 

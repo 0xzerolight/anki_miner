@@ -18,9 +18,10 @@ COMMANDS = (
     "setup",
     "fetch",
     "extract",
+    "video-ocr",
 )
 #: Commands that turn files into files, one run per episode (``jobs.py``): ``<name> FILE``.
-JOB_COMMANDS = ("fetch", "extract")
+JOB_COMMANDS = ("fetch", "extract", "video-ocr")
 #: What this build adds beyond 3.5.0's API, by stable name (API.md, "version"). One name per
 #: addition, appended when it ships; a caller checks a name instead of comparing versions.
 FEATURES = (
@@ -38,6 +39,7 @@ FEATURES = (
     "fetch",
     "beside-window",
     "tracks",
+    "video-ocr",
 )
 
 BUSY = "BUSY"
