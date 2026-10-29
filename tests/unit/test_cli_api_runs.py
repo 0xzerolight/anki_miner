@@ -99,7 +99,14 @@ def test_mine_writes_a_result_file_per_run(services, tmp_path, video) -> None:
     anki.last_created_mined_forms, anki.last_created_note_ids = ["約束"], [1727000000001]
     services.processor.last_media_missing = {"約束": ["audio"]}
     [verdict] = runs.mine_runs(_run_file(tmp_path, video), threading.Event())
-    assert verdict == {"run_id": "ep-01", "ok": True, "error": None, "message": None, "file": "result-1.json"}
+    assert verdict == {
+        "run_id": "ep-01",
+        "ok": True,
+        "error": None,
+        "message": None,
+        "file": "result-1.json",
+        "failure_is_transient": False,
+    }
     result = _result_file(tmp_path)
     assert result["outcome"] == "success" and result["error"] is None and result["media_store_failures"] == 0
     assert result["anki_write_state"] == "no_note_write" and result["failure_is_transient"] is False
@@ -111,6 +118,23 @@ def test_mine_writes_a_result_file_per_run(services, tmp_path, video) -> None:
     # mining the run again starts over and keeps the earlier result
     assert runs.mine_runs(_run_file(tmp_path, video), threading.Event())[0]["file"] == "result-2.json"
     assert (tmp_path / "ep-01" / "result-1.json").exists()
+
+
+def test_a_dropped_connection_makes_the_run_verdict_transient(services, tmp_path, video) -> None:
+    def drops(*_args, **kwargs):
+        kwargs["curation_callback"](services.words())
+        return replace(_result(), errors=["Anki stopped answering"], failure_is_transient=True)
+
+    services.processor.process_episode.side_effect = drops
+    [verdict] = runs.mine_runs(_run_file(tmp_path, video), threading.Event())
+    assert (verdict["error"], verdict["failure_is_transient"]) == ("MINING_FAILED", True)
+    assert _result_file(tmp_path)["failure_is_transient"] is True
+
+
+def test_every_run_verdict_says_whether_its_failure_is_transient(services, tmp_path, video) -> None:
+    services.duration.side_effect = [None, 1.0]
+    verdicts = runs.mine_runs(_run_file(tmp_path, video, second=True), threading.Event())
+    assert [(v["error"], v["failure_is_transient"]) for v in verdicts] == [("VIDEO_UNREADABLE", False), (None, False)]
 
 
 def test_statuses_come_from_the_processor_and_its_anki_service(services, tmp_path, video) -> None:

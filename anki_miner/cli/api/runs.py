@@ -33,10 +33,10 @@ from anki_miner.cli.api.contract import (
     SUBTITLE_UNREADABLE,
     VIDEO_UNREADABLE,
     ApiError,
-    run_verdict,
     setup_failure,
 )
 from anki_miner.cli.api.files import Episode, RunFile
+from anki_miner.cli.api.jobs import RunFailed, verdict
 from anki_miner.cli.api.lines import Fates, LineWords, WordSelection, line_merges, named_word
 from anki_miner.cli.api.render import Rendered, RenderService
 from anki_miner.cli.api.runfolder import (
@@ -328,19 +328,21 @@ def _outcome_error(result: ProcessingResult) -> ApiError | None:
     if outcome is MiningOutcome.CANCELLED:
         return ApiError(CANCELLED, "The run was cancelled.")
     if outcome is MiningOutcome.FAILED:
-        return ApiError(MINING_FAILED, "; ".join(result.errors) or "The run failed.")
+        # Transient as the result file says: a dropped connection running again can get past.
+        message = "; ".join(result.errors) or "The run failed."
+        return RunFailed(MINING_FAILED, message, transient=bool(result.failure_is_transient))
     return None
 
 
 def guarded(run_id: str, body: Callable[[], dict[str, object]]) -> dict[str, object]:
-    """One run's verdict: its own ApiError, or INTERNAL for anything unexpected (logged)."""
+    """One run's verdict (``jobs.verdict``): its own ApiError, or INTERNAL for anything unexpected (logged)."""
     try:
         return body()
     except ApiError as exc:
-        return run_verdict(run_id, error=exc)
+        return verdict(run_id, error=exc)
     except Exception as exc:  # noqa: BLE001 — one broken run must not end the call
         logger.exception("API run %s failed", run_id)
-        return run_verdict(run_id, error=ApiError(INTERNAL, f"{type(exc).__name__}: {exc}"))
+        return verdict(run_id, error=ApiError(INTERNAL, f"{type(exc).__name__}: {exc}"))
 
 
 def mine_runs(run_file: RunFile, cancel_all: threading.Event, kind: Kind = Kind.MINE) -> list[dict[str, object]]:
@@ -393,7 +395,7 @@ def _mine_one(
         del report["dry_run"], report["anki_write_state"]
         report["words"] = _render_rows(words, mined.rendered, out)
     write_json(path, report)
-    return run_verdict(episode.run_id, error=error, file=path.name)
+    return verdict(episode.run_id, error=error, file=path.name)
 
 
 def _render_rows(rows: list[dict[str, object]], rendered: Mapping[str, Rendered], out: Path) -> list[dict[str, object]]:

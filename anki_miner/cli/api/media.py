@@ -14,8 +14,9 @@ from functools import partial
 from pathlib import Path
 
 from anki_miner.cli.api import settings
-from anki_miner.cli.api.contract import SUBTITLE_UNREADABLE, ApiError, run_verdict
+from anki_miner.cli.api.contract import SUBTITLE_UNREADABLE, ApiError
 from anki_miner.cli.api.files import MediaEpisode, MediaFile
+from anki_miner.cli.api.jobs import verdict
 from anki_miner.cli.api.lines import fit_expansion, line_merge, nearest_line
 from anki_miner.cli.api.runfolder import next_numbered, write_json
 from anki_miner.cli.api.runs import check_video, guarded, require_ffmpeg
@@ -100,7 +101,7 @@ def _cut_one(media_file: MediaFile, episode: MediaEpisode, config: AnkiMinerConf
         for k, ((index, window), made) in enumerate(zip(chosen, cuts, strict=True), 1)
     ]
     write_json(path, {"schema": 1, "run_id": episode.run_id, "lines": rows})
-    return run_verdict(episode.run_id, file=path.name)
+    return verdict(episode.run_id, file=path.name)
 
 
 def _keep(cut: Path | None, out: Path, k: int) -> str | None:
