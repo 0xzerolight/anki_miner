@@ -548,3 +548,67 @@ class TestMiningLanguageEncoding:
         committed = pysubs2.load(str(out_sub))
         assert [event.text for event in committed] == self._SIMPLIFIED
         assert _cue_starts(out_sub) == [2000 + i * 3000 + 1500 for i in range(len(self._SIMPLIFIED))]
+
+
+class TestReferenceSubtitleFile:
+    """A subtitle file already timed to the video (the API's reference_subtitle) as the reference."""
+
+    def test_the_file_reaches_both_engines_as_a_cleaned_subtitle_reference(self, cfg, video, in_sub, out_sub, tmp_path):
+        reference = _write_sub(tmp_path / "en.ass", _starts(), texts=[f"line {i}" for i in range(14)])
+        seen: list[tuple[str, Path, list[int], dict[str, Any]]] = []
+
+        def _engine(name: str, ok: bool):
+            def run(config, ref, sub, out, **kwargs):
+                seen.append((name, ref, _cue_starts(ref), kwargs))
+                return _fake_engine(500, ok=ok, engine=name)(config, ref, sub, out, **kwargs)
+
+            return run
+
+        with (
+            patch(_REF) as auto,
+            patch(_FFS, side_effect=_engine("ffsubsync", ok=False)),
+            patch(_ALASS, side_effect=_engine("alass", ok=True)),
+        ):
+            outcome = retime_subtitle(cfg, video, in_sub, out_sub, reference_subtitle=reference)
+
+        assert outcome and outcome.reference_label == "en.ass"
+        auto.assert_not_called()  # the video's own tracks and audio are not consulted
+        [(_, ffs_ref, ffs_starts, _), (_, alass_ref, alass_starts, alass_kwargs)] = seen
+        assert ffs_ref == alass_ref and ffs_ref.parent.name == TMP_SUBDIR_NAME and ffs_ref.suffix == ".srt"
+        assert ffs_starts == alass_starts == _starts()
+        assert alass_kwargs["sub_reference"] is True
+        assert not ffs_ref.exists() and not (out_sub.parent / TMP_SUBDIR_NAME).exists()
+        assert reference.exists() and _cue_starts(reference) == _starts()
+
+    def test_a_reference_with_no_dialogue_fails_without_running_an_engine(self, cfg, video, in_sub, out_sub, tmp_path):
+        reference = _write_sub(tmp_path / "signs.srt", [1000, 4000], texts=["♪", "♪♪"])
+        with patch(_FFS) as ffs, patch(_ALASS) as alass:
+            outcome = retime_subtitle(cfg, video, in_sub, out_sub, reference_subtitle=reference)
+        assert not outcome and "no dialogue" in outcome.reason
+        ffs.assert_not_called()
+        alass.assert_not_called()
+        assert not out_sub.exists() and not (out_sub.parent / TMP_SUBDIR_NAME).exists()
+
+
+class TestWinningShift:
+    @pytest.mark.parametrize(
+        ("result", "offset", "scale", "shifts"),
+        [
+            (SyncResult(ok=True, engine="ffsubsync", offset_seconds=-1.84, framerate_scale=1.001), -1.84, 1.001, ()),
+            (SyncResult(ok=True, engine="alass", block_shifts_seconds=(1.5, 2.0)), None, None, (1.5, 2.0)),
+        ],
+    )
+    def test_the_winning_engines_shift_is_carried(self, cfg, video, in_sub, out_sub, result, offset, scale, shifts):
+        def _run(config, ref, sub, out, **kwargs):
+            _fake_engine(1500)(config, ref, sub, out, **kwargs)
+            return result
+
+        with patch(_FFS, side_effect=_run), patch(_ALASS, side_effect=_run):
+            outcome = retime_subtitle(cfg, video, in_sub, out_sub)
+
+        assert outcome.engine == result.engine
+        assert (outcome.offset_seconds, outcome.framerate_scale, outcome.block_shifts_seconds) == (
+            offset,
+            scale,
+            shifts,
+        )

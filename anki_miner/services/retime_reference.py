@@ -63,6 +63,7 @@ __all__ = [
     "RetimeReference",
     "list_reference_subtitle_streams",
     "resolve_reference",
+    "subtitle_file_reference",
 ]
 
 ReferenceKind = Literal["subtitle", "audio"]
@@ -334,6 +335,26 @@ def _stream_label(stream: SubtitleStream) -> str:
     if stream.title:
         return f"{language} · {stream.title}"
     return language
+
+
+def subtitle_file_reference(path: Path, dest: Path) -> RetimeReference | None:
+    """*path*, a subtitle file already timed to the video, cleaned into *dest* as a track is.
+
+    Cleaned for the same reasons (signs and karaoke skew the alignment, and
+    alass is told the reference is UTF-8), but the caller named this file, so
+    neither the cue floor nor the coverage gate applies. None when it does not
+    parse or no dialogue line survives; *dest* is then gone.
+    """
+    try:
+        cues = _clean_reference(path, dest).cues
+    except Exception:  # noqa: BLE001 — an unparsable file is reported by the caller, not raised
+        logger.warning("retime reference: could not clean %s", path, exc_info=True)
+        cues = 0
+    if cues == 0:
+        _unlink(dest)
+        return None
+    logger.info("retime reference: aligning against subtitle file %s (%d lines)", path.name, cues)
+    return RetimeReference(path=dest, kind="subtitle", temp=dest, label=path.name)
 
 
 # ---------------------------------------------------------------------------

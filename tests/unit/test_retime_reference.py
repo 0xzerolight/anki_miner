@@ -18,6 +18,7 @@ from anki_miner.services.retime_reference import (
     _clean_reference,
     list_reference_subtitle_streams,
     resolve_reference,
+    subtitle_file_reference,
 )
 from anki_miner.utils.audio_track_detector import SubtitleStream
 
@@ -430,3 +431,27 @@ class TestResolveReference:
 
         assert not sparse.exists()
         assert not sparse.with_suffix(".clean.srt").exists()
+
+
+# ---------------------------------------------------------------------------
+# subtitle_file_reference: a caller's file timed to the video
+# ---------------------------------------------------------------------------
+
+
+def test_a_short_subtitle_file_is_a_reference_without_the_cue_floor(tmp_path: Path) -> None:
+    subs = pysubs2.SSAFile()
+    for i in range(3):  # far below the floor an auto-picked track must clear
+        subs.events.append(pysubs2.SSAEvent(start=1000 + i * 2000, end=2000 + i * 2000, text=f"line {i}"))
+    subs.save(str(tmp_path / "ref.ass"), encoding="utf-8")
+    dest = tmp_path / "ref.clean.srt"
+    reference = subtitle_file_reference(tmp_path / "ref.ass", dest)
+    assert reference is not None and reference.kind == "subtitle" and reference.label == "ref.ass"
+    assert reference.path == reference.temp == dest
+    assert [e.start for e in pysubs2.load(str(dest))] == [1000, 3000, 5000]
+
+
+def test_a_subtitle_file_that_does_not_parse_is_no_reference(tmp_path: Path) -> None:
+    (tmp_path / "ref.srt").write_bytes(b"\x00\x01 not a subtitle")
+    dest = tmp_path / "ref.clean.srt"
+    assert subtitle_file_reference(tmp_path / "ref.srt", dest) is None
+    assert not dest.exists()
