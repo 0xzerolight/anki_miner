@@ -53,6 +53,9 @@ FEATURES = (
     "tracks",
     "video-ocr",
     "retime",
+    "reading",
+    "manga",
+    "audio-episodes",
 )
 
 BUSY = "BUSY"

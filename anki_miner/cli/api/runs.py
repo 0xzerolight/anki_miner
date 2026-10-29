@@ -8,12 +8,15 @@ stats.db are never touched (the caller keeps that record). A dry run
 (``Kind.DRY_RUN``) ends at the curation step: nothing is cut and nothing
 reaches Anki. A render (``Kind.RENDER``) runs to the notes and writes them,
 with their media, to ``<run_id>/render-<n>/`` and ``render-<n>.json``
-instead of Anki.
+instead of Anki. An episode's source is a video, an audio file (mined as the
+Audiobooks tab mines one) or a reading source (``process_reading``, its units
+the lines its words are named on).
 """
 
 from __future__ import annotations
 
 import logging
+import math
 import shutil
 import threading
 from collections.abc import Callable, Iterator, Mapping
@@ -30,13 +33,14 @@ from anki_miner.cli.api.contract import (
     INTERNAL,
     MINING_FAILED,
     SETUP_ERROR,
+    SOURCE_UNREADABLE,
     SUBTITLE_UNREADABLE,
     VIDEO_UNREADABLE,
     ApiError,
-    run_verdict,
     setup_failure,
 )
 from anki_miner.cli.api.files import Episode, RunFile
+from anki_miner.cli.api.jobs import RunFailed, verdict
 from anki_miner.cli.api.lines import Fates, LineWords, WordSelection, line_merges, named_word
 from anki_miner.cli.api.render import Rendered, RenderService
 from anki_miner.cli.api.runfolder import (
@@ -47,6 +51,7 @@ from anki_miner.cli.api.runfolder import (
     next_numbered,
     write_json,
 )
+from anki_miner.cli.api.sources import check_audio, open_reading
 from anki_miner.cli.runner import SetupFailure, check_card_target, check_environment
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import AnkiConnectionError, SetupError, SubtitleParseError
@@ -58,6 +63,7 @@ from anki_miner.gui.utils.service_factory import (
 from anki_miner.languages.registry import config_language, get_profile
 from anki_miner.models import (
     CANCELLED_ERROR,
+    AnkiWriteState,
     CardPayload,
     MediaData,
     MiningOutcome,
@@ -65,6 +71,7 @@ from anki_miner.models import (
     TokenizedWord,
     classify_result,
 )
+from anki_miner.orchestration.episode_processor import reading_cleanup
 from anki_miner.presenters.null_presenter import NullPresenter
 from anki_miner.services.anki_service import AnkiService
 from anki_miner.services.cue_merge import merge_budget_seconds
@@ -121,13 +128,17 @@ def require_ffmpeg(config: AnkiMinerConfig) -> None:
 
 
 @contextmanager
-def _services(config: AnkiMinerConfig, kind: Kind) -> Iterator[SharedLookupServices]:
-    """Run-level checks, then the lookup stack the runs share. A dry run checks neither ffmpeg nor Anki."""
+def _services(config: AnkiMinerConfig, kind: Kind, *, cuts: bool) -> Iterator[SharedLookupServices]:
+    """Run-level checks, then the lookup stack the runs share.
+
+    ffmpeg only when a run *cuts* media from a video or audio file (a reading
+    source needs none); a dry run checks neither ffmpeg nor Anki.
+    """
     try:
         check_environment(config)
     except SetupFailure as exc:
         raise ApiError(SETUP_ERROR, str(exc)) from exc
-    if kind is not Kind.DRY_RUN:
+    if kind is not Kind.DRY_RUN and cuts:
         require_ffmpeg(config)
     shared = create_shared_lookup_services(config)
     try:
@@ -185,7 +196,7 @@ def _mine(
     kind: Kind,
     out: Path,
 ) -> _Mined:
-    """One process_episode call, media inside the run folder, cleaned up whatever happens.
+    """One process_episode (or process_reading) call, media inside the run folder, cleaned up whatever happens.
 
     The temp folder is ``<run_id>/media/`` for every kind: a run folder serves one call at a time.
     A render's notes and their media go to *out* (``<run_id>/render-<n>/``), which stays.
@@ -206,15 +217,6 @@ def _mine(
     )
     try:
         parser = processor.subtitle_parser
-        try:
-            entries = parser.parse_raw_entries(episode.subtitle_file, episode.subtitle_offset)
-            # The same lines at the file's own times: line_start is what the caller read there.
-            raw = parser.parse_raw_entries(episode.subtitle_file, 0.0)
-            # The processor's own parse of the second track (None without one), done again inside
-            # process_episode: there a file that will not parse fails the run as MINING_FAILED.
-            processor._load_secondary_entries(episode.secondary_subtitle_file)
-        except SubtitleParseError as exc:
-            raise ApiError(SUBTITLE_UNREADABLE, str(exc)) from exc
         fold = get_profile(config_language(config)).dedup_fold
         line_words = LineWords(
             parse_line=processor.parse_sentence_fn,
@@ -223,28 +225,46 @@ def _mine(
             readings=processor.definition_service.offline_term_readings,
             removed=partial(_removed, processor, fold),
         )
-        selection = WordSelection(
+        choose = partial(
+            WordSelection,
             episode.words,
-            entries,
-            raw,
-            line_merges(config, entries),
-            merge_budget_seconds(config.audio_padding),
-            clean=parser._clean_line_text,  # the cleaner parse_raw_entries applied to the lines
             fold=fold,
             allow_duplicates=run_config.allow_duplicate_cards,
             line_words=line_words,
             dry_run=dry,
         )
+        progress = ProgressFile(folder, episode.run_id)
+        if episode.subtitle_file is not None:
+            try:
+                entries = parser.parse_raw_entries(episode.subtitle_file, episode.subtitle_offset)
+                # The same lines at the file's own times: line_start is what the caller read there.
+                raw = parser.parse_raw_entries(episode.subtitle_file, 0.0)
+                # The processor's own parse of the second track (None without one), done again inside
+                # process_episode: there a file that will not parse fails the run as MINING_FAILED.
+                processor._load_secondary_entries(episode.secondary_subtitle_file)
+            except SubtitleParseError as exc:
+                raise ApiError(SUBTITLE_UNREADABLE, str(exc)) from exc
+            selection = choose(
+                entries,
+                raw,
+                line_merges(config, entries),
+                merge_budget_seconds(config.audio_padding),
+                clean=parser._clean_line_text,  # the cleaner parse_raw_entries applied to the lines
+            )
         with CancelWatcher(folder, cancel_all) as cancel:
             try:
-                result = processor.process_episode(
-                    episode.video_file,
-                    episode.subtitle_file,
-                    progress_callback=ProgressFile(folder, episode.run_id),
-                    curation_callback=selection,
-                    cancel_event=cancel,
-                    **episode.process_kwargs(),  # type: ignore[arg-type]
-                )
+                if episode.subtitle_file is None:
+                    selection, result = _mine_reading(run_config, episode, processor, choose, progress, cancel)
+                else:
+                    assert episode.media_file is not None  # a subtitle file goes with a video or audio file
+                    result = processor.process_episode(
+                        episode.media_file,
+                        episode.subtitle_file,
+                        progress_callback=progress,
+                        curation_callback=selection,
+                        cancel_event=cancel,
+                        **episode.process_kwargs(),  # type: ignore[arg-type]
+                    )
             except (AnkiConnectionError, SetupError) as exc:  # the processor's own preflight
                 raise setup_failure(exc) from exc
             succeeded = classify_result(result) is MiningOutcome.SUCCESS
@@ -283,6 +303,58 @@ def _mine(
     finally:
         processor.close()
         shutil.rmtree(folder / MEDIA, ignore_errors=True)
+
+
+def _mine_reading(
+    config: AnkiMinerConfig,
+    episode: Episode,
+    processor: EpisodeProcessor,
+    choose: Callable[..., WordSelection],
+    progress: ProgressFile,
+    cancel: threading.Event,
+) -> tuple[WordSelection, ProcessingResult]:
+    """A reading episode: its source loaded as Reading loads it, then mined over its units.
+
+    The units are the lines: each one's card sentence at its index
+    (``reading_entries``), with no time budget for a merge and no automatic
+    one. Loaded inside the run's cancel watcher, so a cancel stops a long load;
+    a run cancelled there reports every word not_attempted, as one cancelled
+    mid-run does.
+    """
+    assert episode.reading_file is not None  # an episode without a subtitle file reads one
+    parser = processor.subtitle_parser
+    try:
+        document = open_reading(config, parser, episode.reading_file, cancel_check=cancel.is_set)
+    except ApiError as exc:
+        if exc.code != CANCELLED:
+            raise
+        stopped = ProcessingResult(
+            total_words_found=0,
+            new_words_found=0,
+            cards_created=0,
+            errors=[CANCELLED_ERROR],
+            anki_write_state=AnkiWriteState.NO_NOTE_WRITE,
+        )
+        return choose([], [], [], math.inf), stopped
+    cleanup = reading_cleanup(document)
+    entries = parser.reading_entries(document.units, subtitle_cleanup=cleanup)
+    selection = choose(
+        entries,
+        entries,
+        [(0, 0)] * len(entries),
+        math.inf,
+        # A unit copied from the source (inspect's unit list) matches its line.
+        clean=partial(parser.reading_sentence, subtitle_cleanup=cleanup),
+        units={unit.index: unit.location_label for unit in document.units},
+    )
+    result = processor.process_reading(
+        document,
+        progress_callback=progress,
+        curation_callback=selection,
+        cancel_event=cancel,
+        **episode.reading_kwargs(),
+    )
+    return selection, result
 
 
 def _dry_statuses(
@@ -328,19 +400,21 @@ def _outcome_error(result: ProcessingResult) -> ApiError | None:
     if outcome is MiningOutcome.CANCELLED:
         return ApiError(CANCELLED, "The run was cancelled.")
     if outcome is MiningOutcome.FAILED:
-        return ApiError(MINING_FAILED, "; ".join(result.errors) or "The run failed.")
+        # Transient as the result file says: a dropped connection running again can get past.
+        message = "; ".join(result.errors) or "The run failed."
+        return RunFailed(MINING_FAILED, message, transient=bool(result.failure_is_transient))
     return None
 
 
 def guarded(run_id: str, body: Callable[[], dict[str, object]]) -> dict[str, object]:
-    """One run's verdict: its own ApiError, or INTERNAL for anything unexpected (logged)."""
+    """One run's verdict (``jobs.verdict``): its own ApiError, or INTERNAL for anything unexpected (logged)."""
     try:
         return body()
     except ApiError as exc:
-        return run_verdict(run_id, error=exc)
+        return verdict(run_id, error=exc)
     except Exception as exc:  # noqa: BLE001 — one broken run must not end the call
         logger.exception("API run %s failed", run_id)
-        return run_verdict(run_id, error=ApiError(INTERNAL, f"{type(exc).__name__}: {exc}"))
+        return verdict(run_id, error=ApiError(INTERNAL, f"{type(exc).__name__}: {exc}"))
 
 
 def mine_runs(run_file: RunFile, cancel_all: threading.Event, kind: Kind = Kind.MINE) -> list[dict[str, object]]:
@@ -350,7 +424,8 @@ def mine_runs(run_file: RunFile, cancel_all: threading.Event, kind: Kind = Kind.
     """
     clear_leftovers(run_file.run_dir, (episode.run_id for episode in run_file.episodes))
     config = settings.resolve_run_config(run_file.profile, run_file.language, run_file.overlay)
-    with _services(config, kind) as shared:
+    cuts = any(episode.media_file is not None for episode in run_file.episodes)
+    with _services(config, kind, cuts=cuts) as shared:
         return [
             guarded(episode.run_id, partial(_mine_one, run_file.run_dir, episode, config, shared, cancel_all, kind))
             for episode in run_file.episodes
@@ -369,8 +444,13 @@ def _mine_one(
     folder.mkdir(exist_ok=True)
     if cancel_all.is_set():
         raise ApiError(CANCELLED, "Cancelled before this run started.")
-    if kind is not Kind.DRY_RUN:  # a dry run cuts nothing from the video
-        check_video(config, episode.video_file)
+    if kind is not Kind.DRY_RUN:  # a dry run cuts nothing from the video or audio
+        if episode.video_file is not None:
+            check_video(config, episode.video_file)
+        elif episode.audio_file is not None:
+            check_audio(config, episode.audio_file)
+    if isinstance(episode.reading_file, Path) and not episode.reading_file.exists():
+        raise ApiError(SOURCE_UNREADABLE, f"File not found: {episode.reading_file}")
     # Numbered first: a render's files folder carries the number of its json.
     path = next_numbered(folder, "render" if kind is Kind.RENDER else "result")
     out = folder / path.stem
@@ -393,7 +473,7 @@ def _mine_one(
         del report["dry_run"], report["anki_write_state"]
         report["words"] = _render_rows(words, mined.rendered, out)
     write_json(path, report)
-    return run_verdict(episode.run_id, error=error, file=path.name)
+    return verdict(episode.run_id, error=error, file=path.name)
 
 
 def _render_rows(rows: list[dict[str, object]], rendered: Mapping[str, Rendered], out: Path) -> list[dict[str, object]]:

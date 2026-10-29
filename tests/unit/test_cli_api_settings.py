@@ -112,6 +112,12 @@ def test_run_config_turns_the_translation_auto_pick_off(test_config) -> None:
     assert settings.resolve_run_config(None, "ja", {}).secondary_subtitle_enabled is False
 
 
+def test_run_config_mines_every_named_reading_word_and_crops_manga(test_config) -> None:
+    GUIConfigManager.save_config(replace(test_config, reading_min_occurrence=3, crop_manga_to_text=False))
+    config = settings.resolve_run_config(None, "ja", {})
+    assert (config.reading_min_occurrence, config.crop_manga_to_text) == (1, True)
+
+
 def test_run_config_turns_the_whitelist_on_keeping_the_profiles_file_only_when_it_was_on(test_config, tmp_path) -> None:
     wl = tmp_path / "wl.txt"
     GUIConfigManager.save_config(replace(test_config, use_whitelist=False, whitelist_path=wl))

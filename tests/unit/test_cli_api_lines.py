@@ -2,12 +2,17 @@
 
 from __future__ import annotations
 
+import collections
+import math
 import unicodedata
 from dataclasses import replace
+from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 from anki_miner.cli.api import files, lines
+from anki_miner.models.reading import ImageRef, ReadingUnit
 from anki_miner.models.word import TokenizedWord
 from anki_miner.services.subtitle_parser import SubtitleParserService
 
@@ -52,6 +57,8 @@ KEYS = {
     "sentence",
     "start",
     "end",
+    "unit_index",
+    "location",
     "filter",
 }
 
@@ -84,6 +91,8 @@ def test_word_keeps_its_own_line_with_that_lines_merge() -> None:
         "sentence": "今日こそは言うよ ちゃんと",
         "start": 15.02,
         "end": 20.10,
+        "unit_index": None,
+        "location": None,
         "filter": None,
     }
 
@@ -493,3 +502,125 @@ def test_find_folded_maps_back_to_the_lines_own_offsets() -> None:
     assert lines.find_folded("ＯＫ 約束だよ", "約束") == (3, 5)
     assert lines.find_folded("約 束だよ", "約束") == (0, 3)
     assert lines.find_folded("約束だよ", "走る") is None
+
+
+# A reading run's lines: its units' card sentences, each at its index as both times.
+UNITS = [
+    (0.0, 0.0, "吾輩は猫である。"),
+    (1.0, 1.0, "名前はまだ無い。"),
+    (2.0, 2.0, "名前はまだ無い。"),
+    (3.0, 3.0, "どこで生れたか"),
+]
+LABELS = {0: "一", 1: "一", 2: "二", 3: "二"}
+
+
+def _reading(requests, *, entries=UNITS, labels=LABELS, **kw) -> lines.WordSelection:
+    return lines.WordSelection(
+        requests, entries, entries, [(0, 0)] * len(entries), math.inf, units=labels, line_words=_line_words(), **kw
+    )
+
+
+def test_unit_index_names_the_second_of_two_identical_sentences() -> None:
+    selection = _reading([R("名前", unit_index=2)])
+    [chosen] = selection([_on_lines("名前", 1, 2, entries=UNITS)])
+    assert chosen.start_time == 2.0 and chosen.line_expansion == (0, 0)
+    [row] = selection.report(lines.Fates(created={"名前": 5}))
+    assert {k: row[k] for k in ("unit_index", "location", "sentence", "line_start", "start", "end")} == {
+        "unit_index": 2,
+        "location": "二",
+        "sentence": "名前はまだ無い。",
+        "line_start": None,
+        "start": None,
+        "end": None,
+    }
+    assert set(row) == KEYS
+
+
+def test_line_text_names_the_first_unit_holding_it() -> None:
+    selection = _reading([R("名前", line_text="名前はまだ無い。")])
+    [chosen] = selection([_on_lines("名前", 1, 2, entries=UNITS)])
+    assert chosen.start_time == 1.0
+
+
+def test_a_unit_copied_from_the_source_matches_through_the_units_own_cleaner() -> None:
+    # The source's text is halfwidth; the line is its card sentence (reading_sentence).
+    entries = [(0.0, 0.0, "パソコンを使う")]
+    selection = _reading(
+        [R("使う", line_text="ﾊﾟｿｺﾝを使う")],
+        entries=entries,
+        labels={0: "p.1"},
+        clean=lambda t: t.replace("ﾊﾟｿｺﾝ", "パソコン"),
+    )
+    [chosen] = selection([_word("使う", 0, entries=entries)])
+    assert selection.report(lines.Fates())[0]["unit_index"] == 0 and chosen.start_time == 0.0
+
+
+def test_a_unit_index_past_the_end_is_not_found() -> None:
+    selection = _reading([R("名前", unit_index=9)])
+    assert selection([_on_lines("名前", 1, 2, entries=UNITS)]) == []
+    [row] = selection.report(lines.Fates())
+    assert (row["status"], row["mined_form"], row["unit_index"]) == ("not_found", None, None)
+
+
+def test_a_word_is_made_from_its_named_unit() -> None:
+    selection = _reading([R("生れる", unit_index=3, surface="生れ")])
+    assert selection.makes_words is True
+    [chosen] = selection([])
+    assert (chosen.start_time, chosen.sentence, chosen.mined_form) == (3.0, "どこで生れたか", "生れる")
+    [row] = selection.report(lines.Fates(created={"生れる": 1}))
+    assert (row["from_line"], row["unit_index"], row["location"]) == (True, 3, "二")
+
+
+def test_a_reading_merge_has_no_time_budget_and_stops_at_the_ends() -> None:
+    selection = _reading([R("名前", unit_index=1, line_expansion=(5, 1))])
+    [chosen] = selection([_on_lines("名前", 1, 2, entries=UNITS)])
+    assert chosen.line_expansion == (1, 1)
+    [row] = selection.report(lines.Fates())
+    assert row["sentence"] == "吾輩は猫である。 名前はまだ無い。 名前はまだ無い。"
+    assert (row["unit_index"], row["location"]) == (1, "一")  # the named unit, not the first merged one
+
+
+def test_a_manga_word_on_the_real_reading_path_keeps_its_units_crop_and_location(test_config) -> None:
+    """unit_index + line_expansion [1, 1] through process_reading: the merged sentence, unit 1's crop and page."""
+    from tests.unit.test_episode_processor_reading import (
+        _IMG,
+        _document,
+        _make_anki_service,
+        _make_processor,
+        _on_unit,
+        _parse_returning,
+        _sources,
+    )
+
+    page = ImageRef(Path("/pages/page12.png"))
+    texts = ["えっ", "宿題やった？", "まだ"]
+    units = [
+        ReadingUnit(text=t, index=i, location_label=f"p.{i + 11}", image_ref=page, block_box=(i, i, 10 + i, 10 + i))
+        for i, t in enumerate(texts)
+    ]
+    entries = [(float(i), float(i), t) for i, t in enumerate(texts)]
+    parser = MagicMock()
+    parser.parse_text_units.side_effect = _parse_returning(
+        [_on_unit("宿題", 1, "宿題やった？")], None, collections.Counter({"宿題": 1})
+    )
+    parser.reading_entries.return_value = entries
+    anki = _make_anki_service()
+    processor = _make_processor(
+        replace(test_config, crop_manga_to_text=True), subtitle_parser=parser, anki_service=anki
+    )
+    selection = lines.WordSelection(
+        [R("宿題", unit_index=1, line_expansion=(1, 1))],
+        entries,
+        entries,
+        [(0, 0)] * 3,
+        math.inf,
+        units={u.index: u.location_label for u in units},
+    )
+    with patch(_IMG, return_value=Path("/tmp/reading_crop.jpg")) as prepare:
+        processor.process_reading(_document(units, series="漫画", episode="第1巻"), curation_callback=selection)
+    [card] = anki.last_card_data
+    assert card.word.sentence == "えっ 宿題やった？ まだ"
+    assert prepare.call_args.kwargs["block_box"] == (1, 1, 11, 11)
+    assert _sources(anki) == ["漫画 — 第1巻 @ p.12"]
+    [row] = selection.report(lines.Fates(created={"宿題": 1}))
+    assert (row["sentence"], row["unit_index"], row["location"]) == (card.word.sentence, 1, "p.12")

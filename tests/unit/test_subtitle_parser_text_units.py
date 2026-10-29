@@ -377,6 +377,39 @@ class TestReadingPathDecorationStrip:
         assert any("　" in w.sentence for w in words2)
 
 
+class TestReadingEntries:
+    """reading_entries: each unit's card sentence at its dummy time, as the words carry them."""
+
+    def test_each_word_sits_on_its_units_entry(self, tmp_path):
+        config = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
+        service = SubtitleParserService(config)
+        units = [
+            ReadingUnit(text="ﾊﾟｿｺﾝを使う", index=0, location_label="p.0"),
+            ReadingUnit(text="⼝を開ける", index=1, location_label="p.1"),
+        ]
+        entries = service.reading_entries(units)
+        assert entries == [(0.0, 0.0, "パソコンを使う"), (1.0, 1.0, "口を開ける")]
+        words, _index, _counts = service.parse_text_units(units, want_line_index=False)
+        assert words and all((w.start_time, w.end_time, w.sentence) in entries for w in words)
+
+    def test_a_unit_the_cleanup_empties_is_left_out(self, tmp_path):
+        config = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
+        service = SubtitleParserService(config)
+        units = [
+            ReadingUnit(text="（スマホのバイブ音）", index=0, location_label="0:01"),
+            ReadingUnit(text="（旬）猫が魚を食べる", index=1, location_label="0:05"),
+        ]
+        assert service.reading_entries(units, subtitle_cleanup=True) == [(1.0, 1.0, "猫が魚を食べる")]
+        assert [text for _s, _e, text in service.reading_entries(units)] == [u.text for u in units]
+
+    def test_needs_no_tagger(self, tmp_path):
+        config = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
+        with patch("anki_miner.services.subtitle_parser.get_shared_tagger", side_effect=AssertionError("tagger")):
+            service = SubtitleParserService(config, defer_tagger=True)
+            units = [ReadingUnit(text="猫が好き", index=3, location_label="p.3")]
+            assert service.reading_entries(units) == [(3.0, 3.0, "猫が好き")]
+
+
 class TestCountFronts:
     """count_fronts: count_lemmas' occurrences keyed by card front (audit L3-005), under the
     T-38 parity: same span locator, same mine gate, same identity as emission."""

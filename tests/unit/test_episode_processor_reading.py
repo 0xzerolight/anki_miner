@@ -567,25 +567,111 @@ def test_line_unknown_counts_attached_for_curation(test_config):
     assert seen == {"犬": 2, "猫": 1}
 
 
-def test_reading_curation_warns_on_dropped_line_expansion(test_config, caplog):
-    """A curated word carrying a line_expansion must warn — the reading path
-    has no subtitle timeline to materialize it against (Issue #120 C4)."""
-    import logging
+def _on_unit(lemma: str, index: int, text: str) -> TokenizedWord:
+    """A word whose sentence is its unit's card sentence, as parse_text_units gives it."""
+    start = text.index(lemma)
+    return replace(_word(lemma, index), sentence=text, surface_start=start, surface_end=start + len(lemma))
 
-    words = [_word("犬", 0)]
-    counts = collections.Counter({"犬": 1})
+
+def test_a_curated_line_expansion_merges_the_neighbouring_units(test_config):
+    """The --api callback's line_expansion: the merged sentence, the named unit's crop and location."""
+    config = replace(test_config, crop_manga_to_text=True)
+    page = ImageRef(Path("/pages/page01.png"))
+    texts = ["前の吹き出し", "犬がいる", "次の吹き出し"]
+    units = [
+        ReadingUnit(text=t, index=i, location_label=f"p.{i + 1}", image_ref=page, block_box=(i, i, 10 + i, 10 + i))
+        for i, t in enumerate(texts)
+    ]
     sp = MagicMock()
-    sp.parse_text_units.side_effect = _parse_returning(words, None, counts)
+    sp.parse_text_units.side_effect = _parse_returning(
+        [_on_unit("犬", 1, "犬がいる")], None, collections.Counter({"犬": 1})
+    )
+    sp.reading_entries.return_value = [(float(i), float(i), t) for i, t in enumerate(texts)]
+    anki = _make_anki_service()
+    proc = _make_processor(config, subtitle_parser=sp, anki_service=anki)
+
+    with patch(_IMG, return_value=Path("/tmp/reading_crop.jpg")) as prepare:
+        proc.process_reading(
+            _document(units), curation_callback=lambda words: [replace(words[0], line_expansion=(1, 1))]
+        )
+
+    sp.reading_entries.assert_called_once_with(units, subtitle_cleanup=False)
+    [card] = anki.last_card_data
+    assert card.word.sentence == "前の吹き出し 犬がいる 次の吹き出し"
+    assert card.word.sentence[card.word.surface_start : card.word.surface_end] == "犬"
+    assert prepare.call_args.kwargs["block_box"] == (1, 1, 11, 11)  # unit 1's crop, not unit 0's
+    assert _sources(anki) == ["My Manga — vol01 @ p.2"]
+
+
+def test_a_window_run_never_reads_the_entries(test_config):
+    """The Word Curator stamps no expansion on a reading run: the fast path, as before."""
+    sp = MagicMock()
+    sp.parse_text_units.side_effect = _parse_returning([_word("犬", 0)], None, collections.Counter({"犬": 1}))
     proc = _make_processor(test_config, subtitle_parser=sp)
 
-    def curate(curated_words):
-        return [replace(curated_words[0], line_expansion=(1, 0))]
+    result = proc.process_reading(_document([_unit(0)]), curation_callback=lambda words: words)
 
-    with caplog.at_level(logging.WARNING, logger="anki_miner.orchestration.episode_processor"):
-        proc.process_reading(_document([_unit(0)]), curation_callback=curate)
+    assert result.cards_created == 1
+    sp.reading_entries.assert_not_called()
 
-    messages = [r.getMessage() for r in caplog.records]
-    assert any("line expansion" in m for m in messages)
+
+class _MakesWords:
+    """A curation callback that makes its word itself, as the --api WordSelection does."""
+
+    makes_words = True
+
+    def __init__(self, made: TokenizedWord) -> None:
+        self.made = made
+        self.offered: list[list[TokenizedWord]] = []
+
+    def __call__(self, words: list[TokenizedWord]) -> list[TokenizedWord]:
+        self.offered.append(list(words))
+        return [self.made]
+
+
+@pytest.mark.parametrize("parsed", [[], [_word("稀", 0)]], ids=["empty-parse", "phase-2-leaves-nothing"])
+def test_a_callback_that_makes_words_is_reached_when_nothing_is_left(test_config, parsed):
+    config = replace(test_config, reading_min_occurrence=2)  # 稀 occurs once: phase 2 drops it
+    sp = MagicMock()
+    sp.parse_text_units.side_effect = _parse_returning(parsed, None, collections.Counter({"稀": 1}))
+    anki = _make_anki_service()
+    proc = _make_processor(config, subtitle_parser=sp, anki_service=anki)
+    callback = _MakesWords(_word("犬", 1))
+
+    result = proc.process_reading(_document([_unit(0), _unit(1)]), curation_callback=callback)
+
+    assert callback.offered == [[]]
+    assert result.cards_created == 1 and [c.word.lemma for c in anki.last_card_data] == ["犬"]
+    assert _sources(anki) == ["My Manga — vol01 @ p.1"]
+
+
+def test_without_makes_words_an_empty_run_still_ends_before_curation(test_config):
+    sp = MagicMock()
+    sp.parse_text_units.side_effect = _parse_returning([], None, collections.Counter())
+    proc = _make_processor(test_config, subtitle_parser=sp)
+    offered = []
+
+    proc.process_reading(_document([_unit(0)]), curation_callback=lambda words: offered.append(words) or words)
+
+    assert offered == []
+
+
+def test_the_api_overrides_name_the_source(test_config):
+    sp = MagicMock()
+    sp.parse_text_units.side_effect = _parse_returning([_word("犬", 0)], None, collections.Counter({"犬": 1}))
+    anki = _make_anki_service()
+    stats = MagicMock()
+    proc = _make_processor(test_config, subtitle_parser=sp, anki_service=anki, stats_service=stats)
+    proc.process_reading(
+        _document([_unit(0, label="p.1")]), series_name_override="Series", episode_name_override="Vol 2"
+    )
+    assert _sources(anki) == ["Series — Vol 2 @ p.1"]
+
+    sp.parse_text_units.side_effect = _parse_returning([_word("犬", 0)], None, collections.Counter({"犬": 1}))
+    proc.process_reading(
+        _document([_unit(0, label="ch.3")], kind="book", episode="A Novel"), source_label_override="My Label"
+    )
+    assert _sources(anki) == ["My Label @ ch.3"]
 
 
 def test_image_materialized_once_per_ref(test_config):

@@ -150,4 +150,9 @@ def resolve_run_config(profile_id: str | None, language: object, overlay: Mappin
         # the auto-pick (F-04) never fills the Translation field behind its back. A
         # passed file still loads: _load_secondary_entries ignores this switch.
         secondary_subtitle_enabled=False,
+        # A named word of a reading_file is mined however often the source
+        # holds it (Reading's "seen at least N times" would drop it), and a
+        # manga card's picture is its text block's crop (API.md, Z-14).
+        reading_min_occurrence=1,
+        crop_manga_to_text=True,
     )
