@@ -20,7 +20,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from anki_miner.cli.api import files, settings, sources
-from anki_miner.cli.api.contract import BAD_RUN_FILE, CANCELLED, VIDEO_UNREADABLE, ApiError
+from anki_miner.cli.api.contract import BAD_RUN_FILE, CANCELLED, SETUP_ERROR, VIDEO_UNREADABLE, ApiError
 from anki_miner.cli.api.ocr import page_images
 from anki_miner.cli.api.runfolder import next_numbered, write_json
 from anki_miner.config import AnkiMinerConfig
@@ -33,7 +33,7 @@ from anki_miner.services.reading.web_article import is_web_url
 from anki_miner.services.subtitle_parser import SubtitleParserService
 from anki_miner.services.track_extractor import TRACKS_VIDEO_EXTENSIONS, probe_tracks
 from anki_miner.utils.audio_track_detector import get_media_duration_seconds, get_primary_video_codec
-from anki_miner.utils.ffmpeg_resolver import resolve_ffprobe
+from anki_miner.utils.ffmpeg_resolver import binary_available, resolve_ffprobe
 
 #: A book loader's label where the book names no chapter: an EPUB's ch.N, a text's ¶N, a PDF's p.N.
 _NO_CHAPTER = re.compile(r"(?:ch\.|¶|p\.)\d+")
@@ -41,6 +41,7 @@ _UNKNOWN = (
     "{name} is not a source inspect reads: a book, text, subtitle file, manga volume or web address, "
     "an audio file (.m4b, .mp3, .m4a, .aac, .ogg, .opus, .flac, .wav) or a video."
 )
+_NO_FFPROBE = "ffprobe was not found. Install ffmpeg, or set its location in Anki Miner's settings."
 #: A source's keys, in order; a source that fails has only path, error and message set.
 _KEYS = (
     "path",
@@ -154,8 +155,10 @@ def _describe(
     path = request.path
     if isinstance(path, Path):
         if path.suffix.lower() in AUDIO_EXTENSIONS:
+            _require_ffprobe(config)
             return _audio(config, path), None
         if source_kind(path) is None:
+            _require_ffprobe(config)
             return _video(config, path), None
         if sources.needs_ocr(path) and page_images(path) > 0:
             return _owed_volume(path), None
@@ -209,6 +212,15 @@ def _owed_volume(path: Path) -> dict[str, object]:
     entry["units"] = 0
     entry["needs"] = ["ocr"]
     return entry
+
+
+def _require_ffprobe(config: AnkiMinerConfig) -> None:
+    """Audio and video are read with ffprobe: without it a good file would read as unreadable.
+
+    Per source, so books and manga still inspect without ffmpeg.
+    """
+    if not binary_available(resolve_ffprobe(config)):
+        raise ApiError(SETUP_ERROR, _NO_FFPROBE)
 
 
 def _audio(config: AnkiMinerConfig, path: Path) -> dict[str, object]:

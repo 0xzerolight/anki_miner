@@ -302,6 +302,9 @@ def _speech_model(config: AnkiMinerConfig, name: str, item: _Item, bar: _Progres
     installed = False
     model_ready = False
     try:
+        # A model that cannot transcribe the language (Cantonese on small) is refused before it
+        # downloads, or it would become the profile's model and stop every transcription.
+        model_manager.decode_language(name, get_profile(config_language(config)).asr_language)
         if not _engine.available():
             if not (getattr(sys, "frozen", False) and asr_pack_installer.asr_pack_supported()):
                 item.done("failed", _NO_ENGINE_HERE if getattr(sys, "frozen", False) else _NO_ENGINE_SOURCE)
@@ -333,9 +336,10 @@ def _speech_model(config: AnkiMinerConfig, name: str, item: _Item, bar: _Progres
             if not ggml_model_installer.is_vad_downloaded(root):
                 ggml_model_installer.install_vad_model(root, progress=bar.download, cancel_event=cancel)
                 installed = True
-    except SetupError as exc:  # OperationCancelled too: then the item stays not_attempted
+    except (SetupError, OSError) as exc:  # OperationCancelled too: then the item stays not_attempted
+        # OSError: the model download's own failures (offline, an HTTP error) are not SetupErrors.
         if not cancel.is_set():
-            item.done("failed", str(exc))
+            item.done("failed", str(exc) or type(exc).__name__)
         return model_ready
     if not cancel.is_set():
         item.done("installed" if installed else "already_installed")

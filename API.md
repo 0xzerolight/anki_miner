@@ -368,7 +368,8 @@ A source's error is one of these; the call's `ok` stays true:
 - `SOURCE_UNREADABLE`: a reading source;
 - `AUDIO_UNREADABLE`;
 - `VIDEO_UNREADABLE`: a video file with no video in it;
-- `BAD_RUN_FILE`: a file `inspect` does not read.
+- `BAD_RUN_FILE`: a file `inspect` does not read;
+- `SETUP_ERROR`: an audio or video source when ffprobe is missing.
 
 It needs no Anki and no lock, runs any time, and writes only the unit lists asked for. SIGINT or SIGTERM ends the call with `CANCELLED`.
 
@@ -578,7 +579,7 @@ A call starts by deleting the `progress.json` and `cancel` files an earlier call
 - `result`: `{"language": "ja", "profile": "default", "language_pack": {"status": "not_needed", "message": null}, "resources": [{"id": "jmdict-english", "kind": "dict", "name": "JMdict", "status": "installed", "message": null}, …]}`. `status` is `installed`, `already_installed`, `not_needed` (language pack only), `failed` (`message` says why) or `not_attempted`.
 - `--speech-model` also installs what transcription needs (`transcribe`, `sync`, and `fetch` without captions), as Settings → Transcription & Alignment would on this computer:
   - the speech engine, when the app needs it;
-  - the model: `--model large-v3` (about 3 GB) or `small` (about 0.5 GB), left out the profile's. Cantonese needs `large-v3`;
+  - the model: `--model large-v3` (about 3 GB) or `small` (about 0.5 GB), left out the profile's. Cantonese needs `large-v3`: with `small`, the item fails and nothing downloads;
   - the part for an NVIDIA or Vulkan graphics card.
 - After a successful download, `--model` becomes the profile's model.
 - `--ocr` installs Manga OCR (mokuro, and the language's text recognizer where it uses one) and Video OCR (its engine and the language's models), as Utilities → Manga OCR and → Video OCR do.

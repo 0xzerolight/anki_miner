@@ -170,6 +170,7 @@ def test_a_volume_without_its_mokuro_needs_ocr(verdict, inspect_file, tmp_path) 
 
 
 def _probe(monkeypatch, *, video: bool, duration: float | None, tracks: MediaTracks) -> None:
+    monkeypatch.setattr(inspect, "binary_available", lambda resolved: True)
     monkeypatch.setattr(inspect, "get_primary_video_codec", lambda path, ffprobe: "h264" if video else None)
     monkeypatch.setattr(inspect, "get_media_duration_seconds", lambda path, ffprobe: duration)
     monkeypatch.setattr(inspect, "probe_tracks", lambda path, ffprobe: tracks)
@@ -248,6 +249,17 @@ def test_an_audio_file_by_its_extension(verdict, inspect_file, tmp_path, monkeyp
     )
     assert (entry["cover"], entry["duration"], entry["file"]) == (True, 3600.0, None)
     assert [t["kind"] for t in entry["tracks"]] == ["audio"]
+
+
+def test_without_ffprobe_audio_and_video_are_setup_errors_and_books_still_read(
+    verdict, inspect_file, tmp_path, monkeypatch
+) -> None:
+    """A missing ffprobe is no reason to call a good file unreadable."""
+    monkeypatch.setattr(inspect, "binary_available", lambda resolved: False)
+    paths = [tmp_path / "ep01.mkv", tmp_path / "book.m4b", _epub(tmp_path)]
+    entries = _result(verdict("inspect", inspect_file(*({"path": str(p)} for p in paths))))
+    assert [e["error"] for e in entries] == ["SETUP_ERROR", "SETUP_ERROR", None]
+    assert "ffprobe" in entries[0]["message"] and entries[2]["kind"] == "book"
 
 
 def test_each_failing_source_carries_its_code(verdict, inspect_file, tmp_path, monkeypatch) -> None:

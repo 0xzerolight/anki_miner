@@ -11,6 +11,7 @@ from types import SimpleNamespace
 import pytest
 
 from anki_miner.cli.api import setup as api_setup
+from anki_miner.exceptions import SetupError
 from anki_miner.gui.utils.config_manager import GUIConfigManager
 from anki_miner.gui.utils.profile_store import ProfileStore
 from anki_miner.gui.workers.resource_download_worker import ResourceDownloadResult
@@ -28,7 +29,7 @@ def _no_seeded_marker(monkeypatch):
 
 @pytest.fixture
 def catalog(monkeypatch):
-    profile = SimpleNamespace(catalog=(DICT, FREQ), unavailable_reason=None)
+    profile = SimpleNamespace(catalog=(DICT, FREQ), unavailable_reason=None, asr_language="ja")
     monkeypatch.setattr(api_setup, "get_profile", lambda code: profile)
     monkeypatch.setattr(api_setup.packs, "load_pack", lambda code: None)
     return profile
@@ -305,7 +306,11 @@ def bare(monkeypatch):
     def profile(code):
         real = registry.get_profile(code)
         return SimpleNamespace(
-            catalog=(), unavailable_reason=None, capabilities=real.capabilities, ocr_recognizer=real.ocr_recognizer
+            catalog=(),
+            unavailable_reason=None,
+            capabilities=real.capabilities,
+            ocr_recognizer=real.ocr_recognizer,
+            asr_language=real.asr_language,
         )
 
     monkeypatch.setattr(api_setup, "get_profile", profile)
@@ -464,13 +469,12 @@ def test_model_already_there_is_still_saved(bare, machine, test_config, tmp_path
     assert GUIConfigManager.load_config().asr_model == "small"
 
 
-def test_a_model_that_did_not_download_is_not_saved(bare, machine, test_config, tmp_path, monkeypatch) -> None:
-    from anki_miner.exceptions import SetupError
-
+@pytest.mark.parametrize("error", [SetupError, OSError])  # OSError: huggingface_hub's own (offline, HTTP)
+def test_a_model_that_did_not_download_is_not_saved(bare, machine, test_config, tmp_path, monkeypatch, error) -> None:
     GUIConfigManager.save_config(test_config)
 
     def broken(name, root, cancel_event=None):
-        raise SetupError("huggingface.co did not answer")
+        raise error("huggingface.co did not answer")
 
     monkeypatch.setattr(api_setup.model_manager, "download", broken)
     outcome = _with(tmp_path, speech_model=True, model="small")
@@ -479,6 +483,18 @@ def test_a_model_that_did_not_download_is_not_saved(bare, machine, test_config, 
         "status": "failed",
         "message": "huggingface.co did not answer",
     }
+    assert GUIConfigManager.load_config().asr_model == "large-v3"
+
+
+def test_a_model_that_cannot_transcribe_the_language_is_refused_before_it_downloads(
+    bare, machine, test_config, tmp_path
+) -> None:
+    """Cantonese on small: saved, it would stop every transcription in the profile."""
+    GUIConfigManager.save_config(replace(test_config, language="yue"))
+    outcome = _with(tmp_path, language="yue", speech_model=True, model="small")
+    assert machine.calls == [] and outcome.failed
+    assert outcome.result["speech_model"]["status"] == "failed"
+    assert "cannot transcribe" in outcome.result["speech_model"]["message"]
     assert GUIConfigManager.load_config().asr_model == "large-v3"
 
 
