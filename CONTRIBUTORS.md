@@ -39,6 +39,7 @@ This list is generated automatically — see [.github/workflows/contributors.yml
   </tr>
   <tr>
     <td align="center" valign="top" width="12.50%"><a href="https://github.com/WhoMI7"><img src="https://avatars.githubusercontent.com/u/93109835?s=80&v=4" width="80" height="80" alt="@WhoMI7"/><br/><sub><b>WhoMI7</b></sub></a></td>
+    <td align="center" valign="top" width="12.50%"><a href="https://github.com/yudataguy"><img src="https://avatars.githubusercontent.com/u/25761223?s=80&u=a848f449440ea91ffb5c1ea92f0b78195f4c271b&v=4" width="80" height="80" alt="@yudataguy"/><br/><sub><b>yudataguy</b></sub></a></td>
   </tr>
 </table>
 <!-- contributors:end -->
