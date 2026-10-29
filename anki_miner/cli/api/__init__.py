@@ -4,8 +4,8 @@ Each call writes exactly one JSON verdict line to fd 1 and exits 0; any other
 exit is a crash. ``mine`` (but not a dry run), ``settings-import`` and ``setup``
 hold the run lock: ``mine`` runs beside an idle window; ``settings-import`` and
 ``setup`` refuse any window. ``render``, ``media``, ``check``, ``version``,
-``profiles``, ``settings-export`` and the job commands (``fetch`` and the others
-in ``jobs.py``) run at any time. The log goes to ``anki_miner.api.log``
+``profiles``, ``settings-export``, ``inspect`` and the job commands (``fetch``
+and the others in ``jobs.py``) run at any time. The log goes to ``anki_miner.api.log``
 (installed by ``cli.entry`` before this runs).
 """
 
@@ -81,6 +81,7 @@ def build_parser() -> argparse.ArgumentParser:
     setup.add_argument("--ocr", action="store_true")
     for name in JOB_COMMANDS:
         commands.add_parser(name).add_argument("file", type=Path)
+    commands.add_parser("inspect").add_argument("file", type=Path)
     return parser
 
 
@@ -140,6 +141,8 @@ def _dispatch(args: argparse.Namespace) -> dict[str, object]:
         return _ok("settings-import", result=result)
     if args.command == "setup":
         return _setup(args)
+    if args.command == "inspect":
+        return _inspect(args)
     if args.command in JOB_COMMANDS:
         return _job(args.command, args.file)
     return _run(args)
@@ -210,6 +213,16 @@ def _setup(args: argparse.Namespace) -> dict[str, object]:
     if outcome.cancelled:
         return {**verdict, "ok": False, "error": CANCELLED, "message": "Setup was cancelled."}
     return {**verdict, "ok": not outcome.failed}
+
+
+def _inspect(args: argparse.Namespace) -> dict[str, object]:
+    """inspect: no lock (it writes only the unit lists asked for); SIGINT/SIGTERM stop the call (CANCELLED)."""
+    from anki_miner.cli.api import inspect
+    from anki_miner.cli.entry import _cancel_on_signals
+
+    cancel = threading.Event()
+    with _cancel_on_signals(cancel):
+        return _ok(args.command, result=inspect.call(args.file, cancel))
 
 
 def _job(command: str, file: Path) -> dict[str, object]:

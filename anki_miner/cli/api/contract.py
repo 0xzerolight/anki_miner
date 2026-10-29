@@ -18,6 +18,7 @@ COMMANDS = (
     "setup",
     "fetch",
     "ocr",
+    "inspect",
 )
 #: Commands that turn files into files, one run per episode (``jobs.py``): ``<name> FILE``.
 JOB_COMMANDS = ("fetch", "ocr")
@@ -40,6 +41,7 @@ FEATURES = (
     "check-speech-ocr",
     "setup-speech-ocr",
     "ocr",
+    "inspect",
 )
 
 BUSY = "BUSY"
