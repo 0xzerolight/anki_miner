@@ -223,6 +223,10 @@ def _job_call(command: str) -> Callable[[Path, threading.Event], list[dict[str, 
         from anki_miner.cli.api import transcribe
 
         return transcribe.call
+    if command == "sync":
+        from anki_miner.cli.api import sync
+
+        return sync.call
     raise AssertionError(f"not a job command: {command}")
 
 
