@@ -12,6 +12,10 @@ times the caller wrote.
 
 A word can also be made from its named line (Z-2): ``LineWords`` holds the
 run's seams for that, bound by ``runs`` to its processor.
+
+A reading run's lines are its units (``reading_entries``: each unit's card
+sentence at its index as both times), and ``unit_index`` names one directly.
+Its rows say the unit and its ``location`` and have no times.
 """
 
 from __future__ import annotations
@@ -95,6 +99,11 @@ def find_folded(text: str, needle: str) -> tuple[int, int] | None:
     if found < 0:
         return None
     return origin[found], origin[found + len(target) - 1] + 1
+
+
+def unit_line(entries: Entries, unit_index: int) -> int | None:
+    """The line of a reading run that is unit *unit_index*; None past the end, or for a unit with no text."""
+    return next((i for i, (start, _end, _text) in enumerate(entries) if start == unit_index), None)
 
 
 def nearest_line(raw: Entries, start: float) -> int:
@@ -216,6 +225,7 @@ class WordSelection:
         allow_duplicates: bool = False,
         line_words: LineWords | None = None,
         dry_run: bool = False,
+        units: Mapping[int, str] | None = None,
     ) -> None:
         self._requests = list(requests)
         self._entries = entries
@@ -237,10 +247,13 @@ class WordSelection:
         #: Read by process_episode: a run the parse or the filters leave empty still
         #: reaches this callback, so a named line can make its word (Z-2).
         self.makes_words = line_words is not None and any(
-            request.line_start is not None or request.line_text is not None for request in self._requests
+            request.line_start is not None or request.line_text is not None or request.unit_index is not None
+            for request in self._requests
         )
         #: The picks are recorded but none is handed on (``[]``: no media, definitions or cards).
         self._dry_run = dry_run
+        #: A reading run's ``location_label`` by unit index; None on a video or audio run.
+        self._units = units
         self._chosen: dict[int, _Picked] = {}  # by request index
         self._repeats: dict[int, str] = {}  # request index -> the mined_form an earlier request took
         #: False until the processor reached the curation step.
@@ -302,9 +315,11 @@ class WordSelection:
         return found
 
     def _named_line(self, request: WordRequest) -> int | None:
-        """The line the entry names: nearest ``line_start``, else the first holding ``line_text``."""
+        """The line the entry names: its ``unit_index``, the nearest ``line_start``, else the first with ``line_text``."""
         if not self._entries:
             return None
+        if request.unit_index is not None:
+            return unit_line(self._raw, request.unit_index)
         if request.line_start is not None:
             return nearest_line(self._raw, request.line_start)
         if request.line_text is not None:
@@ -322,7 +337,7 @@ class WordSelection:
         which, pool = next(((i, p) for i, p in enumerate(pools) if p), (None, []))
         named = self._named_line(request)
         if named is None:
-            if not pool:
+            if request.unit_index is not None or not pool:  # a unit_index past the end names no line
                 return None
             first = pool[0]
             return _Placed(first, first, cue_index(self._entries, first))
@@ -380,6 +395,8 @@ class WordSelection:
             "sentence": None,
             "start": None,
             "end": None,
+            "unit_index": None,  # a reading run's unit and its location_label
+            "location": None,
             "filter": None,  # the step that removed a named word (API.md): "duplicate-expression" or null
         }
         chosen = self._chosen.get(i)
@@ -409,8 +426,21 @@ class WordSelection:
         return row
 
     def _span(self, chosen: _Picked) -> dict[str, object]:
+        word = chosen.word
+        if self._units is not None:  # a unit has no times: its index (the word's dummy time) and location
+            window_text = word.sentence
+            if chosen.line is not None:
+                window_text = merge_cue_window(self._entries, chosen.line, *chosen.expansion).text
+            unit = int(word.start_time)
+            return {
+                "line_start": None,
+                "sentence": window_text,
+                "start": None,
+                "end": None,
+                "unit_index": unit,
+                "location": self._units.get(unit),
+            }
         if chosen.line is None:
-            word = chosen.word
             return {"line_start": None, "sentence": word.sentence, "start": word.start_time, "end": word.end_time}
         before, after = chosen.expansion
         window = merge_cue_window(self._entries, chosen.line, before, after)

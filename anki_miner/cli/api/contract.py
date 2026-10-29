@@ -36,6 +36,9 @@ FEATURES = (
     "setup",
     "fetch",
     "beside-window",
+    "reading",
+    "manga",
+    "audio-episodes",
 )
 
 BUSY = "BUSY"

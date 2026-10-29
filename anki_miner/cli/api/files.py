@@ -14,6 +14,8 @@ from pathlib import Path
 from typing import Generic, Protocol, TypeVar
 
 from anki_miner.cli.api.contract import BAD_RUN_FILE, ApiError
+from anki_miner.services.reading.detector import source_kind
+from anki_miner.services.reading.web_article import is_web_url
 from anki_miner.utils.bounded_reader import read_json_bounded
 from anki_miner.utils.youtube_url import classify_youtube_url
 
@@ -29,6 +31,8 @@ _EPISODE_KEYS = frozenset(
     {
         "run_id",
         "video_file",
+        "audio_file",
+        "reading_file",
         "subtitle_file",
         "subtitle_offset",
         "audio_track_override",
@@ -41,10 +45,33 @@ _EPISODE_KEYS = frozenset(
         "words",
     }
 )
-_EPISODE_REQUIRED = frozenset({"run_id", "video_file", "subtitle_file", "words"})
-_WORD_KEYS = frozenset({"word", "line_start", "line_text", "line_expansion", "surface", "reading"})
+_EPISODE_REQUIRED = frozenset({"run_id", "words"})
+_WORD_KEYS = frozenset({"word", "line_start", "line_text", "line_expansion", "surface", "reading", "unit_index"})
 _MEDIA_EPISODE_KEYS = frozenset(
-    {"run_id", "video_file", "subtitle_file", "subtitle_offset", "audio_track_override", "lines"}
+    {
+        "run_id",
+        "video_file",
+        "audio_file",
+        "reading_file",
+        "subtitle_file",
+        "subtitle_offset",
+        "audio_track_override",
+        "lines",
+    }
+)
+#: An episode's source: exactly one of them.
+_SOURCE_KEYS = ("video_file", "audio_file", "reading_file")
+#: What a reading episode has none of: a subtitle file, its timeline, an audio track or a translation track.
+_NOT_FOR_READING = (
+    "subtitle_file",
+    "subtitle_offset",
+    "audio_track_override",
+    "secondary_subtitle_file",
+    "secondary_subtitle_offset",
+)
+_NOT_READING = (
+    "{where}.reading_file is not a reading source: {name}. Supported: .epub, .txt, .pdf, subtitle files "
+    "(.srt/.ass/.ssa/.vtt/.smi/.lrc), a manga volume (.mokuro, .cbz/.zip, a page folder) or a web address."
 )
 _FETCH_EPISODE_KEYS = frozenset({"run_id", "youtube_url", "youtube_subtitle_source", "youtube_align_captions"})
 _SUBTITLE_SOURCES = ("auto", "captions", "transcribe")
@@ -161,9 +188,12 @@ class WordRequest:
     line_expansion: tuple[int, int] | None = None
     surface: str | None = None
     reading: str | None = None
+    #: A reading_file's unit, by its index (``inspect`` lists them)
+    unit_index: int | None = None
 
 
-def _word_request(raw: object, where: str) -> WordRequest:
+def _word_request(raw: object, where: str, *, reading_episode: bool = False) -> WordRequest:
+    """One word; on a reading episode it names its unit by ``unit_index``, never by ``line_start``."""
     obj = json_object(raw, where)
     check_keys(obj, _WORD_KEYS, frozenset({"word"}), where)
     word = text(obj["word"], f"{where}.word")
@@ -172,6 +202,9 @@ def _word_request(raw: object, where: str) -> WordRequest:
     line_start = opt_float(obj.get("line_start"), f"{where}.line_start")
     if line_start is not None and line_start < 0:
         raise bad(f"{where}.line_start cannot be negative.")
+    if line_start is not None and reading_episode:
+        raise bad(f"{where}.line_start names a subtitle line: a reading_file's words name a unit_index or line_text.")
+    unit_index = _unit_index(obj.get("unit_index"), where, reading_episode=reading_episode)
     line_text = opt_text(obj.get("line_text"), f"{where}.line_text")
     if line_text is not None and not line_text.strip():
         raise bad(f"{where}.line_text is empty.")
@@ -181,7 +214,19 @@ def _word_request(raw: object, where: str) -> WordRequest:
     for key, value in (("surface", surface), ("reading", reading)):
         if value is not None and not value.strip():
             raise bad(f"{where}.{key} is empty.")
-    return WordRequest(word, line_start, line_text, expansion, surface, reading)
+    return WordRequest(word, line_start, line_text, expansion, surface, reading, unit_index)
+
+
+def _unit_index(raw: object, where: str, *, reading_episode: bool) -> int | None:
+    """A ``unit_index``: a whole number of 0 or more, on a reading episode only."""
+    index = opt_int(raw, f"{where}.unit_index")
+    if index is None:
+        return None
+    if not reading_episode:
+        raise bad(f"{where}.unit_index names a reading_file's unit: a subtitle line is named by line_start.")
+    if index < 0:
+        raise bad(f"{where}.unit_index cannot be negative.")
+    return index
 
 
 def parse_expansion(raw: object, where: str) -> tuple[int, int] | None:
@@ -197,11 +242,67 @@ def parse_expansion(raw: object, where: str) -> tuple[int, int] | None:
     return (raw[0], raw[1])
 
 
+#: A ``reading_file``: a path, or a web address (a ``str``) whose article is fetched.
+ReadingInput = Path | str
+
+
+def _reading_file(value: object, where: str) -> ReadingInput:
+    """A web address as written, else a path that names a reading source.
+
+    A path is judged by its extension, and one without as a manga page folder
+    when it is a folder; one that has neither and does not exist is left to the
+    run, which reports it SOURCE_UNREADABLE as it does a missing file.
+    """
+    raw = text(value, f"{where}.reading_file")
+    if is_web_url(raw):
+        return raw.strip()
+    path = abs_path(raw)
+    if source_kind(path) is None and (path.suffix or path.exists()):
+        raise bad(_NOT_READING.format(where=where, name=path.name))
+    return path
+
+
+@dataclass(frozen=True)
+class _Source:
+    """An episode's source: exactly one of the three files, and the subtitle file a video or audio file needs."""
+
+    video_file: Path | None
+    audio_file: Path | None
+    reading_file: ReadingInput | None
+    subtitle_file: Path | None
+
+
+def _episode_source(obj: Mapping[str, object], where: str) -> _Source:
+    """``video_file``, ``audio_file`` or ``reading_file``, and ``subtitle_file``.
+
+    A reading source has no subtitle file, nor anything that times one or picks
+    an audio track (``_NOT_FOR_READING``).
+    """
+    named = [key for key in _SOURCE_KEYS if obj.get(key) is not None]
+    if len(named) != 1:
+        raise bad(f"{where} must name exactly one of video_file, audio_file and reading_file.")
+    [key] = named
+    if key == "reading_file":
+        refused = [k for k in _NOT_FOR_READING if obj.get(k) is not None]
+        if refused:
+            raise bad(f"{where} has a reading_file, which takes none of: {', '.join(refused)}")
+        return _Source(None, None, _reading_file(obj[key], where), None)
+    if obj.get("subtitle_file") is None:
+        raise bad(f"{where} is missing: subtitle_file")
+    path = abs_path(text(obj[key], f"{where}.{key}"))
+    subtitle = abs_path(text(obj["subtitle_file"], f"{where}.subtitle_file"))
+    if key == "audio_file":
+        return _Source(None, path, None, subtitle)
+    return _Source(path, None, None, subtitle)
+
+
 @dataclass(frozen=True)
 class Episode:
     run_id: str
-    video_file: Path
-    subtitle_file: Path
+    #: Exactly one of video_file, audio_file and reading_file is set.
+    video_file: Path | None
+    #: None on a reading episode only.
+    subtitle_file: Path | None
     subtitle_offset: float
     audio_track_override: int | None
     source_label_override: str | None
@@ -211,15 +312,38 @@ class Episode:
     episode_name_override: str | None
     tags: str
     words: tuple[WordRequest, ...]
+    audio_file: Path | None = None
+    reading_file: ReadingInput | None = None
+
+    @property
+    def media_file(self) -> Path | None:
+        """The video or audio file the clips are cut from; None on a reading episode."""
+        return self.video_file or self.audio_file
 
     def process_kwargs(self) -> dict[str, object]:
-        """The optional ``process_episode`` arguments this episode sets."""
+        """The optional ``process_episode`` arguments this episode sets.
+
+        An audio episode mines as the Audiobooks tab does: audio only (the clip,
+        and the file's own cover as its picture), its cards named ``Audio`` and
+        the file's stem unless the episode names them.
+        """
+        audio = self.audio_file
+        series, episode = self.series_name_override, self.episode_name_override
         return {
             "subtitle_offset": self.subtitle_offset,
             "audio_track_override": self.audio_track_override,
             "source_label_override": self.source_label_override,
             "secondary_subtitle_file": self.secondary_subtitle_file,
             "secondary_subtitle_offset": self.secondary_subtitle_offset,
+            "series_name_override": "Audio" if audio is not None and series is None else series,
+            "episode_name_override": audio.stem if audio is not None and episode is None else episode,
+            "audio_only": audio is not None,
+        }
+
+    def reading_kwargs(self) -> dict[str, str | None]:
+        """The optional ``process_reading`` arguments this episode sets."""
+        return {
+            "source_label_override": self.source_label_override,
             "series_name_override": self.series_name_override,
             "episode_name_override": self.episode_name_override,
         }
@@ -228,17 +352,17 @@ class Episode:
 def parse_episode(raw: object, where: str) -> Episode:
     obj = json_object(raw, where)
     check_keys(obj, _EPISODE_KEYS, _EPISODE_REQUIRED, where)
-    video_file = abs_path(text(obj["video_file"], f"{where}.video_file"))
-    subtitle_file = abs_path(text(obj["subtitle_file"], f"{where}.subtitle_file"))
+    source = _episode_source(obj, where)
     secondary = opt_path(opt_text(obj.get("secondary_subtitle_file"), f"{where}.secondary_subtitle_file"))
     raw_words = obj["words"]
     if not isinstance(raw_words, list) or not raw_words:
         raise bad(f"{where}.words must list at least one word (there is no 'all').")
-    words = tuple(_word_request(w, f"{where}.words[{j}]") for j, w in enumerate(raw_words))
+    reading = source.reading_file is not None
+    words = tuple(_word_request(w, f"{where}.words[{j}]", reading_episode=reading) for j, w in enumerate(raw_words))
     return Episode(
         run_id=valid_run_id(obj["run_id"], f"{where}.run_id"),
-        video_file=video_file,
-        subtitle_file=subtitle_file,
+        video_file=source.video_file,
+        subtitle_file=source.subtitle_file,
         subtitle_offset=opt_float(obj.get("subtitle_offset"), f"{where}.subtitle_offset") or 0.0,
         audio_track_override=opt_int(obj.get("audio_track_override"), f"{where}.audio_track_override"),
         source_label_override=opt_text(obj.get("source_label_override"), f"{where}.source_label_override"),
@@ -249,6 +373,8 @@ def parse_episode(raw: object, where: str) -> Episode:
         episode_name_override=opt_text(obj.get("episode_name_override"), f"{where}.episode_name_override"),
         tags=opt_text(obj.get("tags"), f"{where}.tags") or "",
         words=words,
+        audio_file=source.audio_file,
+        reading_file=source.reading_file,
     )
 
 
@@ -291,18 +417,25 @@ def parse_run_file(data: object) -> RunFile:
 
 @dataclass(frozen=True)
 class LineRequest:
-    line_start: float
+    #: a subtitle line's start (video and audio episodes)
+    line_start: float | None = None
     line_expansion: tuple[int, int] | None = None
+    #: a reading_file's unit (reading episodes)
+    unit_index: int | None = None
 
 
 @dataclass(frozen=True)
 class MediaEpisode:
     run_id: str
-    video_file: Path
-    subtitle_file: Path
+    #: Exactly one of video_file, audio_file and reading_file is set.
+    video_file: Path | None
+    #: None on a reading episode only.
+    subtitle_file: Path | None
     subtitle_offset: float
     audio_track_override: int | None
     lines: tuple[LineRequest, ...]
+    audio_file: Path | None = None
+    reading_file: ReadingInput | None = None
 
 
 @dataclass(frozen=True)
@@ -322,13 +455,23 @@ def opt_positive(value: object, where: str) -> int | None:
     return number
 
 
-def _line_request(raw: object, where: str) -> LineRequest:
+def _line_request(raw: object, where: str, *, reading: bool) -> LineRequest:
+    """One line to cut: a ``unit_index`` on a reading episode, else a ``line_start``."""
     obj = json_object(raw, where)
-    check_keys(obj, frozenset({"line_start", "line_expansion"}), frozenset({"line_start"}), where)
-    start = opt_float(obj["line_start"], f"{where}.line_start")
+    check_keys(obj, frozenset({"line_start", "unit_index", "line_expansion"}), frozenset(), where)
+    expansion = parse_expansion(obj.get("line_expansion"), where)
+    if reading:
+        if obj.get("line_start") is not None:
+            raise bad(f"{where}.line_start names a subtitle line: a reading_file's lines name a unit_index.")
+        index = _unit_index(obj.get("unit_index"), where, reading_episode=True)
+        if index is None:
+            raise bad(f"{where} is missing: unit_index")
+        return LineRequest(line_expansion=expansion, unit_index=index)
+    _unit_index(obj.get("unit_index"), where, reading_episode=False)
+    start = opt_float(obj.get("line_start"), f"{where}.line_start")
     if start is None or start < 0:
         raise bad(f"{where}.line_start must be a number of 0 or more.")
-    return LineRequest(start, parse_expansion(obj.get("line_expansion"), where))
+    return LineRequest(start, expansion)
 
 
 def parse_media_file(data: object) -> MediaFile:
@@ -347,18 +490,24 @@ def parse_media_file(data: object) -> MediaFile:
     for i, raw in enumerate(raw_episodes):
         where = f"episodes[{i}]"
         ep = json_object(raw, where)
-        check_keys(ep, _MEDIA_EPISODE_KEYS, frozenset({"run_id", "video_file", "subtitle_file", "lines"}), where)
+        check_keys(ep, _MEDIA_EPISODE_KEYS, frozenset({"run_id", "lines"}), where)
+        source = _episode_source(ep, where)
         raw_lines = ep["lines"]
         if not isinstance(raw_lines, list) or not raw_lines:
             raise bad(f"{where}.lines must list at least one line.")
+        reading = source.reading_file is not None
         episodes.append(
             MediaEpisode(
                 run_id=valid_run_id(ep["run_id"], f"{where}.run_id"),
-                video_file=abs_path(text(ep["video_file"], f"{where}.video_file")),
-                subtitle_file=abs_path(text(ep["subtitle_file"], f"{where}.subtitle_file")),
+                video_file=source.video_file,
+                subtitle_file=source.subtitle_file,
                 subtitle_offset=opt_float(ep.get("subtitle_offset"), f"{where}.subtitle_offset") or 0.0,
                 audio_track_override=opt_int(ep.get("audio_track_override"), f"{where}.audio_track_override"),
-                lines=tuple(_line_request(line, f"{where}.lines[{j}]") for j, line in enumerate(raw_lines)),
+                lines=tuple(
+                    _line_request(line, f"{where}.lines[{j}]", reading=reading) for j, line in enumerate(raw_lines)
+                ),
+                audio_file=source.audio_file,
+                reading_file=source.reading_file,
             )
         )
     _unique_run_ids([episode.run_id for episode in episodes])

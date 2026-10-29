@@ -14,10 +14,14 @@ import pytest
 import requests
 
 from anki_miner.cli import runner
-from anki_miner.cli.api import files, render, runfolder, runs
+from anki_miner.cli.api import files, render, runfolder, runs, sources
 from anki_miner.cli.api.contract import ApiError
+from anki_miner.cli.api.jobs import RunFailed
 from anki_miner.exceptions import SubtitleParseError
+from anki_miner.gui.utils.service_factory import create_line_parser
+from anki_miner.languages.switching import switch_language
 from anki_miner.models import CANCELLED_ERROR, AnkiWriteState, ProcessingResult
+from anki_miner.models.reading import ReadingDocument, ReadingUnit
 from anki_miner.services import _ankiconnect, anki_service
 from anki_miner.services.anki_service import AnkiService
 from anki_miner.services.validation_service import ValidationService
@@ -73,6 +77,7 @@ def services(test_config):
         return _result()
 
     processor.process_episode.side_effect = process
+    processor.process_reading.side_effect = process
     with (
         patch.object(runs.settings, "resolve_run_config", return_value=test_config),
         patch.object(runs, "check_environment"),
@@ -84,6 +89,7 @@ def services(test_config):
         patch.object(runs, "get_media_duration_seconds", return_value=1.0) as duration,
         patch.object(runs, "get_primary_video_codec", return_value=None),
         patch.object(runs, "create_episode_processor", return_value=processor) as factory,
+        patch.object(runs, "check_audio") as check_audio,
     ):
         validation.return_value.check_ankiconnect.return_value = (True, "AnkiConnect is running")
         ns.processor = processor
@@ -91,6 +97,7 @@ def services(test_config):
         ns.duration = duration
         ns.check_card_target = check_card_target
         ns.anki_cls = anki_cls
+        ns.check_audio = check_audio
         yield ns
 
 
@@ -544,3 +551,238 @@ def test_a_failed_calls_leftover_folder_takes_its_number(tmp_path) -> None:
     assert runfolder.next_numbered(tmp_path, "render").name == "render-2.json"
     assert runfolder.next_numbered(tmp_path, "result").name == "result-4.json"
     assert runfolder.next_numbered(tmp_path, "media").name == "media-1.json"
+
+
+# --- reading and audio episodes ------------------------------------------------------------------
+
+BILINGUAL = (
+    "1\n00:00:01,000 --> 00:00:02,000\n나는 고양이다.\nI am a cat.\n\n"
+    "2\n00:00:03,000 --> 00:00:04,000\n이름은 아직 없다.\nNo name yet.\n\n"
+    "3\n00:00:05,000 --> 00:00:06,000\n이름은 아직 없다.\nStill no name.\n"
+)
+MANGA = ["えっ", "宿題やった？", "まだ"]
+
+
+def _reading_run(tmp_path: Path, source: Path | str, words, **episode) -> files.RunFile:
+    first = {"run_id": "ep-01", "reading_file": str(source), "words": words, **episode}
+    return files.parse_run_file({"schema": 1, "run_dir": str(tmp_path), "language": "ja", "episodes": [first]})
+
+
+def _volume(tmp_path: Path, texts=MANGA) -> tuple[Path, ReadingDocument, list]:
+    """A manga volume's .mokuro, the document it loads as, and its lines (one per unit, p.11 on)."""
+    source = tmp_path / "漫画 第1巻.mokuro"
+    source.write_text("{}", encoding="utf-8")
+    units = [ReadingUnit(text=t, index=i, location_label=f"p.{i + 11}") for i, t in enumerate(texts)]
+    document = ReadingDocument(title="漫画", kind="manga", series="漫画", episode="第1巻", units=units)
+    return source, document, [(float(u.index), float(u.index), u.text) for u in units]
+
+
+def _reads(services, entries) -> None:
+    """The processor's parser gives *entries* for the document's units, and cleans text as it is."""
+    parser = services.processor.subtitle_parser
+    parser.reading_entries.return_value = entries
+    parser.reading_sentence.side_effect = lambda text, **_kw: text
+
+
+def _makes_words(services) -> None:
+    services.processor.word_on_line.side_effect = lambda word, line, span, **_kw: replace(
+        word, sentence=line[2], start_time=line[0], end_time=line[1]
+    )
+    services.processor.parse_sentence_fn.return_value = []
+    services.processor.definition_service.offline_term_readings.return_value = {}
+
+
+def test_a_bilingual_subtitle_mines_as_a_reading_file(services, tmp_path, test_config) -> None:
+    config = switch_language(test_config, "ko")
+    srt = tmp_path / "ep.srt"
+    srt.write_text(BILINGUAL, encoding="utf-8")
+    parser = create_line_parser(config)
+    document = sources.open_reading(config, parser, srt, cancel_check=lambda: False)
+    entries = parser.reading_entries(document.units, subtitle_cleanup=True)
+    services.processor.subtitle_parser = parser
+    services.words = lambda: [_on_lines("이름", 1, 2, entries=entries)]
+    _makes_words(services)
+    words = [{"word": "이름", "unit_index": 2}, {"word": "고양이", "line_text": "나는 고양이다."}]
+    with patch.object(runs.settings, "resolve_run_config", return_value=config):
+        [verdict] = runs.mine_runs(_reading_run(tmp_path, srt, words), threading.Event())
+    assert verdict["ok"] is True, verdict
+    mined = services.processor.process_reading.call_args.args[0]
+    assert [(u.index, u.text) for u in mined.units] == [(u.index, u.text) for u in document.units]
+    assert [u.text for u in document.units] == ["나는 고양이다.", "이름은 아직 없다.", "이름은 아직 없다."]
+    name, cat = _result_file(tmp_path)["words"]
+    assert (name["unit_index"], name["location"], name["sentence"]) == (
+        2,
+        document.units[2].location_label,
+        "이름은 아직 없다.",
+    )
+    assert (name["line_start"], name["start"], name["end"]) == (None, None, None)
+    assert (cat["from_line"], cat["unit_index"], cat["sentence"]) == (True, 0, document.units[0].text)
+
+
+def test_a_manga_word_merges_its_neighbours_and_keeps_its_unit(services, tmp_path) -> None:
+    source, document, entries = _volume(tmp_path)
+    _reads(services, entries)
+    services.words = lambda: [_word("宿題", 1, entries=entries)]
+    words = [{"word": "宿題", "line_text": "宿題やった？", "line_expansion": [1, 1]}]
+    with patch.object(runs, "open_reading", return_value=document) as opened:
+        runs.mine_runs(_reading_run(tmp_path, source, words), threading.Event())
+    assert opened.call_args.args[2] == source.resolve()
+    services.processor.subtitle_parser.reading_entries.assert_called_once_with(document.units, subtitle_cleanup=False)
+    selection = services.processor.process_reading.call_args.kwargs["curation_callback"]
+    [(handed, _from_line)] = selection.picked()
+    assert (handed.start_time, handed.line_expansion) == (1.0, (1, 1))  # merged by process_reading, on unit 1
+    [row] = _result_file(tmp_path)["words"]
+    assert (row["sentence"], row["unit_index"], row["location"]) == ("えっ 宿題やった？ まだ", 1, "p.12")
+
+
+def test_a_reading_episode_passes_its_own_names(services, tmp_path) -> None:
+    source, document, entries = _volume(tmp_path)
+    _reads(services, entries)
+    names = {"source_label_override": "Label", "series_name_override": "S", "episode_name_override": "E"}
+    with patch.object(runs, "open_reading", return_value=document):
+        runs.mine_runs(_reading_run(tmp_path, source, [{"word": "宿題"}], **names), threading.Event())
+    kwargs = services.processor.process_reading.call_args.kwargs
+    assert {key: kwargs[key] for key in names} == names
+
+
+def test_a_unit_index_past_the_end_is_not_found(services, tmp_path) -> None:
+    source, document, entries = _volume(tmp_path)
+    _reads(services, entries)
+    _makes_words(services)
+    services.words = lambda: [_word("宿題", 1, entries=entries)]
+    with patch.object(runs, "open_reading", return_value=document):
+        runs.mine_runs(_reading_run(tmp_path, source, [{"word": "宿題", "unit_index": 3}]), threading.Event())
+    [row] = _result_file(tmp_path)["words"]
+    assert (row["status"], row["unit_index"]) == ("not_found", None)
+    services.processor.word_on_line.assert_not_called()
+
+
+def test_a_reading_word_phase_2_left_out_is_made_from_its_unit(services, tmp_path) -> None:
+    source, document, entries = _volume(tmp_path)
+    _reads(services, entries)
+    _makes_words(services)
+    services.words = lambda: []  # nothing parsed, or phase 2 left nothing: the callback still runs
+    with patch.object(runs, "open_reading", return_value=document):
+        runs.mine_runs(_reading_run(tmp_path, source, [{"word": "まだ", "unit_index": 2}]), threading.Event())
+    [row] = _result_file(tmp_path)["words"]
+    assert (row["from_line"], row["unit_index"], row["location"], row["sentence"]) == (True, 2, "p.13", "まだ")
+
+
+def test_a_dry_run_on_a_reading_episode(services, tmp_path) -> None:
+    source, document, entries = _volume(tmp_path)
+    _reads(services, entries)
+    services.words = lambda: [_word("宿題", 1, entries=entries)]
+    job = replace(_reading_run(tmp_path, source, [{"word": "宿題"}, {"word": "まだ"}]), dry_run=True)
+    with (
+        patch.object(runs, "open_reading", return_value=document),
+        patch.object(runs, "binary_available", return_value=False),
+    ):
+        [verdict] = runs.mine_runs(job, threading.Event(), runs.Kind.DRY_RUN)
+    assert verdict["ok"] is True
+    result = _result_file(tmp_path)
+    assert result["dry_run"] is True
+    assert [(w["status"], w["unit_index"]) for w in result["words"]] == [("ready", 1), ("not_found", None)]
+    services.processor.process_episode.assert_not_called()
+
+
+def test_a_render_on_a_reading_episode(services, tmp_path) -> None:
+    source, document, entries = _volume(tmp_path)
+    _reads(services, entries)
+
+    def process(*_args, **kwargs):
+        kwargs["curation_callback"]([_word("宿題", 1, entries=entries)])
+        anki = services.factory.call_args.kwargs["anki_service"]
+        anki.rendered = {"宿題": render.Rendered(fields={"Word": "宿題"}, files=["宿題_x.jpg"])}
+        return _result()
+
+    services.processor.process_reading.side_effect = process
+    with patch.object(runs, "open_reading", return_value=document):
+        [verdict] = runs.mine_runs(
+            _reading_run(tmp_path, source, [{"word": "宿題"}]), threading.Event(), runs.Kind.RENDER
+        )
+    assert verdict["file"] == "render-1.json"
+    [row] = json.loads((tmp_path / "ep-01" / "render-1.json").read_text(encoding="utf-8"))["words"]
+    assert (row["status"], row["files"], row["location"]) == ("rendered", ["render-1/宿題_x.jpg"], "p.12")
+
+
+def test_a_reading_only_call_needs_no_ffmpeg(services, tmp_path) -> None:
+    source, document, entries = _volume(tmp_path)
+    _reads(services, entries)
+    with (
+        patch.object(runs, "open_reading", return_value=document),
+        patch.object(runs, "binary_available", return_value=False),
+    ):
+        [verdict] = runs.mine_runs(_reading_run(tmp_path, source, [{"word": "宿題"}]), threading.Event())
+    assert verdict["ok"] is True
+
+
+@pytest.mark.parametrize(
+    ("error", "transient"),
+    [
+        (ApiError("SOURCE_UNREADABLE", "not an EPUB"), False),
+        (RunFailed("SOURCE_UNREADABLE", "timed out", transient=True), True),
+    ],
+)
+def test_a_source_that_does_not_load_fails_its_run(services, tmp_path, error, transient) -> None:
+    source, _document, _entries = _volume(tmp_path)
+    with patch.object(runs, "open_reading", side_effect=error):
+        [verdict] = runs.mine_runs(_reading_run(tmp_path, source, [{"word": "宿題"}]), threading.Event())
+    assert (verdict["error"], verdict["file"], verdict["failure_is_transient"]) == (
+        "SOURCE_UNREADABLE",
+        None,
+        transient,
+    )
+    services.processor.process_reading.assert_not_called()
+
+
+def test_a_missing_reading_folder_is_unreadable_not_a_bad_file(services, tmp_path) -> None:
+    [verdict] = runs.mine_runs(
+        _reading_run(tmp_path, tmp_path / "no such volume", [{"word": "宿題"}]), threading.Event()
+    )
+    assert verdict["error"] == "SOURCE_UNREADABLE" and "not found" in verdict["message"]
+
+
+def test_a_cancel_during_the_load_lists_every_word_not_attempted(services, tmp_path) -> None:
+    source, _document, _entries = _volume(tmp_path)
+    with patch.object(runs, "open_reading", side_effect=ApiError("CANCELLED", "The run was cancelled.")):
+        [verdict] = runs.mine_runs(_reading_run(tmp_path, source, [{"word": "宿題"}]), threading.Event())
+    assert (verdict["error"], verdict["file"]) == ("CANCELLED", "result-1.json")
+    result = _result_file(tmp_path)
+    assert (result["outcome"], [w["status"] for w in result["words"]]) == ("cancelled", ["not_attempted"])
+
+
+def _audio_run(tmp_path: Path, **episode) -> files.RunFile:
+    audio = tmp_path / "吾輩は猫である.m4b"
+    audio.write_bytes(b"audio")
+    first = {"run_id": "ep-01", "audio_file": str(audio), "subtitle_file": str(tmp_path / "s.srt"), "words": WORDS}
+    return files.parse_run_file(
+        {"schema": 1, "run_dir": str(tmp_path), "language": "ja", "episodes": [{**first, **episode}]}
+    )
+
+
+def test_an_audio_episode_mines_audio_only_as_the_audiobooks_tab(services, tmp_path, video) -> None:
+    [verdict] = runs.mine_runs(_audio_run(tmp_path), threading.Event())
+    assert verdict["ok"] is True
+    args, kwargs = services.processor.process_episode.call_args
+    assert args[:2] == (tmp_path.resolve() / "吾輩は猫である.m4b", tmp_path.resolve() / "s.srt")
+    assert (kwargs["audio_only"], kwargs["series_name_override"], kwargs["episode_name_override"]) == (
+        True,
+        "Audio",
+        "吾輩は猫である",
+    )
+    services.check_audio.assert_called_once()
+    services.duration.assert_not_called()  # no video check
+    row = _result_file(tmp_path)["words"][0]
+    assert (row["line_start"], row["unit_index"], row["location"]) == (30.0, None, None)
+
+
+def test_an_audio_episode_keeps_its_own_names(services, tmp_path, video) -> None:
+    runs.mine_runs(_audio_run(tmp_path, series_name_override="Books", episode_name_override=""), threading.Event())
+    kwargs = services.processor.process_episode.call_args.kwargs
+    assert (kwargs["series_name_override"], kwargs["episode_name_override"]) == ("Books", "")
+
+
+def test_an_audio_file_that_does_not_open_fails_its_run(services, tmp_path, video) -> None:
+    services.check_audio.side_effect = ApiError("AUDIO_UNREADABLE", "The audio file cannot be opened")
+    [verdict] = runs.mine_runs(_audio_run(tmp_path), threading.Event())
+    assert (verdict["error"], verdict["file"]) == ("AUDIO_UNREADABLE", None)

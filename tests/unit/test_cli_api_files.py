@@ -320,3 +320,156 @@ def test_fetch_file_refuses_shared_run_ids(tmp_path: Path) -> None:
     data["episodes"].append(dict(data["episodes"][0]))
     with pytest.raises(ApiError, match="share a run_id"):
         files.parse_fetch_file(data)
+
+
+# --- reading and audio episodes ------------------------------------------------------------------
+
+
+def _reading(tmp_path: Path, reading_file: str = "book.epub", **episode) -> dict:
+    data = _run_file(tmp_path)
+    data["episodes"] = [{"run_id": "ep-01", "reading_file": reading_file, "words": [{"word": "名前"}], **episode}]
+    return data
+
+
+def test_a_reading_episode_takes_a_path_or_a_web_address(tmp_path: Path) -> None:
+    run = files.parse_run_file(_reading(tmp_path, words=[{"word": "名前", "unit_index": 1, "line_expansion": [0, 1]}]))
+    [ep] = run.episodes
+    assert (ep.reading_file, ep.video_file, ep.audio_file, ep.subtitle_file) == (
+        Path("book.epub").resolve(),
+        None,
+        None,
+        None,
+    )
+    assert ep.words == (R("名前", line_expansion=(0, 1), unit_index=1),)
+    assert ep.media_file is None
+    url = "https://example.com/article?id=1"
+    assert files.parse_run_file(_reading(tmp_path, f" {url} ")).episodes[0].reading_file == url
+    volume = tmp_path / "漫画 第1巻"
+    volume.mkdir()
+    assert files.parse_run_file(_reading(tmp_path, str(volume))).episodes[0].reading_file == volume.resolve()
+
+
+def test_a_reading_episode_passes_its_names_to_process_reading(tmp_path: Path) -> None:
+    run = files.parse_run_file(_reading(tmp_path, source_label_override="L", series_name_override="S"))
+    assert run.episodes[0].reading_kwargs() == {
+        "source_label_override": "L",
+        "series_name_override": "S",
+        "episode_name_override": None,
+    }
+
+
+@pytest.mark.parametrize(
+    "episode",
+    [
+        {"words": [{"word": "名前", "line_start": 1.0}]},
+        {"words": [{"word": "名前", "unit_index": -1}]},
+        {"words": [{"word": "名前", "unit_index": 1.5}]},
+        {"subtitle_file": "s.srt"},
+        {"subtitle_offset": 1.0},
+        {"audio_track_override": 0},
+        {"secondary_subtitle_file": "en.srt"},
+        {"secondary_subtitle_offset": 1.0},
+        {"video_file": "v.mkv"},
+        {"audio_file": "a.m4b"},
+    ],
+)
+def test_a_reading_episode_refuses_what_only_a_timeline_has(tmp_path: Path, episode) -> None:
+    with pytest.raises(ApiError) as err:
+        files.parse_run_file(_reading(tmp_path, **episode))
+    assert err.value.code == "BAD_RUN_FILE"
+
+
+@pytest.mark.parametrize("name", ["episode.mkv", "missing.mkv", "notes.docx"])
+def test_a_file_that_is_no_reading_source_refuses_the_call(tmp_path: Path, name: str) -> None:
+    if name == "episode.mkv":
+        (tmp_path / name).write_bytes(b"video")
+    with pytest.raises(ApiError, match="not a reading source") as err:
+        files.parse_run_file(_reading(tmp_path, str(tmp_path / name)))
+    assert err.value.code == "BAD_RUN_FILE"
+
+
+def test_a_missing_folder_is_left_to_the_run(tmp_path: Path) -> None:
+    """A suffixless path may be a page folder: the run reports it missing (SOURCE_UNREADABLE)."""
+    missing = tmp_path / "第2巻"
+    assert files.parse_run_file(_reading(tmp_path, str(missing))).episodes[0].reading_file == missing.resolve()
+
+
+def test_an_episode_names_exactly_one_source(tmp_path: Path) -> None:
+    data = _run_file(tmp_path)
+    data["episodes"][0].pop("video_file")
+    with pytest.raises(ApiError, match="exactly one"):
+        files.parse_run_file(data)
+
+
+def test_an_audio_episode_takes_its_subtitle_and_mines_as_the_audiobooks_tab(tmp_path: Path) -> None:
+    data = _run_file(tmp_path)
+    data["episodes"][0].pop("video_file")
+    data["episodes"][0]["audio_file"] = "吾輩は猫である.m4b"
+    [ep] = files.parse_run_file(data).episodes
+    assert (ep.audio_file, ep.video_file) == (Path("吾輩は猫である.m4b").resolve(), None)
+    assert ep.media_file == ep.audio_file
+    kwargs = ep.process_kwargs()
+    assert (kwargs["audio_only"], kwargs["series_name_override"], kwargs["episode_name_override"]) == (
+        True,
+        "Audio",
+        "吾輩は猫である",
+    )
+    data["episodes"][0].pop("subtitle_file")
+    with pytest.raises(ApiError, match="subtitle_file"):
+        files.parse_run_file(data)
+
+
+def test_a_video_episode_still_mines_as_before(tmp_path: Path) -> None:
+    kwargs = files.parse_run_file(_run_file(tmp_path)).episodes[0].process_kwargs()
+    assert (kwargs["audio_only"], kwargs["series_name_override"], kwargs["episode_name_override"]) == (
+        False,
+        None,
+        None,
+    )
+
+
+def test_unit_index_is_for_a_reading_episode_only(tmp_path: Path) -> None:
+    with pytest.raises(ApiError, match="unit_index") as err:
+        files.parse_run_file(_run_file(tmp_path, words=[{"word": "約束", "unit_index": 0}]))
+    assert err.value.code == "BAD_RUN_FILE"
+
+
+def _reading_media(**episode) -> dict:
+    return {
+        "schema": 1,
+        "run_dir": ".",
+        "language": "ja",
+        "episodes": [{"run_id": "e", "reading_file": "vol.mokuro", "lines": [{"unit_index": 4}], **episode}],
+    }
+
+
+def test_a_media_file_takes_reading_and_audio_episodes() -> None:
+    [ep] = files.parse_media_file(_reading_media(lines=[{"unit_index": 4, "line_expansion": [1, 0]}])).episodes
+    assert (ep.reading_file, ep.subtitle_file) == (Path("vol.mokuro").resolve(), None)
+    assert ep.lines == (files.LineRequest(line_expansion=(1, 0), unit_index=4),)
+    audio = _media()
+    audio["episodes"][0]["audio_file"] = audio["episodes"][0].pop("video_file")
+    assert files.parse_media_file(audio).episodes[0].audio_file == Path("v").resolve()
+
+
+@pytest.mark.parametrize(
+    "episode",
+    [
+        {"lines": [{"line_start": 1.0}]},
+        {"lines": [{}]},
+        {"lines": [{"unit_index": -2}]},
+        {"subtitle_file": "s.srt"},
+        {"audio_track_override": 1},
+    ],
+)
+def test_reading_media_refusals(episode) -> None:
+    with pytest.raises(ApiError) as err:
+        files.parse_media_file(_reading_media(**episode))
+    assert err.value.code == "BAD_RUN_FILE"
+
+
+def test_a_video_media_line_takes_no_unit_index() -> None:
+    data = _media()
+    data["episodes"][0]["lines"] = [{"line_start": 1.0, "unit_index": 0}]
+    with pytest.raises(ApiError, match="unit_index"):
+        files.parse_media_file(data)
