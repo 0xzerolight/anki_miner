@@ -4,7 +4,8 @@ One episode's retime is a pipeline, not a single tool call:
 
 1. **Reference** — :mod:`anki_miner.services.retime_reference` picks what to
    align against (embedded dialogue track preferred, extracted audio fallback,
-   raw video as last resort).
+   raw video as last resort), unless the caller names a subtitle file already
+   timed to the video.
 2. **Clean** — :mod:`anki_miner.services.subtitle_cleaner` strips non-dialogue
    cues (signs, songs, ♪ markers, HoH annotations) from the input into a copy
    the aligners can read; aligners see dialogue only. A format no engine reads
@@ -44,7 +45,7 @@ from PyQt6.QtCore import QCoreApplication
 
 from anki_miner.exceptions.subtitle import AlassNotFoundError
 from anki_miner.languages.registry import config_language, get_profile
-from anki_miner.services.retime_reference import ReferenceOverride, resolve_reference
+from anki_miner.services.retime_reference import ReferenceOverride, resolve_reference, subtitle_file_reference
 from anki_miner.services.subtitle_cleaner import (
     clean_for_alignment,
     map_deltas_back,
@@ -98,7 +99,8 @@ class RetimeOutcome:
 
     Truthy exactly when a validated result was written. ``attempts`` holds one
     human-readable line per engine tried — the forensic trail the old pipeline
-    never kept.
+    never kept. The shift fields are the winning engine's :class:`SyncResult`
+    figures: ffsubsync's offset and framerate scale, alass's per-block shifts.
     """
 
     ok: bool
@@ -107,6 +109,9 @@ class RetimeOutcome:
     attempts: tuple[str, ...] = ()
     reason: str = ""
     cancelled: bool = False
+    offset_seconds: float | None = None
+    framerate_scale: float | None = None
+    block_shifts_seconds: tuple[float, ...] = ()
 
     def __bool__(self) -> bool:
         return self.ok
@@ -119,6 +124,7 @@ def retime_subtitle(
     out_sub: Path,
     *,
     reference_override: ReferenceOverride | None = None,
+    reference_subtitle: Path | None = None,
     fix_framerate: bool = True,
     cancel_event: threading.Event | None = None,
     log_cb: Callable[[str], None] | None = None,
@@ -139,6 +145,10 @@ def retime_subtitle(
             suffix). Passing *in_sub* here overwrites it with no copy kept.
         reference_override: Explicit user pick of the reference track; None
             auto-selects (embedded subtitle preferred, audio fallback).
+        reference_subtitle: A subtitle file already timed to *video* (the
+            API's ``reference_subtitle``), aligned against instead of the
+            video's own tracks and audio; *reference_override* is then not
+            consulted. One that keeps no dialogue line fails the retime.
         fix_framerate: Let ffsubsync correct a framerate mismatch. False for a
             subtitle timed against this very stream (fetched captions), where
             no ratio can be right; alass never guesses one.
@@ -153,14 +163,24 @@ def retime_subtitle(
     try:
         tmp_dir.mkdir(exist_ok=True)
         duration_s = get_media_duration_seconds(video, resolve_ffprobe(config))
-        reference = resolve_reference(
-            config,
-            video,
-            override=reference_override,
-            video_duration_seconds=duration_s,
-            cancel_event=cancel_event,
-            log_cb=log_cb,
-        )
+        if reference_subtitle is not None:
+            reference = subtitle_file_reference(reference_subtitle, tmp_dir / (out_sub.stem + ".retime-ref.srt"))
+            if reference is None:
+                return RetimeOutcome(
+                    ok=False,
+                    reason=QCoreApplication.translate(
+                        "SubtitleRetimer", "the reference subtitle has no dialogue lines"
+                    ),
+                )
+        else:
+            reference = resolve_reference(
+                config,
+                video,
+                override=reference_override,
+                video_duration_seconds=duration_s,
+                cancel_event=cancel_event,
+                log_cb=log_cb,
+            )
         if _cancelled(cancel_event):
             return RetimeOutcome(ok=False, cancelled=True, reason="cancelled")
 
@@ -283,6 +303,9 @@ def retime_subtitle(
                     engine=result.engine,
                     reference_label=reference_label,
                     attempts=tuple(attempts),
+                    offset_seconds=result.offset_seconds,
+                    framerate_scale=result.framerate_scale,
+                    block_shifts_seconds=result.block_shifts_seconds,
                 )
 
             reason = "; ".join(verdict.reasons) or "rejected"
