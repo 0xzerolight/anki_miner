@@ -8,6 +8,7 @@ from anki_miner.services.book_sync.aligner import BookCursor, SentenceTiming
 from anki_miner.services.book_sync.report import (
     BookSyncReport,
     UnheardGap,
+    book_unheard,
     build_report,
     grade_for,
     speech_coverage,
@@ -97,3 +98,14 @@ def test_sentences_another_file_timed_are_never_unheard():
     gaps = unheard_gaps(timings, known={2, 3, 5, 6, 8, 9, 10, 11})
 
     assert gaps == [UnheardGap(4, 4, 1.0, 5.0)]
+
+
+def test_the_books_unheard_runs_span_its_files_and_drop_what_a_later_file_timed():
+    """File 1 left 2-4 and 9 unheard, file 2 left 10-11; file 2 then timed 3 (MS-24), so 2-4 splits."""
+    gaps = [UnheardGap(2, 4, 1.0, 5.0), UnheardGap(9, 9, 8.0, 9.0), UnheardGap(10, 11, 0.0, 2.0)]
+
+    assert book_unheard(gaps, timed={0, 1, 3, 5, 8, 12}) == [(2, 2), (4, 4), (9, 11)]
+
+
+def test_a_book_with_no_gaps_has_no_unheard_runs():
+    assert book_unheard([], timed={0, 1}) == []

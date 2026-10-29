@@ -17,6 +17,7 @@ from anki_miner.exceptions import SetupError
 from anki_miner.models.reading import ReadingDocument, ReadingSourceRef, ReadingUnit
 from anki_miner.services.book_sync.aligner import BookCursor, BookText, SentenceTiming
 from anki_miner.services.book_sync.pipeline import BookSyncStatus, load_book, sync_one
+from anki_miner.services.book_sync.report import UnheardGap
 
 _SENTENCES = ("吾輩は猫である。", "名前はまだ無い。", "どこで生れたかとんと見当がつかぬ。")
 
@@ -288,6 +289,28 @@ def _two_of_three(monkeypatch) -> None:
     monkeypatch.setattr(
         pl, "align_to_book", lambda segs, book, cursor, **kw: [SentenceTiming(0, 0.0, 2.0), SentenceTiming(2, 4.0, 7.0)]
     )
+
+
+def test_sync_one_keeps_its_cues_timings_in_srt_order_and_its_unheard_gaps(tmp_path, monkeypatch):
+    """What --api sync reports: cue n is timings[n - 1], and the gaps the log names."""
+    _patch_transcribe(monkeypatch)
+    import anki_miner.services.book_sync.pipeline as pl
+
+    timings = [SentenceTiming(2, 0.0, 2.0), SentenceTiming(0, 4.0, 5.0), SentenceTiming(4, 9.0, 10.0)]
+    monkeypatch.setattr(pl, "align_to_book", lambda segs, book, cursor, **kw: timings)
+    book = _book()
+    book = BookText(book.title, (*book.sentences, "四。", "五。"), (*book.keys, "4", "5"))
+
+    result = sync_one(_make_config(tmp_path), object(), tmp_path / "a.mp3", book, BookCursor(), tmp_path / "a.srt")
+
+    assert result.timings == tuple(timings)
+    assert result.unheard == (UnheardGap(3, 3, 2.0, 9.0),)  # 1 sits between 0 and 2, read backwards: no gap
+
+
+def test_a_file_with_no_cues_keeps_no_timings(tmp_path, monkeypatch):
+    _patch_transcribe(monkeypatch, segments=[(0.0, 5.0, "全然違う話をしている")])
+    result = sync_one(_make_config(tmp_path), object(), tmp_path / "a.mp3", _book(), BookCursor(), tmp_path / "a.srt")
+    assert result.status is BookSyncStatus.NO_MATCH and result.timings == () and result.unheard == ()
 
 
 def test_sync_one_reports_speech_and_matched_seconds(tmp_path, monkeypatch):

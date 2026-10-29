@@ -18,9 +18,9 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from anki_miner.exceptions import SetupError
-from anki_miner.services.book_sync.aligner import BookCursor, BookText, TimedText, align_to_book
+from anki_miner.services.book_sync.aligner import BookCursor, BookText, SentenceTiming, TimedText, align_to_book
 from anki_miner.services.book_sync.normalize import normalize_for_alignment
-from anki_miner.services.book_sync.report import speech_coverage, unheard_gaps
+from anki_miner.services.book_sync.report import UnheardGap, speech_coverage, unheard_gaps
 from anki_miner.utils.logging_ext import capped, log_summary
 
 if TYPE_CHECKING:
@@ -57,6 +57,10 @@ class BookSyncResult:
     #: Seconds of transcript speech, and how many of them a cue covers (MS-25).
     speech_seconds: float = 0.0
     matched_seconds: float = 0.0
+    #: One per cue, in the SRT's order (audio order): the book sentence it times, and when.
+    timings: tuple[SentenceTiming, ...] = ()
+    #: The unheard runs between this file's cues (MS-24); what an earlier file timed is not in them.
+    unheard: tuple[UnheardGap, ...] = ()
 
 
 def load_book(
@@ -210,4 +214,6 @@ def sync_one(
         unmatched_sentences=unmatched,
         speech_seconds=speech_seconds,
         matched_seconds=matched_seconds,
+        timings=tuple(timings),
+        unheard=tuple(gaps),
     )
