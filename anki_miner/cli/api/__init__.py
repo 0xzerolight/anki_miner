@@ -229,6 +229,10 @@ def _job_call(command: str) -> Callable[[Path, threading.Event], list[dict[str, 
         from anki_miner.cli.api import fetch
 
         return fetch.call
+    if command == "ocr":
+        from anki_miner.cli.api import ocr
+
+        return ocr.call
     raise AssertionError(f"not a job command: {command}")
 
 
