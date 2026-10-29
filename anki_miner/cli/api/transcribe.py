@@ -31,9 +31,7 @@ from anki_miner.cli.api.runfolder import ProgressFile
 from anki_miner.cli.api.runs import check_video, require_ffmpeg
 from anki_miner.cli.api.sources import check_audio
 from anki_miner.config import AnkiMinerConfig
-from anki_miner.exceptions import SetupError
 from anki_miner.languages.registry import config_language, get_profile
-from anki_miner.services.asr.model_manager import decode_language
 from anki_miner.services.asr.subtitle_generation import SubtitleGenStatus, generate_subtitle_one
 from anki_miner.services.media_extractor import MediaExtractorService
 
@@ -84,10 +82,6 @@ def prepare_speech(job: JobsFile[E]) -> AnkiMinerConfig:
     config = settings.with_language(settings.load_profile_config(job.profile), job.language, code=BAD_RUN_FILE)
     if (problem := speech_problem(config)) is not None:
         raise ApiError(SETUP_ERROR, problem)
-    try:
-        decode_language(config.asr_model, asr_language(config))
-    except SetupError as exc:
-        raise ApiError(SETUP_ERROR, str(exc)) from exc
     require_ffmpeg(config)
     return config
 

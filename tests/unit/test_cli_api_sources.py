@@ -130,3 +130,13 @@ def test_speech_problem(monkeypatch, test_config, route, model, engine, expected
     monkeypatch.setattr(_engine, "available", lambda: engine)
     problem = readiness.speech_problem(replace(test_config, asr_model="large-v3"))
     assert problem is None if expected is None else expected in (problem or "")
+
+
+def test_a_model_that_cannot_transcribe_the_language_is_a_speech_problem(monkeypatch, test_config) -> None:
+    """Cantonese on small: check says so, and transcribe and sync refuse the call with it."""
+    from anki_miner.services.asr import model_availability
+
+    monkeypatch.setattr(model_availability, "whisper_cpp_route_ready", lambda config: True)
+    problem = readiness.speech_problem(replace(test_config, language="yue", asr_model="small"))
+    assert problem is not None and "cannot transcribe" in problem
+    assert readiness.speech_problem(replace(test_config, language="yue", asr_model="large-v3")) is None

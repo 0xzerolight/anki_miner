@@ -10,7 +10,6 @@ import pytest
 
 from anki_miner.cli.api import transcribe
 from anki_miner.cli.api.contract import AUDIO_UNREADABLE, VIDEO_UNREADABLE, ApiError
-from anki_miner.exceptions import SetupError
 from anki_miner.services.asr.subtitle_generation import SubtitleGenResult, SubtitleGenStatus
 
 
@@ -177,21 +176,6 @@ def test_a_missing_speech_model_refuses_the_call_before_any_run(monkeypatch, tmp
         transcribe.transcribe_runs(job, threading.Event())
     assert err.value.code == "SETUP_ERROR" and "speech model" in err.value.message
     assert generate.calls == [] and checked == [] and not (tmp_path / "tr-1").exists()
-
-
-def test_a_model_that_cannot_transcribe_the_language_refuses_the_call(monkeypatch, tmp_path, checked) -> None:
-    """Cantonese on small (decode_language): every run would fail, so the call is refused up front."""
-
-    def cannot(model, language):
-        raise SetupError(f"The {model} speech model cannot transcribe this language ({language}).")
-
-    monkeypatch.setattr(transcribe, "decode_language", cannot)
-    job = transcribe.files.parse_jobs_file(
-        _file(tmp_path, video_file=str(tmp_path / "ep.mkv")), "transcribe", transcribe._episode
-    )
-    with pytest.raises(ApiError) as err:
-        transcribe.transcribe_runs(job, threading.Event())
-    assert err.value.code == "SETUP_ERROR" and "cannot transcribe" in err.value.message
 
 
 @pytest.mark.parametrize(

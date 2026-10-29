@@ -4,8 +4,8 @@ Each call writes exactly one JSON verdict line to fd 1 and exits 0; any other
 exit is a crash. ``mine`` (but not a dry run), ``settings-import`` and ``setup``
 hold the run lock: ``mine`` runs beside an idle window; ``settings-import`` and
 ``setup`` refuse any window. ``render``, ``media``, ``check``, ``version``,
-``profiles``, ``settings-export`` and the job commands (``fetch`` and the others
-in ``jobs.py``) run at any time. The log goes to ``anki_miner.api.log``
+``profiles``, ``settings-export``, ``inspect`` and the job commands (``fetch``
+and the others in ``jobs.py``) run at any time. The log goes to ``anki_miner.api.log``
 (installed by ``cli.entry`` before this runs).
 """
 
@@ -36,6 +36,9 @@ from anki_miner.cli.api.contract import (
 from anki_miner.cli.entry import _prepare_process, _private_stdout
 
 logger = logging.getLogger(__name__)
+
+#: ``setup --model``: model_manager.KNOWN_MODELS, named here so parsing a command line imports no ASR code.
+SPEECH_MODELS = ("large-v3", "small")
 
 
 class _UsageError(Exception):
@@ -73,8 +76,12 @@ def build_parser() -> argparse.ArgumentParser:
     setup.add_argument("--language", required=True)
     setup.add_argument("--progress", type=Path, required=True)
     setup.add_argument("--profile")
+    setup.add_argument("--speech-model", action="store_true")
+    setup.add_argument("--model", choices=SPEECH_MODELS)
+    setup.add_argument("--ocr", action="store_true")
     for name in JOB_COMMANDS:
         commands.add_parser(name).add_argument("file", type=Path)
+    commands.add_parser("inspect").add_argument("file", type=Path)
     return parser
 
 
@@ -134,6 +141,8 @@ def _dispatch(args: argparse.Namespace) -> dict[str, object]:
         return _ok("settings-import", result=result)
     if args.command == "setup":
         return _setup(args)
+    if args.command == "inspect":
+        return _inspect(args)
     if args.command in JOB_COMMANDS:
         return _job(args.command, args.file)
     return _run(args)
@@ -186,20 +195,34 @@ def _render(args: argparse.Namespace) -> dict[str, object]:
 
 
 def _setup(args: argparse.Namespace) -> dict[str, object]:
-    """setup: under the run lock; SIGINT/SIGTERM stop the item in flight (CANCELLED, that item not_attempted).
+    """setup: under the run lock; SIGINT/SIGTERM or a ``cancel`` file beside ``--progress`` stop the item in
+    flight (CANCELLED, that item not_attempted).
 
     A download cut short resumes on the next call (its resume_key); what finished stays installed and switched on.
     """
     from anki_miner.cli.api import setup
     from anki_miner.cli.entry import _cancel_on_signals
 
+    if args.model is not None and not args.speech_model:
+        raise ApiError(BAD_ARGUMENTS, "--model chooses the speech model: give it with --speech-model.")
+    extras = setup.Extras(speech_model=args.speech_model, model=args.model, ocr=args.ocr)
     cancel = threading.Event()
     with _locked(), _cancel_on_signals(cancel):
-        outcome = setup.run_setup(args.language, args.profile, args.progress, cancel)
+        outcome = setup.run_setup(args.language, args.profile, args.progress, cancel, extras)
     verdict = _ok(args.command, result=outcome.result)
     if outcome.cancelled:
         return {**verdict, "ok": False, "error": CANCELLED, "message": "Setup was cancelled."}
     return {**verdict, "ok": not outcome.failed}
+
+
+def _inspect(args: argparse.Namespace) -> dict[str, object]:
+    """inspect: no lock (it writes only the unit lists asked for); SIGINT/SIGTERM stop the call (CANCELLED)."""
+    from anki_miner.cli.api import inspect
+    from anki_miner.cli.entry import _cancel_on_signals
+
+    cancel = threading.Event()
+    with _cancel_on_signals(cancel):
+        return _ok(args.command, result=inspect.call(args.file, cancel))
 
 
 def _job(command: str, file: Path) -> dict[str, object]:
@@ -239,6 +262,10 @@ def _job_call(command: str) -> Callable[[Path, threading.Event], list[dict[str, 
         from anki_miner.cli.api import retime
 
         return retime.call
+    if command == "ocr":
+        from anki_miner.cli.api import ocr
+
+        return ocr.call
     raise AssertionError(f"not a job command: {command}")
 
 

@@ -142,13 +142,13 @@ def opt_float(value: object, where: str) -> float | None:
     return number
 
 
-def _schema(obj: Mapping[str, object], where: str) -> None:
+def check_schema(obj: Mapping[str, object], where: str) -> None:
     schema = obj.get("schema")
     if isinstance(schema, bool) or schema != 1:
         raise bad(f"{where}: schema must be 1.")
 
 
-def _run_dir(value: object) -> Path:
+def existing_run_dir(value: object) -> Path:
     # Resolved, so a relative run_dir is taken from the caller's folder.
     path = Path(text(value, "run_dir")).expanduser().resolve()
     if not path.is_dir():
@@ -396,7 +396,7 @@ def parse_run_file(data: object) -> RunFile:
         frozenset({"schema", "run_dir", "language", "episodes"}),
         "The run file",
     )
-    _schema(obj, "The run file")
+    check_schema(obj, "The run file")
     dry_run = obj.get("dry_run", False)
     if not isinstance(dry_run, bool):
         raise bad("dry_run must be true or false.")
@@ -406,7 +406,7 @@ def parse_run_file(data: object) -> RunFile:
     episodes = tuple(parse_episode(raw, f"episodes[{i}]") for i, raw in enumerate(raw_episodes))
     _unique_run_ids([episode.run_id for episode in episodes])
     return RunFile(
-        run_dir=_run_dir(obj["run_dir"]),
+        run_dir=existing_run_dir(obj["run_dir"]),
         profile=opt_text(obj.get("profile"), "profile"),
         language=obj["language"],
         overlay=json_object(obj.get("config", {}), "config"),
@@ -482,7 +482,7 @@ def parse_media_file(data: object) -> MediaFile:
         frozenset({"schema", "run_dir", "language", "episodes"}),
         "The media file",
     )
-    _schema(obj, "The media file")
+    check_schema(obj, "The media file")
     raw_episodes = obj["episodes"]
     if not isinstance(raw_episodes, list) or not raw_episodes:
         raise bad("episodes must be a non-empty list.")
@@ -512,7 +512,7 @@ def parse_media_file(data: object) -> MediaFile:
         )
     _unique_run_ids([episode.run_id for episode in episodes])
     return MediaFile(
-        run_dir=_run_dir(obj["run_dir"]),
+        run_dir=existing_run_dir(obj["run_dir"]),
         profile=opt_text(obj.get("profile"), "profile"),
         language=obj["language"],
         still_height=opt_positive(obj.get("still_height"), "still_height"),
@@ -576,14 +576,14 @@ def parse_jobs_file(data: object, name: str, episode: Callable[[object, str], E]
         frozenset({"schema", "run_dir", "language", "episodes"}),
         where,
     )
-    _schema(obj, where)
+    check_schema(obj, where)
     raw_episodes = obj["episodes"]
     if not isinstance(raw_episodes, list) or not raw_episodes:
         raise bad("episodes must be a non-empty list.")
     episodes = tuple(episode(raw, f"episodes[{i}]") for i, raw in enumerate(raw_episodes))
     _unique_run_ids([e.run_id for e in episodes])
     return JobsFile(
-        run_dir=_run_dir(obj["run_dir"]),
+        run_dir=existing_run_dir(obj["run_dir"]),
         profile=opt_text(obj.get("profile"), "profile"),
         language=obj["language"],
         episodes=episodes,

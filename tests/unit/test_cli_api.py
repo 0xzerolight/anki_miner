@@ -93,7 +93,7 @@ def _fake_validation(**checks):
 
 
 def _check_ok(monkeypatch, commands, **overrides) -> None:
-    """Every check passing, except *overrides*; yt-dlp and the speech model missing."""
+    """Every check passing, except *overrides*; yt-dlp, the speech model and both OCRs missing."""
     checks = {
         "check_ankiconnect": (True, ""),
         "check_deck_exists": (True, ""),
@@ -106,7 +106,9 @@ def _check_ok(monkeypatch, commands, **overrides) -> None:
     monkeypatch.setattr(commands, "stale_resource_reimport_error", lambda config: None)
     monkeypatch.setattr(commands, "binary_available", lambda resolved: True)
     monkeypatch.setattr(commands, "ytdlp_available", lambda config: False)
-    monkeypatch.setattr(commands, "usable_model_installed", lambda config: False)
+    monkeypatch.setattr(commands, "speech_problem", lambda config: "The speech model large-v3 is not installed.")
+    monkeypatch.setattr(commands, "manga_ocr_problem", lambda config: "mokuro is not installed.")
+    monkeypatch.setattr(commands, "video_ocr_problem", lambda config: "Video OCR's engine is not installed.")
 
 
 def test_check_reports_every_item(verdict, monkeypatch, test_config) -> None:
@@ -129,6 +131,8 @@ def test_check_reports_every_item(verdict, monkeypatch, test_config) -> None:
         "ffprobe",
         "yt_dlp",
         "speech_model",
+        "ocr",
+        "video_ocr",
     ]
     assert items["deck"] == {"name": "deck", "ok": False, "message": "Deck 'x' not found."}
     assert items["anki"]["message"] is None and "yt-dlp" in items["yt_dlp"]["message"]
@@ -143,29 +147,31 @@ def test_check_skips_anki_items_when_unreachable(verdict, monkeypatch, test_conf
     assert items["deck"]["ok"] is False and "not reachable" in items["deck"]["message"]
 
 
-def test_a_missing_speech_model_does_not_count_toward_ready(verdict, monkeypatch, test_config) -> None:
+def test_the_speech_and_ocr_items_do_not_count_toward_ready(verdict, monkeypatch, test_config) -> None:
     from anki_miner.cli.api import commands
 
-    assert test_config.youtube_subtitle_source == "auto"
     monkeypatch.setattr(commands.settings, "load_profile_config", lambda pid: test_config)
     _check_ok(monkeypatch, commands)
     result = verdict("check", "--language", "ja")["result"]
     items = {i["name"]: i for i in result["items"]}
-    assert items["yt_dlp"]["ok"] is False and items["speech_model"]["ok"] is False
-    assert "speech model" in items["speech_model"]["message"]
+    assert [items[n]["ok"] for n in ("yt_dlp", "speech_model", "ocr", "video_ocr")] == [False] * 4
+    assert items["speech_model"]["message"] == "The speech model large-v3 is not installed."
+    assert items["ocr"]["message"] == "mokuro is not installed."
     assert result["ready"] is True
 
 
-def test_fetch_items_do_not_count_toward_ready(verdict, monkeypatch, test_config) -> None:
+def test_the_speech_model_is_reported_whatever_the_youtube_setting(verdict, monkeypatch, test_config) -> None:
     from anki_miner.cli.api import commands
 
     monkeypatch.setattr(
         commands.settings, "load_profile_config", lambda pid: replace(test_config, youtube_subtitle_source="captions")
     )
     _check_ok(monkeypatch, commands)
-    result = verdict("check", "--language", "ja")["result"]
-    assert result["ready"] is True
-    assert [i["name"] for i in result["items"]][-1] == "yt_dlp"  # captions only: no speech model needed
+    monkeypatch.setattr(commands, "speech_problem", lambda config: None)
+    monkeypatch.setattr(commands, "video_ocr_problem", lambda config: None)
+    items = {i["name"]: i for i in verdict("check", "--language", "ja")["result"]["items"]}
+    assert items["speech_model"] == {"name": "speech_model", "ok": True, "message": None}
+    assert items["video_ocr"]["ok"] is True and items["ocr"]["ok"] is False
 
 
 def test_check_unknown_language_is_bad_arguments(verdict) -> None:

@@ -22,6 +22,8 @@ COMMANDS = (
     "extract",
     "video-ocr",
     "retime",
+    "ocr",
+    "inspect",
 )
 #: Commands that turn files into files, one run per episode (``jobs.py``): ``<name> FILE``.
 JOB_COMMANDS = (
@@ -31,6 +33,7 @@ JOB_COMMANDS = (
     "extract",
     "video-ocr",
     "retime",
+    "ocr",
 )
 #: What this build adds beyond 3.5.0's API, by stable name (API.md, "version"). One name per
 #: addition, appended when it ships; a caller checks a name instead of comparing versions.
@@ -56,6 +59,10 @@ FEATURES = (
     "reading",
     "manga",
     "audio-episodes",
+    "check-speech-ocr",
+    "setup-speech-ocr",
+    "ocr",
+    "inspect",
 )
 
 BUSY = "BUSY"

@@ -8,6 +8,7 @@ loaded and no engine is started.
 from __future__ import annotations
 
 from anki_miner.config import AnkiMinerConfig
+from anki_miner.exceptions import SetupError
 from anki_miner.languages.registry import config_language, get_profile
 
 NO_SPEECH_MODEL = (
@@ -32,7 +33,7 @@ _NO_VIDEO_OCR_PARTS = (
 
 
 def speech_problem(config: AnkiMinerConfig) -> str | None:
-    """A usable model and an engine that runs it.
+    """A usable model for the mining language, and an engine that runs it.
 
     ``usable_model_installed`` takes a downloaded CT2 model as enough; a build
     without the CT2 engine (the bundle before its engine pack is installed)
@@ -41,6 +42,11 @@ def speech_problem(config: AnkiMinerConfig) -> str | None:
     from anki_miner.services.asr import _engine, model_manager
     from anki_miner.services.asr.model_availability import whisper_cpp_route_ready
 
+    try:
+        # A model that cannot transcribe the mining language (Cantonese on small) is no model for it.
+        model_manager.decode_language(config.asr_model, get_profile(config_language(config)).asr_language)
+    except SetupError as exc:
+        return str(exc)
     if whisper_cpp_route_ready(config):
         return None
     if not model_manager.is_downloaded(config.asr_model, config.asr_models_root):
