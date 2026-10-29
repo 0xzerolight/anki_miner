@@ -36,6 +36,7 @@ FEATURES = (
     "setup",
     "fetch",
     "beside-window",
+    "check-speech-ocr",
 )
 
 BUSY = "BUSY"
