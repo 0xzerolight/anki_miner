@@ -1,6 +1,6 @@
 """Tests for the house glossary stylesheet (resources/glossary.css).
 
-Seven structural rules plus the ``images`` and ``tables`` groups. Every rule is
+Nine structural rules plus the ``images`` and ``tables`` groups. Every rule is
 guarded by miner-only ``ol[data-count]`` markup so it never restyles
 Yomitan-exported glossary HTML sharing a note type; the sheet carries no
 ``!important``, no nesting and no theme selectors, and the minified core rides
@@ -95,6 +95,21 @@ class TestSheetDiscipline:
             subject = selector.split()[-1]
             assert any(ch in subject for ch in ".#["), f"{selector!r} takes a bare type selector as its subject"
 
+    def test_list_gutters_yield_to_the_note_type(self):
+        # Senren lays every `.yomitan-glossary ol` out inline with `padding-left: 0`; a
+        # padded inline <ol> around a block <li> renders a blank line. The gutter rides a
+        # zero-specificity :where() so the note type's own list padding wins.
+        gutters = []
+        for selector, declarations in _selectors(load_glossary_css()):
+            if "ol.gloss-" not in selector or "padding" not in declarations:
+                continue
+            assert selector.startswith(".yomitan-glossary :where(ol[data-count] "), selector
+            gutters.append(selector)
+        assert sorted(gutters) == [
+            ".yomitan-glossary :where(ol[data-count] ol.gloss-glosses)",
+            ".yomitan-glossary :where(ol[data-count] ol.gloss-list)",
+        ]
+
     def test_group_markers_sit_between_complete_rules(self):
         # base_css concatenates minified regions with no separator, which is only
         # sound when every region boundary falls right after a `}`.
@@ -124,8 +139,8 @@ class TestBaseCss:
 
     def test_core_draws_gloss_bullets_as_circles(self):
         assert (
-            ".yomitan-glossary ol[data-count] ol.gloss-glosses{margin: 0.1em 0;padding-left: 1.4em;"
-            "list-style-type: circle;}" in base_css("")
+            ".yomitan-glossary ol[data-count] ol.gloss-glosses{margin: 0.1em 0;list-style-type: circle;}"
+            in base_css("")
         )
 
     def test_images_region_only_when_the_field_has_an_image(self):

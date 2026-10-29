@@ -5,9 +5,9 @@
  * minified, at the head of the trailing <style> block in every styled field,
  * followed by each present dictionary's own styles.css (scoped to its
  * [data-dictionary] envelope). The definition shape itself (numbered senses only
- * when there are two or more, circle bullets only for two or more glosses, muted
+ * when there are two or more, a circle bullet on every gloss, muted
  * usage notes) is written into the markup at mining time, so this sheet carries
- * structure only: seven core rules, plus two regions adapted from Yomitan's
+ * structure only: nine core rules, plus two regions adapted from Yomitan's
  * ext/css/structured-content.css (GPL-3.0; Anki Miner is GPL-3.0-or-later).
  *
  * Contract (enforced by tests/unit/test_glossary_css.py):
@@ -17,6 +17,9 @@
  *    shares a note type.
  *  - No `!important`, no nesting, no `.nightMode`/`prefers-color-scheme`: the
  *    note type governs everything not declared here.
+ *  - The nested lists' gutters (`padding-left`) sit in zero-specificity `:where()`
+ *    rules, so a note type's own list padding wins: Senren lays lists out inline
+ *    with `padding-left: 0`, and a padded inline <ol> renders a blank line.
  *  - Every `var()` is defined here, carries a fallback, or is the
  *    renderer-stamped `--image`.
  *  - The first rule is the wrapper rule below: its minified form opens with
@@ -43,6 +46,8 @@
 }
 .yomitan-glossary ol[data-count] ol.gloss-list {
   margin: 0.1em 0 0;
+}
+.yomitan-glossary :where(ol[data-count] ol.gloss-list) {
   padding-left: 1.6em;
 }
 .yomitan-glossary ol[data-count] li.gloss-item {
@@ -50,8 +55,10 @@
 }
 .yomitan-glossary ol[data-count] ol.gloss-glosses {
   margin: 0.1em 0;
-  padding-left: 1.4em;
   list-style-type: circle;
+}
+.yomitan-glossary :where(ol[data-count] ol.gloss-glosses) {
+  padding-left: 1.4em;
 }
 .yomitan-glossary ol[data-count] .gloss-note {
   opacity: 0.7;

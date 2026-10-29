@@ -23,7 +23,7 @@ page-by-page through ``DOMParser`` → ``doc.body.innerHTML``:
 
 The block is ``[base glossary.css] + [scoped per-dictionary CSS]`` (base →
 dict-author, following the Yomitan ``_getCustomCss`` ordering). The base is
-minified on embed (comments + whitespace stripped): the seven structural core
+minified on embed (comments + whitespace stripped): the nine structural core
 rules always, plus the ``images`` / ``tables`` regions (delimited in
 ``glossary.css`` by ``@am-group`` marker comments) only when the field itself
 contains markup they style (``base_css``). Only the base — which we author — is

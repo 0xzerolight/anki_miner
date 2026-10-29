@@ -18,5 +18,5 @@ _GLOSSARY_FILENAME = "glossary.css"
 
 
 def load_glossary_css() -> str:
-    """Return the bundled structural glossary stylesheet text (seven core rules plus the images/tables regions)."""
+    """Return the bundled structural glossary stylesheet text (nine core rules plus the images/tables regions)."""
     return files(_RESOURCE_PACKAGE).joinpath(_GLOSSARY_FILENAME).read_text(encoding="utf-8")
