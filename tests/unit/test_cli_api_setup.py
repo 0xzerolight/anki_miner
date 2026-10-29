@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import sys
 import threading
 from dataclasses import replace
 from types import SimpleNamespace
@@ -291,3 +292,362 @@ def test_setup_is_busy_while_any_window_is_open(verdict, tmp_path) -> None:
     finally:
         marker.unlock()
     assert v["error"] == "BUSY" and "window is open" in v["message"]
+
+
+# --- --speech-model, --model and --ocr ---------------------------------------------------------------
+
+
+@pytest.fixture
+def bare(monkeypatch):
+    """No language pack and no resources: only what the flags add runs, with the language's real OCR."""
+    from anki_miner.languages import registry
+
+    def profile(code):
+        real = registry.get_profile(code)
+        return SimpleNamespace(
+            catalog=(), unavailable_reason=None, capabilities=real.capabilities, ocr_recognizer=real.ocr_recognizer
+        )
+
+    monkeypatch.setattr(api_setup, "get_profile", profile)
+    monkeypatch.setattr(api_setup.packs, "load_pack", lambda code: None)
+
+
+@pytest.fixture
+def machine(monkeypatch):
+    """A source install with the CT2 engine, no GPU and nothing downloaded; every install is recorded in order."""
+    state = SimpleNamespace(
+        engine=True,
+        pack_supported=True,
+        cuda=0,
+        cuda_supported=True,
+        cuda_installed=False,
+        whisper_cpp=False,
+        vulkan=0,
+        models=set(),
+        ggml=False,
+        vad=False,
+        calls=[],
+    )
+    monkeypatch.delattr(sys, "frozen", raising=False)
+    engine, packs_ = api_setup._engine, api_setup.asr_pack_installer
+    monkeypatch.setattr(engine, "available", lambda: state.engine)
+    monkeypatch.setattr(engine, "cuda_device_count", lambda: state.cuda)
+    monkeypatch.setattr(engine, "whisper_cpp_available", lambda: state.whisper_cpp)
+    monkeypatch.setattr(engine, "vulkan_device_count", lambda: state.vulkan)
+    monkeypatch.setattr(packs_, "asr_pack_supported", lambda: state.pack_supported)
+
+    def install_pack(root, *, progress, cancelled_check):
+        state.calls.append("asr_pack")
+        progress(10, 10, "ASR pack (1/1): downloading")
+
+    def on_syspath():
+        state.calls.append("syspath")
+        state.engine = True
+
+    monkeypatch.setattr(packs_, "install_asr_pack", install_pack)
+    monkeypatch.setattr(packs_, "ensure_asr_pack_on_syspath", on_syspath)
+    models = api_setup.model_manager
+    monkeypatch.setattr(models, "is_downloaded", lambda name, root: name in state.models)
+
+    def download(name, root, cancel_event=None):
+        state.calls.append(f"model:{name}")
+        state.models.add(name)
+
+    monkeypatch.setattr(models, "download", download)
+    cuda = api_setup.cuda_pack_installer
+    monkeypatch.setattr(cuda, "cuda_pack_supported", lambda: state.cuda_supported)
+    monkeypatch.setattr(cuda, "is_installed", lambda root: state.cuda_installed)
+    monkeypatch.setattr(cuda, "install_cuda_pack", lambda root, **kw: state.calls.append("cuda"))
+    ggml = api_setup.ggml_model_installer
+    monkeypatch.setattr(ggml, "is_ggml_downloaded", lambda name, root: state.ggml)
+    monkeypatch.setattr(ggml, "is_vad_downloaded", lambda root: state.vad)
+    monkeypatch.setattr(ggml, "install_ggml_model", lambda name, root, **kw: state.calls.append(f"ggml:{name}"))
+    monkeypatch.setattr(ggml, "install_vad_model", lambda root, **kw: state.calls.append("vad"))
+    return state
+
+
+def _with(tmp_path, *, language="ja", cancel=None, **extras):
+    return api_setup.run_setup(
+        language, None, tmp_path / "progress.json", cancel or threading.Event(), api_setup.Extras(**extras)
+    )
+
+
+def test_without_the_flags_the_result_and_progress_are_unchanged(catalog, test_config, tmp_path, monkeypatch) -> None:
+    GUIConfigManager.save_config(test_config)
+    _installs(monkeypatch)
+    outcome = _setup(tmp_path)
+    assert list(outcome.result) == ["language", "profile", "language_pack", "resources"]
+    assert json.loads((tmp_path / "progress.json").read_text(encoding="utf-8"))["stages"] == 2
+
+
+def test_the_speech_model_comes_after_the_resources(catalog, machine, test_config, tmp_path, monkeypatch) -> None:
+    GUIConfigManager.save_config(test_config)
+    calls = _installs(monkeypatch, calls=machine.calls)
+    outcome = _with(tmp_path, speech_model=True)
+    assert calls == ["test-dict", "test-freq", "model:large-v3"]
+    assert outcome.result["speech_model"] == {"name": "large-v3", "status": "installed", "message": None}
+    assert "ocr" not in outcome.result and not outcome.failed
+    progress = json.loads((tmp_path / "progress.json").read_text(encoding="utf-8"))
+    assert (progress["item"], progress["stage"], progress["stages"]) == ("speech_model", 3, 3)
+    assert (progress["done"], progress["total"]) == (0, 0)  # the model download reports no byte count
+
+
+@pytest.mark.parametrize(
+    ("device", "cuda", "expected"),
+    [
+        ("auto", 1, ["asr_pack", "syspath", "model:large-v3", "cuda"]),  # CUDA wins over Vulkan
+        ("auto", 0, ["asr_pack", "syspath", "model:large-v3", "ggml:large-v3", "vad"]),
+        ("vulkan", 1, ["asr_pack", "syspath", "model:large-v3", "cuda", "ggml:large-v3", "vad"]),
+        ("cpu", 1, ["asr_pack", "syspath", "model:large-v3", "cuda"]),  # the panel offers the pack for any device
+        ("cuda", 0, ["asr_pack", "syspath", "model:large-v3"]),
+    ],
+)
+def test_a_bundle_installs_the_engine_then_its_gpu_part(
+    bare, machine, test_config, tmp_path, monkeypatch, device, cuda, expected
+) -> None:
+    GUIConfigManager.save_config(replace(test_config, asr_device=device))
+    monkeypatch.setattr(sys, "frozen", True, raising=False)
+    machine.engine, machine.cuda = False, cuda
+    machine.whisper_cpp, machine.vulkan = True, 1
+    outcome = _with(tmp_path, speech_model=True)
+    assert machine.calls == expected
+    assert outcome.result["speech_model"]["status"] == "installed"
+
+
+def test_no_vulkan_device_no_whisper_cpp_files(bare, machine, test_config, tmp_path) -> None:
+    GUIConfigManager.save_config(replace(test_config, asr_device="vulkan"))
+    machine.whisper_cpp, machine.vulkan = True, 0
+    _with(tmp_path, speech_model=True)
+    assert machine.calls == ["model:large-v3"]
+
+
+def test_what_is_there_already_is_not_downloaded(bare, machine, test_config, tmp_path) -> None:
+    GUIConfigManager.save_config(test_config)
+    machine.models, machine.cuda, machine.cuda_installed = {"large-v3"}, 1, True
+    outcome = _with(tmp_path, speech_model=True)
+    assert machine.calls == []
+    assert outcome.result["speech_model"] == {"name": "large-v3", "status": "already_installed", "message": None}
+
+
+@pytest.mark.parametrize(
+    ("frozen", "supported", "message"),
+    [
+        (False, True, 'pip install "anki-miner[asr]"'),
+        (True, False, "not available for this build"),
+    ],
+)
+def test_an_engine_this_build_cannot_download_fails(
+    bare, machine, test_config, tmp_path, monkeypatch, frozen, supported, message
+) -> None:
+    GUIConfigManager.save_config(test_config)
+    if frozen:
+        monkeypatch.setattr(sys, "frozen", True, raising=False)
+    machine.engine, machine.pack_supported = False, supported
+    outcome = _with(tmp_path, speech_model=True)
+    assert machine.calls == [] and outcome.failed
+    assert outcome.result["speech_model"]["status"] == "failed"
+    assert message in outcome.result["speech_model"]["message"]
+
+
+def test_model_is_installed_and_saved_as_the_profiles(bare, machine, test_config, tmp_path) -> None:
+    GUIConfigManager.save_config(test_config)
+    outcome = _with(tmp_path, speech_model=True, model="small")
+    assert machine.calls == ["model:small"]
+    assert outcome.result["speech_model"] == {"name": "small", "status": "installed", "message": None}
+    assert GUIConfigManager.load_config().asr_model == "small"
+
+
+def test_model_already_there_is_still_saved(bare, machine, test_config, tmp_path) -> None:
+    GUIConfigManager.save_config(test_config)
+    machine.models = {"small"}
+    assert _with(tmp_path, speech_model=True, model="small").result["speech_model"]["status"] == "already_installed"
+    assert GUIConfigManager.load_config().asr_model == "small"
+
+
+def test_a_model_that_did_not_download_is_not_saved(bare, machine, test_config, tmp_path, monkeypatch) -> None:
+    from anki_miner.exceptions import SetupError
+
+    GUIConfigManager.save_config(test_config)
+
+    def broken(name, root, cancel_event=None):
+        raise SetupError("huggingface.co did not answer")
+
+    monkeypatch.setattr(api_setup.model_manager, "download", broken)
+    outcome = _with(tmp_path, speech_model=True, model="small")
+    assert outcome.failed and outcome.result["speech_model"] == {
+        "name": "small",
+        "status": "failed",
+        "message": "huggingface.co did not answer",
+    }
+    assert GUIConfigManager.load_config().asr_model == "large-v3"
+
+
+def test_a_cancel_during_the_model_download_leaves_it_not_attempted(
+    bare, machine, test_config, tmp_path, monkeypatch
+) -> None:
+    GUIConfigManager.save_config(test_config)
+    cancel = threading.Event()
+
+    def interrupted(name, root, cancel_event=None):
+        cancel.set()
+        cancel_event.wait(5)  # the watcher passes the signal on; the download then promotes nothing
+
+    monkeypatch.setattr(api_setup.model_manager, "download", interrupted)
+    outcome = _with(tmp_path, cancel=cancel, speech_model=True, model="small", ocr=True)
+    assert outcome.cancelled and not outcome.failed
+    assert [outcome.result[k]["status"] for k in ("speech_model", "ocr", "video_ocr")] == ["not_attempted"] * 3
+    assert GUIConfigManager.load_config().asr_model == "large-v3"
+
+
+@pytest.fixture
+def ocr(monkeypatch):
+    """Nothing of either OCR installed; every install is recorded in order."""
+    calls: list[str] = []
+    state = SimpleNamespace(managed=False, onnxruntime=False, importable=False, calls=calls)
+    monkeypatch.setattr(api_setup, "manga_ocr_problem", lambda config: "mokuro is not installed.")
+    monkeypatch.setattr(api_setup, "video_ocr_problem", lambda config: "Video OCR is not installed.")
+    monkeypatch.setattr(api_setup, "managed_mokuro_installed", lambda uv_root: state.managed)
+    mi = api_setup.mokuro_installer
+
+    def install_mokuro(bin_root, uv_root, *, status, progress, cancel_event):
+        calls.append("mokuro")
+        progress(20, 20, "uv")
+        status("Preparing Python 3.12.14…")
+
+    monkeypatch.setattr(mi, "install_mokuro", install_mokuro)
+    monkeypatch.setattr(mi, "onnxruntime_installed", lambda uv_root: state.onnxruntime)
+    monkeypatch.setattr(mi, "add_onnxruntime", lambda bin_root, uv_root, **kw: calls.append("venv-onnxruntime"))
+    monkeypatch.setattr(api_setup.onnx_pack_installer, "onnxruntime_importable", lambda root: state.importable)
+    monkeypatch.setattr(
+        api_setup.onnx_pack_installer, "install_onnx_pack", lambda root, **kw: calls.append("onnx-pack")
+    )
+
+    def install_models(root, specs, *, progress, cancel_event):
+        calls.append("models:" + ",".join(spec.filename for spec in specs))
+        progress(7, 7, "")
+
+    monkeypatch.setattr(api_setup.model_installer, "install_models", install_models)
+    return state
+
+
+def test_ocr_for_japanese_is_mokuro_then_video_ocr(bare, ocr, test_config, tmp_path) -> None:
+    from anki_miner.services.ocr.model_installer import MEIKI_SPECS
+
+    GUIConfigManager.save_config(test_config)
+    outcome = _with(tmp_path, ocr=True)
+    assert ocr.calls == ["mokuro", "onnx-pack", "models:" + ",".join(s.filename for s in MEIKI_SPECS)]
+    assert outcome.result["ocr"] == {"status": "installed", "message": None}
+    assert outcome.result["video_ocr"] == {"status": "installed", "message": None}
+    assert "speech_model" not in outcome.result
+    progress = json.loads((tmp_path / "progress.json").read_text(encoding="utf-8"))
+    assert (progress["item"], progress["stage"], progress["stages"], progress["done"]) == ("video_ocr", 2, 2, 7)
+
+
+def test_ocr_for_a_recogniser_language_adds_its_runtime_and_model(bare, ocr, test_config, tmp_path) -> None:
+    from anki_miner.services.ocr.model_installer import MEIKI_SPECS
+    from anki_miner.services.ocr.recognizers import RECOGNIZERS
+
+    GUIConfigManager.save_config(switch_language(switch_language(test_config, "ko"), "ja"))
+    ocr.managed, ocr.importable = True, True  # a Japanese mokuro already in; onnxruntime importable for video OCR
+    outcome = _with(tmp_path, language="ko", ocr=True)
+    korean = RECOGNIZERS["korean"].model.filename
+    assert ocr.calls == ["venv-onnxruntime", f"models:{korean}", f"models:{MEIKI_SPECS[0].filename},{korean}"]
+    assert (outcome.result["ocr"]["status"], outcome.result["video_ocr"]["status"]) == ("installed", "installed")
+
+
+def test_ocr_already_installed_downloads_nothing(bare, ocr, test_config, tmp_path, monkeypatch) -> None:
+    GUIConfigManager.save_config(test_config)
+    monkeypatch.setattr(api_setup, "manga_ocr_problem", lambda config: None)
+    monkeypatch.setattr(api_setup, "video_ocr_problem", lambda config: None)
+    outcome = _with(tmp_path, ocr=True)
+    assert ocr.calls == [] and not outcome.failed
+    assert outcome.result["ocr"]["status"] == outcome.result["video_ocr"]["status"] == "already_installed"
+
+
+def test_ocr_for_a_language_without_it_fails(bare, ocr, test_config, tmp_path, monkeypatch) -> None:
+    from anki_miner.cli.api import readiness
+
+    GUIConfigManager.save_config(switch_language(switch_language(test_config, "vi"), "ja"))
+    monkeypatch.setattr(api_setup, "manga_ocr_problem", readiness.manga_ocr_problem)
+    monkeypatch.setattr(api_setup, "video_ocr_problem", readiness.video_ocr_problem)
+    outcome = _with(tmp_path, language="vi", ocr=True)
+    assert ocr.calls == [] and outcome.failed
+    assert outcome.result["ocr"] == {"status": "failed", "message": "Manga OCR is not available for this language."}
+    assert outcome.result["video_ocr"] == {
+        "status": "failed",
+        "message": "Video OCR is not available for this language.",
+    }
+
+
+def test_a_failed_mokuro_install_still_tries_video_ocr(bare, ocr, test_config, tmp_path, monkeypatch) -> None:
+    from anki_miner.exceptions import SetupError
+
+    GUIConfigManager.save_config(test_config)
+
+    def broken(*args, **kwargs):
+        raise SetupError("uv pip install failed (exit code 1).")
+
+    monkeypatch.setattr(api_setup.mokuro_installer, "install_mokuro", broken)
+    outcome = _with(tmp_path, ocr=True)
+    assert outcome.failed and outcome.result["ocr"]["message"] == "uv pip install failed (exit code 1)."
+    assert outcome.result["video_ocr"]["status"] == "installed"
+
+
+def test_a_cancel_file_beside_progress_stops_setup(bare, ocr, test_config, tmp_path, monkeypatch) -> None:
+    from anki_miner.exceptions import OperationCancelled
+
+    GUIConfigManager.save_config(test_config)
+
+    def cancelled_by_file(bin_root, uv_root, *, status, progress, cancel_event):
+        (tmp_path / "cancel").touch()
+        assert cancel_event.wait(5)
+        raise OperationCancelled("mokuro installation cancelled")
+
+    monkeypatch.setattr(api_setup.mokuro_installer, "install_mokuro", cancelled_by_file)
+    outcome = _with(tmp_path, ocr=True)
+    assert outcome.cancelled and not outcome.failed
+    assert outcome.result["ocr"]["status"] == outcome.result["video_ocr"]["status"] == "not_attempted"
+    assert ocr.calls == [] and not (tmp_path / "cancel").exists()
+
+
+def test_an_earlier_calls_cancel_and_progress_are_cleared(catalog, test_config, tmp_path, monkeypatch) -> None:
+    GUIConfigManager.save_config(test_config)
+    (tmp_path / "cancel").touch()
+    (tmp_path / "progress.json").write_text('{"stale": true}', encoding="utf-8")
+    calls = _installs(monkeypatch)
+    outcome = _setup(tmp_path)
+    assert not outcome.cancelled and calls == ["test-dict", "test-freq"]
+    assert "stale" not in json.loads((tmp_path / "progress.json").read_text(encoding="utf-8"))
+
+
+def test_setup_passes_the_flags(verdict, tmp_path, monkeypatch) -> None:
+    seen = []
+    monkeypatch.setattr(api_setup, "run_setup", lambda *args: seen.append(args) or _outcome())
+    v = verdict(
+        "setup",
+        "--language",
+        "ja",
+        "--progress",
+        str(tmp_path / "p.json"),
+        "--speech-model",
+        "--model",
+        "small",
+        "--ocr",
+    )
+    assert v["ok"] and seen[0][4] == api_setup.Extras(speech_model=True, model="small", ocr=True)
+    verdict("setup", "--language", "ja", "--progress", str(tmp_path / "p.json"))
+    assert seen[1][4] == api_setup.Extras()
+
+
+@pytest.mark.parametrize("extra", [("--model", "small"), ("--speech-model", "--model", "medium")])
+def test_a_bad_model_is_bad_arguments(verdict, tmp_path, monkeypatch, extra) -> None:
+    monkeypatch.setattr(api_setup, "run_setup", lambda *args: pytest.fail("ran"))
+    v = verdict("setup", "--language", "ja", "--progress", str(tmp_path / "p.json"), *extra)
+    assert v["error"] == "BAD_ARGUMENTS"
+
+
+def test_the_model_choices_are_the_known_models() -> None:
+    from anki_miner.cli import api
+    from anki_miner.services.asr.model_manager import KNOWN_MODELS
+
+    assert set(api.SPEECH_MODELS) == KNOWN_MODELS
