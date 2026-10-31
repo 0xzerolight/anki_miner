@@ -6,7 +6,7 @@
 # upstream commit by re-running the dump documented in licenses/yomitan/.
 #
 # Copyright (C) 2024-2026  Yomitan Authors
-# Copyright (C) 2026  anki_miner contributors (Python port)
+# Ported to Python in 2026.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by

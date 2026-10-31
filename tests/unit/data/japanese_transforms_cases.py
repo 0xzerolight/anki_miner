@@ -3,7 +3,7 @@
 # test/language/japanese-transforms.test.js, commit e2ed450c2f11a591922822e77f008e70a87daf0c.
 #
 # Copyright (C) 2020-2026  Yomitan Authors
-# Copyright (C) 2026  anki_miner contributors (Python port)
+# Ported to Python in 2026.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by

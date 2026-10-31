@@ -17,7 +17,6 @@
  *
  * Plain node + ESM only; no package install.
  *
- * Copyright (C) 2026  anki_miner contributors
  * Licensed under the GNU General Public License v3.0 or later (same as the
  * Yomitan sources it materializes); see licenses/yomitan/.
  */
@@ -112,7 +111,7 @@ push('# omitted — they are upstream UI text). Regenerate against a newer');
 push('# upstream commit by re-running the dump documented in licenses/yomitan/.');
 push('#');
 push('# Copyright (C) 2024-2026  Yomitan Authors');
-push('# Copyright (C) 2026  anki_miner contributors (Python port)');
+push('# Ported to Python in 2026.');
 push('#');
 push('# This program is free software: you can redistribute it and/or modify');
 push('# it under the terms of the GNU General Public License as published by');
