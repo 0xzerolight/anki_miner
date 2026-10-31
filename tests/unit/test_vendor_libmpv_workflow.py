@@ -59,6 +59,31 @@ def test_vendor_libmpv_macos_includes_pinned_libopus_notice() -> None:
     assert "Redistributions in binary form must reproduce" in notice
 
 
+def test_vendor_libmpv_linux_decodes_av1_in_software_with_dav1d_notice() -> None:
+    # The preview runs hwdec=no and ffmpeg's native av1 decoder is hwaccel-only,
+    # so without dav1d every AV1 file previews black (Issue #140).
+    workflow = _WORKFLOW_PATH.read_text(encoding="utf-8")
+    linux_job = workflow.split("  linux:", 1)[1].split("  windows:", 1)[0]
+
+    assert 'echo "--enable-libdav1d" >> ffmpeg_options' in linux_job
+    assert "--default-library=static" in linux_job
+    assert "- name: Smoke-decode AV1 in software (fail-closed)" in linux_job
+    assert '("hwdec", "no")' in linux_job
+    notice = (_ROOT / "licenses" / "libmpv" / "COPYING.dav1d").read_text(encoding="utf-8")
+    assert "VideoLAN and dav1d authors" in notice
+    assert "Redistributions in binary form must reproduce" in notice
+
+
+def test_vendor_libmpv_linux_ffmpeg_is_built_without_openssl() -> None:
+    # mpv-build otherwise auto-adds --enable-nonfree --enable-openssl from the
+    # runner's OpenSSL headers, which makes the bundled ffmpeg non-redistributable.
+    workflow = _WORKFLOW_PATH.read_text(encoding="utf-8")
+    linux_job = workflow.split("  linux:", 1)[1].split("  windows:", 1)[0]
+
+    assert 'echo "--disable-openssl" >> ffmpeg_options' in linux_job
+    assert "libssl" not in linux_job.split("ALLOW=", 1)[1].split("\n", 1)[0]
+
+
 def test_windows_vulkan_loader_is_paired_with_its_license() -> None:
     workflow = _RELEASE_WORKFLOW_PATH.read_text(encoding="utf-8")
     loader_step = workflow.split("- name: Bundle the Vulkan loader next to libmpv (Windows)", 1)[1].split(

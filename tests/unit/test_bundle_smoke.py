@@ -141,7 +141,7 @@ def test_clean_release_preflight_fetches_verified_libmpv_before_pyinstaller(tmp_
     assert (repo / "vendor" / "libmpv" / "libmpv.so.2").is_file()
     assert (repo / "licenses" / "libmpv" / "Copyright").is_file()
     assert (repo / "licenses" / "libmpv" / "SOURCES.txt").is_file()
-    assert "5d9278463edab8f2a467f45c2c66416070d4e1543024df30fed2f721def663c1" in sha_record.read_text(encoding="utf-8")
+    assert "772805894b606c28e9e0947e771198985c82544d1ea04d4e815f2960fa0318a4" in sha_record.read_text(encoding="utf-8")
 
 
 def test_release_constraints_cover_direct_dependencies() -> None:

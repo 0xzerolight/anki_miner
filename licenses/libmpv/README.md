@@ -31,7 +31,7 @@ in `0xzerolight/anki_miner_assets`, produced by `.github/workflows/vendor-libmpv
 
 - **Linux** — built from source via
   [mpv-player/mpv-build](https://github.com/mpv-player/mpv-build) with FFmpeg,
-  libass, and libplacebo linked statically into a single `libmpv.so.2`.
+  dav1d, libass, and libplacebo linked statically into a single `libmpv.so.2`.
 - **Windows** — `libmpv-2.dll` mirrored from
   [zhongfly/mpv-winbuild](https://github.com/zhongfly/mpv-winbuild)
   (build scripts are public in that repository).
@@ -46,7 +46,7 @@ versions, git tags/SHAs, and build inputs used; CI copies it (and mpv's
 
 The complete corresponding source for the bundled libmpv is the mpv project's
 own source at <https://mpv.io> / <https://github.com/mpv-player/mpv>, plus the
-component sources named in `SOURCES.txt` (FFmpeg, libass, libplacebo, and the
+component sources named in `SOURCES.txt` (FFmpeg, dav1d, libass, libplacebo, and the
 Homebrew/zhongfly build definitions).
 
 On request we will provide, or point you to, the exact corresponding source
