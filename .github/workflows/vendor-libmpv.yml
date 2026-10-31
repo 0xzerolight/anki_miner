@@ -8,7 +8,8 @@
 # - Windows: zhongfly/mpv-winbuild retains releases ~30 days — a URL pinned in
 #   release.yml would 404 within a month.
 # - Linux: no official binary exists; we build once via mpv-player/mpv-build
-#   with ffmpeg/libass/libplacebo linked statically into a single libmpv.so.2.
+#   with dav1d/ffmpeg/libass/libplacebo linked statically into a single
+#   libmpv.so.2.
 # - macOS: Homebrew bottles + dylibbundler produce a self-contained closure
 #   that must be re-signed; not something to redo on every release build.
 #
@@ -49,15 +50,33 @@ jobs:
           sudo pip3 install "meson>=1.4"
           meson --version
 
-      - name: Build libmpv via mpv-build (static ffmpeg/libass/libplacebo)
+      - name: Build libmpv via mpv-build (static dav1d/ffmpeg/libass/libplacebo)
         run: |
           set -euo pipefail
+          # The preview decodes with hwdec=no, and ffmpeg's native av1 decoder
+          # is hwaccel-only: without dav1d every AV1 file (YouTube's <=720p
+          # video) previews black (Issue #140). Static, so it adds no NEEDED.
+          DAV1D_TAG="1.5.4"
+          git clone --depth=1 --branch "$DAV1D_TAG" https://code.videolan.org/videolan/dav1d.git
+          DAV1D_SHA="$(git -C dav1d rev-parse HEAD)"
+          meson setup dav1d/build dav1d --buildtype=release --default-library=static \
+            --prefix="$PWD/dav1d_prefix" --libdir=lib -Denable_tools=false -Denable_tests=false
+          meson install -C dav1d/build
+          # mpv-build's ffmpeg-config/mpv-config prepend their own prefix to
+          # this rather than replace it, so ffmpeg's configure finds dav1d.pc.
+          export PKG_CONFIG_PATH="$PWD/dav1d_prefix/lib/pkgconfig"
           git clone --depth=1 https://github.com/mpv-player/mpv-build.git
           cd mpv-build
           MPV_BUILD_SHA="$(git rev-parse HEAD)"
           # Pin to upstream release tags (recorded below), not git master.
           ./use-mpv-release
           ./use-ffmpeg-release
+          echo "--enable-libdav1d" >> ffmpeg_options
+          # Naming any TLS option skips mpv-build's TLS auto-detect, which
+          # otherwise finds the runner's OpenSSL headers and adds
+          # --enable-nonfree --enable-openssl (a non-redistributable ffmpeg).
+          # The preview only plays local files.
+          echo "--disable-openssl" >> ffmpeg_options
           echo "-Dlibmpv=true"  >> mpv_options
           echo "-Dcplayer=false" >> mpv_options
           ./rebuild -j"$(nproc)"
@@ -77,6 +96,7 @@ jobs:
             echo "mpv-build: ${MPV_BUILD_SHA}"
             echo "mpv: ${MPV_TAG}"
             echo "ffmpeg: ${FFMPEG_TAG} (linked statically)"
+            echo "dav1d: ${DAV1D_TAG} ${DAV1D_SHA} (linked statically)"
             echo "libass: ${LIBASS_SHA} (linked statically)"
             echo "libplacebo: ${LIBPLACEBO_SHA} (linked statically)"
             echo "source offer: https://mpv.io + the repos/tags above"
@@ -89,12 +109,11 @@ jobs:
           # present on desktop Linux or collectable/excludable by PyInstaller.
           # An unexpected NEEDED entry means the dependency closure changed —
           # fail so a human re-evaluates instead of shipping a silent break.
-          # Notable allowances: libssl/libcrypto (ffmpeg TLS — PyInstaller
-          # already bundles both for Python's _ssl, bindepend dedupes),
-          # liblcms2 (libplacebo ICC) and libjpeg (mpv screenshot writer) —
-          # both bindepend-collected into the bundle; libxcb-* are on
-          # PyInstaller's own exclude list and resolve from the host.
-          ALLOW='^(linux-vdso|ld-linux|libc|libm|libdl|libpthread|librt|libgcc_s|libstdc\+\+|libz|libbz2|liblzma|libbrotli(common|dec)|libssl|libcrypto|liblcms2|libjpeg|libX11|libXext|libXrandr|libXinerama|libXss|libXv|libxcb(-[a-z0-9-]+)?|libGL|libEGL|libOpenGL|libGLdispatch|libGLX|libdrm|libgbm|libwayland-(client|cursor|egl)|libxkbcommon|libasound|libpulse(-simple)?|libpipewire-0\.3|libva(-drm|-x11|-wayland)?|libvdpau|libfreetype|libfontconfig|libfribidi|libharfbuzz|libexpat|libpng16|libffi|libuuid|libmd|libbsd|libdbus-1|libsystemd|libcap|libapparmor|libblkid|libmount|libselinux|libpcre2?-?8?)\.so'
+          # Notable allowances: liblcms2 (libplacebo ICC) and libjpeg (mpv
+          # screenshot writer) — both bindepend-collected into the bundle;
+          # libxcb-* are on PyInstaller's own exclude list and resolve from the
+          # host. No libssl/libcrypto: ffmpeg is built without TLS (above).
+          ALLOW='^(linux-vdso|ld-linux|libc|libm|libdl|libpthread|librt|libgcc_s|libstdc\+\+|libz|libbz2|liblzma|libbrotli(common|dec)|liblcms2|libjpeg|libX11|libXext|libXrandr|libXinerama|libXss|libXv|libxcb(-[a-z0-9-]+)?|libGL|libEGL|libOpenGL|libGLdispatch|libGLX|libdrm|libgbm|libwayland-(client|cursor|egl)|libxkbcommon|libasound|libpulse(-simple)?|libpipewire-0\.3|libva(-drm|-x11|-wayland)?|libvdpau|libfreetype|libfontconfig|libfribidi|libharfbuzz|libexpat|libpng16|libffi|libuuid|libmd|libbsd|libdbus-1|libsystemd|libcap|libapparmor|libblkid|libmount|libselinux|libpcre2?-?8?)\.so'
           BAD=0
           while read -r lib; do
             if ! echo "$lib" | grep -qE "$ALLOW"; then
@@ -104,6 +123,51 @@ jobs:
           done < <(readelf -d out/libmpv.so.2 | awk '/NEEDED/{gsub(/[\[\]]/,"",$5); print $5}')
           readelf -d out/libmpv.so.2 | grep NEEDED || true
           exit "$BAD"
+
+      - name: Smoke-decode AV1 in software (fail-closed)
+        run: |
+          set -euo pipefail
+          # The preview's hwdec=no core must put out AV1 frames (Issue #140);
+          # an AV1-blind build fails here with pixelformat=None. The build deps
+          # above already cover libmpv.so.2's runtime NEEDED.
+          sudo apt-get install -y --no-install-recommends ffmpeg
+          ffmpeg -hide_banner -loglevel error -f lavfi -i testsrc=size=128x72:rate=10 -t 1 \
+            -c:v libaom-av1 -cpu-used 8 -pix_fmt yuv420p av1.webm
+          python3 - <<'EOF'
+          import ctypes, sys, time
+          lib = ctypes.CDLL("out/libmpv.so.2")
+          lib.mpv_create.restype = ctypes.c_void_p
+          lib.mpv_set_option_string.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
+          lib.mpv_initialize.argtypes = [ctypes.c_void_p]
+          lib.mpv_command.argtypes = [ctypes.c_void_p, ctypes.POINTER(ctypes.c_char_p)]
+          lib.mpv_get_property_string.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
+          lib.mpv_get_property_string.restype = ctypes.c_void_p
+          lib.mpv_free.argtypes = [ctypes.c_void_p]
+          lib.mpv_terminate_destroy.argtypes = [ctypes.c_void_p]
+
+          def prop(handle, name):
+              ptr = lib.mpv_get_property_string(handle, name.encode())
+              if not ptr:
+                  return None
+              try:
+                  return ctypes.string_at(ptr).decode()
+              finally:
+                  lib.mpv_free(ptr)
+
+          h = lib.mpv_create()
+          for key, value in (("vo", "null"), ("ao", "null"), ("hwdec", "no"), ("keep-open", "yes")):
+              assert lib.mpv_set_option_string(h, key.encode(), value.encode()) == 0, key
+          assert lib.mpv_initialize(h) == 0
+          assert lib.mpv_command(h, (ctypes.c_char_p * 3)(b"loadfile", b"av1.webm", None)) == 0
+          fmt = None
+          deadline = time.monotonic() + 15
+          while not fmt and time.monotonic() < deadline:
+              time.sleep(0.1)
+              fmt = prop(h, "video-params/pixelformat")
+          print(f"decoder={prop(h, 'current-tracks/video/decoder-desc')!r} pixelformat={fmt!r}")
+          lib.mpv_terminate_destroy(h)
+          sys.exit(0 if fmt else "AV1 decoded no frames with hwdec=no")
+          EOF
 
       - name: Pack artifact
         run: |
