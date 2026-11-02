@@ -142,6 +142,14 @@ def opt_float(value: object, where: str) -> float | None:
     return number
 
 
+def audio_track(value: object, where: str) -> int | None:
+    """An ``audio_track_override``: a 0-based track, or None to find the mining language's own."""
+    track = opt_int(value, where)
+    if track is not None and track < 0:
+        raise bad(f"{where} must be 0 or more (null finds the mining language's track).")
+    return track
+
+
 def check_schema(obj: Mapping[str, object], where: str) -> None:
     schema = obj.get("schema")
     if isinstance(schema, bool) or schema != 1:
@@ -364,7 +372,7 @@ def parse_episode(raw: object, where: str) -> Episode:
         video_file=source.video_file,
         subtitle_file=source.subtitle_file,
         subtitle_offset=opt_float(obj.get("subtitle_offset"), f"{where}.subtitle_offset") or 0.0,
-        audio_track_override=opt_int(obj.get("audio_track_override"), f"{where}.audio_track_override"),
+        audio_track_override=audio_track(obj.get("audio_track_override"), f"{where}.audio_track_override"),
         source_label_override=opt_text(obj.get("source_label_override"), f"{where}.source_label_override"),
         secondary_subtitle_file=secondary,
         secondary_subtitle_offset=opt_float(obj.get("secondary_subtitle_offset"), f"{where}.secondary_subtitle_offset")
@@ -397,7 +405,8 @@ def parse_run_file(data: object) -> RunFile:
         "The run file",
     )
     check_schema(obj, "The run file")
-    dry_run = obj.get("dry_run", False)
+    # null is "left out" here too, as for every other optional key.
+    dry_run = False if obj.get("dry_run") is None else obj["dry_run"]
     if not isinstance(dry_run, bool):
         raise bad("dry_run must be true or false.")
     raw_episodes = obj["episodes"]
@@ -409,7 +418,7 @@ def parse_run_file(data: object) -> RunFile:
         run_dir=existing_run_dir(obj["run_dir"]),
         profile=opt_text(obj.get("profile"), "profile"),
         language=obj["language"],
-        overlay=json_object(obj.get("config", {}), "config"),
+        overlay={} if obj.get("config") is None else json_object(obj["config"], "config"),
         episodes=episodes,
         dry_run=dry_run,
     )
@@ -502,7 +511,7 @@ def parse_media_file(data: object) -> MediaFile:
                 video_file=source.video_file,
                 subtitle_file=source.subtitle_file,
                 subtitle_offset=opt_float(ep.get("subtitle_offset"), f"{where}.subtitle_offset") or 0.0,
-                audio_track_override=opt_int(ep.get("audio_track_override"), f"{where}.audio_track_override"),
+                audio_track_override=audio_track(ep.get("audio_track_override"), f"{where}.audio_track_override"),
                 lines=tuple(
                     _line_request(line, f"{where}.lines[{j}]", reading=reading) for j, line in enumerate(raw_lines)
                 ),

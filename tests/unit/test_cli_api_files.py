@@ -100,6 +100,28 @@ def test_dry_run_is_a_top_level_true_or_false(tmp_path: Path) -> None:
         files.parse_run_file({**_run_file(tmp_path), "dry_run": "yes"})
 
 
+def test_null_config_and_dry_run_are_left_out(tmp_path: Path) -> None:
+    """As for every other optional key: a caller serialising an empty optional sends null."""
+    run = files.parse_run_file({**_run_file(tmp_path), "config": None, "dry_run": None})
+    assert run.overlay == {} and run.dry_run is False
+    for bad in ({"dry_run": 0}, {"config": []}):
+        with pytest.raises(ApiError):
+            files.parse_run_file({**_run_file(tmp_path), **bad})
+
+
+def test_a_negative_audio_track_is_refused(tmp_path: Path) -> None:
+    """0-based: -1 names no track, and the run would quietly pick the language's own."""
+    with pytest.raises(ApiError) as err:
+        files.parse_run_file(_run_file(tmp_path, audio_track_override=-1))
+    assert err.value.code == "BAD_RUN_FILE" and "audio_track_override" in err.value.message
+    media = _media()
+    media["episodes"][0]["audio_track_override"] = -1
+    with pytest.raises(ApiError) as err:
+        files.parse_media_file(media)
+    assert err.value.code == "BAD_RUN_FILE"
+    assert files.parse_run_file(_run_file(tmp_path, audio_track_override=0)).episodes[0].audio_track_override == 0
+
+
 def test_parse_words(tmp_path: Path) -> None:
     words = [
         {"word": "約束", "line_start": 812.3},

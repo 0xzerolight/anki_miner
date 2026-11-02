@@ -138,7 +138,7 @@ An episode:
 | `reading_file` | instead, a book, text, subtitle file, manga volume or web address mined without media (see Books, text and manga) |
 | `words` | required: the words to mine (below) |
 | `subtitle_offset` | seconds added to every subtitle time; `0` when left out (the profile's offset is not used) |
-| `audio_track_override` | 0-based audio track, or `null` to find the mining language's track |
+| `audio_track_override` | 0-based audio track (0 or more), or `null` to find the mining language's track |
 | `source_label_override` | the card's Source text instead of `<series> — <episode>` |
 | `secondary_subtitle_file`, `secondary_subtitle_offset` | a second-language track for the sentence translation field. API runs never pick a translation track themselves; pass `secondary_subtitle_file` |
 | `series_name_override`, `episode_name_override` | instead of the video's folder and file names |
@@ -294,7 +294,7 @@ An episode:
 | `reading_file` | instead, a reading source, as for `mine` |
 | `lines` | required: the lines to cut |
 | `subtitle_offset` | seconds added to every subtitle time; `0` when left out |
-| `audio_track_override` | 0-based audio track, or `null` to find the mining language's track |
+| `audio_track_override` | 0-based audio track (0 or more), or `null` to find the mining language's track |
 
 Each line is a `line_start` (a reading source: a `unit_index`) and an optional `line_expansion`, chosen and merged as for `mine`. `media` needs no parse, no dictionary and no Anki, and runs any time. It takes no `cancel` file, and a signal ends it without a verdict. `media-<n>.json` lists per line its `line_start`, `start`, `end`, `unit_index`, `location`, `text`, `picture` and `audio` (paths in the run folder, `null` when that cut failed).
 - **Audiobook:** the picture is the audio's embedded cover.
