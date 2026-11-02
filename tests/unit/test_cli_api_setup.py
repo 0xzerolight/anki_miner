@@ -486,6 +486,54 @@ def test_a_model_that_did_not_download_is_not_saved(bare, machine, test_config, 
     assert GUIConfigManager.load_config().asr_model == "large-v3"
 
 
+class _ConnectError(Exception):
+    """httpx.ConnectError's shape: huggingface_hub re-raises it mid-download, and it is no OSError."""
+
+
+def test_a_dropped_model_download_fails_the_item_and_keeps_what_was_installed(
+    catalog, machine, test_config, tmp_path, monkeypatch
+) -> None:
+    GUIConfigManager.save_config(test_config)
+    _installs(monkeypatch)
+
+    def dropped(name, root, cancel_event=None):
+        raise _ConnectError("Connection reset by peer")
+
+    monkeypatch.setattr(api_setup.model_manager, "download", dropped)
+    outcome = _with(tmp_path, speech_model=True, model="small")
+    assert outcome.failed and outcome.result["speech_model"] == {
+        "name": "small",
+        "status": "failed",
+        "message": "Connection reset by peer",
+    }
+    assert [r["status"] for r in outcome.result["resources"]] == ["installed", "installed"]
+    config = GUIConfigManager.load_config()
+    assert config.dictionary_chain[0].dict_id == "test-dict" and config.asr_model == "large-v3"
+
+
+def test_a_language_pack_that_cannot_be_written_fails_and_the_resources_still_apply(
+    catalog, test_config, tmp_path, monkeypatch
+) -> None:
+    GUIConfigManager.save_config(test_config)
+    catalog.unavailable_reason = lambda: "needs its pack"
+    monkeypatch.setattr(api_setup.packs, "load_pack", lambda code: object())
+    monkeypatch.setattr(api_setup.packs, "pack_supported", lambda code: True)
+    monkeypatch.setattr(api_setup.packs, "is_installed", lambda code: False)
+
+    def disk_full(code, root, **kwargs):
+        raise OSError(28, "No space left on device")
+
+    monkeypatch.setattr(api_setup.packs, "install_language_pack", disk_full)
+    calls = _installs(monkeypatch)
+    outcome = _setup(tmp_path)
+    assert outcome.failed and outcome.result["language_pack"] == {
+        "status": "failed",
+        "message": "[Errno 28] No space left on device",
+    }
+    assert calls == ["test-dict", "test-freq"]
+    assert GUIConfigManager.load_config().dictionary_chain[0].dict_id == "test-dict"
+
+
 def test_a_model_that_cannot_transcribe_the_language_is_refused_before_it_downloads(
     bare, machine, test_config, tmp_path
 ) -> None:
@@ -595,18 +643,35 @@ def test_ocr_for_a_language_without_it_fails(bare, ocr, test_config, tmp_path, m
     }
 
 
-def test_a_failed_mokuro_install_still_tries_video_ocr(bare, ocr, test_config, tmp_path, monkeypatch) -> None:
-    from anki_miner.exceptions import SetupError
-
+@pytest.mark.parametrize(
+    "error",
+    [SetupError("uv pip install failed (exit code 1)."), PermissionError(13, "Permission denied")],
+)
+def test_a_failed_mokuro_install_still_tries_video_ocr(bare, ocr, test_config, tmp_path, monkeypatch, error) -> None:
     GUIConfigManager.save_config(test_config)
 
     def broken(*args, **kwargs):
-        raise SetupError("uv pip install failed (exit code 1).")
+        raise error
 
     monkeypatch.setattr(api_setup.mokuro_installer, "install_mokuro", broken)
     outcome = _with(tmp_path, ocr=True)
-    assert outcome.failed and outcome.result["ocr"]["message"] == "uv pip install failed (exit code 1)."
+    assert outcome.failed and outcome.result["ocr"]["message"] == str(error)
     assert outcome.result["video_ocr"]["status"] == "installed"
+
+
+def test_a_video_ocr_model_that_cannot_be_placed_fails_its_item(bare, ocr, test_config, tmp_path, monkeypatch) -> None:
+    GUIConfigManager.save_config(test_config)
+
+    def unwritable(*args, **kwargs):
+        raise OSError(30, "Read-only file system")
+
+    monkeypatch.setattr(api_setup.onnx_pack_installer, "install_onnx_pack", unwritable)
+    outcome = _with(tmp_path, ocr=True)
+    assert outcome.failed and outcome.result["video_ocr"] == {
+        "status": "failed",
+        "message": "[Errno 30] Read-only file system",
+    }
+    assert outcome.result["ocr"]["status"] == "installed"
 
 
 def test_a_cancel_file_beside_progress_stops_setup(bare, ocr, test_config, tmp_path, monkeypatch) -> None:

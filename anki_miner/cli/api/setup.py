@@ -282,7 +282,7 @@ def _language_pack(code: str, item: _Item, bar: _Progress, cancel: threading.Eve
         )
     except OperationCancelled:
         return
-    except SetupError as exc:
+    except (SetupError, OSError) as exc:  # OSError: a pack folder it cannot write (a full disk)
         item.done("failed", str(exc))
         return
     # Before any resource: a word-count list is lemmatised with this language's tagger.
@@ -336,8 +336,12 @@ def _speech_model(config: AnkiMinerConfig, name: str, item: _Item, bar: _Progres
             if not ggml_model_installer.is_vad_downloaded(root):
                 ggml_model_installer.install_vad_model(root, progress=bar.download, cancel_event=cancel)
                 installed = True
-    except (SetupError, OSError) as exc:  # OperationCancelled too: then the item stays not_attempted
-        # OSError: the model download's own failures (offline, an HTTP error) are not SetupErrors.
+    except Exception as exc:  # noqa: BLE001 — OperationCancelled too: then the item stays not_attempted
+        # Not only SetupError and OSError (huggingface_hub's offline and HTTP errors): a connection
+        # that drops mid-download re-raises httpx's own errors, which are neither. One item's failure
+        # must not end the call before what it finished is switched on.
+        if not isinstance(exc, (SetupError, OSError)):
+            logger.warning("API setup: the speech model failed", exc_info=True)
         if not cancel.is_set():
             item.done("failed", str(exc) or type(exc).__name__)
         return model_ready
@@ -394,7 +398,7 @@ def _manga_ocr(config: AnkiMinerConfig, item: _Item, bar: _Progress, cancel: thr
             model_installer.install_models(
                 config.video_ocr_models_root, (recognizer.model,), progress=bar.download, cancel_event=cancel
             )
-    except SetupError as exc:
+    except (SetupError, OSError) as exc:  # OSError: a file the install cannot write or move into place
         if not cancel.is_set():
             item.done("failed", str(exc))
         return
@@ -421,7 +425,7 @@ def _video_ocr(config: AnkiMinerConfig, item: _Item, bar: _Progress, cancel: thr
             progress=bar.download,
             cancel_event=cancel,
         )
-    except SetupError as exc:
+    except (SetupError, OSError) as exc:  # OSError: a file the install cannot write or move into place
         if not cancel.is_set():
             item.done("failed", str(exc))
         return
