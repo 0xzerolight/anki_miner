@@ -177,7 +177,9 @@ def test_what_video_youtube_refuses_is_youtube_refused(monkeypatch, tmp_path, in
     [
         (BotDetectionError("login"), None, True),
         (None, BotDetectionError("login"), True),
-        (None, CookieDatabaseLockedError("locked"), True),
+        (None, CookieDatabaseLockedError("locked", tag="cookie_locked"), True),  # the browser lets go
+        (None, CookieDatabaseLockedError("no DPAPI", tag="cookie_decrypt"), False),
+        (None, CookieDatabaseLockedError("no database", tag="cookie_missing"), False),
         (None, YouTubeTimeoutError("timed out"), True),
         (None, YouTubeFetchError("exit 1"), False),
         (None, NoJapaneseSubtitlesError("gone"), False),

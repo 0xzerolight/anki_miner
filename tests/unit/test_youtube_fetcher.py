@@ -696,6 +696,7 @@ class TestProbeClassifiesLikeFetch:
         ):
             service.probe_metadata("https://youtu.be/abc123")
         assert "Close chrome" in str(exc.value)
+        assert exc.value.tag == "cookie_locked"  # what --api fetch counts as transient
         # The whole point: yt-dlp's text and issue link stop here.
         assert "Could not copy" not in str(exc.value)
         assert "github.com" not in str(exc.value)
@@ -725,6 +726,7 @@ class TestProbeClassifiesLikeFetch:
         ):
             service.probe_metadata("https://youtu.be/abc123")
         assert "No cookie database for chrome" in str(exc.value)
+        assert exc.value.tag == "cookie_missing"
         # Closing a browser that was never there cannot help.
         assert "Close chrome" not in str(exc.value)
 

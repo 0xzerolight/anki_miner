@@ -52,13 +52,20 @@ _NO_FFMPEG = "ffmpeg was not found. Install ffmpeg, or set its location in Anki 
 _CANCELLED = "The run was cancelled."
 #: probing, downloading, then transcribing or aligning when the run does either
 _STAGES = 3
-#: What running again later can get past: a login wall that lifts, a browser
-#: that lets go of its cookie database, a slow network.
-_TRANSIENT = (BotDetectionError, CookieDatabaseLockedError, YouTubeTimeoutError)
+#: What running again later can get past: a login wall that lifts, a slow network,
+#: and a browser that lets go of its cookie database (``_transient``).
+_TRANSIENT = (BotDetectionError, YouTubeTimeoutError)
+
+
+def _transient(exc: YouTubeFetchError) -> bool:
+    """A cookie database the running browser holds is; one that cannot be decrypted or is not there is not."""
+    if isinstance(exc, CookieDatabaseLockedError):
+        return exc.tag == "cookie_locked"
+    return isinstance(exc, _TRANSIENT)
 
 
 def _failure(exc: YouTubeFetchError) -> RunFailed:
-    return RunFailed(FETCH_FAILED, str(exc) or type(exc).__name__, transient=isinstance(exc, _TRANSIENT))
+    return RunFailed(FETCH_FAILED, str(exc) or type(exc).__name__, transient=_transient(exc))
 
 
 def call(fetch_file: Path, cancel_all: threading.Event) -> list[dict[str, object]]:

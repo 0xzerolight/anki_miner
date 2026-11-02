@@ -32,9 +32,15 @@ class CookieDatabaseLockedError(YouTubeFetchError):
     because every caller treats them identically — each is deterministic, so each
     sits in the queue worker's ``_DETERMINISTIC_FETCH_ERRORS`` and none is worth a
     retry. The remedy the user needs lives in the message, not the type.
+
+    ``tag`` is the classification (``cookie_locked``, ``cookie_decrypt`` or
+    ``cookie_missing``; "" when unknown): ``--api fetch`` counts only a locked
+    database as one running again later can get past.
     """
 
-    pass
+    def __init__(self, message: str, *, tag: str = "") -> None:
+        super().__init__(message)
+        self.tag = tag
 
 
 class VideoTooLongError(YouTubeFetchError):

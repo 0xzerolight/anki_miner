@@ -682,7 +682,8 @@ class MediaDownloaderService:
                     self._config.youtube_cookies_from_browser,
                     joined_lower,
                     platform=sys.platform,
-                )
+                ),
+                tag=str(classification),
             )
 
         if classification == "format_missing" and not subtitles_only:

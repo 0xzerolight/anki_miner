@@ -899,7 +899,8 @@ class YouTubeFetcherService:
                     self._config.youtube_cookies_from_browser,
                     joined_lower,
                     platform=sys.platform,
-                )
+                ),
+                tag=str(classification),
             )
 
         # Extractor-freshness failures. YouTube keeps rolling out DRM and SABR-only
