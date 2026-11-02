@@ -366,6 +366,26 @@ def test_a_second_run_on_the_same_file_reuses_the_saved_transcript(tmp_path, mon
     assert hits == ["hit"] and fractions == [1.0]
 
 
+def test_a_cancel_set_before_a_cache_hit_still_cancels(tmp_path, monkeypatch, cache_dir):
+    """A run cancelled before it starts (the API's queued cancel) is cancelled, saved transcript or not."""
+    _patch_transcribe(monkeypatch, record=[])
+    media = _real_media(tmp_path)
+    transcribe_media(
+        _make_config(tmp_path), _FakeExtractor(total_s=20.0), media, probe_duration=lambda p: 20.0, use_cache=True
+    )
+    cancel = threading.Event()
+    cancel.set()
+    result = transcribe_media(
+        _make_config(tmp_path),
+        _FakeExtractor(total_s=20.0),
+        media,
+        use_cache=True,
+        cancel_event=cancel,
+        on_cache_hit=lambda: pytest.fail("a cancelled run reads no transcript"),
+    )
+    assert result.status is LongAudioStatus.CANCELLED
+
+
 def test_without_use_cache_nothing_is_read_or_saved(tmp_path, monkeypatch, cache_dir):
     record: list = []
     _patch_transcribe(monkeypatch, record=record)

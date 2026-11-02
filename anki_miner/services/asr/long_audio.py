@@ -135,6 +135,9 @@ def transcribe_media(
 
     key = transcript_cache.cache_key(media_path, model=config.asr_model, language=language) if use_cache else None
     if key is not None:
+        # A hit returns at once, past every later check: a run cancelled before it got here stops here.
+        if _is_cancelled(cancel_event):
+            return LongAudioResult(LongAudioStatus.CANCELLED, [])
         cached = transcript_cache.load_transcript(key)
         if cached is not None:
             log_summary(logger, "Transcript reused", file=media_path, segments=len(cached))
