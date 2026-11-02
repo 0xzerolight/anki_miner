@@ -385,7 +385,11 @@ def _audio_reference(
 
     from anki_miner.services.media_extractor import MediaExtractorService
 
-    fd, tmp_name = tempfile.mkstemp(suffix=".retime-ref.wav")
+    # In the run's temp folder, as the embedded-subtitle reference is: an hour of WAV is ~115 MB,
+    # and the system's temp folder can be RAM-backed.
+    temp_dir = config.media_temp_folder
+    temp_dir.mkdir(parents=True, exist_ok=True)
+    fd, tmp_name = tempfile.mkstemp(suffix=".retime-ref.wav", dir=temp_dir)
     os.close(fd)
     tmp_wav = Path(tmp_name)
     try:

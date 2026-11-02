@@ -340,6 +340,8 @@ class TestResolveReference:
         assert reference is not None
         assert reference.kind == "audio"
         assert reference.path.name.endswith(".retime-ref.wav")
+        # The run's own temp folder (an API run's media/), not the system's: it can be an hour of WAV.
+        assert reference.path.parent == config.media_temp_folder
         reference.path.unlink()
 
     def test_returns_none_when_audio_extraction_also_fails(self, config: MagicMock, video: Path) -> None:
