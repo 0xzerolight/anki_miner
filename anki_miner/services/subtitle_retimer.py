@@ -315,6 +315,15 @@ def retime_subtitle(
                 tr_format(QCoreApplication.translate("SubtitleRetimer", "%1 result rejected: %2"), label, reason),
             )
 
+        if _cancelled(cancel_event):
+            # The cancel landed during the last engine: killed, it reported a failed run, not a misfit.
+            return RetimeOutcome(
+                ok=False,
+                cancelled=True,
+                reference_label=reference_label,
+                attempts=tuple(attempts),
+                reason="cancelled",
+            )
         # No reassurance clause: the original can never be the file written
         # (the output always carries the _retimed suffix), so "original left
         # untouched" answered a question the code never raised.

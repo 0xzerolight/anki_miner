@@ -401,6 +401,24 @@ class TestCancellation:
         mock_ffs.assert_not_called()
         mock_alass.assert_not_called()
 
+    def test_a_cancel_during_the_last_engine_is_a_cancel_not_a_failed_fit(self, cfg, video, in_sub, out_sub):
+        """The cancel kills the chain's last engine, which then reports a failed run like any other."""
+        cancel = threading.Event()
+        runs: list[str] = []
+
+        def ffsubsync(*args: Any, **kwargs: Any) -> SyncResult:
+            runs.append("ffsubsync")
+            if len(runs) == 2:  # ffsubsync (single offset), the last engine
+                cancel.set()
+            return SyncResult(ok=False, engine="ffsubsync", detail="engine failed")
+
+        with patch(_FFS, side_effect=ffsubsync), patch(_ALASS, side_effect=_fake_engine(ok=False, engine="alass")):
+            outcome = retime_subtitle(cfg, video, in_sub, out_sub, cancel_event=cancel)
+
+        assert runs == ["ffsubsync", "ffsubsync"]
+        assert outcome.cancelled and not outcome
+        assert not out_sub.exists()
+
 
 def _write_dialogue(path: Path, *, count: int, fmt: str) -> None:
     """Write *count* plain dialogue cues to *path* in *fmt*."""
