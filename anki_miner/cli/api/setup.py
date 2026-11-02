@@ -49,6 +49,7 @@ from anki_miner.services.asr import (
     model_manager,
     onnx_pack_installer,
 )
+from anki_miner.services.frequency.source_importer import zip_store_id
 from anki_miner.services.ocr import model_installer
 from anki_miner.services.ocr.recognizers import RECOGNIZERS
 from anki_miner.services.resource_catalog import ResourceSpec
@@ -443,7 +444,7 @@ def _resource(
     bar: _Progress,
     cancel: threading.Event,
 ) -> None:
-    slot = pinned_slot(spec)
+    slot = pinned_slot(spec) or _titled_slot(spec, config, language)
     if slot is not None and _installed(spec, slot, config):
         item.done("already_installed")
         if not _chained(spec, slot, config):
@@ -466,6 +467,13 @@ def _resource(
         item.done("installed")
     else:
         item.done("failed", result.detail)
+
+
+def _titled_slot(spec: ResourceSpec, config: AnkiMinerConfig, language: str) -> str | None:
+    """The slot a frequency zip named by its title imports into, when the catalogue records the title; else None."""
+    if not spec.index_title:
+        return None
+    return zip_store_id(config.freqs_root, spec.index_title, spec.index_revision, language)
 
 
 def _installed(spec: ResourceSpec, slot: str, config: AnkiMinerConfig) -> bool:

@@ -46,6 +46,11 @@ class ResourceSpec:
             imported ("" = unchecked). Set it on a row whose URL names one
             fixed release (FreeDict's versioned files); a moving
             ``latest`` URL cannot carry one.
+        index_title, index_revision: Freq zip without ``pin_slot`` only: the
+            ``title`` and ``revision`` its ``index.json`` carries, which name
+            the slot it imports into (``zip_store_id``), so ``--api setup``
+            can tell it is installed without downloading it again. Update them
+            with ``url``; "" = unknown, downloaded on every setup.
     """
 
     id: str
@@ -58,6 +63,8 @@ class ResourceSpec:
     pin_slot: bool = False
     sweep_superseded: bool = True
     sha256: str = ""
+    index_title: str = ""
+    index_revision: str = ""
 
 
 # For dict resources, ``id`` is the PINNED on-disk slot the importer writes to
@@ -89,6 +96,8 @@ RECOMMENDED_DEFAULT_SET: tuple[ResourceSpec, ...] = (
             "JPDB_v2.2_Frequency_Kana_2024-10-13.zip"
         ),
         license_note="JPDB frequency data — downloaded from upstream source; original license applies.",
+        index_title="JPDBv2㋕",
+        index_revision="JPDB v2.2 Frequency Kana 2024-10-13",
     ),
     # Jiten serves its list from an always-latest API endpoint, and every build
     # carries a new index.json revision ("Jiten 26-09-21"): pin_slot keeps each

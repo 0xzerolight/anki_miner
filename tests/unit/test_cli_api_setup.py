@@ -99,6 +99,25 @@ def test_an_installed_resource_is_switched_on_not_downloaded(catalog, test_confi
     assert GUIConfigManager.load_config().dictionary_chain[0].dict_id == "test-dict"
 
 
+def test_a_frequency_list_named_by_its_title_is_found_not_downloaded_again(
+    catalog, test_config, tmp_path, monkeypatch
+) -> None:
+    """JPDB's slot is named after its zip's title: found by it, nothing downloads and the chain keeps its order."""
+    from anki_miner.config import FreqEntry
+    from anki_miner.services.frequency.source_importer import zip_store_id
+
+    slot = zip_store_id(test_config.freqs_root, "Test freq title", "2026-01-01", "ja")
+    catalog.catalog = (DICT, replace(FREQ, index_title="Test freq title", index_revision="2026-01-01"))
+    order = (FreqEntry(source_id="jiten", enabled=True), FreqEntry(source_id=slot, enabled=True))
+    GUIConfigManager.save_config(replace(test_config, frequency_chain=order))
+    monkeypatch.setattr(api_setup, "_installed", lambda spec, s, config: s == slot)
+    calls = _installs(monkeypatch)
+    outcome = _setup(tmp_path)
+    assert calls == ["test-dict"]
+    assert outcome.result["resources"][1]["status"] == "already_installed"
+    assert GUIConfigManager.load_config().frequency_chain == order
+
+
 def test_an_installed_but_disabled_resource_is_switched_back_on(catalog, test_config, tmp_path, monkeypatch) -> None:
     entry = replace(test_config.dictionary_chain[0], dict_id="test-dict", enabled=False)
     GUIConfigManager.save_config(replace(test_config, dictionary_chain=[entry]))

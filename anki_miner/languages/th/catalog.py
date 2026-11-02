@@ -49,6 +49,8 @@ TH_CATALOG: tuple[ResourceSpec, ...] = (
             "resources-2026-09-20/tnc-th-2026-09-20.zip"
         ),
         license_note="Thai National Corpus word list via PyThaiNLP, CC0. Built by scripts/convert_tnc_thai_frequency.py.",
+        index_title="TNC Thai frequency",
+        index_revision="2026-09-20",
     ),
     ResourceSpec(
         id="ttc-th",
@@ -59,5 +61,7 @@ TH_CATALOG: tuple[ResourceSpec, ...] = (
             "resources-2026-09-20/ttc-th-2026-09-20.zip"
         ),
         license_note="Thai Textbook Corpus word list via PyThaiNLP, CC0. Built by scripts/convert_tnc_thai_frequency.py.",
+        index_title="TTC Thai textbook frequency",
+        index_revision="2026-09-20",
     ),
 )

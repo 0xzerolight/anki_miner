@@ -81,6 +81,8 @@ YUE_CATALOG: tuple[ResourceSpec, ...] = (
             "HKCanCor (Luke and Wong 2015), CC BY 4.0; CTCPC, CC0 1.0. Both bundled with "
             "PyCantonese. Built by scripts/build_yue_frequency.py."
         ),
+        index_title="HKCanCor + CTCPC Cantonese frequency",
+        index_revision="2026-09-20",
     ),
     ResourceSpec(
         id="wty-yue-en",

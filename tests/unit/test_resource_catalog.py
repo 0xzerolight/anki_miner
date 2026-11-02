@@ -116,7 +116,28 @@ class TestResourceSpec:
             "pin_slot",
             "sweep_superseded",
             "sha256",
+            "index_title",
+            "index_revision",
         }
+
+    def test_every_unpinned_frequency_zip_records_its_title(self):
+        # setup --api finds such a list's slot by its index.json title and revision
+        # (zip_store_id); without them it downloads the list again on every call.
+        from anki_miner.gui.workers.resource_download_worker import pinned_slot
+        from anki_miner.languages import AVAILABLE_LANGUAGES
+        from anki_miner.languages.registry import get_profile
+
+        specs = {spec.id: spec for code in AVAILABLE_LANGUAGES for spec in get_profile(code).catalog}
+        unpinned = {spec.id for spec in specs.values() if pinned_slot(spec) is None}
+        assert unpinned == {
+            "jpdb-freq",
+            "opensubtitles-zh-word",
+            "opensubtitles-vi-word",
+            "tnc-th",
+            "ttc-th",
+            "hkcancor-yue",
+        }
+        assert all(specs[spec_id].index_title and specs[spec_id].index_revision for spec_id in unpinned)
 
 
 def _by_id(spec_id: str) -> ResourceSpec:

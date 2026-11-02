@@ -47,5 +47,7 @@ ZH_CATALOG: tuple[ResourceSpec, ...] = (
             "OPUS OpenSubtitles v2024, ODC-BY 1.0 (P. Lison and J. Tiedemann, 2016; opensubtitles.org); "
             "segmented into words with jieba by Anki Miner and hosted on its releases."
         ),
+        index_title="OpenSubtitles 2024 word frequency (Chinese)",
+        index_revision="2026.09.20",
     ),
 )

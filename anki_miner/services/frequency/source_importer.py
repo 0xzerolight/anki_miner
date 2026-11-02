@@ -314,12 +314,7 @@ def _import_zip(
         title = banks.title
         revision = banks.revision
         declared_mode = banks.index.frequency_mode
-        resolved_id = source_id or resolve_auto_store_id(
-            dest_root,
-            _derive_source_id(title),
-            "frequency",
-            {"source_name": title, "source_revision": revision, **language_identity(language)},
-        )
+        resolved_id = source_id or zip_store_id(dest_root, title, revision, language)
 
         # Numeric path: key = (term, reading) -> (best rank, display_value),
         # "best" per `prefer`: the rank rule (non-㋕ beats ㋕, then min rank), or
@@ -831,6 +826,20 @@ def _finalize(
         skipped_malformed=skipped_malformed,
         converted_to_ranks=converted_to_ranks,
         is_categorical=is_categorical,
+    )
+
+
+def zip_store_id(dest_root: Path, title: str, revision: str, language: str) -> str:
+    """The slot under *dest_root* a zip with this ``index.json`` title and revision imports into.
+
+    What an import without an explicit ``source_id`` resolves, so a caller that
+    knows the title can find an installed list without downloading it again.
+    """
+    return resolve_auto_store_id(
+        dest_root,
+        _derive_source_id(title),
+        "frequency",
+        {"source_name": title, "source_revision": revision, **language_identity(language)},
     )
 
 

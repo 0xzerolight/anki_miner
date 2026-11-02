@@ -19,6 +19,7 @@ from anki_miner.services.frequency.mode_probe import LESS_COMMON_TERMS, MORE_COM
 from anki_miner.services.frequency.source_importer import (
     FreqSourceImportResult,
     import_frequency_source,
+    zip_store_id,
 )
 
 _MORE_COMMON = MORE_COMMON_TERMS["ja"]
@@ -1019,3 +1020,15 @@ class TestCsvSkippedRowReceipt:
             import_frequency_source(csv_path, tmp_path / "sources")
 
         assert not [r for r in caplog.records if r.message.startswith("Frequency import skipped rows:")]
+
+
+def test_zip_store_id_names_the_slot_an_import_uses(tmp_path: Path) -> None:
+    """Fresh, and forked: a newer revision of a title already installed gets its own slot."""
+    root = tmp_path / "freqs"
+    expected = zip_store_id(root, "Test Freq", "rev1", "ja")
+    old = import_frequency_source(_write_zip(tmp_path / "old.zip", revision="rev1"), root)
+    assert old.source_id == expected == "test-freq"
+    assert zip_store_id(root, "Test Freq", "rev1", "ja") == old.source_id
+    forked = zip_store_id(root, "Test Freq", "rev2", "ja")
+    assert forked != old.source_id
+    assert import_frequency_source(_write_zip(tmp_path / "new.zip", revision="rev2"), root).source_id == forked
