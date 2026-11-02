@@ -151,6 +151,16 @@ def test_a_text_with_headings_and_one_without(verdict, inspect_file, tmp_path) -
     assert unheaded["chapters"] == [] and unheaded["units"] == 3  # ¶N labels name no chapter
 
 
+def test_path_is_as_given(verdict, inspect_file, tmp_path, monkeypatch) -> None:
+    """A caller matches entries to its sources by path: relative, unresolved, read from the working folder."""
+    (tmp_path / "plain.txt").write_text("前書き。\n", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    given = ["./plain.txt", "./missing.epub"]
+    entries = _result(verdict("inspect", inspect_file(*({"path": p} for p in given))))
+    assert [e["path"] for e in entries] == given
+    assert (entries[0]["kind"], entries[1]["error"]) == ("book", "SOURCE_UNREADABLE")
+
+
 def test_a_volume_without_its_mokuro_needs_ocr(verdict, inspect_file, tmp_path) -> None:
     volume = tmp_path / "漫画" / "漫画 第1巻"
     volume.mkdir(parents=True)

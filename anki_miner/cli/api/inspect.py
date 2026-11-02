@@ -68,6 +68,8 @@ class SourceRequest:
     path: Path | str
     units: bool
     run_id: str | None
+    #: ``path`` as the caller wrote it, which its entry gives back
+    given: str
 
 
 @dataclass(frozen=True)
@@ -90,7 +92,7 @@ def _source_request(raw: object, where: str) -> SourceRequest:
     run_id = None if obj.get("run_id") is None else files.valid_run_id(obj["run_id"], f"{where}.run_id")
     if units and run_id is None:
         raise files.bad(f"{where}.run_id is required with units: the unit list goes to <run_dir>/<run_id>/.")
-    return SourceRequest(path if is_web_url(path) else files.abs_path(path), units, run_id)
+    return SourceRequest(path if is_web_url(path) else files.abs_path(path), units, run_id, given=path)
 
 
 def parse_inspect_file(data: object) -> InspectFile:
@@ -137,11 +139,11 @@ def _inspect(
     except ApiError as exc:
         if exc.code == CANCELLED:
             raise
-        return {**dict.fromkeys(_KEYS), "path": str(request.path), "error": exc.code, "message": exc.message}
+        return {**dict.fromkeys(_KEYS), "path": request.given, "error": exc.code, "message": exc.message}
     if request.units and document is not None:
         assert run_dir is not None and request.run_id is not None  # parse_inspect_file
         entry["file"] = _write_units(run_dir, request.run_id, document)
-    return entry
+    return {**entry, "path": request.given}  # as given (API.md): the caller matches its sources by it
 
 
 def _describe(
