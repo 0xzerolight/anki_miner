@@ -223,6 +223,22 @@ def test_cancel_watcher_signal_cancels(tmp_path: Path) -> None:
         assert cancel.wait(2)
 
 
+def test_cancel_watcher_sees_a_file_already_there_at_once(tmp_path: Path) -> None:
+    (tmp_path / "cancel").touch()
+    with runfolder.CancelWatcher(tmp_path, threading.Event(), interval=60) as cancel:
+        assert cancel.is_set()
+    assert not (tmp_path / "cancel").exists()
+
+
+def test_cancel_watcher_deletes_a_file_that_lands_after_its_last_poll(tmp_path: Path) -> None:
+    """The run's result stands (it had no step left), but the cancel file still goes (API.md)."""
+    with runfolder.CancelWatcher(tmp_path, threading.Event(), interval=60) as cancel:
+        time.sleep(0.05)  # the watcher has polled once and sleeps
+        (tmp_path / "cancel").touch()
+    assert cancel.is_set()
+    assert not (tmp_path / "cancel").exists()
+
+
 def test_cancel_watcher_uncancelled_run_leaves_no_file(tmp_path: Path) -> None:
     with runfolder.CancelWatcher(tmp_path, threading.Event(), interval=0.01) as cancel:
         time.sleep(0.05)

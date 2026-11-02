@@ -126,19 +126,23 @@ class CancelWatcher:
         self._thread = threading.Thread(target=self._watch, name="api-cancel-watch", daemon=True)
 
     def __enter__(self) -> threading.Event:
+        self._check()  # before the run's first step, not at the thread's first poll
         self._thread.start()
         return self.event
 
     def __exit__(self, *exc: object) -> None:
         self._stop.set()
         self._thread.join()
-        if self.event.is_set():
+        # One that landed after the last poll: the run's result stands, and the file still goes.
+        if self._check():
             self._file.unlink(missing_ok=True)
 
+    def _check(self) -> bool:
+        if self._cancel_all.is_set() or self._file.exists():
+            self.event.set()
+        return self.event.is_set()
+
     def _watch(self) -> None:
-        while True:
-            if self._cancel_all.is_set() or self._file.exists():
-                self.event.set()
-                return
+        while not self._check():
             if self._stop.wait(self._interval):
                 return
