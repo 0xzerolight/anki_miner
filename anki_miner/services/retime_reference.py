@@ -44,7 +44,7 @@ from typing import Literal
 
 from PyQt6.QtCore import QCoreApplication
 
-from anki_miner.languages.registry import config_language, get_profile
+from anki_miner.languages.registry import audio_title_language, config_language, get_profile
 from anki_miner.services.subtitle_cleaner import clean_reference as _clean_reference
 from anki_miner.utils.audio_track_detector import (
     SubtitleStream,
@@ -411,13 +411,18 @@ def _audio_reference(
         label = f"audio track {audio_track_override + 1}"
     else:
         # Honest labelling: extraction falls back to the FIRST audio track when
-        # no stream carries a tag the mining language recognises, which on
+        # no stream carries the mining language's tag or title, which on
         # dual-audio releases can be the dub — say so instead of claiming a
         # match. The codes come from the profile, so the label must not name a
         # language either; RetimeReference.label is also cached, so a display
         # name here would go stale on a language switch.
-        codes = get_profile(config_language(config)).audio_track_codes
-        jp_stream = find_japanese_audio_stream(video, resolve_ffprobe(config), codes=codes)
+        language = config_language(config)
+        jp_stream = find_japanese_audio_stream(
+            video,
+            resolve_ffprobe(config),
+            codes=get_profile(language).audio_track_codes,
+            titles=audio_title_language(language),
+        )
         if jp_stream is not None:
             label = QCoreApplication.translate("RetimeReference", "matching audio track")
         else:

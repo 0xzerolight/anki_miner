@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Changed
 
 ### Fixed
+- **Videos whose audio tracks have names but no language tags use the mining language's track.** Many Blu-ray remuxes name their tracks "English" and "Japanese" without tagging them, so the language was not found and the first track was used, often the dub: speech recognition transcribed it and every card clip took its audio. A track with no language tag whose name is the mining language ("Japanese [Stereo]", "日本語", "JPN") is now used when no track is tagged with it; a track tagged with another language is still not.
 
 ### Removed
 

@@ -7,6 +7,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from anki_miner.languages.registry import audio_title_language, get_profile
 from anki_miner.utils.audio_track_detector import (
     BITMAP_SUBTITLE_CODECS,
     JAPANESE_LANGUAGE_CODES,
@@ -209,6 +210,95 @@ class TestFindJapaneseAudioStream:
         messages = [r.getMessage() for r in caplog.records if r.levelno >= logging.INFO]
         assert f"No audio tagged ['es', 'spa'] found in {video_file}. Available languages: ['eng']" in messages
         assert not any("Japanese" in m for m in messages)
+
+
+def _find_by_title(video_file, streams: list[dict], code: str = "ja") -> AudioStream | None:
+    """find_japanese_audio_stream as the services call it: *code*'s profile codes and title names."""
+    with patch(f"{MODULE}.subprocess.run", return_value=_mock_proc(stdout=_ffprobe_json(streams))):
+        return find_japanese_audio_stream(
+            video_file, codes=get_profile(code).audio_track_codes, titles=audio_title_language(code)
+        )
+
+
+class TestTitleFallback:
+    """No stream's tag matches: an untagged stream whose title names the mining language is taken."""
+
+    def test_untagged_bluray_remux_picks_the_japanese_title(self, video_file, caplog):
+        """Memories (1995): English (default) and Japanese, titles only."""
+        streams = [{"index": 1, "title": "English", "default": 1}, {"index": 2, "title": "Japanese", "default": 0}]
+        with caplog.at_level(logging.INFO, logger=MODULE):
+            result = _find_by_title(video_file, streams)
+        assert result is not None
+        assert (result.global_index, result.audio_index) == (2, 1)
+        assert "Found matching audio by title: global stream 2, audio track 1 (title: Japanese)" in caplog.messages
+
+    @pytest.mark.parametrize(
+        "title", ["Japanese [Stereo]", "日本語", "JPN 2.0", "Original_Japanese", "Japanese (English signs)"]
+    )
+    def test_title_spellings_that_name_japanese(self, video_file, title):
+        result = _find_by_title(video_file, [{"index": 1, "title": "English"}, {"index": 2, "title": title}])
+        assert result is not None and result.global_index == 2
+
+    @pytest.mark.parametrize("title", ["Javanese", "Japanesey", "English (Japanese signs)", "jp", "Commentary"])
+    def test_titles_that_do_not_name_japanese(self, video_file, title):
+        """Whole words only, the first language named decides, and a two-letter code is not read in a title."""
+        assert _find_by_title(video_file, [{"index": 1, "title": title}]) is None
+
+    def test_und_tag_counts_as_untagged(self, video_file):
+        result = _find_by_title(
+            video_file,
+            [{"index": 1, "language": "und", "title": "English"}, {"index": 2, "language": "und", "title": "Japanese"}],
+        )
+        assert result is not None and result.global_index == 2
+
+    def test_language_tag_beats_title(self, video_file):
+        """A tagged match wins even over an earlier untagged stream titled Japanese."""
+        streams = [{"index": 1, "title": "Japanese"}, {"index": 2, "language": "jpn", "title": "Main"}]
+        result = _find_by_title(video_file, streams)
+        assert result is not None and result.global_index == 2
+
+    def test_stream_tagged_another_language_is_not_taken_by_title(self, video_file):
+        streams = [
+            {"index": 1, "language": "eng", "title": "English"},
+            {"index": 2, "language": "eng", "title": "Japanese commentary"},
+        ]
+        assert _find_by_title(video_file, streams) is None
+
+    def test_several_title_matches_take_the_default(self, video_file):
+        streams = [
+            {"index": 1, "title": "Japanese Commentary", "default": 0},
+            {"index": 2, "title": "Japanese", "default": 1},
+        ]
+        result = _find_by_title(video_file, streams)
+        assert result is not None and result.global_index == 2
+
+    def test_several_title_matches_without_default_take_the_first(self, video_file):
+        streams = [{"index": 1, "title": "Japanese 5.1"}, {"index": 2, "title": "Japanese 2.0"}]
+        result = _find_by_title(video_file, streams)
+        assert result is not None and result.global_index == 1
+
+    def test_no_tag_or_title_match_returns_none(self, video_file, caplog):
+        """The caller's first-stream fallback is unchanged, and so is its warning."""
+        with caplog.at_level(logging.WARNING, logger=MODULE):
+            assert _find_by_title(video_file, [{"index": 1, "title": "English"}, {"index": 2}]) is None
+        assert any("No audio tagged" in m for m in caplog.messages)
+
+    def test_without_titles_only_tags_are_read(self, video_file):
+        stdout = _ffprobe_json([{"index": 1, "title": "English"}, {"index": 2, "title": "Japanese"}])
+        with patch(f"{MODULE}.subprocess.run", return_value=_mock_proc(stdout=stdout)):
+            assert find_japanese_audio_stream(video_file) is None
+
+    @pytest.mark.parametrize("title", ["Español", "Spanish [Stereo]", "SPA"])
+    def test_non_japanese_language_reads_its_own_profile(self, video_file, title):
+        streams = [{"index": 1, "title": "Japanese"}, {"index": 2, "title": title}]
+        result = _find_by_title(video_file, streams, code="es")
+        assert result is not None and result.global_index == 2
+
+    def test_multi_word_native_name(self, video_file):
+        result = _find_by_title(
+            video_file, [{"index": 1, "title": "English"}, {"index": 2, "title": "Norsk Bokmål"}], code="nb"
+        )
+        assert result is not None and result.global_index == 2
 
 
 class TestListAudioStreams:

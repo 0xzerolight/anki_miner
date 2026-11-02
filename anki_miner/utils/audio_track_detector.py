@@ -1,5 +1,6 @@
 """Detect Japanese audio streams in video files via ffprobe."""
 
+import functools
 import json
 import logging
 import re
@@ -88,6 +89,64 @@ def matches_language_tag(language_tag: str | None, codes: frozenset[str]) -> boo
         return True
     primary, sep, _ = normalized.partition("-")
     return bool(sep) and primary in codes
+
+
+@dataclass(frozen=True)
+class TitleLanguage:
+    """The language names an audio stream's title is read against.
+
+    ``mining`` holds the casefolded names of the mining language; ``known``
+    every mining language's, ``mining`` included, so the first language a title
+    names decides. Built by
+    :func:`anki_miner.languages.registry.audio_title_language`: ``utils``
+    cannot reach the profiles itself.
+    """
+
+    mining: frozenset[str]
+    known: frozenset[str]
+
+
+@functools.cache
+def _language_name_pattern(names: frozenset[str]) -> re.Pattern[str]:
+    """One alternation of *names*, longest first, each bounded by a non-word character, ``_`` or an end."""
+    alternatives = "|".join(re.escape(name) for name in sorted(names, key=len, reverse=True))
+    return re.compile(rf"(?<![^\W_])({alternatives})(?![^\W_])")
+
+
+def title_names_language(title: str | None, language: TitleLanguage) -> bool:
+    """Whether *title* names the mining language of *language*.
+
+    The first language name in the title decides, matched as a whole word:
+    "Japanese [Stereo]" and "日本語" name Japanese, "Javanese" names nothing and
+    "English (Japanese signs)" names English.
+    """
+    if not title:
+        return False
+    match = _language_name_pattern(language.known | language.mining).search(title.casefold())
+    return match is not None and match.group(1) in language.mining
+
+
+def pick_audio_stream(
+    streams: list[AudioStream], codes: frozenset[str], titles: TitleLanguage | None = None
+) -> AudioStream | None:
+    """The mining language's stream among *streams*, or None.
+
+    A stream whose language tag matches *codes* wins. Only when none does, a
+    stream with no language tag (none, or ``und``) whose title names the
+    language (:func:`title_names_language`, skipped when *titles* is None) is
+    taken: a stream tagged with another language is that language's, whatever
+    its title says. Among several, the default stream, else the first.
+    """
+    matches = [stream for stream in streams if matches_language_tag(stream.language_tag, codes)]
+    if not matches and titles is not None:
+        matches = [
+            stream
+            for stream in streams
+            if stream.language_tag in (None, "und") and title_names_language(stream.title_tag, titles)
+        ]
+    if not matches:
+        return None
+    return next((stream for stream in matches if stream.is_default), matches[0])
 
 
 def _positive_int(value: object) -> int | None:
@@ -430,12 +489,16 @@ def list_chapters(media_path: Path, ffprobe_cmd: str = "ffprobe", *, require_vid
 
 
 def find_japanese_audio_stream(
-    video_file: Path, ffprobe_cmd: str = "ffprobe", *, codes: frozenset[str] | None = None
+    video_file: Path,
+    ffprobe_cmd: str = "ffprobe",
+    *,
+    codes: frozenset[str] | None = None,
+    titles: TitleLanguage | None = None,
 ) -> AudioStream | None:
     """Probe a video file with ffprobe and return its mining-language audio stream.
 
-    Returns None if ffprobe fails, returns malformed JSON, or no audio stream
-    carries a matching language tag.
+    Returns None if ffprobe fails, returns malformed JSON, or
+    :func:`pick_audio_stream` finds no stream by tag or title.
 
     ``ffprobe_cmd`` is forwarded to :func:`list_audio_streams`; defaults to the
     bare ``"ffprobe"`` literal so direct callers are unaffected.
@@ -443,19 +506,28 @@ def find_japanese_audio_stream(
     ``codes`` is the mining language's ``LanguageProfile.audio_track_codes``;
     it is keyword-only so the pre-existing positional ``ffprobe_cmd`` callers
     stay untouched, and ``None`` means :data:`JAPANESE_LANGUAGE_CODES`.
+    ``titles`` is ``registry.audio_title_language`` for the same language; None
+    reads tags only.
     """
     wanted = JAPANESE_LANGUAGE_CODES if codes is None else codes
     streams = list_audio_streams(video_file, ffprobe_cmd=ffprobe_cmd)
 
-    japanese_streams = [stream for stream in streams if matches_language_tag(stream.language_tag, wanted)]
-    if japanese_streams:
-        stream = next((candidate for candidate in japanese_streams if candidate.is_default), japanese_streams[0])
-        logger.info(
-            "Found matching audio: global stream %d, audio track %d (language: %s)",
-            stream.global_index,
-            stream.audio_index,
-            stream.language_tag,
-        )
+    stream = pick_audio_stream(streams, wanted, titles)
+    if stream is not None:
+        if matches_language_tag(stream.language_tag, wanted):
+            logger.info(
+                "Found matching audio: global stream %d, audio track %d (language: %s)",
+                stream.global_index,
+                stream.audio_index,
+                stream.language_tag,
+            )
+        else:
+            logger.info(
+                "Found matching audio by title: global stream %d, audio track %d (title: %s)",
+                stream.global_index,
+                stream.audio_index,
+                stream.title_tag,
+            )
         return stream
 
     available_langs = [s.language_tag or "unknown" for s in streams]

@@ -18,6 +18,7 @@ from typing import Any
 
 from anki_miner.languages import AVAILABLE_LANGUAGES
 from anki_miner.languages.profile import LanguageProfile, MinedFormPolicy
+from anki_miner.utils.audio_track_detector import TitleLanguage
 from anki_miner.utils.file_pairing import SubtitleLanguage
 
 logger = logging.getLogger(__name__)
@@ -131,6 +132,30 @@ def get_profile(code: str) -> LanguageProfile:
 def _every_language_tag() -> frozenset[str]:
     """Every code a registered mining language answers to (ja, jpn, en, eng, pt, ...)."""
     return frozenset().union(*(get_profile(code).audio_track_codes for code in available_languages()))
+
+
+def _language_names(code: str) -> frozenset[str]:
+    """The casefolded names an audio stream's title can give *code* by: its native and
+    English names and its codes of three letters or more (``日本語``, ``japanese``, ``jpn``).
+
+    Two-letter codes are left out: in a title they are ordinary words ("Commentary
+    in English", "It", "No"), not Indonesian, Italian or Norwegian.
+    """
+    profile = get_profile(code)
+    names = {tag for tag in profile.audio_track_codes if len(tag) >= 3} | {profile.display_name, profile.english_name}
+    return frozenset(name.casefold() for name in names if name)
+
+
+@functools.cache
+def _every_language_name() -> frozenset[str]:
+    """:func:`_language_names` of every registered mining language."""
+    return frozenset().union(*(_language_names(code) for code in available_languages()))
+
+
+def audio_title_language(code: str) -> TitleLanguage:
+    """How audio stream titles read for mining language *code*: "Japanese [Stereo]" is ja's, "English" another's."""
+    mining = _language_names(code)
+    return TitleLanguage(mining=mining, known=_every_language_name() | mining)
 
 
 def subtitle_language(code: str, *, with_caption_codes: bool = False) -> SubtitleLanguage:

@@ -1339,8 +1339,21 @@ class TestGetJapaneseAudioStream:
             entry = {"index": s["index"], "codec_type": "audio", "tags": {}}
             if "language" in s:
                 entry["tags"]["language"] = s["language"]
+            if "title" in s:
+                entry["tags"]["title"] = s["title"]
             stream_list.append(entry)
         return json.dumps({"streams": stream_list})
+
+    def test_untagged_stream_titled_in_the_mining_language(self, service, video_file):
+        """A Blu-ray remux with titles and no tags maps the Japanese stream, not the first."""
+        mock_proc = MagicMock()
+        mock_proc.returncode = 0
+        mock_proc.stdout = self._make_ffprobe_output(
+            [{"index": 1, "title": "English [Stereo]"}, {"index": 2, "title": "Japanese [Stereo]"}]
+        )
+
+        with patch(f"{DETECTOR_MODULE}.subprocess.run", return_value=mock_proc):
+            assert service._get_japanese_audio_stream(video_file) == 2
 
     def test_returns_stream_index_when_japanese_found(self, service, video_file):
         """Should return the index of the Japanese audio stream."""
@@ -2084,8 +2097,8 @@ class TestAudioTrackOverride:
     def test_override_out_of_range_falls_back(self, service, video_file, tmp_path, caplog):
         """When override audio_index doesn't exist, fall back to JP inline filter and log a warning.
 
-        find_japanese_audio_stream must NOT be called; the fallback reuses the already-cached
-        stream list and filters by JAPANESE_LANGUAGE_CODES directly.
+        find_japanese_audio_stream must NOT be called; the fallback applies the same tag-then-title
+        pick to the already-cached stream list.
         """
         import logging
 
@@ -2123,6 +2136,15 @@ class TestAudioTrackOverride:
         assert any("audio_track_override=99" in r.message for r in caplog.records)
         # Fallback uses cached stream list inline — find_japanese_audio_stream must not be called.
         mock_find_jp.assert_not_called()
+
+    def test_override_out_of_range_falls_back_to_title_match(self, service, video_file):
+        """The out-of-range fallback reads untagged titles like auto-detect does."""
+        streams = [
+            dataclasses.replace(_make_audio_stream(audio_index=0, global_index=1), title_tag="English"),
+            dataclasses.replace(_make_audio_stream(audio_index=1, global_index=2), title_tag="Japanese"),
+        ]
+        with patch(f"{MODULE}.list_audio_streams", return_value=streams):
+            assert service._resolve_audio_track_global_index(video_file, 99) == 2
 
     # ------------------------------------------------------------------
     # 5. Override=0 is a valid first-track index, not a falsy sentinel

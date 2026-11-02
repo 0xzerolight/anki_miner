@@ -70,11 +70,11 @@ from anki_miner.gui.workers.condense_worker import (
     CondenseWorker,
     plan_condense_outputs,
 )
-from anki_miner.languages.registry import config_language, get_profile, subtitle_language
+from anki_miner.languages.registry import audio_title_language, config_language, get_profile, subtitle_language
 from anki_miner.services.audio_condenser import EncoderUnavailableError, FilterUnavailableError
 from anki_miner.services.audio_tagger import TrackMetadata, prefill_track_metadata
 from anki_miner.utils import list_audio_streams
-from anki_miner.utils.audio_track_detector import list_subtitle_streams, matches_language_tag
+from anki_miner.utils.audio_track_detector import list_subtitle_streams, matches_language_tag, pick_audio_stream
 from anki_miner.utils.ffmpeg_resolver import binary_available, resolve_ffmpeg, resolve_ffprobe
 from anki_miner.utils.file_pairing import FilePairMatcher, resolve_output_path
 from anki_miner.utils.file_utils import bounded_output_name, is_junk_path, safe_filename
@@ -693,8 +693,10 @@ class CondenseTab(RunOptionsMixin, _ToolTabBase):
                 )
                 return
 
-            codes = get_profile(config_language(self.config)).audio_track_codes
-            auto_stream = next((s for s in streams if matches_language_tag(s.language_tag, codes)), None)
+            language = config_language(self.config)
+            auto_stream = pick_audio_stream(
+                streams, get_profile(language).audio_track_codes, audio_title_language(language)
+            )
             dialog = AudioTracksDialog(
                 streams=streams,
                 current_override=self._audio_track_override,
