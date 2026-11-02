@@ -367,6 +367,12 @@ dev = [
 i18n = [
     "pyside6-essentials>=6.6.0",
 ]
+# scripts/card_css_check.py: renders mined cards through Lapis, Senren, Kiku and
+# Anki Miner Note in Chromium. Pinned, because the baseline it checks against is
+# what this Chromium computes; `python -m playwright install chromium` fetches it.
+card-css = [
+    "playwright==1.64.0",
+]
 
 [project.scripts]
 anki_miner_gui = "anki_miner.gui.launch:main"

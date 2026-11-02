@@ -44,6 +44,18 @@ run_tolerant() {  # name, binary, cmd...
   echo
 }
 
+run_skippable() {  # name, cmd... — exit 3 means a dependency is missing (SKIP)
+  local name="$1"; shift
+  echo "=== ${name} ==="
+  "$@"
+  case $? in
+    0) echo "PASS ${name}" ;;
+    3) echo "SKIP ${name}"; skipped+=("${name}") ;;
+    *) echo "FAIL ${name}"; failed+=("${name}") ;;
+  esac
+  echo
+}
+
 run_hard     "black"      "${BIN}black" --check .
 run_hard     "ruff"       "${BIN}ruff" check .
 run_hard     "mypy"       "${BIN}mypy" anki_miner
@@ -66,6 +78,9 @@ run_tolerant "shellcheck" "shellcheck" shellcheck packaging/appimage/build-appim
 # The Linux entrypoint shim. Tolerant here (release.yml runs it as a hard gate
 # against the real bundle); local runs still surface a broken AppRun early.
 run_tolerant "launcher"   "bash" scripts/launcher_smoke.sh
+# Does glossary.css beat Lapis/Senren/Kiku/Anki Miner Note's own rules anywhere
+# new (dd8dc96)? Real Chromium; SKIP without the [card-css] extra and its browser.
+run_skippable "card-css"  "${BIN}python" -I scripts/card_css_check.py
 
 echo "================ SUMMARY ================"
 [ ${#skipped[@]} -gt 0 ] && echo "skipped: ${skipped[*]}"

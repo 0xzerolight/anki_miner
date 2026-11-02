@@ -30,6 +30,8 @@ The `languages` extra adds the Chinese, Korean, Cantonese, Turkish, Thai and Vie
 
 The Arabic and Persian tests read seeded data packs, which no package carries: `python scripts/fetch_language_pack_seeds.py ~/.cache/anki-miner-pack-seeds ar fa` (about 41 MB, once).
 
+Changes to card styling (`services/dictionary/resources/glossary.css`, or the glossary markup) are checked by `scripts/card_css_check.py`, which renders mined cards through Lapis, Senren, Kiku and Anki Miner Note in Chromium. `scripts/health.sh` runs it when it can: `pip install -e ".[card-css]"` and `python -m playwright install chromium` (about 120 MB, once).
+
 External runtime dependencies:
 
 - `ffmpeg` on PATH (`brew install ffmpeg`, `sudo apt install ffmpeg`, or the official Windows build).
