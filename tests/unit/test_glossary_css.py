@@ -1,10 +1,10 @@
 """Tests for the house glossary stylesheet (resources/glossary.css).
 
 Nine structural rules plus the ``images`` and ``tables`` groups. Every rule is
-guarded by miner-only ``ol[data-count]`` markup so it never restyles
-Yomitan-exported glossary HTML sharing a note type; the sheet carries no
-``!important``, no nesting and no theme selectors, and the minified core rides
-every styled field, so it stays under 1 KiB.
+guarded by miner-only markup (``ol[data-count]``, or ``li[data-dictionary-id]``
+inside the list) so it never restyles Yomitan-exported glossary HTML sharing a
+note type; the sheet carries no ``!important``, no nesting and no theme
+selectors, and the minified core rides every styled field, so it stays under 1 KiB.
 """
 
 import re
@@ -40,23 +40,31 @@ def _iter_rules(css: str):
 
 
 def _selectors(css: str):
+    """Each selector of each rule; a comma inside ``:is()``/``:where()`` stays put."""
     for selector_group, declarations in _iter_rules(css):
-        for selector in selector_group.split(","):
+        for selector in re.split(r",(?![^()]*\))", selector_group):
             yield selector.strip(), declarations
+
+
+_GUARD = ":is(ol[data-count],li[data-dictionary-id])"
 
 
 class TestSheetDiscipline:
     def test_every_selector_guarded_by_miner_only_markup(self):
-        # `data-count` on the outer <ol> is the one marker only anki_miner emits;
-        # without it a rule would stack onto Yomitan-exported glossary HTML. The bare
-        # wrapper is the single exception, and it may set custom properties only.
+        # `data-count` on the outer <ol> and `data-dictionary-id` on its <li> are
+        # markers only anki_miner emits; without one a rule would stack onto
+        # Yomitan-exported glossary HTML. Rules inside the list take either, because
+        # Kiku's glossary-split mode rebuilds the outer <ol> without `data-count`.
+        # The bare wrapper is the single exception: custom properties only.
         seen = 0
         for selector, declarations in _selectors(load_glossary_css()):
             seen += 1
             assert selector.startswith(".yomitan-glossary"), selector
-            if "ol[data-count]" in selector:
+            if selector.startswith((".yomitan-glossary > ol[data-count]", ".yomitan-glossary + ")):
                 continue
-            assert selector == ".yomitan-glossary", f"{selector!r} lacks the ol[data-count] guard"
+            if _GUARD in selector:
+                continue
+            assert selector == ".yomitan-glossary", f"{selector!r} lacks the miner-only guard"
             for decl in filter(None, (d.strip() for d in declarations.split(";"))):
                 assert decl.startswith("--"), f"the bare wrapper rule may only set custom properties: {decl!r}"
         assert seen >= 7
@@ -103,11 +111,11 @@ class TestSheetDiscipline:
         for selector, declarations in _selectors(load_glossary_css()):
             if "ol.gloss-" not in selector or "padding" not in declarations:
                 continue
-            assert selector.startswith(".yomitan-glossary :where(ol[data-count] "), selector
+            assert selector.startswith(f".yomitan-glossary :where({_GUARD} "), selector
             gutters.append(selector)
         assert sorted(gutters) == [
-            ".yomitan-glossary :where(ol[data-count] ol.gloss-glosses)",
-            ".yomitan-glossary :where(ol[data-count] ol.gloss-list)",
+            f".yomitan-glossary :where({_GUARD} ol.gloss-glosses)",
+            f".yomitan-glossary :where({_GUARD} ol.gloss-list)",
         ]
 
     def test_no_inherited_typography(self):
@@ -146,9 +154,8 @@ class TestBaseCss:
         assert ".yomitan-glossary > ol[data-count]{margin: 0;padding: 0;list-style: none;" in base_css("")
 
     def test_core_draws_gloss_bullets_as_circles(self):
-        assert (
-            ".yomitan-glossary ol[data-count] ol.gloss-glosses{margin: 0.1em 0;list-style-type: circle;}"
-            in base_css("")
+        assert f".yomitan-glossary {_GUARD} ol.gloss-glosses{{margin: 0.1em 0;list-style-type: circle;}}" in base_css(
+            ""
         )
 
     def test_images_region_only_when_the_field_has_an_image(self):

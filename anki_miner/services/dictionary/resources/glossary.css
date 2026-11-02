@@ -12,9 +12,11 @@
  *
  * Contract (enforced by tests/unit/test_glossary_css.py):
  *  - Every selector starts with `.yomitan-glossary` and, except the bare wrapper
- *    rule (custom properties only), contains the miner-only `ol[data-count]`
- *    guard, so the sheet never restyles Yomitan-exported glossary HTML that
- *    shares a note type.
+ *    rule (custom properties only), carries a miner-only guard, so the sheet never
+ *    restyles Yomitan-exported glossary HTML that shares a note type: the outer
+ *    list's `ol[data-count]`, or, inside it, `:is(ol[data-count],li[data-dictionary-id])`.
+ *    Kiku's glossary-split mode rebuilds the outer list without `data-count` but
+ *    keeps our envelope <li>; both arguments weigh (0,1,1), as the old guard did.
  *  - No `!important`, no nesting, no `.nightMode`/`prefers-color-scheme`: the
  *    note type governs everything not declared here.
  *  - The nested lists' gutters (`padding-left`) sit in zero-specificity `:where()`
@@ -50,23 +52,23 @@
 .yomitan-glossary + .yomitan-glossary > ol[data-count] {
   margin-top: 0.6em;
 }
-.yomitan-glossary ol[data-count] ol.gloss-list {
+.yomitan-glossary :is(ol[data-count],li[data-dictionary-id]) ol.gloss-list {
   margin: 0.1em 0 0;
 }
-.yomitan-glossary :where(ol[data-count] ol.gloss-list) {
+.yomitan-glossary :where(:is(ol[data-count],li[data-dictionary-id]) ol.gloss-list) {
   padding-left: 1.6em;
 }
-.yomitan-glossary ol[data-count] li.gloss-item {
+.yomitan-glossary :is(ol[data-count],li[data-dictionary-id]) li.gloss-item {
   margin: 0.1em 0;
 }
-.yomitan-glossary ol[data-count] ol.gloss-glosses {
+.yomitan-glossary :is(ol[data-count],li[data-dictionary-id]) ol.gloss-glosses {
   margin: 0.1em 0;
   list-style-type: circle;
 }
-.yomitan-glossary :where(ol[data-count] ol.gloss-glosses) {
+.yomitan-glossary :where(:is(ol[data-count],li[data-dictionary-id]) ol.gloss-glosses) {
   padding-left: 1.4em;
 }
-.yomitan-glossary ol[data-count] .gloss-note {
+.yomitan-glossary :is(ol[data-count],li[data-dictionary-id]) .gloss-note {
   opacity: 0.7;
   font-size: 0.92em;
 }
@@ -76,17 +78,17 @@
 /* Dictionary-bundled images (e.g. pitch-accent SVGs) — cap so they never blow
  * out the card; vertical-align lives on the inline-block container, not the img
  * (the container is what participates in line layout). */
-.yomitan-glossary ol[data-count] .gloss-image {
+.yomitan-glossary :is(ol[data-count],li[data-dictionary-id]) .gloss-image {
   max-width: 100%;
   max-height: 6em;
   height: auto;
 }
 
-.yomitan-glossary ol[data-count] .gloss-image-link {
+.yomitan-glossary :is(ol[data-count],li[data-dictionary-id]) .gloss-image-link {
   text-decoration: none;
 }
 
-.yomitan-glossary ol[data-count] .gloss-image-container {
+.yomitan-glossary :is(ol[data-count],li[data-dictionary-id]) .gloss-image-container {
   display: inline-block;
   vertical-align: middle;
   /* Positioning context for the absolutely-placed .gloss-image-background
@@ -100,7 +102,7 @@
  * .gloss-image-background span masks `currentColor` through the image's alpha
  * (the --image url is stamped inline by the renderer), and the real <img> is
  * hidden. Ported from ext/data/structured-content-style.json (upstream e2ed450). */
-.yomitan-glossary ol[data-count] .gloss-image-background {
+.yomitan-glossary :is(ol[data-count],li[data-dictionary-id]) .gloss-image-background {
   position: absolute;
   left: 0;
   top: 0;
@@ -121,21 +123,21 @@
 
 /* The recolor layer must be inert for every non-monochrome image — otherwise it
  * would paint a solid currentColor block over the real bitmap. */
-.yomitan-glossary ol[data-count] .gloss-image-link:not([data-appearance=monochrome]) .gloss-image-background {
+.yomitan-glossary :is(ol[data-count],li[data-dictionary-id]) .gloss-image-link:not([data-appearance=monochrome]) .gloss-image-background {
   display: none;
 }
 
 /* For a monochrome image the recolored mask above replaces it, so hide the
  * original black-stroke bitmap. */
-.yomitan-glossary ol[data-count] .gloss-image-link[data-appearance=monochrome] .gloss-image {
+.yomitan-glossary :is(ol[data-count],li[data-dictionary-id]) .gloss-image-link[data-appearance=monochrome] .gloss-image {
   opacity: 0;
 }
 
 /* Pixel-art dictionaries (kanji stroke-order bitmaps, retro glyphs) ask for
  * nearest-neighbor scaling so they stay crisp instead of blurring. Ordered
  * fallbacks: the last value a WebView understands wins. */
-.yomitan-glossary ol[data-count] .gloss-image-link[data-image-rendering=pixelated] .gloss-image,
-.yomitan-glossary ol[data-count] .gloss-image-link[data-image-rendering=pixelated] .gloss-image-background {
+.yomitan-glossary :is(ol[data-count],li[data-dictionary-id]) .gloss-image-link[data-image-rendering=pixelated] .gloss-image,
+.yomitan-glossary :is(ol[data-count],li[data-dictionary-id]) .gloss-image-link[data-image-rendering=pixelated] .gloss-image-background {
   image-rendering: -webkit-optimize-contrast;
   image-rendering: pixelated;
   image-rendering: crisp-edges;
@@ -150,22 +152,22 @@
  * did not emit and out-ranked the note type on its own element. The class also
  * makes the old `.gloss-content` ancestor scope on `summary` redundant — only our
  * renderer emits `.gloss-sc-summary`, so it can never reach the dictionary label. */
-.yomitan-glossary ol[data-count] .gloss-sc-details {
+.yomitan-glossary :is(ol[data-count],li[data-dictionary-id]) .gloss-sc-details {
   margin: 0.25em 0;
 }
 
-.yomitan-glossary ol[data-count] .gloss-sc-summary {
+.yomitan-glossary :is(ol[data-count],li[data-dictionary-id]) .gloss-sc-summary {
   cursor: pointer;
   color: var(--amn-accent, #4f7cff);
 }
 
-.yomitan-glossary ol[data-count] .gloss-sc-details[open] > .gloss-sc-summary {
+.yomitan-glossary :is(ol[data-count],li[data-dictionary-id]) .gloss-sc-details[open] > .gloss-sc-summary {
   margin-bottom: 0.25em;
 }
 
 /* Tables (inflection/reading layouts) — full borders, and scroll instead of
  * overflowing the card when a dictionary embeds a wide table on a narrow screen. */
-.yomitan-glossary ol[data-count] .gloss-sc-table {
+.yomitan-glossary :is(ol[data-count],li[data-dictionary-id]) .gloss-sc-table {
   border-collapse: collapse;
   margin: 0.3em 0;
   max-width: 100%;
@@ -174,14 +176,14 @@
   font-size: 0.9em;
 }
 
-.yomitan-glossary ol[data-count] .gloss-sc-th,
-.yomitan-glossary ol[data-count] .gloss-sc-td {
+.yomitan-glossary :is(ol[data-count],li[data-dictionary-id]) .gloss-sc-th,
+.yomitan-glossary :is(ol[data-count],li[data-dictionary-id]) .gloss-sc-td {
   padding: 0.18em 0.5em;
   border: 1px solid rgba(128, 128, 128, 0.4);
   text-align: left;
 }
 
-.yomitan-glossary ol[data-count] .gloss-sc-th {
+.yomitan-glossary :is(ol[data-count],li[data-dictionary-id]) .gloss-sc-th {
   font-weight: 600;
 }
 

@@ -57,7 +57,8 @@ from anki_miner.services.dictionary.card_style_presets import load_glossary_css
 # instead of being corrupted to ``content:"a,b"``. Output is byte-identical to a
 # naive global pass whenever no comma/semicolon lives inside a quoted string —
 # which is true of today's glossary.css (its only commas separate selector lists,
-# ``rgba()`` arguments and a ``var()`` fallback, where tightening is valid CSS).
+# ``:is()`` and ``rgba()`` arguments and a ``var()`` fallback, where tightening is
+# valid CSS).
 _COMMENT_OR_STRING_RE = re.compile(
     r"""/\*.*?\*/          # a CSS comment
         | "(?:\\.|[^"\\])*"  # a double-quoted string (with escapes)
