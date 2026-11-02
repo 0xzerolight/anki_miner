@@ -475,7 +475,7 @@ Output and errors:
 ## ocr
 
 `ocr OCR_FILE` reads a manga volume with mokuro, as Utilities → Manga OCR does. An episode has `volume`: a folder of page images, a `.cbz` or a `.zip`.
-- It writes `<volume>.mokuro` beside the volume, replacing one already there. mokuro keeps its page cache in `_ocr/` there too, so a cancelled volume resumes on the next call.
+- It writes `<volume>.mokuro` beside the volume. A volume that already has one is read again from its pages, and its `.mokuro` replaced. mokuro keeps its page cache in `_ocr/` there too, so a cancelled first read resumes on the next call; a cancelled read-again starts over.
 - `ocr-<n>.json` has `mokuro_file`, `pages` (the pages in the `.mokuro`) and `pages_failed` (page images it could not read).
 - One stage; `done`/`total` are percent of pages.
 - The call gives `SETUP_ERROR` when Manga OCR is not installed for the language (`setup --ocr` installs it).
@@ -627,7 +627,7 @@ This build implements the v7 proposal's "First" list, the next requests (Z-1 to 
 - `check` and `setup` (Z-20, Z-22) report Manga OCR (`ocr`) and Video OCR (`video_ocr`) apart, as they use different engines; `--ocr` installs both.
 - Long jobs count `done`/`total` in percent, not pages or audio seconds. The Whisper model's download has no byte count.
 - `video-ocr` (Z-21) takes a region per episode, else the profile's. With neither, the call is refused.
-- `ocr` (Z-15) replaces an existing `.mokuro`, and resumes a cancelled volume from mokuro's page cache.
+- `ocr` (Z-15) reads a volume again when it already has a `.mokuro`, and resumes a cancelled first read from mokuro's page cache.
 
 ## Example (Python)
 
