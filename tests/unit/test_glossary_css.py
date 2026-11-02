@@ -110,6 +110,14 @@ class TestSheetDiscipline:
             ".yomitan-glossary :where(ol[data-count] ol.gloss-list)",
         ]
 
+    def test_no_inherited_typography(self):
+        # A declaration on our element beats any value it would inherit, whatever its
+        # specificity: a line-height here overrode Senren's own setting and Lapis's
+        # 1.75em. The note type owns the glossary's line spacing and fonts.
+        for selector, declarations in _selectors(load_glossary_css()):
+            for prop in ("line-height", "font-family"):
+                assert f"{prop}:" not in declarations, f"{selector!r} sets {prop}"
+
     def test_group_markers_sit_between_complete_rules(self):
         # base_css concatenates minified regions with no separator, which is only
         # sound when every region boundary falls right after a `}`.

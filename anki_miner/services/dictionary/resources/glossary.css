@@ -20,6 +20,13 @@
  *  - The nested lists' gutters (`padding-left`) sit in zero-specificity `:where()`
  *    rules, so a note type's own list padding wins: Senren lays lists out inline
  *    with `padding-left: 0`, and a padded inline <ol> renders a blank line.
+ *  - No line-height or font-family: a declaration on our element beats any value
+ *    it would inherit, so the note type's own line spacing (Senren's setting,
+ *    Lapis's 1.75em) would lose to it however low its specificity.
+ *  - scripts/card_css_check.py renders this sheet through Lapis, Senren, Kiku and
+ *    Anki Miner Note: a change here or to the glossary markup keeps it green, and
+ *    a new entry in its baseline (this sheet beating a note type's own rule) is a
+ *    review decision.
  *  - Every `var()` is defined here, carries a fallback, or is the
  *    renderer-stamped `--image`.
  *  - The first rule is the wrapper rule below: its minified form opens with
@@ -39,7 +46,6 @@
   padding: 0;
   list-style: none;
   text-align: left;
-  line-height: 1.5;
 }
 .yomitan-glossary + .yomitan-glossary > ol[data-count] {
   margin-top: 0.6em;
