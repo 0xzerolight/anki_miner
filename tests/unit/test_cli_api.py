@@ -81,6 +81,12 @@ def test_setup_failure_maps_unreachable_anki() -> None:
     assert contract.setup_failure(AnkiConnectionError("AnkiConnect error in 'x': y")).code == "SETUP_ERROR"
 
 
+def test_setup_failure_maps_a_syncing_anki_to_unreachable_not_setup() -> None:
+    from anki_miner.exceptions import AnkiBusyError
+
+    assert contract.setup_failure(AnkiBusyError("Anki is busy syncing")).code == "ANKI_UNREACHABLE"
+
+
 def test_profiles_command(verdict) -> None:
     v = verdict("profiles")
     assert v["ok"] and v["result"] == {"profiles": [{"id": "default", "name": "Default", "active": True}]}

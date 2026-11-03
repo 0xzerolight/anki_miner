@@ -135,6 +135,16 @@ def test_setup_failure_exit_4(booted, fake_run, out, tmp_path: Path) -> None:
     assert result["items"] == [] and result["cards_created"] == 0
 
 
+def test_anki_busy_syncing_is_busy_exit_3_not_setup_error(booted, fake_run, out, tmp_path: Path) -> None:
+    from anki_miner.exceptions import AnkiBusyError
+
+    fake_run.raise_ = AnkiBusyError("Anki is busy syncing — wait for it to finish and retry.")
+    assert entry.main(_pair(tmp_path)) == 3
+    result = out()[-1]
+    assert result["status"] == "busy" and "syncing" in result["error"]
+    assert result["items"] == [] and result["cards_created"] == 0
+
+
 def test_unexpected_exception_is_error_json_not_traceback(booted, fake_run, out, tmp_path: Path) -> None:
     fake_run.raise_ = RuntimeError("kaboom")
     assert entry.main(_pair(tmp_path)) == 1
@@ -376,9 +386,11 @@ class _SyncRecorder:
     def __init__(self, error: Exception | None = None) -> None:
         self.calls = 0
         self.error = error
+        self.cancelled: object = None
 
-    def __call__(self) -> None:  # set on the class, so it is called unbound
+    def __call__(self, cancelled=None) -> None:  # set on the class, so it is called unbound
         self.calls += 1
+        self.cancelled = cancelled
         if self.error is not None:
             raise self.error
 
@@ -395,6 +407,8 @@ def test_a_run_that_added_cards_syncs_once_when_the_setting_is_on(booted, fake_r
     monkeypatch.setattr(AnkiService, "sync", sync)
     assert entry.main(_pair(tmp_path)) == 0
     assert sync.calls == 1
+    # The run waits for the sync to finish; its cancel event (SIGINT/SIGTERM) ends that wait.
+    assert callable(sync.cancelled) and sync.cancelled() is False
 
 
 def test_a_run_never_syncs_with_the_setting_off_or_no_cards(booted, fake_run, monkeypatch, tmp_path) -> None:

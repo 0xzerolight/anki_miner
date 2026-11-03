@@ -74,7 +74,7 @@ Item `status` is `success`, `failed`, `cancelled` or `skipped` (not reached afte
 | `failed` | 1 | Every item failed. |
 | `error` | 1 | Internal error; details are in Anki Miner's log. |
 | `usage_error` | 2 | Bad arguments, a missing file or folder, no pairs matched, or an unsupported URL. |
-| `busy` | 3 | An Anki Miner window or another command-line or API run is open. |
+| `busy` | 3 | An Anki Miner window or another command-line or API run is open, or Anki is busy syncing. |
 | `setup_error` | 4 | Nothing was mined: Anki Miner was never set up, the mining language's pack is missing, AnkiConnect is unreachable, the deck or note type is wrong, there is no offline dictionary, a dictionary needs re-importing, or yt-dlp is missing. |
 | `cancelled` | 130 | Stopped by SIGINT/SIGTERM. |
 
@@ -89,7 +89,7 @@ Item `status` is `success`, `failed`, `cancelled` or `skipped` (not reached afte
 - YouTube needs yt-dlp, which the app installs the first time it is used (Video → YouTube).
 - To cancel, send SIGINT or SIGTERM on Linux and macOS; the run stops at its next step and reports `cancelled`. On Windows, terminate the process. Notes already added to Anki stay.
 - Runs are written to Anki Miner's log and statistics like runs started in the app.
-- With "Sync Anki after mining" on (Settings → Cards & Anki), a run that added cards asks Anki to sync once at the end. A failed sync is logged and does not change the run's `status`.
+- With "Sync Anki after mining" on (Settings → Cards & Anki), a run that added cards asks Anki to sync once at the end and waits up to two minutes for the sync to finish, so the next run finds Anki free. A failed or unfinished sync is logged and does not change the run's `status`.
 
 ## Example (Python)
 

@@ -12,7 +12,7 @@ import requests
 from PyQt6.QtCore import QCoreApplication
 
 from anki_miner.config import AnkiMinerConfig
-from anki_miner.exceptions import AnkiConnectionError, SetupError
+from anki_miner.exceptions import AnkiBusyError, AnkiConnectionError, SetupError
 from anki_miner.interfaces import ProgressCallback
 from anki_miner.languages.profile import CARD_FRONT_KEY
 from anki_miner.models import AnkiWriteState, CardPayload
@@ -140,17 +140,22 @@ def is_transient_anki_transport_error(exc: BaseException) -> bool:
 
 
 #: AnkiConnect ``sync`` hands the work to Anki's own sync and answers; a slow
-#: AnkiWeb round trip must not read as a dead Anki (AI-03).
+#: AnkiWeb round trip must not read as a dead Anki (AI-03). Also how long
+#: :meth:`AnkiService.sync` waits for that sync to finish.
 _SYNC_TIMEOUT_S = 120
 
+#: How often :meth:`AnkiService.sync` asks whether Anki's sync has finished.
+_SYNC_POLL_S = 1.0
 
-def sync_after_run(config: AnkiMinerConfig, cards_created: int) -> bool:
+
+def sync_after_run(config: AnkiMinerConfig, cards_created: int, cancelled: Callable[[], bool] | None = None) -> bool:
     """Sync Anki once after a run that added cards (AI-03, owner ruling R6).
 
     The one rule every run end calls (the mining screens now; the command line
     after the merge): nothing unless Settings → Cards & Anki → "Sync Anki
     after mining" is on and the run added at least one card. A failure — Anki
-    closed, no AnkiWeb login — is one WARNING line and never fails the run.
+    closed, no AnkiWeb login, a sync still running when the wait runs out — is
+    one WARNING line and never fails the run. *cancelled* ends the wait early.
 
     Returns:
         True when Anki accepted the sync request; False when skipped or failed.
@@ -158,7 +163,7 @@ def sync_after_run(config: AnkiMinerConfig, cards_created: int) -> bool:
     if not config.sync_anki_after_run or cards_created <= 0:
         return False
     try:
-        AnkiService(config).sync()
+        AnkiService(config).sync(cancelled)
     except (AnkiConnectionError, ValueError) as exc:
         # ValueError: an incomplete field map refuses AnkiService itself.
         log_summary(
@@ -615,18 +620,42 @@ class AnkiService:
             timeout=15,
         )
 
-    def sync(self) -> None:
-        """Ask Anki to sync the collection with AnkiWeb (AnkiConnect ``sync``).
+    def sync(self, cancelled: Callable[[], bool] | None = None) -> None:
+        """Ask Anki to sync the collection with AnkiWeb and wait for it to finish.
 
         AI-03: called through :func:`sync_after_run` only. AnkiConnect starts
         Anki's own sync; a collection that needs a one-way full sync makes Anki
         ask the user, which is why the setting is off by default.
 
+        AnkiConnect answers ``sync`` as soon as Anki takes it and refuses every
+        collection action as busy until the sync ends, so a run that returned
+        here would hand the next run a busy Anki. This polls a cheap collection
+        action until Anki answers it, for at most ``_SYNC_TIMEOUT_S``; a
+        *cancelled* that reports true stops the wait. An AnkiConnect that syncs
+        before it answers is free at the first poll.
+
         Raises:
+            AnkiBusyError: Anki was still syncing when the wait ran out.
             AnkiConnectionError: AnkiConnect is unreachable or refused.
         """
         log_summary(logger, "Anki sync requested")
         post_action(self.config.ankiconnect_url, "sync", timeout=_SYNC_TIMEOUT_S)
+        deadline = time.monotonic() + _SYNC_TIMEOUT_S
+        waiting_logged = False
+        while True:
+            try:
+                post_action(self.config.ankiconnect_url, "deckNames", timeout=15)
+                return
+            except AnkiBusyError:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    raise
+            if not waiting_logged:
+                waiting_logged = True
+                log_summary(logger, "Anki sync running, waiting", limit=f"{_SYNC_TIMEOUT_S}s")
+            if cancelled is not None and cancelled():
+                return
+            time.sleep(min(_SYNC_POLL_S, remaining))
 
     def media_dir_path(self) -> Path | None:
         """Return Anki's ``collection.media`` folder (AnkiConnect ``getMediaDirPath``).

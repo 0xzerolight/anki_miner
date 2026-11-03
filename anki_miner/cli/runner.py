@@ -22,7 +22,7 @@ from typing import ClassVar, cast
 
 from anki_miner.cli.events import EventPresenter, EventProgress, EventSink
 from anki_miner.config import AnkiMinerConfig
-from anki_miner.exceptions import AnkiConnectionError, OperationCancelled, SetupError
+from anki_miner.exceptions import AnkiBusyError, AnkiConnectionError, OperationCancelled, SetupError
 from anki_miner.exceptions.youtube import YouTubeFetchError
 from anki_miner.gui.utils.service_factory import (
     create_episode_processor,
@@ -273,7 +273,10 @@ class MiningRun:
         self._progress = EventProgress(sink)
 
     def run(self, jobs: Sequence[Job]) -> list[ItemReport]:
-        """Mine every job; raise :class:`SetupFailure` if a run-level check fails first."""
+        """Mine every job; raise :class:`SetupFailure` if a run-level check fails first.
+
+        :class:`AnkiBusyError` (Anki mid-sync) propagates unwrapped: it is not a setup problem.
+        """
         check_environment(self._config, youtube=any(isinstance(job, YouTubeJob) for job in jobs))
         anki_service = AnkiService(self._config)
         shared = create_shared_lookup_services(self._config)
@@ -284,6 +287,8 @@ class MiningRun:
                 self._presenter.show_warning(message)
             try:
                 check_card_target(self._config, anki_service, shared.definition_service)
+            except AnkiBusyError:
+                raise  # Anki is mid-sync, not misconfigured: the entry reports busy
             except AnkiConnectionError as exc:
                 raise SetupFailure(str(exc)) from exc
             processor = create_episode_processor(

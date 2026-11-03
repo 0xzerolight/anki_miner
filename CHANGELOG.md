@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Changed
 
 ### Fixed
+- **Mining again right after a run that synced Anki works.** With "Sync Anki after mining" on, Anki answers the sync request at once and syncs in the background, refusing everything else until it is done, so a command-line run started straight after another failed with `setup_error`. A run now waits up to two minutes for its sync to finish before it ends. A run that still finds Anki syncing reports `busy` on the command line and `ANKI_UNREACHABLE` in `--api`, not a setup problem; the window says Anki is busy syncing.
 - **Videos whose audio tracks have names but no language tags use the mining language's track.** Many Blu-ray remuxes name their tracks "English" and "Japanese" without tagging them, so the language was not found and the first track was used, often the dub: speech recognition transcribed it and every card clip took its audio. A track with no language tag whose name is the mining language ("Japanese [Stereo]", "日本語", "JPN") is now used when no track is tagged with it; a track tagged with another language is still not.
 
 ### Removed

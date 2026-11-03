@@ -1,6 +1,6 @@
 """Custom exceptions for Anki Miner."""
 
-from .anki import AnkiConnectionError
+from .anki import AnkiBusyError, AnkiConnectionError
 from .base import AnkiMinerException
 from .cancel import OperationCancelled, raise_if_cancelled
 from .media import SubtitleParseError
@@ -25,6 +25,7 @@ __all__ = [
     "OperationCancelled",
     "raise_if_cancelled",
     "AnkiConnectionError",
+    "AnkiBusyError",
     "SubtitleParseError",
     "MokuroError",
     "MokuroNotFoundError",

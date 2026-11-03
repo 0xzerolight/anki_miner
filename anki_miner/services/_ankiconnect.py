@@ -24,7 +24,7 @@ from urllib.parse import unquote, urlsplit, urlunsplit
 
 import requests
 
-from anki_miner.exceptions import AnkiConnectionError
+from anki_miner.exceptions import AnkiBusyError, AnkiConnectionError
 from anki_miner.utils.logging_ext import log_summary
 
 logger = logging.getLogger(__name__)
@@ -248,6 +248,31 @@ def _timeout_message(action: str, timeout: int) -> str:
     return f"Anki accepted the connection but did not answer within {timeout}s — wait for it to finish and retry."
 
 
+# AnkiConnect's refusal while a sync, or another collection lifecycle operation
+# it started, holds the collection. It answers `sync` as soon as Anki takes it
+# and runs the sync in the background, refusing every collection action with
+# this until the sync ends (see AnkiService.sync).
+_COLLECTION_BUSY_ERROR = "Collection lifecycle operation is active."
+
+
+def _raise_if_busy(action: str, log_url: str, started: float, error: object) -> None:
+    """Raise :class:`AnkiBusyError` when *error* is AnkiConnect's busy-collection refusal.
+
+    DEBUG, not the WARNING other AnkiConnect errors get: ``AnkiService.sync``
+    polls through this while Anki syncs and logs its wait once itself.
+    """
+    if error != _COLLECTION_BUSY_ERROR:
+        return
+    logger.debug(
+        "AnkiConnect busy: action=%s url=%s elapsed=%.3fs error=%s",
+        action,
+        log_url,
+        time.monotonic() - started,
+        error,
+    )
+    raise AnkiBusyError("Anki is busy syncing — wait for it to finish and retry.")
+
+
 def post_action(
     ankiconnect_url: str,
     action: str,
@@ -270,6 +295,7 @@ def post_action(
     Raises:
         AnkiConnectionError: on connection failure, HTTP/JSON parse failure,
             or AnkiConnect-side error (where ``result["error"]`` is set).
+        AnkiBusyError: AnkiConnect refused because a sync holds the collection.
     """
     logger.debug(
         "AnkiConnect request: action=%s params=%d timeout=%d",
@@ -323,6 +349,7 @@ def post_action(
         )
         raise AnkiConnectionError("Anki sent an unusable reply — check that only Anki is listening on that port.")
     if result.get("error"):
+        _raise_if_busy(action, log_url, started, result["error"])
         # Hand-rolled, not `log_summary`: the AnkiConnect error string is the
         # whole diagnosis and must stay unquoted at the end of the line, where
         # both readers and the pinned test look for it verbatim.
@@ -416,6 +443,7 @@ def post_multi(
         )
         raise AnkiConnectionError("Anki sent an unusable reply — check that only Anki is listening on that port.")
     if result.get("error"):
+        _raise_if_busy("multi", log_url, started, result["error"])
         # See post_action: the error string stays verbatim at end of line.
         logger.warning(
             "AnkiConnect error: action=multi url=%s elapsed=%.3fs error=%s",

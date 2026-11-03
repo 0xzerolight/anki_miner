@@ -12,7 +12,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 import requests
 
-from anki_miner.exceptions import AnkiConnectionError
+from anki_miner.exceptions import AnkiBusyError, AnkiConnectionError
 from anki_miner.services import _ankiconnect
 from anki_miner.services._ankiconnect import post_action, post_multi
 
@@ -184,3 +184,42 @@ class TestFailureEvidence:
         assert "url=http://localhost:8765" in message
         assert "elapsed=" in message
         assert "body=boom" in message
+
+
+class TestCollectionBusy:
+    """AnkiConnect's busy-collection refusal (a sync running) is AnkiBusyError, not a plain error."""
+
+    _BUSY = "Collection lifecycle operation is active."
+
+    def test_busy_refusal_raises_anki_busy_error_logged_at_debug(self, caplog):
+        with (
+            patch("anki_miner.services._ankiconnect.requests.post", return_value=_mock_response(error=self._BUSY)),
+            caplog.at_level(logging.DEBUG, logger=_LOGGER),
+            pytest.raises(AnkiBusyError, match="busy syncing"),
+        ):
+            post_action("http://localhost:8765", "modelNames")
+
+        assert not [r for r in caplog.records if r.levelno >= logging.WARNING]
+        busy = next(r for r in caplog.records if r.getMessage().startswith("AnkiConnect busy:"))
+        assert "action=modelNames" in busy.getMessage() and self._BUSY in busy.getMessage()
+
+    def test_busy_refusal_on_a_multi_envelope_raises_anki_busy_error(self):
+        with (
+            patch("anki_miner.services._ankiconnect.requests.post", return_value=_mock_response(error=self._BUSY)),
+            pytest.raises(AnkiBusyError),
+        ):
+            post_multi("http://localhost:8765", [{"action": "deckNames", "version": 6, "params": {}}])
+
+    def test_other_errors_stay_plain_anki_connection_errors(self, caplog):
+        with (
+            patch(
+                "anki_miner.services._ankiconnect.requests.post",
+                return_value=_mock_response(error="model was not found"),
+            ),
+            caplog.at_level(logging.WARNING, logger=_LOGGER),
+            pytest.raises(AnkiConnectionError) as raised,
+        ):
+            post_action("http://localhost:8765", "modelFieldNames")
+
+        assert not isinstance(raised.value, AnkiBusyError)
+        assert any(r.getMessage().startswith("AnkiConnect error:") for r in caplog.records)

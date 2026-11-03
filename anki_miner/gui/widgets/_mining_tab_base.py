@@ -516,7 +516,8 @@ class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidge
                     )
                 )
 
-        run_off_thread(self, partial(sync_after_run, self.config, notes_added), _on_done)
+        # The work waits for Anki's sync to finish; the cancel check lets app close end that wait.
+        run_off_thread(self, partial(sync_after_run, self.config, notes_added), _on_done, pass_cancel_check=True)
 
     def _log_whitelist_report(self, coverage: WhitelistCoverage) -> None:
         """Put the run-level whitelist line in this screen's Activity Log, once.

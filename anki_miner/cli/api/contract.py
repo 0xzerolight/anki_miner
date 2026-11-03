@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from anki_miner.exceptions import AnkiConnectionError
+from anki_miner.exceptions import AnkiBusyError, AnkiConnectionError
 from anki_miner.services.anki_service import is_transient_anki_transport_error
 
 API_SCHEMA = 1
@@ -96,8 +96,13 @@ class ApiError(Exception):
 
 
 def setup_failure(exc: BaseException) -> ApiError:
-    """A preflight exception as its code: a dead connection is ANKI_UNREACHABLE, the rest SETUP_ERROR."""
-    if isinstance(exc, AnkiConnectionError) and is_transient_anki_transport_error(exc):
+    """A preflight exception as its code: a dead connection or a busy (syncing) Anki is ANKI_UNREACHABLE.
+
+    The rest are SETUP_ERROR.
+    """
+    if isinstance(exc, AnkiBusyError) or (
+        isinstance(exc, AnkiConnectionError) and is_transient_anki_transport_error(exc)
+    ):
         return ApiError(ANKI_UNREACHABLE, str(exc))
     return ApiError(SETUP_ERROR, str(exc))
 

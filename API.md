@@ -175,7 +175,7 @@ Before any episode runs, `mine` checks:
 - the Anki deck, note type and field mapping;
 - the offline dictionary.
 
-A failure refuses the call with `SETUP_ERROR`, or with `ANKI_UNREACHABLE` when Anki does not answer. Per episode, a video that does not open gives `VIDEO_UNREADABLE`, an audio file `AUDIO_UNREADABLE`, a reading source `SOURCE_UNREADABLE`, and a subtitle file that cannot be read, the secondary one included, gives `SUBTITLE_UNREADABLE`; the other episodes still run. A call whose episodes are all reading sources needs no ffmpeg.
+A failure refuses the call with `SETUP_ERROR`, or with `ANKI_UNREACHABLE` when Anki does not answer or is busy syncing. Per episode, a video that does not open gives `VIDEO_UNREADABLE`, an audio file `AUDIO_UNREADABLE`, a reading source `SOURCE_UNREADABLE`, and a subtitle file that cannot be read, the secondary one included, gives `SUBTITLE_UNREADABLE`; the other episodes still run. A call whose episodes are all reading sources needs no ffmpeg.
 
 Episodes run one at a time, and each run's `result-<n>.json` is written as it ends, before the next starts. Nothing is retried: mine the same `run_id` again with any subset of the words. The media is cut again, and a word Anki now has comes back `duplicate` (with `allow_duplicate_cards` on, a word already in the run's deck).
 
@@ -502,7 +502,7 @@ A call starts by deleting the `progress.json` and `cancel` files an earlier call
 | `BAD_RUN_FILE` | call | a command's file is not valid JSON or breaks the rules above |
 | `PROFILE_UNREADABLE` | call | the profile does not exist or cannot be read |
 | `SETUP_ERROR` | call, run | language pack, dictionary index, ffmpeg, deck, note type, fields or offline dictionary; for fetch, yt-dlp, ffmpeg or the speech model; for transcribe and sync, the speech model; for video-ocr and ocr, their OCR engine |
-| `ANKI_UNREACHABLE` | call, run | AnkiConnect does not answer |
+| `ANKI_UNREACHABLE` | call, run | AnkiConnect does not answer, or Anki is busy syncing |
 | `VIDEO_UNREADABLE` | run | the video does not open |
 | `AUDIO_UNREADABLE` | run | the audio file does not open |
 | `SOURCE_UNREADABLE` | run | a book, text, subtitle file, manga volume or web article does not load |

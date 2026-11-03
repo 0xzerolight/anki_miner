@@ -26,11 +26,11 @@ def sync_calls(monkeypatch):
     from anki_miner.gui.widgets import _mining_tab_base
 
     real = _mining_tab_base.run_off_thread
-    calls: list[tuple[object, object]] = []
+    calls: list[tuple[object, object, dict]] = []
 
     def fake(parent, work, on_done, on_error=None, **kwargs):
         if getattr(work, "func", None) is sync_after_run:
-            calls.append((work, on_done))
+            calls.append((work, on_done, kwargs))
             return MagicMock()
         return real(parent, work, on_done, on_error, **kwargs)
 
@@ -52,8 +52,10 @@ def test_a_run_that_added_cards_syncs_once(youtube_tab, clock, sync_calls):
     youtube_tab._finish_receipt()  # a second terminal signal changes nothing
 
     assert len(sync_calls) == 1
-    work, _on_done = sync_calls[0]
+    work, _on_done, kwargs = sync_calls[0]
     assert work.args[1] == 3
+    # The work waits for Anki's sync to finish; app close must be able to end that wait.
+    assert kwargs.get("pass_cancel_check") is True
 
 
 def test_off_never_syncs(youtube_tab, clock, sync_calls):
@@ -73,7 +75,7 @@ def test_a_run_without_cards_never_syncs(youtube_tab, clock, sync_calls):
 def test_a_failed_sync_is_a_warning_line_in_the_activity_log(youtube_tab, clock, sync_calls):
     youtube_tab.config = replace(youtube_tab.config, sync_anki_after_run=True)
     _finish_run(youtube_tab, 2)
-    _work, on_done = sync_calls[0]
+    _work, on_done, _kwargs = sync_calls[0]
 
     on_done(False)
 
@@ -84,7 +86,7 @@ def test_a_good_sync_writes_nothing(youtube_tab, clock, sync_calls):
     youtube_tab.config = replace(youtube_tab.config, sync_anki_after_run=True)
     _finish_run(youtube_tab, 2)
     before = youtube_tab.log_widget.full_text()
-    _work, on_done = sync_calls[0]
+    _work, on_done, _kwargs = sync_calls[0]
 
     on_done(True)
 

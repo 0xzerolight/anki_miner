@@ -9,7 +9,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 import requests
 
-from anki_miner.exceptions import AnkiConnectionError, SetupError
+from anki_miner.exceptions import AnkiBusyError, AnkiConnectionError, SetupError
 from anki_miner.languages.profile import CARD_FRONT_KEY
 from anki_miner.models import AnkiWriteState, CardPayload, MediaData, TokenizedWord
 from anki_miner.services import _ankiconnect
@@ -3830,6 +3830,19 @@ class TestVerifyCardTarget:
         actions = [call[0][1] for call in mock_pa.call_args_list]
         assert actions == ["modelNames", "modelFieldNames", "deckNames"]
         assert "createDeck" not in actions
+
+    def test_anki_busy_syncing_is_busy_not_setup(self, test_config):
+        """A sync in progress (the previous run's) refuses modelNames: transient, not a setup problem."""
+        busy = MagicMock()
+        busy.content = b"{}"
+        busy.json.return_value = {"result": None, "error": "Collection lifecycle operation is active."}
+        with (
+            patch("anki_miner.services._ankiconnect.requests.post", return_value=busy),
+            pytest.raises(AnkiBusyError) as raised,
+        ):
+            AnkiService(test_config).verify_card_target()
+
+        assert not isinstance(raised.value, SetupError)
 
     def test_deck_missing_raises_setup_error(self, test_config):
         """A deck absent from Anki must fail the run, not be created."""

@@ -12,7 +12,7 @@ import pytest
 
 from anki_miner.cli import runner
 from anki_miner.cli.events import EventSink
-from anki_miner.exceptions import AnkiConnectionError, SetupError
+from anki_miner.exceptions import AnkiBusyError, AnkiConnectionError, SetupError
 from anki_miner.exceptions.youtube import BotDetectionError, YouTubeFetchError
 from anki_miner.models import CANCELLED_ERROR, AnkiWriteState, ProcessingResult
 from anki_miner.services.reading.web_article import ArticleFetchError, WebArticle
@@ -274,6 +274,16 @@ def test_ankiconnect_down_is_setup_failure(services, test_config, tmp_path: Path
         "Cannot connect to AnkiConnect"
     )
     with pytest.raises(runner.SetupFailure, match="Cannot connect"):
+        runner.MiningRun(test_config, _sink()[0], threading.Event()).run([_episode(tmp_path)])
+    services.process_episode.assert_not_called()
+    services.test_shared.close.assert_called_once()
+
+
+def test_anki_busy_syncing_is_not_a_setup_failure(services, test_config, tmp_path: Path) -> None:
+    services.test_anki_cls.return_value.verify_card_target.side_effect = AnkiBusyError(
+        "Anki is busy syncing — wait for it to finish and retry."
+    )
+    with pytest.raises(AnkiBusyError):
         runner.MiningRun(test_config, _sink()[0], threading.Event()).run([_episode(tmp_path)])
     services.process_episode.assert_not_called()
     services.test_shared.close.assert_called_once()
