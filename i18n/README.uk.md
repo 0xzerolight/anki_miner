@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:7dd1b505cab496be -->
+<!-- i18n-source: README.md sha256:2591c7122ac60e4d -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -11,6 +11,7 @@
 <a href="https://github.com/0xzerolight/anki_miner/releases/latest"><img src="https://img.shields.io/github/downloads/0xzerolight/anki_miner/total.svg" alt="Завантаження з GitHub"></a>
 <a href="https://github.com/0xzerolight/anki_miner/stargazers"><img src="https://img.shields.io/github/stars/0xzerolight/anki_miner?style=social" alt="Зірки на GitHub"></a>
 <a href="https://discord.com/invite/aDtQyZzUVP"><img src="https://img.shields.io/discord/1517634859110240326?logo=discord&logoColor=white&label=Discord&color=5865F2" alt="Спільнота в Discord"></a>
+<a href="https://awesome-japanese.japantv.app/?utm_source=badge"><img src="https://awesome-japanese.japantv.app/assets/badge.svg" alt="Представлено в Awesome Japanese"></a>
 </p>
 
 <!-- i18n-nav:start -->

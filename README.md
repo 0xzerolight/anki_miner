@@ -9,6 +9,7 @@
 <a href="https://github.com/0xzerolight/anki_miner/releases/latest"><img src="https://img.shields.io/github/downloads/0xzerolight/anki_miner/total.svg" alt="GitHub downloads"></a>
 <a href="https://github.com/0xzerolight/anki_miner/stargazers"><img src="https://img.shields.io/github/stars/0xzerolight/anki_miner?style=social" alt="GitHub stars"></a>
 <a href="https://discord.com/invite/aDtQyZzUVP"><img src="https://img.shields.io/discord/1517634859110240326?logo=discord&logoColor=white&label=Discord&color=5865F2" alt="Discord community"></a>
+<a href="https://awesome-japanese.japantv.app/?utm_source=badge"><img src="https://awesome-japanese.japantv.app/assets/badge.svg" alt="Featured on Awesome Japanese"></a>
 </p>
 
 <!-- i18n-nav:start -->
