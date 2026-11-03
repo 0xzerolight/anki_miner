@@ -106,11 +106,34 @@ class TitleLanguage:
     known: frozenset[str]
 
 
+# Scripts written without spaces between words: Han, kana, Hangul (Korean
+# glues compounds: "한국어음성"), Thai, Lao, Myanmar and Khmer. A name is glued
+# to the next word in them ("日本語音声", "中文配音"), so they mark no word edge.
+_UNSPACED_SCRIPTS = (
+    "\u0e00-\u0eff\u1000-\u109f\u1100-\u11ff\u1780-\u17ff\u2e80-\u2fdf\u3005-\u3007\u3021-\u3029"
+    "\u3040-\u30ff\u3130-\u318f\u31f0-\u31ff\u3400-\u4dbf\u4e00-\u9fff\ua960-\ua97f\uac00-\ud7ff"
+    "\uf900-\ufaff\uff66-\uff9f\U00020000-\U0003ffff"
+)
+_IN_UNSPACED_SCRIPT = re.compile(f"[{_UNSPACED_SCRIPTS}]")
+# A letter of a script written with spaces: a word character that is not a
+# digit, ``_`` or in one of :data:`_UNSPACED_SCRIPTS`.
+_SPACED_LETTER = rf"[^\W\d_{_UNSPACED_SCRIPTS}]"
+
+
 @functools.cache
 def _language_name_pattern(names: frozenset[str]) -> re.Pattern[str]:
-    """One alternation of *names*, longest first, each bounded by a non-word character, ``_`` or an end."""
-    alternatives = "|".join(re.escape(name) for name in sorted(names, key=len, reverse=True))
-    return re.compile(rf"(?<![^\W_])({alternatives})(?![^\W_])")
+    """One alternation of *names*, longest first, each matched as a whole word.
+
+    A word edge is needed only between two letters of scripts written with
+    spaces: "Japanese" is not read in "Javanese", but "日本語" is in "日本語音声"
+    and "Japanese" in "Japanese5.1".
+    """
+    alternatives = []
+    for name in sorted(names, key=len, reverse=True):
+        before = "" if _IN_UNSPACED_SCRIPT.match(name[0]) else f"(?<!{_SPACED_LETTER})"
+        after = "" if _IN_UNSPACED_SCRIPT.match(name[-1]) else f"(?!{_SPACED_LETTER})"
+        alternatives.append(f"{before}{re.escape(name)}{after}")
+    return re.compile(f"({'|'.join(alternatives)})")
 
 
 def title_names_language(title: str | None, language: TitleLanguage) -> bool:

@@ -294,6 +294,20 @@ class TestTitleFallback:
         result = _find_by_title(video_file, streams, code="es")
         assert result is not None and result.global_index == 2
 
+    @pytest.mark.parametrize(
+        ("title", "code"),
+        [("日本語音声", "ja"), ("日本語5.1ch", "ja"), ("中文配音", "zh"), ("廣東話配音", "yue"), ("한국어음성", "ko")],
+    )
+    def test_native_name_glued_to_the_next_word(self, video_file, title, code):
+        """Scripts written without spaces glue the name to what follows: no word edge is needed there."""
+        result = _find_by_title(video_file, [{"index": 1, "title": "English"}, {"index": 2, "title": title}], code=code)
+        assert result is not None and result.global_index == 2
+
+    @pytest.mark.parametrize("title", ["Japanese5.1", "JPN2.0", "5.1Japanese"])
+    def test_a_digit_is_a_word_edge(self, video_file, title):
+        result = _find_by_title(video_file, [{"index": 1, "title": "English"}, {"index": 2, "title": title}])
+        assert result is not None and result.global_index == 2
+
     def test_multi_word_native_name(self, video_file):
         result = _find_by_title(
             video_file, [{"index": 1, "title": "English"}, {"index": 2, "title": "Norsk Bokmål"}], code="nb"
