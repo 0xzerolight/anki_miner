@@ -65,6 +65,7 @@ from anki_miner.gui.widgets.enhanced.modern_button import ModernButton
 from anki_miner.gui.widgets.subtitle_player_widget import SubtitlePlayerWidget
 from anki_miner.languages.profile import ContentTextStyle
 from anki_miner.languages.registry import get_profile
+from anki_miner.utils.audio_track_detector import TitleLanguage
 from anki_miner.utils.i18n import tr_format
 
 logger = logging.getLogger(__name__)
@@ -111,6 +112,9 @@ class SubtitleViewer(ScreenIssueHost, QDialog):
             auto-detecting Japanese. None preserves auto-detect (mpv metadata).
         audio_track_codes: The mining language's audio-track language codes,
             used for that auto-detect. None keeps the player's ja default.
+        audio_track_titles: The same language's track-title names
+            (``registry.audio_title_language``), so an untagged track named
+            for it is picked as extraction picks it. None reads tags only.
         offer_align: Show "Align automatically". False while the Retime tool
             is hidden in Settings, since there is then no tool to hand the
             pair to.
@@ -130,6 +134,7 @@ class SubtitleViewer(ScreenIssueHost, QDialog):
         *,
         audio_track_override: int | None = None,
         audio_track_codes: frozenset[str] | None = None,
+        audio_track_titles: TitleLanguage | None = None,
         content_style: ContentTextStyle | None = None,
         offer_align: bool = True,
     ):
@@ -159,6 +164,7 @@ class SubtitleViewer(ScreenIssueHost, QDialog):
         # file-loaded event picks the audio track.
         if audio_track_codes is not None:
             self.player_widget.audio_track_codes = audio_track_codes
+        self.player_widget.audio_track_titles = audio_track_titles
 
         self.player_widget.source_loaded.connect(self._on_source_loaded)
         self.player_widget.playback_failed.connect(self._on_playback_failed)

@@ -63,7 +63,7 @@ from anki_miner.gui.workers.expression_audio_prefetch import (
     ExpressionAudioProbeChannel,
     run_expression_audio_prefetch,
 )
-from anki_miner.languages.registry import config_language, get_profile
+from anki_miner.languages.registry import audio_title_language, config_language, get_profile
 from anki_miner.models.processing import NOT_MINED_FAILURES
 from anki_miner.services.subtitle_parser import SubtitleParserService
 from anki_miner.utils.i18n import tr_format
@@ -1246,6 +1246,7 @@ class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidge
                 offset=offset,
                 audio_track_override=audio_track_override,
                 audio_track_codes=get_profile(config_language(config)).audio_track_codes,
+                audio_track_titles=audio_title_language(config_language(config)),
                 audio_padding=config.audio_padding,
                 screenshot_animated=config.screenshot_animated,
                 screenshot_offset=config.screenshot_offset,

@@ -97,7 +97,7 @@ from anki_miner.services.dictionary.preview_html import PREVIEW_CSS, to_preview_
 from anki_miner.services.media_extractor import resolve_screenshot_time
 from anki_miner.services.secondary_subtitles import match_secondary_line
 from anki_miner.services.word_filter import MergedLineWindow, find_cue_index, merge_cue_window
-from anki_miner.utils.audio_track_detector import JAPANESE_LANGUAGE_CODES
+from anki_miner.utils.audio_track_detector import JAPANESE_LANGUAGE_CODES, TitleLanguage
 from anki_miner.utils.i18n import tr_format
 from anki_miner.utils.mpv_loader import mpv_available
 
@@ -239,6 +239,9 @@ class CurationMediaContext:
     #: defaulted field, like ``audio_track_override``: the dialog is built
     #: without a config, so the construction sites pass the profile's value.
     audio_track_codes: frozenset[str] = JAPANESE_LANGUAGE_CODES
+    #: The same language's track-title names (``registry.audio_title_language``),
+    #: so the player picks the track extraction picks. None reads tags only.
+    audio_track_titles: TitleLanguage | None = None
     page_units: Mapping[int, ReadingUnit] | None = None  # manga: unit.index -> ReadingUnit
     #: ``config.audio_padding`` — what the default clip window widens the
     #: subtitle line by on each side. Carried here rather than handed to the
@@ -1928,6 +1931,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         ctx = self._media_context
         assert ctx is not None  # guarded by self._show_player
         widget.audio_track_codes = ctx.audio_track_codes
+        widget.audio_track_titles = ctx.audio_track_titles
         # Offset is passed to set_source for subtitle overlay alignment only.
         # Seek calls use raw word.start_time (video timeline); see _on_focus_timer_fired.
         widget.set_source(

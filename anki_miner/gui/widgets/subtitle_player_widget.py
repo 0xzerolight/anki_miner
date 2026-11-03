@@ -57,7 +57,13 @@ from anki_miner.gui.utils.fonts import (
 from anki_miner.gui.widgets.mpv_video_widget import MpvVideoWidget
 from anki_miner.languages.profile import ContentTextStyle
 from anki_miner.languages.registry import get_profile
-from anki_miner.utils.audio_track_detector import JAPANESE_LANGUAGE_CODES, matches_language_tag
+from anki_miner.utils.audio_track_detector import (
+    JAPANESE_LANGUAGE_CODES,
+    AudioStream,
+    TitleLanguage,
+    matches_language_tag,
+    pick_audio_stream,
+)
 from anki_miner.utils.bundled_binary import frozen_state
 from anki_miner.utils.i18n import tr_format
 from anki_miner.utils.mpv_loader import create_mpv_player, mpv_available, terminate_mpv_player
@@ -136,6 +142,9 @@ class SubtitlePlayerWidget(QWidget):
         # owner (SubtitleViewer / WordCurationDialog) when it holds a config;
         # this widget is constructed without one, so ja is the default.
         self.audio_track_codes: frozenset[str] = JAPANESE_LANGUAGE_CODES
+        # The same language's track-title names (``registry.audio_title_language``),
+        # so the preview picks the track extraction picks; None reads tags only.
+        self.audio_track_titles: TitleLanguage | None = None
 
         # Player is None until the first set_source call; one instance per
         # widget lifetime afterwards (loadfile per source).
@@ -760,8 +769,9 @@ class SubtitlePlayerWidget(QWidget):
 
         Override (0-based index within the audio-only track list, demuxer
         order — the same order ffprobe reports) maps to mpv's 1-based ``aid``.
-        Without an override, scan track metadata for a Japanese language tag.
-        Otherwise leave mpv's own default selection.
+        Without an override, pick by the extraction rule
+        (:func:`pick_audio_stream`: the mining language's tag, else an untagged
+        track whose title names it). Otherwise leave mpv's own default selection.
         """
         track_list = self.player.track_list or []
         audio_tracks = [t for t in track_list if t.get("type") == "audio"]
@@ -778,13 +788,27 @@ class SubtitlePlayerWidget(QWidget):
             logger.info("Selected audio track %d in mini-player", self._audio_track_override)
             return
 
-        for position, track in enumerate(audio_tracks):
-            lang = (track.get("lang") or "").lower()
-            if matches_language_tag(lang, self.audio_track_codes):
-                self.player.aid = track.get("id", position + 1)
-                logger.info("Selected audio track %d (language: %s) via mpv track metadata", position, lang)
-                return
-        # No matching tag anywhere — leave mpv's default selection.
+        streams = [
+            AudioStream(
+                global_index=track.get("ff-index", position),
+                audio_index=position,
+                language_tag=(track.get("lang") or "").lower() or None,
+                title_tag=track.get("title") or None,
+                codec=track.get("codec"),
+                channels=track.get("demux-channel-count"),
+                is_default=bool(track.get("default")),
+            )
+            for position, track in enumerate(audio_tracks)
+        ]
+        stream = pick_audio_stream(streams, self.audio_track_codes, self.audio_track_titles)
+        if stream is None:
+            return  # No match by tag or title — leave mpv's default selection.
+        position = stream.audio_index
+        self.player.aid = audio_tracks[position].get("id", position + 1)
+        if matches_language_tag(stream.language_tag, self.audio_track_codes):
+            logger.info("Selected audio track %d (language: %s) via mpv track metadata", position, stream.language_tag)
+        else:
+            logger.info("Selected audio track %d (title: %s) via mpv track metadata", position, stream.title_tag)
 
     def _on_time_pos(self, value: object) -> None:
         """Playback position observer (seconds float; None while idle)."""

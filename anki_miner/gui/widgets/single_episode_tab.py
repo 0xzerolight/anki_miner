@@ -628,6 +628,7 @@ class SingleEpisodeTab(MiningTabBase):
                     parent=self,
                     audio_track_override=self._audio_track_override,
                     audio_track_codes=get_profile(config_language(self.config)).audio_track_codes,
+                    audio_track_titles=audio_title_language(config_language(self.config)),
                     content_style=get_profile(config_language(self.config)).content_style,
                     offer_align="retime" not in effective_hidden_utilities(self.config.hidden_utilities),
                 )

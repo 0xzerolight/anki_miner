@@ -19,6 +19,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from anki_miner.gui.widgets.subtitle_player_widget import SubtitlePlayerWidget
+from anki_miner.languages.registry import audio_title_language
 
 MODULE = "anki_miner.gui.widgets.subtitle_player_widget"
 
@@ -313,6 +314,66 @@ class TestAudioTrackSelection:
         fake_mpv["player"].aid = sentinel
         widget._on_file_loaded()
         assert fake_mpv["player"].aid is sentinel
+
+
+class TestAudioTrackTitleSelection:
+    """The preview picks the track extraction picks: by tag, else an untagged track whose title names the language."""
+
+    @staticmethod
+    def _load(qtbot, fake_mpv, tracks: list[dict]) -> SubtitlePlayerWidget:
+        widget = _widget(qtbot)
+        widget.audio_track_titles = audio_title_language("ja")
+        widget.set_source(VIDEO, ENTRIES)
+        fake_mpv["player"].track_list = [{"type": "video", "id": 1}, *tracks]
+        widget._on_file_loaded()
+        return widget
+
+    def test_untagged_remux_plays_the_japanese_titled_track(self, qtbot, fake_mpv, caplog):
+        with caplog.at_level("INFO", logger=MODULE):
+            self._load(
+                qtbot,
+                fake_mpv,
+                [
+                    {"type": "audio", "id": 1, "title": "English [Stereo]", "default": True},
+                    {"type": "audio", "id": 2, "title": "Japanese [Stereo]", "default": False},
+                ],
+            )
+        assert fake_mpv["player"].aid == 2
+        assert "Selected audio track 1 (title: Japanese [Stereo]) via mpv track metadata" in caplog.text
+
+    def test_language_tag_beats_title(self, qtbot, fake_mpv):
+        self._load(
+            qtbot,
+            fake_mpv,
+            [
+                {"type": "audio", "id": 1, "title": "Japanese"},
+                {"type": "audio", "id": 2, "lang": "jpn", "title": "Main"},
+            ],
+        )
+        assert fake_mpv["player"].aid == 2
+
+    def test_track_tagged_another_language_is_not_taken_by_title(self, qtbot, fake_mpv):
+        fake_mpv["player"].aid = sentinel = object()
+        self._load(
+            qtbot,
+            fake_mpv,
+            [
+                {"type": "audio", "id": 1, "lang": "eng", "title": "English"},
+                {"type": "audio", "id": 2, "lang": "eng", "title": "Japanese commentary"},
+            ],
+        )
+        assert fake_mpv["player"].aid is sentinel
+
+    def test_override_still_wins_over_the_title(self, qtbot, fake_mpv):
+        widget = _widget(qtbot)
+        widget.audio_track_titles = audio_title_language("ja")
+        widget.set_source(VIDEO, ENTRIES, audio_track_override=0)
+        fake_mpv["player"].track_list = [
+            {"type": "audio", "id": 1, "title": "English"},
+            {"type": "audio", "id": 2, "title": "Japanese"},
+        ]
+        widget._on_file_loaded()
+        assert fake_mpv["player"].aid == 1
 
 
 class TestSeek:
