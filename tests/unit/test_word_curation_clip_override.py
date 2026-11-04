@@ -108,7 +108,7 @@ class TestAvailability:
     def test_side_key_unchanged(self, qtbot, words, existing_video):
         """Wrapping the player must not orphan saved side-split blobs."""
         dlg, _ = _dialog(qtbot, words, existing_video)
-        assert dlg._side_key == "player"
+        assert dlg._side_key == "player+sentences"
 
 
 class TestSeeding:

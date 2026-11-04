@@ -14,6 +14,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from PyQt6.QtCore import Qt
 
+from anki_miner.gui.utils.phrase_wrap import WORD_JOINER
 from anki_miner.gui.utils.qt_helpers import COPY_ROLE
 from anki_miner.gui.widgets.audio_clip_editor import MAX_CLIP_SECONDS, to_ticks
 from anki_miner.gui.widgets.dialogs.word_curation_dialog import (
@@ -86,6 +87,11 @@ def _focus(dialog: WordCurationDialog, row: int) -> None:
     dialog._on_focus_timer_fired()
 
 
+def _pane_sentence(dialog: WordCurationDialog) -> str:
+    """The Sentences pane's full sentence, without its display-only soft-wrap marks."""
+    return dialog.chosen_sentence_label.text().replace(WORD_JOINER, "")
+
+
 def _drag(dialog: WordCurationDialog, in_seconds: float, out_seconds: float) -> None:
     dialog.clip_editor.slider.values_changed.emit(to_ticks(in_seconds), to_ticks(out_seconds))
 
@@ -121,7 +127,7 @@ class TestAvailability:
     def test_side_key_unchanged_by_feature(self, qtbot, words, existing_video):
         """The row lives inside the player pane; saved split blobs stay valid."""
         dlg, _ = _dialog(qtbot, words, existing_video)
-        assert dlg._side_key == "player"
+        assert dlg._side_key == "player+sentences"
 
     def test_expansion_tooltips_carry_the_real_ceiling(self, qtbot, words, existing_video):
         dlg, _ = _dialog(qtbot, words, existing_video)
@@ -174,6 +180,27 @@ class TestWiring:
         dlg.expand_prev_button.click()
         row = dlg._visual_row_for_index(0)
         assert dlg.table.item(row, 4).text() == MERGED_PREV
+
+    def test_sentences_pane_shows_the_merged_text_in_full(self, qtbot, words, existing_video):
+        """The other user's ask: the whole merged sentence, where the cell cuts it at 47."""
+        dlg, _ = _dialog(qtbot, words, existing_video)
+        _focus(dlg, 0)
+        assert _pane_sentence(dlg) == "食べるのテスト"
+        dlg.expand_prev_button.click()
+        assert _pane_sentence(dlg) == MERGED_PREV
+        dlg.expand_next_button.click()
+        assert _pane_sentence(dlg) == MERGED_PREV + CUE_JOINER + "次の行です"
+        dlg.expand_reset_button.click()
+        assert _pane_sentence(dlg) == "食べるのテスト"
+
+    def test_sentences_pane_keeps_the_merge_across_a_refocus(self, qtbot, words, existing_video):
+        dlg, _ = _dialog(qtbot, words, existing_video)
+        _focus(dlg, 0)
+        dlg.expand_prev_button.click()
+        _focus(dlg, 1)
+        assert _pane_sentence(dlg) == "走るのテスト"
+        _focus(dlg, 0)
+        assert _pane_sentence(dlg) == MERGED_PREV
 
     def test_refocus_previews_expanded_start(self, qtbot, words, existing_video):
         dlg, player = _dialog(qtbot, words, existing_video)
@@ -229,6 +256,7 @@ class TestWiring:
         dlg._on_candidate_chosen(1)
 
         assert dlg._line_expansions == {}
+        assert _pane_sentence(dlg) == "二つ目"
 
 
 class TestGuardrails:
@@ -448,6 +476,8 @@ class TestAutoMergeSeeding:
         dlg, _ = self._auto_dialog(qtbot, existing_video)
         assert dlg._line_expansions == {0: (0, 1)}
         assert dlg.table.item(0, 4).text() == MERGED_AUTO
+        _focus(dlg, 0)
+        assert _pane_sentence(dlg) == MERGED_AUTO
 
     def test_clip_strip_seeds_the_merged_window(self, qtbot, existing_video):
         dlg, _ = self._auto_dialog(qtbot, existing_video)
@@ -506,6 +536,7 @@ class TestAutoMergeCandidatePick:
         # COPY_ROLE, not text(): a word with candidates carries a "(2)" badge
         # after its sentence, exactly as the sentence-picker tests handle.
         assert dlg.table.item(0, 4).data(COPY_ROLE) == MERGED_CANDIDATE
+        assert _pane_sentence(dlg) == MERGED_CANDIDATE
         assert dlg.get_selected_words()[0].line_expansion == (0, 1)
 
     def test_pick_without_the_setting_keeps_the_fragment(self, qtbot, existing_video):

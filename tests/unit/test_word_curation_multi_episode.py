@@ -322,8 +322,11 @@ class TestAutoMergeAcrossEpisodes:
         assert dlg.table.item(1, 4).data(COPY_ROLE) == "だから"
 
         _focus_row(dlg, 1)
+        assert dlg.chosen_sentence_label.text().replace(WORD_JOINER, "") == "だから"
         work, on_done, _on_error = deferred_off_thread[-1]
         on_done(work())
 
         assert dlg.table.item(1, 4).data(COPY_ROLE) == merged
         assert dlg.clip_editor.current_window() == (1.0 - 0.3, 5.5 + 0.3)
+        # The Sentences pane, seeded from the same fragment, follows the row.
+        assert dlg.chosen_sentence_label.text().replace(WORD_JOINER, "") == merged

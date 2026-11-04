@@ -143,10 +143,12 @@ def test_rebound_play_pause_leaves_space_unbound_on_every_pane(qtbot, tmp_path) 
 
     space = QKeySequence.fromString("Space", PORTABLE)
     assert [shortcut for shortcut in dialog.findChildren(QShortcut) if shortcut.key() == space] == []
-    for pane in (dialog.table, dialog.player_pane, dialog.sentence_list, dialog.definition_view):
+    for pane in (dialog.table, dialog.player_pane, dialog.sentence_pane, dialog.definition_view):
         assert len(_shortcuts(pane, "P")) == 1, type(pane).__name__
     # Never on the player itself: a second P in the pane's focus chain is ambiguous (#120).
     assert _shortcuts(dialog.player_widget, "P") == []
+    # Nor on the candidate list, for the same reason: it sits inside the Sentences pane.
+    assert _shortcuts(dialog.sentence_list, "P") == []
 
 
 def test_rebound_play_pause_fires_once_from_the_player_pane(qtbot, tmp_path) -> None:

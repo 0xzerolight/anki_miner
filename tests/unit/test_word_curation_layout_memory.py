@@ -43,6 +43,10 @@ def _main_splitter(dlg: WordCurationDialog) -> QSplitter:
     return [s for s in dlg.findChildren(QSplitter) if s.orientation() == Qt.Orientation.Horizontal][0]
 
 
+def _side_splitter(dlg: WordCurationDialog) -> QSplitter:
+    return [s for s in dlg.findChildren(QSplitter) if s.orientation() == Qt.Orientation.Vertical][0]
+
+
 class TestTheDragSurvivesTheNextItem:
     def test_a_dragged_split_comes_back(self, qtbot, make_tokenized_words):
         first = _build(qtbot, make_tokenized_words(4), lookup_fn=_lookup)
@@ -84,6 +88,24 @@ class TestTheDragSurvivesTheNextItem:
         first = _build(qtbot, make_tokenized_words(4), lookup_fn=_lookup)
         first.force_reject()
         assert session_state.load_curator_layout(first._side_key)[0] is not None
+
+    def test_a_collapsed_sentences_pane_stays_collapsed(self, qtbot, make_tokenized_words):
+        """A size below a pane's minimum rejects the whole blob, so without the
+        exception a collapse would also lose the rest of the user's side split.
+        """
+        first = _build(qtbot, make_tokenized_words(4), lookup_fn=_lookup)
+        side = _side_splitter(first)
+        assert side.widget(0) is first.sentence_pane
+        side.setSizes([0, sum(side.sizes())])
+        collapsed = side.sizes()
+        assert collapsed[0] == 0
+        first.accept()
+
+        second = _build(qtbot, make_tokenized_words(4), lookup_fn=_lookup)
+        assert second._side_split_restored is True
+        assert _side_splitter(second).sizes() == collapsed
+        # Restoring leaves the other panes as uncollapsible as they were.
+        assert [_side_splitter(second).isCollapsible(i) for i in range(2)] == [True, False]
 
     def test_the_save_happens_once(self, qtbot, make_tokenized_words):
         dlg = _build(qtbot, make_tokenized_words(4), lookup_fn=_lookup)

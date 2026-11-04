@@ -107,6 +107,7 @@ def test_the_sentence_picker_takes_the_content_direction(qtbot):
     qtbot.addWidget(dialog)
 
     assert dialog.sentence_list.layoutDirection() == Qt.LayoutDirection.RightToLeft
+    assert dialog.chosen_sentence_label.layoutDirection() == Qt.LayoutDirection.RightToLeft
 
 
 def test_a_japanese_sentence_picker_is_never_touched(qtbot):
@@ -121,6 +122,7 @@ def test_a_japanese_sentence_picker_is_never_touched(qtbot):
     qtbot.addWidget(dialog)
 
     assert not dialog.sentence_list.testAttribute(Qt.WidgetAttribute.WA_SetLayoutDirection)
+    assert not dialog.chosen_sentence_label.testAttribute(Qt.WidgetAttribute.WA_SetLayoutDirection)
 
 
 def test_a_japanese_word_and_its_form_keep_left_to_right_under_an_rtl_interface(qtbot, qapp):
