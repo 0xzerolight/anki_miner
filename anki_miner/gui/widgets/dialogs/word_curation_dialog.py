@@ -1948,48 +1948,56 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
     # Keyboard shortcuts
     # ------------------------------------------------------------------
 
-    def _install_play_pause_shortcut(self, widget: QWidget) -> None:
-        """Install the widget-scoped play/pause key (Space unless rebound) on ``widget``.
+    def _install_pane_keys(self, widget: QWidget) -> None:
+        """Install every widget-scoped PLAYER key on ``widget``: play/pause (Space
+        unless rebound), play just this clip, and the two frame steps.
 
-        ``WidgetWithChildrenShortcut`` so it only fires when ``widget`` (or one of
+        ``WidgetWithChildrenShortcut`` so they only fire when ``widget`` (or one of
         its children) has focus — never the Search box. Installed on the table and
         on each preview pane the user clicks into (the player PANE, the sentence
-        picker, and the dictionary), so the key keeps reaching the player after
+        picker, and the dictionary), so the keys keep reaching the player after
         focus leaves the table. A window-scoped shortcut can't be used: it would
-        swallow the key typed in the Search box (Issue #55).
+        swallow the key typed in the Search box (Issue #55). One helper for every
+        player key, so the install sites can only ever move together; a new
+        player key is one more line here.
 
         For the player it must be the pane container, never ``self.player_widget``:
         the clip strip and the prev/next line buttons are the player's siblings, and
         a ``QPushButton`` that holds focus activates on Space unless a shortcut in
         scope claims the key first (#120). Never install on both — two matching
         WidgetWithChildren shortcuts in one ancestry chain fire
-        ``activatedAmbiguously`` and nothing happens at all.
+        ``activatedAmbiguously`` and nothing happens at all. The same holds for
+        any key installed here AND anywhere else in a pane's ancestry, which is
+        why the table-scoped keys in _setup_shortcuts are a separate set.
         """
         self._bind("curator.play_pause", widget, self._toggle_play_pause)
+        self._bind("curator.play_clip", widget, self._play_clip)
+        self._bind("curator.frame_back", widget, lambda: self._step_frame(-1))
+        self._bind("curator.frame_forward", widget, lambda: self._step_frame(1))
 
     def _setup_shortcuts(self) -> None:
         """Install the curator's keys from ``self._keys`` (Settings -> Keyboard).
 
         Every key but confirm is scoped to the table (WidgetWithChildren), so
         none fires from the Search box: a window-scoped letter would stage words
-        while the user types (Issue #55). Play/pause is the one key installed on
-        more than one pane; see _install_play_pause_shortcut. An unbound action
+        while the user types (Issue #55). The player keys are the ones installed
+        on more than one pane; see _install_pane_keys. An unbound action
         installs nothing. The arrow keys stay the table's own navigation and
         cannot be rebound (key_bindings reserves them).
         """
-        # Play/pause (Issue #55), on the table and on each interactive preview
-        # pane: focus leaves the table the moment a sentence or scene is
-        # clicked, so the table alone isn't enough.
-        self._install_play_pause_shortcut(self.table)
+        # The player keys (Issue #55), on the table and on each interactive
+        # preview pane: focus leaves the table the moment a sentence or scene
+        # is clicked, so the table alone isn't enough.
+        self._install_pane_keys(self.table)
         if self._show_player and hasattr(self, "player_pane"):
             # The PANE, not self.player_widget. Installing on both would put two
             # WidgetWithChildren shortcuts for one key in one ancestry chain,
             # which Qt resolves as activatedAmbiguously — neither fires.
-            self._install_play_pause_shortcut(self.player_pane)
+            self._install_pane_keys(self.player_pane)
         if self._has_candidates and hasattr(self, "sentence_list"):
-            self._install_play_pause_shortcut(self.sentence_list)
+            self._install_pane_keys(self.sentence_list)
         if self._show_dict and hasattr(self, "definition_view"):
-            self._install_play_pause_shortcut(self.definition_view)
+            self._install_pane_keys(self.definition_view)
 
         # Toggle the highlighted rows (or the current row when none). Moved off
         # Space, which became play/pause (Issue #55).
@@ -2006,6 +2014,24 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         # What the arrow keys do, for a user who wants it on a left-hand key.
         self._bind("curator.next_word", self.table, lambda: self._move_focus(1))
         self._bind("curator.previous_word", self.table, lambda: self._move_focus(-1))
+        # The preview panes' own buttons, by keyboard. Each key clicks its
+        # button, so it is gated exactly as the click is: a disabled button
+        # ignores click(), and a hidden reset button is a disabled one. A
+        # control this run never built (manga, reading, an Anki deck, no
+        # player or no picture) gets no key at all.
+        if hasattr(self, "expand_prev_button"):
+            self._bind("curator.expand_previous", self.table, self.expand_prev_button.click)
+            self._bind("curator.expand_next", self.table, self.expand_next_button.click)
+            self._bind("curator.reset_lines", self.table, self.expand_reset_button.click)
+        if hasattr(self, "use_frame_button"):
+            self._bind("curator.use_frame", self.table, self.use_frame_button.click)
+            self._bind("curator.reset_frame", self.table, self.frame_reset_button.click)
+        if hasattr(self, "clip_editor"):
+            # The slider's double-click.
+            self._bind("curator.reset_clip", self.table, self.clip_editor.reset)
+        # What a click on the neighbouring row of the sentence picker does.
+        self._bind("curator.previous_sentence", self.table, lambda: self._step_sentence(-1))
+        self._bind("curator.next_sentence", self.table, lambda: self._step_sentence(1))
 
         # Ctrl+Return (and the keypad's Ctrl+Enter): confirm the selection.
         # Fixed, not remappable. A bare Return can NOT be used here: this dialog
@@ -2075,6 +2101,42 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
             self.player_widget.toggle_play_pause()
         elif self._clip_audio is not None:
             self._play_focused_clip()
+
+    def _play_clip(self) -> None:
+        """The play-clip key: what the clip strip's play button does — play the
+        trimmed window and stop, or stop a running preview. Unlike play/pause,
+        which plays on from the line's start. On an Anki-deck run it plays the
+        focused card's own clip, as play/pause does there."""
+        if hasattr(self, "clip_editor"):
+            self.clip_editor.toggle_play()
+        elif self._clip_audio is not None:
+            self._play_focused_clip()
+
+    def _step_frame(self, direction: int) -> None:
+        """The frame-step keys: the player's own steppers, which exist only with
+        a picture. Gated like play/pause on the chosen episode being the one
+        displayed (season curation)."""
+        if (
+            self._show_player
+            and hasattr(self, "player_widget")
+            and self.player_widget.video_surface_available
+            and self._chosen_episode_displayed()
+        ):
+            self.player_widget.step_frame(direction)
+
+    def _step_sentence(self, step: int) -> None:
+        """Pick the sentence ``step`` rows away in the picker, as a click on it would.
+
+        ``setCurrentRow`` fires ``currentRowChanged`` -> ``_on_candidate_chosen``,
+        the click's own path. Stops at either end; nothing to pick from when the
+        word has one sentence (the list is then empty and disabled).
+        """
+        if not hasattr(self, "sentence_list"):
+            return
+        count = self.sentence_list.count()
+        row = self.sentence_list.currentRow() + step
+        if count > 1 and 0 <= row < count:
+            self.sentence_list.setCurrentRow(row)
 
     # ------------------------------------------------------------------
     # Table helpers

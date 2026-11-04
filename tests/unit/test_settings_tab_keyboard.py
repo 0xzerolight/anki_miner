@@ -56,3 +56,9 @@ def test_reset_to_defaults_keeps_the_key_bindings(tab, monkeypatch):
 def test_search_jumps_to_a_shortcut_row(tab):
     tab.jump_to_setting("keyboard.curator_mark_known")
     assert tab.current_subtab_key() == "keyboard"
+
+
+def test_search_jumps_to_a_player_key_row(tab):
+    assert "keyboard.curator_play_clip" in tab._search_entries
+    tab.jump_to_setting("keyboard.curator_play_clip")
+    assert tab.current_subtab_key() == "keyboard"

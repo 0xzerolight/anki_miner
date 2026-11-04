@@ -229,8 +229,9 @@ class ClipRangeSlider(QWidget):
         if event is None or not self.isEnabled() or event.button() != Qt.MouseButton.LeftButton:
             super().mouseDoubleClickEvent(event)
             return
-        # The only way back to the default window, now that the strip has no
-        # reset button. The tooltip is where the user is told so.
+        # The mouse's only way back to the default window, now that the strip
+        # has no reset button (the curator's Reset clip key is the keyboard's).
+        # The tooltip is where the user is told so.
         self._dragging = False
         self.reset_requested.emit()
 
@@ -365,7 +366,7 @@ class AudioClipEditor(QWidget):
             )
         )
         self.slider.values_changed.connect(self._on_slider_moved)
-        self.slider.reset_requested.connect(self._on_reset)
+        self.slider.reset_requested.connect(self.reset)
         row.addWidget(self.slider, 1)
 
         # The clip preview lives next to the window it plays, deliberately
@@ -437,6 +438,30 @@ class AudioClipEditor(QWidget):
             return False
         return self.slider.values() != self._default
 
+    def toggle_play(self) -> None:
+        """What the play button does: preview the window, or stop a running preview.
+
+        Through the button itself, so the curator's play-clip key is gated
+        exactly as a click is: with no word focused the strip is disabled and
+        the press does nothing.
+        """
+        self.play_button.click()
+
+    def reset(self) -> None:
+        """Restore the word's default window, as a double-click on the slider does.
+
+        A no-op with no word focused.
+        """
+        if self._default is None:
+            return
+        self._seeding = True
+        try:
+            self._seat(self._default)
+        finally:
+            self._seeding = False
+        self._refresh_readout()
+        self.clip_reset.emit()
+
     # ------------------------------------------------------------------
     # Internals
     # ------------------------------------------------------------------
@@ -470,17 +495,6 @@ class AudioClipEditor(QWidget):
             self.stop_requested.emit()
             return
         self.play_requested.emit(*self.current_window())
-
-    def _on_reset(self) -> None:
-        if self._default is None:
-            return
-        self._seeding = True
-        try:
-            self._seat(self._default)
-        finally:
-            self._seeding = False
-        self._refresh_readout()
-        self.clip_reset.emit()
 
     def _refresh_play_button(self) -> None:
         self.play_button.setText("■" if self._playing else "▶")

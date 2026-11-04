@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [Unreleased]
 
 ### Added
+- **More Word Curator controls take a key (Settings → Keyboard).** Shift+Space plays just the focused word's clip and stops, as the clip strip's play button does; Space still plays on from the line's start. Comma and period step the preview one frame back or forward. Adding the previous or next line, Reset lines, Use current frame, Reset frame, resetting the clip and picking the previous or next sentence can each be given a key, and ship without one. A key already given to another curator action stays with it, and the new default on that key starts unbound.
 
 ### Changed
 

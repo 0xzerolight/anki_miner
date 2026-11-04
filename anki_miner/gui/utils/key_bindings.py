@@ -21,8 +21,13 @@ it did exactly what Go to Settings does.
 
 :func:`binding_problem` is the only validator, and the Settings -> Keyboard
 page is its only caller. :func:`resolve_bindings` parses and never validates,
-with one exception: an app action's override on the fixed Ctrl+, alias is
-ignored. Otherwise a hand-edited file gets exactly the keys it names.
+with two exceptions, both about one key landing on two actions (Qt then fires
+neither: activatedAmbiguously). An app action's override on the fixed Ctrl+,
+alias is ignored. And a default yields to a saved override: an action the user
+never rebound resolves unbound when another action of its group holds its
+default key through an override, so a key a release adds as a new default
+cannot take a key the user already gave to something else. Otherwise a
+hand-edited file gets exactly the keys it names.
 """
 
 from __future__ import annotations
@@ -91,6 +96,17 @@ KEY_ACTIONS: tuple[KeyAction, ...] = (
     KeyAction("curator.exclude_visible", CURATOR, QT_TRANSLATE_NOOP("KeyBindings", "Exclude visible"), "Ctrl+D"),
     KeyAction("curator.next_word", CURATOR, QT_TRANSLATE_NOOP("KeyBindings", "Next word"), ""),
     KeyAction("curator.previous_word", CURATOR, QT_TRANSLATE_NOOP("KeyBindings", "Previous word"), ""),
+    KeyAction("curator.play_clip", CURATOR, QT_TRANSLATE_NOOP("KeyBindings", "Play just this clip"), "Shift+Space"),
+    KeyAction("curator.frame_back", CURATOR, QT_TRANSLATE_NOOP("KeyBindings", "Step one frame back"), ","),
+    KeyAction("curator.frame_forward", CURATOR, QT_TRANSLATE_NOOP("KeyBindings", "Step one frame forward"), "."),
+    KeyAction("curator.expand_previous", CURATOR, QT_TRANSLATE_NOOP("KeyBindings", "Add the previous line"), ""),
+    KeyAction("curator.expand_next", CURATOR, QT_TRANSLATE_NOOP("KeyBindings", "Add the next line"), ""),
+    KeyAction("curator.reset_lines", CURATOR, QT_TRANSLATE_NOOP("KeyBindings", "Reset lines"), ""),
+    KeyAction("curator.use_frame", CURATOR, QT_TRANSLATE_NOOP("KeyBindings", "Use current frame"), ""),
+    KeyAction("curator.reset_frame", CURATOR, QT_TRANSLATE_NOOP("KeyBindings", "Reset frame"), ""),
+    KeyAction("curator.reset_clip", CURATOR, QT_TRANSLATE_NOOP("KeyBindings", "Reset clip"), ""),
+    KeyAction("curator.previous_sentence", CURATOR, QT_TRANSLATE_NOOP("KeyBindings", "Previous sentence"), ""),
+    KeyAction("curator.next_sentence", CURATOR, QT_TRANSLATE_NOOP("KeyBindings", "Next sentence"), ""),
     KeyAction("app.usage_guide", APP, QT_TRANSLATE_NOOP("KeyBindings", "Usage Guide"), "F1"),
     KeyAction(tab_action_id("video"), APP, QT_TRANSLATE_NOOP("KeyBindings", "Go to Video"), "Ctrl+1"),
     KeyAction(tab_action_id("audiobook"), APP, QT_TRANSLATE_NOOP("KeyBindings", "Go to Audiobooks"), "Ctrl+2"),
@@ -133,14 +149,23 @@ def resolve_bindings(overrides: Mapping[str, str]) -> dict[str, QKeySequence]:
     ignored; ``""`` unbinds; a sequence Qt cannot read as one chord keeps the
     default. Never raises on config content. The Open Settings alias is always
     Ctrl+,; an app action's saved override on Ctrl+, is ignored (C07).
+
+    An action left on its default resolves unbound when another action of its
+    group holds that key through an override: the user's choice wins over a
+    default they never picked, which matters when a release ships a new
+    default on a key the user already took (Shift+Space, "," and "." in the
+    curator). Two shortcuts on one key are activatedAmbiguously in Qt, so
+    keeping both would leave the user's own key dead too.
     """
     keys = {action.id: default_sequence(action.id) for action in KEY_ACTIONS}
     keys[OPEN_SETTINGS_ACTION_ID] = QKeySequence.fromString(OPEN_SETTINGS_KEY, _PORTABLE)
+    overridden: set[str] = set()
     for action_id, text in overrides.items():
         if action_id not in _BY_ID:
             continue
         if text == "":
             keys[action_id] = QKeySequence()
+            overridden.add(action_id)
             continue
         parsed = _parse(text)
         if parsed is None:
@@ -151,6 +176,15 @@ def resolve_bindings(overrides: Mapping[str, str]) -> dict[str, QKeySequence]:
         if _BY_ID[action_id].group == APP and parsed.toString(_PORTABLE) == OPEN_SETTINGS_KEY:
             continue
         keys[action_id] = parsed
+        overridden.add(action_id)
+    for action in KEY_ACTIONS:
+        if action.id in overridden or keys[action.id].isEmpty():
+            continue
+        if any(
+            other.id in overridden and other.group == action.group and keys[other.id] == keys[action.id]
+            for other in KEY_ACTIONS
+        ):
+            keys[action.id] = QKeySequence()
     return keys
 
 

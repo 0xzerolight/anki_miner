@@ -174,6 +174,27 @@ class TestReset:
         editor.slider.reset_requested.emit()
         assert resets == []
 
+    def test_reset_is_the_double_click(self, editor):
+        """The curator's Reset clip key calls reset(); it must do what the double-click does."""
+        _seed(editor, override=(4.0, 9.5))
+        resets: list[bool] = []
+        changes: list[tuple[float, float]] = []
+        editor.clip_reset.connect(lambda: resets.append(True))
+        editor.clip_changed.connect(lambda a, b: changes.append((a, b)))
+
+        editor.reset()
+
+        assert editor.current_window() == DEFAULT
+        assert editor.has_override() is False
+        assert resets == [True]
+        assert changes == []
+
+    def test_reset_without_a_word_does_nothing(self, editor):
+        resets: list[bool] = []
+        editor.clip_reset.connect(lambda: resets.append(True))
+        editor.reset()
+        assert resets == []
+
 
 class TestPlayback:
     def test_play_requests_the_current_window(self, editor):
@@ -202,3 +223,28 @@ class TestPlayback:
         assert editor.play_button.text() != idle
         editor.set_playing(False)
         assert editor.play_button.text() == idle
+
+    def test_toggle_play_plays_the_window_then_stops_it(self, editor):
+        """The curator's play-clip key calls toggle_play(): exactly the play button."""
+        _seed(editor, override=(4.0, 9.5))
+        requests: list[tuple[float, float]] = []
+        stops: list[bool] = []
+        editor.play_requested.connect(lambda a, b: requests.append((a, b)))
+        editor.stop_requested.connect(lambda: stops.append(True))
+
+        editor.toggle_play()
+        editor.set_playing(True)  # what the host does on play_requested
+        editor.toggle_play()
+
+        assert requests == [(4.0, 9.5)]
+        assert stops == [True]
+
+    def test_toggle_play_without_a_word_does_nothing(self, editor):
+        """A disabled strip ignores the key, as its disabled button ignores a click."""
+        editor.clear_word()
+        requests: list[tuple[float, float]] = []
+        editor.play_requested.connect(lambda a, b: requests.append((a, b)))
+
+        editor.toggle_play()
+
+        assert requests == []
