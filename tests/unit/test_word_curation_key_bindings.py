@@ -262,9 +262,10 @@ def test_every_player_key_sits_once_on_every_pane(qtbot, tmp_path) -> None:
     dialog = _four_pane_curator(qtbot, tmp_path, None)
 
     for text in PLAYER_KEYS:
-        for pane in (dialog.table, dialog.player_pane, dialog.sentence_list, dialog.definition_view):
+        for pane in (dialog.table, dialog.player_pane, dialog.sentence_pane, dialog.definition_view):
             assert len(_shortcuts(pane, text)) == 1, (text, type(pane).__name__)
         assert _shortcuts(dialog.player_widget, text) == [], text
+        assert _shortcuts(dialog.sentence_list, text) == [], text
         key = QKeySequence.fromString(text, PORTABLE)
         assert len([sc for sc in dialog.findChildren(QShortcut) if sc.key() == key]) == 4, text
 

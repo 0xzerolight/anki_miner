@@ -247,6 +247,7 @@ class _SubtitleOverlay(QFrame):
 
     def eventFilter(self, watched: QObject | None, event: QEvent | None) -> bool:  # noqa: N802 - Qt override
         """Re-wrap the cue on screen when the picture is resized."""
+        del watched  # installed on the video widget only
         if event is not None and event.type() == QEvent.Type.Resize and not self.isHidden():
             self._fit()
         return False
