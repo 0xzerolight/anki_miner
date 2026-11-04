@@ -1158,6 +1158,254 @@ class TestSecondaryStrip:
             qapp.setPalette(previous_palette)
 
 
+SECONDARY = [(1.0, 2.5, "Hello."), (5.0, 6.0, "Only the translation.")]
+LONG_CUE = "これはとても長い字幕の行で、必ず二行以上に折り返されます。" * 2
+
+
+def _overlay_widget(qtbot, content_style=None) -> SubtitlePlayerWidget:
+    widget = SubtitlePlayerWidget(content_style=content_style, subtitle_overlay=True)
+    qtbot.addWidget(widget)
+    return widget
+
+
+class TestCueOverVideo:
+    """``subtitle_overlay``: the Word Curator draws the cue over the picture.
+
+    Both lines ride one plate over the video (the translation smaller,
+    beneath), and both strips go away while it does. Without a picture, or once
+    rendering fails, the strips carry the cue exactly as before.
+    """
+
+    def test_off_by_default(self, qtbot, fake_mpv):
+        widget = _widget(qtbot)
+        widget.set_source(VIDEO, ENTRIES, secondary_entries=SECONDARY)
+        widget._update_subtitle(1.5)
+        assert widget.subtitle_overlay is None
+        assert widget.subtitle_strip.isVisibleTo(widget)
+        assert widget.secondary_strip.isVisibleTo(widget)
+        assert widget.subtitle_strip.toPlainText() == "こんにちは"
+
+    def test_both_strips_are_hidden_while_it_is_on(self, qtbot, fake_mpv):
+        widget = _overlay_widget(qtbot)
+        widget.set_source(VIDEO, ENTRIES, secondary_entries=SECONDARY)
+        assert widget.subtitle_overlay is not None
+        assert not widget.subtitle_strip.isVisibleTo(widget)
+        assert not widget.secondary_strip.isVisibleTo(widget)
+
+    def test_the_cue_goes_to_the_overlay(self, qtbot, fake_mpv):
+        widget = _overlay_widget(qtbot)
+        widget.set_source(VIDEO, ENTRIES)
+        widget._on_duration(60.0)
+        widget._on_time_pos(1.5)
+        overlay = widget.subtitle_overlay
+        assert overlay.lines() == ("こんにちは", "")
+        assert overlay.isVisibleTo(widget)
+        assert overlay.primary.isVisibleTo(overlay)
+        assert not overlay.secondary.isVisibleTo(overlay)
+        assert widget.subtitle_strip.toPlainText() == ""
+
+    def test_the_translation_sits_beneath_in_the_smaller_app_font(self, qtbot, fake_mpv):
+        from anki_miner.gui.resources.styles import FONT_SIZES
+        from anki_miner.gui.utils.fonts import make_scaled_font
+
+        widget = _overlay_widget(qtbot)
+        widget.set_source(VIDEO, ENTRIES, secondary_entries=SECONDARY)
+        widget._update_subtitle(1.5)
+        overlay = widget.subtitle_overlay
+        assert overlay.lines() == ("こんにちは", "Hello.")
+        assert overlay.secondary.isVisibleTo(overlay)
+        layout = overlay.layout()
+        assert layout.indexOf(overlay.secondary) > layout.indexOf(overlay.primary)
+        assert overlay.secondary.font().pixelSize() == make_scaled_font(FONT_SIZES.body_sm).pixelSize()
+        assert overlay.secondary.font().pixelSize() < overlay.primary.font().pixelSize()
+
+    def test_the_translation_alone_still_shows(self, qtbot, fake_mpv):
+        widget = _overlay_widget(qtbot)
+        widget.set_source(VIDEO, ENTRIES, secondary_entries=SECONDARY)
+        widget._update_subtitle(5.5)
+        overlay = widget.subtitle_overlay
+        assert overlay.lines() == ("", "Only the translation.")
+        assert overlay.isVisibleTo(widget)
+        assert not overlay.primary.isVisibleTo(overlay)
+
+    def test_an_empty_cue_hides_the_plate(self, qtbot, fake_mpv):
+        widget = _overlay_widget(qtbot)
+        widget.set_source(VIDEO, ENTRIES, secondary_entries=SECONDARY)
+        widget._update_subtitle(1.5)
+        widget._update_subtitle(2.7)  # between cues on both tracks
+        assert widget.subtitle_overlay.lines() == ("", "")
+        assert not widget.subtitle_overlay.isVisibleTo(widget)
+
+    def test_a_new_source_clears_the_plate(self, qtbot, fake_mpv):
+        widget = _overlay_widget(qtbot)
+        widget.set_source(VIDEO, ENTRIES, secondary_entries=SECONDARY)
+        widget._update_subtitle(1.5)
+        widget.set_source(VIDEO, ENTRIES)
+        assert widget.subtitle_overlay.lines() == ("", "")
+        assert not widget.subtitle_overlay.isVisibleTo(widget)
+        assert not widget.secondary_strip.isVisibleTo(widget)
+
+    def test_an_unchanged_cue_is_not_refitted_every_tick(self, qtbot, fake_mpv):
+        widget = _overlay_widget(qtbot)
+        widget.set_source(VIDEO, ENTRIES)
+        with patch.object(widget.subtitle_overlay, "_fit") as fit:
+            widget._update_subtitle(1.2)
+            widget._update_subtitle(1.4)
+            widget._update_subtitle(1.6)
+        fit.assert_called_once()
+
+    def test_a_playback_error_shows_on_the_plate(self, qtbot, fake_mpv):
+        widget = _overlay_widget(qtbot)
+        widget.set_source(VIDEO, ENTRIES)
+        widget._on_playback_error("demux failure")
+        assert "demux failure" in widget.subtitle_overlay.lines()[0]
+        assert widget.subtitle_overlay.isVisibleTo(widget)
+
+    def test_the_overlay_shares_the_video_cell_without_becoming_its_child(self, qtbot, fake_mpv):
+        from PyQt6.QtWidgets import QWidget
+
+        widget = _overlay_widget(qtbot)
+        assert widget.subtitle_overlay.parentWidget() is widget
+        assert widget.video_widget.parentWidget() is widget
+        assert widget.video_widget.findChildren(QWidget) == []
+        siblings = [child for child in widget.children() if isinstance(child, QWidget)]
+        assert siblings.index(widget.subtitle_overlay) > siblings.index(widget.video_widget)
+
+    def test_clicks_and_focus_pass_through(self, qtbot, fake_mpv):
+        from PyQt6.QtCore import Qt
+
+        overlay = _overlay_widget(qtbot).subtitle_overlay
+        assert overlay.testAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+        for part in (overlay, overlay.primary, overlay.secondary):
+            assert part.focusPolicy() == Qt.FocusPolicy.NoFocus
+
+    def test_the_cue_keeps_the_strips_face_and_japanese_leading(self, qtbot, fake_mpv):
+        from anki_miner.gui.resources.styles._variables import TYPOGRAPHY
+
+        widget = _overlay_widget(qtbot)
+        widget.set_source(VIDEO, ENTRIES)
+        widget._update_subtitle(1.5)
+        primary = widget.subtitle_overlay.primary
+        assert primary.font() == widget.subtitle_strip.font()
+        assert primary.document().firstBlock().blockFormat().lineHeight() == TYPOGRAPHY.japanese_leading_percent
+
+    def test_another_language_keeps_the_default_leading(self, qtbot, fake_mpv):
+        from anki_miner.languages.registry import get_profile
+
+        widget = _overlay_widget(qtbot, get_profile("zh").content_style)
+        widget.set_source(VIDEO, [(1.0, 2.0, "你好")])
+        widget._update_subtitle(1.5)
+        assert widget.subtitle_overlay.primary.document().firstBlock().blockFormat().lineHeight() == 0.0
+
+    def test_an_rtl_cue_runs_right_to_left(self, qtbot, fake_mpv):
+        """Even one that opens on a Latin name, which a guessed direction gets wrong."""
+        from PyQt6.QtCore import Qt
+
+        from anki_miner.languages.registry import get_profile
+
+        widget = _overlay_widget(qtbot, get_profile("ar").content_style)
+        kitab = "\N{ARABIC LETTER KAF}\N{ARABIC LETTER TEH}\N{ARABIC LETTER ALEF}\N{ARABIC LETTER BEH}"
+        widget.set_source(VIDEO, [(1.0, 2.0, f"Sami {kitab}")])
+        widget._update_subtitle(1.5)
+        primary = widget.subtitle_overlay.primary
+        assert primary.layoutDirection() == Qt.LayoutDirection.RightToLeft
+        assert primary.document().defaultTextOption().textDirection() == Qt.LayoutDirection.RightToLeft
+
+    def test_light_text_on_a_dark_plate_in_any_theme(self, qtbot, qapp, fake_mpv):
+        from PyQt6.QtGui import QPalette
+
+        from anki_miner.gui.resources.styles.theme import Theme
+
+        previous_sheet = qapp.styleSheet()
+        previous_palette = qapp.palette()
+        Theme.apply_to_app(qapp, "light")
+        try:
+            overlay = _overlay_widget(qtbot).subtitle_overlay
+            overlay.ensurePolished()
+            for line in (overlay.primary, overlay.secondary):
+                assert line.palette().color(QPalette.ColorRole.Text).name() == "#ffffff"
+            assert "rgba(0, 0, 0," in overlay.styleSheet()
+        finally:
+            qapp.setStyleSheet(previous_sheet)
+            qapp.setPalette(previous_palette)
+
+    def test_the_plate_wraps_within_most_of_the_picture_width(self, qtbot, fake_mpv):
+        widget = _overlay_widget(qtbot)
+        widget.video_widget.resize(400, 300)
+        widget.set_source(VIDEO, [(1.0, 2.0, LONG_CUE), (3.0, 4.0, "短い")])
+        overlay = widget.subtitle_overlay
+
+        widget._update_subtitle(1.5)
+        margins = overlay.contentsMargins()
+        long_width = overlay.primary.width() + margins.left() + margins.right()
+        long_height = overlay.primary.height()
+        assert long_width <= 0.9 * 400
+        widget._update_subtitle(3.5)
+        assert overlay.primary.width() < long_width / 2  # sized to the line, not the cap
+        assert overlay.primary.height() < long_height  # the long cue wrapped
+
+    def test_the_plate_rewraps_when_the_picture_is_resized(self, qtbot, fake_mpv):
+        from PyQt6.QtCore import QCoreApplication, QSize
+        from PyQt6.QtGui import QResizeEvent
+
+        widget = _overlay_widget(qtbot)
+        video = widget.video_widget
+        video.resize(400, 300)
+        widget.set_source(VIDEO, [(1.0, 2.0, LONG_CUE)])
+        widget._update_subtitle(1.5)
+        overlay = widget.subtitle_overlay
+        wide = overlay.primary.width()
+
+        video.resize(200, 150)
+        QCoreApplication.sendEvent(video, QResizeEvent(QSize(200, 150), QSize(400, 300)))
+        assert overlay.primary.width() < wide
+        assert overlay.primary.width() <= 0.9 * 200
+
+    def test_the_plate_holds_no_room_in_the_layout(self, qtbot, fake_mpv):
+        """A plate fitted to a wide picture must not stop the pane narrowing."""
+        widget = _overlay_widget(qtbot)
+        widget.video_widget.resize(1200, 700)
+        widget.set_source(VIDEO, [(1.0, 2.0, LONG_CUE)])
+        widget._update_subtitle(1.5)
+        assert widget.subtitle_overlay.primary.width() > 600
+        assert widget.minimumSizeHint().width() < 600
+
+    def test_render_failed_gives_the_strips_back(self, qtbot, fake_mpv):
+        widget = _overlay_widget(qtbot)
+        widget.set_source(VIDEO, ENTRIES, secondary_entries=SECONDARY)
+        widget._update_subtitle(1.5)
+        overlay = widget.subtitle_overlay
+
+        widget.video_widget.render_failed.emit("no GL")
+
+        assert widget.subtitle_overlay is None
+        assert not overlay.isVisibleTo(widget)
+        assert widget.subtitle_strip.isVisibleTo(widget)
+        assert widget.secondary_strip.isVisibleTo(widget)
+        # The cue on screen moves across at once, not at the next tick.
+        assert widget.subtitle_strip.toPlainText() == "こんにちは"
+        assert widget.secondary_strip.toPlainText() == "Hello."
+        widget._update_subtitle(3.5)
+        assert widget.subtitle_strip.toPlainText() == "テスト"
+        assert overlay.lines() == ("こんにちは", "Hello.")
+
+    def test_render_failed_without_a_second_track_keeps_its_strip_hidden(self, qtbot, fake_mpv):
+        widget = _overlay_widget(qtbot)
+        widget.set_source(VIDEO, ENTRIES)
+        widget.video_widget.render_failed.emit("no GL")
+        assert widget.subtitle_strip.isVisibleTo(widget)
+        assert not widget.secondary_strip.isVisibleTo(widget)
+
+    def test_no_libmpv_keeps_the_strips(self, qtbot):
+        with patch(f"{MODULE}.mpv_available", return_value=False):
+            widget = _overlay_widget(qtbot)
+        widget.set_source(VIDEO, ENTRIES)
+        widget._update_subtitle(1.5)
+        assert widget.subtitle_overlay is None
+        assert widget.subtitle_strip.isVisibleTo(widget)
+        assert widget.subtitle_strip.toPlainText() == "こんにちは"
+
+
 class TestPreviewSuppressed:
     """The preview turned off by ``ANKI_MINER_NO_VIDEO_PREVIEW``.
 
@@ -1226,6 +1474,17 @@ class TestPreviewSuppressed:
             widget._teardown_player()
         terminate.assert_called_once()
         assert widget.player is None
+
+    def test_an_overlay_request_keeps_the_strips(self, qtbot, fake_mpv):
+        """No picture to float over: the cue and its translation stay in the strips."""
+        widget = _overlay_widget(qtbot)
+        widget.set_source(VIDEO, ENTRIES, secondary_entries=SECONDARY)
+        widget._update_subtitle(1.5)
+        assert widget.subtitle_overlay is None
+        assert widget.subtitle_strip.isVisibleTo(widget)
+        assert widget.secondary_strip.isVisibleTo(widget)
+        assert widget.subtitle_strip.toPlainText() == "こんにちは"
+        assert widget.secondary_strip.toPlainText() == "Hello."
 
 
 class TestMpvUnavailableSkipsGlWidget:

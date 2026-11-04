@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Added
 
 ### Changed
+- **The Word Curator shows subtitles over the video, as Anki Miner for Android does.** The line sits on a dark band at the bottom of the picture, with its translation in a smaller font beneath it when a translation is loaded, and the band is gone between lines. The two lines the subtitle strip under the video kept free now go to the picture. Without a picture (the preview turned off, no libmpv, or a display that cannot draw video) the line stays in the strip under the video, as before. The subtitle viewer keeps its strip.
 
 ### Fixed
 - **Mining again right after a run that synced Anki works.** With "Sync Anki after mining" on, Anki answers the sync request at once and syncs in the background, refusing everything else until it is done, so a command-line run started straight after another failed with `setup_error`. A run now waits up to two minutes for its sync to finish before it ends. A run that still finds Anki syncing reports `busy` on the command line and `ANKI_UNREACHABLE` in `--api`, not a setup problem; the window says Anki is busy syncing.

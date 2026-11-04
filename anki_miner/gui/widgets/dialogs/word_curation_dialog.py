@@ -1927,7 +1927,9 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         # where the player backend may need patching.
         from anki_miner.gui.widgets.subtitle_player_widget import SubtitlePlayerWidget
 
-        widget = SubtitlePlayerWidget(self, content_style=self._content_style)
+        # Subtitles over the picture, as in Anki Miner for Android: the strips
+        # under the video would take their reserved lines from the pane's height.
+        widget = SubtitlePlayerWidget(self, content_style=self._content_style, subtitle_overlay=True)
         ctx = self._media_context
         assert ctx is not None  # guarded by self._show_player
         widget.audio_track_codes = ctx.audio_track_codes
