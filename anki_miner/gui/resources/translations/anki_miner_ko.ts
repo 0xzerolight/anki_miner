@@ -1179,11 +1179,11 @@ Continue anyway?</source>
     </message>
     <message>
         <source>Start the clip at the playhead</source>
-        <translation type="unfinished" />
+        <translation>클립 시작을 재생 위치로 설정</translation>
     </message>
     <message>
         <source>End the clip at the playhead</source>
-        <translation type="unfinished" />
+        <translation>클립 끝을 재생 위치로 설정</translation>
     </message>
     <message>
         <source>Stop the clip preview</source>
@@ -2633,11 +2633,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Ignore suspended cards</source>
-        <translation type="unfinished" />
+        <translation>보류된 카드 무시</translation>
     </message>
     <message>
         <source>Words whose only Anki cards are suspended count as unknown, so they can be mined again.</source>
-        <translation type="unfinished" />
+        <translation>Anki 카드가 모두 보류된 단어는 모르는 단어로 계산되므로 다시 마이닝할 수 있습니다.</translation>
     </message>
     <message>
         <source>Mark words as known by hand</source>
@@ -2681,11 +2681,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Mine numbers with their counters</source>
-        <translation type="unfinished" />
+        <translation>숫자를 조수사와 함께 마이닝</translation>
     </message>
     <message>
         <source>Card 3本 or 4人 as one word, read with its sound changes (さんぼん, よにん) and defined by the counter.</source>
-        <translation type="unfinished" />
+        <translation>3本이나 4人을 한 단어로 카드에 담습니다. 읽기는 음 변화를 반영하고(さんぼん, よにん) 정의는 조수사를 따릅니다.</translation>
     </message>
     <message>
         <source>Blacklist / whitelist words</source>
@@ -5869,7 +5869,7 @@ No files on disk are deleted.</source>
     </message>
     <message>
         <source>Words stay known after their Anki cards are deleted, suspended or moved to an excluded deck. Rebuild (in Manage Known Words) forgets them.</source>
-        <translation type="unfinished" />
+        <translation>Anki 카드가 삭제되거나 보류되거나 제외된 덱으로 옮겨져도 단어는 아는 단어로 유지됩니다. 아는 단어 관리에서 다시 빌드하면 이 단어들을 잊습니다.</translation>
     </message>
     <message>
         <source>Manage Known Words…</source>
@@ -5909,11 +5909,11 @@ No files on disk are deleted.</source>
     </message>
     <message>
         <source>Ignore suspended cards</source>
-        <translation type="unfinished" />
+        <translation>보류된 카드 무시</translation>
     </message>
     <message>
         <source>Words whose only Anki cards are suspended count as unknown: they can be mined again, and Readability and i+1 treat them as new. A note with any unsuspended card still counts as known.</source>
-        <translation type="unfinished" />
+        <translation>Anki 카드가 모두 보류된 단어는 모르는 단어로 계산됩니다. 다시 마이닝할 수 있으며, 난이도와 i+1에서는 새 단어로 취급됩니다. 보류되지 않은 카드가 하나라도 있는 노트는 여전히 아는 단어로 계산됩니다.</translation>
     </message>
     <message>
         <source>Word Lists</source>
@@ -5993,15 +5993,15 @@ No files on disk are deleted.</source>
     </message>
     <message>
         <source>Numbers</source>
-        <translation type="unfinished" />
+        <translation>숫자</translation>
     </message>
     <message>
         <source>Mine numbers with their counters</source>
-        <translation type="unfinished" />
+        <translation>숫자를 조수사와 함께 마이닝</translation>
     </message>
     <message>
         <source>Make a card for a number and its counter, read with its sound changes (3本 さんぼん, 4人 よにん), defined by the counter. One card per number.</source>
-        <translation type="unfinished" />
+        <translation>숫자와 조수사로 카드를 만듭니다. 읽기는 음 변화를 반영하고(3本 さんぼん, 4人 よにん) 정의는 조수사를 따릅니다. 숫자마다 카드 한 장입니다.</translation>
     </message>
     <message>
         <source>Reading</source>
@@ -6463,55 +6463,55 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Play just this clip</source>
-        <translation type="unfinished">이 클립만 재생</translation>
+        <translation>이 클립만 재생</translation>
     </message>
     <message>
         <source>Step one frame back</source>
-        <translation type="unfinished">한 프레임 뒤로</translation>
+        <translation>한 프레임 뒤로</translation>
     </message>
     <message>
         <source>Step one frame forward</source>
-        <translation type="unfinished">한 프레임 앞으로</translation>
+        <translation>한 프레임 앞으로</translation>
     </message>
     <message>
         <source>Add the previous line</source>
-        <translation type="unfinished" />
+        <translation>이전 줄 추가</translation>
     </message>
     <message>
         <source>Add the next line</source>
-        <translation type="unfinished" />
+        <translation>다음 줄 추가</translation>
     </message>
     <message>
         <source>Reset lines</source>
-        <translation type="unfinished">줄 재설정</translation>
+        <translation>줄 재설정</translation>
     </message>
     <message>
         <source>Use current frame</source>
-        <translation type="unfinished">현재 프레임 사용</translation>
+        <translation>현재 프레임 사용</translation>
     </message>
     <message>
         <source>Reset frame</source>
-        <translation type="unfinished">프레임 재설정</translation>
+        <translation>프레임 재설정</translation>
     </message>
     <message>
         <source>Reset clip</source>
-        <translation type="unfinished" />
+        <translation>클립 재설정</translation>
     </message>
     <message>
         <source>Previous sentence</source>
-        <translation type="unfinished" />
+        <translation>이전 문장</translation>
     </message>
     <message>
         <source>Next sentence</source>
-        <translation type="unfinished" />
+        <translation>다음 문장</translation>
     </message>
     <message>
         <source>Start the clip at the playhead</source>
-        <translation type="unfinished" />
+        <translation>클립 시작을 재생 위치로 설정</translation>
     </message>
     <message>
         <source>End the clip at the playhead</source>
-        <translation type="unfinished" />
+        <translation>클립 끝을 재생 위치로 설정</translation>
     </message>
     <message>
         <source>Usage Guide</source>
@@ -7966,7 +7966,7 @@ Words to add: %3. Continue?</source>
     <message>
         <source>Downloads mokuro and its OCR engine into Anki Miner's folder — about 3 GB, up to 7 GB with NVIDIA GPU support.</source>
         <extracomment>Install/Reinstall's tooltip; "Download OCR model" swaps in its own.</extracomment>
-        <translation type="unfinished" />
+        <translation>mokuro와 OCR 엔진을 Anki Miner 폴더에 다운로드합니다 — 약 3GB, NVIDIA GPU 지원 시 최대 7GB.</translation>
     </message>
     <message>
         <source>Not available on this platform</source>
@@ -9216,11 +9216,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Lines with exactly two new words.</source>
-        <translation type="unfinished" />
+        <translation>새 단어가 정확히 둘인 줄입니다.</translation>
     </message>
     <message>
         <source>Lines with three or more new words.</source>
-        <translation type="unfinished" />
+        <translation>새 단어가 셋 이상인 줄입니다.</translation>
     </message>
     <message>
         <source>Check Readability</source>
@@ -12245,7 +12245,7 @@ Your installed resources and your theme are kept.</source>
     <name>SubtitleRetimer</name>
     <message>
         <source>the reference subtitle has no dialogue lines</source>
-        <translation type="unfinished" />
+        <translation>기준 자막에 대사 줄이 없음</translation>
     </message>
     <message>
         <source>Ignoring %1 non-dialogue lines during alignment.</source>

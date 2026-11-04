@@ -1179,11 +1179,11 @@ Vẫn tiếp tục?</translation>
     </message>
     <message>
         <source>Start the clip at the playhead</source>
-        <translation type="unfinished" />
+        <translation>Đặt điểm đầu đoạn âm thanh tại vị trí phát</translation>
     </message>
     <message>
         <source>End the clip at the playhead</source>
-        <translation type="unfinished" />
+        <translation>Đặt điểm cuối đoạn âm thanh tại vị trí phát</translation>
     </message>
     <message>
         <source>Stop the clip preview</source>
@@ -2633,11 +2633,11 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>Ignore suspended cards</source>
-        <translation type="unfinished" />
+        <translation>Bỏ qua thẻ bị tạm ngưng</translation>
     </message>
     <message>
         <source>Words whose only Anki cards are suspended count as unknown, so they can be mined again.</source>
-        <translation type="unfinished" />
+        <translation>Các từ mà mọi thẻ Anki đều bị tạm ngưng được tính là chưa biết, nên có thể khai thác lại.</translation>
     </message>
     <message>
         <source>Mark words as known by hand</source>
@@ -2681,11 +2681,11 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>Mine numbers with their counters</source>
-        <translation type="unfinished" />
+        <translation>Khai thác số kèm lượng từ</translation>
     </message>
     <message>
         <source>Card 3本 or 4人 as one word, read with its sound changes (さんぼん, よにん) and defined by the counter.</source>
-        <translation type="unfinished" />
+        <translation>Tạo thẻ cho 3本 hoặc 4人 như một từ, đọc theo biến âm (さんぼん, よにん) và định nghĩa theo lượng từ.</translation>
     </message>
     <message>
         <source>Blacklist / whitelist words</source>
@@ -5869,7 +5869,7 @@ Không có tệp nào trên ổ đĩa bị xóa.</translation>
     </message>
     <message>
         <source>Words stay known after their Anki cards are deleted, suspended or moved to an excluded deck. Rebuild (in Manage Known Words) forgets them.</source>
-        <translation type="unfinished" />
+        <translation>Từ vẫn được tính là đã biết sau khi thẻ Anki của chúng bị xóa, tạm ngưng hoặc chuyển sang bộ thẻ bị loại trừ. Dựng lại (trong Quản lý từ đã biết) sẽ quên chúng.</translation>
     </message>
     <message>
         <source>Manage Known Words…</source>
@@ -5909,11 +5909,11 @@ Không có tệp nào trên ổ đĩa bị xóa.</translation>
     </message>
     <message>
         <source>Ignore suspended cards</source>
-        <translation type="unfinished" />
+        <translation>Bỏ qua thẻ bị tạm ngưng</translation>
     </message>
     <message>
         <source>Words whose only Anki cards are suspended count as unknown: they can be mined again, and Readability and i+1 treat them as new. A note with any unsuspended card still counts as known.</source>
-        <translation type="unfinished" />
+        <translation>Các từ mà mọi thẻ Anki đều bị tạm ngưng được tính là chưa biết: có thể khai thác lại, và Độ dễ đọc cùng i+1 coi chúng là từ mới. Ghi chú có bất kỳ thẻ nào không bị tạm ngưng vẫn được tính là đã biết.</translation>
     </message>
     <message>
         <source>Word Lists</source>
@@ -5993,15 +5993,15 @@ Không có tệp nào trên ổ đĩa bị xóa.</translation>
     </message>
     <message>
         <source>Numbers</source>
-        <translation type="unfinished" />
+        <translation>Số</translation>
     </message>
     <message>
         <source>Mine numbers with their counters</source>
-        <translation type="unfinished" />
+        <translation>Khai thác số kèm lượng từ</translation>
     </message>
     <message>
         <source>Make a card for a number and its counter, read with its sound changes (3本 さんぼん, 4人 よにん), defined by the counter. One card per number.</source>
-        <translation type="unfinished" />
+        <translation>Tạo một thẻ cho số kèm lượng từ, đọc theo biến âm (3本 さんぼん, 4人 よにん), định nghĩa theo lượng từ. Mỗi số một thẻ.</translation>
     </message>
     <message>
         <source>Reading</source>
@@ -6463,55 +6463,55 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>Play just this clip</source>
-        <translation type="unfinished">Chỉ phát đoạn âm thanh này</translation>
+        <translation>Chỉ phát đoạn âm thanh này</translation>
     </message>
     <message>
         <source>Step one frame back</source>
-        <translation type="unfinished">Lùi một khung hình</translation>
+        <translation>Lùi một khung hình</translation>
     </message>
     <message>
         <source>Step one frame forward</source>
-        <translation type="unfinished">Tiến một khung hình</translation>
+        <translation>Tiến một khung hình</translation>
     </message>
     <message>
         <source>Add the previous line</source>
-        <translation type="unfinished" />
+        <translation>Thêm dòng trước</translation>
     </message>
     <message>
         <source>Add the next line</source>
-        <translation type="unfinished" />
+        <translation>Thêm dòng sau</translation>
     </message>
     <message>
         <source>Reset lines</source>
-        <translation type="unfinished">Đặt lại các dòng</translation>
+        <translation>Đặt lại các dòng</translation>
     </message>
     <message>
         <source>Use current frame</source>
-        <translation type="unfinished">Dùng khung hình hiện tại</translation>
+        <translation>Dùng khung hình hiện tại</translation>
     </message>
     <message>
         <source>Reset frame</source>
-        <translation type="unfinished">Đặt lại khung hình</translation>
+        <translation>Đặt lại khung hình</translation>
     </message>
     <message>
         <source>Reset clip</source>
-        <translation type="unfinished" />
+        <translation>Đặt lại đoạn âm thanh</translation>
     </message>
     <message>
         <source>Previous sentence</source>
-        <translation type="unfinished" />
+        <translation>Câu trước</translation>
     </message>
     <message>
         <source>Next sentence</source>
-        <translation type="unfinished" />
+        <translation>Câu sau</translation>
     </message>
     <message>
         <source>Start the clip at the playhead</source>
-        <translation type="unfinished" />
+        <translation>Đặt điểm đầu đoạn âm thanh tại vị trí phát</translation>
     </message>
     <message>
         <source>End the clip at the playhead</source>
-        <translation type="unfinished" />
+        <translation>Đặt điểm cuối đoạn âm thanh tại vị trí phát</translation>
     </message>
     <message>
         <source>Usage Guide</source>
@@ -7966,7 +7966,7 @@ Số từ sẽ thêm: %3. Tiếp tục?</translation>
     <message>
         <source>Downloads mokuro and its OCR engine into Anki Miner's folder — about 3 GB, up to 7 GB with NVIDIA GPU support.</source>
         <extracomment>Install/Reinstall's tooltip; "Download OCR model" swaps in its own.</extracomment>
-        <translation type="unfinished" />
+        <translation>Tải mokuro và công cụ OCR của nó vào thư mục của Anki Miner — khoảng 3 GB, lên đến 7 GB nếu hỗ trợ GPU NVIDIA.</translation>
     </message>
     <message>
         <source>Not available on this platform</source>
@@ -9216,11 +9216,11 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>Lines with exactly two new words.</source>
-        <translation type="unfinished" />
+        <translation>Các dòng có đúng hai từ mới.</translation>
     </message>
     <message>
         <source>Lines with three or more new words.</source>
-        <translation type="unfinished" />
+        <translation>Các dòng có ba từ mới trở lên.</translation>
     </message>
     <message>
         <source>Check Readability</source>
@@ -12245,7 +12245,7 @@ Tài nguyên đã cài đặt và chủ đề của bạn được giữ nguyên
     <name>SubtitleRetimer</name>
     <message>
         <source>the reference subtitle has no dialogue lines</source>
-        <translation type="unfinished" />
+        <translation>phụ đề tham chiếu không có dòng thoại</translation>
     </message>
     <message>
         <source>Ignoring %1 non-dialogue lines during alignment.</source>

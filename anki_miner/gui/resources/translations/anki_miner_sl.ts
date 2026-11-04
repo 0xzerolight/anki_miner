@@ -1185,11 +1185,11 @@ Continue anyway?</source>
     </message>
     <message>
         <source>Start the clip at the playhead</source>
-        <translation type="unfinished" />
+        <translation>Začni posnetek na trenutnem mestu predvajanja</translation>
     </message>
     <message>
         <source>End the clip at the playhead</source>
-        <translation type="unfinished" />
+        <translation>Končaj posnetek na trenutnem mestu predvajanja</translation>
     </message>
     <message>
         <source>Stop the clip preview</source>
@@ -2642,11 +2642,11 @@ Nobena datoteka indeksa ne bo izbrisana.</translation>
     </message>
     <message>
         <source>Ignore suspended cards</source>
-        <translation type="unfinished" />
+        <translation>Prezri suspendirane kartice</translation>
     </message>
     <message>
         <source>Words whose only Anki cards are suspended count as unknown, so they can be mined again.</source>
-        <translation type="unfinished" />
+        <translation>Besede, katerih vse kartice v Anki so suspendirane, štejejo za neznane, zato jih lahko znova zberete.</translation>
     </message>
     <message>
         <source>Mark words as known by hand</source>
@@ -2690,11 +2690,11 @@ Nobena datoteka indeksa ne bo izbrisana.</translation>
     </message>
     <message>
         <source>Mine numbers with their counters</source>
-        <translation type="unfinished" />
+        <translation>Zbiraj števila s klasifikatorji</translation>
     </message>
     <message>
         <source>Card 3本 or 4人 as one word, read with its sound changes (さんぼん, よにん) and defined by the counter.</source>
-        <translation type="unfinished" />
+        <translation>Ustvari kartico za 3本 ali 4人 kot eno besedo, z branjem z glasovnimi spremembami (さんぼん, よにん) in definicijo klasifikatorja.</translation>
     </message>
     <message>
         <source>Blacklist / whitelist words</source>
@@ -5983,7 +5983,7 @@ Nobena datoteka na disku ne bo izbrisana.</translation>
     </message>
     <message>
         <source>Words stay known after their Anki cards are deleted, suspended or moved to an excluded deck. Rebuild (in Manage Known Words) forgets them.</source>
-        <translation type="unfinished" />
+        <translation>Besede ostanejo znane, ko so njihove kartice v Anki izbrisane, suspendirane ali premaknjene v izključen komplet. Znova zgradi zbirko znanih besed (v Upravljaj znane besede) jih pozabi.</translation>
     </message>
     <message>
         <source>Manage Known Words…</source>
@@ -6023,11 +6023,11 @@ Nobena datoteka na disku ne bo izbrisana.</translation>
     </message>
     <message>
         <source>Ignore suspended cards</source>
-        <translation type="unfinished" />
+        <translation>Prezri suspendirane kartice</translation>
     </message>
     <message>
         <source>Words whose only Anki cards are suspended count as unknown: they can be mined again, and Readability and i+1 treat them as new. A note with any unsuspended card still counts as known.</source>
-        <translation type="unfinished" />
+        <translation>Besede, katerih vse kartice v Anki so suspendirane, štejejo za neznane: lahko jih znova zberete, Berljivost in i+1 pa jih obravnavata kot nove. Zapisek z vsaj eno nesuspendirano kartico še vedno šteje za znanega.</translation>
     </message>
     <message>
         <source>Word Lists</source>
@@ -6107,15 +6107,15 @@ Nobena datoteka na disku ne bo izbrisana.</translation>
     </message>
     <message>
         <source>Numbers</source>
-        <translation type="unfinished" />
+        <translation>Števila</translation>
     </message>
     <message>
         <source>Mine numbers with their counters</source>
-        <translation type="unfinished" />
+        <translation>Zbiraj števila s klasifikatorji</translation>
     </message>
     <message>
         <source>Make a card for a number and its counter, read with its sound changes (3本 さんぼん, 4人 よにん), defined by the counter. One card per number.</source>
-        <translation type="unfinished" />
+        <translation>Ustvari kartico za število in njegov klasifikator, z branjem z glasovnimi spremembami (3本 さんぼん, 4人 よにん) in definicijo klasifikatorja. Ena kartica na število.</translation>
     </message>
     <message>
         <source>Reading</source>
@@ -6577,55 +6577,55 @@ Nobena datoteka indeksa ne bo izbrisana.</translation>
     </message>
     <message>
         <source>Play just this clip</source>
-        <translation type="unfinished">Predvajaj samo ta posnetek</translation>
+        <translation>Predvajaj samo ta posnetek</translation>
     </message>
     <message>
         <source>Step one frame back</source>
-        <translation type="unfinished">Eno sličico nazaj</translation>
+        <translation>Eno sličico nazaj</translation>
     </message>
     <message>
         <source>Step one frame forward</source>
-        <translation type="unfinished">Eno sličico naprej</translation>
+        <translation>Eno sličico naprej</translation>
     </message>
     <message>
         <source>Add the previous line</source>
-        <translation type="unfinished" />
+        <translation>Dodaj prejšnjo vrstico</translation>
     </message>
     <message>
         <source>Add the next line</source>
-        <translation type="unfinished" />
+        <translation>Dodaj naslednjo vrstico</translation>
     </message>
     <message>
         <source>Reset lines</source>
-        <translation type="unfinished">Ponastavi vrstice</translation>
+        <translation>Ponastavi vrstice</translation>
     </message>
     <message>
         <source>Use current frame</source>
-        <translation type="unfinished">Uporabi trenutno sličico</translation>
+        <translation>Uporabi trenutno sličico</translation>
     </message>
     <message>
         <source>Reset frame</source>
-        <translation type="unfinished">Ponastavi sličico</translation>
+        <translation>Ponastavi sličico</translation>
     </message>
     <message>
         <source>Reset clip</source>
-        <translation type="unfinished" />
+        <translation>Ponastavi posnetek</translation>
     </message>
     <message>
         <source>Previous sentence</source>
-        <translation type="unfinished" />
+        <translation>Prejšnji stavek</translation>
     </message>
     <message>
         <source>Next sentence</source>
-        <translation type="unfinished" />
+        <translation>Naslednji stavek</translation>
     </message>
     <message>
         <source>Start the clip at the playhead</source>
-        <translation type="unfinished" />
+        <translation>Začni posnetek na trenutnem mestu predvajanja</translation>
     </message>
     <message>
         <source>End the clip at the playhead</source>
-        <translation type="unfinished" />
+        <translation>Končaj posnetek na trenutnem mestu predvajanja</translation>
     </message>
     <message>
         <source>Usage Guide</source>
@@ -8083,7 +8083,7 @@ Besede za dodajanje: %3. Želite nadaljevati?</translation>
     <message>
         <source>Downloads mokuro and its OCR engine into Anki Miner's folder — about 3 GB, up to 7 GB with NVIDIA GPU support.</source>
         <extracomment>Install/Reinstall's tooltip; "Download OCR model" swaps in its own.</extracomment>
-        <translation type="unfinished" />
+        <translation>Prenese mokuro in njegov pogon OCR v mapo programa Anki Miner — približno 3 GB, s podporo za NVIDIA GPU do 7 GB.</translation>
     </message>
     <message>
         <source>Not available on this platform</source>
@@ -9345,11 +9345,11 @@ Nobena datoteka indeksa ne bo izbrisana.</translation>
     </message>
     <message>
         <source>Lines with exactly two new words.</source>
-        <translation type="unfinished" />
+        <translation>Vrstice z natanko dvema novima besedama.</translation>
     </message>
     <message>
         <source>Lines with three or more new words.</source>
-        <translation type="unfinished" />
+        <translation>Vrstice s tremi ali več novimi besedami.</translation>
     </message>
     <message>
         <source>Check Readability</source>
@@ -12392,7 +12392,7 @@ Nameščeni viri in tema se ohranijo.</translation>
     <name>SubtitleRetimer</name>
     <message>
         <source>the reference subtitle has no dialogue lines</source>
-        <translation type="unfinished" />
+        <translation>referenčni podnapisi nimajo vrstic dialoga</translation>
     </message>
     <message>
         <source>Ignoring %1 non-dialogue lines during alignment.</source>

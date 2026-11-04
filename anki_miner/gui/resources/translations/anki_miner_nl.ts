@@ -1181,11 +1181,11 @@ Toch doorgaan?</translation>
     </message>
     <message>
         <source>Start the clip at the playhead</source>
-        <translation type="unfinished" />
+        <translation>Clip laten beginnen bij de afspeelpositie</translation>
     </message>
     <message>
         <source>End the clip at the playhead</source>
-        <translation type="unfinished" />
+        <translation>Clip laten eindigen bij de afspeelpositie</translation>
     </message>
     <message>
         <source>Stop the clip preview</source>
@@ -2636,11 +2636,11 @@ Er worden geen indexbestanden gewist.</translation>
     </message>
     <message>
         <source>Ignore suspended cards</source>
-        <translation type="unfinished" />
+        <translation>Opgeschorte kaarten negeren</translation>
     </message>
     <message>
         <source>Words whose only Anki cards are suspended count as unknown, so they can be mined again.</source>
-        <translation type="unfinished" />
+        <translation>Woorden waarvan alle Anki-kaarten zijn opgeschort, tellen als onbekend, zodat ze opnieuw kunnen worden gemined.</translation>
     </message>
     <message>
         <source>Mark words as known by hand</source>
@@ -2684,11 +2684,11 @@ Er worden geen indexbestanden gewist.</translation>
     </message>
     <message>
         <source>Mine numbers with their counters</source>
-        <translation type="unfinished" />
+        <translation>Getallen met hun telwoorden minen</translation>
     </message>
     <message>
         <source>Card 3本 or 4人 as one word, read with its sound changes (さんぼん, よにん) and defined by the counter.</source>
-        <translation type="unfinished" />
+        <translation>3本 of 4人 als één woord op een kaart zetten, gelezen met de klankveranderingen (さんぼん, よにん) en gedefinieerd via het telwoord.</translation>
     </message>
     <message>
         <source>Blacklist / whitelist words</source>
@@ -5907,7 +5907,7 @@ Er worden geen bestanden van de schijf gewist.</translation>
     </message>
     <message>
         <source>Words stay known after their Anki cards are deleted, suspended or moved to an excluded deck. Rebuild (in Manage Known Words) forgets them.</source>
-        <translation type="unfinished" />
+        <translation>Woorden blijven bekend nadat hun Anki-kaarten zijn verwijderd, opgeschort of naar een uitgesloten stapel zijn verplaatst. Herbouwen (in Bekende woorden beheren) vergeet ze.</translation>
     </message>
     <message>
         <source>Manage Known Words…</source>
@@ -5947,11 +5947,11 @@ Er worden geen bestanden van de schijf gewist.</translation>
     </message>
     <message>
         <source>Ignore suspended cards</source>
-        <translation type="unfinished" />
+        <translation>Opgeschorte kaarten negeren</translation>
     </message>
     <message>
         <source>Words whose only Anki cards are suspended count as unknown: they can be mined again, and Readability and i+1 treat them as new. A note with any unsuspended card still counts as known.</source>
-        <translation type="unfinished" />
+        <translation>Woorden waarvan alle Anki-kaarten zijn opgeschort, tellen als onbekend: ze kunnen opnieuw worden gemined, en Leesbaarheid en i+1 behandelen ze als nieuw. Een notitie met minstens één niet-opgeschorte kaart telt nog steeds als bekend.</translation>
     </message>
     <message>
         <source>Word Lists</source>
@@ -6031,15 +6031,15 @@ Er worden geen bestanden van de schijf gewist.</translation>
     </message>
     <message>
         <source>Numbers</source>
-        <translation type="unfinished" />
+        <translation>Getallen</translation>
     </message>
     <message>
         <source>Mine numbers with their counters</source>
-        <translation type="unfinished" />
+        <translation>Getallen met hun telwoorden minen</translation>
     </message>
     <message>
         <source>Make a card for a number and its counter, read with its sound changes (3本 さんぼん, 4人 よにん), defined by the counter. One card per number.</source>
-        <translation type="unfinished" />
+        <translation>Een kaart maken voor een getal met zijn telwoord, gelezen met de klankveranderingen (3本 さんぼん, 4人 よにん) en gedefinieerd via het telwoord. Eén kaart per getal.</translation>
     </message>
     <message>
         <source>Reading</source>
@@ -6501,55 +6501,55 @@ Er worden geen indexbestanden verwijderd.</translation>
     </message>
     <message>
         <source>Play just this clip</source>
-        <translation type="unfinished">Alleen deze clip afspelen</translation>
+        <translation>Alleen deze clip afspelen</translation>
     </message>
     <message>
         <source>Step one frame back</source>
-        <translation type="unfinished">Eén frame terug</translation>
+        <translation>Eén frame terug</translation>
     </message>
     <message>
         <source>Step one frame forward</source>
-        <translation type="unfinished">Eén frame vooruit</translation>
+        <translation>Eén frame vooruit</translation>
     </message>
     <message>
         <source>Add the previous line</source>
-        <translation type="unfinished" />
+        <translation>Vorige regel toevoegen</translation>
     </message>
     <message>
         <source>Add the next line</source>
-        <translation type="unfinished" />
+        <translation>Volgende regel toevoegen</translation>
     </message>
     <message>
         <source>Reset lines</source>
-        <translation type="unfinished">Regels terugzetten</translation>
+        <translation>Regels terugzetten</translation>
     </message>
     <message>
         <source>Use current frame</source>
-        <translation type="unfinished">Huidig frame gebruiken</translation>
+        <translation>Huidig frame gebruiken</translation>
     </message>
     <message>
         <source>Reset frame</source>
-        <translation type="unfinished">Frame terugzetten</translation>
+        <translation>Frame terugzetten</translation>
     </message>
     <message>
         <source>Reset clip</source>
-        <translation type="unfinished" />
+        <translation>Clip terugzetten</translation>
     </message>
     <message>
         <source>Previous sentence</source>
-        <translation type="unfinished" />
+        <translation>Vorige zin</translation>
     </message>
     <message>
         <source>Next sentence</source>
-        <translation type="unfinished" />
+        <translation>Volgende zin</translation>
     </message>
     <message>
         <source>Start the clip at the playhead</source>
-        <translation type="unfinished" />
+        <translation>Clip laten beginnen bij de afspeelpositie</translation>
     </message>
     <message>
         <source>End the clip at the playhead</source>
-        <translation type="unfinished" />
+        <translation>Clip laten eindigen bij de afspeelpositie</translation>
     </message>
     <message>
         <source>Usage Guide</source>
@@ -8005,7 +8005,7 @@ Woorden om toe te voegen: %3. Doorgaan?</translation>
     <message>
         <source>Downloads mokuro and its OCR engine into Anki Miner's folder — about 3 GB, up to 7 GB with NVIDIA GPU support.</source>
         <extracomment>Install/Reinstall's tooltip; "Download OCR model" swaps in its own.</extracomment>
-        <translation type="unfinished" />
+        <translation>Downloadt mokuro en de OCR-engine naar de map van Anki Miner — ongeveer 3 GB, tot 7 GB met ondersteuning voor NVIDIA-GPU's.</translation>
     </message>
     <message>
         <source>Not available on this platform</source>
@@ -9259,11 +9259,11 @@ Er worden geen indexbestanden verwijderd.</translation>
     </message>
     <message>
         <source>Lines with exactly two new words.</source>
-        <translation type="unfinished" />
+        <translation>Regels met precies twee nieuwe woorden.</translation>
     </message>
     <message>
         <source>Lines with three or more new words.</source>
-        <translation type="unfinished" />
+        <translation>Regels met drie of meer nieuwe woorden.</translation>
     </message>
     <message>
         <source>Check Readability</source>
@@ -12294,7 +12294,7 @@ Je geïnstalleerde bronnen en je thema blijven behouden.</translation>
     <name>SubtitleRetimer</name>
     <message>
         <source>the reference subtitle has no dialogue lines</source>
-        <translation type="unfinished" />
+        <translation>de referentieondertitel heeft geen dialoogregels</translation>
     </message>
     <message>
         <source>Ignoring %1 non-dialogue lines during alignment.</source>

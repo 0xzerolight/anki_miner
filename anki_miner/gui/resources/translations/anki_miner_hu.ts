@@ -1179,11 +1179,11 @@ Folytatja mégis?</translation>
     </message>
     <message>
         <source>Start the clip at the playhead</source>
-        <translation type="unfinished" />
+        <translation>Részlet kezdete a lejátszási pozíciónál</translation>
     </message>
     <message>
         <source>End the clip at the playhead</source>
-        <translation type="unfinished" />
+        <translation>Részlet vége a lejátszási pozíciónál</translation>
     </message>
     <message>
         <source>Stop the clip preview</source>
@@ -2633,11 +2633,11 @@ Indexfájl nem törlődik.</translation>
     </message>
     <message>
         <source>Ignore suspended cards</source>
-        <translation type="unfinished" />
+        <translation>Felfüggesztett kártyák figyelmen kívül hagyása</translation>
     </message>
     <message>
         <source>Words whose only Anki cards are suspended count as unknown, so they can be mined again.</source>
-        <translation type="unfinished" />
+        <translation>Azok a szavak, amelyeknek minden Anki-kártyája fel van függesztve, ismeretlennek számítanak, így újra gyűjthetők.</translation>
     </message>
     <message>
         <source>Mark words as known by hand</source>
@@ -2681,11 +2681,11 @@ Indexfájl nem törlődik.</translation>
     </message>
     <message>
         <source>Mine numbers with their counters</source>
-        <translation type="unfinished" />
+        <translation>Számok gyűjtése számlálószóval</translation>
     </message>
     <message>
         <source>Card 3本 or 4人 as one word, read with its sound changes (さんぼん, よにん) and defined by the counter.</source>
-        <translation type="unfinished" />
+        <translation>A 3本 vagy 4人 egy szóként kerül kártyára, hangváltozásokkal olvasva (さんぼん, よにん), a számlálószó szerint definiálva.</translation>
     </message>
     <message>
         <source>Blacklist / whitelist words</source>
@@ -5869,7 +5869,7 @@ A lemezről nem törlődik fájl.</translation>
     </message>
     <message>
         <source>Words stay known after their Anki cards are deleted, suspended or moved to an excluded deck. Rebuild (in Manage Known Words) forgets them.</source>
-        <translation type="unfinished" />
+        <translation>A szavak ismertek maradnak, miután Anki-kártyáikat törölték, felfüggesztették vagy kizárt pakliba helyezték át. Az Újraépítés (az Ismert szavak kezelése ablakban) elfelejti őket.</translation>
     </message>
     <message>
         <source>Manage Known Words…</source>
@@ -5909,11 +5909,11 @@ A lemezről nem törlődik fájl.</translation>
     </message>
     <message>
         <source>Ignore suspended cards</source>
-        <translation type="unfinished" />
+        <translation>Felfüggesztett kártyák figyelmen kívül hagyása</translation>
     </message>
     <message>
         <source>Words whose only Anki cards are suspended count as unknown: they can be mined again, and Readability and i+1 treat them as new. A note with any unsuspended card still counts as known.</source>
-        <translation type="unfinished" />
+        <translation>Azok a szavak, amelyeknek minden Anki-kártyája fel van függesztve, ismeretlennek számítanak: újra gyűjthetők, és az Olvashatóság és az i+1 újként kezeli őket. Az a jegyzet, amelynek legalább egy kártyája nincs felfüggesztve, továbbra is ismertnek számít.</translation>
     </message>
     <message>
         <source>Word Lists</source>
@@ -5993,15 +5993,15 @@ A lemezről nem törlődik fájl.</translation>
     </message>
     <message>
         <source>Numbers</source>
-        <translation type="unfinished" />
+        <translation>Számok</translation>
     </message>
     <message>
         <source>Mine numbers with their counters</source>
-        <translation type="unfinished" />
+        <translation>Számok gyűjtése számlálószóval</translation>
     </message>
     <message>
         <source>Make a card for a number and its counter, read with its sound changes (3本 さんぼん, 4人 よにん), defined by the counter. One card per number.</source>
-        <translation type="unfinished" />
+        <translation>Kártya készítése egy számhoz és a számlálószavához, hangváltozásokkal olvasva (3本 さんぼん, 4人 よにん), a számlálószó szerint definiálva. Számonként egy kártya.</translation>
     </message>
     <message>
         <source>Reading</source>
@@ -6463,55 +6463,55 @@ Indexfájl nem törlődik.</translation>
     </message>
     <message>
         <source>Play just this clip</source>
-        <translation type="unfinished">Csak ennek a részletnek a lejátszása</translation>
+        <translation>Csak ennek a részletnek a lejátszása</translation>
     </message>
     <message>
         <source>Step one frame back</source>
-        <translation type="unfinished">Egy képkocka vissza</translation>
+        <translation>Egy képkocka vissza</translation>
     </message>
     <message>
         <source>Step one frame forward</source>
-        <translation type="unfinished">Egy képkocka előre</translation>
+        <translation>Egy képkocka előre</translation>
     </message>
     <message>
         <source>Add the previous line</source>
-        <translation type="unfinished" />
+        <translation>Előző sor hozzáadása</translation>
     </message>
     <message>
         <source>Add the next line</source>
-        <translation type="unfinished" />
+        <translation>Következő sor hozzáadása</translation>
     </message>
     <message>
         <source>Reset lines</source>
-        <translation type="unfinished">Sorok visszaállítása</translation>
+        <translation>Sorok visszaállítása</translation>
     </message>
     <message>
         <source>Use current frame</source>
-        <translation type="unfinished">Jelenlegi képkocka használata</translation>
+        <translation>Jelenlegi képkocka használata</translation>
     </message>
     <message>
         <source>Reset frame</source>
-        <translation type="unfinished">Képkocka visszaállítása</translation>
+        <translation>Képkocka visszaállítása</translation>
     </message>
     <message>
         <source>Reset clip</source>
-        <translation type="unfinished" />
+        <translation>Részlet visszaállítása</translation>
     </message>
     <message>
         <source>Previous sentence</source>
-        <translation type="unfinished" />
+        <translation>Előző mondat</translation>
     </message>
     <message>
         <source>Next sentence</source>
-        <translation type="unfinished" />
+        <translation>Következő mondat</translation>
     </message>
     <message>
         <source>Start the clip at the playhead</source>
-        <translation type="unfinished" />
+        <translation>Részlet kezdete a lejátszási pozíciónál</translation>
     </message>
     <message>
         <source>End the clip at the playhead</source>
-        <translation type="unfinished" />
+        <translation>Részlet vége a lejátszási pozíciónál</translation>
     </message>
     <message>
         <source>Usage Guide</source>
@@ -7966,7 +7966,7 @@ Hozzáadandó szavak: %3. Folytatja?</translation>
     <message>
         <source>Downloads mokuro and its OCR engine into Anki Miner's folder — about 3 GB, up to 7 GB with NVIDIA GPU support.</source>
         <extracomment>Install/Reinstall's tooltip; "Download OCR model" swaps in its own.</extracomment>
-        <translation type="unfinished" />
+        <translation>Letölti a mokurót és OCR-motorját az Anki Miner mappájába — kb. 3 GB, NVIDIA GPU-támogatással akár 7 GB.</translation>
     </message>
     <message>
         <source>Not available on this platform</source>
@@ -9216,11 +9216,11 @@ Indexfájl nem törlődik.</translation>
     </message>
     <message>
         <source>Lines with exactly two new words.</source>
-        <translation type="unfinished" />
+        <translation>Pontosan két új szót tartalmazó sorok.</translation>
     </message>
     <message>
         <source>Lines with three or more new words.</source>
-        <translation type="unfinished" />
+        <translation>Három vagy több új szót tartalmazó sorok.</translation>
     </message>
     <message>
         <source>Check Readability</source>
@@ -12245,7 +12245,7 @@ A telepített erőforrások és a téma megmarad.</translation>
     <name>SubtitleRetimer</name>
     <message>
         <source>the reference subtitle has no dialogue lines</source>
-        <translation type="unfinished" />
+        <translation>a referenciafelirat nem tartalmaz párbeszédsorokat</translation>
     </message>
     <message>
         <source>Ignoring %1 non-dialogue lines during alignment.</source>

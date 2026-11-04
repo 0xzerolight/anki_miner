@@ -1179,11 +1179,11 @@ Yine de devam edilsin mi?</translation>
     </message>
     <message>
         <source>Start the clip at the playhead</source>
-        <translation type="unfinished" />
+        <translation>Klibi oynatma konumunda başlat</translation>
     </message>
     <message>
         <source>End the clip at the playhead</source>
-        <translation type="unfinished" />
+        <translation>Klibi oynatma konumunda bitir</translation>
     </message>
     <message>
         <source>Stop the clip preview</source>
@@ -2633,11 +2633,11 @@ Hiçbir dizin dosyası silinmez.</translation>
     </message>
     <message>
         <source>Ignore suspended cards</source>
-        <translation type="unfinished" />
+        <translation>Askıya alınmış kartları yok say</translation>
     </message>
     <message>
         <source>Words whose only Anki cards are suspended count as unknown, so they can be mined again.</source>
-        <translation type="unfinished" />
+        <translation>Anki kartlarının tümü askıya alınmış kelimeler bilinmeyen sayılır, böylece yeniden toplanabilir.</translation>
     </message>
     <message>
         <source>Mark words as known by hand</source>
@@ -2681,11 +2681,11 @@ Hiçbir dizin dosyası silinmez.</translation>
     </message>
     <message>
         <source>Mine numbers with their counters</source>
-        <translation type="unfinished" />
+        <translation>Sayıları sayma sözcükleriyle topla</translation>
     </message>
     <message>
         <source>Card 3本 or 4人 as one word, read with its sound changes (さんぼん, よにん) and defined by the counter.</source>
-        <translation type="unfinished" />
+        <translation>3本 veya 4人'i tek kelime olarak karta ekler; ses değişimleriyle okunur (さんぼん, よにん) ve sayma sözcüğüyle tanımlanır.</translation>
     </message>
     <message>
         <source>Blacklist / whitelist words</source>
@@ -5869,7 +5869,7 @@ Diskteki hiçbir dosya silinmez.</translation>
     </message>
     <message>
         <source>Words stay known after their Anki cards are deleted, suspended or moved to an excluded deck. Rebuild (in Manage Known Words) forgets them.</source>
-        <translation type="unfinished" />
+        <translation>Anki kartları silinse, askıya alınsa veya hariç tutulan bir desteye taşınsa da kelimeler bilinen kalır. Yeniden oluştur (Bilinen Kelimeleri Yönet'te) onları unutur.</translation>
     </message>
     <message>
         <source>Manage Known Words…</source>
@@ -5909,11 +5909,11 @@ Diskteki hiçbir dosya silinmez.</translation>
     </message>
     <message>
         <source>Ignore suspended cards</source>
-        <translation type="unfinished" />
+        <translation>Askıya alınmış kartları yok say</translation>
     </message>
     <message>
         <source>Words whose only Anki cards are suspended count as unknown: they can be mined again, and Readability and i+1 treat them as new. A note with any unsuspended card still counts as known.</source>
-        <translation type="unfinished" />
+        <translation>Anki kartlarının tümü askıya alınmış kelimeler bilinmeyen sayılır: yeniden toplanabilir, Okunabilirlik ve i+1 de onları yeni kabul eder. Askıya alınmamış en az bir kartı olan not yine bilinen sayılır.</translation>
     </message>
     <message>
         <source>Word Lists</source>
@@ -5993,15 +5993,15 @@ Diskteki hiçbir dosya silinmez.</translation>
     </message>
     <message>
         <source>Numbers</source>
-        <translation type="unfinished" />
+        <translation>Sayılar</translation>
     </message>
     <message>
         <source>Mine numbers with their counters</source>
-        <translation type="unfinished" />
+        <translation>Sayıları sayma sözcükleriyle topla</translation>
     </message>
     <message>
         <source>Make a card for a number and its counter, read with its sound changes (3本 さんぼん, 4人 よにん), defined by the counter. One card per number.</source>
-        <translation type="unfinished" />
+        <translation>Bir sayı ve sayma sözcüğü için kart oluşturur; ses değişimleriyle okunur (3本 さんぼん, 4人 よにん) ve sayma sözcüğüyle tanımlanır. Her sayı için bir kart.</translation>
     </message>
     <message>
         <source>Reading</source>
@@ -6463,55 +6463,55 @@ Hiçbir dizin dosyası silinmez.</translation>
     </message>
     <message>
         <source>Play just this clip</source>
-        <translation type="unfinished">Yalnızca bu klibi oynat</translation>
+        <translation>Yalnızca bu klibi oynat</translation>
     </message>
     <message>
         <source>Step one frame back</source>
-        <translation type="unfinished">Bir kare geri git</translation>
+        <translation>Bir kare geri git</translation>
     </message>
     <message>
         <source>Step one frame forward</source>
-        <translation type="unfinished">Bir kare ileri git</translation>
+        <translation>Bir kare ileri git</translation>
     </message>
     <message>
         <source>Add the previous line</source>
-        <translation type="unfinished" />
+        <translation>Önceki satırı ekle</translation>
     </message>
     <message>
         <source>Add the next line</source>
-        <translation type="unfinished" />
+        <translation>Sonraki satırı ekle</translation>
     </message>
     <message>
         <source>Reset lines</source>
-        <translation type="unfinished">Satırları sıfırla</translation>
+        <translation>Satırları sıfırla</translation>
     </message>
     <message>
         <source>Use current frame</source>
-        <translation type="unfinished">Geçerli kareyi kullan</translation>
+        <translation>Geçerli kareyi kullan</translation>
     </message>
     <message>
         <source>Reset frame</source>
-        <translation type="unfinished">Kareyi sıfırla</translation>
+        <translation>Kareyi sıfırla</translation>
     </message>
     <message>
         <source>Reset clip</source>
-        <translation type="unfinished" />
+        <translation>Klibi sıfırla</translation>
     </message>
     <message>
         <source>Previous sentence</source>
-        <translation type="unfinished" />
+        <translation>Önceki cümle</translation>
     </message>
     <message>
         <source>Next sentence</source>
-        <translation type="unfinished" />
+        <translation>Sonraki cümle</translation>
     </message>
     <message>
         <source>Start the clip at the playhead</source>
-        <translation type="unfinished" />
+        <translation>Klibi oynatma konumunda başlat</translation>
     </message>
     <message>
         <source>End the clip at the playhead</source>
-        <translation type="unfinished" />
+        <translation>Klibi oynatma konumunda bitir</translation>
     </message>
     <message>
         <source>Usage Guide</source>
@@ -7966,7 +7966,7 @@ Eklenecek kelimeler: %3. Devam edilsin mi?</translation>
     <message>
         <source>Downloads mokuro and its OCR engine into Anki Miner's folder — about 3 GB, up to 7 GB with NVIDIA GPU support.</source>
         <extracomment>Install/Reinstall's tooltip; "Download OCR model" swaps in its own.</extracomment>
-        <translation type="unfinished" />
+        <translation>mokuro'yu ve OCR motorunu Anki Miner'ın klasörüne indirir — yaklaşık 3 GB, NVIDIA GPU desteğiyle 7 GB'a kadar.</translation>
     </message>
     <message>
         <source>Not available on this platform</source>
@@ -9216,11 +9216,11 @@ Hiçbir dizin dosyası silinmez.</translation>
     </message>
     <message>
         <source>Lines with exactly two new words.</source>
-        <translation type="unfinished" />
+        <translation>Tam olarak iki yeni kelime içeren satırlar.</translation>
     </message>
     <message>
         <source>Lines with three or more new words.</source>
-        <translation type="unfinished" />
+        <translation>Üç veya daha fazla yeni kelime içeren satırlar.</translation>
     </message>
     <message>
         <source>Check Readability</source>
@@ -12245,7 +12245,7 @@ Yüklü kaynaklarınız ve temanız korunur.</translation>
     <name>SubtitleRetimer</name>
     <message>
         <source>the reference subtitle has no dialogue lines</source>
-        <translation type="unfinished" />
+        <translation>referans altyazıda diyalog satırı yok</translation>
     </message>
     <message>
         <source>Ignoring %1 non-dialogue lines during alignment.</source>

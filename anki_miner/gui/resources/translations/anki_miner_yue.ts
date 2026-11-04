@@ -1179,11 +1179,11 @@ Continue anyway?</source>
     </message>
     <message>
         <source>Start the clip at the playhead</source>
-        <translation type="unfinished" />
+        <translation>將片段開頭設喺播放位置</translation>
     </message>
     <message>
         <source>End the clip at the playhead</source>
-        <translation type="unfinished" />
+        <translation>將片段結尾設喺播放位置</translation>
     </message>
     <message>
         <source>Stop the clip preview</source>
@@ -2633,11 +2633,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Ignore suspended cards</source>
-        <translation type="unfinished" />
+        <translation>忽略暫停咗嘅卡片</translation>
     </message>
     <message>
         <source>Words whose only Anki cards are suspended count as unknown, so they can be mined again.</source>
-        <translation type="unfinished" />
+        <translation>所有 Anki 卡片都暫停咗嘅詞語會當做未知，所以可以再採集。</translation>
     </message>
     <message>
         <source>Mark words as known by hand</source>
@@ -2681,11 +2681,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Mine numbers with their counters</source>
-        <translation type="unfinished" />
+        <translation>連量詞一齊採集數字</translation>
     </message>
     <message>
         <source>Card 3本 or 4人 as one word, read with its sound changes (さんぼん, よにん) and defined by the counter.</source>
-        <translation type="unfinished" />
+        <translation>將 3本 或者 4人 當做一個詞語整卡，讀音跟埋音變（さんぼん、よにん），釋義用量詞嘅。</translation>
     </message>
     <message>
         <source>Blacklist / whitelist words</source>
@@ -5869,7 +5869,7 @@ No files on disk are deleted.</source>
     </message>
     <message>
         <source>Words stay known after their Anki cards are deleted, suspended or moved to an excluded deck. Rebuild (in Manage Known Words) forgets them.</source>
-        <translation type="unfinished" />
+        <translation>Anki 卡片刪除咗、暫停咗或者搬咗去排除嘅牌組之後，詞語都會保持已知。喺管理已知詞語重建就會忘記佢哋。</translation>
     </message>
     <message>
         <source>Manage Known Words…</source>
@@ -5909,11 +5909,11 @@ No files on disk are deleted.</source>
     </message>
     <message>
         <source>Ignore suspended cards</source>
-        <translation type="unfinished" />
+        <translation>忽略暫停咗嘅卡片</translation>
     </message>
     <message>
         <source>Words whose only Anki cards are suspended count as unknown: they can be mined again, and Readability and i+1 treat them as new. A note with any unsuspended card still counts as known.</source>
-        <translation type="unfinished" />
+        <translation>所有 Anki 卡片都暫停咗嘅詞語會當做未知：可以再採集，可讀性同 i+1 都會當佢係新詞語。只要筆記有任何一張未暫停嘅卡片，就仍然當做已知。</translation>
     </message>
     <message>
         <source>Word Lists</source>
@@ -5993,15 +5993,15 @@ No files on disk are deleted.</source>
     </message>
     <message>
         <source>Numbers</source>
-        <translation type="unfinished" />
+        <translation>數字</translation>
     </message>
     <message>
         <source>Mine numbers with their counters</source>
-        <translation type="unfinished" />
+        <translation>連量詞一齊採集數字</translation>
     </message>
     <message>
         <source>Make a card for a number and its counter, read with its sound changes (3本 さんぼん, 4人 よにん), defined by the counter. One card per number.</source>
-        <translation type="unfinished" />
+        <translation>為數字同佢嘅量詞整一張卡片，讀音跟埋音變（3本 さんぼん、4人 よにん），釋義用量詞嘅。每個數字一張卡片。</translation>
     </message>
     <message>
         <source>Reading</source>
@@ -6463,55 +6463,55 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Play just this clip</source>
-        <translation type="unfinished">只播呢個片段</translation>
+        <translation>只播呢個片段</translation>
     </message>
     <message>
         <source>Step one frame back</source>
-        <translation type="unfinished">後退一格</translation>
+        <translation>後退一格</translation>
     </message>
     <message>
         <source>Step one frame forward</source>
-        <translation type="unfinished">前進一格</translation>
+        <translation>前進一格</translation>
     </message>
     <message>
         <source>Add the previous line</source>
-        <translation type="unfinished" />
+        <translation>加上一行</translation>
     </message>
     <message>
         <source>Add the next line</source>
-        <translation type="unfinished" />
+        <translation>加下一行</translation>
     </message>
     <message>
         <source>Reset lines</source>
-        <translation type="unfinished">重設行</translation>
+        <translation>重設行</translation>
     </message>
     <message>
         <source>Use current frame</source>
-        <translation type="unfinished">用目前畫面</translation>
+        <translation>用目前畫面</translation>
     </message>
     <message>
         <source>Reset frame</source>
-        <translation type="unfinished">重設畫面</translation>
+        <translation>重設畫面</translation>
     </message>
     <message>
         <source>Reset clip</source>
-        <translation type="unfinished" />
+        <translation>重設片段</translation>
     </message>
     <message>
         <source>Previous sentence</source>
-        <translation type="unfinished" />
+        <translation>上一個例句</translation>
     </message>
     <message>
         <source>Next sentence</source>
-        <translation type="unfinished" />
+        <translation>下一個例句</translation>
     </message>
     <message>
         <source>Start the clip at the playhead</source>
-        <translation type="unfinished" />
+        <translation>將片段開頭設喺播放位置</translation>
     </message>
     <message>
         <source>End the clip at the playhead</source>
-        <translation type="unfinished" />
+        <translation>將片段結尾設喺播放位置</translation>
     </message>
     <message>
         <source>Usage Guide</source>
@@ -7966,7 +7966,7 @@ Words to add: %3. Continue?</source>
     <message>
         <source>Downloads mokuro and its OCR engine into Anki Miner's folder — about 3 GB, up to 7 GB with NVIDIA GPU support.</source>
         <extracomment>Install/Reinstall's tooltip; "Download OCR model" swaps in its own.</extracomment>
-        <translation type="unfinished" />
+        <translation>將 mokuro 同佢嘅 OCR 引擎下載到 Anki Miner 嘅資料夾 — 大約 3 GB，有 NVIDIA GPU 支援就最多 7 GB。</translation>
     </message>
     <message>
         <source>Not available on this platform</source>
@@ -9216,11 +9216,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Lines with exactly two new words.</source>
-        <translation type="unfinished" />
+        <translation>啱啱好得兩個新詞語嘅行。</translation>
     </message>
     <message>
         <source>Lines with three or more new words.</source>
-        <translation type="unfinished" />
+        <translation>有三個或以上新詞語嘅行。</translation>
     </message>
     <message>
         <source>Check Readability</source>
@@ -12245,7 +12245,7 @@ Your installed resources and your theme are kept.</source>
     <name>SubtitleRetimer</name>
     <message>
         <source>the reference subtitle has no dialogue lines</source>
-        <translation type="unfinished" />
+        <translation>參考字幕冇對白行</translation>
     </message>
     <message>
         <source>Ignoring %1 non-dialogue lines during alignment.</source>

@@ -1181,11 +1181,11 @@ Trotzdem fortfahren?</translation>
     </message>
     <message>
         <source>Start the clip at the playhead</source>
-        <translation type="unfinished" />
+        <translation>Clip-Anfang an Abspielposition setzen</translation>
     </message>
     <message>
         <source>End the clip at the playhead</source>
-        <translation type="unfinished" />
+        <translation>Clip-Ende an Abspielposition setzen</translation>
     </message>
     <message>
         <source>Stop the clip preview</source>
@@ -2636,11 +2636,11 @@ Es werden keine Indexdateien gelöscht.</translation>
     </message>
     <message>
         <source>Ignore suspended cards</source>
-        <translation type="unfinished" />
+        <translation>Ausgesetzte Karten ignorieren</translation>
     </message>
     <message>
         <source>Words whose only Anki cards are suspended count as unknown, so they can be mined again.</source>
-        <translation type="unfinished" />
+        <translation>Wörter, deren einzige Anki-Karten ausgesetzt sind, gelten als unbekannt und können erneut gesammelt werden.</translation>
     </message>
     <message>
         <source>Mark words as known by hand</source>
@@ -2684,11 +2684,11 @@ Es werden keine Indexdateien gelöscht.</translation>
     </message>
     <message>
         <source>Mine numbers with their counters</source>
-        <translation type="unfinished" />
+        <translation>Zahlen mit ihren Zählwörtern sammeln</translation>
     </message>
     <message>
         <source>Card 3本 or 4人 as one word, read with its sound changes (さんぼん, よにん) and defined by the counter.</source>
-        <translation type="unfinished" />
+        <translation>3本 oder 4人 als ein Wort auf eine Karte bringen, mit Lautwandel gelesen (さんぼん, よにん) und über das Zählwort definiert.</translation>
     </message>
     <message>
         <source>Blacklist / whitelist words</source>
@@ -5907,7 +5907,7 @@ Es werden keine Dateien von der Festplatte gelöscht.</translation>
     </message>
     <message>
         <source>Words stay known after their Anki cards are deleted, suspended or moved to an excluded deck. Rebuild (in Manage Known Words) forgets them.</source>
-        <translation type="unfinished" />
+        <translation>Wörter bleiben bekannt, nachdem ihre Anki-Karten gelöscht, ausgesetzt oder in einen ausgeschlossenen Stapel verschoben wurden. Neu aufbauen (unter Bekannte Wörter verwalten) vergisst sie.</translation>
     </message>
     <message>
         <source>Manage Known Words…</source>
@@ -5947,11 +5947,11 @@ Es werden keine Dateien von der Festplatte gelöscht.</translation>
     </message>
     <message>
         <source>Ignore suspended cards</source>
-        <translation type="unfinished" />
+        <translation>Ausgesetzte Karten ignorieren</translation>
     </message>
     <message>
         <source>Words whose only Anki cards are suspended count as unknown: they can be mined again, and Readability and i+1 treat them as new. A note with any unsuspended card still counts as known.</source>
-        <translation type="unfinished" />
+        <translation>Wörter, deren einzige Anki-Karten ausgesetzt sind, gelten als unbekannt: sie können erneut gesammelt werden, und Lesbarkeit und i+1 behandeln sie als neu. Eine Notiz mit mindestens einer nicht ausgesetzten Karte gilt weiterhin als bekannt.</translation>
     </message>
     <message>
         <source>Word Lists</source>
@@ -6031,15 +6031,15 @@ Es werden keine Dateien von der Festplatte gelöscht.</translation>
     </message>
     <message>
         <source>Numbers</source>
-        <translation type="unfinished" />
+        <translation>Zahlen</translation>
     </message>
     <message>
         <source>Mine numbers with their counters</source>
-        <translation type="unfinished" />
+        <translation>Zahlen mit ihren Zählwörtern sammeln</translation>
     </message>
     <message>
         <source>Make a card for a number and its counter, read with its sound changes (3本 さんぼん, 4人 よにん), defined by the counter. One card per number.</source>
-        <translation type="unfinished" />
+        <translation>Eine Karte für eine Zahl samt Zählwort erstellen, mit Lautwandel gelesen (3本 さんぼん, 4人 よにん) und über das Zählwort definiert. Eine Karte pro Zahl.</translation>
     </message>
     <message>
         <source>Reading</source>
@@ -6501,55 +6501,55 @@ Es werden keine Indexdateien gelöscht.</translation>
     </message>
     <message>
         <source>Play just this clip</source>
-        <translation type="unfinished">Nur diesen Clip abspielen</translation>
+        <translation>Nur diesen Clip abspielen</translation>
     </message>
     <message>
         <source>Step one frame back</source>
-        <translation type="unfinished">Ein Bild zurück</translation>
+        <translation>Ein Bild zurück</translation>
     </message>
     <message>
         <source>Step one frame forward</source>
-        <translation type="unfinished">Ein Bild vorwärts</translation>
+        <translation>Ein Bild vorwärts</translation>
     </message>
     <message>
         <source>Add the previous line</source>
-        <translation type="unfinished" />
+        <translation>Vorherige Zeile hinzufügen</translation>
     </message>
     <message>
         <source>Add the next line</source>
-        <translation type="unfinished" />
+        <translation>Nächste Zeile hinzufügen</translation>
     </message>
     <message>
         <source>Reset lines</source>
-        <translation type="unfinished">Zeilen zurücksetzen</translation>
+        <translation>Zeilen zurücksetzen</translation>
     </message>
     <message>
         <source>Use current frame</source>
-        <translation type="unfinished">Aktuelles Standbild verwenden</translation>
+        <translation>Aktuelles Standbild verwenden</translation>
     </message>
     <message>
         <source>Reset frame</source>
-        <translation type="unfinished">Standbild zurücksetzen</translation>
+        <translation>Standbild zurücksetzen</translation>
     </message>
     <message>
         <source>Reset clip</source>
-        <translation type="unfinished" />
+        <translation>Clip zurücksetzen</translation>
     </message>
     <message>
         <source>Previous sentence</source>
-        <translation type="unfinished" />
+        <translation>Vorheriger Satz</translation>
     </message>
     <message>
         <source>Next sentence</source>
-        <translation type="unfinished" />
+        <translation>Nächster Satz</translation>
     </message>
     <message>
         <source>Start the clip at the playhead</source>
-        <translation type="unfinished" />
+        <translation>Clip-Anfang an Abspielposition setzen</translation>
     </message>
     <message>
         <source>End the clip at the playhead</source>
-        <translation type="unfinished" />
+        <translation>Clip-Ende an Abspielposition setzen</translation>
     </message>
     <message>
         <source>Usage Guide</source>
@@ -8005,7 +8005,7 @@ Hinzuzufügende Wörter: %3. Fortfahren?</translation>
     <message>
         <source>Downloads mokuro and its OCR engine into Anki Miner's folder — about 3 GB, up to 7 GB with NVIDIA GPU support.</source>
         <extracomment>Install/Reinstall's tooltip; "Download OCR model" swaps in its own.</extracomment>
-        <translation type="unfinished" />
+        <translation>Lädt mokuro und seine OCR-Engine in den Ordner von Anki Miner herunter — etwa 3 GB, mit NVIDIA-GPU-Unterstützung bis zu 7 GB.</translation>
     </message>
     <message>
         <source>Not available on this platform</source>
@@ -9259,11 +9259,11 @@ Es werden keine Indexdateien gelöscht.</translation>
     </message>
     <message>
         <source>Lines with exactly two new words.</source>
-        <translation type="unfinished" />
+        <translation>Zeilen mit genau zwei neuen Wörtern.</translation>
     </message>
     <message>
         <source>Lines with three or more new words.</source>
-        <translation type="unfinished" />
+        <translation>Zeilen mit drei oder mehr neuen Wörtern.</translation>
     </message>
     <message>
         <source>Check Readability</source>
@@ -12294,7 +12294,7 @@ Ihre installierten Ressourcen und Ihr Design bleiben erhalten.</translation>
     <name>SubtitleRetimer</name>
     <message>
         <source>the reference subtitle has no dialogue lines</source>
-        <translation type="unfinished" />
+        <translation>der Referenz-Untertitel enthält keine Dialogzeilen</translation>
     </message>
     <message>
         <source>Ignoring %1 non-dialogue lines during alignment.</source>

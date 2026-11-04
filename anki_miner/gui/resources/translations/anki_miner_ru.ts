@@ -1183,11 +1183,11 @@ Continue anyway?</source>
     </message>
     <message>
         <source>Start the clip at the playhead</source>
-        <translation type="unfinished" />
+        <translation>Начать клип с позиции воспроизведения</translation>
     </message>
     <message>
         <source>End the clip at the playhead</source>
-        <translation type="unfinished" />
+        <translation>Закончить клип на позиции воспроизведения</translation>
     </message>
     <message>
         <source>Stop the clip preview</source>
@@ -2639,11 +2639,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Ignore suspended cards</source>
-        <translation type="unfinished" />
+        <translation>Игнорировать приостановленные карточки</translation>
     </message>
     <message>
         <source>Words whose only Anki cards are suspended count as unknown, so they can be mined again.</source>
-        <translation type="unfinished" />
+        <translation>Слова, у которых все карточки Anki приостановлены, считаются неизвестными, поэтому их можно майнить снова.</translation>
     </message>
     <message>
         <source>Mark words as known by hand</source>
@@ -2687,11 +2687,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Mine numbers with their counters</source>
-        <translation type="unfinished" />
+        <translation>Майнить числа со счётными словами</translation>
     </message>
     <message>
         <source>Card 3本 or 4人 as one word, read with its sound changes (さんぼん, よにん) and defined by the counter.</source>
-        <translation type="unfinished" />
+        <translation>Создаёт карточку для 3本 или 4人 как для одного слова: чтение с учётом звуковых изменений (さんぼん, よにん), определение — по счётному слову.</translation>
     </message>
     <message>
         <source>Blacklist / whitelist words</source>
@@ -5945,7 +5945,7 @@ No files on disk are deleted.</source>
     </message>
     <message>
         <source>Words stay known after their Anki cards are deleted, suspended or moved to an excluded deck. Rebuild (in Manage Known Words) forgets them.</source>
-        <translation type="unfinished" />
+        <translation>Слова остаются известными после того, как их карточки Anki удалены, приостановлены или перемещены в исключённую колоду. «Перестроить БД известных слов» (в окне «Управление известными словами») забывает их.</translation>
     </message>
     <message>
         <source>Manage Known Words…</source>
@@ -5985,11 +5985,11 @@ No files on disk are deleted.</source>
     </message>
     <message>
         <source>Ignore suspended cards</source>
-        <translation type="unfinished" />
+        <translation>Игнорировать приостановленные карточки</translation>
     </message>
     <message>
         <source>Words whose only Anki cards are suspended count as unknown: they can be mined again, and Readability and i+1 treat them as new. A note with any unsuspended card still counts as known.</source>
-        <translation type="unfinished" />
+        <translation>Слова, у которых все карточки Anki приостановлены, считаются неизвестными: их можно майнить снова, а «Понятность» и i+1 считают их новыми. Заметка, у которой есть хотя бы одна неприостановленная карточка, по-прежнему считается известной.</translation>
     </message>
     <message>
         <source>Word Lists</source>
@@ -6069,15 +6069,15 @@ No files on disk are deleted.</source>
     </message>
     <message>
         <source>Numbers</source>
-        <translation type="unfinished" />
+        <translation>Числа</translation>
     </message>
     <message>
         <source>Mine numbers with their counters</source>
-        <translation type="unfinished" />
+        <translation>Майнить числа со счётными словами</translation>
     </message>
     <message>
         <source>Make a card for a number and its counter, read with its sound changes (3本 さんぼん, 4人 よにん), defined by the counter. One card per number.</source>
-        <translation type="unfinished" />
+        <translation>Создаёт карточку для числа и его счётного слова с чтением с учётом звуковых изменений (3本 さんぼん, 4人 よにん) и определением по счётному слову. Одна карточка на каждое число.</translation>
     </message>
     <message>
         <source>Reading</source>
@@ -6539,55 +6539,55 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Play just this clip</source>
-        <translation type="unfinished">Воспроизвести только этот клип</translation>
+        <translation>Воспроизвести только этот клип</translation>
     </message>
     <message>
         <source>Step one frame back</source>
-        <translation type="unfinished">Шаг на один кадр назад</translation>
+        <translation>Шаг на один кадр назад</translation>
     </message>
     <message>
         <source>Step one frame forward</source>
-        <translation type="unfinished">Шаг на один кадр вперёд</translation>
+        <translation>Шаг на один кадр вперёд</translation>
     </message>
     <message>
         <source>Add the previous line</source>
-        <translation type="unfinished" />
+        <translation>Добавить предыдущую строку</translation>
     </message>
     <message>
         <source>Add the next line</source>
-        <translation type="unfinished" />
+        <translation>Добавить следующую строку</translation>
     </message>
     <message>
         <source>Reset lines</source>
-        <translation type="unfinished">Сбросить строки</translation>
+        <translation>Сбросить строки</translation>
     </message>
     <message>
         <source>Use current frame</source>
-        <translation type="unfinished">Использовать текущий кадр</translation>
+        <translation>Использовать текущий кадр</translation>
     </message>
     <message>
         <source>Reset frame</source>
-        <translation type="unfinished">Сбросить кадр</translation>
+        <translation>Сбросить кадр</translation>
     </message>
     <message>
         <source>Reset clip</source>
-        <translation type="unfinished" />
+        <translation>Сбросить клип</translation>
     </message>
     <message>
         <source>Previous sentence</source>
-        <translation type="unfinished" />
+        <translation>Предыдущее предложение</translation>
     </message>
     <message>
         <source>Next sentence</source>
-        <translation type="unfinished" />
+        <translation>Следующее предложение</translation>
     </message>
     <message>
         <source>Start the clip at the playhead</source>
-        <translation type="unfinished" />
+        <translation>Начать клип с позиции воспроизведения</translation>
     </message>
     <message>
         <source>End the clip at the playhead</source>
-        <translation type="unfinished" />
+        <translation>Закончить клип на позиции воспроизведения</translation>
     </message>
     <message>
         <source>Usage Guide</source>
@@ -8044,7 +8044,7 @@ Words to add: %3. Continue?</source>
     <message>
         <source>Downloads mokuro and its OCR engine into Anki Miner's folder — about 3 GB, up to 7 GB with NVIDIA GPU support.</source>
         <extracomment>Install/Reinstall's tooltip; "Download OCR model" swaps in its own.</extracomment>
-        <translation type="unfinished" />
+        <translation>Загружает mokuro и его OCR-движок в папку Anki Miner — около 3 ГБ, до 7 ГБ с поддержкой GPU NVIDIA.</translation>
     </message>
     <message>
         <source>Not available on this platform</source>
@@ -9302,11 +9302,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Lines with exactly two new words.</source>
-        <translation type="unfinished" />
+        <translation>Строки ровно с двумя новыми словами.</translation>
     </message>
     <message>
         <source>Lines with three or more new words.</source>
-        <translation type="unfinished" />
+        <translation>Строки с тремя и более новыми словами.</translation>
     </message>
     <message>
         <source>Check Readability</source>
@@ -12343,7 +12343,7 @@ Your installed resources and your theme are kept.</source>
     <name>SubtitleRetimer</name>
     <message>
         <source>the reference subtitle has no dialogue lines</source>
-        <translation type="unfinished" />
+        <translation>в опорных субтитрах нет строк диалога</translation>
     </message>
     <message>
         <source>Ignoring %1 non-dialogue lines during alignment.</source>

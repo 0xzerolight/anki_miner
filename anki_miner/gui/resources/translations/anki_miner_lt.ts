@@ -1183,11 +1183,11 @@ Vis tiek tęsti?</translation>
     </message>
     <message>
         <source>Start the clip at the playhead</source>
-        <translation type="unfinished" />
+        <translation>Pradėti įrašą nuo grojimo vietos</translation>
     </message>
     <message>
         <source>End the clip at the playhead</source>
-        <translation type="unfinished" />
+        <translation>Baigti įrašą ties grojimo vieta</translation>
     </message>
     <message>
         <source>Stop the clip preview</source>
@@ -2639,11 +2639,11 @@ Indekso failai neištrinami.</translation>
     </message>
     <message>
         <source>Ignore suspended cards</source>
-        <translation type="unfinished" />
+        <translation>Ignoruoti sustabdytas korteles</translation>
     </message>
     <message>
         <source>Words whose only Anki cards are suspended count as unknown, so they can be mined again.</source>
-        <translation type="unfinished" />
+        <translation>Žodžiai, kurių visos Anki kortelės sustabdytos, laikomi nežinomais, todėl juos galima rinkti iš naujo.</translation>
     </message>
     <message>
         <source>Mark words as known by hand</source>
@@ -2687,11 +2687,11 @@ Indekso failai neištrinami.</translation>
     </message>
     <message>
         <source>Mine numbers with their counters</source>
-        <translation type="unfinished" />
+        <translation>Rinkti skaičius su klasifikatoriais</translation>
     </message>
     <message>
         <source>Card 3本 or 4人 as one word, read with its sound changes (さんぼん, よにん) and defined by the counter.</source>
-        <translation type="unfinished" />
+        <translation>Sukuria kortelę 3本 ar 4人 kaip vienam žodžiui, su tarimu, apimančiu garsų kaitą (さんぼん, よにん), ir klasifikatoriaus apibrėžtimi.</translation>
     </message>
     <message>
         <source>Blacklist / whitelist words</source>
@@ -5945,7 +5945,7 @@ Failai diske neištrinami.</translation>
     </message>
     <message>
         <source>Words stay known after their Anki cards are deleted, suspended or moved to an excluded deck. Rebuild (in Manage Known Words) forgets them.</source>
-        <translation type="unfinished" />
+        <translation>Žodžiai lieka žinomi, kai jų Anki kortelės ištrinamos, sustabdomos ar perkeliamos į neįtrauktą kaladę. Perkurti žinomų žodžių DB (lange Tvarkyti žinomus žodžius) juos pamiršta.</translation>
     </message>
     <message>
         <source>Manage Known Words…</source>
@@ -5985,11 +5985,11 @@ Failai diske neištrinami.</translation>
     </message>
     <message>
         <source>Ignore suspended cards</source>
-        <translation type="unfinished" />
+        <translation>Ignoruoti sustabdytas korteles</translation>
     </message>
     <message>
         <source>Words whose only Anki cards are suspended count as unknown: they can be mined again, and Readability and i+1 treat them as new. A note with any unsuspended card still counts as known.</source>
-        <translation type="unfinished" />
+        <translation>Žodžiai, kurių visos Anki kortelės sustabdytos, laikomi nežinomais: juos galima rinkti iš naujo, o Skaitomumas ir i+1 juos laiko naujais. Užrašas, turintis bent vieną nesustabdytą kortelę, vis tiek laikomas žinomu.</translation>
     </message>
     <message>
         <source>Word Lists</source>
@@ -6069,15 +6069,15 @@ Failai diske neištrinami.</translation>
     </message>
     <message>
         <source>Numbers</source>
-        <translation type="unfinished" />
+        <translation>Skaičiai</translation>
     </message>
     <message>
         <source>Mine numbers with their counters</source>
-        <translation type="unfinished" />
+        <translation>Rinkti skaičius su klasifikatoriais</translation>
     </message>
     <message>
         <source>Make a card for a number and its counter, read with its sound changes (3本 さんぼん, 4人 よにん), defined by the counter. One card per number.</source>
-        <translation type="unfinished" />
+        <translation>Sukuria kortelę skaičiui su jo klasifikatoriumi, su tarimu, apimančiu garsų kaitą (3本 さんぼん, 4人 よにん), ir klasifikatoriaus apibrėžtimi. Viena kortelė kiekvienam skaičiui.</translation>
     </message>
     <message>
         <source>Reading</source>
@@ -6539,55 +6539,55 @@ Indekso failai neištrinami.</translation>
     </message>
     <message>
         <source>Play just this clip</source>
-        <translation type="unfinished">Groti tik šį įrašą</translation>
+        <translation>Groti tik šį įrašą</translation>
     </message>
     <message>
         <source>Step one frame back</source>
-        <translation type="unfinished">Vienu kadru atgal</translation>
+        <translation>Vienu kadru atgal</translation>
     </message>
     <message>
         <source>Step one frame forward</source>
-        <translation type="unfinished">Vienu kadru pirmyn</translation>
+        <translation>Vienu kadru pirmyn</translation>
     </message>
     <message>
         <source>Add the previous line</source>
-        <translation type="unfinished" />
+        <translation>Pridėti ankstesnę eilutę</translation>
     </message>
     <message>
         <source>Add the next line</source>
-        <translation type="unfinished" />
+        <translation>Pridėti kitą eilutę</translation>
     </message>
     <message>
         <source>Reset lines</source>
-        <translation type="unfinished">Atstatyti eilutes</translation>
+        <translation>Atstatyti eilutes</translation>
     </message>
     <message>
         <source>Use current frame</source>
-        <translation type="unfinished">Naudoti dabartinį kadrą</translation>
+        <translation>Naudoti dabartinį kadrą</translation>
     </message>
     <message>
         <source>Reset frame</source>
-        <translation type="unfinished">Atstatyti kadrą</translation>
+        <translation>Atstatyti kadrą</translation>
     </message>
     <message>
         <source>Reset clip</source>
-        <translation type="unfinished" />
+        <translation>Atstatyti įrašą</translation>
     </message>
     <message>
         <source>Previous sentence</source>
-        <translation type="unfinished" />
+        <translation>Ankstesnis sakinys</translation>
     </message>
     <message>
         <source>Next sentence</source>
-        <translation type="unfinished" />
+        <translation>Kitas sakinys</translation>
     </message>
     <message>
         <source>Start the clip at the playhead</source>
-        <translation type="unfinished" />
+        <translation>Pradėti įrašą nuo grojimo vietos</translation>
     </message>
     <message>
         <source>End the clip at the playhead</source>
-        <translation type="unfinished" />
+        <translation>Baigti įrašą ties grojimo vieta</translation>
     </message>
     <message>
         <source>Usage Guide</source>
@@ -8044,7 +8044,7 @@ Pridedamų žodžių: %3. Tęsti?</translation>
     <message>
         <source>Downloads mokuro and its OCR engine into Anki Miner's folder — about 3 GB, up to 7 GB with NVIDIA GPU support.</source>
         <extracomment>Install/Reinstall's tooltip; "Download OCR model" swaps in its own.</extracomment>
-        <translation type="unfinished" />
+        <translation>Atsisiunčia mokuro ir jo OCR variklį į Anki Miner aplanką — apie 3 GB, iki 7 GB su NVIDIA GPU palaikymu.</translation>
     </message>
     <message>
         <source>Not available on this platform</source>
@@ -9302,11 +9302,11 @@ Indekso failai neištrinami.</translation>
     </message>
     <message>
         <source>Lines with exactly two new words.</source>
-        <translation type="unfinished" />
+        <translation>Eilutės su lygiai dviem naujais žodžiais.</translation>
     </message>
     <message>
         <source>Lines with three or more new words.</source>
-        <translation type="unfinished" />
+        <translation>Eilutės su trimis ar daugiau naujų žodžių.</translation>
     </message>
     <message>
         <source>Check Readability</source>
@@ -12343,7 +12343,7 @@ Your installed resources and your theme are kept.</source>
     <name>SubtitleRetimer</name>
     <message>
         <source>the reference subtitle has no dialogue lines</source>
-        <translation type="unfinished" />
+        <translation>atskaitos subtitruose nėra dialogo eilučių</translation>
     </message>
     <message>
         <source>Ignoring %1 non-dialogue lines during alignment.</source>

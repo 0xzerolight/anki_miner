@@ -1179,11 +1179,11 @@ Continue anyway?</source>
     </message>
     <message>
         <source>Start the clip at the playhead</source>
-        <translation type="unfinished" />
+        <translation>ตั้งจุดเริ่มคลิปที่ตำแหน่งเล่น</translation>
     </message>
     <message>
         <source>End the clip at the playhead</source>
-        <translation type="unfinished" />
+        <translation>ตั้งจุดสิ้นสุดคลิปที่ตำแหน่งเล่น</translation>
     </message>
     <message>
         <source>Stop the clip preview</source>
@@ -2633,11 +2633,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Ignore suspended cards</source>
-        <translation type="unfinished" />
+        <translation>ละเว้นการ์ดที่ถูกระงับ</translation>
     </message>
     <message>
         <source>Words whose only Anki cards are suspended count as unknown, so they can be mined again.</source>
-        <translation type="unfinished" />
+        <translation>คำที่การ์ด Anki ทั้งหมดถูกระงับจะนับว่ายังไม่รู้ จึงขุดใหม่ได้</translation>
     </message>
     <message>
         <source>Mark words as known by hand</source>
@@ -2681,11 +2681,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Mine numbers with their counters</source>
-        <translation type="unfinished" />
+        <translation>ขุดตัวเลขพร้อมลักษณนาม</translation>
     </message>
     <message>
         <source>Card 3本 or 4人 as one word, read with its sound changes (さんぼん, よにん) and defined by the counter.</source>
-        <translation type="unfinished" />
+        <translation>ทำ 3本 หรือ 4人 เป็นการ์ดเดียวในฐานะคำเดียว อ่านตามการเปลี่ยนเสียง (さんぼん, よにん) และใช้ความหมายของลักษณนาม</translation>
     </message>
     <message>
         <source>Blacklist / whitelist words</source>
@@ -5869,7 +5869,7 @@ No files on disk are deleted.</source>
     </message>
     <message>
         <source>Words stay known after their Anki cards are deleted, suspended or moved to an excluded deck. Rebuild (in Manage Known Words) forgets them.</source>
-        <translation type="unfinished" />
+        <translation>คำยังนับว่ารู้แล้วหลังการ์ด Anki ถูกลบ ถูกระงับ หรือถูกย้ายไปยังสำรับที่ยกเว้น การสร้างใหม่ (ใน จัดการคำที่รู้แล้ว) จะลืมคำเหล่านี้</translation>
     </message>
     <message>
         <source>Manage Known Words…</source>
@@ -5909,11 +5909,11 @@ No files on disk are deleted.</source>
     </message>
     <message>
         <source>Ignore suspended cards</source>
-        <translation type="unfinished" />
+        <translation>ละเว้นการ์ดที่ถูกระงับ</translation>
     </message>
     <message>
         <source>Words whose only Anki cards are suspended count as unknown: they can be mined again, and Readability and i+1 treat them as new. A note with any unsuspended card still counts as known.</source>
-        <translation type="unfinished" />
+        <translation>คำที่การ์ด Anki ทั้งหมดถูกระงับจะนับว่ายังไม่รู้: ขุดใหม่ได้ และความอ่านง่ายกับ i+1 จะถือเป็นคำใหม่ โน้ตที่มีการ์ดที่ไม่ถูกระงับอย่างน้อยหนึ่งใบยังนับว่ารู้แล้ว</translation>
     </message>
     <message>
         <source>Word Lists</source>
@@ -5993,15 +5993,15 @@ No files on disk are deleted.</source>
     </message>
     <message>
         <source>Numbers</source>
-        <translation type="unfinished" />
+        <translation>ตัวเลข</translation>
     </message>
     <message>
         <source>Mine numbers with their counters</source>
-        <translation type="unfinished" />
+        <translation>ขุดตัวเลขพร้อมลักษณนาม</translation>
     </message>
     <message>
         <source>Make a card for a number and its counter, read with its sound changes (3本 さんぼん, 4人 よにん), defined by the counter. One card per number.</source>
-        <translation type="unfinished" />
+        <translation>สร้างการ์ดสำหรับตัวเลขพร้อมลักษณนาม อ่านตามการเปลี่ยนเสียง (3本 さんぼん, 4人 よにん) และใช้ความหมายของลักษณนาม หนึ่งการ์ดต่อหนึ่งตัวเลข</translation>
     </message>
     <message>
         <source>Reading</source>
@@ -6463,55 +6463,55 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Play just this clip</source>
-        <translation type="unfinished">เล่นเฉพาะคลิปนี้</translation>
+        <translation>เล่นเฉพาะคลิปนี้</translation>
     </message>
     <message>
         <source>Step one frame back</source>
-        <translation type="unfinished">ถอยหลังหนึ่งเฟรม</translation>
+        <translation>ถอยหลังหนึ่งเฟรม</translation>
     </message>
     <message>
         <source>Step one frame forward</source>
-        <translation type="unfinished">เดินหน้าหนึ่งเฟรม</translation>
+        <translation>เดินหน้าหนึ่งเฟรม</translation>
     </message>
     <message>
         <source>Add the previous line</source>
-        <translation type="unfinished" />
+        <translation>เพิ่มบรรทัดก่อนหน้า</translation>
     </message>
     <message>
         <source>Add the next line</source>
-        <translation type="unfinished" />
+        <translation>เพิ่มบรรทัดถัดไป</translation>
     </message>
     <message>
         <source>Reset lines</source>
-        <translation type="unfinished">รีเซ็ตบรรทัด</translation>
+        <translation>รีเซ็ตบรรทัด</translation>
     </message>
     <message>
         <source>Use current frame</source>
-        <translation type="unfinished">ใช้เฟรมปัจจุบัน</translation>
+        <translation>ใช้เฟรมปัจจุบัน</translation>
     </message>
     <message>
         <source>Reset frame</source>
-        <translation type="unfinished">รีเซ็ตเฟรม</translation>
+        <translation>รีเซ็ตเฟรม</translation>
     </message>
     <message>
         <source>Reset clip</source>
-        <translation type="unfinished" />
+        <translation>รีเซ็ตคลิป</translation>
     </message>
     <message>
         <source>Previous sentence</source>
-        <translation type="unfinished" />
+        <translation>ประโยคก่อนหน้า</translation>
     </message>
     <message>
         <source>Next sentence</source>
-        <translation type="unfinished" />
+        <translation>ประโยคถัดไป</translation>
     </message>
     <message>
         <source>Start the clip at the playhead</source>
-        <translation type="unfinished" />
+        <translation>ตั้งจุดเริ่มคลิปที่ตำแหน่งเล่น</translation>
     </message>
     <message>
         <source>End the clip at the playhead</source>
-        <translation type="unfinished" />
+        <translation>ตั้งจุดสิ้นสุดคลิปที่ตำแหน่งเล่น</translation>
     </message>
     <message>
         <source>Usage Guide</source>
@@ -7966,7 +7966,7 @@ Words to add: %3. Continue?</source>
     <message>
         <source>Downloads mokuro and its OCR engine into Anki Miner's folder — about 3 GB, up to 7 GB with NVIDIA GPU support.</source>
         <extracomment>Install/Reinstall's tooltip; "Download OCR model" swaps in its own.</extracomment>
-        <translation type="unfinished" />
+        <translation>ดาวน์โหลด mokuro และเอนจิน OCR ลงในโฟลเดอร์ของ Anki Miner — ประมาณ 3 GB หรือสูงสุด 7 GB หากรองรับ GPU ของ NVIDIA</translation>
     </message>
     <message>
         <source>Not available on this platform</source>
@@ -9216,11 +9216,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Lines with exactly two new words.</source>
-        <translation type="unfinished" />
+        <translation>บรรทัดที่มีคำใหม่สองคำพอดี</translation>
     </message>
     <message>
         <source>Lines with three or more new words.</source>
-        <translation type="unfinished" />
+        <translation>บรรทัดที่มีคำใหม่ตั้งแต่สามคำขึ้นไป</translation>
     </message>
     <message>
         <source>Check Readability</source>
@@ -12245,7 +12245,7 @@ Your installed resources and your theme are kept.</source>
     <name>SubtitleRetimer</name>
     <message>
         <source>the reference subtitle has no dialogue lines</source>
-        <translation type="unfinished" />
+        <translation>คำบรรยายอ้างอิงไม่มีบรรทัดบทพูด</translation>
     </message>
     <message>
         <source>Ignoring %1 non-dialogue lines during alignment.</source>

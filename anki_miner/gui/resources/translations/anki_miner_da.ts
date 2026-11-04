@@ -1181,11 +1181,11 @@ Vil du fortsætte alligevel?</translation>
     </message>
     <message>
         <source>Start the clip at the playhead</source>
-        <translation type="unfinished" />
+        <translation>Start klippet ved afspilningspositionen</translation>
     </message>
     <message>
         <source>End the clip at the playhead</source>
-        <translation type="unfinished" />
+        <translation>Afslut klippet ved afspilningspositionen</translation>
     </message>
     <message>
         <source>Stop the clip preview</source>
@@ -2636,11 +2636,11 @@ Ingen indeksfiler slettes.</translation>
     </message>
     <message>
         <source>Ignore suspended cards</source>
-        <translation type="unfinished" />
+        <translation>Ignorér suspenderede kort</translation>
     </message>
     <message>
         <source>Words whose only Anki cards are suspended count as unknown, so they can be mined again.</source>
-        <translation type="unfinished" />
+        <translation>Ord, hvis eneste Anki-kort er suspenderede, regnes som ukendte, så de kan udvindes igen.</translation>
     </message>
     <message>
         <source>Mark words as known by hand</source>
@@ -2684,11 +2684,11 @@ Ingen indeksfiler slettes.</translation>
     </message>
     <message>
         <source>Mine numbers with their counters</source>
-        <translation type="unfinished" />
+        <translation>Udvind tal med deres tælleord</translation>
     </message>
     <message>
         <source>Card 3本 or 4人 as one word, read with its sound changes (さんぼん, よにん) and defined by the counter.</source>
-        <translation type="unfinished" />
+        <translation>Lav kort af 3本 eller 4人 som ét ord, læst med lydændringerne (さんぼん, よにん) og defineret ud fra tælleordet.</translation>
     </message>
     <message>
         <source>Blacklist / whitelist words</source>
@@ -5907,7 +5907,7 @@ Ingen filer på disken slettes.</translation>
     </message>
     <message>
         <source>Words stay known after their Anki cards are deleted, suspended or moved to an excluded deck. Rebuild (in Manage Known Words) forgets them.</source>
-        <translation type="unfinished" />
+        <translation>Ord forbliver kendte, efter at deres Anki-kort er slettet, suspenderet eller flyttet til et udeladt kortsæt. Genopbyg (under Administrer kendte ord) glemmer dem.</translation>
     </message>
     <message>
         <source>Manage Known Words…</source>
@@ -5947,11 +5947,11 @@ Ingen filer på disken slettes.</translation>
     </message>
     <message>
         <source>Ignore suspended cards</source>
-        <translation type="unfinished" />
+        <translation>Ignorér suspenderede kort</translation>
     </message>
     <message>
         <source>Words whose only Anki cards are suspended count as unknown: they can be mined again, and Readability and i+1 treat them as new. A note with any unsuspended card still counts as known.</source>
-        <translation type="unfinished" />
+        <translation>Ord, hvis eneste Anki-kort er suspenderede, regnes som ukendte: de kan udvindes igen, og Læsbarhed og i+1 behandler dem som nye. En note med mindst ét ikke-suspenderet kort regnes stadig som kendt.</translation>
     </message>
     <message>
         <source>Word Lists</source>
@@ -6031,15 +6031,15 @@ Ingen filer på disken slettes.</translation>
     </message>
     <message>
         <source>Numbers</source>
-        <translation type="unfinished" />
+        <translation>Tal</translation>
     </message>
     <message>
         <source>Mine numbers with their counters</source>
-        <translation type="unfinished" />
+        <translation>Udvind tal med deres tælleord</translation>
     </message>
     <message>
         <source>Make a card for a number and its counter, read with its sound changes (3本 さんぼん, 4人 よにん), defined by the counter. One card per number.</source>
-        <translation type="unfinished" />
+        <translation>Lav et kort for et tal og dets tælleord, læst med lydændringerne (3本 さんぼん, 4人 よにん) og defineret ud fra tælleordet. Ét kort pr. tal.</translation>
     </message>
     <message>
         <source>Reading</source>
@@ -6501,55 +6501,55 @@ Ingen indeksfiler slettes.</translation>
     </message>
     <message>
         <source>Play just this clip</source>
-        <translation type="unfinished">Afspil kun dette klip</translation>
+        <translation>Afspil kun dette klip</translation>
     </message>
     <message>
         <source>Step one frame back</source>
-        <translation type="unfinished">Gå ét billede tilbage</translation>
+        <translation>Gå ét billede tilbage</translation>
     </message>
     <message>
         <source>Step one frame forward</source>
-        <translation type="unfinished">Gå ét billede frem</translation>
+        <translation>Gå ét billede frem</translation>
     </message>
     <message>
         <source>Add the previous line</source>
-        <translation type="unfinished" />
+        <translation>Tilføj forrige linje</translation>
     </message>
     <message>
         <source>Add the next line</source>
-        <translation type="unfinished" />
+        <translation>Tilføj næste linje</translation>
     </message>
     <message>
         <source>Reset lines</source>
-        <translation type="unfinished">Nulstil linjer</translation>
+        <translation>Nulstil linjer</translation>
     </message>
     <message>
         <source>Use current frame</source>
-        <translation type="unfinished">Brug aktuelt billede</translation>
+        <translation>Brug aktuelt billede</translation>
     </message>
     <message>
         <source>Reset frame</source>
-        <translation type="unfinished">Nulstil billede</translation>
+        <translation>Nulstil billede</translation>
     </message>
     <message>
         <source>Reset clip</source>
-        <translation type="unfinished" />
+        <translation>Nulstil klip</translation>
     </message>
     <message>
         <source>Previous sentence</source>
-        <translation type="unfinished" />
+        <translation>Forrige sætning</translation>
     </message>
     <message>
         <source>Next sentence</source>
-        <translation type="unfinished" />
+        <translation>Næste sætning</translation>
     </message>
     <message>
         <source>Start the clip at the playhead</source>
-        <translation type="unfinished" />
+        <translation>Start klippet ved afspilningspositionen</translation>
     </message>
     <message>
         <source>End the clip at the playhead</source>
-        <translation type="unfinished" />
+        <translation>Afslut klippet ved afspilningspositionen</translation>
     </message>
     <message>
         <source>Usage Guide</source>
@@ -8005,7 +8005,7 @@ Ord, der tilføjes: %3. Vil du fortsætte?</translation>
     <message>
         <source>Downloads mokuro and its OCR engine into Anki Miner's folder — about 3 GB, up to 7 GB with NVIDIA GPU support.</source>
         <extracomment>Install/Reinstall's tooltip; "Download OCR model" swaps in its own.</extracomment>
-        <translation type="unfinished" />
+        <translation>Henter mokuro og dets OCR-motor til Anki Miners mappe — ca. 3 GB, op til 7 GB med understøttelse af NVIDIA GPU.</translation>
     </message>
     <message>
         <source>Not available on this platform</source>
@@ -9259,11 +9259,11 @@ Ingen indeksfiler slettes.</translation>
     </message>
     <message>
         <source>Lines with exactly two new words.</source>
-        <translation type="unfinished" />
+        <translation>Linjer med præcis to nye ord.</translation>
     </message>
     <message>
         <source>Lines with three or more new words.</source>
-        <translation type="unfinished" />
+        <translation>Linjer med tre eller flere nye ord.</translation>
     </message>
     <message>
         <source>Check Readability</source>
@@ -12294,7 +12294,7 @@ Dine installerede ressourcer og dit tema bevares.</translation>
     <name>SubtitleRetimer</name>
     <message>
         <source>the reference subtitle has no dialogue lines</source>
-        <translation type="unfinished" />
+        <translation>referenceunderteksten har ingen dialoglinjer</translation>
     </message>
     <message>
         <source>Ignoring %1 non-dialogue lines during alignment.</source>

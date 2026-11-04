@@ -1181,11 +1181,11 @@ Continue anyway?</source>
     </message>
     <message>
         <source>Start the clip at the playhead</source>
-        <translation type="unfinished" />
+        <translation>Έναρξη αποσπάσματος στη θέση αναπαραγωγής</translation>
     </message>
     <message>
         <source>End the clip at the playhead</source>
-        <translation type="unfinished" />
+        <translation>Τέλος αποσπάσματος στη θέση αναπαραγωγής</translation>
     </message>
     <message>
         <source>Stop the clip preview</source>
@@ -2636,11 +2636,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Ignore suspended cards</source>
-        <translation type="unfinished" />
+        <translation>Παράβλεψη καρτών σε αναστολή</translation>
     </message>
     <message>
         <source>Words whose only Anki cards are suspended count as unknown, so they can be mined again.</source>
-        <translation type="unfinished" />
+        <translation>Οι λέξεις των οποίων όλες οι κάρτες στο Anki είναι σε αναστολή μετρούν ως άγνωστες, ώστε να μπορούν να εξορυχτούν ξανά.</translation>
     </message>
     <message>
         <source>Mark words as known by hand</source>
@@ -2684,11 +2684,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Mine numbers with their counters</source>
-        <translation type="unfinished" />
+        <translation>Εξόρυξη αριθμών μαζί με τις λέξεις μέτρησης</translation>
     </message>
     <message>
         <source>Card 3本 or 4人 as one word, read with its sound changes (さんぼん, よにん) and defined by the counter.</source>
-        <translation type="unfinished" />
+        <translation>Δημιουργία κάρτας για το 3本 ή το 4人 ως μία λέξη, με ανάγνωση που περιλαμβάνει τις ηχητικές αλλαγές (さんぼん, よにん) και ορισμό από τη λέξη μέτρησης.</translation>
     </message>
     <message>
         <source>Blacklist / whitelist words</source>
@@ -5907,7 +5907,7 @@ No files on disk are deleted.</source>
     </message>
     <message>
         <source>Words stay known after their Anki cards are deleted, suspended or moved to an excluded deck. Rebuild (in Manage Known Words) forgets them.</source>
-        <translation type="unfinished" />
+        <translation>Οι λέξεις παραμένουν γνωστές αφού οι κάρτες τους στο Anki διαγραφούν, τεθούν σε αναστολή ή μετακινηθούν σε εξαιρεμένη τράπουλα. Η Αναδημιουργία (στη Διαχείριση γνωστών λέξεων) τις ξεχνά.</translation>
     </message>
     <message>
         <source>Manage Known Words…</source>
@@ -5947,11 +5947,11 @@ No files on disk are deleted.</source>
     </message>
     <message>
         <source>Ignore suspended cards</source>
-        <translation type="unfinished" />
+        <translation>Παράβλεψη καρτών σε αναστολή</translation>
     </message>
     <message>
         <source>Words whose only Anki cards are suspended count as unknown: they can be mined again, and Readability and i+1 treat them as new. A note with any unsuspended card still counts as known.</source>
-        <translation type="unfinished" />
+        <translation>Οι λέξεις των οποίων όλες οι κάρτες στο Anki είναι σε αναστολή μετρούν ως άγνωστες: μπορούν να εξορυχτούν ξανά, και η Αναγνωσιμότητα και το i+1 τις αντιμετωπίζουν ως νέες. Μια σημείωση με έστω μία κάρτα εκτός αναστολής εξακολουθεί να μετρά ως γνωστή.</translation>
     </message>
     <message>
         <source>Word Lists</source>
@@ -6031,15 +6031,15 @@ No files on disk are deleted.</source>
     </message>
     <message>
         <source>Numbers</source>
-        <translation type="unfinished" />
+        <translation>Αριθμοί</translation>
     </message>
     <message>
         <source>Mine numbers with their counters</source>
-        <translation type="unfinished" />
+        <translation>Εξόρυξη αριθμών μαζί με τις λέξεις μέτρησης</translation>
     </message>
     <message>
         <source>Make a card for a number and its counter, read with its sound changes (3本 さんぼん, 4人 よにん), defined by the counter. One card per number.</source>
-        <translation type="unfinished" />
+        <translation>Δημιουργία κάρτας για έναν αριθμό και τη λέξη μέτρησής του, με ανάγνωση που περιλαμβάνει τις ηχητικές αλλαγές (3本 さんぼん, 4人 よにん) και ορισμό από τη λέξη μέτρησης. Μία κάρτα ανά αριθμό.</translation>
     </message>
     <message>
         <source>Reading</source>
@@ -6501,55 +6501,55 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Play just this clip</source>
-        <translation type="unfinished">Αναπαραγωγή μόνο αυτού του αποσπάσματος</translation>
+        <translation>Αναπαραγωγή μόνο αυτού του αποσπάσματος</translation>
     </message>
     <message>
         <source>Step one frame back</source>
-        <translation type="unfinished">Ένα καρέ πίσω</translation>
+        <translation>Ένα καρέ πίσω</translation>
     </message>
     <message>
         <source>Step one frame forward</source>
-        <translation type="unfinished">Ένα καρέ μπροστά</translation>
+        <translation>Ένα καρέ μπροστά</translation>
     </message>
     <message>
         <source>Add the previous line</source>
-        <translation type="unfinished" />
+        <translation>Προσθήκη προηγούμενης γραμμής</translation>
     </message>
     <message>
         <source>Add the next line</source>
-        <translation type="unfinished" />
+        <translation>Προσθήκη επόμενης γραμμής</translation>
     </message>
     <message>
         <source>Reset lines</source>
-        <translation type="unfinished">Επαναφορά γραμμών</translation>
+        <translation>Επαναφορά γραμμών</translation>
     </message>
     <message>
         <source>Use current frame</source>
-        <translation type="unfinished">Χρήση τρέχοντος καρέ</translation>
+        <translation>Χρήση τρέχοντος καρέ</translation>
     </message>
     <message>
         <source>Reset frame</source>
-        <translation type="unfinished">Επαναφορά καρέ</translation>
+        <translation>Επαναφορά καρέ</translation>
     </message>
     <message>
         <source>Reset clip</source>
-        <translation type="unfinished" />
+        <translation>Επαναφορά αποσπάσματος</translation>
     </message>
     <message>
         <source>Previous sentence</source>
-        <translation type="unfinished" />
+        <translation>Προηγούμενη πρόταση</translation>
     </message>
     <message>
         <source>Next sentence</source>
-        <translation type="unfinished" />
+        <translation>Επόμενη πρόταση</translation>
     </message>
     <message>
         <source>Start the clip at the playhead</source>
-        <translation type="unfinished" />
+        <translation>Έναρξη αποσπάσματος στη θέση αναπαραγωγής</translation>
     </message>
     <message>
         <source>End the clip at the playhead</source>
-        <translation type="unfinished" />
+        <translation>Τέλος αποσπάσματος στη θέση αναπαραγωγής</translation>
     </message>
     <message>
         <source>Usage Guide</source>
@@ -8005,7 +8005,7 @@ Words to add: %3. Continue?</source>
     <message>
         <source>Downloads mokuro and its OCR engine into Anki Miner's folder — about 3 GB, up to 7 GB with NVIDIA GPU support.</source>
         <extracomment>Install/Reinstall's tooltip; "Download OCR model" swaps in its own.</extracomment>
-        <translation type="unfinished" />
+        <translation>Κατεβάζει το mokuro και τη μηχανή OCR του στον φάκελο του Anki Miner — περίπου 3 GB, έως 7 GB με υποστήριξη GPU NVIDIA.</translation>
     </message>
     <message>
         <source>Not available on this platform</source>
@@ -9259,11 +9259,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Lines with exactly two new words.</source>
-        <translation type="unfinished" />
+        <translation>Γραμμές με ακριβώς δύο νέες λέξεις.</translation>
     </message>
     <message>
         <source>Lines with three or more new words.</source>
-        <translation type="unfinished" />
+        <translation>Γραμμές με τρεις ή περισσότερες νέες λέξεις.</translation>
     </message>
     <message>
         <source>Check Readability</source>
@@ -12294,7 +12294,7 @@ Your installed resources and your theme are kept.</source>
     <name>SubtitleRetimer</name>
     <message>
         <source>the reference subtitle has no dialogue lines</source>
-        <translation type="unfinished" />
+        <translation>οι υπότιτλοι αναφοράς δεν έχουν γραμμές διαλόγου</translation>
     </message>
     <message>
         <source>Ignoring %1 non-dialogue lines during alignment.</source>

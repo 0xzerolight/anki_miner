@@ -1179,11 +1179,11 @@ Continue anyway?</source>
     </message>
     <message>
         <source>Start the clip at the playhead</source>
-        <translation type="unfinished" />
+        <translation>شروع کلیپ از نقطه پخش</translation>
     </message>
     <message>
         <source>End the clip at the playhead</source>
-        <translation type="unfinished" />
+        <translation>پایان کلیپ در نقطه پخش</translation>
     </message>
     <message>
         <source>Stop the clip preview</source>
@@ -2633,11 +2633,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Ignore suspended cards</source>
-        <translation type="unfinished" />
+        <translation>نادیده گرفتن کارت‌های معلق</translation>
     </message>
     <message>
         <source>Words whose only Anki cards are suspended count as unknown, so they can be mined again.</source>
-        <translation type="unfinished" />
+        <translation>واژه‌هایی که همه کارت‌های Anki آن‌ها معلق است ناشناخته به شمار می‌آیند، پس می‌توان دوباره استخراجشان کرد.</translation>
     </message>
     <message>
         <source>Mark words as known by hand</source>
@@ -2681,11 +2681,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Mine numbers with their counters</source>
-        <translation type="unfinished" />
+        <translation>استخراج عددها همراه با شمارنده‌ها</translation>
     </message>
     <message>
         <source>Card 3本 or 4人 as one word, read with its sound changes (さんぼん, よにん) and defined by the counter.</source>
-        <translation type="unfinished" />
+        <translation>ساخت کارت برای 3本 یا 4人 به‌عنوان یک واژه، با خوانشی همراه با تغییرات آوایی (さんぼん، よにん) و تعریف شمارنده.</translation>
     </message>
     <message>
         <source>Blacklist / whitelist words</source>
@@ -5869,7 +5869,7 @@ No files on disk are deleted.</source>
     </message>
     <message>
         <source>Words stay known after their Anki cards are deleted, suspended or moved to an excluded deck. Rebuild (in Manage Known Words) forgets them.</source>
-        <translation type="unfinished" />
+        <translation>واژه‌ها پس از حذف، معلق شدن یا انتقال کارت‌هایشان در Anki به دسته‌ای مستثنا شناخته‌شده می‌مانند. بازسازی پایگاه داده واژه‌های شناخته‌شده (در مدیریت واژه‌های شناخته‌شده) آن‌ها را فراموش می‌کند.</translation>
     </message>
     <message>
         <source>Manage Known Words…</source>
@@ -5909,11 +5909,11 @@ No files on disk are deleted.</source>
     </message>
     <message>
         <source>Ignore suspended cards</source>
-        <translation type="unfinished" />
+        <translation>نادیده گرفتن کارت‌های معلق</translation>
     </message>
     <message>
         <source>Words whose only Anki cards are suspended count as unknown: they can be mined again, and Readability and i+1 treat them as new. A note with any unsuspended card still counts as known.</source>
-        <translation type="unfinished" />
+        <translation>واژه‌هایی که همه کارت‌های Anki آن‌ها معلق است ناشناخته به شمار می‌آیند: می‌توان دوباره استخراجشان کرد و خوانایی و i+1 آن‌ها را جدید در نظر می‌گیرند. یادداشتی که هر کارت غیرمعلقی داشته باشد همچنان شناخته‌شده به شمار می‌آید.</translation>
     </message>
     <message>
         <source>Word Lists</source>
@@ -5993,15 +5993,15 @@ No files on disk are deleted.</source>
     </message>
     <message>
         <source>Numbers</source>
-        <translation type="unfinished" />
+        <translation>عددها</translation>
     </message>
     <message>
         <source>Mine numbers with their counters</source>
-        <translation type="unfinished" />
+        <translation>استخراج عددها همراه با شمارنده‌ها</translation>
     </message>
     <message>
         <source>Make a card for a number and its counter, read with its sound changes (3本 さんぼん, 4人 よにん), defined by the counter. One card per number.</source>
-        <translation type="unfinished" />
+        <translation>ساخت کارت برای عدد و شمارنده‌اش، با خوانشی همراه با تغییرات آوایی (3本 さんぼん، 4人 よにん) و تعریف شمارنده. یک کارت برای هر عدد.</translation>
     </message>
     <message>
         <source>Reading</source>
@@ -6463,55 +6463,55 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Play just this clip</source>
-        <translation type="unfinished">پخش فقط همین کلیپ</translation>
+        <translation>پخش فقط همین کلیپ</translation>
     </message>
     <message>
         <source>Step one frame back</source>
-        <translation type="unfinished">یک فریم به عقب</translation>
+        <translation>یک فریم به عقب</translation>
     </message>
     <message>
         <source>Step one frame forward</source>
-        <translation type="unfinished">یک فریم به جلو</translation>
+        <translation>یک فریم به جلو</translation>
     </message>
     <message>
         <source>Add the previous line</source>
-        <translation type="unfinished" />
+        <translation>افزودن سطر قبلی</translation>
     </message>
     <message>
         <source>Add the next line</source>
-        <translation type="unfinished" />
+        <translation>افزودن سطر بعدی</translation>
     </message>
     <message>
         <source>Reset lines</source>
-        <translation type="unfinished">بازنشانی سطرها</translation>
+        <translation>بازنشانی سطرها</translation>
     </message>
     <message>
         <source>Use current frame</source>
-        <translation type="unfinished">استفاده از فریم فعلی</translation>
+        <translation>استفاده از فریم فعلی</translation>
     </message>
     <message>
         <source>Reset frame</source>
-        <translation type="unfinished">بازنشانی فریم</translation>
+        <translation>بازنشانی فریم</translation>
     </message>
     <message>
         <source>Reset clip</source>
-        <translation type="unfinished" />
+        <translation>بازنشانی کلیپ</translation>
     </message>
     <message>
         <source>Previous sentence</source>
-        <translation type="unfinished" />
+        <translation>جمله قبلی</translation>
     </message>
     <message>
         <source>Next sentence</source>
-        <translation type="unfinished" />
+        <translation>جمله بعدی</translation>
     </message>
     <message>
         <source>Start the clip at the playhead</source>
-        <translation type="unfinished" />
+        <translation>شروع کلیپ از نقطه پخش</translation>
     </message>
     <message>
         <source>End the clip at the playhead</source>
-        <translation type="unfinished" />
+        <translation>پایان کلیپ در نقطه پخش</translation>
     </message>
     <message>
         <source>Usage Guide</source>
@@ -7966,7 +7966,7 @@ Words to add: %3. Continue?</source>
     <message>
         <source>Downloads mokuro and its OCR engine into Anki Miner's folder — about 3 GB, up to 7 GB with NVIDIA GPU support.</source>
         <extracomment>Install/Reinstall's tooltip; "Download OCR model" swaps in its own.</extracomment>
-        <translation type="unfinished" />
+        <translation>‏mokuro و موتور OCR آن را در پوشه Anki Miner دانلود می‌کند — حدود 3 GB، و با پشتیبانی GPU از NVIDIA تا 7 GB.</translation>
     </message>
     <message>
         <source>Not available on this platform</source>
@@ -9216,11 +9216,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Lines with exactly two new words.</source>
-        <translation type="unfinished" />
+        <translation>سطرهایی با دقیقاً دو واژه جدید.</translation>
     </message>
     <message>
         <source>Lines with three or more new words.</source>
-        <translation type="unfinished" />
+        <translation>سطرهایی با سه واژه جدید یا بیشتر.</translation>
     </message>
     <message>
         <source>Check Readability</source>
@@ -12245,7 +12245,7 @@ Your installed resources and your theme are kept.</source>
     <name>SubtitleRetimer</name>
     <message>
         <source>the reference subtitle has no dialogue lines</source>
-        <translation type="unfinished" />
+        <translation>زیرنویس مرجع هیچ سطر گفت‌وگویی ندارد</translation>
     </message>
     <message>
         <source>Ignoring %1 non-dialogue lines during alignment.</source>

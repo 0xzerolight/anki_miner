@@ -1179,11 +1179,11 @@ Tetap lanjutkan?</translation>
     </message>
     <message>
         <source>Start the clip at the playhead</source>
-        <translation type="unfinished" />
+        <translation>Mulai klip di posisi pemutaran</translation>
     </message>
     <message>
         <source>End the clip at the playhead</source>
-        <translation type="unfinished" />
+        <translation>Akhiri klip di posisi pemutaran</translation>
     </message>
     <message>
         <source>Stop the clip preview</source>
@@ -2633,11 +2633,11 @@ Tidak ada berkas indeks yang dihapus.</translation>
     </message>
     <message>
         <source>Ignore suspended cards</source>
-        <translation type="unfinished" />
+        <translation>Abaikan kartu yang ditangguhkan</translation>
     </message>
     <message>
         <source>Words whose only Anki cards are suspended count as unknown, so they can be mined again.</source>
-        <translation type="unfinished" />
+        <translation>Kata yang semua kartu Anki-nya ditangguhkan dianggap tidak dikenal, sehingga dapat di-mining lagi.</translation>
     </message>
     <message>
         <source>Mark words as known by hand</source>
@@ -2681,11 +2681,11 @@ Tidak ada berkas indeks yang dihapus.</translation>
     </message>
     <message>
         <source>Mine numbers with their counters</source>
-        <translation type="unfinished" />
+        <translation>Mining angka beserta kata bantu bilangannya</translation>
     </message>
     <message>
         <source>Card 3本 or 4人 as one word, read with its sound changes (さんぼん, よにん) and defined by the counter.</source>
-        <translation type="unfinished" />
+        <translation>Jadikan 3本 atau 4人 kartu sebagai satu kata, dibaca dengan perubahan bunyinya (さんぼん, よにん) dan didefinisikan menurut kata bantu bilangannya.</translation>
     </message>
     <message>
         <source>Blacklist / whitelist words</source>
@@ -5869,7 +5869,7 @@ Tidak ada berkas di disk yang dihapus.</translation>
     </message>
     <message>
         <source>Words stay known after their Anki cards are deleted, suspended or moved to an excluded deck. Rebuild (in Manage Known Words) forgets them.</source>
-        <translation type="unfinished" />
+        <translation>Kata tetap dikenal setelah kartu Anki-nya dihapus, ditangguhkan, atau dipindahkan ke dek yang dikecualikan. Bangun Ulang (di Kelola Kata yang Dikenal) akan melupakannya.</translation>
     </message>
     <message>
         <source>Manage Known Words…</source>
@@ -5909,11 +5909,11 @@ Tidak ada berkas di disk yang dihapus.</translation>
     </message>
     <message>
         <source>Ignore suspended cards</source>
-        <translation type="unfinished" />
+        <translation>Abaikan kartu yang ditangguhkan</translation>
     </message>
     <message>
         <source>Words whose only Anki cards are suspended count as unknown: they can be mined again, and Readability and i+1 treat them as new. A note with any unsuspended card still counts as known.</source>
-        <translation type="unfinished" />
+        <translation>Kata yang semua kartu Anki-nya ditangguhkan dianggap tidak dikenal: kata itu dapat di-mining lagi, serta Keterbacaan dan i+1 memperlakukannya sebagai kata baru. Catatan yang masih memiliki kartu yang tidak ditangguhkan tetap dianggap dikenal.</translation>
     </message>
     <message>
         <source>Word Lists</source>
@@ -5993,15 +5993,15 @@ Tidak ada berkas di disk yang dihapus.</translation>
     </message>
     <message>
         <source>Numbers</source>
-        <translation type="unfinished" />
+        <translation>Angka</translation>
     </message>
     <message>
         <source>Mine numbers with their counters</source>
-        <translation type="unfinished" />
+        <translation>Mining angka beserta kata bantu bilangannya</translation>
     </message>
     <message>
         <source>Make a card for a number and its counter, read with its sound changes (3本 さんぼん, 4人 よにん), defined by the counter. One card per number.</source>
-        <translation type="unfinished" />
+        <translation>Buat kartu untuk angka beserta kata bantu bilangannya, dibaca dengan perubahan bunyinya (3本 さんぼん, 4人 よにん), didefinisikan menurut kata bantu bilangannya. Satu kartu per angka.</translation>
     </message>
     <message>
         <source>Reading</source>
@@ -6463,55 +6463,55 @@ Tidak ada berkas indeks yang dihapus.</translation>
     </message>
     <message>
         <source>Play just this clip</source>
-        <translation type="unfinished">Putar klip ini saja</translation>
+        <translation>Putar klip ini saja</translation>
     </message>
     <message>
         <source>Step one frame back</source>
-        <translation type="unfinished">Mundur satu bingkai</translation>
+        <translation>Mundur satu bingkai</translation>
     </message>
     <message>
         <source>Step one frame forward</source>
-        <translation type="unfinished">Maju satu bingkai</translation>
+        <translation>Maju satu bingkai</translation>
     </message>
     <message>
         <source>Add the previous line</source>
-        <translation type="unfinished" />
+        <translation>Tambahkan baris sebelumnya</translation>
     </message>
     <message>
         <source>Add the next line</source>
-        <translation type="unfinished" />
+        <translation>Tambahkan baris berikutnya</translation>
     </message>
     <message>
         <source>Reset lines</source>
-        <translation type="unfinished">Setel ulang baris</translation>
+        <translation>Setel ulang baris</translation>
     </message>
     <message>
         <source>Use current frame</source>
-        <translation type="unfinished">Gunakan bingkai saat ini</translation>
+        <translation>Gunakan bingkai saat ini</translation>
     </message>
     <message>
         <source>Reset frame</source>
-        <translation type="unfinished">Setel ulang bingkai</translation>
+        <translation>Setel ulang bingkai</translation>
     </message>
     <message>
         <source>Reset clip</source>
-        <translation type="unfinished" />
+        <translation>Setel ulang klip</translation>
     </message>
     <message>
         <source>Previous sentence</source>
-        <translation type="unfinished" />
+        <translation>Kalimat sebelumnya</translation>
     </message>
     <message>
         <source>Next sentence</source>
-        <translation type="unfinished" />
+        <translation>Kalimat berikutnya</translation>
     </message>
     <message>
         <source>Start the clip at the playhead</source>
-        <translation type="unfinished" />
+        <translation>Mulai klip di posisi pemutaran</translation>
     </message>
     <message>
         <source>End the clip at the playhead</source>
-        <translation type="unfinished" />
+        <translation>Akhiri klip di posisi pemutaran</translation>
     </message>
     <message>
         <source>Usage Guide</source>
@@ -7966,7 +7966,7 @@ Kata yang akan ditambahkan: %3. Lanjutkan?</translation>
     <message>
         <source>Downloads mokuro and its OCR engine into Anki Miner's folder — about 3 GB, up to 7 GB with NVIDIA GPU support.</source>
         <extracomment>Install/Reinstall's tooltip; "Download OCR model" swaps in its own.</extracomment>
-        <translation type="unfinished" />
+        <translation>Mengunduh mokuro dan mesin OCR-nya ke folder Anki Miner — sekitar 3 GB, hingga 7 GB dengan dukungan GPU NVIDIA.</translation>
     </message>
     <message>
         <source>Not available on this platform</source>
@@ -9216,11 +9216,11 @@ Tidak ada berkas indeks yang dihapus.</translation>
     </message>
     <message>
         <source>Lines with exactly two new words.</source>
-        <translation type="unfinished" />
+        <translation>Baris dengan tepat dua kata baru.</translation>
     </message>
     <message>
         <source>Lines with three or more new words.</source>
-        <translation type="unfinished" />
+        <translation>Baris dengan tiga kata baru atau lebih.</translation>
     </message>
     <message>
         <source>Check Readability</source>
@@ -12245,7 +12245,7 @@ Sumber daya yang terpasang dan tema Anda tetap dipertahankan.</translation>
     <name>SubtitleRetimer</name>
     <message>
         <source>the reference subtitle has no dialogue lines</source>
-        <translation type="unfinished" />
+        <translation>subtitel referensi tidak memiliki baris dialog</translation>
     </message>
     <message>
         <source>Ignoring %1 non-dialogue lines during alignment.</source>

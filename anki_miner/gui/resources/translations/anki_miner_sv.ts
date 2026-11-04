@@ -1181,11 +1181,11 @@ Vill du fortsätta ändå?</translation>
     </message>
     <message>
         <source>Start the clip at the playhead</source>
-        <translation type="unfinished" />
+        <translation>Starta klippet vid uppspelningspositionen</translation>
     </message>
     <message>
         <source>End the clip at the playhead</source>
-        <translation type="unfinished" />
+        <translation>Avsluta klippet vid uppspelningspositionen</translation>
     </message>
     <message>
         <source>Stop the clip preview</source>
@@ -2636,11 +2636,11 @@ Inga indexfiler raderas.</translation>
     </message>
     <message>
         <source>Ignore suspended cards</source>
-        <translation type="unfinished" />
+        <translation>Ignorera suspenderade kort</translation>
     </message>
     <message>
         <source>Words whose only Anki cards are suspended count as unknown, so they can be mined again.</source>
-        <translation type="unfinished" />
+        <translation>Ord vars alla Anki-kort är suspenderade räknas som okända, så att de kan samlas in igen.</translation>
     </message>
     <message>
         <source>Mark words as known by hand</source>
@@ -2684,11 +2684,11 @@ Inga indexfiler raderas.</translation>
     </message>
     <message>
         <source>Mine numbers with their counters</source>
-        <translation type="unfinished" />
+        <translation>Samla in tal med räkneord</translation>
     </message>
     <message>
         <source>Card 3本 or 4人 as one word, read with its sound changes (さんぼん, よにん) and defined by the counter.</source>
-        <translation type="unfinished" />
+        <translation>Gör ett kort av 3本 eller 4人 som ett ord, läst med ljudförändringarna (さんぼん, よにん) och definierat utifrån räkneordet.</translation>
     </message>
     <message>
         <source>Blacklist / whitelist words</source>
@@ -5907,7 +5907,7 @@ Inga filer på disken raderas.</translation>
     </message>
     <message>
         <source>Words stay known after their Anki cards are deleted, suspended or moved to an excluded deck. Rebuild (in Manage Known Words) forgets them.</source>
-        <translation type="unfinished" />
+        <translation>Ord förblir kända efter att deras Anki-kort raderats, suspenderats eller flyttats till en undantagen kortlek. Bygg om (i Hantera kända ord) glömmer dem.</translation>
     </message>
     <message>
         <source>Manage Known Words…</source>
@@ -5947,11 +5947,11 @@ Inga filer på disken raderas.</translation>
     </message>
     <message>
         <source>Ignore suspended cards</source>
-        <translation type="unfinished" />
+        <translation>Ignorera suspenderade kort</translation>
     </message>
     <message>
         <source>Words whose only Anki cards are suspended count as unknown: they can be mined again, and Readability and i+1 treat them as new. A note with any unsuspended card still counts as known.</source>
-        <translation type="unfinished" />
+        <translation>Ord vars alla Anki-kort är suspenderade räknas som okända: de kan samlas in igen, och Läsbarhet och i+1 behandlar dem som nya. En anteckning med minst ett kort som inte är suspenderat räknas fortfarande som känd.</translation>
     </message>
     <message>
         <source>Word Lists</source>
@@ -6031,15 +6031,15 @@ Inga filer på disken raderas.</translation>
     </message>
     <message>
         <source>Numbers</source>
-        <translation type="unfinished" />
+        <translation>Tal</translation>
     </message>
     <message>
         <source>Mine numbers with their counters</source>
-        <translation type="unfinished" />
+        <translation>Samla in tal med räkneord</translation>
     </message>
     <message>
         <source>Make a card for a number and its counter, read with its sound changes (3本 さんぼん, 4人 よにん), defined by the counter. One card per number.</source>
-        <translation type="unfinished" />
+        <translation>Gör ett kort för ett tal och dess räkneord, läst med ljudförändringarna (3本 さんぼん, 4人 よにん) och definierat utifrån räkneordet. Ett kort per tal.</translation>
     </message>
     <message>
         <source>Reading</source>
@@ -6501,55 +6501,55 @@ Inga indexfiler raderas.</translation>
     </message>
     <message>
         <source>Play just this clip</source>
-        <translation type="unfinished">Spela bara det här klippet</translation>
+        <translation>Spela bara det här klippet</translation>
     </message>
     <message>
         <source>Step one frame back</source>
-        <translation type="unfinished">Stega en bildruta bakåt</translation>
+        <translation>Stega en bildruta bakåt</translation>
     </message>
     <message>
         <source>Step one frame forward</source>
-        <translation type="unfinished">Stega en bildruta framåt</translation>
+        <translation>Stega en bildruta framåt</translation>
     </message>
     <message>
         <source>Add the previous line</source>
-        <translation type="unfinished" />
+        <translation>Lägg till föregående rad</translation>
     </message>
     <message>
         <source>Add the next line</source>
-        <translation type="unfinished" />
+        <translation>Lägg till nästa rad</translation>
     </message>
     <message>
         <source>Reset lines</source>
-        <translation type="unfinished">Återställ rader</translation>
+        <translation>Återställ rader</translation>
     </message>
     <message>
         <source>Use current frame</source>
-        <translation type="unfinished">Använd aktuell bildruta</translation>
+        <translation>Använd aktuell bildruta</translation>
     </message>
     <message>
         <source>Reset frame</source>
-        <translation type="unfinished">Återställ bildruta</translation>
+        <translation>Återställ bildruta</translation>
     </message>
     <message>
         <source>Reset clip</source>
-        <translation type="unfinished" />
+        <translation>Återställ klipp</translation>
     </message>
     <message>
         <source>Previous sentence</source>
-        <translation type="unfinished" />
+        <translation>Föregående mening</translation>
     </message>
     <message>
         <source>Next sentence</source>
-        <translation type="unfinished" />
+        <translation>Nästa mening</translation>
     </message>
     <message>
         <source>Start the clip at the playhead</source>
-        <translation type="unfinished" />
+        <translation>Starta klippet vid uppspelningspositionen</translation>
     </message>
     <message>
         <source>End the clip at the playhead</source>
-        <translation type="unfinished" />
+        <translation>Avsluta klippet vid uppspelningspositionen</translation>
     </message>
     <message>
         <source>Usage Guide</source>
@@ -8005,7 +8005,7 @@ Ord att lägga till: %3. Vill du fortsätta?</translation>
     <message>
         <source>Downloads mokuro and its OCR engine into Anki Miner's folder — about 3 GB, up to 7 GB with NVIDIA GPU support.</source>
         <extracomment>Install/Reinstall's tooltip; "Download OCR model" swaps in its own.</extracomment>
-        <translation type="unfinished" />
+        <translation>Laddar ned mokuro och dess OCR-motor till Anki Miners mapp – cirka 3 GB, upp till 7 GB med stöd för NVIDIA GPU.</translation>
     </message>
     <message>
         <source>Not available on this platform</source>
@@ -9259,11 +9259,11 @@ Inga indexfiler raderas.</translation>
     </message>
     <message>
         <source>Lines with exactly two new words.</source>
-        <translation type="unfinished" />
+        <translation>Rader med exakt två nya ord.</translation>
     </message>
     <message>
         <source>Lines with three or more new words.</source>
-        <translation type="unfinished" />
+        <translation>Rader med tre eller fler nya ord.</translation>
     </message>
     <message>
         <source>Check Readability</source>
@@ -12294,7 +12294,7 @@ Dina installerade resurser och ditt tema behålls.</translation>
     <name>SubtitleRetimer</name>
     <message>
         <source>the reference subtitle has no dialogue lines</source>
-        <translation type="unfinished" />
+        <translation>referensundertexten har inga dialograder</translation>
     </message>
     <message>
         <source>Ignoring %1 non-dialogue lines during alignment.</source>

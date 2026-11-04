@@ -1183,11 +1183,11 @@ Continuați oricum?</translation>
     </message>
     <message>
         <source>Start the clip at the playhead</source>
-        <translation type="unfinished" />
+        <translation>Începe clipul la cursorul de redare</translation>
     </message>
     <message>
         <source>End the clip at the playhead</source>
-        <translation type="unfinished" />
+        <translation>Termină clipul la cursorul de redare</translation>
     </message>
     <message>
         <source>Stop the clip preview</source>
@@ -2639,11 +2639,11 @@ Nu se șterge niciun fișier index.</translation>
     </message>
     <message>
         <source>Ignore suspended cards</source>
-        <translation type="unfinished" />
+        <translation>Ignoră cardurile suspendate</translation>
     </message>
     <message>
         <source>Words whose only Anki cards are suspended count as unknown, so they can be mined again.</source>
-        <translation type="unfinished" />
+        <translation>Cuvintele ale căror singure carduri Anki sunt suspendate sunt considerate necunoscute, deci pot fi extrase din nou.</translation>
     </message>
     <message>
         <source>Mark words as known by hand</source>
@@ -2687,11 +2687,11 @@ Nu se șterge niciun fișier index.</translation>
     </message>
     <message>
         <source>Mine numbers with their counters</source>
-        <translation type="unfinished" />
+        <translation>Extrage numerele cu clasificatorii lor</translation>
     </message>
     <message>
         <source>Card 3本 or 4人 as one word, read with its sound changes (さんぼん, よにん) and defined by the counter.</source>
-        <translation type="unfinished" />
+        <translation>Creează un card pentru 3本 sau 4人 ca un singur cuvânt, citit cu modificările sale fonetice (さんぼん, よにん) și definit prin clasificator.</translation>
     </message>
     <message>
         <source>Blacklist / whitelist words</source>
@@ -5945,7 +5945,7 @@ Nu se șterge niciun fișier de pe disc.</translation>
     </message>
     <message>
         <source>Words stay known after their Anki cards are deleted, suspended or moved to an excluded deck. Rebuild (in Manage Known Words) forgets them.</source>
-        <translation type="unfinished" />
+        <translation>Cuvintele rămân cunoscute după ce cardurile lor Anki sunt șterse, suspendate sau mutate într-un pachet exclus. Reconstruiește (în Gestionează cuvintele cunoscute) le uită.</translation>
     </message>
     <message>
         <source>Manage Known Words…</source>
@@ -5985,11 +5985,11 @@ Nu se șterge niciun fișier de pe disc.</translation>
     </message>
     <message>
         <source>Ignore suspended cards</source>
-        <translation type="unfinished" />
+        <translation>Ignoră cardurile suspendate</translation>
     </message>
     <message>
         <source>Words whose only Anki cards are suspended count as unknown: they can be mined again, and Readability and i+1 treat them as new. A note with any unsuspended card still counts as known.</source>
-        <translation type="unfinished" />
+        <translation>Cuvintele ale căror singure carduri Anki sunt suspendate sunt considerate necunoscute: pot fi extrase din nou, iar Lizibilitate și i+1 le tratează ca noi. O notă cu cel puțin un card nesuspendat este considerată în continuare cunoscută.</translation>
     </message>
     <message>
         <source>Word Lists</source>
@@ -6069,15 +6069,15 @@ Nu se șterge niciun fișier de pe disc.</translation>
     </message>
     <message>
         <source>Numbers</source>
-        <translation type="unfinished" />
+        <translation>Numere</translation>
     </message>
     <message>
         <source>Mine numbers with their counters</source>
-        <translation type="unfinished" />
+        <translation>Extrage numerele cu clasificatorii lor</translation>
     </message>
     <message>
         <source>Make a card for a number and its counter, read with its sound changes (3本 さんぼん, 4人 よにん), defined by the counter. One card per number.</source>
-        <translation type="unfinished" />
+        <translation>Creează un card pentru un număr și clasificatorul său, citit cu modificările sale fonetice (3本 さんぼん, 4人 よにん) și definit prin clasificator. Un card pentru fiecare număr.</translation>
     </message>
     <message>
         <source>Reading</source>
@@ -6539,55 +6539,55 @@ Nu se șterge niciun fișier index.</translation>
     </message>
     <message>
         <source>Play just this clip</source>
-        <translation type="unfinished">Redă doar acest clip</translation>
+        <translation>Redă doar acest clip</translation>
     </message>
     <message>
         <source>Step one frame back</source>
-        <translation type="unfinished">Un cadru înapoi</translation>
+        <translation>Un cadru înapoi</translation>
     </message>
     <message>
         <source>Step one frame forward</source>
-        <translation type="unfinished">Un cadru înainte</translation>
+        <translation>Un cadru înainte</translation>
     </message>
     <message>
         <source>Add the previous line</source>
-        <translation type="unfinished" />
+        <translation>Adaugă linia anterioară</translation>
     </message>
     <message>
         <source>Add the next line</source>
-        <translation type="unfinished" />
+        <translation>Adaugă linia următoare</translation>
     </message>
     <message>
         <source>Reset lines</source>
-        <translation type="unfinished">Resetează liniile</translation>
+        <translation>Resetează liniile</translation>
     </message>
     <message>
         <source>Use current frame</source>
-        <translation type="unfinished">Folosește cadrul curent</translation>
+        <translation>Folosește cadrul curent</translation>
     </message>
     <message>
         <source>Reset frame</source>
-        <translation type="unfinished">Resetează cadrul</translation>
+        <translation>Resetează cadrul</translation>
     </message>
     <message>
         <source>Reset clip</source>
-        <translation type="unfinished" />
+        <translation>Resetează clipul</translation>
     </message>
     <message>
         <source>Previous sentence</source>
-        <translation type="unfinished" />
+        <translation>Propoziția anterioară</translation>
     </message>
     <message>
         <source>Next sentence</source>
-        <translation type="unfinished" />
+        <translation>Propoziția următoare</translation>
     </message>
     <message>
         <source>Start the clip at the playhead</source>
-        <translation type="unfinished" />
+        <translation>Începe clipul la cursorul de redare</translation>
     </message>
     <message>
         <source>End the clip at the playhead</source>
-        <translation type="unfinished" />
+        <translation>Termină clipul la cursorul de redare</translation>
     </message>
     <message>
         <source>Usage Guide</source>
@@ -8044,7 +8044,7 @@ Cuvinte de adăugat: %3. Continuați?</translation>
     <message>
         <source>Downloads mokuro and its OCR engine into Anki Miner's folder — about 3 GB, up to 7 GB with NVIDIA GPU support.</source>
         <extracomment>Install/Reinstall's tooltip; "Download OCR model" swaps in its own.</extracomment>
-        <translation type="unfinished" />
+        <translation>Descarcă mokuro și motorul său OCR în dosarul Anki Miner — aproximativ 3 GB, până la 7 GB cu suport pentru GPU NVIDIA.</translation>
     </message>
     <message>
         <source>Not available on this platform</source>
@@ -9302,11 +9302,11 @@ Nu se șterge niciun fișier index.</translation>
     </message>
     <message>
         <source>Lines with exactly two new words.</source>
-        <translation type="unfinished" />
+        <translation>Linii cu exact două cuvinte noi.</translation>
     </message>
     <message>
         <source>Lines with three or more new words.</source>
-        <translation type="unfinished" />
+        <translation>Linii cu trei sau mai multe cuvinte noi.</translation>
     </message>
     <message>
         <source>Check Readability</source>
@@ -12343,7 +12343,7 @@ Resursele instalate și tema se păstrează.</translation>
     <name>SubtitleRetimer</name>
     <message>
         <source>the reference subtitle has no dialogue lines</source>
-        <translation type="unfinished" />
+        <translation>subtitrarea de referință nu are linii de dialog</translation>
     </message>
     <message>
         <source>Ignoring %1 non-dialogue lines during alignment.</source>

@@ -1181,11 +1181,11 @@ Continue anyway?</source>
     </message>
     <message>
         <source>Start the clip at the playhead</source>
-        <translation type="unfinished" />
+        <translation>להתחיל את הקטע במיקום הנגינה</translation>
     </message>
     <message>
         <source>End the clip at the playhead</source>
-        <translation type="unfinished" />
+        <translation>לסיים את הקטע במיקום הנגינה</translation>
     </message>
     <message>
         <source>Stop the clip preview</source>
@@ -2636,11 +2636,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Ignore suspended cards</source>
-        <translation type="unfinished" />
+        <translation>להתעלם מכרטיסים מושעים</translation>
     </message>
     <message>
         <source>Words whose only Anki cards are suspended count as unknown, so they can be mined again.</source>
-        <translation type="unfinished" />
+        <translation>מילים שכל כרטיסי ה-Anki שלהן מושעים נחשבות לא מוכרות, כך שאפשר לכרות אותן שוב.</translation>
     </message>
     <message>
         <source>Mark words as known by hand</source>
@@ -2684,11 +2684,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Mine numbers with their counters</source>
-        <translation type="unfinished" />
+        <translation>לכרות מספרים עם מילות המנייה שלהם</translation>
     </message>
     <message>
         <source>Card 3本 or 4人 as one word, read with its sound changes (さんぼん, よにん) and defined by the counter.</source>
-        <translation type="unfinished" />
+        <translation>יצירת כרטיס ל-3本 או ל-4人 כמילה אחת, עם קריאה שכוללת את שינויי הצליל (さんぼん, よにん) והגדרה לפי מילת המנייה.</translation>
     </message>
     <message>
         <source>Blacklist / whitelist words</source>
@@ -5907,7 +5907,7 @@ No files on disk are deleted.</source>
     </message>
     <message>
         <source>Words stay known after their Anki cards are deleted, suspended or moved to an excluded deck. Rebuild (in Manage Known Words) forgets them.</source>
-        <translation type="unfinished" />
+        <translation>מילים נשארות מוכרות לאחר שכרטיסי ה-Anki שלהן נמחקים, מושעים או מועברים לחפיסה מוחרגת. לבנות מחדש את מסד המילים המוכרות (בניהול מילים מוכרות) שוכח אותן.</translation>
     </message>
     <message>
         <source>Manage Known Words…</source>
@@ -5947,11 +5947,11 @@ No files on disk are deleted.</source>
     </message>
     <message>
         <source>Ignore suspended cards</source>
-        <translation type="unfinished" />
+        <translation>להתעלם מכרטיסים מושעים</translation>
     </message>
     <message>
         <source>Words whose only Anki cards are suspended count as unknown: they can be mined again, and Readability and i+1 treat them as new. A note with any unsuspended card still counts as known.</source>
-        <translation type="unfinished" />
+        <translation>מילים שכל כרטיסי ה-Anki שלהן מושעים נחשבות לא מוכרות: אפשר לכרות אותן שוב, ורמת קושי ו-i+1 מתייחסים אליהן כחדשות. פתק שיש לו כרטיס כלשהו שאינו מושעה עדיין נחשב מוכר.</translation>
     </message>
     <message>
         <source>Word Lists</source>
@@ -6031,15 +6031,15 @@ No files on disk are deleted.</source>
     </message>
     <message>
         <source>Numbers</source>
-        <translation type="unfinished" />
+        <translation>מספרים</translation>
     </message>
     <message>
         <source>Mine numbers with their counters</source>
-        <translation type="unfinished" />
+        <translation>לכרות מספרים עם מילות המנייה שלהם</translation>
     </message>
     <message>
         <source>Make a card for a number and its counter, read with its sound changes (3本 さんぼん, 4人 よにん), defined by the counter. One card per number.</source>
-        <translation type="unfinished" />
+        <translation>יצירת כרטיס למספר ולמילת המנייה שלו, עם קריאה שכוללת את שינויי הצליל (3本 さんぼん, 4人 よにん) והגדרה לפי מילת המנייה. כרטיס אחד לכל מספר.</translation>
     </message>
     <message>
         <source>Reading</source>
@@ -6501,55 +6501,55 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Play just this clip</source>
-        <translation type="unfinished">לנגן רק את הקטע הזה</translation>
+        <translation>לנגן רק את הקטע הזה</translation>
     </message>
     <message>
         <source>Step one frame back</source>
-        <translation type="unfinished">פריים אחד אחורה</translation>
+        <translation>פריים אחד אחורה</translation>
     </message>
     <message>
         <source>Step one frame forward</source>
-        <translation type="unfinished">פריים אחד קדימה</translation>
+        <translation>פריים אחד קדימה</translation>
     </message>
     <message>
         <source>Add the previous line</source>
-        <translation type="unfinished" />
+        <translation>להוסיף את השורה הקודמת</translation>
     </message>
     <message>
         <source>Add the next line</source>
-        <translation type="unfinished" />
+        <translation>להוסיף את השורה הבאה</translation>
     </message>
     <message>
         <source>Reset lines</source>
-        <translation type="unfinished">לאפס שורות</translation>
+        <translation>לאפס שורות</translation>
     </message>
     <message>
         <source>Use current frame</source>
-        <translation type="unfinished">להשתמש בפריים הנוכחי</translation>
+        <translation>להשתמש בפריים הנוכחי</translation>
     </message>
     <message>
         <source>Reset frame</source>
-        <translation type="unfinished">לאפס פריים</translation>
+        <translation>לאפס פריים</translation>
     </message>
     <message>
         <source>Reset clip</source>
-        <translation type="unfinished" />
+        <translation>לאפס קטע</translation>
     </message>
     <message>
         <source>Previous sentence</source>
-        <translation type="unfinished" />
+        <translation>המשפט הקודם</translation>
     </message>
     <message>
         <source>Next sentence</source>
-        <translation type="unfinished" />
+        <translation>המשפט הבא</translation>
     </message>
     <message>
         <source>Start the clip at the playhead</source>
-        <translation type="unfinished" />
+        <translation>להתחיל את הקטע במיקום הנגינה</translation>
     </message>
     <message>
         <source>End the clip at the playhead</source>
-        <translation type="unfinished" />
+        <translation>לסיים את הקטע במיקום הנגינה</translation>
     </message>
     <message>
         <source>Usage Guide</source>
@@ -8005,7 +8005,7 @@ Words to add: %3. Continue?</source>
     <message>
         <source>Downloads mokuro and its OCR engine into Anki Miner's folder — about 3 GB, up to 7 GB with NVIDIA GPU support.</source>
         <extracomment>Install/Reinstall's tooltip; "Download OCR model" swaps in its own.</extracomment>
-        <translation type="unfinished" />
+        <translation>הורדת mokuro ומנוע ה-OCR שלו לתיקייה של Anki Miner — כ-3 GB, ועד 7 GB עם תמיכה ב-GPU של NVIDIA.</translation>
     </message>
     <message>
         <source>Not available on this platform</source>
@@ -9259,11 +9259,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Lines with exactly two new words.</source>
-        <translation type="unfinished" />
+        <translation>שורות עם שתי מילים חדשות בדיוק.</translation>
     </message>
     <message>
         <source>Lines with three or more new words.</source>
-        <translation type="unfinished" />
+        <translation>שורות עם שלוש מילים חדשות או יותר.</translation>
     </message>
     <message>
         <source>Check Readability</source>
@@ -12294,7 +12294,7 @@ Your installed resources and your theme are kept.</source>
     <name>SubtitleRetimer</name>
     <message>
         <source>the reference subtitle has no dialogue lines</source>
-        <translation type="unfinished" />
+        <translation>בכתוביות הייחוס אין שורות דיאלוג</translation>
     </message>
     <message>
         <source>Ignoring %1 non-dialogue lines during alignment.</source>

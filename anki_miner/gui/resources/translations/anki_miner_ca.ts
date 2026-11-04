@@ -1181,11 +1181,11 @@ Voleu continuar igualment?</translation>
     </message>
     <message>
         <source>Start the clip at the playhead</source>
-        <translation type="unfinished" />
+        <translation>Comença el clip al capçal de reproducció</translation>
     </message>
     <message>
         <source>End the clip at the playhead</source>
-        <translation type="unfinished" />
+        <translation>Acaba el clip al capçal de reproducció</translation>
     </message>
     <message>
         <source>Stop the clip preview</source>
@@ -2636,11 +2636,11 @@ No se suprimeix cap fitxer d'índex.</translation>
     </message>
     <message>
         <source>Ignore suspended cards</source>
-        <translation type="unfinished" />
+        <translation>Ignora les targetes suspeses</translation>
     </message>
     <message>
         <source>Words whose only Anki cards are suspended count as unknown, so they can be mined again.</source>
-        <translation type="unfinished" />
+        <translation>Les paraules les úniques targetes de l'Anki de les quals estan suspeses compten com a desconegudes, de manera que es poden tornar a extreure.</translation>
     </message>
     <message>
         <source>Mark words as known by hand</source>
@@ -2684,11 +2684,11 @@ No se suprimeix cap fitxer d'índex.</translation>
     </message>
     <message>
         <source>Mine numbers with their counters</source>
-        <translation type="unfinished" />
+        <translation>Extreu els nombres amb els seus comptadors</translation>
     </message>
     <message>
         <source>Card 3本 or 4人 as one word, read with its sound changes (さんぼん, よにん) and defined by the counter.</source>
-        <translation type="unfinished" />
+        <translation>Crea una targeta de 3本 o 4人 com una sola paraula, llegida amb els seus canvis fonètics (さんぼん, よにん) i definida pel comptador.</translation>
     </message>
     <message>
         <source>Blacklist / whitelist words</source>
@@ -5907,7 +5907,7 @@ No se suprimeix cap fitxer del disc.</translation>
     </message>
     <message>
         <source>Words stay known after their Anki cards are deleted, suspended or moved to an excluded deck. Rebuild (in Manage Known Words) forgets them.</source>
-        <translation type="unfinished" />
+        <translation>Les paraules continuen conegudes encara que les seves targetes de l'Anki se suprimeixin, se suspenguin o es moguin a una baralla exclosa. Reconstrueix (a Gestiona les paraules conegudes) les oblida.</translation>
     </message>
     <message>
         <source>Manage Known Words…</source>
@@ -5947,11 +5947,11 @@ No se suprimeix cap fitxer del disc.</translation>
     </message>
     <message>
         <source>Ignore suspended cards</source>
-        <translation type="unfinished" />
+        <translation>Ignora les targetes suspeses</translation>
     </message>
     <message>
         <source>Words whose only Anki cards are suspended count as unknown: they can be mined again, and Readability and i+1 treat them as new. A note with any unsuspended card still counts as known.</source>
-        <translation type="unfinished" />
+        <translation>Les paraules les úniques targetes de l'Anki de les quals estan suspeses compten com a desconegudes: es poden tornar a extreure, i Llegibilitat i i+1 les tracten com a noves. Una nota amb alguna targeta no suspesa continua comptant com a coneguda.</translation>
     </message>
     <message>
         <source>Word Lists</source>
@@ -6031,15 +6031,15 @@ No se suprimeix cap fitxer del disc.</translation>
     </message>
     <message>
         <source>Numbers</source>
-        <translation type="unfinished" />
+        <translation>Nombres</translation>
     </message>
     <message>
         <source>Mine numbers with their counters</source>
-        <translation type="unfinished" />
+        <translation>Extreu els nombres amb els seus comptadors</translation>
     </message>
     <message>
         <source>Make a card for a number and its counter, read with its sound changes (3本 さんぼん, 4人 よにん), defined by the counter. One card per number.</source>
-        <translation type="unfinished" />
+        <translation>Crea una targeta per a un nombre i el seu comptador, llegida amb els seus canvis fonètics (3本 さんぼん, 4人 よにん) i definida pel comptador. Una targeta per nombre.</translation>
     </message>
     <message>
         <source>Reading</source>
@@ -6501,55 +6501,55 @@ No se suprimeix cap fitxer d'índex.</translation>
     </message>
     <message>
         <source>Play just this clip</source>
-        <translation type="unfinished">Reprodueix només aquest clip</translation>
+        <translation>Reprodueix només aquest clip</translation>
     </message>
     <message>
         <source>Step one frame back</source>
-        <translation type="unfinished">Retrocedeix un fotograma</translation>
+        <translation>Retrocedeix un fotograma</translation>
     </message>
     <message>
         <source>Step one frame forward</source>
-        <translation type="unfinished">Avança un fotograma</translation>
+        <translation>Avança un fotograma</translation>
     </message>
     <message>
         <source>Add the previous line</source>
-        <translation type="unfinished" />
+        <translation>Afegeix la línia anterior</translation>
     </message>
     <message>
         <source>Add the next line</source>
-        <translation type="unfinished" />
+        <translation>Afegeix la línia següent</translation>
     </message>
     <message>
         <source>Reset lines</source>
-        <translation type="unfinished">Restableix les línies</translation>
+        <translation>Restableix les línies</translation>
     </message>
     <message>
         <source>Use current frame</source>
-        <translation type="unfinished">Utilitza el fotograma actual</translation>
+        <translation>Utilitza el fotograma actual</translation>
     </message>
     <message>
         <source>Reset frame</source>
-        <translation type="unfinished">Restableix el fotograma</translation>
+        <translation>Restableix el fotograma</translation>
     </message>
     <message>
         <source>Reset clip</source>
-        <translation type="unfinished" />
+        <translation>Restableix el clip</translation>
     </message>
     <message>
         <source>Previous sentence</source>
-        <translation type="unfinished" />
+        <translation>Frase anterior</translation>
     </message>
     <message>
         <source>Next sentence</source>
-        <translation type="unfinished" />
+        <translation>Frase següent</translation>
     </message>
     <message>
         <source>Start the clip at the playhead</source>
-        <translation type="unfinished" />
+        <translation>Comença el clip al capçal de reproducció</translation>
     </message>
     <message>
         <source>End the clip at the playhead</source>
-        <translation type="unfinished" />
+        <translation>Acaba el clip al capçal de reproducció</translation>
     </message>
     <message>
         <source>Usage Guide</source>
@@ -8005,7 +8005,7 @@ Paraules que s'afegiran: %3. Voleu continuar?</translation>
     <message>
         <source>Downloads mokuro and its OCR engine into Anki Miner's folder — about 3 GB, up to 7 GB with NVIDIA GPU support.</source>
         <extracomment>Install/Reinstall's tooltip; "Download OCR model" swaps in its own.</extracomment>
-        <translation type="unfinished" />
+        <translation>Baixa el mokuro i el seu motor d'OCR a la carpeta de l'Anki Miner: aproximadament 3 GB, fins a 7 GB amb compatibilitat amb GPU NVIDIA.</translation>
     </message>
     <message>
         <source>Not available on this platform</source>
@@ -9259,11 +9259,11 @@ No se suprimeix cap fitxer d'índex.</translation>
     </message>
     <message>
         <source>Lines with exactly two new words.</source>
-        <translation type="unfinished" />
+        <translation>Línies amb exactament dues paraules noves.</translation>
     </message>
     <message>
         <source>Lines with three or more new words.</source>
-        <translation type="unfinished" />
+        <translation>Línies amb tres paraules noves o més.</translation>
     </message>
     <message>
         <source>Check Readability</source>
@@ -12294,7 +12294,7 @@ Es mantenen els recursos instal·lats i el tema.</translation>
     <name>SubtitleRetimer</name>
     <message>
         <source>the reference subtitle has no dialogue lines</source>
-        <translation type="unfinished" />
+        <translation>el subtítol de referència no té línies de diàleg</translation>
     </message>
     <message>
         <source>Ignoring %1 non-dialogue lines during alignment.</source>
