@@ -1,15 +1,18 @@
 """Per-word audio clip window editor for the word curator.
 
 One always-visible row: a two-handle slider for the clip window, with the
-length drawn inside it, and a button that plays just that clip. Dragging rather
+length drawn inside it, a button either side of it that puts that end at the
+player's playhead, and a button that plays just that clip. Dragging rather
 than typing timestamps because this is never a precise edit — it is a nudge for
 a line that got cut off or ran into the next speaker — and the row is small
 enough that hiding it behind a disclosure only cost a click and made it
-undiscoverable.
+undiscoverable. The playhead buttons are for the exact moment a drag keeps
+missing: the user finds it in the player, then presses.
 
 The widget owns no media and no config. It is told a word's window
 (:meth:`set_word`) and reports edits back through signals; the dialog decides
-what to do with them and the player performs the preview.
+what to do with them, reads the playhead for :meth:`set_edge`, and the player
+performs the preview.
 
 Windows are absolute seconds on the source video's own timeline, the same units
 the player seeks in and ffmpeg cuts with, so nothing is converted between what
@@ -229,8 +232,9 @@ class ClipRangeSlider(QWidget):
         if event is None or not self.isEnabled() or event.button() != Qt.MouseButton.LeftButton:
             super().mouseDoubleClickEvent(event)
             return
-        # The only way back to the default window, now that the strip has no
-        # reset button. The tooltip is where the user is told so.
+        # The mouse's only way back to the default window, now that the strip
+        # has no reset button (the curator's Reset clip key is the keyboard's).
+        # The tooltip is where the user is told so.
         self._dragging = False
         self.reset_requested.emit()
 
@@ -330,6 +334,14 @@ class AudioClipEditor(QWidget):
     #: Preview should stop (the play button was pressed while playing).
     stop_requested = pyqtSignal()
 
+    #: The user asked to start the clip at the playhead. No payload: this
+    #: widget owns no media, so the host reads the position and calls
+    #: :meth:`set_edge`.
+    start_here_requested = pyqtSignal()
+
+    #: The user asked to end the clip at the playhead (see start_here_requested).
+    end_here_requested = pyqtSignal()
+
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         # The word's untouched window in ticks, kept so a reset can restore it
@@ -365,8 +377,20 @@ class AudioClipEditor(QWidget):
             )
         )
         self.slider.values_changed.connect(self._on_slider_moved)
-        self.slider.reset_requested.connect(self._on_reset)
+        self.slider.reset_requested.connect(self.reset)
+
+        # Set an end at the playhead, each glyph beside the handle it moves.
+        # Glyph buttons on this row rather than a row of their own: a new row
+        # costs the video height. Glyphs, not labels, keep this row narrower
+        # than the pane's button rows, so the pane's width floor stays put.
+        self.start_here_button = self._edge_button("⇤", self.tr("Start the clip at the playhead"))
+        self.start_here_button.clicked.connect(self.start_here_requested)
+        self.end_here_button = self._edge_button("⇥", self.tr("End the clip at the playhead"))
+        self.end_here_button.clicked.connect(self.end_here_requested)
+
+        row.addWidget(self.start_here_button)
         row.addWidget(self.slider, 1)
+        row.addWidget(self.end_here_button)
 
         # The clip preview lives next to the window it plays, deliberately
         # separate from the player's own transport below the video: that one
@@ -379,6 +403,18 @@ class AudioClipEditor(QWidget):
 
         self._refresh_play_button()
         self._refresh_readout()
+
+    @staticmethod
+    def _edge_button(glyph: str, label: str) -> QToolButton:
+        """One set-an-end-here button, built as the play button is."""
+        button = QToolButton()
+        button.setText(glyph)
+        button.setToolTip(label)
+        # The glyph alone means nothing read aloud.
+        button.setAccessibleName(label)
+        button.setAutoRaise(True)
+        button.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        return button
 
     # ------------------------------------------------------------------
     # Host API
@@ -437,6 +473,60 @@ class AudioClipEditor(QWidget):
             return False
         return self.slider.values() != self._default
 
+    def toggle_play(self) -> None:
+        """What the play button does: preview the window, or stop a running preview.
+
+        Through the button itself, so the curator's play-clip key is gated
+        exactly as a click is: with no word focused the strip is disabled and
+        the press does nothing.
+        """
+        self.play_button.click()
+
+    def reset(self) -> None:
+        """Restore the word's default window, as a double-click on the slider does.
+
+        A no-op with no word focused.
+        """
+        if self._default is None:
+            return
+        self._seeding = True
+        try:
+            self._seat(self._default)
+        finally:
+            self._seeding = False
+        self._refresh_readout()
+        self.clip_reset.emit()
+
+    def set_edge(self, seconds: float, *, out: bool) -> None:
+        """Put the clip's start (or, with ``out``, its end) at ``seconds``.
+
+        What the start-here and end-here buttons ask the host for, once it has
+        read the playhead. The edge lands exactly there, on the tick grid; the
+        other edge is pushed to keep the length within MIN/MAX, as a drag
+        pushes it. The travel is re-seated around the result (the MARGIN rule
+        :meth:`_seat` uses) only when the window leaves it: a playhead can be
+        anywhere in the video, and a handle cannot sit outside its travel.
+        Emits ``clip_changed`` like an edit. A no-op with no word focused.
+        """
+        if self._default is None:
+            return
+        edge = to_ticks(max(0.0, seconds))
+        in_ticks, out_ticks = self.slider.values()
+        if out:
+            out_ticks = edge
+        else:
+            in_ticks = edge
+        # Bounds wide enough that only MIN/MAX move anything: the travel is
+        # no limit here, or an edge near its end would be pulled back off the
+        # playhead to make room for the minimum length.
+        in_ticks, out_ticks = coerce(in_ticks, out_ticks, 0, max(in_ticks, out_ticks) + _MAX_TICKS, moved_in=not out)
+        if self.slider._lo <= in_ticks and out_ticks <= self.slider._hi:
+            self._write(in_ticks, out_ticks)
+        else:
+            self._seat((in_ticks, out_ticks))
+        self._refresh_readout()
+        self.clip_changed.emit(*self.current_window())
+
     # ------------------------------------------------------------------
     # Internals
     # ------------------------------------------------------------------
@@ -470,17 +560,6 @@ class AudioClipEditor(QWidget):
             self.stop_requested.emit()
             return
         self.play_requested.emit(*self.current_window())
-
-    def _on_reset(self) -> None:
-        if self._default is None:
-            return
-        self._seeding = True
-        try:
-            self._seat(self._default)
-        finally:
-            self._seeding = False
-        self._refresh_readout()
-        self.clip_reset.emit()
 
     def _refresh_play_button(self) -> None:
         self.play_button.setText("■" if self._playing else "▶")

@@ -174,6 +174,27 @@ class TestReset:
         editor.slider.reset_requested.emit()
         assert resets == []
 
+    def test_reset_is_the_double_click(self, editor):
+        """The curator's Reset clip key calls reset(); it must do what the double-click does."""
+        _seed(editor, override=(4.0, 9.5))
+        resets: list[bool] = []
+        changes: list[tuple[float, float]] = []
+        editor.clip_reset.connect(lambda: resets.append(True))
+        editor.clip_changed.connect(lambda a, b: changes.append((a, b)))
+
+        editor.reset()
+
+        assert editor.current_window() == DEFAULT
+        assert editor.has_override() is False
+        assert resets == [True]
+        assert changes == []
+
+    def test_reset_without_a_word_does_nothing(self, editor):
+        resets: list[bool] = []
+        editor.clip_reset.connect(lambda: resets.append(True))
+        editor.reset()
+        assert resets == []
+
 
 class TestPlayback:
     def test_play_requests_the_current_window(self, editor):
@@ -202,3 +223,176 @@ class TestPlayback:
         assert editor.play_button.text() != idle
         editor.set_playing(False)
         assert editor.play_button.text() == idle
+
+    def test_toggle_play_plays_the_window_then_stops_it(self, editor):
+        """The curator's play-clip key calls toggle_play(): exactly the play button."""
+        _seed(editor, override=(4.0, 9.5))
+        requests: list[tuple[float, float]] = []
+        stops: list[bool] = []
+        editor.play_requested.connect(lambda a, b: requests.append((a, b)))
+        editor.stop_requested.connect(lambda: stops.append(True))
+
+        editor.toggle_play()
+        editor.set_playing(True)  # what the host does on play_requested
+        editor.toggle_play()
+
+        assert requests == [(4.0, 9.5)]
+        assert stops == [True]
+
+    def test_toggle_play_without_a_word_does_nothing(self, editor):
+        """A disabled strip ignores the key, as its disabled button ignores a click."""
+        editor.clear_word()
+        requests: list[tuple[float, float]] = []
+        editor.play_requested.connect(lambda a, b: requests.append((a, b)))
+
+        editor.toggle_play()
+
+        assert requests == []
+
+
+class TestEdgeButtons:
+    def test_they_flank_the_slider(self, editor):
+        """Start-here beside the start handle, end-here between the slider and play."""
+        layout = editor.layout()
+        order = [layout.itemAt(i).widget() for i in range(layout.count())]
+        assert order == [editor.start_here_button, editor.slider, editor.end_here_button, editor.play_button]
+
+    def test_glyphs_and_tooltips(self, editor):
+        assert editor.start_here_button.text() == "⇤"
+        assert editor.end_here_button.text() == "⇥"
+        assert editor.start_here_button.toolTip() == "Start the clip at the playhead"
+        assert editor.end_here_button.toolTip() == "End the clip at the playhead"
+
+    def test_built_as_the_play_button_is(self, editor):
+        for button in (editor.start_here_button, editor.end_here_button):
+            assert button.autoRaise()
+            assert button.focusPolicy() == editor.play_button.focusPolicy()
+            assert button.sizePolicy() == editor.play_button.sizePolicy()
+
+    def test_a_click_asks_the_host(self, editor):
+        """No payload: the editor owns no media, so the host reads the playhead."""
+        _seed(editor)
+        asked: list[str] = []
+        editor.start_here_requested.connect(lambda: asked.append("start"))
+        editor.end_here_requested.connect(lambda: asked.append("end"))
+
+        editor.start_here_button.click()
+        editor.end_here_button.click()
+
+        assert asked == ["start", "end"]
+
+    def test_disabled_without_a_word(self, editor):
+        editor.clear_word()
+        assert not editor.start_here_button.isEnabled()
+        assert not editor.end_here_button.isEnabled()
+
+
+class TestSetEdge:
+    def _changes(self, editor) -> list[tuple[float, float]]:
+        changes: list[tuple[float, float]] = []
+        editor.clip_changed.connect(lambda a, b: changes.append((a, b)))
+        return changes
+
+    def test_start_inside_the_travel(self, editor):
+        _seed(editor)
+        changes = self._changes(editor)
+
+        editor.set_edge(4.2, out=False)
+
+        assert editor.current_window() == (4.2, 7.3)
+        assert changes == [(4.2, 7.3)]
+        assert editor.has_override() is True
+        assert editor.slider._text.startswith("3.1")
+
+    def test_end_inside_the_travel(self, editor):
+        _seed(editor)
+        changes = self._changes(editor)
+
+        editor.set_edge(9.0, out=True)
+
+        assert editor.current_window() == (4.7, 9.0)
+        assert changes == [(4.7, 9.0)]
+
+    def test_inside_the_travel_the_travel_stays(self, editor):
+        """Travel is fixed per word; an edit that fits it never moves it."""
+        _seed(editor)
+        editor.set_edge(9.0, out=True)
+        assert (editor.slider._lo, editor.slider._hi) == (to_ticks(1.7), to_ticks(10.3))
+
+    def test_quantised_to_the_tick_grid(self, editor):
+        _seed(editor)
+        editor.set_edge(4.23, out=False)
+        editor.set_edge(6.97, out=True)
+        assert editor.current_window() == (4.2, 7.0)
+
+    def test_an_end_past_the_travel_widens_it(self, editor):
+        """A playhead can be anywhere in the video; the handle must be able to sit there."""
+        _seed(editor)
+        changes = self._changes(editor)
+
+        editor.set_edge(14.0, out=True)
+
+        assert editor.current_window() == (4.7, 14.0)
+        assert changes == [(4.7, 14.0)]
+        # Re-seated by the MARGIN rule around the new window.
+        assert (editor.slider._lo, editor.slider._hi) == (to_ticks(1.7), to_ticks(17.0))
+
+    def test_a_start_before_the_travel_widens_it(self, editor):
+        _seed(editor)
+        editor.set_edge(0.5, out=False)
+        assert editor.current_window() == (0.5, 7.3)
+        assert (editor.slider._lo, editor.slider._hi) == (0, to_ticks(10.3))
+
+    def test_the_widened_travel_is_what_returning_to_the_word_shows(self, editor):
+        _seed(editor)
+        editor.set_edge(14.0, out=True)
+        travel = (editor.slider._lo, editor.slider._hi)
+
+        _seed(editor, override=editor.current_window())
+
+        assert (editor.slider._lo, editor.slider._hi) == travel
+
+    def test_a_start_at_the_end_of_the_travel_stays_on_the_playhead(self, editor):
+        """The travel never pulls the placed edge back to make room for the minimum length."""
+        _seed(editor)
+        editor.set_edge(10.3, out=False)
+        in_value, out_value = editor.current_window()
+        assert in_value == 10.3
+        assert out_value == pytest.approx(10.3 + MIN_CLIP_SECONDS)
+
+    def test_a_start_past_the_end_pushes_the_end(self, editor):
+        _seed(editor)
+        editor.set_edge(8.0, out=False)
+        in_value, out_value = editor.current_window()
+        assert in_value == 8.0
+        assert out_value == pytest.approx(8.0 + MIN_CLIP_SECONDS)
+
+    def test_an_end_before_the_start_pushes_the_start(self, editor):
+        _seed(editor)
+        editor.set_edge(4.0, out=True)
+        in_value, out_value = editor.current_window()
+        assert out_value == 4.0
+        assert in_value == pytest.approx(4.0 - MIN_CLIP_SECONDS)
+
+    def test_an_end_far_ahead_pulls_the_start_to_the_cap(self, editor):
+        _seed(editor)
+        editor.set_edge(50.0, out=True)
+        assert editor.current_window() == (50.0 - MAX_CLIP_SECONDS, 50.0)
+
+    def test_a_start_far_back_pulls_the_end_to_the_cap(self, editor):
+        editor.set_word(5.0, 40.0, 0.0, None)  # an over-long default, shown as-is
+        editor.set_edge(2.0, out=False)
+        assert editor.current_window() == (2.0, 2.0 + MAX_CLIP_SECONDS)
+
+    def test_never_below_zero(self, editor):
+        _seed(editor)
+        editor.set_edge(-1.0, out=False)
+        assert editor.current_window()[0] == 0.0
+
+    def test_noop_without_a_word(self, editor):
+        changes = self._changes(editor)
+        editor.set_edge(4.0, out=False)
+        editor.clear_word()
+        editor.set_edge(4.0, out=True)
+        assert changes == []
+        assert editor.current_window() == (0.0, 0.0)

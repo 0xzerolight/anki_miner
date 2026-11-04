@@ -35,6 +35,26 @@ def test_one_row_per_action_showing_the_shipped_key(panel):
         assert _shown(panel, action.id) == action.default
 
 
+def test_the_player_keys_are_listed_under_the_curator(panel):
+    assert _shown(panel, "curator.play_clip") == "Shift+Space"
+    assert _shown(panel, "curator.frame_back") == ","
+    assert _shown(panel, "curator.frame_forward") == "."
+    assert _shown(panel, "curator.reset_clip") == ""
+
+
+def test_a_saved_key_on_a_new_default_shows_that_default_unbound(panel, qtbot, test_config):
+    """Mark known saved on "," before "," became Step one frame back: the user's key stays."""
+    panel.load_from_config(replace(test_config, key_bindings={"curator.mark_known": ","}))
+    assert _shown(panel, "curator.mark_known") == ","
+    assert _shown(panel, "curator.frame_back") == ""
+    assert not panel._reset_buttons["curator.frame_back"].isHidden()
+
+    with qtbot.assertNotEmitted(panel.key_bindings_changed):
+        panel._reset_buttons["curator.frame_back"].click()
+    assert "Mark known" in panel._errors["curator.frame_back"].text()
+    assert _shown(panel, "curator.frame_back") == ""
+
+
 def test_each_editor_records_one_chord(panel):
     assert all(editor.maximumSequenceLength() == 1 for editor in panel._editors.values())
 

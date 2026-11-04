@@ -267,3 +267,84 @@ class TestPlayback:
         _drag(dlg, 4.0, 7.3)
         dlg.clip_editor.play_button.click()
         player.play_range.assert_called_once_with(4.0, 7.3)
+
+
+class TestPlayheadEdges:
+    """The strip's start-here/end-here buttons: the edge goes where the playhead is."""
+
+    def test_start_here_records_the_playhead(self, qtbot, words, existing_video):
+        dlg, player = _dialog(qtbot, words, existing_video)
+        _focus(dlg, 0)
+        player.current_seconds = 4.2
+
+        dlg.clip_editor.start_here_button.click()
+
+        assert dlg._clip_overrides == {0: (4.2, 7.3)}
+
+    def test_end_here_records_the_playhead(self, qtbot, words, existing_video):
+        dlg, player = _dialog(qtbot, words, existing_video)
+        _focus(dlg, 0)
+        player.current_seconds = 8.6
+
+        dlg.clip_editor.end_here_button.click()
+
+        assert dlg._clip_overrides == {0: (4.7, 8.6)}
+
+    def test_both_ends_ride_the_selection(self, qtbot, words, existing_video):
+        dlg, player = _dialog(qtbot, words, existing_video)
+        _focus(dlg, 1)
+        player.current_seconds = 19.4
+        dlg.clip_editor.start_here_button.click()
+        player.current_seconds = 21.5
+        dlg.clip_editor.end_here_button.click()
+        _check_all(dlg)
+
+        selected = dlg.get_selected_words()
+
+        assert selected[0].clip_override is None
+        assert selected[1].clip_override == (19.4, 21.5)
+
+    def test_the_press_does_not_pause(self, qtbot, words, existing_video):
+        """An end is set while listening; the press must not stop the line."""
+        dlg, player = _dialog(qtbot, words, existing_video)
+        _focus(dlg, 0)
+        player.reset_mock()  # focusing a row previews the scene, which pauses
+        player.current_seconds = 6.0
+
+        dlg.clip_editor.end_here_button.click()
+
+        player.pause.assert_not_called()
+        assert dlg._clip_overrides == {0: (4.7, 6.0)}
+
+    def test_reset_drops_a_playhead_edit(self, qtbot, words, existing_video):
+        dlg, player = _dialog(qtbot, words, existing_video)
+        _focus(dlg, 0)
+        player.current_seconds = 4.2
+        dlg.clip_editor.start_here_button.click()
+
+        dlg.clip_editor.reset()
+
+        assert dlg._clip_overrides == {}
+
+    def test_nothing_without_a_focused_word(self, qtbot, words, existing_video):
+        dlg, player = _dialog(qtbot, words, existing_video)
+        player.current_seconds = 4.2
+
+        dlg._set_clip_edge_at_playhead(out=False)
+
+        assert dlg._clip_overrides == {}
+
+    def test_waits_for_the_chosen_episode(self, qtbot, existing_video, tmp_path):
+        """Season curation: while the swap is in flight the playhead is in another episode."""
+        other = tmp_path / "ep2.mkv"
+        other.write_bytes(b"\x00")
+        dlg, player = _dialog(qtbot, [_make_word("食べる", start_time=5.0, video_file=other)], existing_video)
+        _focus(dlg, 0)
+        assert not dlg._chosen_episode_displayed()
+        player.current_seconds = 4.2
+
+        dlg.clip_editor.start_here_button.click()
+        dlg.clip_editor.end_here_button.click()
+
+        assert dlg._clip_overrides == {}
+        assert dlg.clip_editor.current_window() == (4.7, 7.3)

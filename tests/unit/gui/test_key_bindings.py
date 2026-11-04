@@ -14,6 +14,7 @@ from anki_miner.gui.utils.key_bindings import (
     about_rows,
     binding_problem,
     default_sequence,
+    key_action,
     overrides_for,
     resolve_bindings,
     tab_action_id,
@@ -46,6 +47,43 @@ class TestTable:
         defaults = {action.id: action.default for action in KEY_ACTIONS}
         assert defaults["curator.next_word"] == ""
         assert defaults["curator.previous_word"] == ""
+
+    def test_the_player_keys_ship_bound(self) -> None:
+        defaults = {action.id: action.default for action in KEY_ACTIONS}
+        assert defaults["curator.play_clip"] == "Shift+Space"
+        assert defaults["curator.frame_back"] == ","
+        assert defaults["curator.frame_forward"] == "."
+
+    def test_the_pane_button_keys_ship_unbound(self) -> None:
+        defaults = {action.id: action.default for action in KEY_ACTIONS}
+        for action_id in (
+            "curator.expand_previous",
+            "curator.expand_next",
+            "curator.reset_lines",
+            "curator.use_frame",
+            "curator.reset_frame",
+            "curator.reset_clip",
+            "curator.previous_sentence",
+            "curator.next_sentence",
+        ):
+            assert defaults[action_id] == "", action_id
+
+    def test_the_new_curator_rows_follow_previous_word(self) -> None:
+        ids = [action.id for action in KEY_ACTIONS]
+        start = ids.index("curator.previous_word") + 1
+        assert ids[start : start + 3] == ["curator.play_clip", "curator.frame_back", "curator.frame_forward"]
+        assert all(key_action(action_id).group == CURATOR for action_id in ids[start : start + 11])
+
+    def test_the_playhead_keys_ship_on_i_and_o(self) -> None:
+        defaults = {action.id: action.default for action in KEY_ACTIONS}
+        assert defaults["curator.clip_start_here"] == "I"
+        assert defaults["curator.clip_end_here"] == "O"
+
+    def test_the_playhead_rows_follow_next_sentence(self) -> None:
+        ids = [action.id for action in KEY_ACTIONS]
+        start = ids.index("curator.next_sentence") + 1
+        assert ids[start : start + 2] == ["curator.clip_start_here", "curator.clip_end_here"]
+        assert all(key_action(action_id).group == CURATOR for action_id in ids[start : start + 2])
 
     def test_tab_actions_follow_the_tab_bar(self) -> None:
         assert set(MAIN_TAB_ORDER) == MAIN_TABS
@@ -86,6 +124,50 @@ class TestResolve:
     @pytest.mark.parametrize("garbage", ["Ctrl+Nonsense+Key", "Ctrl+K, Ctrl+D", "NotAKey"])
     def test_an_unreadable_override_keeps_the_default(self, qapp, garbage: str) -> None:
         assert _text(resolve_bindings({"curator.mark_known": garbage})["curator.mark_known"]) == "D"
+
+    def test_a_new_default_on_a_key_the_user_took_ships_unbound(self, qapp) -> None:
+        """A release adds "," as Step one frame back; this user had already put Mark known there.
+
+        Both on "," would be activatedAmbiguously in Qt and neither would fire, so
+        the default the user never picked gives way.
+        """
+        keys = resolve_bindings({"curator.mark_known": ","})
+
+        assert keys["curator.frame_back"].isEmpty()
+        assert _text(keys["curator.mark_known"]) == ","
+        assert _text(keys["curator.frame_forward"]) == "."  # no collision, default kept
+
+    @pytest.mark.parametrize(("action_id", "text"), [("curator.clip_start_here", "I"), ("curator.clip_end_here", "O")])
+    def test_a_saved_key_on_i_or_o_unbinds_the_playhead_default(self, qapp, action_id: str, text: str) -> None:
+        keys = resolve_bindings({"curator.mark_known": text})
+        assert keys[action_id].isEmpty()
+        assert _text(keys["curator.mark_known"]) == text
+
+    def test_without_a_collision_every_default_stays(self, qapp) -> None:
+        keys = resolve_bindings({"curator.mark_known": "J"})
+        assert _text(keys["curator.frame_back"]) == ","
+        assert _text(keys["curator.play_clip"]) == "Shift+Space"
+
+    def test_an_overridden_action_keeps_its_key_against_another_override(self, qapp) -> None:
+        """The rule only unbinds a default. An action the user rebound to its own
+        default is the user's choice too, and is left alone."""
+        keys = resolve_bindings({"curator.frame_back": ",", "curator.next_word": "J"})
+        assert _text(keys["curator.frame_back"]) == ","
+        assert _text(keys["curator.next_word"]) == "J"
+
+    def test_an_override_in_the_other_group_takes_no_default(self, qapp) -> None:
+        """The curator is a window of its own: a hand-edited app key never collides with it."""
+        keys = resolve_bindings({"app.usage_guide": "Shift+Space"})
+        assert _text(keys["curator.play_clip"]) == "Shift+Space"
+
+    def test_a_yielded_default_round_trips_as_unbound(self, qapp) -> None:
+        keys = resolve_bindings({"curator.play_pause": "Shift+Space"})
+        assert keys["curator.play_clip"].isEmpty()
+
+        overrides = overrides_for(keys)
+
+        assert overrides == {"curator.play_pause": "Shift+Space", "curator.play_clip": ""}
+        assert resolve_bindings(overrides) == keys
 
     def test_overrides_for_keeps_only_the_differences(self, qapp) -> None:
         assert overrides_for(resolve_bindings({})) == {}
@@ -145,6 +227,19 @@ class TestBindingProblem:
     @pytest.mark.parametrize("text", ["J", "Shift+J", "F3", "Ctrl+J"])
     def test_the_curator_takes_letters_and_chords(self, qapp, text: str) -> None:
         assert self._problem("curator.next_word", text) is None
+
+    @pytest.mark.parametrize(
+        ("action_id", "text"),
+        [("curator.play_clip", "Shift+Space"), ("curator.frame_back", ","), ("curator.frame_forward", ".")],
+    )
+    def test_the_player_keys_are_curator_keys(self, qapp, action_id: str, text: str) -> None:
+        assert self._problem(action_id, text) is None
+        # And free for another curator action once their default is cleared.
+        assert self._problem("curator.next_word", text, {action_id: ""}) is None
+
+    @pytest.mark.parametrize(("action_id", "text"), [("curator.clip_start_here", "I"), ("curator.clip_end_here", "O")])
+    def test_the_playhead_defaults_are_valid_curator_keys(self, qapp, action_id: str, text: str) -> None:
+        assert self._problem(action_id, text) is None
 
     @pytest.mark.parametrize("text", ["D", "Shift+D", "Space", "Delete"])
     def test_an_app_key_needs_a_modifier_or_an_f_key(self, qapp, text: str) -> None:

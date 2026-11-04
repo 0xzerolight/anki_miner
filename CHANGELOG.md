@@ -7,6 +7,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [Unreleased]
 
 ### Added
+- **More Word Curator controls take a key (Settings → Keyboard).** Shift+Space plays just the focused word's clip and stops, as the clip strip's play button does; Space still plays on from the line's start. Comma and period step the preview one frame back or forward. Adding the previous or next line, Reset lines, Use current frame, Reset frame, resetting the clip and picking the previous or next sentence can each be given a key, and ship without one. A key already given to another curator action stays with it, and the new default on that key starts unbound.
+- **The Word Curator sets a clip's start or end at the playhead.** The two new buttons beside the clip strip, ⇤ and ⇥, move that end of the focused word's clip to where the player is, so the exact moment no longer takes dragging the slider back and forth. I and O do the same from the keyboard (Settings → Keyboard), and the player keeps playing. When the clip would be shorter than 0.2 seconds or longer than 30, the other end moves with it.
 
 ### Changed
 - **Readability counts lines with two new words apart from lines with three or more (Utilities → Readability).** Each file's row now has an i+2 and an i+3+ column where it had one i+2+ column, so a file whose harder lines are mostly two words away from readable no longer looks like one full of dense lines. The four totals above the table are unchanged.

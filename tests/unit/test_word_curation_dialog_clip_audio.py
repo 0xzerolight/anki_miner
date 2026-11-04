@@ -10,6 +10,7 @@ from unittest.mock import MagicMock
 
 import pytest
 from PyQt6.QtCore import QEvent, Qt
+from PyQt6.QtGui import QKeySequence, QShortcut
 from PyQt6.QtWidgets import QApplication
 
 from anki_miner.gui.widgets.dialogs import word_curation_dialog as wcd
@@ -117,6 +118,25 @@ def test_the_play_pause_key_action_plays_the_clip(qtbot, fake_clip_player, deck_
     _focus_word(dialog, 0)
 
     dialog._toggle_play_pause()
+
+    assert fake_clip_player[0].played == [clip]
+
+
+def test_the_play_clip_key_plays_the_cards_clip(qtbot, fake_clip_player, deck_units):
+    """No clip strip on a deck run: Shift+Space plays the card's own clip, as play/pause does."""
+    units, clip = deck_units
+    dialog = WordCurationDialog([_make_word("猫", 0)], media_context=_context(units))
+    qtbot.addWidget(dialog)
+    _focus_word(dialog, 0)
+    play_clip = [sc for sc in dialog.table.findChildren(QShortcut) if sc.key() == QKeySequence("Shift+Space")]
+    frame_steps = [
+        sc for sc in dialog.table.findChildren(QShortcut) if sc.key() in (QKeySequence(","), QKeySequence("."))
+    ]
+    assert len(play_clip) == 1 and len(frame_steps) == 2
+
+    play_clip[0].activated.emit()
+    for shortcut in frame_steps:
+        shortcut.activated.emit()  # no player: nothing to step, and no error
 
     assert fake_clip_player[0].played == [clip]
 
