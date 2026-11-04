@@ -74,6 +74,17 @@ class TestTable:
         assert ids[start : start + 3] == ["curator.play_clip", "curator.frame_back", "curator.frame_forward"]
         assert all(key_action(action_id).group == CURATOR for action_id in ids[start : start + 11])
 
+    def test_the_playhead_keys_ship_on_i_and_o(self) -> None:
+        defaults = {action.id: action.default for action in KEY_ACTIONS}
+        assert defaults["curator.clip_start_here"] == "I"
+        assert defaults["curator.clip_end_here"] == "O"
+
+    def test_the_playhead_rows_follow_next_sentence(self) -> None:
+        ids = [action.id for action in KEY_ACTIONS]
+        start = ids.index("curator.next_sentence") + 1
+        assert ids[start : start + 2] == ["curator.clip_start_here", "curator.clip_end_here"]
+        assert all(key_action(action_id).group == CURATOR for action_id in ids[start : start + 2])
+
     def test_tab_actions_follow_the_tab_bar(self) -> None:
         assert set(MAIN_TAB_ORDER) == MAIN_TABS
         tab_actions = [action for action in KEY_ACTIONS if action.id.startswith("app.tab.")]
@@ -125,6 +136,12 @@ class TestResolve:
         assert keys["curator.frame_back"].isEmpty()
         assert _text(keys["curator.mark_known"]) == ","
         assert _text(keys["curator.frame_forward"]) == "."  # no collision, default kept
+
+    @pytest.mark.parametrize(("action_id", "text"), [("curator.clip_start_here", "I"), ("curator.clip_end_here", "O")])
+    def test_a_saved_key_on_i_or_o_unbinds_the_playhead_default(self, qapp, action_id: str, text: str) -> None:
+        keys = resolve_bindings({"curator.mark_known": text})
+        assert keys[action_id].isEmpty()
+        assert _text(keys["curator.mark_known"]) == text
 
     def test_without_a_collision_every_default_stays(self, qapp) -> None:
         keys = resolve_bindings({"curator.mark_known": "J"})
@@ -219,6 +236,10 @@ class TestBindingProblem:
         assert self._problem(action_id, text) is None
         # And free for another curator action once their default is cleared.
         assert self._problem("curator.next_word", text, {action_id: ""}) is None
+
+    @pytest.mark.parametrize(("action_id", "text"), [("curator.clip_start_here", "I"), ("curator.clip_end_here", "O")])
+    def test_the_playhead_defaults_are_valid_curator_keys(self, qapp, action_id: str, text: str) -> None:
+        assert self._problem(action_id, text) is None
 
     @pytest.mark.parametrize("text", ["D", "Shift+D", "Space", "Delete"])
     def test_an_app_key_needs_a_modifier_or_an_f_key(self, qapp, text: str) -> None:

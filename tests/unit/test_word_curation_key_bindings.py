@@ -102,7 +102,7 @@ def test_an_old_config_marks_known_with_d_and_k_does_nothing(qtbot, make_tokeniz
 def test_typing_curator_keys_into_search_types_letters_and_triggers_nothing(qtbot, make_tokenized_words) -> None:
     """Review Focus 1: every letter key is table-scoped, so Search keeps its letters."""
     dialog = _curator(qtbot, make_tokenized_words(3), {"curator.next_word": "J", "curator.previous_word": "K"})
-    for key in ("S", "D", "J", "K"):
+    for key in ("S", "D", "J", "K", "I", "O"):
         shortcut = _table_shortcut(dialog, key)
         assert shortcut is not None, key  # non-vacuous: each key IS bound, on the table
         assert shortcut.context() == Qt.ShortcutContext.WidgetWithChildrenShortcut
@@ -110,9 +110,9 @@ def test_typing_curator_keys_into_search_types_letters_and_triggers_nothing(qtbo
     states = [dialog.table.item(row, 0).checkState() for row in range(3)]
     _activate(qtbot, dialog, dialog.search_input)
 
-    QTest.keyClicks(dialog.search_input, "sdjk")
+    QTest.keyClicks(dialog.search_input, "sdjkio")
 
-    assert dialog.search_input.text() == "sdjk"
+    assert dialog.search_input.text() == "sdjkio"
     assert dialog.pending_known_forms() == set()
     assert [dialog.table.item(row, 0).checkState() for row in range(3)] == states
     assert dialog.table.currentRow() == 1
@@ -194,7 +194,7 @@ def test_the_table_answers_to_the_shipped_keys(qtbot, make_tokenized_words) -> N
         shortcut.key().toString(PORTABLE)
         for shortcut in dialog.table.findChildren(QShortcut, options=Qt.FindChildOption.FindDirectChildrenOnly)
     }
-    assert keys == {"Space", "Shift+Space", ",", ".", "S", "D", "Ctrl+A", "Ctrl+D", "F2", "Ctrl+C"}
+    assert keys == {"Space", "Shift+Space", ",", ".", "I", "O", "S", "D", "Ctrl+A", "Ctrl+D", "F2", "Ctrl+C"}
 
 
 def test_an_unbound_action_installs_nothing(qtbot, make_tokenized_words) -> None:
@@ -250,7 +250,7 @@ def test_a_modified_next_word_key_moves_the_highlight_instead_of_adding_to_it(qt
 # ---------------------------------------------------------------------------
 
 #: Every key _install_pane_keys puts on each pane, at the shipped bindings.
-PLAYER_KEYS = ("Space", "Shift+Space", ",", ".")
+PLAYER_KEYS = ("Space", "Shift+Space", ",", ".", "I", "O")
 
 PLAYER_MODULE = "anki_miner.gui.widgets.subtitle_player_widget"
 
@@ -368,6 +368,42 @@ def test_a_frame_key_fires_once_from_a_focused_player_pane_button(qtbot, tmp_pat
     assert dialog._line_expansions == {}  # Shift+Space did not fall through to the button
     assert ambiguous == []
     dialog.hide()
+
+
+def test_i_and_o_put_the_clip_ends_at_the_playhead(qtbot, tmp_path, fake_mpv) -> None:
+    """I from the table, O from a focused player-pane button: each edge lands on mpv's position."""
+    dialog = _live_curator(qtbot, tmp_path)
+    ambiguous: list[str] = []
+    for shortcut in dialog.findChildren(QShortcut):
+        shortcut.activatedAmbiguously.connect(partial(ambiguous.append, shortcut.key().toString(PORTABLE)))
+    _activate(qtbot, dialog, dialog.table)
+    fake_mpv.pause = False  # playing: the press must not stop it
+    fake_mpv.time_pos = 4.2
+
+    QTest.keyClick(dialog.table, Qt.Key.Key_I)
+
+    assert dialog._clip_overrides == {0: (4.2, 7.3)}
+    dialog.expand_next_button.setFocus()
+    qtbot.waitUntil(dialog.expand_next_button.hasFocus, timeout=1000)
+    fake_mpv.time_pos = 6.5
+
+    QTest.keyClick(dialog.expand_next_button, Qt.Key.Key_O)
+
+    assert dialog._clip_overrides == {0: (4.2, 6.5)}
+    assert dialog.clip_editor.current_window() == (4.2, 6.5)
+    assert fake_mpv.pause is False
+    assert dialog._line_expansions == {}
+    assert ambiguous == []
+    dialog.hide()
+
+
+def test_the_playhead_keys_wait_for_the_chosen_episode(qtbot, tmp_path, fake_mpv) -> None:
+    dialog = _live_curator(qtbot, tmp_path)
+    fake_mpv.time_pos = 4.2
+    with patch.object(WordCurationDialog, "_chosen_episode_displayed", return_value=False):
+        _table_shortcut(dialog, "I").activated.emit()
+        _table_shortcut(dialog, "O").activated.emit()
+    assert dialog._clip_overrides == {}
 
 
 def test_frame_keys_wait_for_the_chosen_episode(qtbot, tmp_path, fake_mpv) -> None:

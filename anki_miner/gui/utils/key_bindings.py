@@ -107,6 +107,18 @@ KEY_ACTIONS: tuple[KeyAction, ...] = (
     KeyAction("curator.reset_clip", CURATOR, QT_TRANSLATE_NOOP("KeyBindings", "Reset clip"), ""),
     KeyAction("curator.previous_sentence", CURATOR, QT_TRANSLATE_NOOP("KeyBindings", "Previous sentence"), ""),
     KeyAction("curator.next_sentence", CURATOR, QT_TRANSLATE_NOOP("KeyBindings", "Next sentence"), ""),
+    KeyAction(
+        "curator.clip_start_here",
+        CURATOR,
+        QT_TRANSLATE_NOOP("KeyBindings", "Start the clip at the playhead"),
+        "I",
+    ),
+    KeyAction(
+        "curator.clip_end_here",
+        CURATOR,
+        QT_TRANSLATE_NOOP("KeyBindings", "End the clip at the playhead"),
+        "O",
+    ),
     KeyAction("app.usage_guide", APP, QT_TRANSLATE_NOOP("KeyBindings", "Usage Guide"), "F1"),
     KeyAction(tab_action_id("video"), APP, QT_TRANSLATE_NOOP("KeyBindings", "Go to Video"), "Ctrl+1"),
     KeyAction(tab_action_id("audiobook"), APP, QT_TRANSLATE_NOOP("KeyBindings", "Go to Audiobooks"), "Ctrl+2"),
@@ -153,9 +165,9 @@ def resolve_bindings(overrides: Mapping[str, str]) -> dict[str, QKeySequence]:
     An action left on its default resolves unbound when another action of its
     group holds that key through an override: the user's choice wins over a
     default they never picked, which matters when a release ships a new
-    default on a key the user already took (Shift+Space, "," and "." in the
-    curator). Two shortcuts on one key are activatedAmbiguously in Qt, so
-    keeping both would leave the user's own key dead too.
+    default on a key the user already took (Shift+Space, ",", ".", "I" and
+    "O" in the curator). Two shortcuts on one key are activatedAmbiguously in
+    Qt, so keeping both would leave the user's own key dead too.
     """
     keys = {action.id: default_sequence(action.id) for action in KEY_ACTIONS}
     keys[OPEN_SETTINGS_ACTION_ID] = QKeySequence.fromString(OPEN_SETTINGS_KEY, _PORTABLE)

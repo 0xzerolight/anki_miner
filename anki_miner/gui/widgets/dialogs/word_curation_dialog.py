@@ -1506,6 +1506,8 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         self.clip_editor.clip_reset.connect(self._on_clip_reset)
         self.clip_editor.play_requested.connect(self._on_clip_play_requested)
         self.clip_editor.stop_requested.connect(self._on_clip_stop_requested)
+        self.clip_editor.start_here_requested.connect(lambda: self._set_clip_edge_at_playhead(out=False))
+        self.clip_editor.end_here_requested.connect(lambda: self._set_clip_edge_at_playhead(out=True))
         # The player owns the stop: it fires range_finished when the clip ends
         # AND when anything else takes playback over, so the button cannot be
         # left showing "playing" after a Space press moved the user elsewhere.
@@ -1647,6 +1649,27 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
     def _on_clip_stop_requested(self) -> None:
         if self._show_player and hasattr(self, "player_widget"):
             self.player_widget.pause()  # cancels the range, which resets the button
+
+    def _set_clip_edge_at_playhead(self, *, out: bool) -> None:
+        """Put the focused word's clip start (or, with ``out``, its end) at the playhead.
+
+        The strip's start-here/end-here buttons and their keys. The edit goes
+        through clip_changed -> _on_clip_changed like a drag, so it lands in
+        _clip_overrides with no channel of its own.
+
+        Never pauses, unlike the frame pick: an end is set while listening, and
+        the press must not stop the line the user is timing it against. The
+        player's ``current_seconds`` is mpv's own position, read now, not the
+        last slider tick.
+        """
+        word, idx = self._pending_word, self._pending_index
+        if word is None or idx is None or not hasattr(self, "clip_editor") or not hasattr(self, "player_widget"):
+            return
+        if not self._chosen_episode_displayed():
+            # Season curation: the source swap for the chosen episode is still
+            # in flight, so the playhead is in the PREVIOUS one.
+            return
+        self.clip_editor.set_edge(float(self.player_widget.current_seconds), out=out)
 
     # ------------------------------------------------------------------
     # Prev/next subtitle-line expansion (Issue #120)
@@ -1950,7 +1973,8 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
 
     def _install_pane_keys(self, widget: QWidget) -> None:
         """Install every widget-scoped PLAYER key on ``widget``: play/pause (Space
-        unless rebound), play just this clip, and the two frame steps.
+        unless rebound), play just this clip, the two frame steps, and starting
+        or ending the clip at the playhead.
 
         ``WidgetWithChildrenShortcut`` so they only fire when ``widget`` (or one of
         its children) has focus — never the Search box. Installed on the table and
@@ -1974,6 +1998,8 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         self._bind("curator.play_clip", widget, self._play_clip)
         self._bind("curator.frame_back", widget, lambda: self._step_frame(-1))
         self._bind("curator.frame_forward", widget, lambda: self._step_frame(1))
+        self._bind("curator.clip_start_here", widget, lambda: self._set_clip_edge_at_playhead(out=False))
+        self._bind("curator.clip_end_here", widget, lambda: self._set_clip_edge_at_playhead(out=True))
 
     def _setup_shortcuts(self) -> None:
         """Install the curator's keys from ``self._keys`` (Settings -> Keyboard).
