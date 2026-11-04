@@ -282,6 +282,30 @@ class TestChosenSentence:
         # Display text carries the ja soft-wrap marks, as the list rows do.
         assert WORD_JOINER in label.text()
 
+    @pytest.mark.parametrize("code", ["ja", "zh"])
+    def test_it_keeps_the_content_face_under_the_app_stylesheet(self, qtbot, qapp, mixed_words, code):
+        """The app sheet's ``QWidget`` font rule beats ``setFont`` on a widget.
+
+        Without the sheet any setFont reads back as set, so only a real one
+        shows whether the label escapes the interface face (a zh sentence in
+        it draws Han characters with Japanese glyph shapes).
+        """
+        from anki_miner.gui.resources.styles.theme import Theme
+        from anki_miner.gui.utils.content_text import content_cell_font
+        from anki_miner.languages.registry import get_profile
+
+        style = get_profile(code).content_style
+        previous = qapp.styleSheet()
+        qapp.setStyleSheet(Theme.get_stylesheet("light"))
+        try:
+            dlg = WordCurationDialog(mixed_words, content_style=style)
+            qtbot.addWidget(dlg)
+            label = dlg.chosen_sentence_label
+            label.ensurePolished()
+            assert label.font().families() == content_cell_font(style).families()
+        finally:
+            qapp.setStyleSheet(previous)
+
     def test_markup_in_a_line_prints_as_typed(self, qtbot):
         word = _leaf("食べる", "<b>食べる</b>", 1.0)
         word.sentence_candidates = [word, _leaf("食べる", "パンを食べる", 5.0)]

@@ -59,10 +59,11 @@ from anki_miner.gui.utils import session_state
 from anki_miner.gui.utils.content_text import (
     ContentCellDelegate,
     apply_content_direction,
+    apply_content_font,
     content_cell_font,
     content_phrase_wrap,
 )
-from anki_miner.gui.utils.fonts import make_scaled_font
+from anki_miner.gui.utils.fonts import JAPANESE_BODY, make_scaled_font
 from anki_miner.gui.utils.key_bindings import display_text, resolve_bindings
 from anki_miner.gui.utils.keyboard_shortcuts import (
     disown_default_buttons,
@@ -1949,14 +1950,15 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
 
         # Plain text: a subtitle line is data, and "<i>" in one must print as
         # typed. No focus, ever: every curator key but confirm is scoped to the
-        # table. Content face and direction, as the list rows below have.
+        # table. Content face and direction, as the list rows below have --
+        # but through apply_content_font, not setFont: on a widget the app
+        # sheet's QWidget font rule beats setFont, which only item fonts escape.
         self.chosen_sentence_label = QLabel()
         self.chosen_sentence_label.setTextFormat(Qt.TextFormat.PlainText)
         self.chosen_sentence_label.setWordWrap(True)
         self.chosen_sentence_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
         self.chosen_sentence_label.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        self.chosen_sentence_label.setFont(content_cell_font(self._content_style))
-        apply_content_direction(self.chosen_sentence_label, self._content_style)
+        apply_content_font(self.chosen_sentence_label, self._content_style, role=JAPANESE_BODY)
         vbox.addWidget(self.chosen_sentence_label)
 
         self.sentence_list = QListWidget()
