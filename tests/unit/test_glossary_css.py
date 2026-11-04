@@ -176,6 +176,15 @@ class TestBaseCss:
         assert "background-color: currentColor" in css
         assert "image-rendering: pixelated" in css
 
+    def test_image_cap_spares_dictionary_sized_images(self):
+        # Issue #143: max-height beats even an inline height, so a cap on every
+        # image shrank a dictionary's 15em panels to 6em. Only unsized images are
+        # capped; the renderer opens a sized image's style attr with its size.
+        capped = [sel for sel, decls in _selectors(load_glossary_css()) if "max-height" in decls]
+        assert capped == [f'.yomitan-glossary {_GUARD} .gloss-image:not([style^="width:"]):not([style^="height:"])']
+        general = dict(_selectors(load_glossary_css()))[f".yomitan-glossary {_GUARD} .gloss-image"]
+        assert "object-fit: contain" in general
+
     def test_tables_rules_use_literal_colours(self):
         # The --am-* tunables died with the old core; a note type's --amn-accent
         # still wins where it is set. _minify_css tightens the commas.

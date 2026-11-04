@@ -75,13 +75,23 @@
 
 /* @am-group: images */
 
-/* Dictionary-bundled images (e.g. pitch-accent SVGs) — cap so they never blow
- * out the card; vertical-align lives on the inline-block container, not the img
- * (the container is what participates in line layout). */
+/* Dictionary-bundled images. A size the dictionary set is inline on the <img>;
+ * when max-width narrows such an image on a small screen, object-fit letterboxes
+ * it instead of stretching it. vertical-align lives on the inline-block
+ * container, not the img (the container is what participates in line layout). */
 .yomitan-glossary :is(ol[data-count],li[data-dictionary-id]) .gloss-image {
   max-width: 100%;
-  max-height: 6em;
   height: auto;
+  object-fit: contain;
+}
+
+/* Cap unsized images (natural-size art) so they never blow out the card. An image
+ * the dictionary sized is exempt: max-height beats even an inline height (Issue
+ * #143). yomitan_renderer._render_img writes the size decls first in the style
+ * attr, which is what the prefix match keys on. Chained :not(), not a selector
+ * list, so an old WebView keeps the rule. */
+.yomitan-glossary :is(ol[data-count],li[data-dictionary-id]) .gloss-image:not([style^="width:"]):not([style^="height:"]) {
+  max-height: 6em;
 }
 
 .yomitan-glossary :is(ol[data-count],li[data-dictionary-id]) .gloss-image-link {

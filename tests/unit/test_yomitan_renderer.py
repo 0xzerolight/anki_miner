@@ -736,6 +736,24 @@ class TestImgSizing:
         out = structured_content_to_html(node, dict_id="d")
         assert "height:" not in out
 
+    def test_size_decls_lead_the_img_style_attr(self):
+        # Issue #143: glossary.css spares dictionary-sized images its 6em cap by
+        # matching `[style^="width:"]` / `[style^="height:"]`, so the size must open
+        # the attr whatever style keys come first in the node.
+        sizes = ({"height": 15, "sizeUnits": "em"}, {"width": 40}, {"width": 40, "height": 55})
+        for size in sizes:
+            for extra in ({"verticalAlign": "middle"}, {"style": {"verticalAlign": "top", "borderWidth": "1px"}}):
+                node = {**extra, "tag": "img", "path": "svg/x.svg", **size}
+                out = structured_content_to_html(node, dict_id="d")
+                style = re.search(r'<img [^>]*style="([^"]*)"', out)
+                assert style, out
+                assert style.group(1).startswith(("width:", "height:")), style.group(1)
+
+    def test_unsized_img_style_opens_with_neither_size_prop(self):
+        node = {"tag": "img", "path": "svg/x.svg", "style": {"borderWidth": "1px"}, "verticalAlign": "middle"}
+        out = structured_content_to_html(node, dict_id="d")
+        assert '<img class="gloss-image anki-miner-dict-media" src="d__svg_x.svg" style="border-width: 1px;' in out
+
 
 class TestDictMediaImgRewrite:
     """Yomitan monolingual dictionaries reference accent SVGs and other bundled

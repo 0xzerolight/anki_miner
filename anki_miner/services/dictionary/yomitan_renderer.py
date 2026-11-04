@@ -659,6 +659,9 @@ def _render_img(
     # Size (width/height + sizeUnits) and any other inline style (verticalAlign,
     # border, …) are merged into one style="…" attr. Size decls seed first so
     # they survive the style whitelist, which deliberately omits width/height.
+    # Keep them first: glossary.css exempts sized images from its 6em cap by
+    # matching a style attr that starts with `width:` or `height:` (Issue #143),
+    # and cards written since v2.6.2 carry this order.
     style_attr = _collect_style(node, seed=_img_size_decls(node))
     if style_attr:
         extras.append(style_attr)
