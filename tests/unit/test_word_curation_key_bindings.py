@@ -474,6 +474,78 @@ def test_the_reset_clip_key_restores_the_default_window(qtbot, tmp_path, fake_mp
     assert dialog.clip_editor.current_window() == (4.7, 7.3)
 
 
+def _two_word_live_curator(qtbot, tmp_path: Path, key_bindings) -> WordCurationDialog:
+    """Word 0 focused and its panes landed; word 1 (two sentences each) one row down."""
+    video = tmp_path / "episode.mkv"
+    video.write_bytes(b"\x00")
+    first = _word("食べる", "食べるのテスト", 5.0)
+    first.sentence_candidates = [first, _word("食べる", "前の行です", 1.0)]
+    second = _word("走る", "次の行です", 9.0)
+    second.sentence_candidates = [second, _word("走る", "前の行です", 1.0)]
+    context = CurationMediaContext(video_file=video, subtitle_entries=list(ENTRIES), audio_padding=0.3)
+    dialog = WordCurationDialog([first, second], media_context=context, key_bindings=key_bindings)
+    qtbot.addWidget(dialog)
+    dialog.player_widget._on_file_loaded()
+    dialog.player_widget._on_duration(60.0)
+    dialog.table.setCurrentCell(0, 1)
+    dialog._focus_timer.stop()
+    dialog._on_focus_timer_fired()
+    return dialog
+
+
+def _move_focus_down_pending(dialog: WordCurationDialog) -> None:
+    """The arrow key: word 1 is focused, its panes still 120 ms away."""
+    dialog.table.setCurrentCell(1, 1)
+    assert dialog._pending_index == 1
+    assert dialog._focus_timer.isActive()
+
+
+def test_a_playhead_key_in_the_focus_debounce_edits_no_one(qtbot, tmp_path, fake_mpv) -> None:
+    """The strip still holds the word the cursor left, and so does the playhead."""
+    dialog = _two_word_live_curator(qtbot, tmp_path, None)
+    _move_focus_down_pending(dialog)
+    fake_mpv.time_pos = 6.5
+
+    _table_shortcut(dialog, "O").activated.emit()
+
+    assert dialog._clip_overrides == {}
+    dialog._focus_timer.stop()
+    dialog._on_focus_timer_fired()
+    fake_mpv.time_pos = 10.5
+    _table_shortcut(dialog, "O").activated.emit()
+    assert dialog._clip_overrides == {1: (8.7, 10.5)}
+
+
+def test_the_reset_clip_key_in_the_focus_debounce_keeps_the_left_words_clip(qtbot, tmp_path, fake_mpv) -> None:
+    dialog = _two_word_live_curator(qtbot, tmp_path, {"curator.reset_clip": "R"})
+    dialog.clip_editor.slider.values_changed.emit(40, 80)
+    edited = dict(dialog._clip_overrides)
+    assert 0 in edited
+    _move_focus_down_pending(dialog)
+
+    _table_shortcut(dialog, "R").activated.emit()
+
+    assert dialog._clip_overrides == edited
+
+
+def test_a_sentence_key_in_the_focus_debounce_picks_for_no_one(qtbot, tmp_path, fake_mpv) -> None:
+    """The picker still lists the word the cursor left; a pick there would drop its edits."""
+    dialog = _two_word_live_curator(qtbot, tmp_path, {"curator.next_sentence": "X"})
+    dialog.clip_editor.slider.values_changed.emit(40, 80)
+    edited = dict(dialog._clip_overrides)
+    _move_focus_down_pending(dialog)
+
+    _table_shortcut(dialog, "X").activated.emit()
+
+    assert dialog._chosen == {}
+    assert dialog._clip_overrides == edited
+    dialog._focus_timer.stop()
+    dialog._on_focus_timer_fired()
+    _table_shortcut(dialog, "X").activated.emit()
+    assert dialog._chosen[1].start_time == 1.0
+    assert 0 not in dialog._chosen
+
+
 def _stub_player_curator(qtbot, tmp_path: Path, key_bindings) -> WordCurationDialog:
     """The line-expansion layout of test_rebound_play_pause_fires_once_from_the_player_pane."""
     video = tmp_path / "episode.mkv"

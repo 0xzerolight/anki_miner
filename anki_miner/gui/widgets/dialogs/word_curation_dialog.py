@@ -1679,11 +1679,25 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         word, idx = self._pending_word, self._pending_index
         if word is None or idx is None or not hasattr(self, "clip_editor") or not hasattr(self, "player_widget"):
             return
+        if idx != self._clip_index:
+            # Inside the row-focus debounce: the strip (whose clip_changed
+            # writes to _clip_index) and the playhead still belong to the word
+            # the cursor left.
+            return
         if not self._chosen_episode_displayed():
             # Season curation: the source swap for the chosen episode is still
             # in flight, so the playhead is in the PREVIOUS one.
             return
         self.clip_editor.set_edge(float(self.player_widget.current_seconds), out=out)
+
+    def _reset_clip(self) -> None:
+        """The reset-clip key: the slider's double-click, for the focused word only.
+
+        clip_reset drops _clip_index's override, which inside the row-focus
+        debounce is still the word the cursor left.
+        """
+        if self._clip_index == self._pending_index:
+            self.clip_editor.reset()
 
     # ------------------------------------------------------------------
     # Prev/next subtitle-line expansion (Issue #120)
@@ -2118,7 +2132,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
             self._bind("curator.reset_frame", self.table, self.frame_reset_button.click)
         if hasattr(self, "clip_editor"):
             # The slider's double-click.
-            self._bind("curator.reset_clip", self.table, self.clip_editor.reset)
+            self._bind("curator.reset_clip", self.table, self._reset_clip)
         # What a click on the neighbouring row of the sentence picker does.
         self._bind("curator.previous_sentence", self.table, lambda: self._step_sentence(-1))
         self._bind("curator.next_sentence", self.table, lambda: self._step_sentence(1))
@@ -2219,9 +2233,11 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
 
         ``setCurrentRow`` fires ``currentRowChanged`` -> ``_on_candidate_chosen``,
         the click's own path. Stops at either end; nothing to pick from when the
-        word has one sentence (the list is then empty and disabled).
+        word has one sentence (the list is then empty and disabled). Nothing
+        inside the row-focus debounce either: the list still holds the word the
+        cursor left, and a pick there would drop that word's edits.
         """
-        if not hasattr(self, "sentence_list"):
+        if not hasattr(self, "sentence_list") or self._candidate_list_index != self._pending_index:
             return
         count = self.sentence_list.count()
         row = self.sentence_list.currentRow() + step
