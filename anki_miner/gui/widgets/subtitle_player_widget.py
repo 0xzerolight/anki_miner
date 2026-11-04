@@ -24,16 +24,18 @@ duration/time-pos/eof is the NORMAL first event, not an edge case.
 from __future__ import annotations
 
 import logging
+import math
 import sys
 import threading
 import time
 from pathlib import Path
 from typing import Any
 
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import QEvent, QObject, Qt, pyqtSignal
 from PyQt6.QtGui import QFontMetrics
 from PyQt6.QtWidgets import (
     QFrame,
+    QGridLayout,
     QHBoxLayout,
     QLabel,
     QPushButton,
@@ -45,7 +47,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
+from anki_miner.gui.resources.styles import BORDER_RADIUS, FONT_SIZES, SPACING
 from anki_miner.gui.utils import video_preview
 from anki_miner.gui.utils.content_text import apply_content_font
 from anki_miner.gui.utils.fonts import (
@@ -85,13 +87,178 @@ _END_FILE_REASON_ERROR = 4
 _FRAME_BACK_GLYPH = "◁"
 _FRAME_FORWARD_GLYPH = "▷"
 
+#: The cue overlay reads over the picture, not over the window: like the
+#: subtitle viewer's offset readout it carries its own always-dark plate and
+#: light text, so it reads the same in every theme and over any frame. The
+#: margin keeps the plate off the picture's bottom edge.
+_OVERLAY_STYLE = f"""
+QFrame#subtitle-overlay {{
+    background-color: rgba(0, 0, 0, 178);
+    border-radius: {BORDER_RADIUS.small}px;
+    padding: {SPACING.xxs}px {SPACING.xs}px;
+    margin: {SPACING.sm}px;
+}}
+QFrame#subtitle-overlay QTextEdit {{
+    background: transparent;
+    border: none;
+    padding: 0px;
+    color: #ffffff;
+}}
+"""
+
+#: Share of the picture's width a cue takes before it wraps.
+_OVERLAY_WIDTH_SHARE = 0.9
+
+
+def _read_only_line() -> QTextEdit:
+    """A subtitle line: a document, frameless, taking no focus and no text interaction.
+
+    A document rather than a label because Japanese content gets looser leading
+    and Qt stylesheets ignore ``line-height``. No focus and no interaction, so
+    Space still reaches the player's play/pause shortcut over it.
+    """
+    line = QTextEdit()
+    line.setReadOnly(True)
+    line.setFrameShape(QFrame.Shape.NoFrame)
+    line.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+    line.setTextInteractionFlags(Qt.TextInteractionFlag.NoTextInteraction)
+    line.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+    line.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+    line.setLineWrapMode(QTextEdit.LineWrapMode.WidgetWidth)
+    return line
+
+
+def _text_size(line: QTextEdit, text_width: float) -> tuple[int, int]:
+    """Width and height of ``line``'s text laid out at ``text_width`` (-1: unwrapped).
+
+    Measured on a copy, which keeps the face, leading and direction: the editor
+    lays its own document out at its viewport width, and re-laying that one out
+    here would fight it.
+    """
+    document = line.document()
+    assert document is not None  # a QTextEdit always owns one
+    copy = document.clone()
+    assert copy is not None
+    copy.setTextWidth(text_width)
+    size = copy.size()
+    return math.ceil(size.width()), math.ceil(size.height())
+
+
+class _SubtitleOverlay(QFrame):
+    """The cue over the picture: the mining-language line, its translation beneath.
+
+    Sized here from its own text, not by a layout: a word-wrapped QLabel folds a
+    subtitle into a compact block, and a QTextEdit reports no content size at
+    all. The plate is as wide as its longer line up to ``_OVERLAY_WIDTH_SHARE``
+    of the picture, as tall as the wrapped text, and hidden while both lines are
+    empty. It floats over the video, so coming and going per cue moves nothing;
+    the strips' fixed reservation (D45-B) exists because they sit under it.
+
+    Transparent for the mouse (with its children), and never focused: a click
+    belongs to the video under it, and Space to play/pause.
+    """
+
+    def __init__(self, video: QWidget, content_style: ContentTextStyle) -> None:
+        super().__init__()
+        self.setObjectName("subtitle-overlay")
+        self.setStyleSheet(_OVERLAY_STYLE)
+        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+        self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        # Placed at its size hint, but none of its size reaches the cell's
+        # minimum: a plate fitted to a wider picture would otherwise hold the
+        # pane at that width, and never be refitted narrower.
+        self.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Ignored)
+        self._video = video
+        self._japanese_leading = content_style.font_role == "japanese"
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+        # The strip's line moved onto the picture: content face, feature role,
+        # the mining language's direction, and (set per cue) its leading.
+        self.primary = _read_only_line()
+        layout.addWidget(self.primary)
+        apply_content_font(self.primary, content_style, role=JAPANESE_FEATURE)
+        # The secondary strip's: the viewer's own language, so the app font, at
+        # the size the app sheet's QTextEdit rule gives that strip.
+        self.secondary = _read_only_line()
+        layout.addWidget(self.secondary)
+        self.secondary.setFont(make_scaled_font(FONT_SIZES.body_sm))
+        # A QTextEdit's own layout direction never reaches its paragraphs, which
+        # guess theirs from the first letter: an Arabic cue opening on a Latin
+        # name would run left to right. The cue's paragraphs take the content
+        # direction; the translation's keep guessing, as the strip's do.
+        rtl = content_style.direction == "rtl"
+        cue_direction = Qt.LayoutDirection.RightToLeft if rtl else Qt.LayoutDirection.LeftToRight
+        for line, direction in (
+            (self.primary, cue_direction),
+            (self.secondary, Qt.LayoutDirection.LayoutDirectionAuto),
+        ):
+            document = line.document()
+            assert document is not None
+            # Padding is the plate's; every line of a multi-line cue is centred.
+            document.setDocumentMargin(0)
+            option = document.defaultTextOption()
+            option.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+            option.setTextDirection(direction)
+            document.setDefaultTextOption(option)
+            line.setVisible(False)
+        self.setVisible(False)
+        # The wrap width follows the picture's.
+        video.installEventFilter(self)
+
+    def lines(self) -> tuple[str, str]:
+        """The cue on the plate: (primary, secondary)."""
+        return self.primary.toPlainText(), self.secondary.toPlainText()
+
+    def set_lines(self, primary: str, secondary: str) -> None:
+        """Show one cue; both lines empty hides the plate.
+
+        Runs on every position tick, so an unchanged cue returns at once.
+        ``setPlainText`` replaces every block, so the leading is reapplied after
+        each real change, as the strip does.
+        """
+        if (primary, secondary) == self.lines():
+            return
+        self.primary.setPlainText(primary)
+        if self._japanese_leading:
+            apply_japanese_block_format(self.primary.document())
+        self.secondary.setPlainText(secondary)
+        self.primary.setVisible(bool(primary))
+        self.secondary.setVisible(bool(secondary))
+        self._fit()
+        self.setVisible(bool(primary or secondary))
+
+    def _fit(self) -> None:
+        """Size the lines to their text, wrapping within the share of the picture.
+
+        The plate's own size hint follows from them through its layout.
+        """
+        lines = [line for line in (self.primary, self.secondary) if not line.isHidden()]
+        if not lines:
+            return
+        # The sheet's margin and padding, and the faces the lines are drawn in.
+        self.ensurePolished()
+        margins = self.contentsMargins()
+        cap = max(1, int(self._video.width() * _OVERLAY_WIDTH_SHARE) - margins.left() - margins.right())
+        width = min(cap, max(_text_size(line, -1)[0] for line in lines))
+        for line in lines:
+            line.setFixedSize(width, _text_size(line, width)[1])
+
+    def eventFilter(self, watched: QObject | None, event: QEvent | None) -> bool:  # noqa: N802 - Qt override
+        """Re-wrap the cue on screen when the picture is resized."""
+        if event is not None and event.type() == QEvent.Type.Resize and not self.isHidden():
+            self._fit()
+        return False
+
 
 class SubtitlePlayerWidget(QWidget):
     """Reusable video player with a fixed two-line subtitle strip.
 
     Owns MpvVideoWidget, the subtitle strip, position QSlider, time label,
     play/pause button, and the mpv.MPV handle. No player exists until
-    set_source is called.
+    set_source is called. With ``subtitle_overlay`` the cue is drawn over the
+    picture instead of in the strips, for as long as there is a picture.
     """
 
     #: Emitted on the GUI thread once mpv has the file open, i.e. once seeking
@@ -119,13 +286,22 @@ class SubtitlePlayerWidget(QWidget):
     _mpv_file_loaded = pyqtSignal()
     _mpv_playback_error = pyqtSignal(str)
 
-    def __init__(self, parent=None, *, content_style: ContentTextStyle | None = None):
+    def __init__(
+        self,
+        parent=None,
+        *,
+        content_style: ContentTextStyle | None = None,
+        subtitle_overlay: bool = False,
+    ):
         """Initialize the player widget (no media until set_source is called).
 
         Args:
             parent: Optional parent widget.
             content_style: Typography for the subtitle strip, from the mining
                 language's profile. ``None`` keeps today's Japanese face.
+            subtitle_overlay: Draw the cue and its translation over the video,
+                with both strips hidden. Needs a video surface: without one, or
+                once rendering fails, the strips carry the cue as before.
         """
         super().__init__(parent)
 
@@ -191,9 +367,9 @@ class SubtitlePlayerWidget(QWidget):
         self._mpv_file_loaded.connect(self._on_file_loaded)
         self._mpv_playback_error.connect(self._on_playback_error)
 
-        self._setup_ui()
+        self._setup_ui(subtitle_overlay)
 
-    def _setup_ui(self) -> None:
+    def _setup_ui(self, subtitle_overlay: bool) -> None:
         """Set up the player UI layout."""
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
@@ -216,11 +392,30 @@ class SubtitlePlayerWidget(QWidget):
         # GL widget anyway just to render a text notice over it.
         self._video_surface = video_preview.preview_enabled() and self._mpv_available
         self.video_widget: MpvVideoWidget | None = None
+        # The cue over the picture; None whenever the strips carry it (not asked
+        # for, no surface, or rendering failed). _show_cues routes on it.
+        self.subtitle_overlay: _SubtitleOverlay | None = None
         if self._video_surface:
             self.video_widget = MpvVideoWidget()
             self.video_widget.render_ready.connect(self._on_render_ready)
             self.video_widget.render_failed.connect(self._on_render_failed)
-            layout.addWidget(self.video_widget, 1)
+            if subtitle_overlay:
+                # The video and the overlay share one grid cell, as in the
+                # subtitle viewer's offset readout: the mpv surface is given no
+                # child and is never moved into an overlay container.
+                cell = QGridLayout()
+                cell.setContentsMargins(0, 0, 0, 0)
+                cell.addWidget(self.video_widget, 0, 0)
+                self.subtitle_overlay = _SubtitleOverlay(self.video_widget, self._content_style)
+                cell.addWidget(
+                    self.subtitle_overlay,
+                    0,
+                    0,
+                    Qt.AlignmentFlag.AlignBottom | Qt.AlignmentFlag.AlignHCenter,
+                )
+                layout.addLayout(cell, 1)
+            else:
+                layout.addWidget(self.video_widget, 1)
 
         # Backend-degradation notice — hidden by default. Two texts share it:
         # libmpv absent entirely (set_source shows it and no player is built),
@@ -240,24 +435,20 @@ class SubtitlePlayerWidget(QWidget):
         # the whole session and clears its text between cues instead of
         # disappearing, so nothing below it ever moves.
         #
-        # It is a document rather than a label because Japanese content gets
-        # looser leading and Qt stylesheets ignore `line-height`. It takes no
-        # focus and no text interaction, so Space still reaches the player's
-        # play/pause shortcut when the pointer is over the strip.
-        self.subtitle_strip = QTextEdit()
+        # While the subtitle overlay carries the cue, both strips are hidden:
+        # the overlay floats over the picture, and a strip would only take its
+        # height from the video. A failed render brings them back.
+        #
+        # See _read_only_line for why it is a document that takes no focus.
+        self.subtitle_strip = _read_only_line()
         self.subtitle_strip.setObjectName("subtitle-strip")
-        self.subtitle_strip.setReadOnly(True)
-        self.subtitle_strip.setFrameShape(QFrame.Shape.NoFrame)
-        self.subtitle_strip.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        self.subtitle_strip.setTextInteractionFlags(Qt.TextInteractionFlag.NoTextInteraction)
-        self.subtitle_strip.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.subtitle_strip.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.subtitle_strip.setLineWrapMode(QTextEdit.LineWrapMode.WidgetWidth)
         self.subtitle_strip.setAlignment(Qt.AlignmentFlag.AlignCenter)
         apply_content_font(self.subtitle_strip, self._content_style, role=JAPANESE_FEATURE)
         strip_height = 2 * japanese_line_spacing(JAPANESE_FEATURE) + 2 * _STRIP_PADDING_Y
         self.subtitle_strip.setFixedHeight(strip_height)
         self._set_cue_text("")
+        if self.subtitle_overlay is not None:
+            self.subtitle_strip.setVisible(False)
         layout.addWidget(self.subtitle_strip)
 
         # Secondary-language strip (F7). Same D45-B contract as the strip
@@ -267,15 +458,8 @@ class SubtitlePlayerWidget(QWidget):
         # the source changes and never during playback. Application font, not
         # the mining language's content face: this line is in the viewer's
         # own language, whatever that is.
-        self.secondary_strip = QTextEdit()
+        self.secondary_strip = _read_only_line()
         self.secondary_strip.setObjectName("secondary-subtitle-strip")
-        self.secondary_strip.setReadOnly(True)
-        self.secondary_strip.setFrameShape(QFrame.Shape.NoFrame)
-        self.secondary_strip.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        self.secondary_strip.setTextInteractionFlags(Qt.TextInteractionFlag.NoTextInteraction)
-        self.secondary_strip.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.secondary_strip.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.secondary_strip.setLineWrapMode(QTextEdit.LineWrapMode.WidgetWidth)
         self.secondary_strip.setAlignment(Qt.AlignmentFlag.AlignCenter)
         # The app sheet's generic QTextEdit rule sets font-size-body-sm, and a
         # stylesheet size beats setFont; size the two reserved lines from the
@@ -333,6 +517,10 @@ class SubtitlePlayerWidget(QWidget):
         layout.addLayout(controls_layout)
 
         self.setLayout(layout)
+        # Above the video it shares the cell with; only now do both have this
+        # widget as their parent, so only now can the stacking order be set.
+        if self.subtitle_overlay is not None:
+            self.subtitle_overlay.raise_()
 
     def _make_frame_step_button(self, glyph: str, label: str, direction: int) -> QToolButton:
         """One compact, auto-raised frame stepper.
@@ -387,16 +575,16 @@ class SubtitlePlayerWidget(QWidget):
         self._audio_track_override = audio_track_override
         self.secondary_entries = list(secondary_entries or [])
         self._secondary_offset = secondary_offset
-        self._set_secondary_cue_text("")
-        # Decided once per source (D45-B): present only when a second track exists.
-        self.secondary_strip.setVisible(bool(self.secondary_entries))
+        self._show_cues("", "")
+        # Decided once per source (D45-B): present only when a second track
+        # exists, and never while the overlay carries the translation.
+        self.secondary_strip.setVisible(bool(self.secondary_entries) and self.subtitle_overlay is None)
 
         # New source: nothing loaded yet, previous pendings are void.
         self._file_loaded = False
         self._pending_seek_ms = None
         self._play_from_ms = None
         self._at_eof = False
-        self._set_cue_text("")
 
         if not self._mpv_available:
             # libmpv could not load: degrade to a notice; the rest of the dialog
@@ -851,15 +1039,15 @@ class SubtitlePlayerWidget(QWidget):
             self.cancel_range()
 
     def _on_playback_error(self, message: str) -> None:
-        """Surface a playback error in the subtitle strip (old-backend parity)."""
-        self._set_cue_text(tr_format(self.tr("Video error: %1"), message))
+        """Surface a playback error where the cue shows (old-backend parity)."""
+        self._show_cues(tr_format(self.tr("Video error: %1"), message), "")
         self.playback_failed.emit(message)
 
     def _on_render_failed(self, reason: str) -> None:
         """mpv loaded but rendering is impossible on this display (broken GL).
 
-        Audio and the subtitle overlay keep working — say so instead of
-        leaving a silent black box.
+        Audio and the subtitles keep working — say so instead of leaving a
+        silent black box.
         """
         logger.warning("Video render unavailable: %s", reason)
         self._backend_notice_label.setText(
@@ -868,8 +1056,17 @@ class SubtitlePlayerWidget(QWidget):
         self._backend_notice_label.setVisible(True)
         if self.video_widget is not None:
             self.video_widget.setVisible(False)
+        # No picture to float over: the strips take the cue back, with their
+        # two-line reservation, and keep it for this widget's lifetime.
+        overlay, self.subtitle_overlay = self.subtitle_overlay, None
+        if overlay is not None:
+            cue = overlay.lines()
+            overlay.setVisible(False)
+            self.subtitle_strip.setVisible(True)
+            self.secondary_strip.setVisible(bool(self.secondary_entries))
+            self._show_cues(*cue)
         # Honour the "audio still plays" promise: a source queued behind the
-        # (failed) render context still loads — audio + overlay work without it.
+        # (failed) render context still loads — audio + subtitles work without it.
         self._flush_pending_load()
 
     # Identical warn-level mpv lines within this window collapse into one
@@ -924,22 +1121,36 @@ class SubtitlePlayerWidget(QWidget):
         self.seek_seconds(position / 1000.0)
 
     def _update_subtitle(self, current_seconds: float) -> None:
-        """Update the subtitle label(s) based on current playback position.
+        """Show the cue(s) at the current playback position.
 
         Args:
             current_seconds: Current playback position in seconds.
         """
-        self._set_cue_text(self._cue_at(self.subtitle_entries, self._offset, current_seconds))
-        if self.secondary_entries:
-            self._set_secondary_cue_text(self._cue_at(self.secondary_entries, self._secondary_offset, current_seconds))
+        self._show_cues(
+            self._cue_at(self.subtitle_entries, self._offset, current_seconds),
+            self._cue_at(self.secondary_entries, self._secondary_offset, current_seconds),
+        )
+
+    def _show_cues(self, primary: str, secondary: str) -> None:
+        """Put a cue where subtitles are drawn: over the video, else in the strips.
+
+        The one place that picks the target, so a position tick, a new source
+        and a playback error all land on whichever surface is showing.
+        """
+        if self.subtitle_overlay is not None:
+            self.subtitle_overlay.set_lines(primary, secondary)
+            return
+        self._set_cue_text(primary)
+        self._set_secondary_cue_text(secondary)
 
     @staticmethod
     def _cue_at(entries: list[tuple[float, float, str]], offset: float, current_seconds: float) -> str:
-        """First cue covering ``current_seconds`` after ``offset``, else "" (cleared, never hidden)."""
+        """First cue covering ``current_seconds`` after ``offset``, else ""."""
         for start, end, text in entries:
             if start + offset <= current_seconds <= end + offset:
                 return text
-        # Cleared, never hidden: hiding the strip would move the video.
+        # Between cues the strips clear their text but stay (hiding one would
+        # move the video); the overlay hides its plate.
         return ""
 
     def _set_secondary_cue_text(self, text: str) -> None:

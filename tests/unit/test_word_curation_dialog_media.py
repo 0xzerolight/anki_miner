@@ -723,6 +723,29 @@ class TestSinglePlayerInstance:
             assert len(dlg.findChildren(SubtitlePlayerWidget)) == 1
             assert factory.call_count == 1
 
+    def test_the_player_draws_the_cue_over_the_video(self, qtbot, words, existing_video, monkeypatch):
+        """Anki Miner for Android parity: no strips under the curator's video."""
+        from anki_miner.gui.widgets.mpv_video_widget import MpvVideoWidget
+
+        player_module = "anki_miner.gui.widgets.subtitle_player_widget"
+        player = MagicMock(name="mpv.MPV")
+        player.pause = True
+        player.track_list = []
+        player.event_callback.return_value = lambda fn: fn
+        monkeypatch.setattr(MpvVideoWidget, "has_render_context", property(lambda self: True))
+
+        ctx = _make_media_context(video_file=existing_video)
+        with (
+            patch(f"{player_module}.mpv_available", return_value=True),
+            patch(f"{player_module}.create_mpv_player", return_value=player),
+        ):
+            dlg = WordCurationDialog(words, media_context=ctx)
+            qtbot.addWidget(dlg)
+            widget = dlg.player_widget
+
+            assert widget.subtitle_overlay is not None
+            assert not widget.subtitle_strip.isVisibleTo(widget)
+
 
 # ---------------------------------------------------------------------------
 # 6c. The player is released on EVERY destruction path
@@ -1138,3 +1161,14 @@ class TestPreviewSuppressedInCurator:
         assert dlg._show_player
         assert "player" in dlg._side_key
         assert hasattr(dlg, "player_widget")
+
+    def test_the_cue_stays_in_the_strip(self, qtbot, words, existing_video):
+        """No picture to draw the cue over, so the strip under it carries it."""
+        ctx = _make_media_context(video_file=existing_video)
+        dlg = WordCurationDialog(words, media_context=ctx, lookup_fn=lambda _term: [])
+        qtbot.addWidget(dlg)
+        widget = dlg.player_widget
+        widget._update_subtitle(2.0)
+        assert widget.subtitle_overlay is None
+        assert widget.subtitle_strip.isVisibleTo(widget)
+        assert widget.subtitle_strip.toPlainText() == "食べる"

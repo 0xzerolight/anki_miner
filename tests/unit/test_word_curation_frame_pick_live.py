@@ -208,3 +208,24 @@ class TestPlayFromParkedPreview:
 
         fake_mpv.command.assert_not_called()
         assert fake_mpv.pause is False
+
+
+class TestCueOverTheVideo:
+    """The curator draws the cue over the picture (Anki Miner for Android parity)."""
+
+    def test_the_cue_and_its_translation_ride_the_overlay(self, qtbot, fake_mpv, words, video):
+        ctx = CurationMediaContext(
+            video_file=video,
+            subtitle_entries=list(ENTRIES),
+            secondary_entries=[(5.0, 7.0, "to eat")],
+        )
+        dlg = WordCurationDialog(words, media_context=ctx)
+        qtbot.addWidget(dlg)
+        player = dlg.player_widget
+
+        player._on_time_pos(6.0)
+
+        assert player.subtitle_overlay is not None
+        assert player.subtitle_overlay.lines() == ("食べる", "to eat")
+        assert not player.subtitle_strip.isVisibleTo(player)
+        assert not player.secondary_strip.isVisibleTo(player)
