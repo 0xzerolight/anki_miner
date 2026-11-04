@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Added
 
 ### Changed
+- **Readability counts lines with two new words apart from lines with three or more (Utilities → Readability).** Each file's row now has an i+2 and an i+3+ column where it had one i+2+ column, so a file whose harder lines are mostly two words away from readable no longer looks like one full of dense lines. The four totals above the table are unchanged.
 
 ### Fixed
 - **Mining again right after a run that synced Anki works.** With "Sync Anki after mining" on, Anki answers the sync request at once and syncs in the background, refusing everything else until it is done, so a command-line run started straight after another failed with `setup_error`. A run now waits up to two minutes for its sync to finish before it ends. A run that still finds Anki syncing reports `busy` on the command line and `ANKI_UNREACHABLE` in `--api`, not a setup problem; the window says Anki is busy syncing.

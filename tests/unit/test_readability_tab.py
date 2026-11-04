@@ -41,7 +41,7 @@ def _make_tab(config, qtbot, *, available: bool = True) -> ReadabilityTab:
     return tab
 
 
-def _stats(words: int, unknown: int, new: set[str], buckets: tuple[int, int, int]) -> ReadabilityStats:
+def _stats(words: int, unknown: int, new: set[str], buckets: tuple[int, int, int, int]) -> ReadabilityStats:
     return ReadabilityStats(words, unknown, frozenset(new), buckets)
 
 
@@ -254,14 +254,16 @@ def test_measured_rows_fill_table_and_totals(qtbot, tmp_path):
     _worker, measured, _errors, _finished = _start(tab, _subtitle(tmp_path))
     tab._run_files = [tmp_path / "1.srt", tmp_path / "2.srt"]
 
-    measured[0](0, _stats(100, 10, {"犬"}, (8, 1, 1)))
-    measured[0](1, _stats(10, 10, {"犬", "鳥"}, (0, 0, 2)))
+    measured[0](0, _stats(100, 10, {"犬"}, (8, 1, 1, 0)))
+    measured[0](1, _stats(10, 10, {"犬", "鳥"}, (0, 1, 1, 2)))
 
     assert tab.files_table.rowCount() == 2
+    # i+0, i+1, i+2, i+3+ per file: exactly two new words and three or more apart.
+    assert [tab.files_table.item(1, c).text() for c in range(3, 7)] == ["0%", "25%", "25%", "50%"]
     assert tab.known_card.value_label.text() == "81.8%"  # 90 of 110 occurrences, not mean(90, 0)
     assert tab.new_words_card.value_label.text() == "2"  # 犬 counted once
-    assert tab.i0_card.value_label.text() == "67%"  # 8 of 12 lines
-    assert tab.i1_card.value_label.text() == "8%"
+    assert tab.i0_card.value_label.text() == "57%"  # 8 of 14 lines
+    assert tab.i1_card.value_label.text() == "14%"
     assert not tab.report_card.isHidden()
 
 
@@ -283,7 +285,7 @@ def test_totals_never_revisit_earlier_files(qtbot, tmp_path, monkeypatch):
     tab._run_files = [tmp_path / f"{i}.srt" for i in range(5)]
 
     for idx in range(5):
-        measured[0](idx, _stats(10, idx, {f"w{idx}", "犬"}, (1, 0, 0)))
+        measured[0](idx, _stats(10, idx, {f"w{idx}", "犬"}, (1, 0, 0, 0)))
 
     assert max(sizes) <= 2
     assert tab.new_words_card.value_label.text() == "6"  # w0..w4 and 犬 once
@@ -295,11 +297,11 @@ def test_sorted_insert_keeps_cells_together(qtbot, tmp_path):
     _worker, measured, _errors, _finished = _start(tab, _subtitle(tmp_path))
     tab._run_files = [tmp_path / "a.srt", tmp_path / "b.srt", tmp_path / "c.srt"]
 
-    measured[0](0, _stats(100, 50, {"犬"}, (1, 0, 0)))
-    measured[0](1, _stats(100, 10, {"犬", "鳥"}, (1, 0, 0)))
+    measured[0](0, _stats(100, 50, {"犬"}, (1, 0, 0, 0)))
+    measured[0](1, _stats(100, 10, {"犬", "鳥"}, (1, 0, 0, 0)))
     tab.files_table.sortItems(1, Qt.SortOrder.DescendingOrder)
     # Lands between the two: Qt moves the row when its Known cell is set.
-    measured[0](2, _stats(100, 30, {"犬", "鳥", "魚"}, (1, 0, 0)))
+    measured[0](2, _stats(100, 30, {"犬", "鳥", "魚"}, (1, 0, 0, 0)))
 
     assert _rows(tab) == [("b.srt", "90.0%", "2"), ("c.srt", "70.0%", "3"), ("a.srt", "50.0%", "1")]
 
@@ -310,7 +312,7 @@ def test_default_order_is_run_order(qtbot, tmp_path):
     tab._run_files = [tmp_path / "1.srt", tmp_path / "2.srt", tmp_path / "10.srt"]
 
     for idx in range(3):
-        measured[0](idx, _stats(100, 10 * idx, {"犬"}, (1, 0, 0)))
+        measured[0](idx, _stats(100, 10 * idx, {"犬"}, (1, 0, 0, 0)))
 
     assert [row[0] for row in _rows(tab)] == ["1.srt", "2.srt", "10.srt"]
 
@@ -319,7 +321,7 @@ def test_rerun_clears_report(qtbot, tmp_path):
     tab = _make_tab(_make_config(tmp_path), qtbot)
     sub = _subtitle(tmp_path)
     worker, measured, _errors, finished = _start(tab, sub)
-    measured[0](0, _stats(100, 10, {"犬"}, (1, 0, 0)))
+    measured[0](0, _stats(100, 10, {"犬"}, (1, 0, 0, 0)))
     finished[0](TerminalOutcome.SUCCESS)
     tab.worker_thread = None  # the QThread has exited
 
@@ -334,7 +336,7 @@ def test_a_refusal_clears_the_last_report(qtbot, tmp_path):
     """An old report must not sit under a new complaint (Readability review, minor 7)."""
     tab = _make_tab(_make_config(tmp_path), qtbot)
     _worker, measured, _errors, finished = _start(tab, _subtitle(tmp_path))
-    measured[0](0, _stats(100, 10, {"犬"}, (1, 0, 0)))
+    measured[0](0, _stats(100, 10, {"犬"}, (1, 0, 0, 0)))
     finished[0](TerminalOutcome.SUCCESS)
     tab.worker_thread = None  # the QThread has exited
 
@@ -349,7 +351,7 @@ def test_a_refusal_clears_the_last_report(qtbot, tmp_path):
 def test_cancel_keeps_measured_rows(qtbot, tmp_path):
     tab = _make_tab(_make_config(tmp_path), qtbot)
     _worker, measured, _errors, finished = _start(tab, _subtitle(tmp_path))
-    measured[0](0, _stats(100, 10, {"犬"}, (1, 0, 0)))
+    measured[0](0, _stats(100, 10, {"犬"}, (1, 0, 0, 0)))
 
     tab._on_cancel()
     finished[0](TerminalOutcome.CANCELLED)
@@ -410,7 +412,15 @@ def test_probe_mid_run_does_not_rearm_check(qtbot, tmp_path):
 def test_every_header_and_card_has_a_tooltip(qtbot, tmp_path):
     tab = _make_tab(_make_config(tmp_path), qtbot)
     table = tab.files_table
-    assert table.columnCount() == 6
+    assert [table.horizontalHeaderItem(col).text() for col in range(table.columnCount())] == [
+        "File",
+        "Known",
+        "New words",
+        "i+0",
+        "i+1",
+        "i+2",
+        "i+3+",
+    ]
     for col in range(table.columnCount()):
         assert table.horizontalHeaderItem(col).toolTip(), col
     for card in (tab.known_card, tab.new_words_card, tab.i0_card, tab.i1_card):

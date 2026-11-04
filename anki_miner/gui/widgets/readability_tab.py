@@ -3,7 +3,8 @@
 Pick a subtitle file, a book (.epub, .txt) or a mokuro manga volume, or a folder
 of them; the tool shows how much of each file, and of the whole set, the learner
 already knows: the share of word occurrences known, how many different new words
-there are, and the share of lines with no new word (i+0), one (i+1) or more.
+there are, and the share of lines with no new word (i+0), one (i+1), two (i+2)
+or more (i+3+).
 Known words are read the way mining reads them
 (:mod:`anki_miner.services.readability`); nothing is written.
 
@@ -47,7 +48,7 @@ from anki_miner.gui.widgets.base import PageWidth, ScreenIssue, configure_card_l
 from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader, StatCard
 from anki_miner.gui.workers.readability_worker import ReadabilityWorker
 from anki_miner.languages.registry import config_language, get_profile, subtitle_language
-from anki_miner.models.readability import I_PLUS_0, I_PLUS_1, I_PLUS_2_OR_MORE, ReadabilityStats
+from anki_miner.models.readability import I_PLUS_0, I_PLUS_1, I_PLUS_2, I_PLUS_3_OR_MORE, ReadabilityStats
 from anki_miner.services.readability import combine
 from anki_miner.services.reading import detector
 from anki_miner.services.reading._util import natural_sort_key
@@ -59,13 +60,13 @@ _BOOK_EXTENSIONS = (".epub", ".txt")
 _ARCHIVE_EXTENSIONS = (".cbz", ".zip")
 #: What Check takes: the Reading tab's books and mokuro volumes as well as subtitles.
 _ACCEPTED_EXTENSIONS = frozenset(_SUBTITLE_EXTENSIONS) | {*_BOOK_EXTENSIONS, ".mokuro", *_ARCHIVE_EXTENSIONS}
-#: Known, New words, i+0, i+1, i+2+ (File is text).
-_NUMBER_COLUMNS = (1, 2, 3, 4, 5)
+#: Known, New words, i+0, i+1, i+2, i+3+ (File is text).
+_NUMBER_COLUMNS = (1, 2, 3, 4, 5, 6)
 #: Rows the table shows before it scrolls (a floor in rows, not pixels).
 _MIN_VISIBLE_ROWS = 8
 _NO_VALUE = "—"
 #: The run total before any file is measured.
-_NO_TOTAL = ReadabilityStats(0, 0, frozenset(), (0, 0, 0))
+_NO_TOTAL = ReadabilityStats(0, 0, frozenset(), (0, 0, 0, 0))
 
 
 def _pct(value: float | None, decimals: int) -> str:
@@ -267,7 +268,7 @@ class ReadabilityTab(_ToolTabBase):
             cards.addWidget(card)
         layout.addLayout(cards)
 
-        self.files_table = QTableWidget(0, 6)
+        self.files_table = QTableWidget(0, 7)
         headers = (
             (self.tr("File"), self.tr("Subtitle file, book or manga volume.")),
             (self.tr("Known"), self.tr("Share of the file's words you already know.")),
@@ -277,7 +278,8 @@ class ReadabilityTab(_ToolTabBase):
             ),
             ("i+0", self.tr("Lines with no new words.")),
             ("i+1", self.tr("Lines with exactly one new word.")),
-            ("i+2+", self.tr("Lines with two or more new words.")),
+            ("i+2", self.tr("Lines with exactly two new words.")),
+            ("i+3+", self.tr("Lines with three or more new words.")),
         )
         self.files_table.setHorizontalHeaderLabels([label for label, _tip in headers])
         for col, (_label, tip) in enumerate(headers):
@@ -483,7 +485,8 @@ class ReadabilityTab(_ToolTabBase):
             make_table_item(f"{len(stats.new_words):,}", CellRole.NUMBER, sort_value=len(stats.new_words)),
             _pct_cell(stats.line_pct(I_PLUS_0), 0),
             _pct_cell(stats.line_pct(I_PLUS_1), 0),
-            _pct_cell(stats.line_pct(I_PLUS_2_OR_MORE), 0),
+            _pct_cell(stats.line_pct(I_PLUS_2), 0),
+            _pct_cell(stats.line_pct(I_PLUS_3_OR_MORE), 0),
         )
         # With sorting on, Qt re-sorts after every setItem and the new row
         # moves away mid-fill, scattering its cells across rows.
