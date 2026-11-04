@@ -1184,6 +1184,14 @@ Continue anyway?</source>
         <translation>Povlecite kateri koli konec, da obrežete zvočni posnetek te besede; dvokliknite, da obnovite privzeto. To vpliva samo na to besedo.</translation>
     </message>
     <message>
+        <source>Start the clip at the playhead</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>End the clip at the playhead</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Stop the clip preview</source>
         <translation>Ustavi predogled posnetka</translation>
     </message>
@@ -6568,6 +6576,58 @@ Nobena datoteka indeksa ne bo izbrisana.</translation>
         <translation>Prejšnja beseda</translation>
     </message>
     <message>
+        <source>Play just this clip</source>
+        <translation type="unfinished">Predvajaj samo ta posnetek</translation>
+    </message>
+    <message>
+        <source>Step one frame back</source>
+        <translation type="unfinished">Eno sličico nazaj</translation>
+    </message>
+    <message>
+        <source>Step one frame forward</source>
+        <translation type="unfinished">Eno sličico naprej</translation>
+    </message>
+    <message>
+        <source>Add the previous line</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add the next line</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Reset lines</source>
+        <translation type="unfinished">Ponastavi vrstice</translation>
+    </message>
+    <message>
+        <source>Use current frame</source>
+        <translation type="unfinished">Uporabi trenutno sličico</translation>
+    </message>
+    <message>
+        <source>Reset frame</source>
+        <translation type="unfinished">Ponastavi sličico</translation>
+    </message>
+    <message>
+        <source>Reset clip</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Previous sentence</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Next sentence</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Start the clip at the playhead</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>End the clip at the playhead</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Usage Guide</source>
         <translation>Navodila za uporabo</translation>
     </message>
@@ -8021,9 +8081,9 @@ Besede za dodajanje: %3. Želite nadaljevati?</translation>
         <translation>Namesti mokuro</translation>
     </message>
     <message>
-        <source>Downloads mokuro and its OCR engine into Anki Miner's folder — about 1 GB, up to 4 GB with NVIDIA GPU support.</source>
+        <source>Downloads mokuro and its OCR engine into Anki Miner's folder — about 3 GB, up to 7 GB with NVIDIA GPU support.</source>
         <extracomment>Install/Reinstall's tooltip; "Download OCR model" swaps in its own.</extracomment>
-        <translation>Prenese mokuro in njegov pogon OCR v mapo programa Anki Miner — približno 1 GB, s podporo za NVIDIA GPU do 4 GB.</translation>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Not available on this platform</source>
@@ -9284,8 +9344,12 @@ Nobena datoteka indeksa ne bo izbrisana.</translation>
         <translation>Vrstice z natanko eno novo besedo.</translation>
     </message>
     <message>
-        <source>Lines with two or more new words.</source>
-        <translation>Vrstice z dvema ali več novimi besedami.</translation>
+        <source>Lines with exactly two new words.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Lines with three or more new words.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Check Readability</source>
@@ -12326,6 +12390,10 @@ Nameščeni viri in tema se ohranijo.</translation>
     </message>
 </context><context>
     <name>SubtitleRetimer</name>
+    <message>
+        <source>the reference subtitle has no dialogue lines</source>
+        <translation type="unfinished" />
+    </message>
     <message>
         <source>Ignoring %1 non-dialogue lines during alignment.</source>
         <translation>Med poravnavo so prezrte vrstice, ki niso dialog: %1.</translation>

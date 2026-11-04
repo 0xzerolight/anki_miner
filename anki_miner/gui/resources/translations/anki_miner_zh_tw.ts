@@ -1178,6 +1178,14 @@ Continue anyway?</source>
         <translation>拖曳任一端以裁剪此單字的音訊片段；連按兩下可還原為預設值。此操作僅影響此單字。</translation>
     </message>
     <message>
+        <source>Start the clip at the playhead</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>End the clip at the playhead</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Stop the clip preview</source>
         <translation>停止片段預覽</translation>
     </message>
@@ -6454,6 +6462,58 @@ No index files are deleted.</source>
         <translation>上一個單字</translation>
     </message>
     <message>
+        <source>Play just this clip</source>
+        <translation type="unfinished">只播放此片段</translation>
+    </message>
+    <message>
+        <source>Step one frame back</source>
+        <translation type="unfinished">後退一影格</translation>
+    </message>
+    <message>
+        <source>Step one frame forward</source>
+        <translation type="unfinished">前進一影格</translation>
+    </message>
+    <message>
+        <source>Add the previous line</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add the next line</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Reset lines</source>
+        <translation type="unfinished">重設行</translation>
+    </message>
+    <message>
+        <source>Use current frame</source>
+        <translation type="unfinished">使用目前畫面</translation>
+    </message>
+    <message>
+        <source>Reset frame</source>
+        <translation type="unfinished">重設畫面</translation>
+    </message>
+    <message>
+        <source>Reset clip</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Previous sentence</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Next sentence</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Start the clip at the playhead</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>End the clip at the playhead</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Usage Guide</source>
         <translation>使用指南</translation>
     </message>
@@ -7904,9 +7964,9 @@ Words to add: %3. Continue?</source>
         <translation>安裝 mokuro</translation>
     </message>
     <message>
-        <source>Downloads mokuro and its OCR engine into Anki Miner's folder — about 1 GB, up to 4 GB with NVIDIA GPU support.</source>
+        <source>Downloads mokuro and its OCR engine into Anki Miner's folder — about 3 GB, up to 7 GB with NVIDIA GPU support.</source>
         <extracomment>Install/Reinstall's tooltip; "Download OCR model" swaps in its own.</extracomment>
-        <translation>將 mokuro 及其 OCR 引擎下載至 Anki Miner 的資料夾 — 約 1 GB，若含 NVIDIA GPU 支援則最多 4 GB。</translation>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Not available on this platform</source>
@@ -9155,8 +9215,12 @@ No index files are deleted.</source>
         <translation>恰好只有一個新單字的行。</translation>
     </message>
     <message>
-        <source>Lines with two or more new words.</source>
-        <translation>含有兩個或更多新單字的行。</translation>
+        <source>Lines with exactly two new words.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Lines with three or more new words.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Check Readability</source>
@@ -12179,6 +12243,10 @@ Your installed resources and your theme are kept.</source>
     </message>
 </context><context>
     <name>SubtitleRetimer</name>
+    <message>
+        <source>the reference subtitle has no dialogue lines</source>
+        <translation type="unfinished" />
+    </message>
     <message>
         <source>Ignoring %1 non-dialogue lines during alignment.</source>
         <translation>對齊期間忽略 %1 行非對話內容。</translation>

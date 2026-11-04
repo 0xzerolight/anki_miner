@@ -1178,6 +1178,14 @@ Continue anyway?</source>
         <translation>양 끝을 끌어 이 단어의 오디오 클립을 자르고, 두 번 클릭하면 기본값으로 복원합니다. 이 단어에만 적용됩니다.</translation>
     </message>
     <message>
+        <source>Start the clip at the playhead</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>End the clip at the playhead</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Stop the clip preview</source>
         <translation>클립 미리 듣기 중지</translation>
     </message>
@@ -6454,6 +6462,58 @@ No index files are deleted.</source>
         <translation>이전 단어</translation>
     </message>
     <message>
+        <source>Play just this clip</source>
+        <translation type="unfinished">이 클립만 재생</translation>
+    </message>
+    <message>
+        <source>Step one frame back</source>
+        <translation type="unfinished">한 프레임 뒤로</translation>
+    </message>
+    <message>
+        <source>Step one frame forward</source>
+        <translation type="unfinished">한 프레임 앞으로</translation>
+    </message>
+    <message>
+        <source>Add the previous line</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add the next line</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Reset lines</source>
+        <translation type="unfinished">줄 재설정</translation>
+    </message>
+    <message>
+        <source>Use current frame</source>
+        <translation type="unfinished">현재 프레임 사용</translation>
+    </message>
+    <message>
+        <source>Reset frame</source>
+        <translation type="unfinished">프레임 재설정</translation>
+    </message>
+    <message>
+        <source>Reset clip</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Previous sentence</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Next sentence</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Start the clip at the playhead</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>End the clip at the playhead</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Usage Guide</source>
         <translation>사용 가이드</translation>
     </message>
@@ -7904,9 +7964,9 @@ Words to add: %3. Continue?</source>
         <translation>mokuro 설치</translation>
     </message>
     <message>
-        <source>Downloads mokuro and its OCR engine into Anki Miner's folder — about 1 GB, up to 4 GB with NVIDIA GPU support.</source>
+        <source>Downloads mokuro and its OCR engine into Anki Miner's folder — about 3 GB, up to 7 GB with NVIDIA GPU support.</source>
         <extracomment>Install/Reinstall's tooltip; "Download OCR model" swaps in its own.</extracomment>
-        <translation>mokuro와 OCR 엔진을 Anki Miner 폴더에 다운로드합니다 — 약 1GB, NVIDIA GPU 지원 시 최대 4GB.</translation>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Not available on this platform</source>
@@ -9155,8 +9215,12 @@ No index files are deleted.</source>
         <translation>새 단어가 정확히 하나인 줄입니다.</translation>
     </message>
     <message>
-        <source>Lines with two or more new words.</source>
-        <translation>새 단어가 둘 이상인 줄입니다.</translation>
+        <source>Lines with exactly two new words.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Lines with three or more new words.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Check Readability</source>
@@ -12179,6 +12243,10 @@ Your installed resources and your theme are kept.</source>
     </message>
 </context><context>
     <name>SubtitleRetimer</name>
+    <message>
+        <source>the reference subtitle has no dialogue lines</source>
+        <translation type="unfinished" />
+    </message>
     <message>
         <source>Ignoring %1 non-dialogue lines during alignment.</source>
         <translation>정렬 중 대사가 아닌 줄 %1개를 무시합니다.</translation>

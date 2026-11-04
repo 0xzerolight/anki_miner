@@ -1178,6 +1178,14 @@ Yine de devam edilsin mi?</translation>
         <translation>Bu kelimenin ses klibini kırpmak için iki uçtan birini sürükleyin; varsayılana dönmek için çift tıklayın. Yalnızca bu kelime etkilenir.</translation>
     </message>
     <message>
+        <source>Start the clip at the playhead</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>End the clip at the playhead</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Stop the clip preview</source>
         <translation>Klip önizlemesini durdur</translation>
     </message>
@@ -6454,6 +6462,58 @@ Hiçbir dizin dosyası silinmez.</translation>
         <translation>Önceki kelime</translation>
     </message>
     <message>
+        <source>Play just this clip</source>
+        <translation type="unfinished">Yalnızca bu klibi oynat</translation>
+    </message>
+    <message>
+        <source>Step one frame back</source>
+        <translation type="unfinished">Bir kare geri git</translation>
+    </message>
+    <message>
+        <source>Step one frame forward</source>
+        <translation type="unfinished">Bir kare ileri git</translation>
+    </message>
+    <message>
+        <source>Add the previous line</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add the next line</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Reset lines</source>
+        <translation type="unfinished">Satırları sıfırla</translation>
+    </message>
+    <message>
+        <source>Use current frame</source>
+        <translation type="unfinished">Geçerli kareyi kullan</translation>
+    </message>
+    <message>
+        <source>Reset frame</source>
+        <translation type="unfinished">Kareyi sıfırla</translation>
+    </message>
+    <message>
+        <source>Reset clip</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Previous sentence</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Next sentence</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Start the clip at the playhead</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>End the clip at the playhead</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Usage Guide</source>
         <translation>Kullanım Kılavuzu</translation>
     </message>
@@ -7904,9 +7964,9 @@ Eklenecek kelimeler: %3. Devam edilsin mi?</translation>
         <translation>mokuro'yu yükle</translation>
     </message>
     <message>
-        <source>Downloads mokuro and its OCR engine into Anki Miner's folder — about 1 GB, up to 4 GB with NVIDIA GPU support.</source>
+        <source>Downloads mokuro and its OCR engine into Anki Miner's folder — about 3 GB, up to 7 GB with NVIDIA GPU support.</source>
         <extracomment>Install/Reinstall's tooltip; "Download OCR model" swaps in its own.</extracomment>
-        <translation>mokuro'yu ve OCR motorunu Anki Miner'ın klasörüne indirir — yaklaşık 1 GB, NVIDIA GPU desteğiyle 4 GB'a kadar.</translation>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Not available on this platform</source>
@@ -9155,8 +9215,12 @@ Hiçbir dizin dosyası silinmez.</translation>
         <translation>Tam olarak bir yeni kelime içeren satırlar.</translation>
     </message>
     <message>
-        <source>Lines with two or more new words.</source>
-        <translation>İki veya daha fazla yeni kelime içeren satırlar.</translation>
+        <source>Lines with exactly two new words.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Lines with three or more new words.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Check Readability</source>
@@ -12179,6 +12243,10 @@ Yüklü kaynaklarınız ve temanız korunur.</translation>
     </message>
 </context><context>
     <name>SubtitleRetimer</name>
+    <message>
+        <source>the reference subtitle has no dialogue lines</source>
+        <translation type="unfinished" />
+    </message>
     <message>
         <source>Ignoring %1 non-dialogue lines during alignment.</source>
         <translation>Hizalama sırasında diyalog olmayan %1 satır yok sayılıyor.</translation>

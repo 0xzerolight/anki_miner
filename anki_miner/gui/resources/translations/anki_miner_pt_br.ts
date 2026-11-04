@@ -1180,6 +1180,14 @@ Continuar mesmo assim?</translation>
         <translation>Arraste qualquer extremidade para cortar o clipe de áudio desta palavra; clique duas vezes para restaurar o padrão. Apenas esta palavra é afetada.</translation>
     </message>
     <message>
+        <source>Start the clip at the playhead</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>End the clip at the playhead</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Stop the clip preview</source>
         <translation>Parar a pré-visualização do clipe</translation>
     </message>
@@ -6492,6 +6500,58 @@ Nenhum arquivo de índice é excluído.</translation>
         <translation>Palavra anterior</translation>
     </message>
     <message>
+        <source>Play just this clip</source>
+        <translation type="unfinished">Reproduzir apenas este clipe</translation>
+    </message>
+    <message>
+        <source>Step one frame back</source>
+        <translation type="unfinished">Volta um quadro</translation>
+    </message>
+    <message>
+        <source>Step one frame forward</source>
+        <translation type="unfinished">Avança um quadro</translation>
+    </message>
+    <message>
+        <source>Add the previous line</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add the next line</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Reset lines</source>
+        <translation type="unfinished">Redefinir linhas</translation>
+    </message>
+    <message>
+        <source>Use current frame</source>
+        <translation type="unfinished">Usar quadro atual</translation>
+    </message>
+    <message>
+        <source>Reset frame</source>
+        <translation type="unfinished">Redefinir quadro</translation>
+    </message>
+    <message>
+        <source>Reset clip</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Previous sentence</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Next sentence</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Start the clip at the playhead</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>End the clip at the playhead</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Usage Guide</source>
         <translation>Guia de Uso</translation>
     </message>
@@ -7943,9 +8003,9 @@ Palavras a adicionar: %3. Continuar?</translation>
         <translation>Instalar mokuro</translation>
     </message>
     <message>
-        <source>Downloads mokuro and its OCR engine into Anki Miner's folder — about 1 GB, up to 4 GB with NVIDIA GPU support.</source>
+        <source>Downloads mokuro and its OCR engine into Anki Miner's folder — about 3 GB, up to 7 GB with NVIDIA GPU support.</source>
         <extracomment>Install/Reinstall's tooltip; "Download OCR model" swaps in its own.</extracomment>
-        <translation>Baixa o mokuro e seu mecanismo de OCR para a pasta do Anki Miner — cerca de 1 GB, até 4 GB com suporte a GPU NVIDIA.</translation>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Not available on this platform</source>
@@ -9198,8 +9258,12 @@ Nenhum arquivo de índice é excluído.</translation>
         <translation>Linhas com exatamente uma palavra nova.</translation>
     </message>
     <message>
-        <source>Lines with two or more new words.</source>
-        <translation>Linhas com duas ou mais palavras novas.</translation>
+        <source>Lines with exactly two new words.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Lines with three or more new words.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Check Readability</source>
@@ -12228,6 +12292,10 @@ Seus recursos instalados e seu tema são mantidos.</translation>
     </message>
 </context><context>
     <name>SubtitleRetimer</name>
+    <message>
+        <source>the reference subtitle has no dialogue lines</source>
+        <translation type="unfinished" />
+    </message>
     <message>
         <source>Ignoring %1 non-dialogue lines during alignment.</source>
         <translation>Ignorando %1 linhas que não são diálogo durante o alinhamento.</translation>

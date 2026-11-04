@@ -1180,6 +1180,14 @@ Voleu continuar igualment?</translation>
         <translation>Arrossegueu qualsevol dels extrems per retallar el clip d'àudio d'aquesta paraula; feu doble clic per restaurar el valor per defecte. Només afecta aquesta paraula.</translation>
     </message>
     <message>
+        <source>Start the clip at the playhead</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>End the clip at the playhead</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Stop the clip preview</source>
         <translation>Atura la previsualització del clip</translation>
     </message>
@@ -6492,6 +6500,58 @@ No se suprimeix cap fitxer d'índex.</translation>
         <translation>Paraula anterior</translation>
     </message>
     <message>
+        <source>Play just this clip</source>
+        <translation type="unfinished">Reprodueix només aquest clip</translation>
+    </message>
+    <message>
+        <source>Step one frame back</source>
+        <translation type="unfinished">Retrocedeix un fotograma</translation>
+    </message>
+    <message>
+        <source>Step one frame forward</source>
+        <translation type="unfinished">Avança un fotograma</translation>
+    </message>
+    <message>
+        <source>Add the previous line</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add the next line</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Reset lines</source>
+        <translation type="unfinished">Restableix les línies</translation>
+    </message>
+    <message>
+        <source>Use current frame</source>
+        <translation type="unfinished">Utilitza el fotograma actual</translation>
+    </message>
+    <message>
+        <source>Reset frame</source>
+        <translation type="unfinished">Restableix el fotograma</translation>
+    </message>
+    <message>
+        <source>Reset clip</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Previous sentence</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Next sentence</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Start the clip at the playhead</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>End the clip at the playhead</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Usage Guide</source>
         <translation>Guia d'ús</translation>
     </message>
@@ -7943,9 +8003,9 @@ Paraules que s'afegiran: %3. Voleu continuar?</translation>
         <translation>Instal·la el mokuro</translation>
     </message>
     <message>
-        <source>Downloads mokuro and its OCR engine into Anki Miner's folder — about 1 GB, up to 4 GB with NVIDIA GPU support.</source>
+        <source>Downloads mokuro and its OCR engine into Anki Miner's folder — about 3 GB, up to 7 GB with NVIDIA GPU support.</source>
         <extracomment>Install/Reinstall's tooltip; "Download OCR model" swaps in its own.</extracomment>
-        <translation>Baixa el mokuro i el seu motor d'OCR a la carpeta de l'Anki Miner: aproximadament 1 GB, fins a 4 GB amb compatibilitat amb GPU NVIDIA.</translation>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Not available on this platform</source>
@@ -9198,8 +9258,12 @@ No se suprimeix cap fitxer d'índex.</translation>
         <translation>Línies amb exactament una paraula nova.</translation>
     </message>
     <message>
-        <source>Lines with two or more new words.</source>
-        <translation>Línies amb dues paraules noves o més.</translation>
+        <source>Lines with exactly two new words.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Lines with three or more new words.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Check Readability</source>
@@ -12228,6 +12292,10 @@ Es mantenen els recursos instal·lats i el tema.</translation>
     </message>
 </context><context>
     <name>SubtitleRetimer</name>
+    <message>
+        <source>the reference subtitle has no dialogue lines</source>
+        <translation type="unfinished" />
+    </message>
     <message>
         <source>Ignoring %1 non-dialogue lines during alignment.</source>
         <translation>S'ignoren %1 línies que no són diàleg durant l'alineació.</translation>

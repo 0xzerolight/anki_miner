@@ -1182,6 +1182,14 @@ Continue anyway?</source>
         <translation>Перетащите любой край, чтобы обрезать аудиоклип этого слова; дважды щёлкните, чтобы восстановить значение по умолчанию. Это затрагивает только это слово.</translation>
     </message>
     <message>
+        <source>Start the clip at the playhead</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>End the clip at the playhead</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Stop the clip preview</source>
         <translation>Остановить предпросмотр клипа</translation>
     </message>
@@ -6530,6 +6538,58 @@ No index files are deleted.</source>
         <translation>Предыдущее слово</translation>
     </message>
     <message>
+        <source>Play just this clip</source>
+        <translation type="unfinished">Воспроизвести только этот клип</translation>
+    </message>
+    <message>
+        <source>Step one frame back</source>
+        <translation type="unfinished">Шаг на один кадр назад</translation>
+    </message>
+    <message>
+        <source>Step one frame forward</source>
+        <translation type="unfinished">Шаг на один кадр вперёд</translation>
+    </message>
+    <message>
+        <source>Add the previous line</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add the next line</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Reset lines</source>
+        <translation type="unfinished">Сбросить строки</translation>
+    </message>
+    <message>
+        <source>Use current frame</source>
+        <translation type="unfinished">Использовать текущий кадр</translation>
+    </message>
+    <message>
+        <source>Reset frame</source>
+        <translation type="unfinished">Сбросить кадр</translation>
+    </message>
+    <message>
+        <source>Reset clip</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Previous sentence</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Next sentence</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Start the clip at the playhead</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>End the clip at the playhead</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Usage Guide</source>
         <translation>Руководство пользователя</translation>
     </message>
@@ -7982,9 +8042,9 @@ Words to add: %3. Continue?</source>
         <translation>Установить mokuro</translation>
     </message>
     <message>
-        <source>Downloads mokuro and its OCR engine into Anki Miner's folder — about 1 GB, up to 4 GB with NVIDIA GPU support.</source>
+        <source>Downloads mokuro and its OCR engine into Anki Miner's folder — about 3 GB, up to 7 GB with NVIDIA GPU support.</source>
         <extracomment>Install/Reinstall's tooltip; "Download OCR model" swaps in its own.</extracomment>
-        <translation>Загружает mokuro и его OCR-движок в папку Anki Miner — около 1 ГБ, до 4 ГБ с поддержкой GPU NVIDIA.</translation>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Not available on this platform</source>
@@ -9241,8 +9301,12 @@ No index files are deleted.</source>
         <translation>Строки ровно с одним новым словом.</translation>
     </message>
     <message>
-        <source>Lines with two or more new words.</source>
-        <translation>Строки с двумя и более новыми словами.</translation>
+        <source>Lines with exactly two new words.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Lines with three or more new words.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Check Readability</source>
@@ -12277,6 +12341,10 @@ Your installed resources and your theme are kept.</source>
     </message>
 </context><context>
     <name>SubtitleRetimer</name>
+    <message>
+        <source>the reference subtitle has no dialogue lines</source>
+        <translation type="unfinished" />
+    </message>
     <message>
         <source>Ignoring %1 non-dialogue lines during alignment.</source>
         <translation>При выравнивании проигнорировано %1 недиалоговых строк.</translation>

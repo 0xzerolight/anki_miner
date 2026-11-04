@@ -1178,6 +1178,14 @@ Continue anyway?</source>
         <translation>ลากปลายด้านใดด้านหนึ่งเพื่อตัดคลิปเสียงของคำนี้ ดับเบิลคลิกเพื่อคืนค่าเริ่มต้น มีผลกับคำนี้เท่านั้น</translation>
     </message>
     <message>
+        <source>Start the clip at the playhead</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>End the clip at the playhead</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Stop the clip preview</source>
         <translation>หยุดการแสดงตัวอย่างคลิป</translation>
     </message>
@@ -6454,6 +6462,58 @@ No index files are deleted.</source>
         <translation>คำก่อนหน้า</translation>
     </message>
     <message>
+        <source>Play just this clip</source>
+        <translation type="unfinished">เล่นเฉพาะคลิปนี้</translation>
+    </message>
+    <message>
+        <source>Step one frame back</source>
+        <translation type="unfinished">ถอยหลังหนึ่งเฟรม</translation>
+    </message>
+    <message>
+        <source>Step one frame forward</source>
+        <translation type="unfinished">เดินหน้าหนึ่งเฟรม</translation>
+    </message>
+    <message>
+        <source>Add the previous line</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add the next line</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Reset lines</source>
+        <translation type="unfinished">รีเซ็ตบรรทัด</translation>
+    </message>
+    <message>
+        <source>Use current frame</source>
+        <translation type="unfinished">ใช้เฟรมปัจจุบัน</translation>
+    </message>
+    <message>
+        <source>Reset frame</source>
+        <translation type="unfinished">รีเซ็ตเฟรม</translation>
+    </message>
+    <message>
+        <source>Reset clip</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Previous sentence</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Next sentence</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Start the clip at the playhead</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>End the clip at the playhead</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Usage Guide</source>
         <translation>คู่มือการใช้งาน</translation>
     </message>
@@ -7904,9 +7964,9 @@ Words to add: %3. Continue?</source>
         <translation>ติดตั้ง mokuro</translation>
     </message>
     <message>
-        <source>Downloads mokuro and its OCR engine into Anki Miner's folder — about 1 GB, up to 4 GB with NVIDIA GPU support.</source>
+        <source>Downloads mokuro and its OCR engine into Anki Miner's folder — about 3 GB, up to 7 GB with NVIDIA GPU support.</source>
         <extracomment>Install/Reinstall's tooltip; "Download OCR model" swaps in its own.</extracomment>
-        <translation>ดาวน์โหลด mokuro และเอนจิน OCR ลงในโฟลเดอร์ของ Anki Miner — ประมาณ 1 GB หรือสูงสุด 4 GB หากรองรับ GPU ของ NVIDIA</translation>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Not available on this platform</source>
@@ -9155,8 +9215,12 @@ No index files are deleted.</source>
         <translation>บรรทัดที่มีคำใหม่หนึ่งคำพอดี</translation>
     </message>
     <message>
-        <source>Lines with two or more new words.</source>
-        <translation>บรรทัดที่มีคำใหม่ตั้งแต่สองคำขึ้นไป</translation>
+        <source>Lines with exactly two new words.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Lines with three or more new words.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Check Readability</source>
@@ -12179,6 +12243,10 @@ Your installed resources and your theme are kept.</source>
     </message>
 </context><context>
     <name>SubtitleRetimer</name>
+    <message>
+        <source>the reference subtitle has no dialogue lines</source>
+        <translation type="unfinished" />
+    </message>
     <message>
         <source>Ignoring %1 non-dialogue lines during alignment.</source>
         <translation>ละเว้นบรรทัดที่ไม่ใช่บทพูด %1 บรรทัดระหว่างจัดแนว</translation>

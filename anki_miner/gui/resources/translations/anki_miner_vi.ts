@@ -1178,6 +1178,14 @@ Vẫn tiếp tục?</translation>
         <translation>Kéo một trong hai đầu để cắt đoạn âm thanh của từ này; nhấp đúp để khôi phục mặc định. Chỉ từ này bị ảnh hưởng.</translation>
     </message>
     <message>
+        <source>Start the clip at the playhead</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>End the clip at the playhead</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Stop the clip preview</source>
         <translation>Dừng xem trước đoạn âm thanh</translation>
     </message>
@@ -6454,6 +6462,58 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Từ trước đó</translation>
     </message>
     <message>
+        <source>Play just this clip</source>
+        <translation type="unfinished">Chỉ phát đoạn âm thanh này</translation>
+    </message>
+    <message>
+        <source>Step one frame back</source>
+        <translation type="unfinished">Lùi một khung hình</translation>
+    </message>
+    <message>
+        <source>Step one frame forward</source>
+        <translation type="unfinished">Tiến một khung hình</translation>
+    </message>
+    <message>
+        <source>Add the previous line</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add the next line</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Reset lines</source>
+        <translation type="unfinished">Đặt lại các dòng</translation>
+    </message>
+    <message>
+        <source>Use current frame</source>
+        <translation type="unfinished">Dùng khung hình hiện tại</translation>
+    </message>
+    <message>
+        <source>Reset frame</source>
+        <translation type="unfinished">Đặt lại khung hình</translation>
+    </message>
+    <message>
+        <source>Reset clip</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Previous sentence</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Next sentence</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Start the clip at the playhead</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>End the clip at the playhead</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Usage Guide</source>
         <translation>Hướng dẫn sử dụng</translation>
     </message>
@@ -7904,9 +7964,9 @@ Số từ sẽ thêm: %3. Tiếp tục?</translation>
         <translation>Cài đặt mokuro</translation>
     </message>
     <message>
-        <source>Downloads mokuro and its OCR engine into Anki Miner's folder — about 1 GB, up to 4 GB with NVIDIA GPU support.</source>
+        <source>Downloads mokuro and its OCR engine into Anki Miner's folder — about 3 GB, up to 7 GB with NVIDIA GPU support.</source>
         <extracomment>Install/Reinstall's tooltip; "Download OCR model" swaps in its own.</extracomment>
-        <translation>Tải mokuro và công cụ OCR của nó vào thư mục của Anki Miner — khoảng 1 GB, lên đến 4 GB nếu hỗ trợ GPU NVIDIA.</translation>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Not available on this platform</source>
@@ -9155,8 +9215,12 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Các dòng có đúng một từ mới.</translation>
     </message>
     <message>
-        <source>Lines with two or more new words.</source>
-        <translation>Các dòng có hai từ mới trở lên.</translation>
+        <source>Lines with exactly two new words.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Lines with three or more new words.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Check Readability</source>
@@ -12179,6 +12243,10 @@ Tài nguyên đã cài đặt và chủ đề của bạn được giữ nguyên
     </message>
 </context><context>
     <name>SubtitleRetimer</name>
+    <message>
+        <source>the reference subtitle has no dialogue lines</source>
+        <translation type="unfinished" />
+    </message>
     <message>
         <source>Ignoring %1 non-dialogue lines during alignment.</source>
         <translation>Bỏ qua %1 dòng không phải đối thoại trong quá trình căn chỉnh.</translation>

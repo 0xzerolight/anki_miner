@@ -1182,6 +1182,14 @@ Continuați oricum?</translation>
         <translation>Trageți de oricare capăt pentru a tăia clipul audio al acestui cuvânt; dublu clic restabilește valoarea implicită. Este afectat doar acest cuvânt.</translation>
     </message>
     <message>
+        <source>Start the clip at the playhead</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>End the clip at the playhead</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Stop the clip preview</source>
         <translation>Oprește previzualizarea clipului</translation>
     </message>
@@ -6530,6 +6538,58 @@ Nu se șterge niciun fișier index.</translation>
         <translation>Cuvântul anterior</translation>
     </message>
     <message>
+        <source>Play just this clip</source>
+        <translation type="unfinished">Redă doar acest clip</translation>
+    </message>
+    <message>
+        <source>Step one frame back</source>
+        <translation type="unfinished">Un cadru înapoi</translation>
+    </message>
+    <message>
+        <source>Step one frame forward</source>
+        <translation type="unfinished">Un cadru înainte</translation>
+    </message>
+    <message>
+        <source>Add the previous line</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add the next line</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Reset lines</source>
+        <translation type="unfinished">Resetează liniile</translation>
+    </message>
+    <message>
+        <source>Use current frame</source>
+        <translation type="unfinished">Folosește cadrul curent</translation>
+    </message>
+    <message>
+        <source>Reset frame</source>
+        <translation type="unfinished">Resetează cadrul</translation>
+    </message>
+    <message>
+        <source>Reset clip</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Previous sentence</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Next sentence</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Start the clip at the playhead</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>End the clip at the playhead</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Usage Guide</source>
         <translation>Ghid de utilizare</translation>
     </message>
@@ -7982,9 +8042,9 @@ Cuvinte de adăugat: %3. Continuați?</translation>
         <translation>Instalează mokuro</translation>
     </message>
     <message>
-        <source>Downloads mokuro and its OCR engine into Anki Miner's folder — about 1 GB, up to 4 GB with NVIDIA GPU support.</source>
+        <source>Downloads mokuro and its OCR engine into Anki Miner's folder — about 3 GB, up to 7 GB with NVIDIA GPU support.</source>
         <extracomment>Install/Reinstall's tooltip; "Download OCR model" swaps in its own.</extracomment>
-        <translation>Descarcă mokuro și motorul său OCR în dosarul Anki Miner — aproximativ 1 GB, până la 4 GB cu suport pentru GPU NVIDIA.</translation>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Not available on this platform</source>
@@ -9241,8 +9301,12 @@ Nu se șterge niciun fișier index.</translation>
         <translation>Linii cu exact un cuvânt nou.</translation>
     </message>
     <message>
-        <source>Lines with two or more new words.</source>
-        <translation>Linii cu două sau mai multe cuvinte noi.</translation>
+        <source>Lines with exactly two new words.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Lines with three or more new words.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Check Readability</source>
@@ -12277,6 +12341,10 @@ Resursele instalate și tema se păstrează.</translation>
     </message>
 </context><context>
     <name>SubtitleRetimer</name>
+    <message>
+        <source>the reference subtitle has no dialogue lines</source>
+        <translation type="unfinished" />
+    </message>
     <message>
         <source>Ignoring %1 non-dialogue lines during alignment.</source>
         <translation>Se ignoră %1 linii care nu sunt dialog în timpul alinierii.</translation>

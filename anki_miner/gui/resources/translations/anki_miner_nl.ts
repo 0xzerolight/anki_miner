@@ -1180,6 +1180,14 @@ Toch doorgaan?</translation>
         <translation>Sleep een van beide uiteinden om de audioclip van dit woord in te korten; dubbelklik om de standaard te herstellen. Alleen dit woord wordt aangepast.</translation>
     </message>
     <message>
+        <source>Start the clip at the playhead</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>End the clip at the playhead</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Stop the clip preview</source>
         <translation>Clipvoorbeeld stoppen</translation>
     </message>
@@ -6492,6 +6500,58 @@ Er worden geen indexbestanden verwijderd.</translation>
         <translation>Vorig woord</translation>
     </message>
     <message>
+        <source>Play just this clip</source>
+        <translation type="unfinished">Alleen deze clip afspelen</translation>
+    </message>
+    <message>
+        <source>Step one frame back</source>
+        <translation type="unfinished">Eén frame terug</translation>
+    </message>
+    <message>
+        <source>Step one frame forward</source>
+        <translation type="unfinished">Eén frame vooruit</translation>
+    </message>
+    <message>
+        <source>Add the previous line</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add the next line</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Reset lines</source>
+        <translation type="unfinished">Regels terugzetten</translation>
+    </message>
+    <message>
+        <source>Use current frame</source>
+        <translation type="unfinished">Huidig frame gebruiken</translation>
+    </message>
+    <message>
+        <source>Reset frame</source>
+        <translation type="unfinished">Frame terugzetten</translation>
+    </message>
+    <message>
+        <source>Reset clip</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Previous sentence</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Next sentence</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Start the clip at the playhead</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>End the clip at the playhead</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Usage Guide</source>
         <translation>Gebruikshandleiding</translation>
     </message>
@@ -7943,9 +8003,9 @@ Woorden om toe te voegen: %3. Doorgaan?</translation>
         <translation>mokuro installeren</translation>
     </message>
     <message>
-        <source>Downloads mokuro and its OCR engine into Anki Miner's folder — about 1 GB, up to 4 GB with NVIDIA GPU support.</source>
+        <source>Downloads mokuro and its OCR engine into Anki Miner's folder — about 3 GB, up to 7 GB with NVIDIA GPU support.</source>
         <extracomment>Install/Reinstall's tooltip; "Download OCR model" swaps in its own.</extracomment>
-        <translation>Downloadt mokuro en de OCR-engine naar de map van Anki Miner — ongeveer 1 GB, tot 4 GB met ondersteuning voor NVIDIA-GPU's.</translation>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Not available on this platform</source>
@@ -9198,8 +9258,12 @@ Er worden geen indexbestanden verwijderd.</translation>
         <translation>Regels met precies één nieuw woord.</translation>
     </message>
     <message>
-        <source>Lines with two or more new words.</source>
-        <translation>Regels met twee of meer nieuwe woorden.</translation>
+        <source>Lines with exactly two new words.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Lines with three or more new words.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Check Readability</source>
@@ -12228,6 +12292,10 @@ Je geïnstalleerde bronnen en je thema blijven behouden.</translation>
     </message>
 </context><context>
     <name>SubtitleRetimer</name>
+    <message>
+        <source>the reference subtitle has no dialogue lines</source>
+        <translation type="unfinished" />
+    </message>
     <message>
         <source>Ignoring %1 non-dialogue lines during alignment.</source>
         <translation>%1 regels zonder dialoog worden genegeerd bij het uitlijnen.</translation>

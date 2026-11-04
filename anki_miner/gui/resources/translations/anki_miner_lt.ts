@@ -1182,6 +1182,14 @@ Vis tiek tęsti?</translation>
         <translation>Vilkite bet kurį galą, kad apkirptumėte šio žodžio garso įrašą; dukart spustelėkite, kad atkurtumėte numatytąjį. Keičiamas tik šis žodis.</translation>
     </message>
     <message>
+        <source>Start the clip at the playhead</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>End the clip at the playhead</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Stop the clip preview</source>
         <translation>Stabdyti įrašo peržiūrą</translation>
     </message>
@@ -6530,6 +6538,58 @@ Indekso failai neištrinami.</translation>
         <translation>Ankstesnis žodis</translation>
     </message>
     <message>
+        <source>Play just this clip</source>
+        <translation type="unfinished">Groti tik šį įrašą</translation>
+    </message>
+    <message>
+        <source>Step one frame back</source>
+        <translation type="unfinished">Vienu kadru atgal</translation>
+    </message>
+    <message>
+        <source>Step one frame forward</source>
+        <translation type="unfinished">Vienu kadru pirmyn</translation>
+    </message>
+    <message>
+        <source>Add the previous line</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add the next line</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Reset lines</source>
+        <translation type="unfinished">Atstatyti eilutes</translation>
+    </message>
+    <message>
+        <source>Use current frame</source>
+        <translation type="unfinished">Naudoti dabartinį kadrą</translation>
+    </message>
+    <message>
+        <source>Reset frame</source>
+        <translation type="unfinished">Atstatyti kadrą</translation>
+    </message>
+    <message>
+        <source>Reset clip</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Previous sentence</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Next sentence</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Start the clip at the playhead</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>End the clip at the playhead</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Usage Guide</source>
         <translation>Naudojimo vadovas</translation>
     </message>
@@ -7982,9 +8042,9 @@ Pridedamų žodžių: %3. Tęsti?</translation>
         <translation>Įdiegti mokuro</translation>
     </message>
     <message>
-        <source>Downloads mokuro and its OCR engine into Anki Miner's folder — about 1 GB, up to 4 GB with NVIDIA GPU support.</source>
+        <source>Downloads mokuro and its OCR engine into Anki Miner's folder — about 3 GB, up to 7 GB with NVIDIA GPU support.</source>
         <extracomment>Install/Reinstall's tooltip; "Download OCR model" swaps in its own.</extracomment>
-        <translation>Atsisiunčia mokuro ir jo OCR variklį į Anki Miner aplanką — apie 1 GB, iki 4 GB su NVIDIA GPU palaikymu.</translation>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Not available on this platform</source>
@@ -9241,8 +9301,12 @@ Indekso failai neištrinami.</translation>
         <translation>Eilutės su lygiai vienu nauju žodžiu.</translation>
     </message>
     <message>
-        <source>Lines with two or more new words.</source>
-        <translation>Eilutės su dviem ar daugiau naujų žodžių.</translation>
+        <source>Lines with exactly two new words.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Lines with three or more new words.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Check Readability</source>
@@ -12277,6 +12341,10 @@ Your installed resources and your theme are kept.</source>
     </message>
 </context><context>
     <name>SubtitleRetimer</name>
+    <message>
+        <source>the reference subtitle has no dialogue lines</source>
+        <translation type="unfinished" />
+    </message>
     <message>
         <source>Ignoring %1 non-dialogue lines during alignment.</source>
         <translation>Lygiuojant ignoruojama ne dialogo eilučių: %1.</translation>

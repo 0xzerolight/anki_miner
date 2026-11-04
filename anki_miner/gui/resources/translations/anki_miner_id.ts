@@ -1178,6 +1178,14 @@ Tetap lanjutkan?</translation>
         <translation>Seret salah satu ujung untuk memangkas klip audio kata ini; klik dua kali untuk memulihkan default. Hanya kata ini yang terpengaruh.</translation>
     </message>
     <message>
+        <source>Start the clip at the playhead</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>End the clip at the playhead</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Stop the clip preview</source>
         <translation>Hentikan pratinjau klip</translation>
     </message>
@@ -6454,6 +6462,58 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Kata sebelumnya</translation>
     </message>
     <message>
+        <source>Play just this clip</source>
+        <translation type="unfinished">Putar klip ini saja</translation>
+    </message>
+    <message>
+        <source>Step one frame back</source>
+        <translation type="unfinished">Mundur satu bingkai</translation>
+    </message>
+    <message>
+        <source>Step one frame forward</source>
+        <translation type="unfinished">Maju satu bingkai</translation>
+    </message>
+    <message>
+        <source>Add the previous line</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add the next line</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Reset lines</source>
+        <translation type="unfinished">Setel ulang baris</translation>
+    </message>
+    <message>
+        <source>Use current frame</source>
+        <translation type="unfinished">Gunakan bingkai saat ini</translation>
+    </message>
+    <message>
+        <source>Reset frame</source>
+        <translation type="unfinished">Setel ulang bingkai</translation>
+    </message>
+    <message>
+        <source>Reset clip</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Previous sentence</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Next sentence</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Start the clip at the playhead</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>End the clip at the playhead</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Usage Guide</source>
         <translation>Panduan Penggunaan</translation>
     </message>
@@ -7904,9 +7964,9 @@ Kata yang akan ditambahkan: %3. Lanjutkan?</translation>
         <translation>Pasang mokuro</translation>
     </message>
     <message>
-        <source>Downloads mokuro and its OCR engine into Anki Miner's folder — about 1 GB, up to 4 GB with NVIDIA GPU support.</source>
+        <source>Downloads mokuro and its OCR engine into Anki Miner's folder — about 3 GB, up to 7 GB with NVIDIA GPU support.</source>
         <extracomment>Install/Reinstall's tooltip; "Download OCR model" swaps in its own.</extracomment>
-        <translation>Mengunduh mokuro dan mesin OCR-nya ke folder Anki Miner — sekitar 1 GB, hingga 4 GB dengan dukungan GPU NVIDIA.</translation>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Not available on this platform</source>
@@ -9155,8 +9215,12 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Baris dengan tepat satu kata baru.</translation>
     </message>
     <message>
-        <source>Lines with two or more new words.</source>
-        <translation>Baris dengan dua kata baru atau lebih.</translation>
+        <source>Lines with exactly two new words.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Lines with three or more new words.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Check Readability</source>
@@ -12179,6 +12243,10 @@ Sumber daya yang terpasang dan tema Anda tetap dipertahankan.</translation>
     </message>
 </context><context>
     <name>SubtitleRetimer</name>
+    <message>
+        <source>the reference subtitle has no dialogue lines</source>
+        <translation type="unfinished" />
+    </message>
     <message>
         <source>Ignoring %1 non-dialogue lines during alignment.</source>
         <translation>Mengabaikan %1 baris non-dialog selama penyelarasan.</translation>

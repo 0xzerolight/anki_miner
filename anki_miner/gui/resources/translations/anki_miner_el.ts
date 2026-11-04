@@ -1180,6 +1180,14 @@ Continue anyway?</source>
         <translation>Σύρετε οποιοδήποτε άκρο για να περικόψετε το απόσπασμα ήχου αυτής της λέξης· κάντε διπλό κλικ για επαναφορά της προεπιλογής. Επηρεάζεται μόνο αυτή η λέξη.</translation>
     </message>
     <message>
+        <source>Start the clip at the playhead</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>End the clip at the playhead</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Stop the clip preview</source>
         <translation>Διακοπή της προεπισκόπησης αποσπάσματος</translation>
     </message>
@@ -6492,6 +6500,58 @@ No index files are deleted.</source>
         <translation>Προηγούμενη λέξη</translation>
     </message>
     <message>
+        <source>Play just this clip</source>
+        <translation type="unfinished">Αναπαραγωγή μόνο αυτού του αποσπάσματος</translation>
+    </message>
+    <message>
+        <source>Step one frame back</source>
+        <translation type="unfinished">Ένα καρέ πίσω</translation>
+    </message>
+    <message>
+        <source>Step one frame forward</source>
+        <translation type="unfinished">Ένα καρέ μπροστά</translation>
+    </message>
+    <message>
+        <source>Add the previous line</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add the next line</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Reset lines</source>
+        <translation type="unfinished">Επαναφορά γραμμών</translation>
+    </message>
+    <message>
+        <source>Use current frame</source>
+        <translation type="unfinished">Χρήση τρέχοντος καρέ</translation>
+    </message>
+    <message>
+        <source>Reset frame</source>
+        <translation type="unfinished">Επαναφορά καρέ</translation>
+    </message>
+    <message>
+        <source>Reset clip</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Previous sentence</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Next sentence</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Start the clip at the playhead</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>End the clip at the playhead</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Usage Guide</source>
         <translation>Οδηγός χρήσης</translation>
     </message>
@@ -7943,9 +8003,9 @@ Words to add: %3. Continue?</source>
         <translation>Εγκατάσταση mokuro</translation>
     </message>
     <message>
-        <source>Downloads mokuro and its OCR engine into Anki Miner's folder — about 1 GB, up to 4 GB with NVIDIA GPU support.</source>
+        <source>Downloads mokuro and its OCR engine into Anki Miner's folder — about 3 GB, up to 7 GB with NVIDIA GPU support.</source>
         <extracomment>Install/Reinstall's tooltip; "Download OCR model" swaps in its own.</extracomment>
-        <translation>Κατεβάζει το mokuro και τη μηχανή OCR του στον φάκελο του Anki Miner — περίπου 1 GB, έως 4 GB με υποστήριξη GPU NVIDIA.</translation>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Not available on this platform</source>
@@ -9198,8 +9258,12 @@ No index files are deleted.</source>
         <translation>Γραμμές με ακριβώς μία νέα λέξη.</translation>
     </message>
     <message>
-        <source>Lines with two or more new words.</source>
-        <translation>Γραμμές με δύο ή περισσότερες νέες λέξεις.</translation>
+        <source>Lines with exactly two new words.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Lines with three or more new words.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Check Readability</source>
@@ -12228,6 +12292,10 @@ Your installed resources and your theme are kept.</source>
     </message>
 </context><context>
     <name>SubtitleRetimer</name>
+    <message>
+        <source>the reference subtitle has no dialogue lines</source>
+        <translation type="unfinished" />
+    </message>
     <message>
         <source>Ignoring %1 non-dialogue lines during alignment.</source>
         <translation>Αγνοούνται %1 γραμμές εκτός διαλόγου κατά την ευθυγράμμιση.</translation>

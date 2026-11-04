@@ -1180,6 +1180,14 @@ Jatketaanko silti?</translation>
         <translation>Rajaa tämän sanan äänileikettä vetämällä jompaakumpaa päätä; palauta oletus kaksoisnapsauttamalla. Muutos koskee vain tätä sanaa.</translation>
     </message>
     <message>
+        <source>Start the clip at the playhead</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>End the clip at the playhead</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Stop the clip preview</source>
         <translation>Pysäytä leikkeen esikuuntelu</translation>
     </message>
@@ -6492,6 +6500,58 @@ Indeksitiedostoja ei poisteta.</translation>
         <translation>Edellinen sana</translation>
     </message>
     <message>
+        <source>Play just this clip</source>
+        <translation type="unfinished">Toista vain tämä leike</translation>
+    </message>
+    <message>
+        <source>Step one frame back</source>
+        <translation type="unfinished">Siirry yksi kuva taaksepäin</translation>
+    </message>
+    <message>
+        <source>Step one frame forward</source>
+        <translation type="unfinished">Siirry yksi kuva eteenpäin</translation>
+    </message>
+    <message>
+        <source>Add the previous line</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add the next line</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Reset lines</source>
+        <translation type="unfinished">Palauta rivit</translation>
+    </message>
+    <message>
+        <source>Use current frame</source>
+        <translation type="unfinished">Käytä nykyistä kuvaa</translation>
+    </message>
+    <message>
+        <source>Reset frame</source>
+        <translation type="unfinished">Palauta kuva</translation>
+    </message>
+    <message>
+        <source>Reset clip</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Previous sentence</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Next sentence</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Start the clip at the playhead</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>End the clip at the playhead</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Usage Guide</source>
         <translation>Käyttöopas</translation>
     </message>
@@ -7943,9 +8003,9 @@ Lisättäviä sanoja: %3. Jatketaanko?</translation>
         <translation>Asenna mokuro</translation>
     </message>
     <message>
-        <source>Downloads mokuro and its OCR engine into Anki Miner's folder — about 1 GB, up to 4 GB with NVIDIA GPU support.</source>
+        <source>Downloads mokuro and its OCR engine into Anki Miner's folder — about 3 GB, up to 7 GB with NVIDIA GPU support.</source>
         <extracomment>Install/Reinstall's tooltip; "Download OCR model" swaps in its own.</extracomment>
-        <translation>Lataa mokuron ja sen OCR-moottorin Anki Minerin kansioon — noin 1 Gt, NVIDIA-GPU-tuen kanssa enintään 4 Gt.</translation>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Not available on this platform</source>
@@ -9198,8 +9258,12 @@ Indeksitiedostoja ei poisteta.</translation>
         <translation>Rivit, joissa on täsmälleen yksi uusi sana.</translation>
     </message>
     <message>
-        <source>Lines with two or more new words.</source>
-        <translation>Rivit, joissa on kaksi tai useampia uusia sanoja.</translation>
+        <source>Lines with exactly two new words.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Lines with three or more new words.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Check Readability</source>
@@ -12228,6 +12292,10 @@ Asennetut resurssit ja teema säilytetään.</translation>
     </message>
 </context><context>
     <name>SubtitleRetimer</name>
+    <message>
+        <source>the reference subtitle has no dialogue lines</source>
+        <translation type="unfinished" />
+    </message>
     <message>
         <source>Ignoring %1 non-dialogue lines during alignment.</source>
         <translation>Ohitetaan kohdistuksessa %1 muuta kuin dialogiriviä.</translation>

@@ -1178,6 +1178,14 @@ Continue anyway?</source>
         <translation>برای کوتاه کردن کلیپ صوتی این واژه، هر یک از دو سر را بکشید؛ برای بازگرداندن پیش‌فرض دوبار کلیک کنید. فقط این واژه تغییر می‌کند.</translation>
     </message>
     <message>
+        <source>Start the clip at the playhead</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>End the clip at the playhead</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Stop the clip preview</source>
         <translation>توقف پیش‌نمایش کلیپ</translation>
     </message>
@@ -6454,6 +6462,58 @@ No index files are deleted.</source>
         <translation>واژه قبلی</translation>
     </message>
     <message>
+        <source>Play just this clip</source>
+        <translation type="unfinished">پخش فقط همین کلیپ</translation>
+    </message>
+    <message>
+        <source>Step one frame back</source>
+        <translation type="unfinished">یک فریم به عقب</translation>
+    </message>
+    <message>
+        <source>Step one frame forward</source>
+        <translation type="unfinished">یک فریم به جلو</translation>
+    </message>
+    <message>
+        <source>Add the previous line</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add the next line</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Reset lines</source>
+        <translation type="unfinished">بازنشانی سطرها</translation>
+    </message>
+    <message>
+        <source>Use current frame</source>
+        <translation type="unfinished">استفاده از فریم فعلی</translation>
+    </message>
+    <message>
+        <source>Reset frame</source>
+        <translation type="unfinished">بازنشانی فریم</translation>
+    </message>
+    <message>
+        <source>Reset clip</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Previous sentence</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Next sentence</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Start the clip at the playhead</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>End the clip at the playhead</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Usage Guide</source>
         <translation>راهنمای استفاده</translation>
     </message>
@@ -7904,9 +7964,9 @@ Words to add: %3. Continue?</source>
         <translation>نصب mokuro</translation>
     </message>
     <message>
-        <source>Downloads mokuro and its OCR engine into Anki Miner's folder — about 1 GB, up to 4 GB with NVIDIA GPU support.</source>
+        <source>Downloads mokuro and its OCR engine into Anki Miner's folder — about 3 GB, up to 7 GB with NVIDIA GPU support.</source>
         <extracomment>Install/Reinstall's tooltip; "Download OCR model" swaps in its own.</extracomment>
-        <translation>‏mokuro و موتور OCR آن را در پوشه Anki Miner دانلود می‌کند — حدود 1 GB، و با پشتیبانی GPU از NVIDIA تا 4 GB.</translation>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Not available on this platform</source>
@@ -9155,8 +9215,12 @@ No index files are deleted.</source>
         <translation>سطرهایی با دقیقاً یک واژه جدید.</translation>
     </message>
     <message>
-        <source>Lines with two or more new words.</source>
-        <translation>سطرهایی با دو واژه جدید یا بیشتر.</translation>
+        <source>Lines with exactly two new words.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Lines with three or more new words.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Check Readability</source>
@@ -12179,6 +12243,10 @@ Your installed resources and your theme are kept.</source>
     </message>
 </context><context>
     <name>SubtitleRetimer</name>
+    <message>
+        <source>the reference subtitle has no dialogue lines</source>
+        <translation type="unfinished" />
+    </message>
     <message>
         <source>Ignoring %1 non-dialogue lines during alignment.</source>
         <translation>‏%1 سطر غیرگفت‌وگو در هم‌ترازی نادیده گرفته می‌شود.</translation>

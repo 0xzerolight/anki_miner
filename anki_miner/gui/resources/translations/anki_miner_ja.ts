@@ -1178,6 +1178,14 @@ Continue anyway?</source>
         <translation>両端をドラッグしてこの単語の音声クリップをトリミングします。ダブルクリックで既定に戻せます。影響するのはこの単語だけです。</translation>
     </message>
     <message>
+        <source>Start the clip at the playhead</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>End the clip at the playhead</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Stop the clip preview</source>
         <translation>クリップのプレビューを停止</translation>
     </message>
@@ -6454,6 +6462,58 @@ No index files are deleted.</source>
         <translation>前の単語</translation>
     </message>
     <message>
+        <source>Play just this clip</source>
+        <translation type="unfinished">このクリップだけを再生</translation>
+    </message>
+    <message>
+        <source>Step one frame back</source>
+        <translation type="unfinished">1フレーム戻る</translation>
+    </message>
+    <message>
+        <source>Step one frame forward</source>
+        <translation type="unfinished">1フレーム進む</translation>
+    </message>
+    <message>
+        <source>Add the previous line</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add the next line</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Reset lines</source>
+        <translation type="unfinished">行をリセット</translation>
+    </message>
+    <message>
+        <source>Use current frame</source>
+        <translation type="unfinished">現在のフレームを使用</translation>
+    </message>
+    <message>
+        <source>Reset frame</source>
+        <translation type="unfinished">フレームをリセット</translation>
+    </message>
+    <message>
+        <source>Reset clip</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Previous sentence</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Next sentence</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Start the clip at the playhead</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>End the clip at the playhead</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Usage Guide</source>
         <translation>使い方ガイド</translation>
     </message>
@@ -7904,9 +7964,9 @@ Words to add: %3. Continue?</source>
         <translation>mokuro をインストール</translation>
     </message>
     <message>
-        <source>Downloads mokuro and its OCR engine into Anki Miner's folder — about 1 GB, up to 4 GB with NVIDIA GPU support.</source>
+        <source>Downloads mokuro and its OCR engine into Anki Miner's folder — about 3 GB, up to 7 GB with NVIDIA GPU support.</source>
         <extracomment>Install/Reinstall's tooltip; "Download OCR model" swaps in its own.</extracomment>
-        <translation>mokuro とその OCR エンジンを Anki Miner のフォルダにダウンロードします — 約 1 GB、NVIDIA GPU サポートを含めると最大 4 GB です。</translation>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Not available on this platform</source>
@@ -9155,8 +9215,12 @@ No index files are deleted.</source>
         <translation>新出単語をちょうど 1 つ含む行。</translation>
     </message>
     <message>
-        <source>Lines with two or more new words.</source>
-        <translation>新出単語を 2 つ以上含む行。</translation>
+        <source>Lines with exactly two new words.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Lines with three or more new words.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Check Readability</source>
@@ -12179,6 +12243,10 @@ Your installed resources and your theme are kept.</source>
     </message>
 </context><context>
     <name>SubtitleRetimer</name>
+    <message>
+        <source>the reference subtitle has no dialogue lines</source>
+        <translation type="unfinished" />
+    </message>
     <message>
         <source>Ignoring %1 non-dialogue lines during alignment.</source>
         <translation>調整中に %1 個の非対話行を無視します。</translation>

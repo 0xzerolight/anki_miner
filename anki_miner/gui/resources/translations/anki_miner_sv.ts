@@ -1180,6 +1180,14 @@ Vill du fortsätta ändå?</translation>
         <translation>Dra i någon av ändarna för att beskära ordets ljudklipp; dubbelklicka för att återställa standard. Bara det här ordet påverkas.</translation>
     </message>
     <message>
+        <source>Start the clip at the playhead</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>End the clip at the playhead</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Stop the clip preview</source>
         <translation>Stoppa förhandslyssningen av klippet</translation>
     </message>
@@ -6492,6 +6500,58 @@ Inga indexfiler raderas.</translation>
         <translation>Föregående ord</translation>
     </message>
     <message>
+        <source>Play just this clip</source>
+        <translation type="unfinished">Spela bara det här klippet</translation>
+    </message>
+    <message>
+        <source>Step one frame back</source>
+        <translation type="unfinished">Stega en bildruta bakåt</translation>
+    </message>
+    <message>
+        <source>Step one frame forward</source>
+        <translation type="unfinished">Stega en bildruta framåt</translation>
+    </message>
+    <message>
+        <source>Add the previous line</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add the next line</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Reset lines</source>
+        <translation type="unfinished">Återställ rader</translation>
+    </message>
+    <message>
+        <source>Use current frame</source>
+        <translation type="unfinished">Använd aktuell bildruta</translation>
+    </message>
+    <message>
+        <source>Reset frame</source>
+        <translation type="unfinished">Återställ bildruta</translation>
+    </message>
+    <message>
+        <source>Reset clip</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Previous sentence</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Next sentence</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Start the clip at the playhead</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>End the clip at the playhead</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Usage Guide</source>
         <translation>Användarguide</translation>
     </message>
@@ -7943,9 +8003,9 @@ Ord att lägga till: %3. Vill du fortsätta?</translation>
         <translation>Installera mokuro</translation>
     </message>
     <message>
-        <source>Downloads mokuro and its OCR engine into Anki Miner's folder — about 1 GB, up to 4 GB with NVIDIA GPU support.</source>
+        <source>Downloads mokuro and its OCR engine into Anki Miner's folder — about 3 GB, up to 7 GB with NVIDIA GPU support.</source>
         <extracomment>Install/Reinstall's tooltip; "Download OCR model" swaps in its own.</extracomment>
-        <translation>Laddar ned mokuro och dess OCR-motor till Anki Miners mapp – cirka 1 GB, upp till 4 GB med stöd för NVIDIA GPU.</translation>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Not available on this platform</source>
@@ -9198,8 +9258,12 @@ Inga indexfiler raderas.</translation>
         <translation>Rader med exakt ett nytt ord.</translation>
     </message>
     <message>
-        <source>Lines with two or more new words.</source>
-        <translation>Rader med två eller fler nya ord.</translation>
+        <source>Lines with exactly two new words.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Lines with three or more new words.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Check Readability</source>
@@ -12228,6 +12292,10 @@ Dina installerade resurser och ditt tema behålls.</translation>
     </message>
 </context><context>
     <name>SubtitleRetimer</name>
+    <message>
+        <source>the reference subtitle has no dialogue lines</source>
+        <translation type="unfinished" />
+    </message>
     <message>
         <source>Ignoring %1 non-dialogue lines during alignment.</source>
         <translation>Ignorerar %1 rader som inte är dialog under synkningen.</translation>
