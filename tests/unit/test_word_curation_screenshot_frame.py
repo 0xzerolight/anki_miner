@@ -99,7 +99,7 @@ class TestButtonPresence:
     def test_side_key_unchanged(self, qtbot, words, existing_video):
         """The buttons live inside the player pane, so saved layouts survive."""
         dlg, _ = _dialog(qtbot, words, existing_video)
-        assert dlg._side_key == "player"
+        assert dlg._side_key == "player+sentences"
 
 
 class TestPreviewAgreement:

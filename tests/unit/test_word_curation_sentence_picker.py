@@ -2,7 +2,8 @@
 
 Covers picking which example sentence (and scene) gets mined when a word
 appears on multiple subtitle lines:
-1. No picker for single-occurrence words.
+1. The pane shows the focused word's chosen sentence in full; the candidate
+   list shows only for a word with alternatives.
 2. Focusing a multi-candidate word populates the list, default-selecting the
    current pick.
 3. Activating another candidate updates the chosen word, the Sentence cell, and
@@ -16,6 +17,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
+from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QAbstractItemView, QApplication, QMenu
 
 from anki_miner.gui.utils.phrase_wrap import WORD_JOINER
@@ -166,14 +168,25 @@ class TestPickerPopulation:
         assert dlg.sentence_list.count() == 3
         # Default pick is the first candidate (matches the word's sentence/timing).
         assert dlg.sentence_list.currentRow() == 0
-        assert dlg.sentence_list.isEnabled()
+        assert not dlg.sentence_list.isHidden()
 
-    def test_focus_single_occurrence_disables_list(self, qtbot, mixed_words):
+    def test_focus_single_occurrence_hides_list(self, qtbot, mixed_words):
+        """Hidden, not just disabled: the pane's top already shows the one sentence."""
         dlg = WordCurationDialog(mixed_words)
         qtbot.addWidget(dlg)
         _select_and_fire(dlg, 1)
         assert dlg.sentence_list.count() == 0
-        assert dlg.sentence_list.isEnabled() is False
+        assert dlg.sentence_list.isHidden()
+
+    def test_the_list_follows_the_focused_words_candidate_count(self, qtbot, mixed_words):
+        dlg = WordCurationDialog(mixed_words)
+        qtbot.addWidget(dlg)
+        _select_and_fire(dlg, 0)
+        assert not dlg.sentence_list.isHidden()
+        _select_and_fire(dlg, 1)
+        assert dlg.sentence_list.isHidden()
+        _select_and_fire(dlg, 0)
+        assert not dlg.sentence_list.isHidden()
 
     def test_every_candidate_is_listed_and_the_list_scrolls(self, qtbot):
         """The picker is unbounded: 40 lines are 40 options, reachable by scrolling.
@@ -207,6 +220,84 @@ class TestPickerPaneLabel:
         _select_and_fire(dlg, 0)
         _select_and_fire(dlg, 1)
         assert dlg.sentence_pane_label.text() == "Sentences"
+
+
+class TestChosenSentence:
+    """The pane's top reads the focused word's sentence in full, whatever its candidates."""
+
+    @staticmethod
+    def _shown(dlg: WordCurationDialog) -> str:
+        return dlg.chosen_sentence_label.text().replace(WORD_JOINER, "")
+
+    def test_a_one_candidate_word_shows_its_sentence(self, qtbot, mixed_words):
+        dlg = WordCurationDialog(mixed_words)
+        qtbot.addWidget(dlg)
+        _select_and_fire(dlg, 1)
+        assert self._shown(dlg) == "公園を走る"
+
+    def test_a_run_without_candidates_still_has_the_pane(self, qtbot, tmp_path):
+        """One user's ask: a word's only sentence, shown beside the player."""
+        dlg = _dialog_with_stub_player([_plain_word()], tmp_path)
+        qtbot.addWidget(dlg)
+        dlg.player_widget = MagicMock()
+        assert dlg._side_key == "player+sentences"
+        _select_and_fire(dlg, 0)
+        assert self._shown(dlg) == "公園を走る"
+        assert dlg.sentence_list.isHidden()
+        assert dlg.sentence_pane_label.text() == "Sentences"
+
+    def test_focus_moves_it_to_the_next_word(self, qtbot, mixed_words):
+        dlg = WordCurationDialog(mixed_words)
+        qtbot.addWidget(dlg)
+        _select_and_fire(dlg, 0)
+        assert self._shown(dlg) == "朝ごはんを食べる"
+        _select_and_fire(dlg, 1)
+        assert self._shown(dlg) == "公園を走る"
+
+    def test_a_pick_shows_the_picked_sentence(self, qtbot, mixed_words):
+        dlg = WordCurationDialog(mixed_words)
+        qtbot.addWidget(dlg)
+        _select_and_fire(dlg, 0)
+        dlg.sentence_list.setCurrentRow(2)
+        assert self._shown(dlg) == "早く食べなさい"
+
+    def test_the_whole_sentence_where_the_cell_cuts_it(self, qtbot):
+        long_sentence = "長い" * 40
+        word = _leaf("長い", long_sentence, 1.0)
+        word.sentence_candidates = [word, _leaf("長い", "短い文", 5.0)]
+        dlg = WordCurationDialog([word])
+        qtbot.addWidget(dlg)
+        _select_and_fire(dlg, 0)
+        assert dlg.table.item(0, 4).text().startswith(long_sentence[:47] + "...")
+        assert self._shown(dlg) == long_sentence
+
+    def test_it_reads_as_mined_content_and_never_takes_focus(self, qtbot, mixed_words):
+        dlg = WordCurationDialog(mixed_words)
+        qtbot.addWidget(dlg)
+        label = dlg.chosen_sentence_label
+        assert label.focusPolicy() == Qt.FocusPolicy.NoFocus
+        assert label.wordWrap()
+        assert label.textFormat() == Qt.TextFormat.PlainText
+        _select_and_fire(dlg, 0)
+        # Display text carries the ja soft-wrap marks, as the list rows do.
+        assert WORD_JOINER in label.text()
+
+    def test_markup_in_a_line_prints_as_typed(self, qtbot):
+        word = _leaf("食べる", "<b>食べる</b>", 1.0)
+        word.sentence_candidates = [word, _leaf("食べる", "パンを食べる", 5.0)]
+        dlg = WordCurationDialog([word])
+        qtbot.addWidget(dlg)
+        _select_and_fire(dlg, 0)
+        assert dlg.chosen_sentence_label.textFormat() == Qt.TextFormat.PlainText
+        assert self._shown(dlg) == "<b>食べる</b>"
+
+    def test_nothing_focused_shows_nothing(self, qtbot, mixed_words):
+        dlg = WordCurationDialog(mixed_words)
+        qtbot.addWidget(dlg)
+        _select_and_fire(dlg, 0)
+        dlg._pending_index = None
+        dlg._refresh_chosen_sentence()
+        assert dlg.chosen_sentence_label.text() == ""
 
 
 class TestPickerViewportStability:
@@ -352,11 +443,18 @@ class TestPlayPauseShortcut:
             for sc in widget.findChildren(QShortcut, options=Qt.FindChildOption.FindDirectChildrenOnly)
         )
 
-    def test_space_shortcut_on_table_and_sentence_list(self, qtbot, mixed_words):
+    def test_space_shortcut_on_table_and_sentences_pane(self, qtbot, mixed_words):
+        """On the pane, never also on its list: two in one ancestry chain are ambiguous."""
         dlg = WordCurationDialog(mixed_words)
         qtbot.addWidget(dlg)
         assert self._has_space_play_pause(dlg.table)
-        assert self._has_space_play_pause(dlg.sentence_list)
+        assert self._has_space_play_pause(dlg.sentence_pane)
+        assert not self._has_space_play_pause(dlg.sentence_list)
+
+    def test_space_shortcut_on_the_pane_of_a_run_without_candidates(self, qtbot, tmp_path):
+        dlg = _dialog_with_stub_player([_plain_word()], tmp_path)
+        qtbot.addWidget(dlg)
+        assert self._has_space_play_pause(dlg.sentence_pane)
 
     def test_space_shortcut_on_player_pane(self, qtbot, mixed_words, tmp_path):
         """The shortcut hangs off the pane container, so it also covers the clip

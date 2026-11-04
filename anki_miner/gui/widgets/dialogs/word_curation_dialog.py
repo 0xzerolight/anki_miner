@@ -1137,7 +1137,8 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
 
         A restored size below a pane's own minimum is rejected wholesale rather
         than clamped: the point of the blob is a layout the user chose, and a
-        half-honoured one is not that.
+        half-honoured one is not that. The collapsed Sentences pane is the
+        exception, the one pane allowed to collapse: the user chose that too.
         """
         if splitter is None or blob is None:
             return False
@@ -1146,9 +1147,9 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
             return False
         for index, size in enumerate(splitter.sizes()):
             pane = splitter.widget(index)
-            floor = pane.minimumSizeHint() if pane is not None else None
-            if floor is None:
+            if pane is None or (size == 0 and pane is getattr(self, "sentence_pane", None)):
                 continue
+            floor = pane.minimumSizeHint()
             if size < (floor.height() if splitter.orientation() == Qt.Orientation.Vertical else floor.width()):
                 self._reassert_split_policy(splitter)
                 return False
@@ -1328,17 +1329,18 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
     def _build_right_pane(self) -> QWidget:
         """Build the right pane from whichever optional sub-panes are enabled.
 
-        Stacks (top→bottom) the player, the sentence picker, and the definition
-        browser — only the enabled ones, so the list is anywhere from one to
-        three panes long. Always returns a container, never a bare sub-pane:
-        the panes are shared widgets (``SubtitlePlayerWidget`` is also the
-        subtitle viewer's, ``PageImageView`` carries its own minimum), and a
-        wrapper is what lets this screen size its own column without reaching
-        into them.
+        Stacks (top→bottom) the player or page image, the Sentences pane, and
+        the definition browser — the Sentences pane always, the others only
+        when enabled, so the list is one to three panes long. Always returns a
+        container, never a bare sub-pane: the panes are shared widgets
+        (``SubtitlePlayerWidget`` is also the subtitle viewer's,
+        ``PageImageView`` carries its own minimum), and a wrapper is what lets
+        this screen size its own column without reaching into them.
 
         Stretch and minimum height ride the tuple rather than the position,
-        because the composition varies: manga is image + dictionary, and
-        positional factors would hand the dictionary the sentence picker's.
+        because the composition varies: manga is image + sentences +
+        dictionary, and positional factors would hand the dictionary another
+        pane's.
         """
         # (name, widget, stretch, minimum height). The names compose the key a
         # saved side-column position is stored under -- see save_curator_layout.
@@ -1399,11 +1401,16 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
                 image_box.addLayout(play_row)
             panes.append(("image", image_pane, 3, 0))
 
-        if self._has_candidates:
-            # Stretch 0: a picker that shows its candidates is done. Extra
-            # height belongs to the frame and the definition, so this asks only
-            # for its label and three rows.
-            panes.append(("sentences", self._build_sentence_pane(), 0, 4 * row))
+        # Always, not only when some word has alternatives: the pane's top is
+        # where a word's sentence reads in full (the table cell cuts it at 47
+        # characters), merged lines and edits included. Stretch 0: extra height
+        # belongs to the frame and the definition. The minimum is the title and
+        # about two lines of sentence; the run that has candidates opens three
+        # list rows taller (see _apply_side_split_ratio). The one pane that
+        # collapses: the column can do without it, never without the others.
+        sentence_minimum = 3 * row
+        self._sentence_pane_opening = sentence_minimum + (3 * row if self._has_candidates else 0)
+        panes.append(("sentences", self._build_sentence_pane(), 0, sentence_minimum))
 
         if self._show_dict:
             self.definition_view = QTextBrowser()
@@ -1434,11 +1441,15 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
 
         self._side_splitter = QSplitter(Qt.Orientation.Vertical)
         self._side_stretch = [stretch for _, _, stretch, _ in panes]
-        for index, (_, widget, stretch, minimum) in enumerate(panes):
+        for index, (name, widget, stretch, minimum) in enumerate(panes):
             if minimum:
                 widget.setMinimumHeight(minimum)
             self._side_splitter.addWidget(widget)
             self._side_splitter.setStretchFactor(index, stretch)
+            # Stated for every pane, not only the one that collapses: an unset
+            # pane does follow setChildrenCollapsible(False) below, but
+            # isCollapsible() still reports it True.
+            self._side_splitter.setCollapsible(index, name == "sentences")
         self._side_splitter.setChildrenCollapsible(False)
         vbox.addWidget(self._side_splitter)
         return container
@@ -1449,15 +1460,17 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         Stretch factors govern a *resize*; the first frame comes from each
         pane's own sizeHint, and a ``QListWidget`` asks for more than the video
         frame it sits under. So the opening sizes are stated: a stretch-0 pane
-        keeps its minimum and the rest share what is left by weight.
+        opens at its minimum (the Sentences pane at its own opening height,
+        which leaves room for the candidate list in a run that has one) and
+        the rest share what is left by weight.
         """
         if not hasattr(self, "_side_splitter"):
             return
-        fixed = {
-            index: self._side_splitter.widget(index).minimumHeight()  # type: ignore[union-attr]
-            for index, stretch in enumerate(self._side_stretch)
-            if stretch == 0
-        }
+        fixed: dict[int, int] = {}
+        for index, stretch in enumerate(self._side_stretch):
+            pane = self._side_splitter.widget(index)
+            if stretch == 0 and pane is not None:
+                fixed[index] = self._sentence_pane_opening if pane is self.sentence_pane else pane.minimumHeight()
         weights = sum(self._side_stretch)
         spare = max(self._side_splitter.height() - sum(fixed.values()), 0)
         self._side_splitter.setSizes(
@@ -1885,16 +1898,24 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         return resolve_screenshot_time(stamped, start, max(0.0, end - start), ctx.screenshot_offset)
 
     def _build_sentence_pane(self) -> QWidget:
-        """Build the "Sentences" picker pane (label + candidate list).
+        """Build the "Sentences" pane: title, the chosen sentence, candidate list.
 
-        The list is repopulated on row focus with the focused word's candidate
-        sentences; selecting one rewrites which sentence/scene gets mined.
+        The chosen sentence is the focused word's, in full: what its card will
+        carry, widened by any line expansion and replaced by any edit (see
+        :meth:`_refresh_chosen_sentence`). The list below it is repopulated on
+        row focus with the focused word's candidate sentences and shows only
+        for a word that has two or more; selecting one rewrites which
+        sentence/scene gets mined.
 
-        The label carries the option count because the list is unbounded and
+        The title carries the option count because the list is unbounded and
         scrolls: without it, a word offering 30 lines looks like it offers the
         five that happen to fit the pane.
         """
-        container = QWidget()
+        # Named because the play/pause key hangs off THIS container: one
+        # install covers the list, and the pane exists whenever the side
+        # column does (see _install_play_pause_shortcut).
+        self.sentence_pane = QWidget()
+        container = self.sentence_pane
         vbox = QVBoxLayout(container)
         vbox.setContentsMargins(0, 0, 0, 0)
         vbox.setSpacing(SPACING.xs)
@@ -1902,6 +1923,18 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         self.sentence_pane_label = QLabel(self.tr("Sentences"))
         self.sentence_pane_label.setFont(self._make_font(12, QFont.Weight.Medium))
         vbox.addWidget(self.sentence_pane_label)
+
+        # Plain text: a subtitle line is data, and "<i>" in one must print as
+        # typed. No focus, ever: every curator key but confirm is scoped to the
+        # table. Content face and direction, as the list rows below have.
+        self.chosen_sentence_label = QLabel()
+        self.chosen_sentence_label.setTextFormat(Qt.TextFormat.PlainText)
+        self.chosen_sentence_label.setWordWrap(True)
+        self.chosen_sentence_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
+        self.chosen_sentence_label.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.chosen_sentence_label.setFont(content_cell_font(self._content_style))
+        apply_content_direction(self.chosen_sentence_label, self._content_style)
+        vbox.addWidget(self.chosen_sentence_label)
 
         self.sentence_list = QListWidget()
         self.sentence_list.setWordWrap(True)
@@ -1919,7 +1952,33 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         self.sentence_list.setToolTip(self.tr("Pick which sentence gets mined for this word."))
         self.sentence_list.currentRowChanged.connect(self._on_candidate_chosen)
         vbox.addWidget(self.sentence_list, 1)
+        # Until a focused word offers a choice (_populate_candidate_list).
+        self.sentence_list.hide()
+        # Takes the height the hidden list leaves, which the two labels above
+        # would otherwise share out and drift apart in; a shown list's stretch
+        # outranks it.
+        vbox.addStretch()
         return container
+
+    def _refresh_chosen_sentence(self) -> None:
+        """Show the focused word's sentence in full at the top of the Sentences pane.
+
+        What the card will carry: the edit when there is one, else the pick
+        widened by any line expansion (:meth:`_shown_line`). Called from every
+        place that text changes -- row focus, :meth:`_apply_pick_to_row` (a
+        candidate pick, a line expansion or its reset, an edit or its reset)
+        and :meth:`_repaint_expanded_rows` -- and always paints the FOCUSED
+        word, whichever row the change was made on. Empty with nothing focused.
+        """
+        if not hasattr(self, "chosen_sentence_label"):
+            return
+        idx = self._pending_index
+        if idx is None:
+            self.chosen_sentence_label.clear()
+            return
+        edit = self._sentence_edits.get(idx)
+        shown = edit if edit is not None else self._shown_line(idx)
+        self.chosen_sentence_label.setText(content_phrase_wrap(shown.sentence, self._content_style))
 
     def _create_player_widget(self) -> SubtitlePlayerWidget:
         """Instantiate and configure the SubtitlePlayerWidget."""
@@ -1986,8 +2045,9 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
             # WidgetWithChildren shortcuts for one key in one ancestry chain,
             # which Qt resolves as activatedAmbiguously — neither fires.
             self._install_play_pause_shortcut(self.player_pane)
-        if self._has_candidates and hasattr(self, "sentence_list"):
-            self._install_play_pause_shortcut(self.sentence_list)
+        if hasattr(self, "sentence_pane"):
+            # The pane, not its list: one install per ancestry chain.
+            self._install_play_pause_shortcut(self.sentence_pane)
         if self._show_dict and hasattr(self, "definition_view"):
             self._install_play_pause_shortcut(self.definition_view)
 
@@ -2585,9 +2645,10 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         if word is None or idx is None:
             return
 
-        # Sentence picker: list the focused word's candidate sentences (no-op
-        # for single-occurrence words). Done first so seeking uses the chosen
-        # candidate's timing below.
+        # Sentences pane: the focused word's sentence in full, and its
+        # candidate sentences (a run where no word has two keeps the list
+        # hidden). Done first so seeking uses the chosen candidate's timing below.
+        self._refresh_chosen_sentence()
         if self._has_candidates:
             self._populate_candidate_list(word, idx)
 
@@ -2846,7 +2907,8 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
 
         Repopulation is programmatic, so signals are blocked to avoid the
         ``currentRowChanged`` handler treating it as a user pick. Words with no
-        alternatives clear the list.
+        alternatives clear and hide the list: the pane's top already shows
+        their one sentence, and an empty box above it would read as a fault.
         """
         if not hasattr(self, "sentence_list"):
             return
@@ -2880,10 +2942,10 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
                 if self._same_pick(cand, chosen):
                     selected_row = i
             self.sentence_list.setCurrentRow(selected_row)
-            self.sentence_list.setEnabled(True)
+            self.sentence_list.show()
             self._set_sentence_pane_count(len(candidates))
         else:
-            self.sentence_list.setEnabled(False)
+            self.sentence_list.hide()
             self._set_sentence_pane_count(0)
 
         self.sentence_list.blockSignals(False)
@@ -3067,6 +3129,8 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
             if anchor is not None:
                 self.table.scrollToItem(anchor, QAbstractItemView.ScrollHint.EnsureVisible)
         self._refresh_summary()
+        # The pane's full sentence is the one display the cells above cut short.
+        self._refresh_chosen_sentence()
 
     def _preview_scene(
         self, start_time: float, video_file: Path | None = None, *, frame_time: float | None = None
@@ -3202,7 +3266,8 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         carrying the automatic merge's stamp paints its FRAGMENT until the
         context arrives, while ``get_selected_words`` still ships the stamp.
         This is the first moment the two can be made to agree; the focused row
-        also reseeds the clip strip, which was seeded from the same fragment.
+        also reseeds the clip strip and the Sentences pane's full sentence,
+        both shown from the same fragment.
         """
         targets = [
             idx
@@ -3243,6 +3308,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
             if anchor is not None:
                 self.table.scrollToItem(anchor, QAbstractItemView.ScrollHint.EnsureVisible)
             self._seed_clip_editor(self._chosen.get(pending, self._words[pending]), pending)
+            self._refresh_chosen_sentence()
         self._refresh_summary()
 
     def _chosen_episode_displayed(self) -> bool:

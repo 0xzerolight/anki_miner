@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Added
 
 ### Changed
+- **The Word Curator's Sentences pane shows the word's whole sentence, and can be collapsed.** The pane is there for every word now, not only when some word appears on several lines, and its top shows the sentence the card will carry in full, with the lines added by + Previous line or + Next line and any edit, where the table cuts it at 47 characters. The list of other sentences shows only for a word that has them. Drag the pane's edge to collapse it; the next item opens it collapsed too. Manga and book runs have the pane as well. The side column's sizes reset once for runs that had no Sentences pane.
 
 ### Fixed
 - **Mining again right after a run that synced Anki works.** With "Sync Anki after mining" on, Anki answers the sync request at once and syncs in the background, refusing everything else until it is done, so a command-line run started straight after another failed with `setup_error`. A run now waits up to two minutes for its sync to finish before it ends. A run that still finds Anki syncing reports `busy` on the command line and `ANKI_UNREACHABLE` in `--api`, not a setup problem; the window says Anki is busy syncing.

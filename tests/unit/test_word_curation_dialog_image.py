@@ -15,6 +15,7 @@ from unittest.mock import MagicMock
 import pytest
 from PyQt6.QtGui import QColor, QImage, QPixmap
 
+from anki_miner.gui.utils.phrase_wrap import WORD_JOINER
 from anki_miner.gui.widgets.dialogs import word_curation_dialog as wcd
 from anki_miner.gui.widgets.dialogs.word_curation_dialog import (
     CurationMediaContext,
@@ -134,6 +135,22 @@ class TestBackwardCompat:
         dlg = WordCurationDialog([_make_word("食べる", 0)], media_context=ctx)
         qtbot.addWidget(dlg)
         assert not hasattr(dlg, "page_image_view")
+
+
+class TestSentencesPane:
+    def test_a_manga_run_gets_the_sentences_pane(self, qtbot, sync_off_thread):
+        """Manga and reading runs have the pane too: a speech bubble's text, in full."""
+        units = _make_units((0, "001.png", "p.1"), (1, "002.png", "p.2"))
+        words = [_make_word("食べる", 0), _make_word("走る", 1)]
+        dlg = WordCurationDialog(words, media_context=_image_context(units))
+        qtbot.addWidget(dlg)
+        assert dlg._side_key == "image+sentences"
+
+        _select_row(dlg, 1)
+        _fire_timer(dlg)
+
+        assert dlg.chosen_sentence_label.text().replace(WORD_JOINER, "") == "走るのテスト"
+        assert dlg.sentence_list.isHidden()
 
 
 # ---------------------------------------------------------------------------

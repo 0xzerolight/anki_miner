@@ -14,6 +14,7 @@ import pytest
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QDialog, QWidget
 
+from anki_miner.gui.utils.phrase_wrap import WORD_JOINER
 from anki_miner.gui.widgets.dialogs.sentence_edit_dialog import SentenceEditDialog
 from anki_miner.gui.widgets.dialogs.word_curation_dialog import (
     CurationMediaContext,
@@ -144,6 +145,11 @@ def _cell(dialog: WordCurationDialog, idx: int, column: int) -> str:
     return dialog.table.item(row, column).text()
 
 
+def _pane_sentence(dialog: WordCurationDialog) -> str:
+    """The Sentences pane's full sentence, without its display-only soft-wrap marks."""
+    return dialog.chosen_sentence_label.text().replace(WORD_JOINER, "")
+
+
 class TestAvailability:
     def test_no_parser_means_no_editor(self, qtbot, words):
         dlg = WordCurationDialog(words)
@@ -253,6 +259,48 @@ class TestRecording:
         _edit(dlg, 0)
         assert dlg._shown_word(0).mined_form == "持久"
         assert dlg._shown_word(0).sentence == EDITED
+
+
+class TestSentencesPane:
+    """The pane's full sentence is the edit while one exists."""
+
+    def test_the_pane_shows_the_edit(self, qtbot, words, existing_video, sync_off_thread):
+        dlg = _dialog(qtbot, words, existing_video)
+        _focus(dlg, 0)
+        assert _pane_sentence(dlg) == ORIGINAL
+        _edit(dlg, 0)
+        assert _pane_sentence(dlg) == EDITED
+
+    def test_reset_shows_the_line_again(self, qtbot, words, existing_video, sync_off_thread):
+        dlg = _dialog(qtbot, words, existing_video)
+        _focus(dlg, 0)
+        _edit(dlg, 0)
+        dlg._reset_sentence_edit(0)
+        assert _pane_sentence(dlg) == ORIGINAL
+
+    def test_refocusing_keeps_the_edit(self, qtbot, words, existing_video, sync_off_thread):
+        dlg = _dialog(qtbot, words, existing_video)
+        _focus(dlg, 0)
+        _edit(dlg, 0)
+        _focus(dlg, 1)
+        _focus(dlg, 0)
+        assert _pane_sentence(dlg) == EDITED
+
+    def test_an_edit_on_another_row_leaves_the_focused_sentence(self, qtbot, words, existing_video, sync_off_thread):
+        """The pane describes the focused word, whichever row the change lands on."""
+        dlg = _dialog(qtbot, words, existing_video)
+        _focus(dlg, 1)
+        _edit(dlg, 0)
+        assert _pane_sentence(dlg) == "走るのテスト"
+
+    def test_an_edit_of_a_merged_line_shows_the_edited_merge(self, qtbot, words, existing_video, sync_off_thread):
+        dlg = _dialog(qtbot, words, existing_video)
+        _focus(dlg, 0)
+        dlg._on_expand_line(-1)
+        _edit(dlg, 0, text=f"前の行です {EDITED}")
+        assert _pane_sentence(dlg) == f"前の行です {EDITED}"
+        dlg._on_expand_reset()
+        assert _pane_sentence(dlg) == ORIGINAL
 
 
 class TestInvalidation:
