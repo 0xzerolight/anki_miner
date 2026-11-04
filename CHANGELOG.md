@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Fixed
 - **Mining again right after a run that synced Anki works.** With "Sync Anki after mining" on, Anki answers the sync request at once and syncs in the background, refusing everything else until it is done, so a command-line run started straight after another failed with `setup_error`. A run now waits up to two minutes for its sync to finish before it ends. A run that still finds Anki syncing reports `busy` on the command line and `ANKI_UNREACHABLE` in `--api`, not a setup problem; the window says Anki is busy syncing.
 - **Videos whose audio tracks have names but no language tags use the mining language's track.** Many Blu-ray remuxes name their tracks "English" and "Japanese" without tagging them, so the language was not found and the first track was used, often the dub: speech recognition transcribed it and every card clip took its audio. A track with no language tag whose name is the mining language ("Japanese [Stereo]", "日本語音声", "JPN") is now used when no track is tagged with it, and the Word Curator and subtitle viewer previews play that same track; a track tagged with another language is still not.
+- **Manga OCR's install size is stated correctly.** The Install mokuro tooltip said about 1 GB, up to 4 GB with NVIDIA GPU support, but mokuro and the models it downloads on its first run take about 3 GB of disk, and about 7 GB with NVIDIA GPU support. The tooltip now says so.
 
 ### Removed
 

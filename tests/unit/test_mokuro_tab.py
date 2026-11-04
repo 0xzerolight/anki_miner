@@ -328,7 +328,7 @@ class TestLanguageStates:
         tab = self._tab(qtbot, tmp_path, monkeypatch, MangaOcrState(False, False))
 
         assert tab.install_mokuro_button.text() == "Install mokuro"
-        assert "1 GB" in tab.install_mokuro_button.toolTip()
+        assert "about 3 GB, up to 7 GB" in tab.install_mokuro_button.toolTip()
         assert tab.mokuro_status_label.text() == "Not installed"
         assert tab.engine_notice_label.text() == _OWN_MOKURO
         assert not tab.engine_notice_label.isHidden()
@@ -342,7 +342,7 @@ class TestLanguageStates:
         assert tab.run_button.isEnabled()
         tab.change_setup_button.click()
         assert tab.install_mokuro_button.text() == "Reinstall mokuro"
-        assert "1 GB" in tab.install_mokuro_button.toolTip()
+        assert "about 3 GB, up to 7 GB" in tab.install_mokuro_button.toolTip()
         assert self._emitted(tab) == [True]
 
     def test_a_refresh_reapplies_the_stored_state_not_a_bare_bool(self, qtbot, tmp_path, monkeypatch):
