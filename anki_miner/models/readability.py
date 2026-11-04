@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-#: ``line_buckets`` indices: lines with no unknown lemma, exactly one (i+1), two or more.
-I_PLUS_0, I_PLUS_1, I_PLUS_2_OR_MORE = 0, 1, 2
+#: ``line_buckets`` indices: lines with no unknown lemma, exactly one (i+1), exactly two (i+2), three or more.
+I_PLUS_0, I_PLUS_1, I_PLUS_2, I_PLUS_3_OR_MORE = 0, 1, 2, 3
 
 
 @dataclass(frozen=True)
@@ -21,7 +21,7 @@ class ReadabilityStats:
     word_count: int
     unknown_count: int
     new_words: frozenset[str]
-    line_buckets: tuple[int, int, int]
+    line_buckets: tuple[int, int, int, int]
 
     @property
     def known_pct(self) -> float | None:
