@@ -525,6 +525,62 @@ def test_xcb_leg_skips_a_bundle_without_the_qt_xcb_plugin(tmp_path: Path) -> Non
 
 
 @pytest.mark.skipif(shutil.which("bash") is None, reason="bash is unavailable")
+@pytest.mark.parametrize(
+    ("unresolved", "passes"),
+    [
+        ("libgomp-d46f9225.so.1.0.0", False),
+        # The host driver's Vulkan loader, legitimately absent on a GPU-less runner.
+        ("libvulkan.so.1", True),
+    ],
+)
+def test_whispercpp_leg_resolves_ggml_modules_without_ld_library_path(
+    tmp_path: Path, unresolved: str, passes: bool
+) -> None:
+    """3.10/3.11 shipped libggml-cpu where its rpath pointed nowhere (issue #144).
+
+    The bootloader's LD_LIBRARY_PATH reached stray copies and hid it, so this ldd
+    resolves the lib only while LD_LIBRARY_PATH is set, like the real bundle did.
+    """
+    dist = _write_smoke_dist(tmp_path)
+    fake_bin = tmp_path / "fake-bin"
+    fake_bin.mkdir()
+    _write_executable(
+        fake_bin / "ldd",
+        "#!/usr/bin/env bash\n"
+        'case "$1" in *libggml-cpu.so) ;; *) exit 0 ;; esac\n'
+        'if [ -n "${LD_LIBRARY_PATH:-}" ]; then\n'
+        f'  printf "\\t{unresolved} => %s/{unresolved}\\n" "$LD_LIBRARY_PATH"\n'
+        "else\n"
+        f'  printf "\\t{unresolved} => not found\\n"\n'
+        "fi\n",
+    )
+    (tmp_path / "caller-home").mkdir()
+
+    result = subprocess.run(
+        ["bash", str(PROJECT_ROOT / "scripts" / "bundle_smoke.sh"), str(dist)],
+        cwd=tmp_path,
+        env=_smoke_env(
+            tmp_path,
+            tmp_path / "probe-homes.txt",
+            PATH=f"{fake_bin}{os.pathsep}{os.environ['PATH']}",
+            LD_LIBRARY_PATH=str(tmp_path / "bundle-internal"),
+        ),
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+
+    if passes:
+        assert result.returncode == 0, result.stdout + result.stderr
+        assert "PASS whispercpp-vulkan" in result.stdout
+    else:
+        assert result.returncode != 0
+        assert "FAIL whispercpp-vulkan" in result.stdout
+        assert f"{unresolved} => not found" in result.stdout
+
+
+@pytest.mark.skipif(shutil.which("bash") is None, reason="bash is unavailable")
 @pytest.mark.skipif(shutil.which("awk") is None, reason="awk is unavailable")
 def test_smoke_graph_matches_build_aselect_graph(tmp_path: Path) -> None:
     """The smoke's awk generator must emit exactly what the app emits.

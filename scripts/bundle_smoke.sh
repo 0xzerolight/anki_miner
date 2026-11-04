@@ -231,6 +231,10 @@ echo
 #       is a separate GGML_BACKEND_DL module (NOT compiled into libggml-base);
 #       absent means whisper.cpp cannot fall back to CPU when no Vulkan device
 #       exists (DEFECT 2). File-presence only, no Model creation.
+#   (a3) Linux only: both modules resolve their bundled NEEDED libs through their
+#       own rpath, checked by ldd with LD_LIBRARY_PATH unset. (b) and (c) cannot
+#       see this: the bootloader puts _internal on LD_LIBRARY_PATH, which hid
+#       modules collected where their rpath points nowhere (issue #144).
 #   (b) the frozen binary's hidden Vulkan probe (ANKI_MINER_ASR_VULKAN_PROBE=1,
 #       app.main routes it to _vulkan_probe before any Qt init) runs the cold
 #       ctypes load of ggml-vulkan in a child and prints the device count — a
@@ -289,6 +293,23 @@ else
   else
     echo "Found ggml-cpu backend lib: $CPU_LIB"
   fi
+  # (a3) each Linux module resolves libggml-base/libgomp on its own rpath, as a
+  # plain dlopen (the Vulkan probe) needs. The Vulkan loader is the host driver's
+  # and may be absent on a runner, so it is not counted.
+  for lib in "$VK_LIB" "$CPU_LIB"; do
+    case "$lib" in
+      *.so*) ;;
+      *) continue ;;
+    esac
+    MISSING=$(env -u LD_LIBRARY_PATH ldd "$lib" 2>/dev/null | grep '=> not found' | grep -v 'libvulkan\.so' || true)
+    if [ -n "$MISSING" ]; then
+      echo "::error::$lib does not resolve its bundled libs without LD_LIBRARY_PATH (collected outside the dir its rpath was set for):"
+      echo "$MISSING"
+      WHISPERCPP_OK=0
+    else
+      echo "Resolves without LD_LIBRARY_PATH: $lib"
+    fi
+  done
   # (b) frozen binary's Vulkan probe prints a single integer device count, exit 0.
   if PROBE_OUT=$(ANKI_MINER_ASR_VULKAN_PROBE=1 QT_QPA_PLATFORM=offscreen "$APP" 2>probe_err.log); then
     PROBE_OUT=$(printf '%s' "$PROBE_OUT" | tr -d '[:space:]')

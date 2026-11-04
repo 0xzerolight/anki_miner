@@ -18,10 +18,10 @@ are ``GGML_BACKEND_DL`` *modules*, ``dlopen``-ed at runtime via
 ``ggml_backend_load_all`` — neither is a NEEDED entry of
 ``_pywhispercpp``/libggml/libwhisper, so static analysis never reaches them and they
 would be left out of the bundle.  Both are collected EXPLICITLY here, from wherever
-the per-OS wheel-repair tool leaves them: on Linux at the site-packages ROOT
-(auditwheel ``--exclude`` keeps the injected modules top-level — step 2c grafts them
-into ``pywhispercpp.libs``); on Windows as root ``ggml-vulkan.dll`` / ``ggml-cpu.dll``
-(delvewheel — step 2b's ``ggml*.dll`` sweep places them next to the extension).
+the per-OS wheel-repair tool leaves them, and to the same place in the frozen tree:
+on Linux at the site-packages ROOT (auditwheel ``--exclude`` keeps the injected
+modules top-level — step 2c); on Windows as root ``ggml-vulkan.dll`` /
+``ggml-cpu.dll`` (delvewheel — step 2b's ``ggml*.dll`` sweep).
 
 The shared libs carried into the frozen tree:
 
@@ -38,18 +38,17 @@ The shared libs carried into the frozen tree:
                           GGML_BACKEND_DL module the ggml registry dlopen-s at
                           runtime, skipped gracefully when the loader is absent)
 
-Placement.  ggml discovers its backends (``ggml_backend_load_all`` / ``_best``) by
-scanning the directory the loaded ggml libs live in, so ggml-vulkan must land in
-the SAME dir as libggml in the frozen tree.  PyInstaller preserves the
-site-packages parent directory of collected binaries (see
-``bindepend._get_paths_for_parent_directory_preservation``): the NEEDED-followed
-libs from ``site-packages/pywhispercpp.libs`` are placed under
-``_internal/pywhispercpp.libs/``.  So we collect the ``.libs`` dir to dest
-``pywhispercpp.libs`` (matching that adjacency) and the root extension to dest
-``.`` (where PyInstaller's import graph would also place it).  The _engine seam
-(anki_miner/services/asr/_engine.py) globs the same set of dirs — package dir,
-site root, ``*.libs`` siblings — to find ggml-vulkan, and this collection
-reproduces that adjacency in the frozen bundle.
+Placement.  The frozen tree mirrors the wheel's site-packages layout: PyInstaller
+preserves the site-packages parent directory of collected binaries (see
+``bindepend._get_paths_for_parent_directory_preservation``), so the NEEDED-followed
+libs from ``site-packages/pywhispercpp.libs`` land under
+``_internal/pywhispercpp.libs/`` and the root extension and backend modules land at
+``_internal/``.  The repair tools set every rpath for THAT layout, so nothing here
+may move a binary to a different dir than the one it has in the wheel.  ggml finds
+the backend modules because ``_engine.ensure_ggml_backends_loaded``
+(anki_miner/services/asr/_engine.py) passes the ggml-vulkan module's own dir to
+``ggml_backend_load_all_from_path``; the _engine seam globs package dir, site root
+and ``*.libs`` siblings to find it.
 
 EXCLUDE the Vulkan loader (libvulkan.so.1 / vulkan-1.dll): it must NOT be frozen
 into the bundle.  The wheel build already strips it (auditwheel/delvewheel
@@ -98,9 +97,8 @@ if _spec is not None and _spec.origin is not None:
     # (2) The auditwheel/delvewheel-vendored ggml/whisper libs.  auditwheel drops
     #     them in a sibling ``pywhispercpp.libs`` dir (Linux); delvewheel uses a
     #     ``pywhispercpp.libs`` dir too, or places DLLs next to the extension at
-    #     the site root (Windows).  Collect both forms, preserving the
-    #     ``pywhispercpp.libs`` adjacency so ggml-vulkan sits next to libggml for
-    #     runtime ggml_backend_load_all discovery.
+    #     the site root (Windows).  Collect both forms, each to the dir it has in
+    #     the wheel.
     _libs_dir = _site_root / "pywhispercpp.libs"
     if _libs_dir.is_dir():
         for _lib in _libs_dir.iterdir():
@@ -122,26 +120,23 @@ if _spec is not None and _spec.origin is not None:
     #      MODULES at the site ROOT, not inside pywhispercpp.libs.  release.yml injects
     #      both into the raw wheel pre-auditwheel and passes ``auditwheel repair
     #      --exclude libggml-vulkan.so --exclude libggml-cpu.so``, so auditwheel keeps
-    #      the files top-level — but still repairs each in place: its RUNPATH is
-    #      repointed to ``$ORIGIN/pywhispercpp.libs`` and its NEEDED to the hashed
-    #      .libs sonames.  There is no ``.so`` counterpart to the Windows (2b) DLL
-    #      sweep, so without this step neither module is collected and the frozen
-    #      bundle silently ships a tree with no GGML_BACKEND_DL backends (both the
-    #      Vulkan backend AND the CPU-fallback backend missing).  Collect them INTO
-    #      ``pywhispercpp.libs`` (NOT the site root ``.``): that is the dir the LOADED
-    #      libggml lives in (per the extension RUNPATH), so ggml_backend_load_all
-    #      discovers both adjacent to libggml at runtime, their ``$ORIGIN``-relative
-    #      NEEDED resolve against the sibling hashed libs, and
-    #      _engine._find_ggml_vulkan_lib()'s ``*.libs`` search finds ggml-vulkan in
-    #      the frozen tree.  Dest ``.`` would pass the smoke but leave the modules one
-    #      dir above where ggml scans — a silent no-backend bug.  The guard is a no-op
-    #      if a future auditwheel ever vendors them into .libs itself (step 2 already
-    #      collected them), preventing a duplicate same-dest collision.
-    _already_in_libs = {os.path.basename(s) for (s, d) in binaries if d == "pywhispercpp.libs"}
+    #      the files top-level — but still repairs each in place: its DT_RPATH is
+    #      set to ``$ORIGIN/pywhispercpp.libs`` and its NEEDED to the hashed .libs
+    #      sonames (libggml-base, libgomp).  There is no ``.so`` counterpart to the
+    #      Windows (2b) DLL sweep, so without this step neither module is collected
+    #      and the frozen bundle silently ships a tree with no GGML_BACKEND_DL
+    #      backends (both the Vulkan backend AND the CPU-fallback backend missing).
+    #      Collect them to the site root ``.``, where they sit in the wheel: that is
+    #      the only dir their rpath resolves from.  Inside ``pywhispercpp.libs`` it
+    #      points at a nonexistent ``pywhispercpp.libs/pywhispercpp.libs``; the
+    #      bundle then loaded them only through PyInstaller's LD_LIBRARY_PATH
+    #      reaching stray root copies, and a plain dlopen of either module failed
+    #      (issue #144: Vulkan probe 0, no CPU backend -> GGML_ASSERT(device)).
+    #      scripts/bundle_smoke.sh ldd-checks both modules without LD_LIBRARY_PATH.
     for _pat in ("libggml-vulkan*.so*", "libggml-cpu*.so*"):
         for _so in _site_root.glob(_pat):
-            if _so.is_file() and _so.name not in _already_in_libs:
-                binaries.append((str(_so), "pywhispercpp.libs"))
+            if _so.is_file():
+                binaries.append((str(_so), "."))
 
 # Defensive: drop the Vulkan loader if a wheel ever vendors it. The loader is the
 # ICD-dispatching shim that must come from the system / GPU driver at runtime, so
