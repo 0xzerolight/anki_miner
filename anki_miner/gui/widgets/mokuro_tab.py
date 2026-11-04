@@ -301,7 +301,7 @@ class MokuroTab(RunOptionsMixin, _ToolTabBase):
         #: Install/Reinstall's tooltip; "Download OCR model" swaps in its own.
         self._install_tooltip = self.tr(
             "Downloads mokuro and its OCR engine into Anki Miner's folder "
-            "— about 1 GB, up to 4 GB with NVIDIA GPU support."
+            "— about 3 GB, up to 7 GB with NVIDIA GPU support."
         )
         self.install_mokuro_button.setToolTip(self._install_tooltip)
         self.install_mokuro_button.setEnabled(self._mokuro_supported)

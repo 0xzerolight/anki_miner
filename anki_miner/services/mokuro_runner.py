@@ -47,7 +47,7 @@ from anki_miner.utils.process_supervisor import SupervisedState, run_supervised
 
 logger = logging.getLogger(__name__)
 
-#: A few hundred pages on CPU, plus on the very first run the ~550 MB of models
+#: A few hundred pages on CPU, plus on the very first run the ~920 MB of models
 #: mokuro downloads itself. Generous on purpose; Cancel is the fast path out.
 #: The TIMED_OUT MokuroError names this in hours; change both together.
 _VOLUME_TIMEOUT_S = 6 * 60 * 60
@@ -156,7 +156,7 @@ class MokuroRunnerService:
             # mokuro caches its detector under $XDG_CACHE_HOME/manga-ocr, and
             # huggingface_hub defaults HF_HOME to $XDG_CACHE_HOME/huggingface:
             # pointing XDG_CACHE_HOME next to the managed venv keeps both
-            # (~970 MB) inside ANKI_MINER_HOME. A user's explicit HF_HOME still wins.
+            # (~920 MB) inside ANKI_MINER_HOME. A user's explicit HF_HOME still wins.
             env=self._child_env() | {"XDG_CACHE_HOME": str(self._config.uv_root / "model_cache")} | self._ocr_env(),
             line_callback=handle_line,
             combine_stderr=True,

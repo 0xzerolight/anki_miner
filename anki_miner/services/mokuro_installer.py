@@ -1,6 +1,7 @@
 """In-app mokuro install: a pinned uv binary, then ``uv venv`` + ``uv pip install``.
 
-mokuro is a Python package (torch + transformers + manga-ocr, 1–4 GB), so the
+mokuro is a Python package (torch + transformers + manga-ocr; with the models
+it fetches on first run, about 3 GB on disk, 7 GB with CUDA), so the
 sha256-pinned-single-binary model of ``alass_installer`` does not fit and the
 wheel-pack model of ``language_pack_installer`` (platform wheels pinned by
 hand) is unmaintainable for torch. Instead:
