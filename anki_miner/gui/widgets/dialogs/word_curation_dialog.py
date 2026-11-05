@@ -1406,12 +1406,19 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         # where a word's sentence reads in full (the table cell cuts it at 47
         # characters), merged lines and edits included. Stretch 0: extra height
         # belongs to the frame and the definition. The minimum is the title and
-        # about two lines of sentence; the run that has candidates opens three
-        # list rows taller (see _apply_side_split_ratio). The one pane that
+        # two lines of sentence, each measured on its own label: the sentence
+        # is in the content face, whose lines run taller than the interface
+        # rows `row` measures. The run that has candidates opens three list
+        # rows taller (see _apply_side_split_ratio). The one pane that
         # collapses: the column can do without it, never without the others.
-        sentence_minimum = 3 * row
+        sentence_pane = self._build_sentence_pane()
+        sentence_minimum = (
+            self.sentence_pane_label.sizeHint().height()
+            + SPACING.xs
+            + 2 * self.chosen_sentence_label.fontMetrics().lineSpacing()
+        )
         self._sentence_pane_opening = sentence_minimum + (3 * row if self._has_candidates else 0)
-        panes.append(("sentences", self._build_sentence_pane(), 0, sentence_minimum))
+        panes.append(("sentences", sentence_pane, 0, sentence_minimum))
 
         if self._show_dict:
             self.definition_view = QTextBrowser()
