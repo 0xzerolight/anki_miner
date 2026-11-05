@@ -24,6 +24,18 @@ def _lookup(term: str) -> list[tuple[str, str]]:
     return [("JMdict", f"a definition of {term}")]
 
 
+def _unshown_curator(qtbot, words) -> WordCurationDialog:
+    """A curator the test never shows, still leaving through done() as a real one does.
+
+    pytest-qt's close() skips reject() on a hidden QDialog, so _stop_player
+    would never run: the focus timer armed at construction fires in teardown's
+    processEvents, and its lookup lands on widgets the delete drain removed.
+    """
+    dlg = WordCurationDialog(words, lookup_fn=_lookup)
+    qtbot.addWidget(dlg, before_close_func=lambda d: d.reject())
+    return dlg
+
+
 def _side_splitter(dlg: WordCurationDialog) -> QSplitter:
     splitters = [s for s in dlg.findChildren(QSplitter) if s.orientation() == Qt.Orientation.Vertical]
     assert splitters, "a multi-pane side column should be a vertical splitter"
@@ -86,8 +98,7 @@ class TestPickerAndDictionary:
 
 class TestTheSentencesPaneIsAlwaysThere:
     def test_a_run_without_candidates_gets_it(self, qtbot, make_tokenized_words):
-        dlg = WordCurationDialog(make_tokenized_words(3), lookup_fn=_lookup)
-        qtbot.addWidget(dlg)
+        dlg = _unshown_curator(qtbot, make_tokenized_words(3))
         assert dlg._side_key == "sentences+dict"
         assert _side_splitter(dlg).widget(0) is dlg.sentence_pane
 
@@ -95,8 +106,7 @@ class TestTheSentencesPaneIsAlwaysThere:
         """The old four-row minimum was sized for the list, which a word with one
         sentence no longer shows.
         """
-        dlg = WordCurationDialog(make_tokenized_words(3), lookup_fn=_lookup)
-        qtbot.addWidget(dlg)
+        dlg = _unshown_curator(qtbot, make_tokenized_words(3))
         dlg.ensurePolished()
         title = dlg.sentence_pane_label.sizeHint().height()
         two_lines = 2 * dlg.chosen_sentence_label.fontMetrics().lineSpacing()
