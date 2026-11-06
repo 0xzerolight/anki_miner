@@ -2582,6 +2582,44 @@ class TestWhitelistForceInclude:
 
         mock_services["anki_service"].create_cards_batch.assert_called_once()
 
+    def test_lemma_of_another_kanji_is_not_force_included(self, test_config, mock_services, tmp_path):
+        """Whitelist-only mining: 返る and 持ち帰る on the list, a coverage filter that
+        drops everything else. 帰る (UniDic lemma 返る) is another word and stays
+        filtered; 持ち帰る is mined, and the report does not count 返る as mined."""
+        config = replace(test_config, use_whitelist=True, max_sentence_chars=1)
+        kaeru = _make_word("返る", surface="帰る")
+        kaeru.orth_base = "帰る"
+        mochikaeru = _make_word("持ち帰る", surface="持ち帰っ", start_time=5.0)
+        mochikaeru.orth_base = "持ち帰る"
+
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [kaeru, mochikaeru]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["media_extractor"].extract_media_batch.return_value = [(mochikaeru, _make_media())]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to take home"]
+        anki = mock_services["anki_service"]
+
+        def _create(card_data, progress_callback=None):
+            anki.last_created_mined_forms = [p.word.mined_form for p in card_data]
+            anki.last_created_lemmas = [p.word.lemma for p in card_data]
+            anki.last_created_note_ids = [1]
+            return [1]
+
+        anki.create_cards_batch.side_effect = _create
+
+        services = {**mock_services, "word_filter": WordFilterService(config)}
+        processor = build_processor(
+            config=config,
+            presenter=NullPresenter(),
+            word_list_service=self._wls(tmp_path, "返る", "持ち帰る"),
+            **services,
+        )
+        result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        sent = mock_services["media_extractor"].extract_media_batch.call_args.args[1]
+        assert [w.mined_form for w in sent] == ["持ち帰る"]
+        assert result.whitelist_coverage is not None
+        assert result.whitelist_coverage.mined == {"持ち帰る"}
+
     def test_still_dropped_when_no_offline_definition(self, test_config, mock_services, tmp_path):
         """Integrity gate: a whitelisted word with no offline definition is still
         dropped (force-include does NOT bypass the offline-def existence filter)."""

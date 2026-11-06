@@ -433,7 +433,9 @@ def test_whitelist_force_includes_past_min_occurrence(test_config, tmp_path):
     assert fronts == ["稀", "頻"]
 
 
-def test_whitelist_admits_lemma_sibling_at_floor3(test_config, tmp_path):
+def test_whitelist_does_not_admit_lemma_sibling_at_floor3(test_config, tmp_path):
+    """掛ける on the whitelist does not force 賭ける (UniDic lemma 掛ける) past the floor:
+    the front's kanji 賭 says it is another word."""
     wl = tmp_path / "wl.txt"
     wl.write_text("掛ける\n", encoding="utf-8")
     wls = WordListService(whitelist_path=wl)
@@ -443,15 +445,14 @@ def test_whitelist_admits_lemma_sibling_at_floor3(test_config, tmp_path):
     sibling = _word("掛ける", 0, pos="動詞", surface="賭けた")
     sibling.orth_base = "賭ける"
     sp = MagicMock()
-    sp.parse_text_units.side_effect = _parse_returning([sibling], None, collections.Counter({"掛ける": 1}))
+    sp.parse_text_units.side_effect = _parse_returning([sibling], None, collections.Counter({"賭ける": 1}))
     anki = _make_anki_service()
 
     _make_processor(cfg, subtitle_parser=sp, anki_service=anki, word_list_service=wls).process_reading(
         _document([_unit(0)])
     )
 
-    assert [p.word.mined_form for p in anki.last_card_data] == ["賭ける"]
-    assert "lemma-siblings" in (WordFilterService.partition_whitelisted.__doc__ or "")
+    assert anki.last_card_data == []
 
 
 def test_front_whitelist_does_not_force_distinct_lemma_sibling(test_config, tmp_path):

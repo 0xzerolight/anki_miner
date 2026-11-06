@@ -15,6 +15,7 @@ from anki_miner.services.word_filter import (
     CUE_JOINER,
     WordFilterService,
     find_cue_index,
+    lemma_names_front,
     merge_cue_window,
     whitelist_hits,
     whitelisted_keys,
@@ -435,6 +436,32 @@ class TestWordFilterService:
             result = service.filter_by_word_lists([kakeru_bet, kakeru_hang], wls)
             assert [w.mined_form for w in result] == ["掛ける"]
 
+        def test_blacklisted_lemma_spares_a_front_with_other_kanji(self, test_config, tmp_path):
+            """Blacklisting 返る keeps 帰る: UniDic files 帰る under the lemma 返る,
+            but its kanji says it is another word."""
+            bl = tmp_path / "bl.txt"
+            bl.write_text("返る\n", encoding="utf-8")
+            wls = WordListService(blacklist_path=bl)
+            wls.load()
+
+            kaeru_home = create_word("返る", surface="帰る", pos="動詞", orth_base="帰る")
+            kaeru_back = create_word("返る", pos="動詞", orth_base="返る")
+
+            result = WordFilterService(test_config).filter_by_word_lists([kaeru_home, kaeru_back], wls)
+            assert [w.mined_form for w in result] == ["帰る"]
+
+        def test_blacklisted_lemma_drops_its_kana_spelling(self, test_config, tmp_path):
+            """Blacklisting 分かる still drops わかる: a kana front writes no kanji
+            the lemma lacks, so the lemma names it."""
+            bl = tmp_path / "bl.txt"
+            bl.write_text("分かる\n", encoding="utf-8")
+            wls = WordListService(blacklist_path=bl)
+            wls.load()
+
+            wakaru = create_word("分かる", surface="わかっ", pos="動詞", orth_base="わかる")
+
+            assert WordFilterService(test_config).filter_by_word_lists([wakaru], wls) == []
+
         def test_decomposed_blacklist_matches_composed_mined_form(self, test_config, tmp_path):
             bl = tmp_path / "bl.txt"
             bl.write_text(unicodedata.normalize("NFD", "がくせい") + "\n", encoding="utf-8")
@@ -501,6 +528,40 @@ class TestWordFilterService:
             assert [w.mined_form for w in forced] == ["賭ける"]
             assert [w.mined_form for w in rest] == ["飲む"]
 
+        def test_lemma_with_other_kanji_does_not_force_the_front(self, test_config, tmp_path):
+            """Whitelist-only mining (a 0-10 frequency band): 返る on the list must
+            not force-include 帰る, whose UniDic lemma is 返る. 持ち帰る on the list
+            names only itself."""
+            wl = tmp_path / "wl.txt"
+            wl.write_text("返る\n持ち帰る\n", encoding="utf-8")
+            wls = WordListService(whitelist_path=wl)
+            wls.load()
+
+            kaeru = create_word("返る", surface="帰る", pos="動詞", orth_base="帰る")
+            mochikaeru = create_word("持ち帰る", surface="持ち帰っ", pos="動詞", orth_base="持ち帰る")
+
+            forced, rest = WordFilterService(test_config).partition_whitelisted([kaeru, mochikaeru], wls)
+            assert [w.mined_form for w in forced] == ["持ち帰る"]
+            assert [w.mined_form for w in rest] == ["帰る"]
+
+        def test_lemma_forces_its_kana_and_okurigana_spellings(self, test_config, tmp_path):
+            """A kana front (わかる), a kana-mixed front (のみ込む) and an okurigana
+            variant (呼ばる) are still forced through the lemma the list holds."""
+            wl = tmp_path / "wl.txt"
+            wl.write_text("分かる\n飲み込む\n呼ぶ\n", encoding="utf-8")
+            wls = WordListService(whitelist_path=wl)
+            wls.load()
+
+            words = [
+                create_word("分かる", surface="わかっ", pos="動詞", orth_base="わかる"),
+                create_word("飲み込む", surface="のみ込ん", pos="動詞", orth_base="のみ込む"),
+                create_word("呼ぶ", surface="呼ばる", pos="動詞", orth_base="呼ばる"),
+            ]
+
+            forced, rest = WordFilterService(test_config).partition_whitelisted(words, wls)
+            assert [w.mined_form for w in forced] == ["わかる", "のみ込む", "呼ばる"]
+            assert rest == []
+
         def test_decomposed_whitelist_matches_composed_mined_form(self, test_config, tmp_path):
             wl = tmp_path / "wl.txt"
             wl.write_text(unicodedata.normalize("NFD", "がくせい") + "\n", encoding="utf-8")
@@ -513,6 +574,25 @@ class TestWordFilterService:
             assert forced == [word]
             assert rest == []
 
+    class TestLemmaNamesFront:
+        """Whether a word list entry for the lemma may name this card front."""
+
+        @pytest.mark.parametrize(
+            ("front", "lemma", "names"),
+            [
+                ("食べる", "食べる", True),
+                ("帰る", "返る", False),
+                ("撮る", "取る", False),
+                ("賭ける", "掛ける", False),
+                ("わかる", "分かる", True),
+                ("のみ込む", "飲み込む", True),
+                ("呼ばる", "呼ぶ", True),
+                ("Häuser", "Haus", True),
+            ],
+        )
+        def test_every_kanji_of_the_front_must_be_in_the_lemma(self, front, lemma, names):
+            assert lemma_names_front(front, lemma) is names
+
     class TestWhitelistHits:
         """The entry strings a word matches, under the same OR alias policy
         partition_whitelisted uses."""
@@ -524,9 +604,11 @@ class TestWordFilterService:
             wls.load()
             return wls
 
-        def test_keys_are_the_front_and_the_lemma_that_the_list_holds(self, tmp_path):
-            wls = self._wls(tmp_path, "賭ける", "掛ける")
-            assert whitelisted_keys("賭ける", "掛ける", wls) == ("賭ける", "掛ける")
+        def test_keys_are_the_front_and_a_lemma_that_names_it(self, tmp_path):
+            wls = self._wls(tmp_path, "賭ける", "掛ける", "分かる")
+            # 掛ける is another word than 賭ける: its kanji differs.
+            assert whitelisted_keys("賭ける", "掛ける", wls) == ("賭ける",)
+            assert whitelisted_keys("わかる", "分かる", wls) == ("分かる",)
             assert whitelisted_keys("賭ける", "食べる", wls) == ("賭ける",)
             assert whitelisted_keys("飲む", "飲む", wls) == ()
 
