@@ -1558,6 +1558,49 @@ class TestAttachSentenceCandidates:
 
         assert all(c.sentence_candidates == [] for c in word.sentence_candidates)
 
+    def test_lines_over_the_caps_are_not_offered(self, test_config):
+        """The picker offers only lines the length filter would let the word be mined from."""
+        service = WordFilterService(test_config)
+        word = create_word("X", sentence="first")
+        line_index = [
+            self._line({"X"}, text="first", start=0.0, end=1.0),
+            self._line({"X"}, text="a much longer line", start=2.0, end=3.0),
+            self._line({"X"}, text="second", start=4.0, end=5.0),
+            self._line({"X"}, text="slow", start=6.0, end=11.0),
+        ]
+
+        service.attach_sentence_candidates([word], line_index, max_duration=2.0, max_chars=10)
+
+        assert [c.sentence for c in word.sentence_candidates] == ["first", "second"]
+
+    def test_with_max_unknown_only_i_plus_one_lines_are_offered(self, test_config):
+        """Hand-built lines count lemmas; the word's own lemma counts though the snapshot misses it."""
+        service = WordFilterService(test_config)
+        word = create_word("X", sentence="first")
+        line_index = [
+            self._line({"X"}, text="first", start=0.0, end=1.0),
+            self._line({"X", "Y"}, text="crowded", start=2.0, end=3.0),
+            self._line({"X", "K"}, text="third", start=4.0, end=5.0),
+        ]
+
+        service.attach_sentence_candidates(
+            [word], line_index, unknown_lemmas={"Y"}, unknown_fronts=set(), max_unknown=1
+        )
+
+        assert [c.sentence for c in word.sentence_candidates] == ["first", "third"]
+
+    def test_a_word_left_with_one_line_gets_no_candidates(self, test_config):
+        service = WordFilterService(test_config)
+        word = create_word("X", sentence="first")
+        line_index = [
+            self._line({"X"}, text="first", start=0.0, end=1.0),
+            self._line({"X", "Y"}, text="crowded", start=2.0, end=3.0),
+        ]
+
+        service.attach_sentence_candidates([word], line_index, unknown_lemmas={"X", "Y"}, max_unknown=1)
+
+        assert word.sentence_candidates == []
+
     def test_empty_line_index_is_noop(self, test_config):
         service = WordFilterService(test_config)
         word = create_word("X")

@@ -15,6 +15,7 @@ from anki_miner.models import LineLemmas, NotMinedReason, TokenizedWord
 from anki_miner.models.reading import ReadingDocument, ReadingUnit
 from anki_miner.orchestration.episode_processor import EpisodeProcessor, _EpisodeContext
 from anki_miner.services.word_filter import WordFilterService
+from anki_miner.services.word_list_service import WordListService
 from tests.conftest import build_processor
 from tests.unit._processor_fixtures import make_word
 
@@ -363,3 +364,71 @@ def test_the_profile_decides_how_length_is_measured(test_config, language, terse
     kept, _ctx = _phase2(_processor(config, language), [word], lines)
 
     assert [w.sentence for w in kept] == [full]
+
+
+# --- The curator's sentence picker: only lines the run could mine from -------
+
+#: 犬 is on three lines, one of them shared with 鳥 (i+2); 鳥 has an i+1 line of its own.
+_TERSE = _line("犬だ。", 0.0, "犬")  # i+1 for 犬, 3 characters
+_CROWDED = _line("犬と鳥がいる。", 10.0, "犬", "鳥")  # i+2, 7 characters
+_LONG = _line("公園で大きな犬が走っている。", 20.0, "犬")  # i+1 for 犬, 14 characters
+_BIRD = _line("鳥だ。", 30.0, "鳥")  # i+1 for 鳥
+_PICKER_LINES = [_TERSE, _CROWDED, _LONG, _BIRD]
+
+
+def _whitelist(tmp_path, *fronts: str) -> WordListService:
+    path = tmp_path / "whitelist.txt"
+    path.write_text("\n".join(fronts) + "\n", encoding="utf-8")
+    service = WordListService(whitelist_path=path)
+    service.load()
+    return service
+
+
+def _picker(config, word_list_service: WordListService | None = None) -> dict[str, tuple[str, list[str]]]:
+    """Phase 2 then curation: each offered word's line and the lines its picker lists."""
+    processor = _processor(config)
+    if word_list_service is not None:
+        processor.word_list_service = word_list_service
+    dog = _word("犬", _TERSE.line_text, 0.0)
+    bird = _word("鳥", _CROWDED.line_text, 10.0)
+    kept, ctx = _phase2(processor, [dog, bird], _PICKER_LINES)
+    offered: list[TokenizedWord] = []
+    processor._run_curation(ctx, kept, _PICKER_LINES, {}, lambda words: offered.extend(words) or list(words))
+    return {w.mined_form: (w.sentence, [c.sentence for c in w.sentence_candidates]) for w in offered}
+
+
+def test_with_i_plus_one_the_picker_offers_only_i_plus_one_lines(test_config):
+    picker = _picker(_config(test_config, use_i_plus_one_filter=True))
+
+    assert picker["犬"] == (_TERSE.line_text, [_TERSE.line_text, _LONG.line_text])
+    # 鳥's only other line is i+2: one line left, so no picker.
+    assert picker["鳥"] == (_BIRD.line_text, [])
+
+
+def test_with_a_character_cap_the_picker_offers_only_lines_inside_it(test_config):
+    picker = _picker(_config(test_config, max_sentence_chars=10))
+
+    assert picker["犬"] == (_TERSE.line_text, [_TERSE.line_text, _CROWDED.line_text])
+    assert picker["鳥"] == (_CROWDED.line_text, [_CROWDED.line_text, _BIRD.line_text])
+
+
+def test_a_whitelisted_word_keeps_every_line(test_config, tmp_path):
+    """A force-include bypassed i+1 and the caps in phase 2, so its picker does too."""
+    config = _config(test_config, use_i_plus_one_filter=True, max_sentence_chars=5, use_whitelist=True)
+
+    picker = _picker(config, _whitelist(tmp_path, "鳥"))
+
+    assert picker["鳥"] == (_CROWDED.line_text, [_CROWDED.line_text, _BIRD.line_text])
+    # 鳥 is still unknown, so 犬's line beside it stays i+2; the long line is over the cap.
+    assert picker["犬"] == (_TERSE.line_text, [])
+
+
+@pytest.mark.parametrize(
+    "knobs",
+    [{}, {"use_i_plus_one_filter": True, "max_sentence_chars": 10, "bypass_optional_filters": True}],
+    ids=["rules-off", "bypass"],
+)
+def test_without_the_rules_the_picker_offers_every_line(test_config, knobs):
+    picker = _picker(_config(test_config, **knobs))
+
+    assert picker["犬"] == (_TERSE.line_text, [_TERSE.line_text, _CROWDED.line_text, _LONG.line_text])

@@ -247,6 +247,11 @@ def _is_on_line(word: TokenizedWord, line: LineLemmas) -> bool:
     return word.sentence == line.line_text and abs(word.start_time - line.start_time) <= 1e-3
 
 
+def _line_unknowns(line: LineLemmas, lemmas: set[str], fronts: set[str]) -> int:
+    """Distinct unknown words on ``line``: card fronts on a parsed line, lemmas on a hand-built one."""
+    return len(line.fronts & fronts) if line.front_spans else len(line.lemmas & lemmas)
+
+
 def lemma_names_front(front: str, lemma: str) -> bool:
     """Whether a word list entry for *lemma* names the card *front* too.
 
@@ -741,8 +746,9 @@ class WordFilterService:
         A word already on its best line, or with no line inside the caps, comes
         back as the same object; a moved word comes back from
         :meth:`_swap_word_to_line`, the i+1 filter's swap. The curator still
-        offers every line (:meth:`attach_sentence_candidates` runs at
-        curation, from the same index).
+        offers every line within the same caps and unknown limit
+        (:meth:`attach_sentence_candidates` runs at curation, from the same
+        index).
 
         Args:
             words: The words phase 2 kept so far, in order.
@@ -769,8 +775,9 @@ class WordFilterService:
 
         def rank(entry: tuple[int, LineLemmas]) -> tuple[int, bool, int, int]:
             position, line = entry
-            unknown = len(line.fronts & fronts) if line.front_spans else len(line.lemmas & lemmas)
-            count, outside, length = best_sentence_rank(unknown, line.line_text, spaced=spaced)
+            count, outside, length = best_sentence_rank(
+                _line_unknowns(line, lemmas, fronts), line.line_text, spaced=spaced
+            )
             return (count, outside, length, position)
 
         result: list[TokenizedWord] = []
@@ -1234,6 +1241,12 @@ class WordFilterService:
         words: list[TokenizedWord],
         line_index: list[LineLemmas],
         max_candidates: int | None = None,
+        *,
+        max_duration: float = 0.0,
+        max_chars: int = 0,
+        unknown_lemmas: set[str] | None = None,
+        unknown_fronts: set[str] | None = None,
+        max_unknown: int = 0,
     ) -> None:
         """Populate ``word.sentence_candidates`` for words that repeat across lines.
 
@@ -1241,11 +1254,14 @@ class WordFilterService:
         front (a hand-built line without fronts: whose content lemmas include
         ``word.lemma`` and whose matched surface preserves the card front), in
         subtitle order. A line holding only a UniDic lemma-sibling (取る for
-        撮る) is never offered. When a word appears on two or more compatible
+        撮る) is never offered. Only lines the run could mine the word from are
+        kept: inside the Sentences caps (:func:`within_sentence_caps`) and, with
+        ``max_unknown``, holding at most that many unknown words, counted as
+        :meth:`pick_best_sentences` counts them. When a word has two or more such
         lines, builds one fully-swapped :class:`TokenizedWord` variant per line
         (earliest-first) via :meth:`_swap_word_to_line` and assigns the list —
         including the variant for the word's current sentence, so the curator can
-        default-select it. Words on a single compatible line are left untouched
+        default-select it. Words left with a single line are left untouched
         (empty candidates ⇒ no picker).
 
         ``max_candidates`` is unbounded by default: the curator's picker scrolls,
@@ -1255,12 +1271,27 @@ class WordFilterService:
         by one furigana pass over the line), summed over words that repeat.
 
         Mutates ``words`` in place. Safe to call with an empty ``line_index``.
+
+        Args:
+            max_duration: The Sentences duration cap (``0.0`` = none).
+            max_chars: The Sentences character cap (``0`` = none).
+            unknown_lemmas: Phase 2's pre-filter unknown snapshot, as lemmas.
+            unknown_fronts: The same snapshot as card fronts.
+            max_unknown: The most unknown words an offered line may hold
+                (``0`` = no limit). An i+1 run passes ``1``.
         """
         if not line_index:
             return
         lines_by_front, lines_by_lemma = self._index_lines(line_index)
+        lemmas = (unknown_lemmas or set()) | {word.lemma for word in words}
+        fronts = (unknown_fronts or set()) | {word.mined_form for word in words}
         for word in words:
-            lines = [line for _, line in self._compatible_lines(word, lines_by_front, lines_by_lemma)]
+            lines = [
+                line
+                for _, line in self._compatible_lines(word, lines_by_front, lines_by_lemma)
+                if within_sentence_caps(line.duration, line.line_text, max_duration, max_chars)
+                and (max_unknown <= 0 or _line_unknowns(line, lemmas, fronts) <= max_unknown)
+            ]
             if len(lines) < 2:
                 continue
             if max_candidates is not None:

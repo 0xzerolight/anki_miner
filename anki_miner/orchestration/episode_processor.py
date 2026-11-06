@@ -2983,19 +2983,41 @@ class EpisodeProcessor:
         The caller distinguishes the two outcomes with ``isinstance(..., ProcessingResult)``.
         """
         if line_index is not None:
+            # The targets are unioned in exactly as filter_i_plus_one does: a
+            # snapshot that somehow misses a mineable word must not make its
+            # line look emptier than it is.
+            unknown_lemmas = ctx.unknown_lemmas | {w.lemma for w in unknown_words}
+            unknown_fronts = ctx.unknown_fronts | {w.mined_form for w in unknown_words}
             # Attach alternative example sentences so the curator can offer a
-            # per-word sentence picker (no-op for words on a single line).
-            self.word_filter.attach_sentence_candidates(unknown_words, line_index)
+            # per-word sentence picker (no-op for words on a single line). The
+            # picker offers only lines phase 2 could have mined the word from:
+            # inside the length caps and, under i+1, i+1 lines. Whitelist
+            # force-includes bypassed those filters, so they keep every line.
+            if self.config.bypass_optional_filters:
+                self.word_filter.attach_sentence_candidates(unknown_words, line_index)
+            else:
+                forced: list[TokenizedWord] = []
+                rest = unknown_words
+                whitelist_service = self._active_whitelist()
+                if whitelist_service is not None:
+                    forced, rest = self.word_filter.partition_whitelisted(unknown_words, whitelist_service)
+                self.word_filter.attach_sentence_candidates(forced, line_index)
+                self.word_filter.attach_sentence_candidates(
+                    rest,
+                    line_index,
+                    max_duration=self.config.max_sentence_duration_seconds,
+                    max_chars=self.config.max_sentence_chars,
+                    unknown_lemmas=unknown_lemmas,
+                    unknown_fronts=unknown_fronts,
+                    max_unknown=1 if self.config.use_i_plus_one_filter else 0,
+                )
             # Per-word i+1 signal for the curator's "Unknowns in line" column.
-            # Runs after the candidates, which it stamps too. The targets are
-            # unioned in exactly as filter_i_plus_one does: a snapshot that
-            # somehow misses a mineable word must not make its line look
-            # emptier than it is.
+            # Runs after the candidates, which it stamps too.
             self.word_filter.attach_line_unknown_counts(
                 unknown_words,
                 line_index,
-                ctx.unknown_lemmas | {w.lemma for w in unknown_words},
-                unknown_fronts=ctx.unknown_fronts | {w.mined_form for w in unknown_words},
+                unknown_lemmas,
+                unknown_fronts=unknown_fronts,
             )
         # Attach per-run occurrence counts for the curator's "Occurrences"
         # column/sort (Issue #88). They are per card front, and a spelling the

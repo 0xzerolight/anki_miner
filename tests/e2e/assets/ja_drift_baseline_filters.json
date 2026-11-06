@@ -2,16 +2,6 @@
   "curation": [
     {
       "candidates": [
-        "新しい本を買いました",
-        "コーヒーを買いました",
-        "玉子を買いました"
-      ],
-      "lemma": "買う",
-      "occurrences": 3,
-      "word": "買う"
-    },
-    {
-      "candidates": [
         "玉子を買いました",
         "玉子を食べる"
       ],
@@ -36,6 +26,12 @@
       "lemma": "喋る",
       "occurrences": 1,
       "word": "しゃべる"
+    },
+    {
+      "candidates": [],
+      "lemma": "買う",
+      "occurrences": 3,
+      "word": "買う"
     },
     {
       "candidates": [],
