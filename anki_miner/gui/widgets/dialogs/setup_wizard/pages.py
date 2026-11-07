@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import contextlib
 import html
-from collections.abc import Callable, Mapping
+from collections.abc import Callable
 from dataclasses import replace
 from functools import partial
 from typing import TYPE_CHECKING, Any
@@ -1150,12 +1150,6 @@ class NoteTypePage(_WizardSection):
         self.guidance_label.setVisible(False)
         self.guidance_label.setText("")
 
-    def _presets_apply(self) -> bool:
-        """Lapis, Kiku and Senren are Japanese note types and ride ``note_presets``; Anki Miner Note needs none."""
-        from anki_miner.languages.registry import get_profile  # noqa: PLC0415
-
-        return "note_presets" in get_profile(config_language(self._wizard.working_config())).capabilities
-
     def _show_note_type_help(self) -> None:
         """What any note type needs (D10 = B): the app ships none, any one works once mapped.
 
@@ -1238,16 +1232,18 @@ class NoteTypePage(_WizardSection):
 
     # --- auto-fill on fetch ---
 
-    def _apply_preset(self, preset: NotePreset, extra_fields: Mapping[str, str]) -> None:
+    def _apply_preset(self, preset: NotePreset, fill: NoteTypeFill) -> None:
         """Stage ``preset``'s whole answer (fields, pitch format, card markers) onto the working config.
 
+        The fields are ``fill``'s, not ``preset.fields``: the fill leaves a
+        preset's furigana and pitch names out for a language without them. Its
         ``extra_fields`` are the active language's own fields the note type has
-        (Anki Miner Note's Pinyin, Gender, ...), merged over the preset's map.
+        (Anki Miner Note's Pinyin, Gender, ...), merged over that map.
         """
         config = self._wizard.working_config()
         merged = dict(config.anki_fields)
-        merged.update(preset.fields)
-        merged.update(extra_fields)
+        merged.update(fill.fields)
+        merged.update(fill.extra_fields)
         updated = replace(
             config,
             anki_fields=merged,
@@ -1259,7 +1255,7 @@ class NoteTypePage(_WizardSection):
         )
         if updated != config:
             self._wizard.update_working_config(updated)
-        mapped = sum(1 for value in preset.fields.values() if value) + len(extra_fields)
+        mapped = sum(1 for value in fill.fields.values() if value) + len(fill.extra_fields)
         self.mapping_summary.setText(tr_format(self.tr("%1 recognised: %2 fields filled."), preset.name, mapped))
 
     def _auto_fill(self, note_type: str) -> None:
@@ -1287,13 +1283,10 @@ class NoteTypePage(_WizardSection):
             self._show_field_problem()
             self.completeChanged.emit()
             return
-        fill = fill_note_type_fields(
-            names,
-            allow_presets=self._presets_apply(),
-            extra_specs=get_profile(config_language(config)).extra_card_fields,
-        )
+        profile = get_profile(config_language(config))
+        fill = fill_note_type_fields(names, capabilities=profile.capabilities, extra_specs=profile.extra_card_fields)
         if fill.preset is not None:
-            self._apply_preset(fill.preset, fill.extra_fields)
+            self._apply_preset(fill.preset, fill)
         else:
             self._apply_keyword_fill(fill)
         self._update_guidance()

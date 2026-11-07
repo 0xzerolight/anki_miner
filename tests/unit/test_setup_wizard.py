@@ -3248,9 +3248,9 @@ def test_the_wizard_fills_through_the_shared_helper(qtbot, wiz_config, monkeypat
 
     calls: list[tuple[list[str], bool]] = []
 
-    def spy(field_names, *, allow_presets, extra_specs=()):
-        calls.append((list(field_names), allow_presets))
-        return note_presets.fill_note_type_fields(field_names, allow_presets=allow_presets, extra_specs=extra_specs)
+    def spy(field_names, *, capabilities, extra_specs=()):
+        calls.append((list(field_names), "note_presets" in capabilities))
+        return note_presets.fill_note_type_fields(field_names, capabilities=capabilities, extra_specs=extra_specs)
 
     monkeypatch.setattr(pages_mod, "fill_note_type_fields", spy)
     wiz = SetupWizard(replace(wiz_config, anki_note_type="Lapis"))
@@ -3320,8 +3320,11 @@ def test_notetype_page_applies_anki_miner_note_in_chinese(qtbot, wiz_config):
     assert config.anki_fields["expression_pinyin"] == "Pinyin"
     assert config.anki_fields["language"] == "Language"
     assert config.bold_target_in_sentence is True
-    # 17 from the preset plus Pinyin, Traditional and MeasureWord.
-    assert page.mapping_summary.text() == "Anki Miner Note recognised: 20 fields filled."
+    # zh leaves the preset's furigana and pitch fields unmapped: it hides those rows.
+    assert config.anki_fields["expression_furigana"] == ""
+    assert config.anki_fields["pitch_category"] == ""
+    # 13 from the preset plus Pinyin, Traditional and MeasureWord.
+    assert page.mapping_summary.text() == "Anki Miner Note recognised: 16 fields filled."
 
 
 def test_rerun_keeps_a_working_custom_mapping_on_the_same_note_type(qtbot):

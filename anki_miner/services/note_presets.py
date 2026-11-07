@@ -34,7 +34,7 @@ fails the suite.
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Collection, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Literal
 
@@ -419,6 +419,17 @@ FIELD_KEYWORDS: dict[str, list[str]] = {
 }
 
 
+#: The ``anki_fields`` keys only a language with the named capability fills.
+#: Settings hides their rows everywhere else, so a fill leaves them unmapped
+#: there: Lapis's map (and so Anki Miner Note's, in every language) names a
+#: field for each, and a hidden mapping outlives a switch to a note type
+#: without that field, failing the pre-run check on a row nobody can see.
+CAPABILITY_FIELD_KEYS: Mapping[str, tuple[str, ...]] = {
+    "furigana": ("expression_furigana", "sentence_furigana"),
+    "pitch": ("pitch_position", "pitch_category", "pitch_graph", "pitch_text"),
+}
+
+
 def normalized_field_name(name: str) -> str:
     """The spelling both matchers compare on: lowercase, no spaces or underscores."""
     return name.lower().replace(" ", "").replace("_", "")
@@ -507,7 +518,8 @@ class NoteTypeFill:
             words on when the preset's ``bold_target_in_sentence`` says so.
         fields: ``anki_fields`` key -> field name. Without a preset this is the
             keyword pass: every ``FIELD_KEYWORDS`` key, ``""`` where nothing
-            matched.
+            matched. Either way, ``""`` for the keys of a
+            ``CAPABILITY_FIELD_KEYS`` capability the language lacks.
         extra_fields: The active language's extra card fields (Pinyin, Hanja,
             ...) matched on their own spelling. A spec with no match is absent.
     """
@@ -520,26 +532,28 @@ class NoteTypeFill:
 def fill_note_type_fields(
     field_names: Sequence[str],
     *,
-    allow_presets: bool,
+    capabilities: Collection[str],
     extra_specs: Sequence[CardFieldSpec] = (),
 ) -> NoteTypeFill:
     """Propose every mapping for a note type from the field names Anki reported.
 
     Args:
         field_names: The note type's fields, from AnkiConnect ``modelFieldNames``.
-        allow_presets: Whether the Japanese presets (Lapis, Kiku, Senren) are
-            eligible, i.e. whether the active language carries the
-            ``note_presets`` capability. Applying one elsewhere writes
-            furigana and pitch mappings the language cannot fill, so callers
-            pass ``"note_presets" in profile.capabilities``. Every-language
-            presets (Anki Miner Note) are always eligible.
+        capabilities: The active language's ``profile.capabilities``. The
+            Japanese presets (Lapis, Kiku, Senren) need ``note_presets``;
+            every-language presets (Anki Miner Note) are always eligible. The
+            keys of each ``CAPABILITY_FIELD_KEYS`` capability the language
+            lacks come back ``""``, whichever pass proposed them.
         extra_specs: The card-field specs the active language shows.
 
     Returns:
         The proposal. Callers decide how to write it: Settings overwrites the
         rows it shows, the wizard stages it on its working config.
     """
-    preset = preset_for_field_names(field_names, japanese_presets=allow_presets)
-    fields: Mapping[str, str] = dict(preset.fields) if preset is not None else auto_map_fields(field_names)
+    preset = preset_for_field_names(field_names, japanese_presets="note_presets" in capabilities)
+    fields = dict(preset.fields) if preset is not None else auto_map_fields(field_names)
+    for capability, keys in CAPABILITY_FIELD_KEYS.items():
+        if capability not in capabilities:
+            fields.update(dict.fromkeys(keys, ""))
     extra = auto_map_profile_fields(field_names, extra_specs, fields.values())
     return NoteTypeFill(preset=preset, fields=fields, extra_fields=extra)

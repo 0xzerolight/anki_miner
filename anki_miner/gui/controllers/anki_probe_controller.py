@@ -267,8 +267,8 @@ class AnkiProbeController:
             "AnkiProbeController", "Fetched %n field(s) and auto-mapped them", "", len(field_names)
         )
         if count:
-            # Name the blanking: the rows it empties are ones the user can see,
-            # and a silent clear reads as the panel losing their work.
+            # Name the blanking: a silent clear reads as the panel losing their
+            # work, and a row the language gate hid changes nothing on screen.
             status = tr_format(
                 QCoreApplication.translate("AnkiProbeController", "%1; %2"),
                 status,

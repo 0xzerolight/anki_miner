@@ -377,13 +377,76 @@ def test_fill_applies_anki_miner_note_in_chinese_with_its_own_fields(qtbot, test
     preset, filled = panel.fill_from_field_list(list(AMN_FIELDS))
 
     assert preset is ANKI_MINER_NOTE
-    # 17 from the preset plus Pinyin, Traditional and MeasureWord.
-    assert filled == 20
+    # 13 from the preset (zh leaves its furigana and pitch fields unmapped) plus
+    # Pinyin, Traditional and MeasureWord.
+    assert filled == 16
     fields = panel.get_card_fields()
     assert fields["expression_pinyin"] == "Pinyin"
     assert fields["measure_word"] == "MeasureWord"
     assert fields["language"] == "Language"
     assert panel.get_pitch_category_format() == "romaji"
+
+
+_JAPANESE_ONLY_KEYS = ("expression_furigana", "sentence_furigana", "pitch_position", "pitch_category")
+# The note type from a user report: Anki Miner Note's preset had left its four
+# Japanese-only names behind the rows zh hides.
+_CUSTOM_ZH_FIELDS = ["word", "pinyin", "meaning", "sentence", "SentencePinyin", "WordAudio", "SentenceAudio"]
+
+
+def _mapping_error(config) -> str | None:
+    from anki_miner.services.anki_note_builder import configured_target_field_names, field_mapping_error
+
+    return field_mapping_error(
+        config.anki_note_type, _CUSTOM_ZH_FIELDS, configured_target_field_names(config), config.anki_fields["word"]
+    )
+
+
+def test_chinese_fill_after_anki_miner_note_leaves_nothing_hidden_to_remap(qtbot, test_config):
+    """Filling Anki Miner Note, then a custom note type, used to block mining in zh:
+    the pre-run check named furigana and pitch fields whose rows zh hides."""
+    from anki_miner.languages.switching import switch_language
+    from tests.unit.amn_fields import AMN_FIELDS
+
+    zh = switch_language(test_config, "zh")
+    panel = AnkiSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.load_from_config(zh)
+    panel.set_note_type("Anki Miner Note")
+    panel.fill_from_field_list(list(AMN_FIELDS))
+    panel.set_note_type("chinese mining hug")
+
+    panel.fill_from_field_list(_CUSTOM_ZH_FIELDS)
+
+    config = panel.contribute(zh)
+    assert {key: config.anki_fields[key] for key in _JAPANESE_ONLY_KEYS} == dict.fromkeys(_JAPANESE_ONLY_KEYS, "")
+    assert _mapping_error(config) is None
+
+
+def test_one_fill_clears_hidden_mappings_a_saved_config_already_carries(qtbot, test_config):
+    """The way out for a config saved with those names: the pre-run check fails on a
+    mapped field the note type lacks whether its row shows or not."""
+    from anki_miner.languages.switching import switch_language
+
+    zh = switch_language(test_config, "zh")
+    stale = {
+        **zh.anki_fields,
+        "expression_furigana": "ExpressionFurigana",
+        "sentence_furigana": "SentenceFurigana",
+        "pitch_position": "PitchPosition",
+        "pitch_category": "PitchCategories",
+    }
+    panel = AnkiSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.load_from_config(replace(zh, anki_note_type="chinese mining hug", anki_fields=stale))
+
+    preset, cleared = panel.fill_from_field_list(_CUSTOM_ZH_FIELDS)
+
+    config = panel.contribute(zh)
+    assert preset is None
+    assert {key: config.anki_fields[key] for key in _JAPANESE_ONLY_KEYS} == dict.fromkeys(_JAPANESE_ONLY_KEYS, "")
+    # Picture, plus the four hidden rows.
+    assert cleared == 5
+    assert _mapping_error(config) is None
 
 
 def test_fill_runs_the_keyword_pass_for_an_unknown_note_type(qtbot, test_config):
@@ -779,7 +842,7 @@ def test_applying_lapis_fills_the_mapping_and_the_pitch_format(qtbot):
     qtbot.addWidget(panel)
     panel.set_pitch_category_format("jp")
 
-    panel.apply_note_type_preset(preset_by_id("lapis"))
+    panel.apply_note_type_preset(preset_by_id("lapis"), preset_by_id("lapis").fields)
 
     fields = panel.get_card_fields()
     assert fields["word"] == "Expression"
@@ -796,7 +859,7 @@ def test_applying_senren_rewrites_the_markers_and_drops_an_unsupported_card_type
     qtbot.addWidget(panel)
     panel.set_card_type("click")
 
-    panel.apply_note_type_preset(preset_by_id("senren"))
+    panel.apply_note_type_preset(preset_by_id("senren"), preset_by_id("senren").fields)
 
     markers = panel.get_card_type_marker_fields()
     assert markers["sentence"] == "sentenceCard"
@@ -812,7 +875,7 @@ def test_applying_a_preset_keeps_a_supported_card_type(qtbot):
     qtbot.addWidget(panel)
     panel.set_card_type("sentence")
 
-    panel.apply_note_type_preset(preset_by_id("senren"))
+    panel.apply_note_type_preset(preset_by_id("senren"), preset_by_id("senren").fields)
 
     assert panel.get_card_type() == "sentence"
 
@@ -822,7 +885,7 @@ def test_applying_a_preset_preserves_keys_the_panel_does_not_own(qtbot):
     qtbot.addWidget(panel)
     panel.set_card_fields({"word": "Expression", "future_key": "Whatever"})
 
-    panel.apply_note_type_preset(preset_by_id("lapis"))
+    panel.apply_note_type_preset(preset_by_id("lapis"), preset_by_id("lapis").fields)
 
     assert panel.get_card_fields()["future_key"] == "Whatever"
 
@@ -832,11 +895,11 @@ def test_apply_fills_an_empty_note_type_but_never_overwrites_one(qtbot):
     qtbot.addWidget(panel)
     panel.set_note_type("")
 
-    panel.apply_note_type_preset(preset_by_id("kiku"))
+    panel.apply_note_type_preset(preset_by_id("kiku"), preset_by_id("kiku").fields)
     assert panel.get_note_type() == "Kiku"
 
     panel.set_note_type("Lapis-modified")
-    panel.apply_note_type_preset(preset_by_id("kiku"))
+    panel.apply_note_type_preset(preset_by_id("kiku"), preset_by_id("kiku").fields)
     assert panel.get_note_type() == "Lapis-modified"
 
 
@@ -959,20 +1022,33 @@ def test_auto_map_keeps_a_key_the_panel_does_not_own(qtbot):
     assert panel.get_card_fields()["future_key"] == "HandTyped"
 
 
-def test_auto_map_leaves_a_row_the_language_gate_hid(qtbot, test_config):
-    """A ja user's stored zh mapping is off screen, so the clear never sees it."""
-    from dataclasses import replace
-
+def test_auto_map_clears_a_row_the_language_gate_hid(qtbot, test_config):
+    """A ja user's stored zh mapping is off screen, but the pre-run check still
+    reads it, so a field the note type lacks is cleared all the same."""
     panel = AnkiSettingsPanel()
     qtbot.addWidget(panel)
     panel.load_from_config(
         replace(test_config, anki_fields={**_mapping(word="Expression"), "measure_word": "MeasureWord"})
     )
 
-    panel.populate_from_field_list(["Expression"])
+    cleared = panel.populate_from_field_list(["Expression"])
 
     assert not panel.measure_word_field_input.isVisibleTo(panel)
+    assert panel.get_card_fields()["measure_word"] == ""
+    assert cleared == 1
+
+
+def test_auto_map_keeps_a_hidden_row_whose_field_the_note_type_has(qtbot, test_config):
+    panel = AnkiSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.load_from_config(
+        replace(test_config, anki_fields={**_mapping(word="Expression"), "measure_word": "MeasureWord"})
+    )
+
+    cleared = panel.populate_from_field_list(["Expression", "MeasureWord"])
+
     assert panel.get_card_fields()["measure_word"] == "MeasureWord"
+    assert cleared == 0
 
 
 def test_auto_map_clears_only_the_active_card_types_marker(qtbot):

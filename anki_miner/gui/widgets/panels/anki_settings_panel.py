@@ -25,14 +25,15 @@ from anki_miner.gui.widgets.enhanced import ModernButton
 from anki_miner.languages import AVAILABLE_LANGUAGES
 from anki_miner.languages.profile import CardFieldSpec
 from anki_miner.languages.registry import config_language, get_profile
-from anki_miner.services.note_presets import FIELD_KEYWORDS as _FIELD_KEYWORDS  # noqa: F401 - re-exported
 from anki_miner.services.note_presets import (
+    CAPABILITY_FIELD_KEYS,
     NotePreset,
     NoteTypeFill,
     auto_map_fields,  # noqa: F401 - re-exported for setup_wizard/pages.py
     auto_map_profile_fields,  # noqa: F401 - re-exported for setup_wizard/pages.py
     fill_note_type_fields,
 )
+from anki_miner.services.note_presets import FIELD_KEYWORDS as _FIELD_KEYWORDS  # noqa: F401 - re-exported
 
 logger = logging.getLogger(__name__)
 
@@ -321,10 +322,12 @@ class AnkiSettingsPanel(FormPanel):
         # doesn't expose (future/opt-in keys set via gui_config.json) survive a
         # Save round-trip instead of being wiped.
         self._loaded_fields: dict[str, str] = {}
-        # Whether "Fill in automatically" may apply Lapis, Kiku or Senren, the
-        # Japanese note types (the "note_presets" capability); Anki Miner Note
-        # applies in every language. Refreshed on every load_from_config.
-        self._presets_allowed = True
+        # The active language's capabilities, which decide whether "Fill in
+        # automatically" may apply Lapis, Kiku or Senren ("note_presets"; Anki
+        # Miner Note applies in every language) and which gated rows it may
+        # write. Refreshed on every load_from_config; until then nothing is
+        # gated, so every preset and row is open.
+        self._capabilities: frozenset[str] = frozenset({"note_presets", *CAPABILITY_FIELD_KEYS})
         self._setup_fields()
 
     def _setup_fields(self) -> None:
@@ -789,24 +792,16 @@ class AnkiSettingsPanel(FormPanel):
         # Language-gated rows. Each row contributes its label too, so a hidden
         # field never leaves a dangling caption behind. The Auxiliary Data
         # Fields heading stays: frequency and source live under it as well.
+        # The furigana and pitch field rows come from the list the fill gates
+        # by, so a row hidden here is one the fill never writes.
         self._language_gate_pairs.extend(
-            (w, "furigana")
-            for field in (
-                self.expression_furigana_field_input,
-                self.sentence_furigana_field_input,
-            )
-            for w in field_row_widgets(self, field)
+            (w, capability)
+            for capability, keys in CAPABILITY_FIELD_KEYS.items()
+            for key in keys
+            for w in field_row_widgets(self, getattr(self, f"{key}_field_input"))
         )
         self._language_gate_pairs.extend(
-            (w, "pitch")
-            for field in (
-                self.pitch_position_field_input,
-                self.pitch_category_field_input,
-                self.pitch_category_format_combo,
-                self.pitch_graph_field_input,
-                self.pitch_text_field_input,
-            )
-            for w in field_row_widgets(self, field)
+            (w, "pitch") for w in field_row_widgets(self, self.pitch_category_format_combo)
         )
         self._language_gate_pairs.append((self._auxiliary_helper, "pitch"))
 
@@ -887,8 +882,11 @@ class AnkiSettingsPanel(FormPanel):
 
     # === "Fill in automatically" ===
 
-    def apply_note_type_preset(self, preset: NotePreset) -> None:
-        """Overwrite every mapping this panel owns with ``preset``'s names (the fill's preset path).
+    def apply_note_type_preset(self, preset: NotePreset, fields: Mapping[str, str]) -> None:
+        """Overwrite every mapping this panel owns with ``fields``, the fill's map for ``preset``.
+
+        ``fields`` rather than ``preset.fields``: the fill leaves a preset's
+        furigana and pitch names out for a language whose gate hides those rows.
 
         Writes more than the field rows on purpose: every preset reads
         pitch categories as romaji (the config default is Japanese), and Senren
@@ -901,7 +899,7 @@ class AnkiSettingsPanel(FormPanel):
         to be moved onto a different note type.
         """
         merged = dict(self._loaded_fields)
-        merged.update(preset.fields)
+        merged.update(fields)
         self.set_card_fields(merged)
         self.set_pitch_category_format(preset.pitch_category_format)
         self.set_card_type_marker_fields(preset.card_type_marker_fields)
@@ -924,13 +922,13 @@ class AnkiSettingsPanel(FormPanel):
             mappings blanked because the note type has no such field.
         """
         fill = fill_note_type_fields(
-            field_names, allow_presets=self._presets_allowed, extra_specs=self._visible_hook_specs()
+            field_names, capabilities=self._capabilities, extra_specs=self._visible_hook_specs()
         )
         if fill.preset is not None:
-            self.apply_note_type_preset(fill.preset)
+            self.apply_note_type_preset(fill.preset, fill.fields)
             for key, match in fill.extra_fields.items():
                 self._hook_field_inputs[key].setText(match)
-            return fill.preset, sum(1 for value in fill.preset.fields.values() if value) + len(fill.extra_fields)
+            return fill.preset, sum(1 for value in fill.fields.values() if value) + len(fill.extra_fields)
         return None, self._apply_keyword_fill(field_names, fill)
 
     def populate_from_field_list(self, field_names: list[str]) -> int:
@@ -952,7 +950,9 @@ class AnkiSettingsPanel(FormPanel):
             How many mappings were cleared because the note type has no such
             field. The caller reports it — a silent blank reads as data loss.
         """
-        fill = fill_note_type_fields(field_names, allow_presets=False, extra_specs=self._visible_hook_specs())
+        fill = fill_note_type_fields(
+            field_names, capabilities=self._capabilities - {"note_presets"}, extra_specs=self._visible_hook_specs()
+        )
         return self._apply_keyword_fill(field_names, fill)
 
     def _apply_keyword_fill(self, field_names: list[str], fill: NoteTypeFill) -> int:
@@ -998,22 +998,22 @@ class AnkiSettingsPanel(FormPanel):
             style.polish(self.fill_status)
 
     def _clear_missing_mappings(self, field_names: Iterable[str], widgets: Iterable[QLineEdit]) -> int:
-        """Blank every shown mapping naming a field this note type lacks.
+        """Blank every owned mapping naming a field this note type lacks.
+
+        Rows the language gate hid included: the pre-run check reads every
+        mapped name (``configured_target_field_names``), so a stale one behind a
+        hidden row (Anki Miner Note's furigana in zh, a ja user's stored zh
+        mapping) would fail it with no row left to fix it from.
 
         Deliberately narrower than the wizard's sanitiser, which walks all of
-        ``config.anki_fields``. Three things are left alone because none of them
-        is something the fetched list can speak for: the ``_loaded_fields``
+        ``config.anki_fields``. Two things are left alone because neither is
+        something the fetched list can speak for: the ``_loaded_fields``
         passthrough (keys a user set by hand in ``gui_config.json``, which
-        :meth:`get_card_fields` promises survive a Save), rows the language gate
-        has hidden (a ja user's stored zh mappings), and the marker fields of
-        the card types that are not the active one.
+        :meth:`get_card_fields` promises survive a Save), and the marker fields
+        of the card types that are not the active one.
         """
         known = set(field_names)
-        stale = [
-            widget
-            for widget in widgets
-            if widget.isVisibleTo(self) and widget.text().strip() and widget.text().strip() not in known
-        ]
+        stale = [widget for widget in widgets if widget.text().strip() and widget.text().strip() not in known]
         marker = self._card_type_inputs.get(self.get_card_type())
         # Not visibility-tested: the marker inputs live in a collapsed group, and
         # the active card type stamps its field on every card whether or not the
@@ -1259,9 +1259,8 @@ class AnkiSettingsPanel(FormPanel):
         self.auto_open_anki_checkbox.setChecked(config.auto_open_anki)
         self.sync_anki_after_run_checkbox.setChecked(config.sync_anki_after_run)
         self.reading_tone_color_checkbox.setChecked(config.reading_tone_color)
-        capabilities = get_profile(config_language(config)).capabilities
-        self._presets_allowed = "note_presets" in capabilities
-        apply_language_gate(self._language_gate_pairs, capabilities)
+        self._capabilities = get_profile(config_language(config)).capabilities
+        apply_language_gate(self._language_gate_pairs, self._capabilities)
 
     def contribute(self, config):
         """Return a new config with this panel's fields applied.

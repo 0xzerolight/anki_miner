@@ -186,6 +186,7 @@ def test_note_type_name_lookup_is_case_insensitive():
 # ---------------------------------------------------------------------------
 
 from anki_miner.languages.profile import CardFieldSpec  # noqa: E402
+from anki_miner.languages.registry import get_profile  # noqa: E402
 from anki_miner.services.note_presets import (  # noqa: E402
     FIELD_KEYWORDS,
     LAPIS,
@@ -194,9 +195,12 @@ from anki_miner.services.note_presets import (  # noqa: E402
     fill_note_type_fields,
 )
 
+JA = get_profile("ja").capabilities
+ZH = get_profile("zh").capabilities
+
 
 def test_fill_recognises_lapis_and_returns_its_whole_map():
-    fill = fill_note_type_fields(LAPIS_FIELDS, allow_presets=True)
+    fill = fill_note_type_fields(LAPIS_FIELDS, capabilities=JA)
 
     assert isinstance(fill, NoteTypeFill)
     assert fill.preset is LAPIS
@@ -204,7 +208,7 @@ def test_fill_recognises_lapis_and_returns_its_whole_map():
 
 
 def test_fill_without_presets_runs_the_keyword_pass():
-    fill = fill_note_type_fields(LAPIS_FIELDS, allow_presets=False)
+    fill = fill_note_type_fields(LAPIS_FIELDS, capabilities=JA - {"note_presets"})
 
     assert fill.preset is None
     assert dict(fill.fields) == auto_map_fields(LAPIS_FIELDS)
@@ -212,7 +216,7 @@ def test_fill_without_presets_runs_the_keyword_pass():
 
 
 def test_fill_falls_back_to_keywords_for_an_unknown_note_type():
-    fill = fill_note_type_fields(["Word", "Sentence", "Meaning"], allow_presets=True)
+    fill = fill_note_type_fields(["Word", "Sentence", "Meaning"], capabilities=JA)
 
     assert fill.preset is None
     assert fill.fields["word"] == "Word"
@@ -226,7 +230,7 @@ def test_fill_maps_extra_language_fields_without_reusing_a_claimed_field():
         CardFieldSpec(key="reading_paiboon", capability="thai", placeholder="Reading"),
     )
 
-    fill = fill_note_type_fields(["Hanzi", "Sentence", "Pinyin", "Reading"], allow_presets=False, extra_specs=specs)
+    fill = fill_note_type_fields(["Hanzi", "Sentence", "Pinyin", "Reading"], capabilities=ZH, extra_specs=specs)
 
     assert fill.extra_fields == {"expression_pinyin": "Pinyin"}
     # "Reading" is already expression_reading's, so the reading_paiboon spec gets nothing.
@@ -244,7 +248,6 @@ def test_the_panel_module_still_re_exports_the_keyword_helpers():
 # Profile placeholders against the Anki Miner Note field names
 # ---------------------------------------------------------------------------
 
-from anki_miner.languages.registry import get_profile  # noqa: E402
 from anki_miner.services.note_presets import auto_map_profile_fields  # noqa: E402
 from tests.unit.amn_fields import AMN_FIELDS  # noqa: E402
 
@@ -282,29 +285,61 @@ def test_amn_signature_is_its_published_field_list():
 
 
 def test_amn_wins_over_lapis_for_full_field_list():
-    fill = fill_note_type_fields(AMN_FIELDS, allow_presets=True)
+    fill = fill_note_type_fields(AMN_FIELDS, capabilities=JA)
     assert fill.preset is ANKI_MINER_NOTE
     assert fill.fields["sentence_translation"] == "SentenceTranslation"
     assert fill.fields["language"] == "Language"
 
 
 def test_amn_applies_without_note_presets_capability():
-    fill = fill_note_type_fields(AMN_FIELDS, allow_presets=False, extra_specs=get_profile("zh").extra_card_fields)
+    fill = fill_note_type_fields(AMN_FIELDS, capabilities=ZH, extra_specs=get_profile("zh").extra_card_fields)
     assert fill.preset is ANKI_MINER_NOTE
     assert fill.extra_fields["expression_pinyin"] == "Pinyin"
 
 
+_JAPANESE_ONLY_KEYS = ("expression_furigana", "sentence_furigana", "pitch_position", "pitch_category")
+
+
+def test_amn_in_chinese_leaves_the_furigana_and_pitch_fields_unmapped():
+    """zh hides those rows and never fills them. Mapped, they outlive a switch to a
+    note type without them, and the pre-run check fails on fields nobody can see."""
+    fill = fill_note_type_fields(AMN_FIELDS, capabilities=ZH, extra_specs=get_profile("zh").extra_card_fields)
+
+    assert fill.preset is ANKI_MINER_NOTE
+    assert {key: fill.fields[key] for key in _JAPANESE_ONLY_KEYS} == dict.fromkeys(_JAPANESE_ONLY_KEYS, "")
+    assert fill.fields["word"] == "Expression"
+    assert fill.fields["language"] == "Language"
+
+
+def test_amn_in_japanese_maps_the_furigana_and_pitch_fields():
+    fill = fill_note_type_fields(AMN_FIELDS, capabilities=JA)
+
+    assert fill.fields["expression_furigana"] == "ExpressionFurigana"
+    assert fill.fields["sentence_furigana"] == "SentenceFurigana"
+    assert fill.fields["pitch_position"] == "PitchPosition"
+    assert fill.fields["pitch_category"] == "PitchCategories"
+
+
+def test_the_keyword_pass_leaves_the_furigana_and_pitch_fields_unmapped_in_chinese():
+    fill = fill_note_type_fields(["Word", "Sentence", "ExpressionFurigana", "PitchPosition"], capabilities=ZH)
+
+    assert fill.preset is None
+    assert fill.fields["word"] == "Word"
+    assert fill.fields["expression_furigana"] == ""
+    assert fill.fields["pitch_position"] == ""
+
+
 def test_lapis_stays_japanese_only():
-    assert fill_note_type_fields(sorted(LAPIS.signature), allow_presets=False).preset is None
+    assert fill_note_type_fields(sorted(LAPIS.signature), capabilities=ZH).preset is None
 
 
 def test_partial_amn_fork_is_not_amn():
     names = sorted(LAPIS.signature | {"Language", "SentenceTranslation"})
-    assert fill_note_type_fields(names, allow_presets=True).preset is LAPIS
+    assert fill_note_type_fields(names, capabilities=JA).preset is LAPIS
 
 
 def test_kiku_still_detected():
-    assert fill_note_type_fields(sorted(KIKU.signature), allow_presets=True).preset is KIKU
+    assert fill_note_type_fields(sorted(KIKU.signature), capabilities=JA).preset is KIKU
 
 
 def test_amn_reads_romaji_pitch_and_cues_the_target_in_bold():
