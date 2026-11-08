@@ -112,6 +112,32 @@ def test_a_video_track_is_chosen_by_position_with_the_video_size_as_fallback(tes
     assert (source.sub_index, source.width, source.height) == (1, 1280, 720)
 
 
+#: ffprobe's ``-show_data`` dump of a first PGS packet: a composition segment for 1920x1080.
+_FIRST_PACKET_1080 = (
+    "\n00000000: 1600 1307 8004 3810 0000 8000 0001 0000  ......8.........\n"
+    "00000010: 0000 0000 0000                           ......\n"
+)
+
+
+def test_a_pgs_track_ffprobe_could_not_size_takes_its_size_from_its_first_packet(test_config, tmp_path):
+    # A cropped encode: the video is 1920x800, the cues are placed on a 1920x1080 frame.
+    video = tmp_path / "film.mkv"
+    video.write_bytes(b"x")
+
+    def probe(cmd, **_kw):
+        if "-show_data" in cmd:
+            return _packets(_FIRST_PACKET_1080)
+        return _packets("0.000000\n") if "format=start_time" in cmd else _packets("600.0,N/A\n")
+
+    with (
+        patch(_LIST, return_value=[_image(0, width=None, height=None)]),
+        patch(_SIZE, return_value=(1920, 800)),
+        patch(_RUN, side_effect=probe),
+    ):
+        source = open_bitmap_source(test_config, video, sub_index=0)
+    assert (source.width, source.height) == (1920, 1080)
+
+
 def test_an_odd_canvas_is_made_even(test_config, tmp_path):
     sup = tmp_path / "m.sup"
     sup.write_bytes(b"x")
@@ -144,7 +170,10 @@ def test_ffmpeg_arguments_keep_timestamps_and_bound_the_canvas():
     assert args[0] == "-copyts"
     assert args[args.index("-t") + 1] == "5.000"
     assert f"color=c={CANVAS_COLOUR}:s=320x96:r=10" in args
-    assert args[-1] == str(Path("/m.sup"))
+    # ffmpeg renders the track at the canvas's size, not a size of its own choosing.
+    assert args[args.index("-canvas_size") + 1] == "320x96"
+    assert args.index(f"color=c={CANVAS_COLOUR}:s=320x96:r=10") < args.index("-canvas_size") < len(args) - 2
+    assert args[-2:] == ["-i", str(Path("/m.sup"))]
     assert overlay_filter(BitmapSource(Path("/v.mkv"), 2, 320, 96, 5.0)) == "[0:v][1:s:2]overlay=eof_action=pass"
 
 

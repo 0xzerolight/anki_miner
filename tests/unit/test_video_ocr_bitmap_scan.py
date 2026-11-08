@@ -14,6 +14,7 @@ from anki_miner.services.video_ocr.bitmap_source import open_bitmap_source
 from anki_miner.services.video_ocr.frame_source import iter_samples
 from anki_miner.services.video_ocr.region import FULL_FRAME, Region
 from anki_miner.services.video_ocr.scanner import VideoOcrStatus, scan_video
+from anki_miner.utils.audio_track_detector import list_subtitle_streams
 from tests.unit._video_ocr_clips import write_pgs
 
 # numpy-backed (the gate in test_asr_marker_gating.py)
@@ -36,8 +37,8 @@ class _WhiteReader:
         return "台詞" if int(bgr[2, 2, 0]) > 200 else ""
 
 
-def _mkv_with_pgs(tmp_path: Path) -> Path:
-    sup = write_pgs(tmp_path / "subs.sup", _CUES)
+def _mkv_with_pgs(tmp_path: Path, sup: Path | None = None, *, video: str = "320x96", seconds: int = 6) -> Path:
+    sup = sup or write_pgs(tmp_path / "subs.sup", _CUES)
     plain = tmp_path / "plain.mkv"
     subprocess.run(
         [
@@ -48,7 +49,7 @@ def _mkv_with_pgs(tmp_path: Path) -> Path:
             "-f",
             "lavfi",
             "-i",
-            "color=c=red:s=320x96:r=10:d=6",
+            f"color=c=red:s={video}:r=10:d={seconds}",
             "-c:v",
             "ffv1",
             str(plain),
@@ -151,3 +152,23 @@ def test_a_transport_stream_that_starts_late_keeps_cues_on_the_file_start_clock(
     assert result.status is VideoOcrStatus.SUCCESS and result.cue_count == 2
     for event, (cue_start, cue_end) in zip(pysubs2.load(str(out)), _CUES, strict=True):
         assert abs(event.start / 1000 - cue_start) <= 0.25 and abs(event.end / 1000 - cue_end) <= 0.25
+
+
+def _lit_rows(frames: list[tuple[float, np.ndarray]], t: float) -> list[int]:
+    frame = next(f for ft, f in frames if abs(ft - t) < 0.01)
+    return [int(y) for y in np.nonzero(frame.max(axis=(1, 2)) > 200)[0]]
+
+
+def test_a_track_whose_size_ffprobe_misses_keeps_its_own_canvas(test_config, tmp_path):
+    """A film's first cue comes after ffprobe's probe window, so the track reports no size.
+    A cropped video (64 high under a 96-high track) must not become the canvas: ffmpeg would
+    squash the subtitles into it, or drop the ones below its bottom edge."""
+    sup = write_pgs(tmp_path / "subs.sup", [(8.0, 9.0)], box=(64, 16), at=(0, 72))
+    mkv = _mkv_with_pgs(tmp_path, sup, video="320x64", seconds=10)
+    assert list_subtitle_streams(mkv)[0].height is None  # the premise: the probe never saw a cue
+
+    source = open_bitmap_source(test_config, mkv, 0)
+    assert (source.width, source.height) == (320, 96)
+    from_mkv = list(iter_samples(test_config, mkv, FULL_FRAME, fps=10, bitmap=source))
+    from_sup = list(iter_samples(test_config, sup, FULL_FRAME, fps=10, bitmap=open_bitmap_source(test_config, sup)))
+    assert _lit_rows(from_mkv, 8.5) == _lit_rows(from_sup, 8.5) == list(range(72, 88))

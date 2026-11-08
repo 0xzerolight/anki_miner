@@ -7,12 +7,18 @@ at planning time: ``-copyts`` keeps each cue at its own time (a .sup whose
 first cue is at 1 s is otherwise shifted to 0 s), and ``-t`` is required
 because the colour canvas never ends on its own.
 
+The canvas is the size the track is authored for, and ffmpeg's own subtitle
+renderer is given the same size (``-canvas_size``). Left to itself, ffmpeg
+sizes a track it could not size from the video, and a cropped encode (1920x800
+under a 1920x1080 PGS track) squashes the subtitles into that smaller canvas.
+
 numpy-free: the Video OCR tab imports it at app startup.
 """
 
 from __future__ import annotations
 
 import logging
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -35,11 +41,17 @@ CANVAS_COLOUR = "0x5a5a5a"
 #: Seconds drawn past the track's last packet, so its last cue shows and clears.
 END_MARGIN_S = 1.0
 
-#: Canvas when ffprobe names no size and there is no video: the Blu-ray frame PGS is authored for.
+#: Canvas when neither the track nor a video names a size: the Blu-ray frame PGS is authored for.
 _FALLBACK_SIZE = (1920, 1080)
 
 #: Listing a long film's subtitle packets reads the whole file once.
 _PACKET_PROBE_TIMEOUT_S = 300
+
+#: The segment that opens every PGS display set; its payload starts with the frame width and height.
+_PGS_COMPOSITION_SEGMENT = 0x16
+
+#: One row of ffprobe's ``-show_data`` hexdump: offset, then up to eight groups of hex digits.
+_HEX_ROW = re.compile(r"[0-9a-f]{8}: ([0-9a-f]{2,4}(?: [0-9a-f]{2,4})*)")
 
 
 @dataclass(frozen=True)
@@ -115,6 +127,49 @@ def track_end_seconds(path: Path, sub_index: int, ffprobe_cmd: str) -> float | N
     return end
 
 
+def pgs_composition_size(path: Path, sub_index: int, ffprobe_cmd: str) -> tuple[int, int] | None:
+    """The frame size PGS track *sub_index* of *path* is authored for, read from its first packet; None on failure.
+
+    ffprobe sizes a PGS track only by decoding a cue within its probe window
+    (5 s / 5 MB of the file), and a film's first line usually comes later.
+    """
+    cmd = [
+        ffprobe_cmd,
+        "-v",
+        "error",
+        "-select_streams",
+        f"s:{sub_index}",
+        "-read_intervals",
+        "%+#1",
+        "-show_entries",
+        "packet=data",
+        "-show_data",
+        "-of",
+        "default=nw=1:nk=1",
+        str(path),
+    ]
+    done = run_supervised(cmd, timeout_s=_PACKET_PROBE_TIMEOUT_S, op="ffprobe subtitle-size")
+    if done.state is not SupervisedState.COMPLETED or done.returncode != 0:
+        logger.warning(
+            "Video OCR: could not read the first subtitle packet of %s: %s",
+            path.name,
+            done.error or (done.stderr or "").strip()[-300:] or done.state.value,
+        )
+        return None
+    rows = (_HEX_ROW.match(line) for line in (done.stdout or "").splitlines())
+    data = bytes.fromhex("".join(row.group(1).replace(" ", "") for row in rows if row))
+    # Segments: a type byte, a 2-byte payload length, the payload.
+    pos = 0
+    while pos + 3 <= len(data):
+        length = int.from_bytes(data[pos + 1 : pos + 3], "big")
+        payload = data[pos + 3 : pos + 3 + length]
+        if data[pos] == _PGS_COMPOSITION_SEGMENT and len(payload) >= 4:
+            width, height = int.from_bytes(payload[0:2], "big"), int.from_bytes(payload[2:4], "big")
+            return (width, height) if width and height else None
+        pos += 3 + length
+    return None
+
+
 def container_start_seconds(path: Path, ffprobe_cmd: str) -> float:
     """*path*'s ``format.start_time`` in seconds; 0 when it is unset or cannot be read."""
     cmd = [ffprobe_cmd, "-v", "error", "-show_entries", "format=start_time", "-of", "csv=p=0", str(path)]
@@ -134,10 +189,11 @@ def open_bitmap_source(config, path: Path, sub_index: int | None = None) -> Bitm
 
     *sub_index* is the subtitle-track position (``-map 0:s:N``) chosen for a
     video; None takes the file's first image track (a .sup or a VobSub pair
-    holds one). The canvas is the track's own size, else the video's, else
-    1920x1080, made even for the crop. Raises :class:`FrameSourceError` when
-    the pair is incomplete, the track is missing or not an image track, or
-    its timing cannot be read.
+    holds one). The canvas is the track's own size (a PGS track ffprobe did not
+    size gives it in its first packet), else the video's, else 1920x1080, made
+    even for the crop. Raises :class:`FrameSourceError` when the pair is
+    incomplete, the track is missing or not an image track, or its timing
+    cannot be read.
     """
     target = path
     if path.suffix.lower() in {".idx", ".sub"}:
@@ -157,7 +213,12 @@ def open_bitmap_source(config, path: Path, sub_index: int | None = None) -> Bitm
     if stream.width is not None and stream.height is not None:
         width, height = stream.width, stream.height
     else:
-        width, height = get_video_size(target, ffprobe) or _FALLBACK_SIZE
+        pgs = (
+            pgs_composition_size(target, stream.sub_index, ffprobe)
+            if stream.codec_name == "hdmv_pgs_subtitle"
+            else None
+        )
+        width, height = pgs or get_video_size(target, ffprobe) or _FALLBACK_SIZE
     end = track_end_seconds(target, stream.sub_index, ffprobe)
     if end is None:
         raise FrameSourceError(f"{target.name}: the subtitle track's timing could not be read")
@@ -177,12 +238,15 @@ def ffmpeg_input_args(source: BitmapSource, fps: int) -> list[str]:
     """The ffmpeg inputs for *source*: a bounded colour canvas, then the subtitle file itself.
 
     ``-copyts`` keeps every cue on the file's own clock; ``-itsoffset`` moves a
-    container that starts above 0 s back to the file start; ``-t`` ends the
-    canvas, which otherwise never ends.
+    container that starts above 0 s back to the file start; ``-canvas_size``
+    renders the track at the canvas's size; ``-t`` ends the canvas, which
+    otherwise never ends.
     """
-    canvas = f"color=c={CANVAS_COLOUR}:s={source.width}x{source.height}:r={fps}"
+    size = f"{source.width}x{source.height}"
+    canvas = f"color=c={CANVAS_COLOUR}:s={size}:r={fps}"
     shift = ["-itsoffset", f"{-source.start_seconds:.6f}"] if source.start_seconds else []
-    return ["-copyts", "-f", "lavfi", "-t", f"{source.end_seconds:.3f}", "-i", canvas, *shift, "-i", str(source.path)]
+    subtitles = [*shift, "-canvas_size", size, "-i", str(source.path)]
+    return ["-copyts", "-f", "lavfi", "-t", f"{source.end_seconds:.3f}", "-i", canvas, *subtitles]
 
 
 def overlay_filter(source: BitmapSource) -> str:
