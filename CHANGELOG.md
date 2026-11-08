@@ -7,6 +7,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [Unreleased]
 
 ### Added
+
+### Changed
+
+### Fixed
+
+### Removed
+
+## [3.12.0] - 2026-11-08
+
+The Word Curator draws subtitles over the video, always shows the sentence the card will carry, sets a clip's start or end at the playhead and gives more of its controls a key. Readability counts i+2 lines apart from i+3+, and videos whose audio tracks are named but not tagged use the mining language's track. Some changes alter card output: the curator's other sentences follow "Only i+1 sentences" and the sentence length limits; a word list entry no longer matches a word through a lemma written with other kanji (a whitelisted 返る no longer forces 帰る); card audio comes from the untagged track named for the mining language; and dictionary images keep the size their dictionary set.
+
+### Added
 - **More Word Curator controls take a key (Settings → Keyboard).** Shift+Space plays just the focused word's clip and stops, as the clip strip's play button does; Space still plays on from the line's start. Comma and period step the preview one frame back or forward. Adding the previous or next line, Reset lines, Use current frame, Reset frame, resetting the clip and picking the previous or next sentence can each be given a key, and ship without one. A key already given to another curator action stays with it, and the new default on that key starts unbound.
 - **The Word Curator sets a clip's start or end at the playhead.** The two new buttons beside the clip strip, ⇤ and ⇥, move that end of the focused word's clip to where the player is, so the exact moment no longer takes dragging the slider back and forth. I and O do the same from the keyboard (Settings → Keyboard), and the player keeps playing. When the clip would be shorter than 0.2 seconds or longer than 30, the other end moves with it.
 
@@ -20,9 +32,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Mining in Chinese and other languages no longer stops on furigana or pitch fields Settings does not show.** Filling the mapping from Anki Miner Note mapped its ExpressionFurigana, SentenceFurigana, PitchPosition and PitchCategories fields in every language, behind rows only Japanese shows, and filling another note type later left them mapped, so mining stopped with "ExpressionFurigana, PitchCategories, PitchPosition, SentenceFurigana not found on note type". Outside Japanese the fill now leaves those four unmapped, and Fill in automatically clears any mapping, shown or hidden, that names a field the note type does not have. A setup that already shows the message is fixed by pressing Fill in automatically once in Settings → Cards & Anki.
 - **Mining again right after a run that synced Anki works.** With "Sync Anki after mining" on, Anki answers the sync request at once and syncs in the background, refusing everything else until it is done, so a command-line run started straight after another failed with `setup_error`. A run now waits up to two minutes for its sync to finish before it ends. A run that still finds Anki syncing reports `busy` on the command line and `ANKI_UNREACHABLE` in `--api`, not a setup problem; the window says Anki is busy syncing.
 - **Videos whose audio tracks have names but no language tags use the mining language's track.** Many Blu-ray remuxes name their tracks "English" and "Japanese" without tagging them, so the language was not found and the first track was used, often the dub: speech recognition transcribed it and every card clip took its audio. A track with no language tag whose name is the mining language ("Japanese [Stereo]", "日本語音声", "JPN") is now used when no track is tagged with it, and the Word Curator and subtitle viewer previews play that same track; a track tagged with another language is still not.
+- **Dictionary images keep their own size on cards (#143).** The card stylesheet capped every dictionary image at 6em, and that cap beats even a size the dictionary sets, so a manga panel sized 15em shrank to 6em. Only images without a size of their own are capped now, and a sized image narrowed on a small screen keeps its proportions. Existing cards pick this up with Utilities → Card Backfill → Styling.
+- **Word lists no longer match a word through a lemma written with other kanji.** UniDic files distinct words under one lemma (帰る under 返る, 撮る under 取る, 賭ける under 掛ける), and a Whitelist or Blacklist entry matched a word's lemma as well as its card front, so a whitelisted 返る forced 帰る onto cards past the frequency band and a blacklisted 掛ける dropped 賭ける. An entry now matches through the lemma only when every kanji the card front writes is in the lemma; kana spellings (わかる for 分かる) still match.
+- **Video OCR reads embedded PGS subtitles in cropped videos (Utilities → Video OCR).** A Blu-ray subtitle track inside a video was drawn at the picture's size when ffprobe could not size it, so on a cropped encode (a 1920×800 picture under 1920×1080 subtitles) every subtitle was squashed and the scan read nothing, while the same track extracted as a `.sup` worked. The size now comes from the track itself.
 - **Manga OCR's install size is stated correctly.** The Install mokuro tooltip said about 1 GB, up to 4 GB with NVIDIA GPU support, but mokuro and the models it downloads on its first run take about 3 GB of disk, and about 7 GB with NVIDIA GPU support. The tooltip now says so.
-
-### Removed
 
 ## [3.11.0] - 2026-11-02
 
