@@ -611,7 +611,7 @@ jobs:
         # runtime. No GPU/driver needed to build. NOTE: apt cannot supply glslc on
         # the pinned ubuntu-22.04 runner — shaderc is only packaged from 24.04, so
         # `apt-get install glslc` fails with "Unable to locate package glslc".
-        uses: jakoch/install-vulkan-sdk-action@d17de7e2f5e50efb5d2123efed18497d3c58c533 # v1.7.0
+        uses: jakoch/install-vulkan-sdk-action@7fe84289ddbf750f7eff9f8e4588e600e1dd06c8 # v1.8.1
         with:
           vulkan_version: "1.4.350.0"
           install_runtime: false
@@ -623,7 +623,7 @@ jobs:
         # immutable commit SHA (matches the SHA-pinned third-party actions in this
         # workflow) AND a Vulkan SDK version (constraints/asr-vulkan-build.txt).
         # The action sets VULKAN_SDK and puts glslc on PATH for the build step.
-        uses: jakoch/install-vulkan-sdk-action@d17de7e2f5e50efb5d2123efed18497d3c58c533 # v1.7.0
+        uses: jakoch/install-vulkan-sdk-action@7fe84289ddbf750f7eff9f8e4588e600e1dd06c8 # v1.8.1
         with:
           vulkan_version: "1.4.350.0"
           install_runtime: false
@@ -1341,7 +1341,7 @@ jobs:
           path: artifacts/
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3
+        uses: softprops/action-gh-release@8a0cd651e5b2365bd640854a3fa5dfc70e4875f3 # v3
         with:
           generate_release_notes: true
           files: |
