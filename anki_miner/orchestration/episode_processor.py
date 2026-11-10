@@ -1394,10 +1394,17 @@ class EpisodeProcessor:
         # duplicate collapse.
         # Gated on bypass_optional_filters so a bypass run — which already
         # includes everything — is unchanged.
+        # One exception: a kana spelling matched only through a listed lemma
+        # (丁度 forcing ちょうど) stays subject to the script filter, so it goes
+        # to the rest and is dropped there under SCRIPT_FILTER.
         forced_include: list[TokenizedWord] = []
         whitelist_service = self._active_whitelist()
         if whitelist_service is not None:
-            forced_include, unknown_words = self.word_filter.partition_whitelisted(unknown_words, whitelist_service)
+            forced_include, unknown_words = self.word_filter.partition_whitelisted(
+                unknown_words,
+                whitelist_service,
+                script_options=enabled_script_options(self.profile.script, self.config),
+            )
             counts.whitelist_force_includes = len(forced_include)
 
         unknown_words = self._phase2_coverage_filters(

@@ -527,6 +527,8 @@ class WordFilterService:
         self,
         words: list[TokenizedWord],
         word_list_service: WordListService,
+        *,
+        script_options: frozenset[str] = frozenset(),
     ) -> tuple[list[TokenizedWord], list[TokenizedWord]]:
         """Split words into ``(forced, rest)`` by user whitelist membership.
 
@@ -545,9 +547,16 @@ class WordFilterService:
         entry can force several same-lemma fronts. The match itself lives in
         :func:`whitelisted_keys`, shared with the run-end coverage report.
 
+        The one exception: a front matched only through its lemma, whose script
+        ``script_options`` drops, goes to ``rest``. Listing 丁度 with kana-only
+        words skipped asks for 丁度, not its kana spelling ちょうど; a kana front
+        the list holds itself is still forced.
+
         Args:
             words: List of candidate words.
             word_list_service: Service providing whitelist lookups.
+            script_options: The script-filter option ids the run applies
+                (``enabled_script_options``). Empty forces every match.
 
         Returns:
             A ``(forced, rest)`` tuple preserving input order within each list.
@@ -555,11 +564,17 @@ class WordFilterService:
         forced: list[TokenizedWord] = []
         rest: list[TokenizedWord] = []
         for word in words:
-            if whitelisted_keys(word.mined_form, word.lemma, word_list_service):
+            keys = whitelisted_keys(word.mined_form, word.lemma, word_list_service)
+            lemma_only = bool(keys) and word.mined_form not in keys
+            if keys and not (lemma_only and any(self._script_matches(oid, word.mined_form) for oid in script_options)):
                 forced.append(word)
             else:
                 rest.append(word)
         return forced, rest
+
+    def _script_matches(self, option_id: str, form: str) -> bool:
+        """Whether script-filter option *option_id* drops *form* in the active language."""
+        return _ja_matches(option_id, form) if self._script is None else self._script.matches(option_id, form)
 
     def filter_by_script_type(
         self,
@@ -615,8 +630,7 @@ class WordFilterService:
             opts = set(enabled_options)
         if not opts:
             return list(words)
-        matches: Callable[[str, str], bool] = _ja_matches if self._script is None else self._script.matches
-        return [w for w in words if not any(matches(oid, w.mined_form) for oid in opts)]
+        return [w for w in words if not any(self._script_matches(oid, w.mined_form) for oid in opts)]
 
     def filter_by_wordsets(
         self,

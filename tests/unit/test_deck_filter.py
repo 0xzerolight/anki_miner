@@ -438,6 +438,21 @@ class TestScanFrequency:
         assert plan.forced_count == 1
         assert _drops(plan) == {"unranked": 1}
 
+    def test_kana_spelling_of_a_listed_kanji_word_is_still_kana_filtered(self, test_config):
+        """丁度 on the list matches ちょうど only through the lemma, so the
+        script filter still drops it, as on the mining path."""
+        anki = FakeAnkiService(notes={1: _note(1, "Core", {"Expression": "ちょうど"})})
+        config = replace(test_config, use_whitelist=True, exclude_hiragana_only_words=True)
+
+        def tagger(text):
+            return [SimpleNamespace(surface=text, feature=SimpleNamespace(kana="チョウド", lemma="丁度"))]
+
+        services = _services(config, word_list_service=FakeWordListService(whitelist={"丁度"}), tagger=tagger)
+        plan = scan_deck_filter(anki, config, services, _options())
+
+        assert plan.kept == ()
+        assert _drops(plan) == {"script_type": 1}
+
 
 class _Tok:
     """A LanguageToken-shaped duck: no kana, lemma = surface."""

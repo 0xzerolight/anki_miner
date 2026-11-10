@@ -387,11 +387,13 @@ def scan_deck_filter(
     words = word_filter.filter_unknown(words, known)
     drops["known"] += before - len(words)
 
-    # Whitelist force-include: bypasses the coverage filters below.
+    # Whitelist force-include: bypasses the coverage filters below, except that
+    # a kana spelling matched only through a listed lemma stays script-filtered.
+    script_options = enabled_script_options(get_profile(config_language(config)).script, config)
     forced: list[TokenizedWord] = []
     word_list_service = getattr(services, "word_list_service", None)
     if config.use_whitelist and word_list_service is not None and word_list_service.is_available():
-        forced, words = word_filter.partition_whitelisted(words, word_list_service)
+        forced, words = word_filter.partition_whitelisted(words, word_list_service, script_options=script_options)
 
     # Frequency band. Same gate as _phase2_filter: only a loaded NUMERIC
     # source can meaningfully apply a cutoff (a categorical-only source would
@@ -421,7 +423,6 @@ def scan_deck_filter(
         drops["blacklist"] += before - len(words)
 
     # Script type (for ja: hiragana-only / katakana-only forms).
-    script_options = enabled_script_options(get_profile(config_language(config)).script, config)
     if script_options:
         before = len(words)
         words = word_filter.filter_by_script_type(

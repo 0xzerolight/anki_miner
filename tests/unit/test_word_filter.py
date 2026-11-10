@@ -574,6 +574,57 @@ class TestWordFilterService:
             assert forced == [word]
             assert rest == []
 
+        def test_lemma_alias_does_not_force_a_front_the_script_filter_drops(self, test_config, tmp_path):
+            """丁度 and 無くなる on the list with kana-only words skipped: their kana
+            spellings ちょうど / なくなる match only through the lemma, so they go to
+            rest for the script filter instead of being forced past it."""
+            wl = tmp_path / "wl.txt"
+            wl.write_text("丁度\n無くなる\n", encoding="utf-8")
+            wls = WordListService(whitelist_path=wl)
+            wls.load()
+
+            words = [
+                create_word("丁度", surface="ちょうど", pos="副詞"),
+                create_word("無くなる", surface="なくなっ", pos="動詞", orth_base="なくなる"),
+                create_word("丁度", surface="丁度", pos="副詞"),
+            ]
+            forced, rest = WordFilterService(test_config).partition_whitelisted(
+                words, wls, script_options=frozenset({"hiragana_only", "katakana_only", "mixed_kana_only"})
+            )
+
+            assert [w.mined_form for w in forced] == ["丁度"]
+            assert [w.mined_form for w in rest] == ["ちょうど", "なくなる"]
+
+        def test_a_literally_listed_kana_front_stays_forced_past_the_script_filter(self, test_config, tmp_path):
+            wl = tmp_path / "wl.txt"
+            wl.write_text("ちょうど\n", encoding="utf-8")
+            wls = WordListService(whitelist_path=wl)
+            wls.load()
+
+            word = create_word("丁度", surface="ちょうど", pos="副詞")
+            forced, rest = WordFilterService(test_config).partition_whitelisted(
+                [word], wls, script_options=frozenset({"hiragana_only"})
+            )
+
+            assert forced == [word]
+            assert rest == []
+
+        def test_lemma_alias_still_forces_a_front_the_options_keep(self, test_config, tmp_path):
+            """Only the scripts the options name are taken back: ちょうど is
+            hiragana, so a katakana-only filter leaves the alias forcing it."""
+            wl = tmp_path / "wl.txt"
+            wl.write_text("丁度\n", encoding="utf-8")
+            wls = WordListService(whitelist_path=wl)
+            wls.load()
+
+            word = create_word("丁度", surface="ちょうど", pos="副詞")
+            forced, rest = WordFilterService(test_config).partition_whitelisted(
+                [word], wls, script_options=frozenset({"katakana_only"})
+            )
+
+            assert forced == [word]
+            assert rest == []
+
     class TestLemmaNamesFront:
         """Whether a word list entry for the lemma may name this card front."""
 

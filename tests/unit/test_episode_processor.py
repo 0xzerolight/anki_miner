@@ -2620,6 +2620,33 @@ class TestWhitelistForceInclude:
         assert result.whitelist_coverage is not None
         assert result.whitelist_coverage.mined == {"持ち帰る"}
 
+    def test_kana_spelling_of_a_listed_kanji_word_is_still_kana_filtered(self, test_config, mock_services, tmp_path):
+        """丁度 on the list with hiragana-only words skipped: ちょうど matches only
+        through its lemma, so the script filter drops it; 丁度 itself is mined."""
+        config = replace(test_config, use_whitelist=True, exclude_hiragana_only_words=True)
+        kana = _make_word("丁度", surface="ちょうど", pos="副詞")
+        kanji = _make_word("丁度", surface="丁度", start_time=5.0, pos="副詞")
+
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [kana, kanji]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["media_extractor"].extract_media_batch.return_value = [(kanji, _make_media())]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. exactly"]
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
+
+        services = {**mock_services, "word_filter": WordFilterService(config)}
+        processor = build_processor(
+            config=config,
+            presenter=NullPresenter(),
+            word_list_service=self._wls(tmp_path, "丁度"),
+            **services,
+        )
+        result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        sent = mock_services["media_extractor"].extract_media_batch.call_args.args[1]
+        assert [w.mined_form for w in sent] == ["丁度"]
+        assert result.not_mined is not None
+        assert result.not_mined.forms(NotMinedReason.SCRIPT_FILTER) == {"ちょうど"}
+
     def test_still_dropped_when_no_offline_definition(self, test_config, mock_services, tmp_path):
         """Integrity gate: a whitelisted word with no offline definition is still
         dropped (force-include does NOT bypass the offline-def existence filter)."""
