@@ -12,6 +12,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Fixed
 
+- A card whose dictionary glossary holds Anki cloze markup (`{{c1::…}}`, as some example sentences in Bee's Ultimate Grammar Dictionary do) is no longer refused by Anki on a non-Cloze note type with "cannot create note for unknown reason": the markup is unwrapped to its text in every field before the note is sent.
+
 ### Removed
 
 ## [3.12.0] - 2026-11-08
