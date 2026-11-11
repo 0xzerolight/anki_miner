@@ -2,6 +2,7 @@
 
 import hashlib
 import os
+import sys
 from pathlib import Path
 
 #: Component-length fallback when the filesystem will not report ``PC_NAME_MAX``.
@@ -41,9 +42,12 @@ def _truncate_utf8(value: str, byte_budget: int) -> str:
 
 def component_byte_limit(directory: Path) -> int:
     """Return the maximum filename length in bytes for *directory*."""
+    if sys.platform == "win32":
+        # os.pathconf is POSIX-only.
+        return _DEFAULT_COMPONENT_BYTES
     try:
         limit = os.pathconf(directory, "PC_NAME_MAX")
-    except (AttributeError, OSError, ValueError):
+    except (OSError, ValueError):
         return _DEFAULT_COMPONENT_BYTES
     return limit if limit > 0 else _DEFAULT_COMPONENT_BYTES
 

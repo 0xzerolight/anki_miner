@@ -64,8 +64,10 @@ class _WindowsJob:
 
     @classmethod
     def create(cls, proc: Any) -> _WindowsJob | None:
+        if sys.platform != "win32":
+            return None
         try:
-            kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)  # type: ignore[attr-defined]
+            kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
             kernel32.CreateJobObjectW.restype = ctypes.c_void_p
             kernel32.CreateJobObjectW.argtypes = (ctypes.c_void_p, ctypes.c_wchar_p)
             kernel32.AssignProcessToJobObject.restype = ctypes.c_int
@@ -129,6 +131,9 @@ def _cancel_requested(cancel: threading.Event | Callable[[], bool] | None) -> bo
 
 
 def _windows_descendant_pids(ancestor_pids: set[int]) -> set[int]:
+    if sys.platform != "win32":
+        return set()
+
     class ProcessEntry(ctypes.Structure):
         _fields_ = (
             ("dwSize", ctypes.c_ulong),
@@ -143,7 +148,7 @@ def _windows_descendant_pids(ancestor_pids: set[int]) -> set[int]:
             ("szExeFile", ctypes.c_wchar * 260),
         )
 
-    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)  # type: ignore[attr-defined]
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
     kernel32.CreateToolhelp32Snapshot.restype = ctypes.c_void_p
     kernel32.CreateToolhelp32Snapshot.argtypes = (ctypes.c_ulong, ctypes.c_ulong)
     kernel32.Process32FirstW.restype = ctypes.c_int
@@ -177,7 +182,9 @@ def _windows_descendant_pids(ancestor_pids: set[int]) -> set[int]:
 
 
 def _terminate_windows_pid(pid: int, deadline: float) -> None:
-    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)  # type: ignore[attr-defined]
+    if sys.platform != "win32":
+        return
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
     kernel32.OpenProcess.restype = ctypes.c_void_p
     kernel32.OpenProcess.argtypes = (ctypes.c_ulong, ctypes.c_int, ctypes.c_ulong)
     kernel32.TerminateProcess.restype = ctypes.c_int
