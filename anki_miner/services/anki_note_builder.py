@@ -157,11 +157,12 @@ _RAW_HTML_FIELD_KEYS = ("frequency", "pitch_graph", "pitch_text", "expression_pi
 # with cloze markup in their glossaries (Bee's Ultimate Grammar Dictionary:
 # 砂{{c1::まみれ}}の手), so one such entry blocked its word's card for good.
 # Answer and hint hold no "{{" or "}}", so a match is always an innermost cloze.
+# The ordinal may be a comma list: Anki 26.05+ multi-card clozes ({{c1,2::…}}).
 _CLOZE_RE = re.compile(
-    r"\{\{c\d+::((?:(?!\{\{|\}\}).)*?)(?:::(?:(?!\{\{|\}\}).)*?)?\}\}",
+    r"\{\{c[\d,]+::((?:(?!\{\{|\}\}).)*?)(?:::(?:(?!\{\{|\}\}).)*?)?\}\}",
     re.DOTALL | re.IGNORECASE,
 )
-_CLOZE_OPEN_RE = re.compile(r"\{\{(c\d+::)", re.IGNORECASE)
+_CLOZE_OPEN_RE = re.compile(r"\{\{(c[\d,]+::)", re.IGNORECASE)
 
 
 def _defuse_cloze(value: str) -> str:

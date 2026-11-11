@@ -209,6 +209,11 @@ class TestClozeMarkupDefused:
         fields = build_note(payload, AnkiMinerConfig(), set()).note["fields"]
         assert fields[AnkiMinerConfig().anki_fields["definition"]] == "a b c"
 
+    def test_multi_card_cloze_ordinals_are_unwrapped(self):
+        payload = CardPayload(word=_word(), media=MediaData(), definition="砂{{c1,2::まみれ::h}}の手 {{c3,4::x")
+        fields = build_note(payload, AnkiMinerConfig(), set()).note["fields"]
+        assert fields[AnkiMinerConfig().anki_fields["definition"]] == "砂まみれの手 &#123;&#123;c3,4::x"
+
     def test_fields_without_cloze_are_unchanged(self):
         payload = CardPayload(word=_word(), media=MediaData(), definition="{{not a cloze}} to return")
         fields = build_note(payload, AnkiMinerConfig(), set()).note["fields"]
