@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Fixed
 
+- An API reading run whose word names a `line_text` inside a longer unit (a quoted speech, which the splitter keeps whole) now gives the card that sentence rather than the whole unit: the unit is cut around it for the run (a 241-character speech became the card's sentence where one 33-character sentence of it was named).
 ### Removed
 
 ## [3.12.0] - 2026-11-08
