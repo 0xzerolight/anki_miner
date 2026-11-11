@@ -7,6 +7,7 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 import tomllib
 from collections import defaultdict
 from pathlib import Path
@@ -176,6 +177,7 @@ def test_bundle_smoke_pins_c_locale() -> None:
 
 
 @pytest.mark.skipif(shutil.which("bash") is None, reason="bash is unavailable")
+@pytest.mark.skipif(sys.platform == "win32", reason="the fake bundle is a Linux onedir of shebang scripts")
 def test_bundle_smoke_uses_one_temporary_anki_miner_home(tmp_path: Path) -> None:
     dist = tmp_path / "dist" / "AnkiMiner"
     dist.mkdir(parents=True)
