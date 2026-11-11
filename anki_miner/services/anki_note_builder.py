@@ -156,7 +156,11 @@ _RAW_HTML_FIELD_KEYS = ("frequency", "pitch_graph", "pitch_text", "expression_pi
 # note for unknown reason"). Some Yomitan dictionaries ship example sentences
 # with cloze markup in their glossaries (Bee's Ultimate Grammar Dictionary:
 # 砂{{c1::まみれ}}の手), so one such entry blocked its word's card for good.
-_CLOZE_RE = re.compile(r"\{\{c\d+::(.*?)(?:::[^{}]*?)?\}\}", re.DOTALL | re.IGNORECASE)
+# Answer and hint hold no "{{" or "}}", so a match is always an innermost cloze.
+_CLOZE_RE = re.compile(
+    r"\{\{c\d+::((?:(?!\{\{|\}\}).)*?)(?:::(?:(?!\{\{|\}\}).)*?)?\}\}",
+    re.DOTALL | re.IGNORECASE,
+)
 _CLOZE_OPEN_RE = re.compile(r"\{\{(c\d+::)", re.IGNORECASE)
 
 
@@ -164,13 +168,16 @@ def _defuse_cloze(value: str) -> str:
     """A field value with Anki's cloze markup taken out.
 
     ``{{c1::answer::hint}}`` becomes ``answer`` (the text the dictionary meant
-    to show); an opening marker left unclosed has its braces written as
+    to show), innermost first, so a nested ``{{c1::a {{c2::b}} c}}`` becomes
+    ``a b c``; an opening marker left unclosed has its braces written as
     entities, so it shows as typed but is no cloze to Anki. A value without
-    ``{{c`` is returned unchanged (the default wire stays byte-identical).
+    ``{{`` is returned unchanged (the default wire stays byte-identical).
     """
     if "{{" not in value:
         return value
-    value = _CLOZE_RE.sub(r"\1", value)
+    replaced = 1
+    while replaced:
+        value, replaced = _CLOZE_RE.subn(r"\1", value)
     return _CLOZE_OPEN_RE.sub(r"&#123;&#123;\1", value)
 
 
@@ -524,7 +531,7 @@ def build_note(
 
     # No field may carry cloze markup: on a non-Cloze note type Anki refuses
     # the note outright (see _CLOZE_RE). Mining never writes clozes itself.
-    fields = {name: _defuse_cloze(value) if isinstance(value, str) else value for name, value in fields.items()}
+    fields = {name: _defuse_cloze(value) for name, value in fields.items()}
 
     note: dict = {
         "deckName": config.anki_deck_name,

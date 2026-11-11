@@ -204,6 +204,11 @@ class TestClozeMarkupDefused:
         fields = build_note(payload, AnkiMinerConfig(), set()).note["fields"]
         assert fields[AnkiMinerConfig().anki_fields["definition"]] == "a &#123;&#123;c1::b"
 
+    def test_nested_cloze_unwraps_innermost_first(self):
+        payload = CardPayload(word=_word(), media=MediaData(), definition="{{c1::a {{c2::b::h}} c}}")
+        fields = build_note(payload, AnkiMinerConfig(), set()).note["fields"]
+        assert fields[AnkiMinerConfig().anki_fields["definition"]] == "a b c"
+
     def test_fields_without_cloze_are_unchanged(self):
         payload = CardPayload(word=_word(), media=MediaData(), definition="{{not a cloze}} to return")
         fields = build_note(payload, AnkiMinerConfig(), set()).note["fields"]
