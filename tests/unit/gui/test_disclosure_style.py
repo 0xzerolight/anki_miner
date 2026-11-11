@@ -8,6 +8,8 @@ its tick box was Qt's unthemed default.
 
 from __future__ import annotations
 
+import sys
+
 import pytest
 from PyQt6.QtCore import QPoint, QRect
 from PyQt6.QtGui import QColor, QFont, QImage
@@ -143,6 +145,7 @@ def _ink_centre(image: QImage, panel: QWidget, widget: QWidget, width: int) -> f
     return weighted / total - origin.x()
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="the 1 px tolerance holds for the Linux fonts only")
 def test_the_title_text_lines_up_with_checkbox_text(disclosure, qtbot):
     # Measured on screen, not from style rects: Qt draws a group box title away
     # from the label rect its style reports. Same text in both, so the ink

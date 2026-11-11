@@ -176,6 +176,50 @@ class TestDuplicateOptions:
         assert note["options"] == {"allowDuplicate": True, "duplicateScope": "deck"}
 
 
+class TestClozeMarkupDefused:
+    """A dictionary glossary with Anki cloze markup made Anki refuse the note on a
+    non-Cloze note type ("cannot create note for unknown reason")."""
+
+    GLOSSARY = (
+        '<span lang="ja">転んだ子どもは、砂{{c1::まみれ}}の手で涙を拭った。</span>'
+        '<span lang="ja">来月から{{C2::となると::hint}}、</span>'
+    )
+
+    def test_glossary_and_definition_lose_cloze_markup(self):
+        payload = CardPayload(
+            word=_word(),
+            media=MediaData(),
+            definition="砂{{c1::まみれ}}",
+            extra_fields={"glossary": self.GLOSSARY},
+        )
+        config = AnkiMinerConfig(anki_fields={**AnkiMinerConfig().anki_fields, "glossary": "Glossary"})
+        fields = build_note(payload, config, set()).note["fields"]
+        assert "{{" not in "".join(fields.values())
+        assert "砂まみれの手" in fields["Glossary"]
+        assert "来月からとなると、" in fields["Glossary"]
+        assert fields[config.anki_fields["definition"]] == "砂まみれ"
+
+    def test_unclosed_cloze_opening_is_escaped(self):
+        payload = CardPayload(word=_word(), media=MediaData(), definition="a {{c1::b")
+        fields = build_note(payload, AnkiMinerConfig(), set()).note["fields"]
+        assert fields[AnkiMinerConfig().anki_fields["definition"]] == "a &#123;&#123;c1::b"
+
+    def test_nested_cloze_unwraps_innermost_first(self):
+        payload = CardPayload(word=_word(), media=MediaData(), definition="{{c1::a {{c2::b::h}} c}}")
+        fields = build_note(payload, AnkiMinerConfig(), set()).note["fields"]
+        assert fields[AnkiMinerConfig().anki_fields["definition"]] == "a b c"
+
+    def test_multi_card_cloze_ordinals_are_unwrapped(self):
+        payload = CardPayload(word=_word(), media=MediaData(), definition="砂{{c1,2::まみれ::h}}の手 {{c3,4::x")
+        fields = build_note(payload, AnkiMinerConfig(), set()).note["fields"]
+        assert fields[AnkiMinerConfig().anki_fields["definition"]] == "砂まみれの手 &#123;&#123;c3,4::x"
+
+    def test_fields_without_cloze_are_unchanged(self):
+        payload = CardPayload(word=_word(), media=MediaData(), definition="{{not a cloze}} to return")
+        fields = build_note(payload, AnkiMinerConfig(), set()).note["fields"]
+        assert fields[AnkiMinerConfig().anki_fields["definition"]] == "{{not a cloze}} to return"
+
+
 class TestProfileDeclaredExtraKeys:
     """Language N+1's card fields, passed per call instead of added centrally.
 

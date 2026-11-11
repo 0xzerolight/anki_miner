@@ -150,6 +150,38 @@ def field_mapping_error(
 _RAW_HTML_FIELD_KEYS = ("frequency", "pitch_graph", "pitch_text", "expression_pinyin")
 
 
+# Anki's cloze markup. A field holding it on a note type that isn't Cloze makes
+# Anki refuse the whole note (its fields check answers "notetype not cloze" /
+# "field not cloze", which AnkiConnect's addNotes reports only as "cannot create
+# note for unknown reason"). Some Yomitan dictionaries ship example sentences
+# with cloze markup in their glossaries (Bee's Ultimate Grammar Dictionary:
+# 砂{{c1::まみれ}}の手), so one such entry blocked its word's card for good.
+# Answer and hint hold no "{{" or "}}", so a match is always an innermost cloze.
+# The ordinal may be a comma list: Anki 26.05+ multi-card clozes ({{c1,2::…}}).
+_CLOZE_RE = re.compile(
+    r"\{\{c[\d,]+::((?:(?!\{\{|\}\}).)*?)(?:::(?:(?!\{\{|\}\}).)*?)?\}\}",
+    re.DOTALL | re.IGNORECASE,
+)
+_CLOZE_OPEN_RE = re.compile(r"\{\{(c[\d,]+::)", re.IGNORECASE)
+
+
+def _defuse_cloze(value: str) -> str:
+    """A field value with Anki's cloze markup taken out.
+
+    ``{{c1::answer::hint}}`` becomes ``answer`` (the text the dictionary meant
+    to show), innermost first, so a nested ``{{c1::a {{c2::b}} c}}`` becomes
+    ``a b c``; an opening marker left unclosed has its braces written as
+    entities, so it shows as typed but is no cloze to Anki. A value without
+    ``{{`` is returned unchanged (the default wire stays byte-identical).
+    """
+    if "{{" not in value:
+        return value
+    replaced = 1
+    while replaced:
+        value, replaced = _CLOZE_RE.subn(r"\1", value)
+    return _CLOZE_OPEN_RE.sub(r"&#123;&#123;\1", value)
+
+
 # Used to normalize a stored first-field value to the same key Anki dedups on.
 _HTML_TAG_RE = re.compile(r"<[^>]+>")
 _SOUND_REF_RE = re.compile(r"\[(?:sound|anki:play[^\]]*):[^\]]*\]", re.IGNORECASE)
@@ -497,6 +529,10 @@ def build_note(
         marker_field = config.card_type_marker_fields.get(config.card_type, "")
         if marker_field:
             fields[marker_field] = "x"
+
+    # No field may carry cloze markup: on a non-Cloze note type Anki refuses
+    # the note outright (see _CLOZE_RE). Mining never writes clozes itself.
+    fields = {name: _defuse_cloze(value) for name, value in fields.items()}
 
     note: dict = {
         "deckName": config.anki_deck_name,

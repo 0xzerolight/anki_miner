@@ -210,6 +210,7 @@ def test_tree_hash_is_path_and_content_sensitive_but_ignores_bytecode(tmp_path):
     assert exporter._sha256_tree(first) != original
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX symlinks and FIFOs")
 def test_tree_hash_rejects_symlinks_and_special_files(tmp_path):
     tree = tmp_path / "tree"
     tree.mkdir()
@@ -457,7 +458,10 @@ def test_input_root_symlinks_are_rejected(tmp_path):
     target = tmp_path / "target"
     target.mkdir()
     linked = tmp_path / "linked"
-    linked.symlink_to(target, target_is_directory=True)
+    try:
+        linked.symlink_to(target, target_is_directory=True)
+    except OSError as exc:
+        pytest.skip(f"directory symlinks unavailable: {exc}")
     with pytest.raises(exporter.GoldenExportError, match="must not be a symlink"):
         exporter._normalise_input_path(linked, label="test input")
 

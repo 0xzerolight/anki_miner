@@ -12,8 +12,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Fixed
 
-- An API reading run whose word names a `line_text` inside a longer unit (a quoted speech, which the splitter keeps whole) now gives the card that sentence rather than the whole unit: the unit is cut around it for the run (a 241-character speech became the card's sentence where one 33-character sentence of it was named).
-### Removed
+- A card whose dictionary glossary holds Anki cloze markup (`{{c1::…}}`, as some example sentences in Bee's Ultimate Grammar Dictionary do) is no longer refused by Anki on a non-Cloze note type with "cannot create note for unknown reason": the markup is unwrapped to its text in every field before the note is sent.
+- An API reading run whose word names a `line_text` inside a longer unit (a quoted speech, which the splitter keeps whole) now gives the card that sentence rather than the whole unit: the unit is cut around it for the run (a 241-character speech became the card's sentence where one 33-character sentence of it was named).### Removed
 
 ## [3.12.0] - 2026-11-08
 
