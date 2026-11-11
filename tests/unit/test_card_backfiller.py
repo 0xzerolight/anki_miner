@@ -1648,6 +1648,7 @@ def zh_backfill_config(test_config):
     mapping is restored here — the scan is about what the hooks render, not
     about a first-visit mapping the user has yet to do.
     """
+    pytest.importorskip("jieba")
     config = switch_language(test_config, "zh")
     return replace(
         config,
