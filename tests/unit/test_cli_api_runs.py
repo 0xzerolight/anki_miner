@@ -786,3 +786,44 @@ def test_an_audio_file_that_does_not_open_fails_its_run(services, tmp_path, vide
     services.check_audio.side_effect = ApiError("AUDIO_UNREADABLE", "The audio file cannot be opened")
     [verdict] = runs.mine_runs(_audio_run(tmp_path), threading.Event())
     assert (verdict["error"], verdict["file"]) == ("AUDIO_UNREADABLE", None)
+
+
+# --- a named sentence of a long quoted unit is the card's sentence (field report: 241 characters) ---------------
+_QUOTE = (
+    "「ホームステイとは、たんなる魂の修行ではなく、テスト期間のことなのです。言うなれば魂の仮運転ですね。"
+    "となると、ステイ先は当然、あなたがたご自身の家庭ということになる。でも最初からそれを教えてしまうと、"
+    "ぜんぜんおもしろくないので、隠してました」"
+)
+_NAMED = "となると、ステイ先は当然、あなたがたご自身の家庭ということになる。"
+
+
+def _book(*texts):
+    return ReadingDocument(
+        title="カラフル",
+        kind="book",
+        series="カラフル",
+        episode="32",
+        units=[ReadingUnit(text=t, index=i, location_label=f"p.{i}") for i, t in enumerate(texts)],
+    )
+
+
+def test_a_unit_holding_a_named_line_among_more_text_is_cut_around_it():
+    from anki_miner.cli.api.files import WordRequest
+
+    doc = runs.cut_at_named_lines(_book("前の文。", _QUOTE, "後の文。"), [WordRequest("となると", line_text=_NAMED)])
+    texts = [u.text for u in doc.units]
+    assert _NAMED in texts, texts
+    assert "".join(texts) == "前の文。" + _QUOTE + "後の文。", "nothing lost, nothing added"
+    assert [u.index for u in doc.units] == list(range(len(doc.units))), "renumbered in document order"
+    assert {u.location_label for u in doc.units if u.text != "前の文。" and u.text != "後の文。"} == {"p.1"}
+
+
+def test_nothing_is_cut_for_a_whole_unit_no_match_or_a_unit_index():
+    from anki_miner.cli.api.files import WordRequest
+
+    book = _book("前の文。", _QUOTE)
+    assert runs.cut_at_named_lines(book, [WordRequest("前", line_text="前の文。")]) is book
+    assert runs.cut_at_named_lines(book, [WordRequest("x", line_text="どこにもない文。")]) is book
+    named = [WordRequest("となると", line_text=_NAMED), WordRequest("前", unit_index=0)]
+    assert runs.cut_at_named_lines(book, named) is book, "a unit_index counts the source's own units"
+    assert runs.cut_at_named_lines(book, [WordRequest("前")]) is book

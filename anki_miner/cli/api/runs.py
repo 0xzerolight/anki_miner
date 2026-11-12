@@ -19,7 +19,7 @@ import logging
 import math
 import shutil
 import threading
-from collections.abc import Callable, Iterator, Mapping
+from collections.abc import Callable, Iterator, Mapping, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass, replace
 from enum import Enum
@@ -39,7 +39,7 @@ from anki_miner.cli.api.contract import (
     ApiError,
     setup_failure,
 )
-from anki_miner.cli.api.files import Episode, RunFile
+from anki_miner.cli.api.files import Episode, RunFile, WordRequest
 from anki_miner.cli.api.jobs import RunFailed, verdict
 from anki_miner.cli.api.lines import Fates, LineWords, WordSelection, line_merges, named_word
 from anki_miner.cli.api.render import Rendered, RenderService
@@ -71,6 +71,7 @@ from anki_miner.models import (
     TokenizedWord,
     classify_result,
 )
+from anki_miner.models.reading import ReadingDocument, ReadingUnit
 from anki_miner.orchestration.episode_processor import reading_cleanup
 from anki_miner.presenters.null_presenter import NullPresenter
 from anki_miner.services.anki_service import AnkiService
@@ -305,6 +306,50 @@ def _mine(
         shutil.rmtree(folder / MEDIA, ignore_errors=True)
 
 
+def cut_at_named_lines(document: ReadingDocument, requests: Sequence[WordRequest]) -> ReadingDocument:
+    """The document with each unit that holds a requested ``line_text`` among more text cut around it.
+
+    A unit is the splitter's sentence, and a terminator inside 「…」 never ends
+    one (``sentence_splitter``), so a long quoted speech is one unit -- 241
+    characters in a field report -- and its card took all of it although the
+    caller named one sentence of it (``line_text``). Here the unit becomes the
+    text before, the named sentence and the text after, so the card's sentence,
+    its bold, furigana and reading are that sentence's. Only for this run, only
+    an exact match, and never when a request names a ``unit_index``: those
+    count the units as the source has them. A document with nothing to cut is
+    returned as it is.
+    """
+    if any(request.unit_index is not None for request in requests):
+        return document
+    needles = sorted(
+        {request.line_text.strip() for request in requests if request.line_text and request.line_text.strip()},
+        key=len,
+        reverse=True,
+    )
+    if not needles:
+        return document
+    pieces: list[ReadingUnit] = []
+    cut = False
+    for unit in document.units:
+        texts = [unit.text]
+        for needle in needles:
+            split: list[str] = []
+            for text in texts:
+                at = text.find(needle)
+                if at < 0 or text.strip() == needle:
+                    split.append(text)
+                    continue
+                split.extend(part for part in (text[:at], needle, text[at + len(needle) :]) if part.strip())
+            texts = split
+        cut = cut or len(texts) > 1
+        pieces.extend(replace(unit, text=text) for text in texts)
+    if not cut:
+        return document
+    # The index is document order and each card's dummy start time: renumbered, in order.
+    units = [replace(unit, index=i) for i, unit in enumerate(pieces)]
+    return replace(document, units=units)
+
+
 def _mine_reading(
     config: AnkiMinerConfig,
     episode: Episode,
@@ -336,6 +381,7 @@ def _mine_reading(
             anki_write_state=AnkiWriteState.NO_NOTE_WRITE,
         )
         return choose([], [], [], math.inf), stopped
+    document = cut_at_named_lines(document, episode.words)
     cleanup = reading_cleanup(document)
     entries = parser.reading_entries(document.units, subtitle_cleanup=cleanup)
     selection = choose(
