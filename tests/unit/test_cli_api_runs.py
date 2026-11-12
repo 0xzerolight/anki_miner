@@ -848,3 +848,20 @@ def test_a_row_after_a_cut_reports_the_sources_unit(services, tmp_path) -> None:
     named, after = _result_file(tmp_path)["words"]
     assert (named["unit_index"], named["location"], named["sentence"]) == (1, "p.1", _NAMED)
     assert (after["unit_index"], after["location"], after["sentence"]) == (2, "p.2", "後の文。")
+
+
+@pytest.mark.parametrize(
+    "named",
+    [
+        [_NAMED, _QUOTE],  # a sentence inside a unit another word names whole
+        [_NAMED, "言うなれば魂の仮運転ですね。" + _NAMED],  # nested
+        ["言うなれば魂の仮運転ですね。" + _NAMED, _NAMED + "でも最初から"],  # overlapping
+    ],
+)
+def test_a_cut_never_splits_another_named_line(named):
+    from anki_miner.cli.api.files import WordRequest
+
+    doc, _sources = runs.cut_at_named_lines(_book("前の文。", _QUOTE), [WordRequest("w", line_text=t) for t in named])
+    texts = [u.text for u in doc.units]
+    assert all(any(t in text for text in texts) for t in named), texts
+    assert "".join(texts) == "前の文。" + _QUOTE, "nothing lost, nothing added"
