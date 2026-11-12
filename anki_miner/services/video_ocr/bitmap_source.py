@@ -19,9 +19,11 @@ from __future__ import annotations
 
 import logging
 import re
+import threading
 from dataclasses import dataclass
 from pathlib import Path
 
+from anki_miner.exceptions import OperationCancelled
 from anki_miner.services.video_ocr.errors import FrameSourceError
 from anki_miner.utils.audio_track_detector import get_video_size, list_subtitle_streams
 from anki_miner.utils.ffmpeg_resolver import resolve_ffprobe
@@ -82,8 +84,13 @@ def vobsub_index(path: Path) -> Path | None:
     return idx if idx.is_file() and sub.is_file() else None
 
 
-def track_end_seconds(path: Path, sub_index: int, ffprobe_cmd: str) -> float | None:
-    """When subtitle track *sub_index* of *path* ends: its last packet's time plus duration; None on failure."""
+def track_end_seconds(
+    path: Path, sub_index: int, ffprobe_cmd: str, cancel_event: threading.Event | None = None
+) -> float | None:
+    """When subtitle track *sub_index* of *path* ends: its last packet's time plus duration; None on failure.
+
+    Raises ``OperationCancelled`` when *cancel_event* stopped the listing.
+    """
     cmd = [
         ffprobe_cmd,
         "-v",
@@ -96,7 +103,9 @@ def track_end_seconds(path: Path, sub_index: int, ffprobe_cmd: str) -> float | N
         "csv=p=0",
         str(path),
     ]
-    done = run_supervised(cmd, timeout_s=_PACKET_PROBE_TIMEOUT_S, op="ffprobe subtitle-packets")
+    done = run_supervised(cmd, timeout_s=_PACKET_PROBE_TIMEOUT_S, cancel=cancel_event, op="ffprobe subtitle-packets")
+    if done.state is SupervisedState.CANCELLED:
+        raise OperationCancelled("Video OCR scan cancelled")
     if done.state is not SupervisedState.COMPLETED:
         logger.warning(
             "Video OCR: could not list the subtitle packets of %s: %s",
@@ -127,11 +136,14 @@ def track_end_seconds(path: Path, sub_index: int, ffprobe_cmd: str) -> float | N
     return end
 
 
-def pgs_composition_size(path: Path, sub_index: int, ffprobe_cmd: str) -> tuple[int, int] | None:
+def pgs_composition_size(
+    path: Path, sub_index: int, ffprobe_cmd: str, cancel_event: threading.Event | None = None
+) -> tuple[int, int] | None:
     """The frame size PGS track *sub_index* of *path* is authored for, read from its first packet; None on failure.
 
     ffprobe sizes a PGS track only by decoding a cue within its probe window
     (5 s / 5 MB of the file), and a film's first line usually comes later.
+    Raises ``OperationCancelled`` when *cancel_event* stopped the read.
     """
     cmd = [
         ffprobe_cmd,
@@ -148,7 +160,9 @@ def pgs_composition_size(path: Path, sub_index: int, ffprobe_cmd: str) -> tuple[
         "default=nw=1:nk=1",
         str(path),
     ]
-    done = run_supervised(cmd, timeout_s=_PACKET_PROBE_TIMEOUT_S, op="ffprobe subtitle-size")
+    done = run_supervised(cmd, timeout_s=_PACKET_PROBE_TIMEOUT_S, cancel=cancel_event, op="ffprobe subtitle-size")
+    if done.state is SupervisedState.CANCELLED:
+        raise OperationCancelled("Video OCR scan cancelled")
     if done.state is not SupervisedState.COMPLETED or done.returncode != 0:
         logger.warning(
             "Video OCR: could not read the first subtitle packet of %s: %s",
@@ -184,7 +198,9 @@ def container_start_seconds(path: Path, ffprobe_cmd: str) -> float:
     return max(start, 0.0)
 
 
-def open_bitmap_source(config, path: Path, sub_index: int | None = None) -> BitmapSource:
+def open_bitmap_source(
+    config, path: Path, sub_index: int | None = None, cancel_event: threading.Event | None = None
+) -> BitmapSource:
     """Resolve *path* (a video, a ``.sup``, or either half of a VobSub pair) to the image track to read.
 
     *sub_index* is the subtitle-track position (``-map 0:s:N``) chosen for a
@@ -193,7 +209,8 @@ def open_bitmap_source(config, path: Path, sub_index: int | None = None) -> Bitm
     size gives it in its first packet), else the video's, else 1920x1080, made
     even for the crop. Raises :class:`FrameSourceError` when the pair is
     incomplete, the track is missing or not an image track, or its timing
-    cannot be read.
+    cannot be read, and ``OperationCancelled`` when *cancel_event* stopped the
+    packet reads (they read the whole file).
     """
     target = path
     if path.suffix.lower() in {".idx", ".sub"}:
@@ -214,12 +231,12 @@ def open_bitmap_source(config, path: Path, sub_index: int | None = None) -> Bitm
         width, height = stream.width, stream.height
     else:
         pgs = (
-            pgs_composition_size(target, stream.sub_index, ffprobe)
+            pgs_composition_size(target, stream.sub_index, ffprobe, cancel_event)
             if stream.codec_name == "hdmv_pgs_subtitle"
             else None
         )
         width, height = pgs or get_video_size(target, ffprobe) or _FALLBACK_SIZE
-    end = track_end_seconds(target, stream.sub_index, ffprobe)
+    end = track_end_seconds(target, stream.sub_index, ffprobe, cancel_event)
     if end is None:
         raise FrameSourceError(f"{target.name}: the subtitle track's timing could not be read")
     # A bare image-subtitle file keeps its own clock: its "start" is its first cue.
