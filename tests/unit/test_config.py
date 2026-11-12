@@ -385,6 +385,25 @@ def test_merge_incomplete_cues_defaults_off():
     assert AnkiMinerConfig().merge_incomplete_cues is False
 
 
+@pytest.mark.parametrize(
+    ("line", "expected"),
+    [
+        ("集合は10:30だから遅れないで", "集合は10:30だから遅れないで"),
+        ("我们8:30在学校门口见面", "我们8:30在学校门口见面"),
+        ("完成まで2〜3日かかります", "完成まで2〜3日かかります"),
+        ("完成まで2～3日かかります", "完成まで2～3日かかります"),
+        ("田中：おはよう", "おはよう"),
+        ("♪〜", ""),
+    ],
+)
+def test_default_cleanup_strips_labels_and_music_but_not_times_or_ranges(line, expected):
+    """The default cleanup (on for ja, zh, yue) never cuts a clock time or a number range."""
+    from anki_miner.config.config import DEFAULT_SUBTITLE_CLEANUP_PATTERN
+    from anki_miner.services.subtitle_parser import compile_subtitle_regex_filter
+
+    assert compile_subtitle_regex_filter(DEFAULT_SUBTITLE_CLEANUP_PATTERN, "").sub("", line) == expected
+
+
 def test_reading_min_occurrence_default_and_replace():
     """reading_min_occurrence defaults to 1 (filter off) and round-trips via replace."""
     from dataclasses import replace
