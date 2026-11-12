@@ -15,6 +15,8 @@ from anki_miner.languages.profile import CARD_FRONT_KEY
 from anki_miner.languages.registry import get_profile
 from anki_miner.languages.switching import switch_language
 from anki_miner.languages.zh.render import ZhMeasureWordHook, ZhToneColorHook
+from anki_miner.models import CardPayload, MediaData
+from anki_miner.services.anki_note_builder import build_note
 from anki_miner.services.card_backfiller import (
     BACKFILL_TAG,
     BackfillOptions,
@@ -979,6 +981,37 @@ class TestScanDefinitionGlossary:
         changes = _changes_by_key(plan, 1)
         assert changes["definition"] == changes["glossary"] == "<mosquito><dollar>"
         assert batches == ["cedict", "canto"]
+
+
+class TestScanClozeMarkup:
+    """Backfill writes what mining writes: build_note unwraps a dictionary's cloze markup."""
+
+    _CLOZE_GLOSS = '<div class="yomitan-glossary"><ol><li data-dictionary="D">砂{{c1::まみれ}}の手</li></ol></div>'
+
+    def _scan(self, config, stored: str, overwrite: bool) -> BackfillPlan:
+        anki = FakeAnkiService({1: _note(1, word="猫", ExpressionReading="ねこ", definition=stored)})
+        defs = FakeDefinitionService(defs={"猫": self._CLOZE_GLOSS})
+        return scan_backfill(anki, config, _services(defs=defs), _options({"definition"}, overwrite=overwrite))
+
+    def test_an_empty_field_is_filled_without_the_markup(self, backfill_config):
+        value = _changes_by_key(self._scan(backfill_config, "", overwrite=False), 1)["definition"]
+        assert "砂まみれの手" in value
+        assert "{{c1::" not in value
+
+    def test_overwrite_of_the_mined_value_is_identical(self, backfill_config, make_tokenized_word):
+        mined_definition = attach_card_style_block(self._CLOZE_GLOSS, dict_css_entries=[("d-id", "D", "DICTCSS")])
+        mined = build_note(
+            CardPayload(
+                word=make_tokenized_word(surface="猫", lemma="猫"), media=MediaData(), definition=mined_definition
+            ),
+            backfill_config,
+            set(),
+        ).note["fields"]["definition"]
+
+        plan = self._scan(backfill_config, mined, overwrite=True)
+
+        assert plan.notes == ()
+        assert plan.identical_skips == 1
 
 
 class TestScanReadingFurigana:
