@@ -165,7 +165,7 @@ _CLOZE_RE = re.compile(
 _CLOZE_OPEN_RE = re.compile(r"\{\{(c[\d,]+::)", re.IGNORECASE)
 
 
-def _defuse_cloze(value: str) -> str:
+def defuse_cloze(value: str) -> str:
     """A field value with Anki's cloze markup taken out.
 
     ``{{c1::answer::hint}}`` becomes ``answer`` (the text the dictionary meant
@@ -532,7 +532,7 @@ def build_note(
 
     # No field may carry cloze markup: on a non-Cloze note type Anki refuses
     # the note outright (see _CLOZE_RE). Mining never writes clozes itself.
-    fields = {name: _defuse_cloze(value) for name, value in fields.items()}
+    fields = {name: defuse_cloze(value) for name, value in fields.items()}
 
     note: dict = {
         "deckName": config.anki_deck_name,

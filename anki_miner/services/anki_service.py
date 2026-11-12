@@ -1030,13 +1030,13 @@ class AnkiService:
             )
 
         not_created: dict[str, str] = {}
-        scanned_vocabulary_admission = self._scan_is_narrowed()
-        if scanned_vocabulary_admission:
-            candidate_payloads, refused = self._admit_against_scanned_vocabulary(word_data_list)
+        if self._scan_is_narrowed():
+            candidate_payloads, refused, scan_admitted = self._admit_against_scanned_vocabulary(word_data_list)
             skipped_duplicates = len(refused)
             not_created.update(dict.fromkeys(refused, "duplicate"))
         else:
             candidate_payloads = list(word_data_list)
+            scan_admitted = [False] * len(candidate_payloads)
         probed_duplicates = skipped_duplicates
 
         # Create surviving notes in batches. AnkiConnect accepts arbitrary array
@@ -1082,6 +1082,7 @@ class AnkiService:
                     break
 
                 candidate_batch = candidate_payloads[i : i + batch_size]
+                batch_scan_admitted = scan_admitted[i : i + batch_size]
                 # Probe each chunk only after the prior chunk's addNotes response.
                 # A repeated first field crossing the 100-note boundary then sees
                 # the first note in Anki and is rejected before any of its media is
@@ -1089,22 +1090,29 @@ class AnkiService:
                 # duplicates, but still validates every locally admitted note with
                 # duplicates allowed so bad fields fail before media side effects.
                 probe_notes = [self._build_note(item, set()).note for item in candidate_batch]
-                if scanned_vocabulary_admission:
-                    self._validate_notes_addible(probe_notes)
-                    batch = candidate_batch
-                else:
-                    is_duplicate = self._probe_duplicates(probe_notes)
-                    not_created.update(
-                        (item.word.mined_form, "duplicate")
-                        for item, duplicate in zip(candidate_batch, is_duplicate, strict=True)
-                        if duplicate
+                self._validate_notes_addible(
+                    [note for note, admitted in zip(probe_notes, batch_scan_admitted, strict=True) if admitted]
+                )
+                probe_flags = iter(
+                    self._probe_duplicates(
+                        [note for note, admitted in zip(probe_notes, batch_scan_admitted, strict=True) if not admitted]
                     )
-                    batch = [
-                        item for item, duplicate in zip(candidate_batch, is_duplicate, strict=True) if not duplicate
-                    ]
-                    batch_duplicates = sum(is_duplicate)
-                    skipped_duplicates += batch_duplicates
-                    probed_duplicates += batch_duplicates
+                )
+                is_duplicate = [False if admitted else next(probe_flags) for admitted in batch_scan_admitted]
+                not_created.update(
+                    (item.word.mined_form, "duplicate")
+                    for item, duplicate in zip(candidate_batch, is_duplicate, strict=True)
+                    if duplicate
+                )
+                batch = [item for item, duplicate in zip(candidate_batch, is_duplicate, strict=True) if not duplicate]
+                batch_allow_duplicate = [
+                    admitted
+                    for admitted, duplicate in zip(batch_scan_admitted, is_duplicate, strict=True)
+                    if not duplicate
+                ]
+                batch_duplicates = sum(is_duplicate)
+                skipped_duplicates += batch_duplicates
+                probed_duplicates += batch_duplicates
 
                 if not batch:
                     continue
@@ -1118,14 +1126,14 @@ class AnkiService:
                 # Build notes array for this batch (field mapping lives in
                 # anki_note_builder).
                 notes = []
-                for item in batch:
+                for item, allow_duplicate in zip(batch, batch_allow_duplicate, strict=True):
                     built = self._build_note(item, stored_files)
                     if built.used_precomputed_bold:
                         bold_used += 1
                     if built.used_bold_fallback:
                         bold_fallback += 1
                     note = built.note
-                    if scanned_vocabulary_admission:
+                    if allow_duplicate:
                         note["options"] = {"allowDuplicate": True}
                     notes.append(note)
 
@@ -1270,10 +1278,13 @@ class AnkiService:
         ``AnkiConnectionError`` when Anki does not answer.
         """
         if self._scan_is_narrowed():
-            return set(self._admit_against_scanned_vocabulary(word_data_list)[1])
-        notes = [self._build_note(item, set()).note for item in word_data_list]
+            candidates, refused, scan_admitted = self._admit_against_scanned_vocabulary(word_data_list)
+        else:
+            candidates, refused, scan_admitted = list(word_data_list), [], [False] * len(word_data_list)
+        probed = [item for item, admitted in zip(candidates, scan_admitted, strict=True) if not admitted]
+        notes = [self._build_note(item, set()).note for item in probed]
         flags = self._probe_duplicates(notes) if notes else []
-        return {item.word.mined_form for item, dup in zip(word_data_list, flags, strict=True) if dup}
+        return set(refused) | {item.word.mined_form for item, dup in zip(probed, flags, strict=True) if dup}
 
     def _reset_last_run(self) -> None:
         """Clear the per-call receipts before a new ``create_cards_batch`` run."""
@@ -1286,10 +1297,14 @@ class AnkiService:
 
     def _admit_against_scanned_vocabulary(
         self, word_data_list: list[CardPayload]
-    ) -> tuple[list[CardPayload], list[str]]:
+    ) -> tuple[list[CardPayload], list[str], list[bool]]:
         """Admit payloads whose first field is absent from the scanned vocabulary.
 
-        Returns the admitted payloads, in order, and the refused payloads' mined forms.
+        Returns the admitted payloads, in order, the refused payloads' mined
+        forms, and per admitted payload whether the scan admitted it. A first
+        field outside the mining language's script (vi ``mua``) never reaches
+        the scan, so its absence there proves nothing: it is passed on to the
+        per-note duplicate probe instead, with Anki's duplicate rule in force.
         """
         # The normal Phase-2 admission query deliberately leaves out the
         # excluded decks and, when ignored, all-suspended notes. Reuse that same answer here, then allow admitted notes past
@@ -1302,6 +1317,7 @@ class AnkiService:
         seen: set[str] = set()
         candidate_payloads: list[CardPayload] = []
         refused: list[str] = []
+        scan_admitted: list[bool] = []
         for item in word_data_list:
             note = self._build_note(item, set()).note
             fields = note.get("fields") or {}
@@ -1312,9 +1328,10 @@ class AnkiService:
                 refused.append(item.word.mined_form)
             else:
                 candidate_payloads.append(item)
+                scan_admitted.append(not key or self._is_target_script(key))
             if key:
                 seen.add(key)
-        return candidate_payloads, refused
+        return candidate_payloads, refused, scan_admitted
 
     def _submit_add_notes(self, notes: list[dict]) -> list[int | None]:
         """POST one ``addNotes`` request under the D30 write-state guard.

@@ -303,14 +303,30 @@ class TestExpressionAcrossParticle:
 class TestAdverbialParticleEnd:
     """A word + particle JMdict lists as an adverb, expression, pronoun or conjunction merges."""
 
-    TAGS = {"本当に": {"adv"}, "時に": {"adv", "conj"}, "急いで": {"adv"}, "神様": {"n"}}
+    TAGS = {"本当に": {"adv"}, "時に": {"adv", "conj"}, "急いで": {"adv"}, "神様": {"n"}, "外に": {"adv"}}
 
-    def _matcher(self, dictionary, tags=TAGS):
+    def _matcher(self, dictionary, tags=TAGS, readings=None):
         return CompoundDictionaryMatcher(
             lambda terms: dictionary & set(terms),
             _rule(),
+            reading_lookup=None if readings is None else (lambda headword: readings.get(headword, [])),
             entry_tags=None if tags is None else (lambda terms: {t: tags.get(t, set()) for t in terms}),
         )
+
+    def test_a_word_read_otherwise_than_the_entry_keeps_its_particle(self):
+        # 外に出る: the line says そとに; JMdict's 外に is ほかに 'besides'.
+        tokens = [
+            _tok("外", "名詞", "普通名詞", kana="ソト"),
+            _tok("に", "助詞", "格助詞", kana="ニ"),
+            _tok("出る", "動詞", "一般", lemma="出る", kana="デル", orth_base="出る"),
+        ]
+        out = self._matcher({"外に"}, readings={"外に": ["ほかに"]}).merge_line("外に出る", tokens)
+        assert [t.surface for t in out] == ["外", "に", "出る"]
+
+    def test_a_word_read_as_the_entry_still_merges_with_readings_wired(self):
+        tokens = [_tok("本当", "名詞", "普通名詞", kana="ホントウ"), _tok("に", "助詞", "格助詞", kana="ニ")]
+        out = self._matcher({"本当に"}, readings={"本当に": ["ほんとうに"]}).merge_line("本当に", tokens)
+        assert [t.surface for t in out] == ["本当に"]
 
     def test_merges_an_adverb_ending_on_a_particle(self):
         tokens = [_tok("本当", "名詞", "普通名詞", kana="ホントウ"), _tok("に", "助詞", "格助詞", kana="ニ")]

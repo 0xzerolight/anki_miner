@@ -181,6 +181,32 @@ def test_zip_holding_a_book_imports(tmp_path: Path):
     assert (tmp_path / "dicts" / result.dict_id / SOURCE_DIR / "stardict.zip").is_file()
 
 
+_APPLEDOUBLE_STUB = b"\x00\x05\x16\x07\x00\x02\x00\x00Mac OS X        "
+
+
+def test_a_zip_made_by_finder_compress_imports(tmp_path: Path):
+    archive = build_stardict_zip(tmp_path / "mac.zip")
+    with zipfile.ZipFile(archive, "a") as zf:
+        for part in ("ifo", "idx.gz", "dict.dz"):
+            zf.writestr(f"__MACOSX/test-book/._test-book.{part}", _APPLEDOUBLE_STUB)
+
+    assert is_stardict_source(archive)
+    assert import_stardict(archive, tmp_path / "dicts", language="es").entry_count == 2
+
+
+def test_a_tarball_made_by_macos_tar_imports(tmp_path: Path):
+    archive = tmp_path / "mac.tar.gz"
+    ifo = build_stardict_files(tmp_path / "staging" / "test-book")
+    with tarfile.open(archive, "w:gz") as tf:
+        for path in sorted(ifo.parent.iterdir()):
+            sidecar = tarfile.TarInfo(f"test-book/._{path.name}")
+            sidecar.size = len(_APPLEDOUBLE_STUB)
+            tf.addfile(sidecar, io.BytesIO(_APPLEDOUBLE_STUB))
+            tf.add(path, arcname=f"test-book/{path.name}")
+
+    assert import_stardict(archive, tmp_path / "dicts", language="es").entry_count == 2
+
+
 def test_two_books_in_one_archive_are_refused(tmp_path: Path):
     archive = tmp_path / "two.tar.gz"
     one = build_stardict_files(tmp_path / "one", name="one")

@@ -27,9 +27,21 @@ own ``monkeypatch`` on top of this call.
 
 from __future__ import annotations
 
+import signal
 from unittest.mock import MagicMock
 
 import pytest
+
+
+@pytest.fixture(autouse=True)
+def _restore_signal_handlers():
+    """An in-process ``--api`` call keeps its SIGINT/SIGTERM handlers until the process exits
+    (``cli.api.main``); the test process gets its own back after each test."""
+    saved = {signum: signal.getsignal(signum) for signum in (signal.SIGINT, signal.SIGTERM)}
+    yield
+    for signum, handler in saved.items():
+        if handler is not None:
+            signal.signal(signum, handler)
 
 
 @pytest.fixture

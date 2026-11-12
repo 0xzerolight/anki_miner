@@ -33,12 +33,15 @@ from anki_miner.cli.api.contract import (
     JOB_COMMANDS,
     ApiError,
 )
-from anki_miner.cli.entry import _prepare_process, _private_stdout
+from anki_miner.cli.entry import _prepare_process, _private_stdout, _set_cancel_on_signals
 
 logger = logging.getLogger(__name__)
 
 #: ``setup --model``: model_manager.KNOWN_MODELS, named here so parsing a command line imports no ASR code.
 SPEECH_MODELS = ("large-v3", "small")
+
+#: The commands a signal cancels (API.md); a signal ends any other call without a verdict.
+_CANCELLABLE = frozenset({"mine", "render", "setup", "inspect", *JOB_COMMANDS})
 
 
 class _UsageError(Exception):
@@ -87,13 +90,19 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: Sequence[str]) -> int:
     """Run one API command; its verdict is the only line on stdout."""
+    argv = list(argv)
+    cancel = threading.Event()
+    if argv[:1] and argv[0] in _CANCELLABLE:
+        # Never restored: a signal that lands after the last run, even after the
+        # verdict is written, leaves the result as it is and the exit code 0.
+        _set_cancel_on_signals(cancel)
     with _private_stdout() as write:
-        verdict = _verdict(list(argv))
+        verdict = _verdict(argv, cancel)
         write((json.dumps(verdict, ensure_ascii=True) + "\n").encode("ascii"))
     return 0
 
 
-def _verdict(argv: list[str]) -> dict[str, object]:
+def _verdict(argv: list[str], cancel: threading.Event) -> dict[str, object]:
     command = argv[0] if argv and argv[0] in COMMANDS else None
     try:
         args = build_parser().parse_args(argv)
@@ -103,7 +112,7 @@ def _verdict(argv: list[str]) -> dict[str, object]:
         return _ok(command)
     try:
         _prepare_process()
-        return _dispatch(args)
+        return _dispatch(args, cancel)
     except ApiError as exc:
         return _failed(args.command, exc)
     except Exception as exc:  # noqa: BLE001 — the caller always gets a verdict, never a traceback
@@ -111,7 +120,7 @@ def _verdict(argv: list[str]) -> dict[str, object]:
         return _failed(args.command, ApiError(INTERNAL, f"{type(exc).__name__}: {exc}"))
 
 
-def _dispatch(args: argparse.Namespace) -> dict[str, object]:
+def _dispatch(args: argparse.Namespace, cancel: threading.Event) -> dict[str, object]:
     from anki_miner.cli.api import commands
 
     if args.command == "version":
@@ -127,7 +136,7 @@ def _dispatch(args: argparse.Namespace) -> dict[str, object]:
         commands.settings_export(args.profile, args.language, args.out)
         return _ok("settings-export")
     if args.command == "render":
-        return _render(args)
+        return _render(args, cancel)
     if args.command == "media":
         from anki_miner.cli.api import files, media
 
@@ -140,12 +149,12 @@ def _dispatch(args: argparse.Namespace) -> dict[str, object]:
             result = settings_write.import_settings(args.file, args.language, name=args.name, profile_id=args.profile)
         return _ok("settings-import", result=result)
     if args.command == "setup":
-        return _setup(args)
+        return _setup(args, cancel)
     if args.command == "inspect":
-        return _inspect(args)
+        return _inspect(args, cancel)
     if args.command in JOB_COMMANDS:
-        return _job(args.command, args.file)
-    return _run(args)
+        return _job(args.command, args.file, cancel)
+    return _run(args, cancel)
 
 
 @contextlib.contextmanager
@@ -163,51 +172,43 @@ def _locked(*, beside_window: bool = False) -> Iterator[None]:
         lock.unlock()
 
 
-def _run(args: argparse.Namespace) -> dict[str, object]:
+def _run(args: argparse.Namespace, cancel: threading.Event) -> dict[str, object]:
     """mine: the run file checked first, then the runs; a real mine under the run lock, a dry run without."""
     from anki_miner.cli.api import files, runs
-    from anki_miner.cli.entry import _cancel_on_signals
 
     job = files.parse_run_file(files.read_json_file(args.run_file))
-    cancel = threading.Event()
     with contextlib.ExitStack() as stack:
         # A dry run writes nothing shared (no Anki, known-words or stats DB): it runs beside the window and other runs.
         if not job.dry_run:
             stack.enter_context(_locked(beside_window=True))
-        stack.enter_context(_cancel_on_signals(cancel))
         verdicts = runs.mine_runs(job, cancel, runs.Kind.DRY_RUN) if job.dry_run else runs.mine_runs(job, cancel)
     # With several runs the call is ok only if every run is; each run carries its own error.
     return {**_ok(args.command, runs=verdicts), "ok": all(v["ok"] for v in verdicts)}
 
 
-def _render(args: argparse.Namespace) -> dict[str, object]:
+def _render(args: argparse.Namespace, cancel: threading.Event) -> dict[str, object]:
     """render: the run file as for mine, no lock (nothing reaches Anki)."""
     from anki_miner.cli.api import files, runs
-    from anki_miner.cli.entry import _cancel_on_signals
 
     job = files.parse_run_file(files.read_json_file(args.run_file))
     if job.dry_run:
         raise ApiError(BAD_RUN_FILE, "dry_run is for mine; render writes nothing to Anki already.")
-    cancel = threading.Event()
-    with _cancel_on_signals(cancel):
-        verdicts = runs.mine_runs(job, cancel, runs.Kind.RENDER)
+    verdicts = runs.mine_runs(job, cancel, runs.Kind.RENDER)
     return {**_ok(args.command, runs=verdicts), "ok": all(v["ok"] for v in verdicts)}
 
 
-def _setup(args: argparse.Namespace) -> dict[str, object]:
+def _setup(args: argparse.Namespace, cancel: threading.Event) -> dict[str, object]:
     """setup: under the run lock; SIGINT/SIGTERM or a ``cancel`` file beside ``--progress`` stop the item in
     flight (CANCELLED, that item not_attempted).
 
     A download cut short resumes on the next call (its resume_key); what finished stays installed and switched on.
     """
     from anki_miner.cli.api import setup
-    from anki_miner.cli.entry import _cancel_on_signals
 
     if args.model is not None and not args.speech_model:
         raise ApiError(BAD_ARGUMENTS, "--model chooses the speech model: give it with --speech-model.")
     extras = setup.Extras(speech_model=args.speech_model, model=args.model, ocr=args.ocr)
-    cancel = threading.Event()
-    with _locked(), _cancel_on_signals(cancel):
+    with _locked():
         outcome = setup.run_setup(args.language, args.profile, args.progress, cancel, extras)
     verdict = _ok(args.command, result=outcome.result)
     if outcome.cancelled:
@@ -215,24 +216,17 @@ def _setup(args: argparse.Namespace) -> dict[str, object]:
     return {**verdict, "ok": not outcome.failed}
 
 
-def _inspect(args: argparse.Namespace) -> dict[str, object]:
+def _inspect(args: argparse.Namespace, cancel: threading.Event) -> dict[str, object]:
     """inspect: no lock (it writes only the unit lists asked for); SIGINT/SIGTERM stop the call (CANCELLED)."""
     from anki_miner.cli.api import inspect
-    from anki_miner.cli.entry import _cancel_on_signals
 
-    cancel = threading.Event()
-    with _cancel_on_signals(cancel):
-        return _ok(args.command, result=inspect.call(args.file, cancel))
+    return _ok(args.command, result=inspect.call(args.file, cancel))
 
 
-def _job(command: str, file: Path) -> dict[str, object]:
+def _job(command: str, file: Path, cancel: threading.Event) -> dict[str, object]:
     """A job command (``jobs.py``): no lock, as each writes only its run folders and the files it names;
     SIGINT/SIGTERM stop the current run and every later one."""
-    from anki_miner.cli.entry import _cancel_on_signals
-
-    cancel = threading.Event()
-    with _cancel_on_signals(cancel):
-        verdicts = _job_call(command)(file, cancel)
+    verdicts = _job_call(command)(file, cancel)
     return {**_ok(command, runs=verdicts), "ok": all(v["ok"] for v in verdicts)}
 
 

@@ -58,6 +58,7 @@ from anki_miner.services.anki_note_builder import (
     _RAW_HTML_FIELD_KEYS,
     _SOUND_REF_RE,
     _strip_for_dedup,
+    defuse_cloze,
     field_mapping_error,
     field_target_collision_message,
     missing_note_type_message,
@@ -1101,6 +1102,11 @@ def _compute_note_changes(
             if audio_path is not None:
                 proposals["expression_audio"] = f"[sound:{audio_path.name}]"
                 media_paths["expression_audio"] = audio_path
+
+    # build_note's cloze pass, last as in mining (it runs on every field after
+    # the style block and the hooks), so a dictionary's cloze markup lands
+    # unwrapped here too and a mined card compares identical.
+    proposals = {key: defuse_cloze(value) for key, value in proposals.items()}
 
     changes: list[FieldChange] = []
     settled: set[str] = set()

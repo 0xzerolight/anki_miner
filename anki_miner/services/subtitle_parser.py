@@ -1061,7 +1061,9 @@ class SubtitleParserService:
         (手っ取り早い), which the dictionary attests (てっとりばやい). Same
         selection policy as ``attest_merged_readings``, anchored on the
         headword re-tokenize concat: keep it when attested, else the single or
-        edit-distance-closest attested reading. Returns hiragana. ``None``
+        edit-distance-closest attested reading, then the curated
+        ``resolve_reading_override`` keyed on the headword (an inflected span's
+        surface, そう言っ, is no table key). Returns hiragana. ``None``
         when no reading_lookup is wired or the dictionary attests nothing —
         callers fall back to the re-tokenize reading. Only ever called for
         compound synthetics, so plain tokens add zero lookups.
@@ -1078,6 +1080,7 @@ class SubtitleParserService:
                     result = folded[0]
                 else:
                     result = min(folded, key=lambda r: (_edit_distance(r, concat), folded.index(r)))
+                result = resolve_reading_override(headword, result) or result
             self._hw_reading_cache[headword] = result
         return self._hw_reading_cache[headword]
 
@@ -1147,7 +1150,7 @@ class SubtitleParserService:
         """
         return text if self._normalize is None else fold_no_break_spaces(text)
 
-    def _clean_line_text(self, raw_text: str) -> str:
+    def _clean_line_text(self, raw_text: str, *, translation: bool = False) -> str:
         """Full per-line text pipeline shared by the mining and display paths.
 
         Order: markup strip → JP normalization → per-physical-line annotation
@@ -1157,9 +1160,11 @@ class SubtitleParserService:
         by ``_iter_parsed_lines`` (mining) and ``parse_raw_entries`` (display) so
         the shown cue text matches what mining tokenizes. A line that collapses
         to empty is skipped by each caller's existing ``if not text: continue``
-        guard.
+        guard. A *translation* line is another language's text, so it skips
+        the other-script gate.
         """
-        cleaned = clean_subtitle_text(raw_text, normalize=self._normalize, has_target_script=self._has_target_script)
+        gate = None if translation else self._has_target_script
+        cleaned = clean_subtitle_text(raw_text, normalize=self._normalize, has_target_script=gate)
         return self._apply_text_filter(cleaned)
 
     def _load_subs(self, subtitle_file: Path, *, encodings: tuple[str, ...] | None = None):
@@ -2051,6 +2056,7 @@ class SubtitleParserService:
         subtitle_offset: float | None = None,
         *,
         encodings: tuple[str, ...] | None = None,
+        translation: bool = False,
     ) -> list[tuple[float, float, str]]:
         """Parse subtitle file and return raw timing entries without tokenization.
 
@@ -2064,6 +2070,10 @@ class SubtitleParserService:
                 mining language's own ladder; a caller whose file is not in
                 that language passes ``encodings=()`` to skip the ladder and
                 rely on the BOM and charset detection instead.
+            translation: The file is a translation track, not the mining
+                language: its lines skip the mining language's other-script
+                gate (the regex filter still runs), so a kana-only line of a
+                Japanese translation survives a Chinese run.
 
         Returns:
             List of (start_seconds, end_seconds, text) tuples
@@ -2080,7 +2090,7 @@ class SubtitleParserService:
             # Skip ASS/SSA Comment events (same guard as _iter_parsed_lines).
             if getattr(line, "is_comment", None) is True:
                 continue
-            text = self._clean_line_text(line.text)
+            text = self._clean_line_text(line.text, translation=translation)
             if not text:
                 continue
             # The same rule, on the same file timeline, as _iter_parsed_lines.
