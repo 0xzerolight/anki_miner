@@ -75,6 +75,65 @@ def test_the_dry_run_duplicate_check_takes_the_same_branch(test_config, monkeypa
     assert service.duplicate_fronts(items) == {"犬"}
 
 
+def test_a_front_the_scan_cannot_see_keeps_ankis_duplicate_rule(test_config, make_tokenized_word):
+    """vi 'mua' fails the text script gate, so the scan never holds it; its absence proves nothing."""
+    config = replace(test_config, language="vi", ignore_suspended_cards=True)
+    word_field = config.anki_fields["word"]
+    collection = ["mua", "xe"]  # fronts of active, unsuspended cards
+    added: list[dict] = []
+
+    def fake_post(url, action, params=None, timeout=None):
+        if action == "findNotes":
+            return list(range(1, len(collection) + 1))
+        if action == "notesInfo":
+            return [
+                {
+                    "noteId": nid,
+                    "modelName": "Basic",
+                    "fields": {word_field: {"value": collection[nid - 1], "order": 0}},
+                }
+                for nid in params["notes"]
+            ]
+        if action == "canAddNotesWithErrorDetail":
+            return [
+                (
+                    {"canAdd": False, "error": "cannot create note because it is a duplicate"}
+                    if note["fields"][word_field] in collection and not note["options"].get("allowDuplicate")
+                    else {"canAdd": True, "error": None}
+                )
+                for note in params["notes"]
+            ]
+        if action == "addNotes":
+            ids: list[int | None] = []
+            for note in params["notes"]:
+                if note["fields"][word_field] in collection and not (note.get("options") or {}).get("allowDuplicate"):
+                    ids.append(None)
+                else:
+                    added.append(note)
+                    ids.append(1000 + len(added))
+            return ids
+        raise AssertionError(f"unexpected action {action}")
+
+    service = AnkiService(config)
+    items = [
+        CardPayload(
+            word=make_tokenized_word(surface="mua", lemma="mua", sentence="Tôi mua."),
+            media=MediaData(),
+            definition="buy",
+        )
+    ]
+    with (
+        patch("anki_miner.services.anki_service.post_action", side_effect=fake_post),
+        patch.object(service, "_store_media_files_batch", return_value=set()),
+        patch.object(service, "_upload_dict_media_batch"),
+    ):
+        assert service.duplicate_fronts(items) == {"mua"}
+        assert service.create_cards_batch(items) == []
+
+    assert added == []
+    assert service.last_not_created == {"mua": "duplicate"}
+
+
 def test_allowed_duplicates_skip_the_admission(test_config):
     service = AnkiService(replace(test_config, ignore_suspended_cards=True, allow_duplicate_cards=True))
 
