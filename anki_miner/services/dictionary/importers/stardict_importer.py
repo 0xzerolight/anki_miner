@@ -43,6 +43,7 @@ from anki_miner.services.dictionary.importers.plain_index import (
 )
 from anki_miner.services.dictionary.storage import DictRow
 from anki_miner.services.dictionary.zip_safety import MAX_UNCOMPRESSED_BYTES, validate_zip_safe
+from anki_miner.utils.file_utils import is_junk_path
 from anki_miner.utils.logging_ext import log_summary
 
 logger = logging.getLogger(__name__)
@@ -100,7 +101,7 @@ def is_stardict_source(path: Path) -> bool:
             return True
         if zipfile.is_zipfile(path):
             with zipfile.ZipFile(path) as zf:
-                names = [PurePosixPath(n).name for n in zf.namelist()]
+                names = [PurePosixPath(n).name for n in zf.namelist() if not is_junk_path(n)]
             return any(n.lower().endswith(".ifo") for n in names) and "index.json" not in names
     except OSError:
         return False
@@ -156,7 +157,7 @@ def _unpack(
                     raise SetupError(
                         f"Archive uncompressed size exceeds limit ({declared:,} > {MAX_UNCOMPRESSED_BYTES:,} bytes)"
                     )
-                if member.isfile():
+                if member.isfile() and not is_junk_path(member.name):
                     files[member.name] = member
             for suffix, name in _book_members(list(files)).items():
                 extracted = tf.extractfile(files[name])
@@ -169,7 +170,7 @@ def _unpack(
     try:
         with zipfile.ZipFile(source) as zf:
             validate_zip_safe(zf, work)
-            names = [info.filename for info in zf.infolist() if not info.is_dir()]
+            names = [info.filename for info in zf.infolist() if not info.is_dir() and not is_junk_path(info.filename)]
             for suffix, name in _book_members(names).items():
                 with zf.open(name) as stream:
                     _copy_capped(stream, work / f"book{suffix}", budget, cancel_check)
