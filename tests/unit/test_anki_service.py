@@ -5254,7 +5254,11 @@ class TestNotCreatedRecord:
         from dataclasses import replace
 
         service = AnkiService(replace(test_config, excluded_decks=("Archive",)))
-        service._existing_vocab_cache = {service._dedup_key("w0")}
+        service._existing_vocab_cache = {service._dedup_key("犬")}
+        items = [
+            CardPayload(word=make_tokenized_word(surface=front, lemma=front), media=MediaData(), definition="d")
+            for front in ("犬", "猫")
+        ]
         with (
             patch.object(service, "_store_media_files_batch", return_value=set()),
             patch.object(service, "_upload_dict_media_batch"),
@@ -5263,8 +5267,8 @@ class TestNotCreatedRecord:
                 side_effect=[[{"canAdd": True, "error": None}], [10]],
             ),
         ):
-            assert service.create_cards_batch(self._items(make_tokenized_word, 2)) == [10]
-        assert service.last_not_created == {"w0": "duplicate"}
+            assert service.create_cards_batch(items) == [10]
+        assert service.last_not_created == {"犬": "duplicate"}
         assert service.last_skipped_duplicates == 1
 
     def test_reset_by_the_next_call(self, test_config, make_tokenized_word):
@@ -5299,7 +5303,7 @@ def test_duplicate_fronts_runs_create_cards_batchs_own_probe(test_config, monkey
 def test_duplicate_fronts_under_excluded_decks_is_the_admission_alone(test_config, monkeypatch) -> None:
     """create_cards_batch adds admitted notes with duplicates allowed and never probes them."""
     service = AnkiService(replace(test_config, excluded_decks=("Old",), allow_duplicate_cards=False))
-    monkeypatch.setattr(service, "_admit_against_scanned_vocabulary", lambda payloads: (payloads[1:], ["本"]))
+    monkeypatch.setattr(service, "_admit_against_scanned_vocabulary", lambda payloads: (payloads[1:], ["本"], [True]))
 
     def no_probe(notes):
         raise AssertionError("probed under excluded-deck admission")
