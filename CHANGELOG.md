@@ -12,6 +12,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Fixed
 
+- 外に and 後に in lines like 外に出る are no longer mined as ほかに / のちに, and the sentence furigana keeps そと / あと.
+- Dual-language subtitle files with staggered twin lines, and files with per-syllable karaoke effects, no longer have their cues cut to a fraction of a second.
+- Skip songs/signs now drops a karaoke opening written one cue per syllable and keeps positioned dialogue lines in such files.
+- Inflected そう言う (そう言った, そう言えば) now gets the reading そういう instead of そうゆう.
+- The Translation field no longer loses lines of a translation track that the mining language's bilingual-cue filter took for a translation.
+- The default subtitle cleanup no longer deletes the start of a line that contains a time like 10:30, or the wave dash in a range like 2〜3日.
+- "Update now" no longer overwrites another AppImage application's file when Anki Miner was started from that application's terminal or launcher.
+- Restoring a backup made before the data folder was moved now restores into the current data folder instead of the old location.
+- Vietnamese words like "mua" no longer get a duplicate card on every run when suspended cards are ignored or a deck is excluded.
+- Card Backfill no longer writes raw {{c1::...}} cloze markup from dictionaries into definitions, matching what mining writes.
+- StarDict archives made on macOS (with __MACOSX or ._ sidecar files) import instead of failing as "2 StarDict dictionaries".
+- Video OCR: Cancel now stops at once while an image subtitle track of a large video is being read, instead of after the whole file is scanned.
+- Audiobook Sync: a chapter file no longer times a later, unread sentence at its very end, which made the next file skip about 30 sentences.
+- Headless API: a relative input path whose name starts with '~' (like '~ep.srt') is read from the calling folder instead of failing the whole call with INTERNAL.
+- Headless API: a SIGINT/SIGTERM cancel that arrives as a call finishes no longer turns a written verdict into a non-zero exit code.
 - A card whose dictionary glossary holds Anki cloze markup (`{{c1::…}}`, as some example sentences in Bee's Ultimate Grammar Dictionary do) is no longer refused by Anki on a non-Cloze note type with "cannot create note for unknown reason": the markup is unwrapped to its text in every field before the note is sent.
 - An API reading run whose word names a whole sentence with `line_text` inside a longer unit (a quoted speech, which the splitter keeps whole) now gives the card that sentence rather than the whole unit: the unit is cut around it for the run (a 241-character speech became the card's sentence where one 33-character sentence of it was named).
 
