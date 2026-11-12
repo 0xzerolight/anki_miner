@@ -1231,7 +1231,7 @@ class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidge
             secondary_entries: list[tuple[float, float, str]] = []
             if secondary_subtitle is not None:
                 try:
-                    secondary_entries = parser.parse_raw_entries(secondary_subtitle, encodings=())
+                    secondary_entries = parser.parse_raw_entries(secondary_subtitle, encodings=(), translation=True)
                 except Exception as exc:  # noqa: BLE001 — bucket A: the preview loses only the second track.
                     logger.warning(
                         "Secondary subtitle unavailable for curation: file=%s error=%s detail=%s",

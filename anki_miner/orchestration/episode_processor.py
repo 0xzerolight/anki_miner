@@ -3313,7 +3313,9 @@ class EpisodeProcessor:
         if secondary_subtitle_file is None:
             return None
         try:
-            entries = self.subtitle_parser.parse_raw_entries(secondary_subtitle_file, 0.0, encodings=())
+            entries = self.subtitle_parser.parse_raw_entries(
+                secondary_subtitle_file, 0.0, encodings=(), translation=True
+            )
         except SubtitleParseError as exc:
             # Two subtitle files are in play; the decoder's message names neither.
             raise SubtitleParseError(f"Secondary subtitle file {secondary_subtitle_file.name}: {exc}") from exc

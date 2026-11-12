@@ -120,6 +120,21 @@ class TestDropNonDialogueEvents:
 
         assert [event.plaintext for event in drop_non_dialogue_events(events)] == ["Hello", "Bye"]
 
+    def test_a_per_syllable_song_style_never_outweighs_the_dialogue(self):
+        """Twelve lyric lines of twelve one-syllable cues outnumber 100 dialogue lines, not their screen time."""
+        song = [
+            _ev(5000 * line, 5000 * line + 4000, rf"{{\pos(640,40)}}{chr(0x3042 + s)}", "OP")
+            for line in range(12)
+            for s in range(12)
+        ]
+        dialogue = [_ev(60_000 + 3000 * i, 60_000 + 3000 * i + 2800, f"Line {i}") for i in range(100)]
+        dialogue[7] = _ev(dialogue[7].start, dialogue[7].end, r"{\an8\pos(640,60)}Up top", "Default")
+
+        out = drop_non_dialogue_events(song + dialogue)
+
+        assert [event.style for event in out] == ["Default"] * 100
+        assert "Up top" in [event.plaintext for event in out]
+
     def test_an_unstyled_file_is_untouched(self):
         events = [_ev(0, 1000, "One"), _ev(1000, 2000, "Two")]
 
@@ -166,6 +181,30 @@ class TestClampRollingEnds:
         lines = [_ev(0, 2000, "こんにちは"), _ev(0, 2000, "Hello"), _ev(2500, 4000, "またね"), _ev(2500, 4000, "Bye")]
 
         assert _spans(clamp_rolling_ends(lines)) == _spans(lines)
+
+    def test_staggered_twins_from_two_releases_are_not_rolling(self):
+        """A dual-language file whose second track starts 200 ms late overlaps on half its transitions."""
+        lines: list[pysubs2.SSAEvent] = []
+        for i in range(6):
+            start = 1000 + 4000 * i
+            lines += [_ev(start, start + 3000, f"日本語 {i}"), _ev(start + 200, start + 3200, f"English {i}")]
+
+        assert _spans(clamp_rolling_ends(lines)) == _spans(lines)
+
+    def test_a_syllable_fx_opening_does_not_make_the_dialogue_rolling(self):
+        """One event per syllable, staggered, outnumbers the dialogue; the dialogue keeps its own ends."""
+        syllables = [
+            _ev(10_000 * line + 250 * s, 10_000 * line + 3500, chr(0x3042 + s), "OP")
+            for line in range(24)
+            for s in range(12)
+        ]
+        base = 300_000
+        dialogue = [_ev(base + 3000 * i, base + 3000 * i + 2800, f"Line {i}") for i in range(120)]
+        dialogue[40] = _ev(base + 3000 * 40, base + 3000 * 40 + 4300, "Line 40 runs into the next speaker")
+
+        out = clamp_rolling_ends(syllables + dialogue)
+
+        assert _spans(out[len(syllables) :]) == _spans(dialogue)
 
     def test_cues_sharing_a_start_in_a_rolling_track_end_at_the_next_later_start(self):
         events = _rolling()

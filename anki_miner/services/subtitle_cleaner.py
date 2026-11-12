@@ -27,7 +27,6 @@ from __future__ import annotations
 import logging
 import re
 from bisect import bisect_left
-from collections import Counter
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -462,12 +461,31 @@ def collapse_frame_bursts(events: Sequence[pysubs2.SSAEvent]) -> list[pysubs2.SS
 
 
 def _main_styles(events: Sequence[pysubs2.SSAEvent]) -> frozenset[str]:
-    """The style (or tied styles) most cues use: the file's dialogue."""
-    counts = Counter(event.style for event in events)
-    if not counts:
+    """The style (or tied styles) on screen longest: the file's dialogue.
+
+    Time on screen is the length of the union of the style's cue spans, not
+    its cue count, so a song written one event per syllable cannot outweigh
+    the dialogue, while a dialogue style called "Caption" still wins by
+    covering most of the episode.
+    """
+    spans: dict[str, list[tuple[int, int]]] = {}
+    for event in events:
+        spans.setdefault(event.style, []).append((event.start, event.end))
+    if not spans:
         return frozenset()
-    most = max(counts.values())
-    return frozenset(style for style, count in counts.items() if count == most)
+    covered: dict[str, int] = {}
+    for style, style_spans in spans.items():
+        total = 0
+        reach = None
+        for start, end in sorted(style_spans):
+            if reach is not None and start < reach:
+                start = reach
+            if end > start:
+                total += end - start
+            reach = end if reach is None else max(reach, end)
+        covered[style] = total
+    most = max(covered.values())
+    return frozenset(style for style, total in covered.items() if total == most)
 
 
 def drop_non_dialogue_events(events: Sequence[pysubs2.SSAEvent]) -> list[pysubs2.SSAEvent]:
@@ -500,16 +518,19 @@ def clamp_rolling_ends(events: Sequence[pysubs2.SSAEvent]) -> list[pysubs2.SSAEv
     YouTube's auto-captions keep a line on screen until the line after next
     appears, so a cue's end is when it leaves the screen, not when its speech
     ends, and every clip cut from it carried about two seconds of the next
-    line. A track is rolling when more than half of its start-ordered
+    line. A track is rolling when at least four in five of its start-ordered
     transitions overlap (YouTube's measure 96%, ordinary subtitles almost
-    none); each of its cues then ends no later than the next strictly later
-    start, so lines sharing a start (a dual-language file's twins) never clamp
-    each other to nothing. Any other track comes back as it is. Order is kept;
+    none). A dual-language file whose twins come from two separately timed
+    releases overlaps on about half, and a per-syllable fx opening plus
+    dialogue stays well short too, so neither is clamped. Each cue of a
+    rolling track then ends no later than the next strictly later start, so
+    lines sharing a start (a dual-language file's twins) never clamp each
+    other to nothing. Any other track comes back as it is. Order is kept;
     *events* is not changed.
     """
     ordered = sorted(events, key=lambda event: event.start)
     overlapping = sum(1 for a, b in zip(ordered, ordered[1:], strict=False) if a.start < b.start < a.end)
-    if overlapping * 2 <= len(ordered) - 1:
+    if overlapping * 5 < (len(ordered) - 1) * 4:
         return list(events)
     starts = sorted({event.start for event in events})
     next_start = dict(zip(starts, starts[1:], strict=False))
