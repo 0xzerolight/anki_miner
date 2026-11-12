@@ -27,7 +27,6 @@ from __future__ import annotations
 import logging
 import re
 from bisect import bisect_left
-from collections import Counter
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -462,12 +461,31 @@ def collapse_frame_bursts(events: Sequence[pysubs2.SSAEvent]) -> list[pysubs2.SS
 
 
 def _main_styles(events: Sequence[pysubs2.SSAEvent]) -> frozenset[str]:
-    """The style (or tied styles) most cues use: the file's dialogue."""
-    counts = Counter(event.style for event in events)
-    if not counts:
+    """The style (or tied styles) on screen longest: the file's dialogue.
+
+    Time on screen is the length of the union of the style's cue spans, not
+    its cue count, so a song written one event per syllable cannot outweigh
+    the dialogue, while a dialogue style called "Caption" still wins by
+    covering most of the episode.
+    """
+    spans: dict[str, list[tuple[int, int]]] = {}
+    for event in events:
+        spans.setdefault(event.style, []).append((event.start, event.end))
+    if not spans:
         return frozenset()
-    most = max(counts.values())
-    return frozenset(style for style, count in counts.items() if count == most)
+    covered: dict[str, int] = {}
+    for style, style_spans in spans.items():
+        total = 0
+        reach = None
+        for start, end in sorted(style_spans):
+            if reach is not None and start < reach:
+                start = reach
+            if end > start:
+                total += end - start
+            reach = end if reach is None else max(reach, end)
+        covered[style] = total
+    most = max(covered.values())
+    return frozenset(style for style, total in covered.items() if total == most)
 
 
 def drop_non_dialogue_events(events: Sequence[pysubs2.SSAEvent]) -> list[pysubs2.SSAEvent]:

@@ -120,6 +120,21 @@ class TestDropNonDialogueEvents:
 
         assert [event.plaintext for event in drop_non_dialogue_events(events)] == ["Hello", "Bye"]
 
+    def test_a_per_syllable_song_style_never_outweighs_the_dialogue(self):
+        """Twelve lyric lines of twelve one-syllable cues outnumber 100 dialogue lines, not their screen time."""
+        song = [
+            _ev(5000 * line, 5000 * line + 4000, rf"{{\pos(640,40)}}{chr(0x3042 + s)}", "OP")
+            for line in range(12)
+            for s in range(12)
+        ]
+        dialogue = [_ev(60_000 + 3000 * i, 60_000 + 3000 * i + 2800, f"Line {i}") for i in range(100)]
+        dialogue[7] = _ev(dialogue[7].start, dialogue[7].end, r"{\an8\pos(640,60)}Up top", "Default")
+
+        out = drop_non_dialogue_events(song + dialogue)
+
+        assert [event.style for event in out] == ["Default"] * 100
+        assert "Up top" in [event.plaintext for event in out]
+
     def test_an_unstyled_file_is_untouched(self):
         events = [_ev(0, 1000, "One"), _ev(1000, 2000, "Two")]
 
