@@ -225,7 +225,7 @@ class WordSelection:
         allow_duplicates: bool = False,
         line_words: LineWords | None = None,
         dry_run: bool = False,
-        units: Mapping[int, str] | None = None,
+        units: Mapping[int, tuple[int, str]] | None = None,
     ) -> None:
         self._requests = list(requests)
         self._entries = entries
@@ -252,7 +252,9 @@ class WordSelection:
         )
         #: The picks are recorded but none is handed on (``[]``: no media, definitions or cards).
         self._dry_run = dry_run
-        #: A reading run's ``location_label`` by unit index; None on a video or audio run.
+        #: A reading run's units by their index in the run: each one's index in the source
+        #: (``inspect``'s; a cut unit's pieces share it) and its ``location_label``.
+        #: None on a video or audio run.
         self._units = units
         self._chosen: dict[int, _Picked] = {}  # by request index
         self._repeats: dict[int, str] = {}  # request index -> the mined_form an earlier request took
@@ -432,13 +434,14 @@ class WordSelection:
             if chosen.line is not None:
                 window_text = merge_cue_window(self._entries, chosen.line, *chosen.expansion).text
             unit = int(word.start_time)
+            source, location = self._units.get(unit, (unit, None))
             return {
                 "line_start": None,
                 "sentence": window_text,
                 "start": None,
                 "end": None,
-                "unit_index": unit,
-                "location": self._units.get(unit),
+                "unit_index": source,
+                "location": location,
             }
         if chosen.line is None:
             return {"line_start": None, "sentence": word.sentence, "start": word.start_time, "end": word.end_time}

@@ -516,7 +516,14 @@ LABELS = {0: "一", 1: "一", 2: "二", 3: "二"}
 
 def _reading(requests, *, entries=UNITS, labels=LABELS, **kw) -> lines.WordSelection:
     return lines.WordSelection(
-        requests, entries, entries, [(0, 0)] * len(entries), math.inf, units=labels, line_words=_line_words(), **kw
+        requests,
+        entries,
+        entries,
+        [(0, 0)] * len(entries),
+        math.inf,
+        units={i: (i, label) for i, label in labels.items()},
+        line_words=_line_words(),
+        **kw,
     )
 
 
@@ -614,7 +621,7 @@ def test_a_manga_word_on_the_real_reading_path_keeps_its_units_crop_and_location
         entries,
         [(0, 0)] * 3,
         math.inf,
-        units={u.index: u.location_label for u in units},
+        units={u.index: (u.index, u.location_label) for u in units},
     )
     with patch(_IMG, return_value=Path("/tmp/reading_crop.jpg")) as prepare:
         processor.process_reading(_document(units, series="漫画", episode="第1巻"), curation_callback=selection)

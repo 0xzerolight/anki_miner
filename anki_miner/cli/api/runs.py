@@ -306,8 +306,11 @@ def _mine(
         shutil.rmtree(folder / MEDIA, ignore_errors=True)
 
 
-def cut_at_named_lines(document: ReadingDocument, requests: Sequence[WordRequest]) -> ReadingDocument:
-    """The document with each unit that holds a requested ``line_text`` among more text cut around it.
+def cut_at_named_lines(
+    document: ReadingDocument, requests: Sequence[WordRequest]
+) -> tuple[ReadingDocument, dict[int, int]]:
+    """The document with each unit that holds a requested ``line_text`` among more text cut around it,
+    and each unit's index in the source by its index in the run.
 
     A unit is the splitter's sentence, and a terminator inside 「…」 never ends
     one (``sentence_splitter``), so a long quoted speech is one unit -- 241
@@ -318,17 +321,22 @@ def cut_at_named_lines(document: ReadingDocument, requests: Sequence[WordRequest
     an exact match, and never when a request names a ``unit_index``: those
     count the units as the source has them. A document with nothing to cut is
     returned as it is.
+
+    The pieces are renumbered (the index is document order and each card's
+    dummy start time), but a row reports the source's index: ``inspect``
+    lists it and ``media`` takes it.
     """
+    kept = (document, {unit.index: unit.index for unit in document.units})
     if any(request.unit_index is not None for request in requests):
-        return document
+        return kept
     needles = sorted(
         {request.line_text.strip() for request in requests if request.line_text and request.line_text.strip()},
         key=len,
         reverse=True,
     )
     if not needles:
-        return document
-    pieces: list[ReadingUnit] = []
+        return kept
+    pieces: list[tuple[ReadingUnit, int]] = []
     cut = False
     for unit in document.units:
         texts = [unit.text]
@@ -342,12 +350,11 @@ def cut_at_named_lines(document: ReadingDocument, requests: Sequence[WordRequest
                 split.extend(part for part in (text[:at], needle, text[at + len(needle) :]) if part.strip())
             texts = split
         cut = cut or len(texts) > 1
-        pieces.extend(replace(unit, text=text) for text in texts)
+        pieces.extend((replace(unit, text=text), unit.index) for text in texts)
     if not cut:
-        return document
-    # The index is document order and each card's dummy start time: renumbered, in order.
-    units = [replace(unit, index=i) for i, unit in enumerate(pieces)]
-    return replace(document, units=units)
+        return kept
+    units = [replace(unit, index=i) for i, (unit, _source) in enumerate(pieces)]
+    return replace(document, units=units), {i: source for i, (_unit, source) in enumerate(pieces)}
 
 
 def _mine_reading(
@@ -381,7 +388,7 @@ def _mine_reading(
             anki_write_state=AnkiWriteState.NO_NOTE_WRITE,
         )
         return choose([], [], [], math.inf), stopped
-    document = cut_at_named_lines(document, episode.words)
+    document, sources = cut_at_named_lines(document, episode.words)
     cleanup = reading_cleanup(document)
     entries = parser.reading_entries(document.units, subtitle_cleanup=cleanup)
     selection = choose(
@@ -391,7 +398,7 @@ def _mine_reading(
         math.inf,
         # A unit copied from the source (inspect's unit list) matches its line.
         clean=partial(parser.reading_sentence, subtitle_cleanup=cleanup),
-        units={unit.index: unit.location_label for unit in document.units},
+        units={unit.index: (sources[unit.index], unit.location_label) for unit in document.units},
     )
     result = processor.process_reading(
         document,
