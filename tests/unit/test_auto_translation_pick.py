@@ -95,7 +95,7 @@ def test_a_sidecar_is_read_at_zero_offset_without_the_mining_ladder(test_config,
         picked = load_auto_translation(video, test_config, parser, tmp_path / "tmp")
     assert picked is not None and picked.entries == CUES
     assert picked.candidate.label == "ep01.en.srt"
-    parser.parse_raw_entries.assert_called_once_with(tmp_path / "ep01.en.srt", 0.0, encodings=())
+    parser.parse_raw_entries.assert_called_once_with(tmp_path / "ep01.en.srt", 0.0, encodings=(), translation=True)
 
 
 def test_an_embedded_english_stream_is_extracted_parsed_and_deleted(test_config, tmp_path):

@@ -2150,6 +2150,22 @@ class TestParseRawEntries:
         assert entries == [(1.0, 3.0, "I don’t know.")]
         assert parser.parse_raw_entries(srt, 0.0)[0][2] != "I don’t know."  # the ja ladder mis-decodes it
 
+    def test_a_translation_track_skips_the_mining_languages_script_gate(self, tmp_path):
+        """Mining Chinese with a Japanese translation: the kana-only line of a two-line cue stays."""
+        from anki_miner.languages.registry import get_profile
+
+        srt = tmp_path / "ja.srt"
+        srt.write_text("1\n00:00:01,000 --> 00:00:03,000\nそうですか\n分かりました\n", encoding="utf-8")
+        parser = SubtitleParserService(
+            AnkiMinerConfig(language="zh", media_temp_folder=tmp_path / "media"),
+            has_target_script=get_profile("zh").script.contains_target_script,
+        )
+
+        assert parser.parse_raw_entries(srt, 0.0, encodings=(), translation=True) == [
+            (1.0, 3.0, "そうですか 分かりました")
+        ]
+        assert parser.parse_raw_entries(srt, 0.0) == [(1.0, 3.0, "分かりました")]  # the mining track keeps its gate
+
 
 class TestCompoundReassembly:
     """Tests for _merge_compound_suffixes — 名詞+接尾辞 reassembly."""

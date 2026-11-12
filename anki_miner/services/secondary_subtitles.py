@@ -124,6 +124,7 @@ class RawEntryParser(Protocol):
         subtitle_offset: float | None = None,
         *,
         encodings: tuple[str, ...] | None = None,
+        translation: bool = False,
     ) -> list[tuple[float, float, str]]: ...
 
 
@@ -208,7 +209,7 @@ def _embedded_candidates(
 def _parse(parser: RawEntryParser, path: Path, label: str) -> list[tuple[float, float, str]]:
     """Cues of *path* decoded like a chosen second file (BOM, then charset detection); [] when it will not parse."""
     try:
-        return parser.parse_raw_entries(path, 0.0, encodings=())
+        return parser.parse_raw_entries(path, 0.0, encodings=(), translation=True)
     except SubtitleParseError as exc:
         logger.warning("secondary subtitle: skipped %s, it did not parse: %s", label, exc)
         return []
