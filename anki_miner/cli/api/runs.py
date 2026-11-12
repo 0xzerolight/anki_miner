@@ -76,11 +76,13 @@ from anki_miner.orchestration.episode_processor import reading_cleanup
 from anki_miner.presenters.null_presenter import NullPresenter
 from anki_miner.services.anki_service import AnkiService
 from anki_miner.services.cue_merge import merge_budget_seconds
+from anki_miner.services.reading.sentence_splitter import split_sentences
 from anki_miner.services.validation_service import ValidationService
 from anki_miner.utils.audio_track_detector import get_media_duration_seconds, get_primary_video_codec
 from anki_miner.utils.ffmpeg_resolver import binary_available, resolve_ffmpeg, resolve_ffprobe
 
 if TYPE_CHECKING:
+    from anki_miner.languages.profile import SentenceRules
     from anki_miner.orchestration.episode_processor import EpisodeProcessor
 
 logger = logging.getLogger(__name__)
@@ -307,7 +309,7 @@ def _mine(
 
 
 def cut_at_named_lines(
-    document: ReadingDocument, requests: Sequence[WordRequest]
+    document: ReadingDocument, requests: Sequence[WordRequest], rules: SentenceRules
 ) -> tuple[ReadingDocument, dict[int, int]]:
     """The document with each unit that holds a requested ``line_text`` among more text cut around it,
     and each unit's index in the source by its index in the run.
@@ -318,9 +320,12 @@ def cut_at_named_lines(
     caller named one sentence of it (``line_text``). Here the unit becomes the
     text before, the named sentence and the text after, so the card's sentence,
     its bold, furigana and reading are that sentence's. Only for this run, only
-    an exact match, and never when a request names a ``unit_index``: those
-    count the units as the source has them. A document with nothing to cut is
-    returned as it is.
+    an exact match of one or more whole sentences (*rules*: the mining
+    language's, brackets aside), and never when a request names a
+    ``unit_index``: those count the units as the source has them. A
+    ``line_text`` may be any text its line contains, and a fragment cut out
+    would be the card's whole sentence, so it cuts nothing. A document with
+    nothing to cut is returned as it is.
 
     The pieces are renumbered (the index is document order and each card's
     dummy start time), but a row reports the source's index: ``inspect``
@@ -332,15 +337,18 @@ def cut_at_named_lines(
     needles = {request.line_text.strip() for request in requests if request.line_text and request.line_text.strip()}
     if not needles:
         return kept
-    pieces = [(replace(unit, text=text), unit.index) for unit in document.units for text in _cut(unit.text, needles)]
+    pieces = [
+        (replace(unit, text=text), unit.index) for unit in document.units for text in _cut(unit.text, needles, rules)
+    ]
     if len(pieces) == len(document.units):
         return kept
     units = [replace(unit, index=i) for i, (unit, _source) in enumerate(pieces)]
     return replace(document, units=units), {i: source for i, (_unit, source) in enumerate(pieces)}
 
 
-def _cut(text: str, needles: Collection[str]) -> list[str]:
-    """*text* cut at both ends of the first match of each needle, never inside another needle's match.
+def _cut(text: str, needles: Collection[str], rules: SentenceRules) -> list[str]:
+    """*text* cut at both ends of the first match of each needle that is whole sentences of it, never
+    inside another needle's match.
 
     Every needle *text* holds stays whole in one piece, so each still names its
     line: a sentence named inside a named whole unit, or one named inside a
@@ -349,15 +357,37 @@ def _cut(text: str, needles: Collection[str]) -> list[str]:
     whole text cuts nothing. The pieces join back to *text*.
     """
     spans = [(at, at + len(needle)) for needle in needles if (at := text.find(needle)) >= 0]
+    if not spans:
+        return [text]
+    starts, ends = _sentence_bounds(text, rules)
     points = sorted(
         {
             point
             for span in spans
+            if span[0] in starts and span[1] in ends
             for point in span
             if text[:point].strip() and text[point:].strip() and not any(start < point < end for start, end in spans)
         }
     )
     return [text[i:j] for i, j in zip([0, *points], [*points, len(text)], strict=True)]
+
+
+def _sentence_bounds(text: str, rules: SentenceRules) -> tuple[set[int], set[int]]:
+    """Where a sentence of *text* starts and where one ends, split as *rules* split with no bracket holding a terminator.
+
+    The opener before a sentence and the closer after it are optional:
+    「A。B」 has sentences starting at 0 or 1 and at 3, and ending at 3 and at 4 or 5.
+    """
+    openers, closers = "".join(rules.openers), "".join(rules.closers)
+    starts: set[int] = set()
+    ends: set[int] = set()
+    at = 0
+    for sentence in split_sentences(text, rules=replace(rules, openers=frozenset(), closers=frozenset())):
+        start = text.index(sentence, at)  # the splitter strips its sentences and never rewrites them
+        at = start + len(sentence)
+        starts |= {start, at - len(sentence.lstrip(openers))}
+        ends |= {at, start + len(sentence.rstrip(closers))}
+    return starts, ends
 
 
 def _mine_reading(
@@ -391,7 +421,7 @@ def _mine_reading(
             anki_write_state=AnkiWriteState.NO_NOTE_WRITE,
         )
         return choose([], [], [], math.inf), stopped
-    document, sources = cut_at_named_lines(document, episode.words)
+    document, sources = cut_at_named_lines(document, episode.words, get_profile(config_language(config)).sentence_rules)
     cleanup = reading_cleanup(document)
     entries = parser.reading_entries(document.units, subtitle_cleanup=cleanup)
     selection = choose(

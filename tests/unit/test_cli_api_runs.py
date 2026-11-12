@@ -19,6 +19,7 @@ from anki_miner.cli.api.contract import ApiError
 from anki_miner.cli.api.jobs import RunFailed
 from anki_miner.exceptions import SubtitleParseError
 from anki_miner.gui.utils.service_factory import create_line_parser
+from anki_miner.languages.registry import get_profile
 from anki_miner.languages.switching import switch_language
 from anki_miner.models import CANCELLED_ERROR, AnkiWriteState, ProcessingResult
 from anki_miner.models.reading import ReadingDocument, ReadingUnit
@@ -795,6 +796,7 @@ _QUOTE = (
     "ぜんぜんおもしろくないので、隠してました」"
 )
 _NAMED = "となると、ステイ先は当然、あなたがたご自身の家庭ということになる。"
+_JA = get_profile("ja").sentence_rules
 
 
 def _book(*texts):
@@ -811,7 +813,7 @@ def test_a_unit_holding_a_named_line_among_more_text_is_cut_around_it():
     from anki_miner.cli.api.files import WordRequest
 
     doc, sources = runs.cut_at_named_lines(
-        _book("前の文。", _QUOTE, "後の文。"), [WordRequest("となると", line_text=_NAMED)]
+        _book("前の文。", _QUOTE, "後の文。"), [WordRequest("となると", line_text=_NAMED)], _JA
     )
     texts = [u.text for u in doc.units]
     assert _NAMED in texts, texts
@@ -826,11 +828,11 @@ def test_nothing_is_cut_for_a_whole_unit_no_match_or_a_unit_index():
 
     book = _book("前の文。", _QUOTE)
     kept = (book, {0: 0, 1: 1})
-    assert runs.cut_at_named_lines(book, [WordRequest("前", line_text="前の文。")]) == kept
-    assert runs.cut_at_named_lines(book, [WordRequest("x", line_text="どこにもない文。")]) == kept
+    assert runs.cut_at_named_lines(book, [WordRequest("前", line_text="前の文。")], _JA) == kept
+    assert runs.cut_at_named_lines(book, [WordRequest("x", line_text="どこにもない文。")], _JA) == kept
     named = [WordRequest("となると", line_text=_NAMED), WordRequest("前", unit_index=0)]
-    assert runs.cut_at_named_lines(book, named) == kept, "a unit_index counts the source's own units"
-    assert runs.cut_at_named_lines(book, [WordRequest("前")]) == kept
+    assert runs.cut_at_named_lines(book, named, _JA) == kept, "a unit_index counts the source's own units"
+    assert runs.cut_at_named_lines(book, [WordRequest("前")], _JA) == kept
 
 
 def test_a_row_after_a_cut_reports_the_sources_unit(services, tmp_path) -> None:
@@ -861,7 +863,24 @@ def test_a_row_after_a_cut_reports_the_sources_unit(services, tmp_path) -> None:
 def test_a_cut_never_splits_another_named_line(named):
     from anki_miner.cli.api.files import WordRequest
 
-    doc, _sources = runs.cut_at_named_lines(_book("前の文。", _QUOTE), [WordRequest("w", line_text=t) for t in named])
+    doc, _sources = runs.cut_at_named_lines(
+        _book("前の文。", _QUOTE), [WordRequest("w", line_text=t) for t in named], _JA
+    )
     texts = [u.text for u in doc.units]
     assert all(any(t in text for text in texts) for t in named), texts
     assert "".join(texts) == "前の文。" + _QUOTE, "nothing lost, nothing added"
+
+
+def test_only_whole_sentences_are_cut_out():
+    from anki_miner.cli.api.files import WordRequest
+
+    def texts(unit, line_text):
+        doc, _sources = runs.cut_at_named_lines(_book(unit), [WordRequest("w", line_text=line_text)], _JA)
+        return [u.text for u in doc.units]
+
+    assert texts(_QUOTE, "ステイ先") == [_QUOTE], "a fragment would be the card's whole sentence"
+    assert texts("今日は雨が降っている。", "雨が降って") == ["今日は雨が降っている。"]
+    first = "ホームステイとは、たんなる魂の修行ではなく、テスト期間のことなのです。"
+    assert texts(_QUOTE, first)[:2] == ["「", first], "the quote's opener is not the sentence's"
+    two = "言うなれば魂の仮運転ですね。" + _NAMED
+    assert two in texts(_QUOTE, two), "a run of whole sentences is cut out whole"
