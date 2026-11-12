@@ -10,6 +10,7 @@ import sys
 import urllib.parse
 import urllib.request
 from dataclasses import dataclass
+from pathlib import Path
 
 from packaging.version import InvalidVersion, Version
 
@@ -45,6 +46,23 @@ class UpdateInfo:
     target: str = "pip"
 
 
+def running_appimage() -> Path | None:
+    """The AppImage file this process runs from, or ``None``.
+
+    The AppImage runtime exports APPIMAGE and APPDIR to every descendant, so a
+    pip, source or .deb run started from another AppImage app (an editor's
+    terminal, a launcher) inherits them. Only a frozen build whose executable
+    sits inside APPDIR, the mount of the file APPIMAGE names, is that AppImage.
+    """
+    appimage = os.environ.get("APPIMAGE")
+    appdir = os.environ.get("APPDIR")
+    if not appimage or not appdir or not getattr(sys, "frozen", False):
+        return None
+    if not Path(sys.executable).resolve().is_relative_to(Path(appdir).resolve()):
+        return None
+    return Path(appimage)
+
+
 def _detect_target() -> str:
     """Detect the current install target.
 
@@ -56,7 +74,7 @@ def _detect_target() -> str:
     # is also True on AppImage (PyInstaller-built), so the APPIMAGE check MUST
     # come before any sys.frozen branches — otherwise AppImage users get matched
     # as plain linux-frozen and pointed at the .deb instead.
-    if os.environ.get("APPIMAGE"):
+    if running_appimage() is not None:
         return "appimage"
     if getattr(sys, "frozen", False):
         if sys.platform == "win32":

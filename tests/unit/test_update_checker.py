@@ -84,9 +84,11 @@ class TestDetectTarget:
     """Tests for the module-level _detect_target() helper."""
 
     def test_appimage_takes_precedence_over_frozen(self, monkeypatch):
-        """APPIMAGE env var must win even when sys.frozen is set."""
+        """A frozen build run from the AppImage's mount is the AppImage, not linux-frozen."""
         monkeypatch.setenv("APPIMAGE", "/tmp/AnkiMiner-2.4.0-x86_64.AppImage")
+        monkeypatch.setenv("APPDIR", "/tmp/.mount_AnkiMi")
         monkeypatch.setattr("anki_miner.services.update_checker.sys.frozen", True, raising=False)
+        monkeypatch.setattr("anki_miner.services.update_checker.sys.executable", "/tmp/.mount_AnkiMi/usr/bin/AnkiMiner")
         monkeypatch.setattr("anki_miner.services.update_checker.sys.platform", "linux")
         assert _detect_target() == "appimage"
 

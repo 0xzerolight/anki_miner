@@ -8,7 +8,9 @@ One folder per day under ``backups/``. A day is written into a hidden staging
 folder and renamed into place once complete, so a crash leaves only a staging
 folder, which the next backup removes. ``manifest.json`` maps each numbered
 copy to the absolute path it came from; the restore puts it back there, so it
-needs no config, which matters because it runs before the config is read.
+needs no config, which matters because it runs before the config is read. A
+data folder moved since the backup was made has its paths rebased onto the
+folder the backups now sit in.
 
 A restore is never applied to live files: Settings writes ``restore-pending.json``
 and the next launch applies it before any database is opened (``gui.app``).
@@ -48,6 +50,8 @@ _SQLITE_HEADER = b"SQLite format 3\x00"
 #: the restored file, so a restore removes them.
 _SQLITE_SIDECARS = ("-journal", "-wal", "-shm")
 _KINDS = frozenset({"sqlite", "file"})
+#: The config file the backups folder sits beside (``backups_root``).
+_CONFIG_NAME = "gui_config.json"
 
 
 @dataclass(frozen=True)
@@ -243,6 +247,27 @@ def pending_restore(root: Path) -> date | None:
         return None
 
 
+def _rebase_entries(entries: tuple[BackupEntry, ...], home: Path) -> tuple[BackupEntry, ...]:
+    """Point entries backed up in a since-moved data folder at *home* (BA-009).
+
+    The backups folder sits beside ``gui_config.json``, so the folder the
+    backed-up ``gui_config.json`` came from is the data folder the backup was
+    made in. A source under it moves to the same place under *home*; a source
+    outside it (a custom known-words path) did not move with it and stays.
+    """
+    old_home = next((entry.source.parent for entry in entries if entry.source.name == _CONFIG_NAME), None)
+    if old_home is None or old_home == home:
+        return entries
+    return tuple(
+        (
+            replace(entry, source=home / entry.source.relative_to(old_home))
+            if entry.source.is_relative_to(old_home)
+            else entry
+        )
+        for entry in entries
+    )
+
+
 def _restore_entry(folder: Path, entry: BackupEntry) -> None:
     """Put one copy back over its source path, atomically."""
     target = entry.source
@@ -278,7 +303,7 @@ def apply_pending_restore(root: Path) -> int | None:
         if backup is None:
             logger.warning("Backup restore skipped: no complete backup for %s", day.isoformat())
             return 0
-        for entry in backup.entries:
+        for entry in _rebase_entries(backup.entries, root.parent.resolve()):
             try:
                 _restore_entry(backup.path, entry)
             except OSError as exc:
