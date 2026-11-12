@@ -16,7 +16,11 @@ PATTERNS = [pattern for _label, pattern in SUBTITLE_REGEX_PRESETS]
 
 
 def test_no_preset_carries_an_inline_flag():
-    assert not [pattern for pattern in PATTERNS if "(?" in pattern.replace("(?:", "").replace("(?<", "")]
+    lookarounds = ("(?:", "(?<", "(?!", "(?=")
+    stripped = [(pattern, pattern) for pattern in PATTERNS]
+    for token in lookarounds:
+        stripped = [(pattern, rest.replace(token, "")) for pattern, rest in stripped]
+    assert not [pattern for pattern, rest in stripped if "(?" in rest]
 
 
 def test_each_preset_compiles_alone():
