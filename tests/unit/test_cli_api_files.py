@@ -88,6 +88,19 @@ def test_run_ids_differing_only_in_case_share_a_folder(tmp_path: Path) -> None:
         files.parse_fetch_file(fetch)
 
 
+def test_a_leading_tilde_is_a_file_name_unless_it_names_the_callers_home(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "~ep.srt").write_text("", encoding="utf-8")
+    (tmp_path / "~runs").mkdir()
+    assert files.abs_path("~ep.srt") == tmp_path / "~ep.srt"
+    assert files.abs_path("./~ep.srt") == tmp_path / "~ep.srt"
+    assert files.existing_run_dir("~runs") == tmp_path / "~runs"
+    assert files.abs_path("~/x") == Path.home().resolve() / "x"
+    assert files.abs_path("~") == Path.home().resolve()
+
+
 def test_subtitle_offset_left_out_or_null_is_zero(tmp_path: Path) -> None:
     for data in (_run_file(tmp_path), _run_file(tmp_path, subtitle_offset=None)):
         assert files.parse_run_file(data).episodes[0].subtitle_offset == 0.0
