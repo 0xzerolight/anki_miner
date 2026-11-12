@@ -167,6 +167,30 @@ class TestClampRollingEnds:
 
         assert _spans(clamp_rolling_ends(lines)) == _spans(lines)
 
+    def test_staggered_twins_from_two_releases_are_not_rolling(self):
+        """A dual-language file whose second track starts 200 ms late overlaps on half its transitions."""
+        lines: list[pysubs2.SSAEvent] = []
+        for i in range(6):
+            start = 1000 + 4000 * i
+            lines += [_ev(start, start + 3000, f"日本語 {i}"), _ev(start + 200, start + 3200, f"English {i}")]
+
+        assert _spans(clamp_rolling_ends(lines)) == _spans(lines)
+
+    def test_a_syllable_fx_opening_does_not_make_the_dialogue_rolling(self):
+        """One event per syllable, staggered, outnumbers the dialogue; the dialogue keeps its own ends."""
+        syllables = [
+            _ev(10_000 * line + 250 * s, 10_000 * line + 3500, chr(0x3042 + s), "OP")
+            for line in range(24)
+            for s in range(12)
+        ]
+        base = 300_000
+        dialogue = [_ev(base + 3000 * i, base + 3000 * i + 2800, f"Line {i}") for i in range(120)]
+        dialogue[40] = _ev(base + 3000 * 40, base + 3000 * 40 + 4300, "Line 40 runs into the next speaker")
+
+        out = clamp_rolling_ends(syllables + dialogue)
+
+        assert _spans(out[len(syllables) :]) == _spans(dialogue)
+
     def test_cues_sharing_a_start_in_a_rolling_track_end_at_the_next_later_start(self):
         events = _rolling()
         events.insert(1, _ev(199, 6640, "Twin"))

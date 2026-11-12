@@ -500,16 +500,19 @@ def clamp_rolling_ends(events: Sequence[pysubs2.SSAEvent]) -> list[pysubs2.SSAEv
     YouTube's auto-captions keep a line on screen until the line after next
     appears, so a cue's end is when it leaves the screen, not when its speech
     ends, and every clip cut from it carried about two seconds of the next
-    line. A track is rolling when more than half of its start-ordered
+    line. A track is rolling when at least four in five of its start-ordered
     transitions overlap (YouTube's measure 96%, ordinary subtitles almost
-    none); each of its cues then ends no later than the next strictly later
-    start, so lines sharing a start (a dual-language file's twins) never clamp
-    each other to nothing. Any other track comes back as it is. Order is kept;
+    none). A dual-language file whose twins come from two separately timed
+    releases overlaps on about half, and a per-syllable fx opening plus
+    dialogue stays well short too, so neither is clamped. Each cue of a
+    rolling track then ends no later than the next strictly later start, so
+    lines sharing a start (a dual-language file's twins) never clamp each
+    other to nothing. Any other track comes back as it is. Order is kept;
     *events* is not changed.
     """
     ordered = sorted(events, key=lambda event: event.start)
     overlapping = sum(1 for a, b in zip(ordered, ordered[1:], strict=False) if a.start < b.start < a.end)
-    if overlapping * 2 <= len(ordered) - 1:
+    if overlapping * 5 < (len(ordered) - 1) * 4:
         return list(events)
     starts = sorted({event.start for event in events})
     next_start = dict(zip(starts, starts[1:], strict=False))
