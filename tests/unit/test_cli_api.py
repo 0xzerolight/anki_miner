@@ -3,6 +3,10 @@
 from __future__ import annotations
 
 import json
+import os
+import signal
+import subprocess
+import sys
 from dataclasses import replace
 from pathlib import Path
 
@@ -55,7 +59,7 @@ def test_unknown_command_is_bad_arguments(verdict) -> None:
 
 
 def test_internal_error_is_a_verdict_not_a_traceback(verdict, monkeypatch) -> None:
-    def boom(args):
+    def boom(args, cancel):
         raise RuntimeError("kaboom")
 
     monkeypatch.setattr(api, "_dispatch", boom)
@@ -323,3 +327,24 @@ def test_bad_run_file_is_refused_before_the_lock(verdict, tmp_path) -> None:
     bad = tmp_path / "run.json"
     bad.write_text("{}", encoding="utf-8")
     assert verdict("mine", str(bad))["error"] == "BAD_RUN_FILE"
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="SIGTERM cancels only on Linux and macOS")
+def test_a_cancel_signal_after_the_verdict_still_exits_0(tmp_path) -> None:
+    """API.md: exit code 0 means the verdict was written. A caller's SIGTERM that races the
+    end of the call (here: sent once the verdict is on the pipe) must not turn it into a crash."""
+    bad = tmp_path / "run.json"
+    bad.write_text("{}", encoding="utf-8")
+    repo = Path(__file__).resolve().parents[2]
+    proc = subprocess.Popen(
+        [sys.executable, "-m", "anki_miner", "--api", "render", str(bad)],
+        cwd=repo,
+        env={**os.environ, "ANKI_MINER_HOME": str(tmp_path / "home"), "QT_QPA_PLATFORM": "offscreen"},
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+    )
+    assert proc.stdout is not None
+    line = proc.stdout.readline()
+    proc.send_signal(signal.SIGTERM)
+    assert proc.wait(timeout=60) == 0
+    assert json.loads(line)["error"] == "BAD_RUN_FILE"
