@@ -235,6 +235,31 @@ def test_a_restore_recreates_a_deleted_folder(data, tmp_path):
     assert _read(nested) == "words"
 
 
+def test_a_restore_after_the_data_folder_moved_lands_in_the_new_folder(data, tmp_path):
+    """BA-009: a moved data folder keeps working, its backups included."""
+    custom = tmp_path / "custom" / "known_words.db"
+    custom.parent.mkdir()
+    _sqlite(custom, "custom day1")
+    _sqlite(data / "known_words.db", "day1")
+    sources = [data / "known_words.db", custom, data / "gui_config.json"]
+    run_daily_backup(sources, data / "backups", today=date(2026, 10, 14))
+    moved = tmp_path / "moved-home"
+    data.rename(moved)
+    _sqlite(moved / "known_words.db", "day2-broken")
+    (moved / "gui_config.json").write_text('{"a": 2}', encoding="utf-8")
+    _sqlite(custom, "custom day2")
+
+    root = backups_root(moved / "gui_config.json")
+    schedule_restore(root, date(2026, 10, 14))
+
+    assert apply_pending_restore(root) == 3
+    assert _read(moved / "known_words.db") == "day1"
+    assert (moved / "gui_config.json").read_text(encoding="utf-8") == '{"a": 1}'
+    # A source outside the data folder was never moved with it.
+    assert _read(custom) == "custom day1"
+    assert not data.exists()
+
+
 def test_sources_cover_every_language_db_stats_config_and_profiles(tmp_path, test_config):
     kw = tmp_path / "kw"
     kw.mkdir()
