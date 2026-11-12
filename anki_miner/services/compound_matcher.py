@@ -54,7 +54,11 @@ ReadingsLookup = Callable[[str], list[str]]
 # evidence: checking every particle refused real joins (気に入る: UniDic reads
 # 入ら as ハイラ), while across 874 merges on 12,453 Unnatural lines the の check
 # refused none. Known cost: a token UniDic misreads (猫の額 as ねこのがく) loses
-# its join.
+# its join. A word + particle span (one ending on an _ADVERBIAL_PARTICLES
+# particle) is checked too: 外|に reads そとに, but JMdict's 外に is ほかに
+# 'besides', and the join would stamp 外[ほか]に into the sentence. Such a span
+# holds no verb or adjective (_adverbial_fits), so the misread verb tails
+# above cannot arise in it.
 _READING_CHECKED_PARTICLE = "の"
 
 _HIRAGANA_RE = re.compile(r"[ぁ-ゖー]+")
@@ -214,7 +218,7 @@ class CompoundDictionaryMatcher:
         # synthetic the gate refuses still merges when its headword is
         # whitelisted and its tags are rescuable (R1); the parser then rescues it.
         self._force_include = force_include
-        # Attested readings for the の check (see _reading_fits); None ⇒ no check.
+        # Attested readings for _reading_fits; None ⇒ no check.
         self._readings = reading_lookup
         self._max_span = max(2, max_span_tokens)
         char_bound = self._default_max_span_chars if max_span_chars is None else max_span_chars
@@ -300,15 +304,19 @@ class CompoundDictionaryMatcher:
         return self._force_include is not None and self._rule.rescuable(synthetic) and self._force_include(headword)
 
     def _reading_fits(self, span: list, headword: str, kind: str) -> bool:
-        """Whether a join across の can be read as its dictionary headword.
+        """Whether a join across の, or a word + particle span, can be read as its dictionary headword.
 
-        True when no reading probe is wired, the span crosses no の, a token has
+        True when no reading probe is wired, the span neither crosses の nor
+        ends on an adverbial particle (本当|に), a token has
         no kana reading (OOV: its "reading" is its surface), or the dictionary
         records no reading for the headword. A kind-A span compares the tail's
         base reading (利い → キク), since the headword ends in the base form.
         Voicing marks are ignored on both sides, so rendaku still matches.
         """
-        if self._readings is None or not any(
+        if self._readings is None:
+            return True
+        ends_on_particle = _pos1(span[-1]) == "助詞" and span[-1].surface in _ADVERBIAL_PARTICLES
+        if not ends_on_particle and not any(
             _pos1(token) == "助詞" and token.surface == _READING_CHECKED_PARTICLE for token in span
         ):
             return True
