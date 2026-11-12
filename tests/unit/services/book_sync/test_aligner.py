@@ -279,3 +279,24 @@ def test_stray_tail_match_does_not_carry_the_cursor_into_the_next_file():
 
     assert t2[0].index == 30
     assert t2[0].start < 1.0
+
+
+def test_a_files_last_words_do_not_time_a_later_sentence_that_ends_the_same():
+    """File 1 ends on S's last words, which also end a short sentence T a few sentences on.
+    The last window is committed whole against a book window that runs past the audio, and
+    the transcript's last characters tie onto T as cheaply as onto S. T must get no cue, or
+    the cursor lands past it and file 2 never times the sentences in between."""
+    base = _book(260, seed=8)
+    s_index, t_index = 120, 125
+    sentences = list(base.sentences)
+    sentences[s_index] = sentences[s_index][:-1] + "なかった。"
+    sentences[t_index] = "友達はできなかった。"
+    book = BookText(title="t", sentences=tuple(sentences), keys=tuple(normalize_for_alignment(s) for s in sentences))
+    cursor = BookCursor()
+
+    t1 = align_to_book(_read(book, 0, s_index, rng=random.Random(6)), book, cursor)
+    assert max(t.index for t in t1) == s_index
+    assert cursor.sentence == s_index + 1
+    t2 = align_to_book(_read(book, s_index + 1, s_index + 40, rng=random.Random(7)), book, cursor)
+
+    assert set(range(s_index + 1, t_index + 1)) <= {t.index for t in t2}

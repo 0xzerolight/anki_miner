@@ -243,6 +243,16 @@ def _need(book: BookText, s: int) -> int:
     return max(MIN_SENTENCE_MATCH, math.ceil(MIN_SENTENCE_MATCH_SHARE * len(book.keys[s])))
 
 
+def _open_end_distance(text: str, chars: str, start: int) -> int:
+    """Edit distance from ``text`` to the run of ``chars`` from ``start`` that matches it best (any length)."""
+    n = len(text)
+    best = Levenshtein.distance(text, chars[start : start + n])
+    # A run whose length differs from n by more than ``best`` costs more than ``best``.
+    for length in range(max(0, n - best), n + best + 1):
+        best = min(best, Levenshtein.distance(text, chars[start : start + length], score_cutoff=best))
+    return best
+
+
 def _align_window(window: str, commit: int, offset: int, book_win: _Stream) -> _WindowMatch:
     """Align ``window`` (transcript chars from absolute ``offset``) to ``book_win``; count its first ``commit``."""
     matched = 0
@@ -250,7 +260,22 @@ def _align_window(window: str, commit: int, offset: int, book_win: _Stream) -> _
     hits: dict[int, int] = {}
     first: dict[int, int] = {}
     last: dict[int, int] = {}
+    # The last window is committed whole against a book window that runs past
+    # the audio, so its book side ends open: the transcript's final characters
+    # cost the same matched to their own sentence or to an identical run
+    # further on, and the opcodes may pick the later one (or, after a slip, a
+    # run one edit cheaper there). When the transcript left after an inserted
+    # book run is shorter than that run and matches the book where the run
+    # starts at least as well as where it ends, the jump is that artefact, not
+    # a passage the reader skipped, so nothing after it counts.
+    open_end = commit >= len(window)
     for op in Levenshtein.opcodes(window, book_win.chars):
+        if open_end and op.tag == "insert" and op.dest_end - op.dest_start > len(window) - op.src_start:
+            rest = window[op.src_start :]
+            if _open_end_distance(rest, book_win.chars, op.dest_start) <= _open_end_distance(
+                rest, book_win.chars, op.dest_end
+            ):
+                break
         if op.tag not in ("equal", "replace"):
             continue
         i1, j1 = op.src_start, op.dest_start
