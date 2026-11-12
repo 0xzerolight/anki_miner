@@ -24,7 +24,7 @@ from anki_miner.exceptions import SetupError
 from anki_miner.interfaces.progress import DownloadProgressFn
 from anki_miner.services._install_common import cleanup_part, verify_sha256
 from anki_miner.services.resource_downloader import CancelledCheck, download_to_temp
-from anki_miner.services.update_checker import UpdateInfo
+from anki_miner.services.update_checker import UpdateInfo, running_appimage
 from anki_miner.utils.logging_ext import log_summary
 
 logger = logging.getLogger(__name__)
@@ -58,11 +58,6 @@ class StagedUpdate:
     path: Path
 
 
-def _appimage_path() -> Path | None:
-    value = os.environ.get("APPIMAGE")
-    return Path(value) if value else None
-
-
 def _windows_stage_dir() -> Path:
     """Where the Windows installer waits to run. In TEMP, beside Inno's own
     extraction, so a staged installer the user never ran is Windows' to clean."""
@@ -74,7 +69,7 @@ def in_place_supported(info: UpdateInfo) -> bool:
     if info.asset_url is None or info.asset_sha256 is None:
         return False
     if info.target == "appimage":
-        appimage = _appimage_path()
+        appimage = running_appimage()
         # os.replace needs write access to the folder, not to the file.
         return appimage is not None and os.access(appimage.parent, os.W_OK)
     if info.target == "windows-frozen":
@@ -108,7 +103,7 @@ def stage_update(
         raise SetupError("This Anki Miner install cannot update itself.")
 
     if info.target == "appimage":
-        appimage = _appimage_path()
+        appimage = running_appimage()
         if appimage is None:
             raise SetupError("This Anki Miner install cannot update itself.")
         dest_dir = appimage.parent

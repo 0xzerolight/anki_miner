@@ -11,7 +11,7 @@ import pytest
 
 from anki_miner.exceptions import OperationCancelled, SetupError
 from anki_miner.services import app_updater
-from anki_miner.services.update_checker import UpdateInfo
+from anki_miner.services.update_checker import UpdateInfo, _detect_target
 
 NEW_BYTES = b"new anki miner build " * 1000
 NEW_SHA = hashlib.sha256(NEW_BYTES).hexdigest()
@@ -53,7 +53,24 @@ def appimage(tmp_path, monkeypatch):
     path.parent.mkdir()
     path.write_bytes(b"old build")
     path.chmod(0o755)
+    # The runtime mounts the file at APPDIR and runs the frozen build from there.
+    mount = tmp_path / "mount"
     monkeypatch.setenv("APPIMAGE", str(path))
+    monkeypatch.setenv("APPDIR", str(mount))
+    monkeypatch.setattr(app_updater.sys, "frozen", True, raising=False)
+    monkeypatch.setattr(app_updater.sys, "executable", str(mount / "usr" / "bin" / "AnkiMiner"))
+    return path
+
+
+@pytest.fixture
+def inherited_appimage(tmp_path, monkeypatch):
+    """Another app's AppImage in the env of a pip/source run started from it."""
+    path = tmp_path / "apps" / "WezTerm-x86_64.AppImage"
+    path.parent.mkdir()
+    path.write_bytes(b"other app")
+    monkeypatch.setenv("APPIMAGE", str(path))
+    monkeypatch.setenv("APPDIR", str(tmp_path / "mount"))
+    monkeypatch.delattr(app_updater.sys, "frozen", raising=False)
     return path
 
 
@@ -87,6 +104,15 @@ class TestInPlaceSupported:
 
     def test_no_asset_means_no_in_place(self, appimage):
         assert app_updater.in_place_supported(_info("appimage", url=None)) is False
+
+    def test_an_inherited_appimage_is_not_this_install(self, inherited_appimage):
+        assert app_updater.in_place_supported(_info("appimage")) is False
+
+    def test_a_frozen_build_outside_the_appimage_mount(self, inherited_appimage, tmp_path, monkeypatch):
+        """A .deb build started from another AppImage app inherits its APPIMAGE and APPDIR."""
+        monkeypatch.setattr(app_updater.sys, "frozen", True, raising=False)
+        monkeypatch.setattr(app_updater.sys, "executable", str(tmp_path / "opt" / "AnkiMiner"))
+        assert app_updater.in_place_supported(_info("appimage")) is False
 
     def test_appimage_target_without_the_env_var(self, monkeypatch):
         monkeypatch.delenv("APPIMAGE", raising=False)
@@ -132,6 +158,16 @@ class TestStageAppImage:
             app_updater.stage_update(_info("appimage"))
 
         assert appimage.read_bytes() == b"old build"
+
+    def test_never_replaces_an_inherited_appimage(self, inherited_appimage, fake_download):
+        with pytest.raises(SetupError):
+            app_updater.stage_update(_info("appimage"))
+
+        assert inherited_appimage.read_bytes() == b"other app"
+        assert fake_download == []
+
+    def test_an_inherited_appimage_does_not_make_the_target_appimage(self, inherited_appimage):
+        assert _detect_target() == "pip"
 
     def test_refuses_an_install_that_cannot_update_itself(self, appimage, fake_download):
         with pytest.raises(SetupError):
