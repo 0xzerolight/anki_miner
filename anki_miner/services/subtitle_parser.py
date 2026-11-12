@@ -1061,7 +1061,9 @@ class SubtitleParserService:
         (手っ取り早い), which the dictionary attests (てっとりばやい). Same
         selection policy as ``attest_merged_readings``, anchored on the
         headword re-tokenize concat: keep it when attested, else the single or
-        edit-distance-closest attested reading. Returns hiragana. ``None``
+        edit-distance-closest attested reading, then the curated
+        ``resolve_reading_override`` keyed on the headword (an inflected span's
+        surface, そう言っ, is no table key). Returns hiragana. ``None``
         when no reading_lookup is wired or the dictionary attests nothing —
         callers fall back to the re-tokenize reading. Only ever called for
         compound synthetics, so plain tokens add zero lookups.
@@ -1078,6 +1080,7 @@ class SubtitleParserService:
                     result = folded[0]
                 else:
                     result = min(folded, key=lambda r: (_edit_distance(r, concat), folded.index(r)))
+                result = resolve_reading_override(headword, result) or result
             self._hw_reading_cache[headword] = result
         return self._hw_reading_cache[headword]
 

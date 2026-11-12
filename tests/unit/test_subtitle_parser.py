@@ -5307,6 +5307,20 @@ class TestInflectedCompoundHeadwordReading:
         assert word.reading == "てっとりばやい"
         assert "早[ばや]" in word.expression_furigana
 
+    def test_the_curated_reading_override_reaches_an_inflected_compound(self, tmp_path):
+        # そう言った mines そう言う; JMdict lists そうゆう too, but a kanji 言う never reads ゆう on a card.
+        cfg = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
+        srt = _write_srt(tmp_path, "souiu.srt", "そう言った。")
+        parser = SubtitleParserService(
+            cfg,
+            term_lookup=lambda ts: {"そう言う"} & set(ts),
+            reading_lookup=lambda ts: {"そう言う": ["そういう", "そうゆう"]} if "そう言う" in ts else {},
+        )
+        words = parser.parse_subtitle_file(srt)
+        word = next(w for w in words if w.mined_form == "そう言う")
+        assert word.expression_reading == "そういう"
+        assert word.expression_furigana == "そう 言[い]う"
+
 
 class TestKindACompoundKanaAttestedLeak:
     """Kind-A compound whose INFLECTED surface is itself an attested headword
