@@ -99,7 +99,9 @@ def scan_video(
     bitmap: BitmapSource | None = None
     if bitmap_track is not None or is_bitmap_file(video):
         try:
-            bitmap = open_bitmap_source(config, video, bitmap_track)
+            bitmap = open_bitmap_source(config, video, bitmap_track, cancel_event)
+        except OperationCancelled:
+            return VideoOcrResult(VideoOcrStatus.CANCELLED)
         except FrameSourceError as exc:
             logger.warning("Video OCR: %s has no readable image subtitles: %s", video.name, exc)
             return VideoOcrResult(VideoOcrStatus.DECODE_FAILED, detail=str(exc))

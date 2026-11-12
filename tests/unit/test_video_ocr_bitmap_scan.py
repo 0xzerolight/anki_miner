@@ -3,7 +3,11 @@
 from __future__ import annotations
 
 import shutil
+import stat
 import subprocess
+import threading
+import time
+from dataclasses import replace
 from pathlib import Path
 
 import numpy as np
@@ -172,3 +176,23 @@ def test_a_track_whose_size_ffprobe_misses_keeps_its_own_canvas(test_config, tmp
     from_mkv = list(iter_samples(test_config, mkv, FULL_FRAME, fps=10, bitmap=source))
     from_sup = list(iter_samples(test_config, sup, FULL_FRAME, fps=10, bitmap=open_bitmap_source(test_config, sup)))
     assert _lit_rows(from_mkv, 8.5) == _lit_rows(from_sup, 8.5) == list(range(72, 88))
+
+
+def test_cancel_stops_the_scan_while_ffprobe_lists_the_track_packets(test_config, tmp_path):
+    """Listing a track's packets reads the whole video; on a large remux on slow storage
+    that takes minutes, and Cancel must not wait for it."""
+    mkv = _mkv_with_pgs(tmp_path)
+    slow = tmp_path / "slow_ffprobe.sh"
+    slow.write_text('#!/bin/sh\ncase "$*" in *packet=*) sleep 5;; esac\nexec ffprobe "$@"\n')
+    slow.chmod(slow.stat().st_mode | stat.S_IXUSR)
+    config = replace(test_config, ffprobe_location=slow)
+    cancel = threading.Event()
+    threading.Timer(0.2, cancel.set).start()
+
+    started = time.monotonic()
+    result = scan_video(
+        config, mkv, FULL_FRAME, tmp_path / "episode.srt", cancel_event=cancel, reader=_WhiteReader(), bitmap_track=0
+    )
+
+    assert result.status is VideoOcrStatus.CANCELLED
+    assert time.monotonic() - started < 2

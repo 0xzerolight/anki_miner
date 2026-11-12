@@ -25,7 +25,7 @@ import threading
 from collections.abc import Callable, Iterator, Sequence
 from dataclasses import replace
 from pathlib import Path
-from typing import IO, TYPE_CHECKING, NoReturn
+from typing import IO, TYPE_CHECKING, Any, NoReturn
 
 from anki_miner import __version__
 from anki_miner.cli import runner
@@ -357,12 +357,14 @@ def _discard(_data: bytes) -> None:
     """Event writer for a process started with no stdout."""
 
 
-@contextlib.contextmanager
-def _cancel_on_signals(cancel: threading.Event) -> Iterator[None]:
-    """SIGINT/SIGTERM set the run's cancel event; the processor stops at its next checkpoint."""
+def _set_cancel_on_signals(cancel: threading.Event) -> dict[int, Any]:
+    """From now on SIGINT/SIGTERM set *cancel*; returns the handlers they replaced (none off the main thread).
+
+    The ``--api`` call keeps them until the process exits: a cancel that lands
+    after the last run, even after the verdict is written, must leave exit 0.
+    """
     if threading.current_thread() is not threading.main_thread():
-        yield
-        return
+        return {}
     signums = [getattr(signal, name) for name in ("SIGINT", "SIGTERM") if hasattr(signal, name)]
     previous = {signum: signal.getsignal(signum) for signum in signums}
 
@@ -372,6 +374,13 @@ def _cancel_on_signals(cancel: threading.Event) -> Iterator[None]:
 
     for signum in signums:
         signal.signal(signum, handler)
+    return previous
+
+
+@contextlib.contextmanager
+def _cancel_on_signals(cancel: threading.Event) -> Iterator[None]:
+    """SIGINT/SIGTERM set the run's cancel event; the processor stops at its next checkpoint."""
+    previous = _set_cancel_on_signals(cancel)
     try:
         yield
     finally:

@@ -7,6 +7,7 @@ the job commands, which parse their own episodes through :func:`parse_jobs_file`
 from __future__ import annotations
 
 import math
+import os
 import re
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
@@ -158,7 +159,7 @@ def check_schema(obj: Mapping[str, object], where: str) -> None:
 
 def existing_run_dir(value: object) -> Path:
     # Resolved, so a relative run_dir is taken from the caller's folder.
-    path = Path(text(value, "run_dir")).expanduser().resolve()
+    path = abs_path(text(value, "run_dir"))
     if not path.is_dir():
         raise bad(f"run_dir must be an existing folder: {path}")
     return path
@@ -180,8 +181,17 @@ def _unique_run_ids(run_ids: list[str]) -> None:
 
 
 def abs_path(value: str) -> Path:
-    """An input path made absolute against the caller's working folder."""
-    return Path(value).expanduser().resolve()
+    """An input path made absolute against the caller's working folder.
+
+    Only the caller's own home is expanded (``~`` and ``~/...``). Any other
+    leading ``~`` is part of a file name (``~ep.srt``, an editor's temp file),
+    not ``~user``: pathlib would look up a user of that name, raise when there
+    is none, and read from that user's home when there is.
+    """
+    path = Path(value)
+    if value == "~" or value.startswith(("~/", "~" + os.sep)):
+        path = path.expanduser()
+    return path.resolve()
 
 
 def opt_path(value: str | None) -> Path | None:
