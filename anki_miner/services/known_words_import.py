@@ -50,6 +50,7 @@ from typing import Any
 
 from anki_miner.exceptions import SetupError
 from anki_miner.services.reading._util import decode_with_ladder
+from anki_miner.services.word_export import KNOWN_WORDS_COLUMNS
 from anki_miner.utils.logging_ext import log_summary
 
 logger = logging.getLogger(__name__)
@@ -64,6 +65,7 @@ FORMAT_KEYS = (
     "migaku_csv",
     "kindle_vocab",
     "lute_csv",
+    "anki_miner_csv",
     "generic",
 )
 
@@ -321,6 +323,12 @@ def _parse_delimited_or_text(text: str, language: str | None = None) -> KnownWor
         # surface == lemma, so inflected surfaces could never match a card front.
         words = {row[0].strip() for row in entries}
         return _result("ankimorphs", words, len(entries))
+
+    if header[:3] == KNOWN_WORDS_COLUMNS:
+        # Manage Known Words' own CSV export: the word column, without its header.
+        entries = [row for row in rows[1:] if row and _clean(row[0])]
+        words = {row[0].strip() for row in entries}
+        return _result("anki_miner_csv", words, len(entries))
 
     terms = _parse_term_status_table(text, language)
     if terms is not None:
