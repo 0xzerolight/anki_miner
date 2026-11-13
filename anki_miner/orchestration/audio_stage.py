@@ -273,7 +273,6 @@ class AudioStage:
         self._is_cancelled = cancelled
         self.expression_audio_fetcher = expression_audio_fetcher
         self.sentence_audio_fetcher = sentence_audio_fetcher
-        self._started_diagnostic_stages: set[str] = set()
 
     @property
     def expression_audio_active(self) -> bool:
@@ -421,14 +420,9 @@ class AudioStage:
         # session reports its failures at DEBUG and the log looks clean while
         # every word misses.
         reset_fetch_outcome_rate_limit()
-        if stage in self._started_diagnostic_stages:
-            failure_counts_before = self._failure_counts(fetcher)
-        else:
-            # Fetchers are fresh when AudioStage is built, so the first
-            # generation starts from zero. This also keeps simple duck-typed
-            # test fetchers free to expose only their post-run tally.
-            failure_counts_before = {}
-            self._started_diagnostic_stages.add(stage)
+        # Always a snapshot: the Word Curator's prefetch (curation_fetch_fn) may
+        # already have driven this fetcher before the stage's first run.
+        failure_counts_before = self._failure_counts(fetcher)
         log_summary(
             logger,
             "Audio stage",
@@ -464,6 +458,7 @@ class AudioStage:
                 fetcher,
                 diagnose_fn,
                 attempts,
+                misses,
                 stage,
                 failure_counts_before,
             )
@@ -495,6 +490,7 @@ class AudioStage:
         fetcher: object,
         diagnose_fn: Callable[[dict[str, int], int], str | None],
         attempts: int,
+        misses: int,
         stage: str,
         counts_before: dict[str, int],
     ) -> dict[str, int]:
@@ -506,10 +502,14 @@ class AudioStage:
         report. Counts are lifetime-cumulative, so only deltas since this stage
         started may be compared with its per-stage attempt count. Counter resets
         clamp to zero. Invalid stats never break a run.
+
+        The tally counts failed requests per source, including those a later
+        source then satisfied, so it only names the cause: the warning needs at
+        least half the attempted items to have ended without audio.
         """
         current = self._failure_counts(fetcher)
         counts = {key: max(0, value - counts_before.get(key, 0)) for key, value in current.items()}
-        diagnosis = diagnose_fn(counts, attempts)
+        diagnosis = diagnose_fn(counts, attempts) if misses * 2 >= attempts else None
         if diagnosis is not None:
             log_summary(
                 logger,
