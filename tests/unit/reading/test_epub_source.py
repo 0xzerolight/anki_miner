@@ -1096,3 +1096,38 @@ def test_a_book_without_ruby_has_empty_hints(tmp_path: Path) -> None:
     doc = load(_ref(_build_epub(tmp_path, files)), rules=_ES_RULES)
 
     assert [u.ruby for u in doc.units] == [(), ()]
+
+
+_XHTML11_DOCTYPE = '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">\n'
+
+
+@pytest.mark.parametrize("doctype", [_XHTML11_DOCTYPE, "<!DOCTYPE html>\n"], ids=["xhtml11", "html5"])
+def test_named_html_entities_resolve_like_a_reader(tmp_path: Path, doctype: str) -> None:
+    """The XML parse leaves undeclared entities unresolved (XXE hardening), so such a file is read as HTML."""
+    chapter = _xhtml("<p>dit l&rsquo;homme du caf&eacute;&nbsp;x &amp; y &lt;z&gt;</p>").replace(
+        "<html", doctype + "<html", 1
+    )
+    files = {
+        "OEBPS/content.opf": _opf([("c1", "ch1.xhtml", "application/xhtml+xml", "")], [("c1", None)]),
+        "OEBPS/ch1.xhtml": chapter,
+    }
+
+    doc = load(_ref(_build_epub(tmp_path, files)), rules=_ES_RULES)
+
+    assert [u.text for u in doc.units] == ["dit l’homme du café\u00a0x & y <z>"]
+
+
+def test_html_syntax_spine_document_keeps_text_after_unclosed_void_elements(tmp_path: Path) -> None:
+    chapter = (
+        "<html><head><title>x</title></head><body>"
+        '<p>朝になった。<br>彼は窓を開けた。</p><p>空は<img src="g.png">青かった。</p>'
+        "</body></html>"
+    )
+    files = {
+        "OEBPS/content.opf": _opf([("c1", "ch1.html", "text/html", "")], [("c1", None)]),
+        "OEBPS/ch1.html": chapter,
+    }
+
+    doc = load(_ref(_build_epub(tmp_path, files)))
+
+    assert [u.text for u in doc.units] == ["朝になった。", "彼は窓を開けた。", "空は青かった。"]

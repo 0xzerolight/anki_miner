@@ -397,11 +397,14 @@ def _local(el) -> str:
     return tag.rpartition("}")[2].lower()
 
 
-def _parse_xml(data: bytes):
+def _xml_parser():
+    return etree.XMLParser(recover=True, resolve_entities=False, load_dtd=False, no_network=True)
+
+
+def _parse_xml(data: bytes, parser=None):
     """Recovering, network-free XML parse; ``None`` if nothing usable comes out."""
-    parser = etree.XMLParser(recover=True, resolve_entities=False, load_dtd=False, no_network=True)
     try:
-        return etree.fromstring(data, parser)
+        return etree.fromstring(data, parser if parser is not None else _xml_parser())
     except etree.XMLSyntaxError as exc:
         # DEBUG: a recovering parser that still gives up means the member is
         # not XML at all, and the caller only reports "no usable body".
@@ -810,13 +813,37 @@ def _is_cover_typed(root, body) -> bool:
     return False
 
 
+def _xml_parse_was_lossy(parser) -> bool:
+    """Whether recovery reshaped the tree or an entity was left unresolved.
+
+    An HTML-syntax file's unclosed ``<br>``/``<img>`` swallows the text after
+    it, and a named entity (``&eacute;``) that the unloaded DTD would define
+    stays an ``_Entity`` node that carries no text.
+    """
+    return any(
+        err.domain_name == "PARSER"
+        and (err.level >= etree.ErrorLevels.ERROR or err.type_name == "WAR_UNDECLARED_ENTITY")
+        for err in parser.error_log
+    )
+
+
 def _parse_content(raw: bytes):
-    """Return ``(body_element_or_None, is_cover_typed)`` for one spine file."""
-    root = _parse_xml(raw)
+    """Return ``(body_element_or_None, is_cover_typed)`` for one spine file.
+
+    A file the XML parse cannot read faithfully is read with ``lxml.html``,
+    which knows the HTML entity table and void elements and loads no DTD.
+    """
+    parser = _xml_parser()
+    root = _parse_xml(raw, parser)
     body = _find_body(root)
-    if body is None:
+    if body is None or _xml_parse_was_lossy(parser):
+        # XML's default is UTF-8 where libxml2's HTML parser assumes Latin-1;
+        # a BOM it detects itself.
+        encoding = None
+        if root is not None and not raw.startswith((b"\xff\xfe", b"\xfe\xff")):
+            encoding = root.getroottree().docinfo.encoding
         try:
-            root = html.document_fromstring(raw)
+            root = html.document_fromstring(raw, parser=html.HTMLParser(encoding=encoding))
         except (etree.ParserError, etree.XMLSyntaxError, ValueError) as exc:
             # DEBUG: last rung of the parse ladder, so this chapter contributes
             # nothing; without it a book that mines zero words has no trace.
