@@ -1741,7 +1741,7 @@ class SubtitleParserService:
                 override = resolve_reading_override(mined, expression_reading)
                 if override is not None:
                     # unidic-lite misreads this spelling in every context (一日→ツイタチ,
-                    # 仏→フツ, マズい→マジイ, 込む→ゴム). Take the curated reading and
+                    # 仏→フツ, 不味い→マジイ, 込む→ゴム). Take the curated reading and
                     # regenerate ruby from it — a stale per-token furigana would
                     # contradict the corrected reading field (and the corrected value
                     # flows on to the word reading and lemma_reading below).
@@ -1788,7 +1788,7 @@ class SubtitleParserService:
                 # イウ); an isolated re-tokenize of 言う picks ユウ, 得る ウル.
                 own_base_reading = self._own_base_reading(word_token, mined)
                 if override is not None:
-                    # Inflected misread spelling (マズかった→mined マズい→まじい,
+                    # Inflected misread spelling (不味かった→mined 不味い→まじい,
                     # 込んだ→mined 込む→ごむ): apply the curated reading and regenerate
                     # ruby from it, mirroring the mined==surface branch above.
                     expression_reading = override
@@ -1841,9 +1841,15 @@ class SubtitleParserService:
             # most verb/adjective tokens ``mined`` (orthBase) equals the lemma,
             # so reuse the value; a kanji-variant divergence (乞う vs 請う)
             # recomputes the lemma's reading like the surface-mined case. On a curated
-            # reading override the lemma spelling (マズい→不味い) reads the SAME wrong
+            # reading override the lemma spelling (オマエ→御前) reads the SAME wrong
             # value in isolation, so reuse the corrected reading rather than recompute.
-            lemma_reading = expression_reading if (mined == lemma or reading_overridden) else self._reading(lemma)
+            # A recomputed lemma reading takes the curated table too: a kana front
+            # reads as itself, but its lemma (マズい → 不味い) is still misread.
+            if mined == lemma or reading_overridden:
+                lemma_reading = expression_reading
+            else:
+                lemma_reading = self._reading(lemma)
+                lemma_reading = resolve_reading_override(lemma, lemma_reading) or lemma_reading
             # Same recovery for the lemma fallback used by audio and pitch: a
             # kanji-variant lemma the tokenizer cannot read gets its unique attested
             # reading, or stays on the surface fallback.

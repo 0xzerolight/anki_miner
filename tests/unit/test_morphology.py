@@ -670,7 +670,7 @@ class TestResolveReadingOverride:
         [
             ("一日", "ついたち", "いちにち"),
             ("仏", "ふつ", "ほとけ"),
-            ("マズい", "まじい", "まずい"),
+            ("不味い", "まじい", "まずい"),
             ("込む", "ごむ", "こむ"),
             ("私", "わたくし", "わたし"),
             ("私たち", "わたくしたち", "わたしたち"),
@@ -702,7 +702,7 @@ class TestResolveReadingOverride:
             ("仏", "ほとけ"),  # already-correct reading is not remapped
             ("込む", "こむ"),  # already-correct reading is not remapped
             ("飲み込む", "のみこむ"),  # compound reads fine; spelling not in table
-            ("マズい", "まずい"),  # corrected reading passes through unchanged
+            ("不味い", "まずい"),  # corrected reading passes through unchanged
             ("私", "わたし"),  # already-correct reading is not remapped
             ("時間", "じかん"),  # unrelated spelling
         ],
@@ -1151,3 +1151,12 @@ class TestReplaceOverriddenSpans:
         raw, merged = self._setup({"バカ力": ["ばかぢから"]})
         out = replace_overridden_spans("バカ力だ", raw[:-1], merged)
         assert out == raw[:-1]
+
+
+def test_extract_reading_kana_surface_is_its_own_reading():
+    """R4a-002: unidic-lite reads ズルい as ズリイ; a kana-only surface reads as itself,
+    while a surface with an iteration mark keeps the tagger's kana."""
+    zurui = SimpleNamespace(surface="ズルい", feature=SimpleNamespace(kana="ズリイ"))
+    isuzu = SimpleNamespace(surface="いすゞ", feature=SimpleNamespace(kana="イスズ"))
+    assert morphology.extract_reading(zurui) == "ズルイ"
+    assert morphology.extract_reading(isuzu) == "イスズ"

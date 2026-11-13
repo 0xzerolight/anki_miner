@@ -401,6 +401,20 @@ def is_kana_only(text: str) -> bool:
     return bool(text) and all("ぁ" <= ch <= "ゖ" or "ァ" <= ch <= "ヺ" or ch in "ー・ゝゞヽヾ" for ch in text)
 
 
+def is_plain_kana(text: object) -> bool:
+    """True iff ``text`` is only plain hiragana/katakana letters and ー.
+
+    Such a surface is its own reading. Iteration marks (ゝゞヽヾ), ・ and the
+    counter kana ヵヶゕゖ are excluded: their reading depends on context
+    (いすゞ → イスズ, 3ヶ月 → カ), so the tagger's kana stands.
+    """
+    return (
+        isinstance(text, str)
+        and bool(text)
+        and all("ぁ" <= ch <= "ゔ" or "ァ" <= ch <= "ヴ" or ch == "ー" for ch in text)
+    )
+
+
 # Internal alias predating the public export; existing private-name callers
 # (dictionary storage, furigana helpers) keep working.
 _is_kana_only = is_kana_only
@@ -610,7 +624,10 @@ def generate_reading_from_tokens(tokens: Iterable[Any]) -> str:
             kana = token.feature.kana
         except AttributeError:
             kana = None
-        if kana:
+        if is_plain_kana(surface):
+            # A kana surface is its own reading (unidic-lite: キツい kana=キチイ).
+            result.append(katakana_to_hiragana(surface))
+        elif kana:
             result.append(katakana_to_hiragana(kana))
         else:
             result.append(surface)
