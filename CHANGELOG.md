@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Fixed
 
+- The default subtitle cleanup strips a speaker label that contains a digit (男1：) again, while still keeping clock times such as 10:30.
 - Japanese adjectives written with a katakana stem (ズルい, キツい, サムい) and kana-only words such as かんぞう now get their own kana as the card reading instead of a garbled one (ずりい, きちい, かんそう).
 - After an upgrade, the startup prompt's Reimport All now rebuilds every stale resource family (dictionaries, frequency, pitch, audio) instead of only the first one.
 - Outside Japanese, an imported audio pack or an added custom audio source now goes above Google/Edge read-aloud in Word Audio, so its recordings are used.

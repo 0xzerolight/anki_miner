@@ -74,8 +74,9 @@ SUBTITLE_CLEANUP_PIECES: tuple[str, ...] = (
     r"\[[^\]]*\]|［[^］]*］",
     # A wave dash between two digits is a range (2〜3日), not a music mark.
     r"[♪♬♫#]+|(?<!\d)[～〜]+|[～〜]+(?!\d)",
-    # A colon after a digit or before one is a time (10:30), not a speaker label.
-    r"^[^「『:：\d]+[:：](?!\d)\s*",
+    # A colon followed by a digit is a time (10:30) and never ends a speaker label;
+    # a label itself may contain digits (男1：). Owner ruling of 2026-11-13.
+    r"^[^「『:：]+[:：](?!\d)\s*",
     # A dash that opens a speaker turn ("- Hi. - Hello."): at the line start or after
     # a sentence terminator. Hyphenated words and a mid-sentence dash are untouched.
     r"(?:^|(?<=[.!?…]\s))[-–—]\s+",
