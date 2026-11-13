@@ -168,8 +168,13 @@ _RUBY_ATTACHED_RE = re.compile(r"(?:[|｜][^|｜《》\r\n]+|[々぀-ヿ一-鿿]
 # line, otherwise it is body text (a|b).
 _HALF_WIDTH_BASE_MARKER_RE = re.compile(r"\|(?=[^|｜《》\r\n]+《)")
 
+# Kakuyomu's emphasis dots wrap body text: 《《絶対に》》. A ruby reading never
+# starts with 《, so unwrapping these first leaves true ruby untouched.
+_EMPHASIS_RE = re.compile(r"《《([^《》\r\n]+)》》")
+
 
 def _strip_ruby(line: str) -> str:
+    line = _EMPHASIS_RE.sub(r"\1", line)
     line = _HALF_WIDTH_BASE_MARKER_RE.sub("", line)
     return _RUBY_RE.sub("", line).replace("｜", "")
 

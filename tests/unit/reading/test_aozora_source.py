@@ -703,3 +703,11 @@ def test_half_width_bar_opening_a_ruby_base_is_stripped(tmp_path):
     doc = load(_ref(p))
 
     assert [u.text for u in doc.units] == ["彼は魔導書を開いた。", "値はa|bだ。"]
+
+
+def test_kakuyomu_emphasis_dots_keep_the_emphasised_text(tmp_path):
+    p = _write(tmp_path, "　彼は魔法《まほう》を使った。\n　それは《《絶対に》》許されない行為だった。\n", "utf-8")
+
+    doc = load(_ref(p))
+
+    assert [u.text for u in doc.units] == ["彼は魔法を使った。", "それは絶対に許されない行為だった。"]
