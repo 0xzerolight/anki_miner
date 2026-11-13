@@ -66,6 +66,25 @@ def test_a_download_failure_warns_skips_that_language_and_keeps_the_release_gree
     assert calls == [("ko", tmp_path / "ko")]
 
 
+def test_a_download_failure_leaves_no_seed_directory_so_the_smoke_skips(tmp_path, monkeypatch, capsys) -> None:
+    """bundle_smoke.sh runs a leg when its seed directory exists, and the installer makes it before the first byte."""
+    import requests
+
+    from anki_miner.services import pack_installer
+
+    def _outage(url: str, *_args: object, **_kwargs: object) -> Path:
+        try:
+            raise requests.ConnectionError("connection reset")
+        except requests.ConnectionError as exc:
+            raise DownloadFailed(f"Failed to download {url}: {exc}") from exc
+
+    monkeypatch.setattr(pack_installer, "download_to_temp", _outage)
+
+    assert seeds.seed(["zh"], tmp_path) == 0
+    assert "the zh bundle smoke will be skipped" in capsys.readouterr().out
+    assert not (tmp_path / "zh").exists()
+
+
 def test_a_checksum_mismatch_fails_closed(tmp_path, monkeypatch, capsys) -> None:
     calls: list[tuple[str, Path]] = []
     failure = SetupError("kiwipiepy download checksum mismatch: expected aa, got bb")
