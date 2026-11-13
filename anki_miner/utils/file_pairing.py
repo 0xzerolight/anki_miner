@@ -133,14 +133,14 @@ def _tag_of(tokens: Iterable[str], language: SubtitleLanguage | None) -> Subtitl
 
 def _counts_as_tag(token: str, *, names_too: bool) -> bool:
     """A lowercase code (``ja``, ``pt-BR``), an all-caps three-letter one (``ENG``), or with
-    *names_too* a spelled-out name (``English``).
+    *names_too* a spelled-out name in any case (``English``, ``english``).
 
     Never a capitalised word of three letters or fewer, nor an all-caps one of
     two: ``No. 6``, ``It``, ``ID``, ``All.In`` are titles, not Norwegian,
     Italian or Indonesian.
     """
     head = token.partition("-")[0]
-    return head.islower() or (len(head) == 3 and head.isupper()) or (names_too and len(head) > 3)
+    return (head.islower() and len(head) <= 3) or (len(head) == 3 and head.isupper()) or (names_too and len(head) > 3)
 
 
 def subtitle_language_tag(path: Path, language: SubtitleLanguage | None) -> SubtitleTag:

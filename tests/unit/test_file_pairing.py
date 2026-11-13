@@ -748,6 +748,9 @@ JA = SubtitleLanguage(
         ("No. 6 - 01.srt", SubtitleTag.UNTAGGED),  # "No" is a title, not Norwegian
         ("It.2017.srt", SubtitleTag.UNTAGGED),  # "It" is a title, not Italian
         ("Movie.2019.English.srt", SubtitleTag.OTHER),  # a spelled-out name in the last part counts
+        ("movie.2019.english.srt", SubtitleTag.OTHER),
+        ("my.big.fat.italian.wedding.srt", SubtitleTag.UNTAGGED),  # a name counts only last, whatever its case
+        ("the.english.patient.srt", SubtitleTag.UNTAGGED),
     ],
 )
 def test_subtitle_language_tag(name, tag):
