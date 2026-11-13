@@ -14,6 +14,7 @@ from anki_miner.services.reading import web_article
 from anki_miner.services.reading.web_article import (
     ArticleFetchError,
     WebArticle,
+    decode_page,
     extract_article,
     fetch_article,
     fetch_articles,
@@ -252,6 +253,19 @@ def test_fetch_decodes_by_the_pages_meta_charset() -> None:
     url, kwargs = session.calls[0]
     assert url == "https://www.example.com/neko"
     assert kwargs["stream"] is True and kwargs["timeout"] == (10, 30)
+
+
+@pytest.mark.parametrize(
+    ("body", "content_type"),
+    [
+        ("<html><p>héllo</p></html>", "text/html; charset=undefined"),
+        ('<html><head><meta charset="undefined"></head><p>héllo</p></html>', "text/html"),
+    ],
+    ids=["header", "meta"],
+)
+def test_a_charset_named_undefined_falls_through_to_the_next_rung(body: str, content_type: str) -> None:
+    """Python's ``undefined`` codec raises a plain UnicodeError on every decode."""
+    assert decode_page(body.encode("utf-8"), content_type) == body
 
 
 def test_fetch_prefers_the_header_charset_and_names_the_site_after_redirects() -> None:
