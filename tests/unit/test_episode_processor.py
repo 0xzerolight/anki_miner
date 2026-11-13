@@ -877,6 +877,44 @@ class TestProcessEpisode:
         assert result.success is False
         assert any("3 card" in e for e in result.errors)
 
+    def test_mid_batch_failure_records_confirmed_cards(self, test_config, mock_services, tmp_path):
+        """R1a-001: cards Anki confirmed before a later batch failed get the same
+        'mined' known-words receipt and stats session as a created card would."""
+        from anki_miner.services.known_word_db import KnownWordDB
+
+        known_db = KnownWordDB(tmp_path / "known_words.db", language="ja")
+        known_db.initialize()
+        mock_stats = MagicMock()
+        mock_stats.is_available.return_value = True
+        words = [_make_word("食べる")]
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = words
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = words
+        mock_services["media_extractor"].extract_media_batch.return_value = [(words[0], _make_media("taberu"))]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
+
+        def _raise_mid_batch(card_data, progress_callback=None):
+            mock_services["anki_service"].last_created_note_ids = [1, 2]
+            mock_services["anki_service"].last_created_mined_forms = ["a", "b"]
+            raise AnkiConnectionError("Anki connection lost on batch 2")
+
+        mock_services["anki_service"].create_cards_batch.side_effect = _raise_mid_batch
+        processor = build_processor(
+            config=test_config,
+            presenter=NullPresenter(),
+            stats_service=mock_stats,
+            known_word_db=known_db,
+            **mock_services,
+        )
+
+        result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        assert result.card_ids == [1, 2]
+        assert result.mined_forms == ["a", "b"]
+        mock_stats.record_session.assert_called_once()
+        assert mock_stats.record_session.call_args[0][0].note_ids == [1, 2]
+        assert known_db.get_words_by_source("mined") == {"a", "b"}
+
     def test_early_phase_failure_does_not_attribute_prior_episode_ids(self, test_config, mock_services, tmp_path):
         """OVH-008 correctness guard: a failure in phase 1-4 (before
         create_cards_batch runs) must NOT attribute the PREVIOUS episode's IDs.
