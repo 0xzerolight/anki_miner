@@ -362,6 +362,25 @@ class TestPerEpisodeTracks:
         assert tooltip(1) == "EP2 line"
         assert tooltip(0) == "EP1 line"
 
+    def test_translation_column_shows_once_a_later_episode_has_a_track(self, qtbot, ep1, ep2, sync_off_thread):
+        def resolver(video):
+            return CurationMediaContext(
+                video_file=video,
+                subtitle_entries=[(10.0, 12.0, "犬の文")],
+                secondary_entries=[(10.0, 12.0, "EP2 line")],
+            )
+
+        ctx = CurationMediaContext(video_file=ep1, subtitle_entries=[(10.0, 12.0, "猫の文")], context_resolver=resolver)
+        words = [_word("猫", start_time=10.0, video=ep1), _word("犬", start_time=10.0, video=ep2)]
+        dlg, _player = _build_dialog(qtbot, words, ctx)
+        assert dlg.table.isColumnHidden(TRANSLATION_COLUMN)  # no episode known to have a track yet
+
+        _focus_row(dlg, dlg._visual_row_for_index(1))
+
+        assert not dlg.table.isColumnHidden(TRANSLATION_COLUMN)
+        assert dlg.table.item(dlg._visual_row_for_index(1), TRANSLATION_COLUMN).toolTip() == "EP2 line"
+        assert dlg.table.item(dlg._visual_row_for_index(0), TRANSLATION_COLUMN).toolTip() == ""
+
     def test_a_pick_from_an_unloaded_episode_gets_its_merge_once_it_lands(self, qtbot, ep1, ep2, sync_off_thread):
         from PyQt6.QtCore import Qt
         from PyQt6.QtWidgets import QApplication

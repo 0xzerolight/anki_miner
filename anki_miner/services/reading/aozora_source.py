@@ -195,6 +195,10 @@ def _classify(control: str) -> str:
 
 # The quoted target of a 同行見出し / 窓見出し: ［＃「一」は同行中見出し］.
 _SAME_LINE_HEADING_TARGET_RE = re.compile(r"「([^」]+)」は(?:同行|窓)")
+# The bracketed pair ［＃同行中見出し］一［＃同行中見出し終わり］ (大/中/小, 同行/窓) heads
+# the same way: the text between the two markers is the heading, the rest of the
+# line is body text. Owner ruling of 2026-11-13.
+_SAME_LINE_HEADING_PAIR_RE = re.compile(r"(?:同行|窓)[大中小]見出し(終わり)?$")
 
 
 def _strip_annotations(line: str) -> tuple[str, bool, bool, bool, str | None]:
@@ -211,6 +215,7 @@ def _strip_annotations(line: str) -> tuple[str, bool, bool, bool, str | None]:
     out: list[str] = []
     inline = block_start = block_end = False
     same_line: str | None = None
+    pair_start: int | None = None  # len(out) at an open bracketed same-line heading
     i = 0
     n = len(line)
     while i < n:
@@ -228,8 +233,14 @@ def _strip_annotations(line: str) -> tuple[str, bool, bool, bool, str | None]:
             elif kind == "inline_heading":
                 inline = True
                 target = _SAME_LINE_HEADING_TARGET_RE.match(control)
+                pair = _SAME_LINE_HEADING_PAIR_RE.fullmatch(control)
                 if target:
                     same_line = target.group(1)
+                elif pair and not pair.group(1):
+                    pair_start = len(out)
+                elif pair and pair_start is not None:
+                    same_line = "".join(out[pair_start:]).strip() or None
+                    pair_start = None
             i = close + 1
         else:
             out.append(line[i])
@@ -278,6 +289,28 @@ def _drop_symbol_block(lines: list[str]) -> list[str]:
     if r2 is None or not any(_SYMBOL_BLOCK_HEADING in ln for ln in lines[r1 + 1 : r2]):
         return lines
     return lines[:r1] + lines[r2 + 1 :]
+
+
+# Project Gutenberg wraps every .txt in a metadata header and a licence of some
+# 3,500 words. Owner ruling of 2026-11-13: with both marker lines present only the
+# text between them is mined; with one or none the file loads as given.
+_GUTENBERG_MARKER_RE = re.compile(r"^\s*\*{3}\s*(START|END) OF (?:THE|THIS) PROJECT GUTENBERG EBOOK\b", re.IGNORECASE)
+
+
+def _gutenberg_body(lines: list[str]) -> list[str]:
+    """The lines between a Gutenberg START marker and the END marker after it."""
+    start = next((i for i, ln in enumerate(lines) if _marker_kind(ln) == "START"), None)
+    if start is None:
+        return lines
+    end = next((i for i in range(start + 1, len(lines)) if _marker_kind(lines[i]) == "END"), None)
+    if end is None:
+        return lines
+    return lines[start + 1 : end]
+
+
+def _marker_kind(line: str) -> str | None:
+    match = _GUTENBERG_MARKER_RE.match(line)
+    return match.group(1).upper() if match else None
 
 
 def _is_aozora(text: str) -> bool:
@@ -552,7 +585,7 @@ def load(
     first_part = ref.byte_range is None or ref.byte_range[0] == 0
     last_part = ref.byte_range is None or ref.byte_range[1] is None
     text = _decode(raw, encodings=encodings, script_check=script_check)
-    lines = _splitlines(text)
+    lines = _gutenberg_body(_splitlines(text))
     if last_part:
         lines = _cut_footer(lines)
 

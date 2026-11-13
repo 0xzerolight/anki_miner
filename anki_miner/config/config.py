@@ -74,13 +74,41 @@ SUBTITLE_CLEANUP_PIECES: tuple[str, ...] = (
     r"\[[^\]]*\]|［[^］]*］",
     # A wave dash between two digits is a range (2〜3日), not a music mark.
     r"[♪♬♫#]+|(?<!\d)[～〜]+|[～〜]+(?!\d)",
-    # A colon after a digit or before one is a time (10:30), not a speaker label.
-    r"^[^「『:：\d]+[:：](?!\d)\s*",
+    # A colon followed by a digit is a time (10:30) and never ends a speaker label;
+    # a label itself may contain digits (男1：). Owner ruling of 2026-11-13.
+    r"^[^「『:：]+[:：](?!\d)\s*",
     # A dash that opens a speaker turn ("- Hi. - Hello."): at the line start or after
     # a sentence terminator. Hyphenated words and a mid-sentence dash are untouched.
     r"(?:^|(?<=[.!?…]\s))[-–—]\s+",
 )
 DEFAULT_SUBTITLE_CLEANUP_PATTERN = "|".join(SUBTITLE_CLEANUP_PIECES)
+# Earlier defaults of the joined pattern: the v3.10.0 one and the 2026-11-12 interim
+# one. A saved subtitle_regex_filter equal to one of them is the untouched default
+# and loads as the current one; any other value is the user's own and is kept
+# (GUIConfigManager._refresh_cleanup_default). Owner ruling of 2026-11-13. When the
+# default changes again, add the outgoing string here.
+PREVIOUS_SUBTITLE_CLEANUP_DEFAULTS: frozenset[str] = frozenset(
+    {
+        "|".join(
+            (
+                r"\([^)]*\)|（[^）]*）",
+                r"\[[^\]]*\]|［[^］]*］",
+                r"[♪♬♫#～〜]+",
+                r"^[^「『:：]+[:：]\s*",
+                r"(?:^|(?<=[.!?…]\s))[-–—]\s+",
+            )
+        ),
+        "|".join(
+            (
+                r"\([^)]*\)|（[^）]*）",
+                r"\[[^\]]*\]|［[^］]*］",
+                r"[♪♬♫#]+|(?<!\d)[～〜]+|[～〜]+(?!\d)",
+                r"^[^「『:：\d]+[:：](?!\d)\s*",
+                r"(?:^|(?<=[.!?…]\s))[-–—]\s+",
+            )
+        ),
+    }
+)
 
 # Discrete whole-UI zoom presets (whole percents) offered in the Zoom dropdown
 # (gui/widgets/panels/ui_settings_panel.py) and used to snap a folded legacy

@@ -847,3 +847,98 @@ class TestNewInstallUtilities:
         imported = GUIConfigManager.import_config(path, current).config
 
         assert imported.hidden_utilities == ("mokuro",)
+
+
+# The two defaults the subtitle cleanup pattern shipped with before the current one.
+_V3_10_CLEANUP_DEFAULT = "|".join(
+    (
+        r"\([^)]*\)|（[^）]*）",
+        r"\[[^\]]*\]|［[^］]*］",
+        r"[♪♬♫#～〜]+",
+        r"^[^「『:：]+[:：]\s*",
+        r"(?:^|(?<=[.!?…]\s))[-–—]\s+",
+    )
+)
+_INTERIM_CLEANUP_DEFAULT = "|".join(
+    (
+        r"\([^)]*\)|（[^）]*）",
+        r"\[[^\]]*\]|［[^］]*］",
+        r"[♪♬♫#]+|(?<!\d)[～〜]+|[～〜]+(?!\d)",
+        r"^[^「『:：\d]+[:：](?!\d)\s*",
+        r"(?:^|(?<=[.!?…]\s))[-–—]\s+",
+    )
+)
+_EDITED_CLEANUP = _V3_10_CLEANUP_DEFAULT + r"|【[^】]*】"
+
+
+class TestPreviousCleanupDefaultMigration:
+    """A saved subtitle_regex_filter that is exactly an old default becomes the current one."""
+
+    @pytest.mark.parametrize("old", [_V3_10_CLEANUP_DEFAULT, _INTERIM_CLEANUP_DEFAULT], ids=["v3.10.0", "interim"])
+    def test_active_config_old_default_is_migrated(self, tmp_config: Path, old: str):
+        from anki_miner.config.config import DEFAULT_SUBTITLE_CLEANUP_PATTERN
+
+        _write_config(tmp_config, {"config_schema_version": 4, "subtitle_regex_filter": old})
+        assert GUIConfigManager.load_config().subtitle_regex_filter == DEFAULT_SUBTITLE_CLEANUP_PATTERN
+
+    @pytest.mark.parametrize("old", [_V3_10_CLEANUP_DEFAULT, _INTERIM_CLEANUP_DEFAULT], ids=["v3.10.0", "interim"])
+    def test_language_stash_old_default_is_migrated(self, tmp_config: Path, old: str):
+        from anki_miner.config.config import DEFAULT_SUBTITLE_CLEANUP_PATTERN
+
+        _write_config(
+            tmp_config,
+            {"config_schema_version": 4, "language": "en", "language_stash": {"ja": {"subtitle_regex_filter": old}}},
+        )
+        stash = GUIConfigManager.load_config().language_stash
+        assert stash["ja"]["subtitle_regex_filter"] == DEFAULT_SUBTITLE_CLEANUP_PATTERN
+
+    @pytest.mark.parametrize("old", [_V3_10_CLEANUP_DEFAULT, _INTERIM_CLEANUP_DEFAULT], ids=["v3.10.0", "interim"])
+    def test_settings_profile_old_default_is_migrated(self, tmp_config: Path, old: str):
+        from anki_miner.config.config import DEFAULT_SUBTITLE_CLEANUP_PATTERN
+        from anki_miner.gui.utils.profile_store import ProfileStore
+
+        directory = ProfileStore.profiles_dir()
+        directory.mkdir(parents=True, exist_ok=True)
+        (directory / "anime.json").write_text(
+            json.dumps(
+                {
+                    "config_schema_version": 4,
+                    "profile_name": "Anime",
+                    "subtitle_regex_filter": old,
+                    "language_stash": {"zh": {"subtitle_regex_filter": old}},
+                }
+            ),
+            encoding="utf-8",
+        )
+        config = ProfileStore.read_profile("anime")
+        assert config.subtitle_regex_filter == DEFAULT_SUBTITLE_CLEANUP_PATTERN
+        assert config.language_stash["zh"]["subtitle_regex_filter"] == DEFAULT_SUBTITLE_CLEANUP_PATTERN
+
+    def test_edited_value_is_untouched(self, tmp_config: Path):
+        _write_config(
+            tmp_config,
+            {
+                "config_schema_version": 4,
+                "language": "en",
+                "subtitle_regex_filter": _EDITED_CLEANUP,
+                "language_stash": {"ja": {"subtitle_regex_filter": _EDITED_CLEANUP}},
+            },
+        )
+        loaded = GUIConfigManager.load_config()
+        assert loaded.subtitle_regex_filter == _EDITED_CLEANUP
+        assert loaded.language_stash["ja"]["subtitle_regex_filter"] == _EDITED_CLEANUP
+
+    def test_loading_twice_changes_nothing_more(self, tmp_config: Path):
+        _write_config(
+            tmp_config,
+            {
+                "config_schema_version": 4,
+                "language": "en",
+                "subtitle_regex_filter": _V3_10_CLEANUP_DEFAULT,
+                "language_stash": {"ja": {"subtitle_regex_filter": _INTERIM_CLEANUP_DEFAULT}},
+            },
+        )
+        first = GUIConfigManager.load_config()
+        GUIConfigManager.save_config(first)
+        second = GUIConfigManager.load_config()
+        assert second == first

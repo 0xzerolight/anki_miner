@@ -697,6 +697,23 @@ def test_same_line_heading_is_its_own_unit_and_the_body_splits():
     ]
 
 
+@pytest.mark.parametrize(
+    "marker",
+    ["同行大見出し", "同行中見出し", "同行小見出し", "窓大見出し", "窓中見出し", "窓小見出し"],
+)
+def test_bracketed_same_line_heading_is_its_own_unit_and_the_body_splits(marker):
+    units, _paras, _skipped = _emit_units(
+        [f"［＃{marker}］一［＃{marker}終わり］　朝になった。彼は窓を開けた。", "　次だ。"]
+    )
+
+    assert [(u.text, u.location_label) for u in units] == [
+        ("一", "一"),
+        ("朝になった。", "一"),
+        ("彼は窓を開けた。", "一"),
+        ("次だ。", "一"),
+    ]
+
+
 def test_half_width_bar_opening_a_ruby_base_is_stripped(tmp_path):
     p = _write(tmp_path, "　彼は|魔導書《グリモワール》を開いた。\n　値はa|bだ。\n", "utf-8")
 
@@ -711,3 +728,54 @@ def test_kakuyomu_emphasis_dots_keep_the_emphasised_text(tmp_path):
     doc = load(_ref(p))
 
     assert [u.text for u in doc.units] == ["彼は魔法を使った。", "それは絶対に許されない行為だった。"]
+
+
+_GUTENBERG = """The Project Gutenberg eBook of The Great Gatsby
+
+This ebook is for the use of anyone anywhere in the United States.
+
+Title: The Great Gatsby
+
+{start}
+
+In my younger and more vulnerable years my father gave me some advice.
+
+{end}
+
+Updated editions will replace the previous one.
+"""
+
+
+@pytest.mark.parametrize(
+    ("start", "end"),
+    [
+        (
+            "*** START OF THE PROJECT GUTENBERG EBOOK THE GREAT GATSBY ***",
+            "*** END OF THE PROJECT GUTENBERG EBOOK THE GREAT GATSBY ***",
+        ),
+        (
+            "*** START OF THIS PROJECT GUTENBERG EBOOK THE GREAT GATSBY ***",
+            "*** END OF THIS PROJECT GUTENBERG EBOOK THE GREAT GATSBY ***",
+        ),
+        ("***START OF THE PROJECT GUTENBERG EBOOK THE GREAT GATSBY***", "***END OF THE PROJECT GUTENBERG EBOOK***"),
+        (
+            "*** Start of the Project Gutenberg eBook The Great Gatsby ***",
+            "*** end of this project gutenberg ebook the great gatsby ***",
+        ),
+    ],
+)
+def test_gutenberg_text_mines_only_between_its_markers(tmp_path, start, end):
+    doc = _en_doc(tmp_path, _GUTENBERG.format(start=start, end=end))
+    assert [u.text for u in doc.units] == ["In my younger and more vulnerable years my father gave me some advice."]
+
+
+@pytest.mark.parametrize(
+    "end", ["", "*** END OF THE PROJECT GUTENBERG EBOOK THE GREAT GATSBY ***"], ids=["start-only", "end-only"]
+)
+def test_gutenberg_text_with_one_marker_loads_as_before(tmp_path, end):
+    start = "*** START OF THE PROJECT GUTENBERG EBOOK THE GREAT GATSBY ***" if not end else ""
+    text = _GUTENBERG.format(start=start, end=end)
+    plain = _en_doc(tmp_path, text.replace(start or end, "Plain line."), name="plain.txt")
+    doc = _en_doc(tmp_path, text)
+    assert len(doc.units) == len(plain.units)
+    assert doc.units[0].text.startswith("The Project Gutenberg eBook")

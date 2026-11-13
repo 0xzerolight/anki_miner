@@ -2504,7 +2504,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         until ``_repaint_translation_cells`` runs for it.
         """
         ctx = self._media_context
-        if ctx is None or not ctx.secondary_entries:
+        if ctx is None or not self._has_translations:
             return ((TRANSLATION_COLUMN, "", "", ""),)
         chosen = self._chosen.get(idx, self._words[idx])
         video = chosen.video_file or ctx.video_file
@@ -3351,6 +3351,11 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
                 return
             self._media_ctx_cache[video_file] = new_ctx
             self._apply_media_context(new_ctx)
+            # The column shows as soon as any episode of the season has a
+            # translation track, not only the first. Owner ruling of 2026-11-13.
+            if new_ctx.secondary_entries and not self._has_translations:
+                self._has_translations = True
+                self._apply_translation_column_gate()
             self._repaint_translation_cells(video_file)
             for pick in [
                 i for i in self._unstamped_picks if self._chosen.get(i, self._words[i]).video_file == video_file
