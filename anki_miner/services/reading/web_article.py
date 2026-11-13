@@ -289,6 +289,24 @@ _ACCEPT = "text/html,application/xhtml+xml;q=0.9,*/*;q=0.5"
 _META_CHARSET = re.compile(rb"""<meta[^>]+charset\s*=\s*["']?\s*([A-Za-z0-9_.:-]+)""", re.IGNORECASE)
 
 
+# The WHATWG Encoding Standard labels a browser decodes as a different codec:
+# a page that says Latin-1 or ASCII is read as windows-1252, so its bytes
+# 0x80-0x9F are curly quotes and dashes, not C1 control characters.
+_WHATWG_LABEL_CODECS = {
+    "iso-8859-1": "cp1252",
+    "iso8859-1": "cp1252",
+    "iso_8859-1": "cp1252",
+    "latin1": "cp1252",
+    "l1": "cp1252",
+    "us-ascii": "cp1252",
+    "ascii": "cp1252",
+    "iso-8859-9": "cp1254",
+    "latin5": "cp1254",
+    "tis-620": "cp874",
+    "iso-8859-11": "cp874",
+}
+
+
 def _declared_charset(content_type: str) -> str | None:
     for param in content_type.split(";")[1:]:
         key, _, value = param.partition("=")
@@ -314,6 +332,7 @@ def decode_page(raw: bytes, content_type: str = "") -> str:
     if meta:
         candidates.append(meta.group(1).decode("ascii", errors="replace"))
     for encoding in candidates:
+        encoding = _WHATWG_LABEL_CODECS.get(encoding.strip().lower(), encoding)
         try:
             return raw.decode(encoding)
         except (LookupError, UnicodeError):  # UnicodeError: the "undefined" codec
