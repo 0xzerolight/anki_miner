@@ -259,15 +259,7 @@ def request_language_change(window: Any, code: str) -> bool:
         )
         return False
 
-    # A profile builds without the packages it parses with - every zh
-    # third-party import is function-local - so the profile's own probe is what
-    # decides whether the destination can mine a word. Refused BEFORE the guard:
-    # this costs the user nothing, and the reason names what is missing.
-    probe = profile.unavailable_reason
-    reason = probe() if probe is not None else None
-    if reason:
-        logger.info("Refusing a switch to %r: %s", code, reason)
-        _refuse(window, reason)
+    if _refused_as_unavailable(window, code, profile):
         return False
 
     with window._dictionary_mutation_guard(MUTATION_KIND) as ready:
@@ -319,13 +311,17 @@ def apply_imported_language(window: Any, imported: Any) -> bool:
 
     The third trigger. ``import_config`` already ran ``switch_language``, so the
     chains are swapped in ``imported``; what is still owed is what the other two
-    triggers run first: the busy refusals and the queue rule, in the same order,
-    then the commit hooks. No first-visit prompt: the file is configured settings.
+    triggers run first: the unavailable-language refusal, the busy refusals and
+    the queue rule, in the same order, then the commit hooks. No first-visit prompt: the file is configured settings.
     """
     try:
-        display_name = get_profile(imported.language).display_name
+        profile = get_profile(imported.language)
     except (LookupError, ValueError, ImportError):
         display_name = imported.language
+    else:
+        display_name = profile.display_name
+        if _refused_as_unavailable(window, imported.language, profile):
+            return False
     with window._dictionary_mutation_guard(MUTATION_KIND) as ready:
         if not ready:
             _refuse(
@@ -357,6 +353,24 @@ def apply_imported_language(window: Any, imported: Any) -> bool:
             )
             return False
     commit_language_change(window, previous, flush=bool(pending), first_visit=False)
+    return True
+
+
+def _refused_as_unavailable(window: Any, code: str, profile: Any) -> bool:
+    """Refuse a change onto a language that cannot mine here; return whether it refused.
+
+    A profile builds without the packages it parses with - every zh
+    third-party import is function-local, a pack language's data is a
+    download - so the profile's own probe is what decides whether the
+    destination can mine a word. Every trigger runs this BEFORE the guard:
+    this costs the user nothing, and the reason names what is missing.
+    """
+    probe = profile.unavailable_reason
+    reason = probe() if probe is not None else None
+    if not reason:
+        return False
+    logger.info("Refusing a switch to %r: %s", code, reason)
+    _refuse(window, reason)
     return True
 
 
