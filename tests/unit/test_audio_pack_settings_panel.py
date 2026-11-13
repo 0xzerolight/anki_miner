@@ -1289,6 +1289,22 @@ def test_add_source_entry_appends_without_enabled_jpod101(qapp, qtbot, tmp_path)
     assert [e.kind for e in panel.get_chain()] == ["pack", "jpod101", "custom"]
 
 
+def test_add_source_entry_inserts_above_enabled_synthetic_voice(qapp, qtbot, tmp_path):
+    # Outside Japanese the always-available fallback is the synthetic voice;
+    # a custom source below it would never be consulted.
+    panel = AudioPackSettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
+    panel.set_chain(
+        (
+            AudioSourceEntry(kind="wikimedia", enabled=True),
+            AudioSourceEntry(kind="googletts", enabled=True),
+        )
+    )
+    with qtbot.waitSignal(panel.chain_changed, timeout=1000):
+        panel.add_source_entry(AudioSourceEntry(kind="custom_json", url="http://h/?t={term}", enabled=True))
+    assert [e.kind for e in panel.get_chain()] == ["wikimedia", "custom_json", "googletts"]
+
+
 def test_add_source_entry_logs_kind_and_host_only(qapp, qtbot, tmp_path, caplog):
     panel = AudioPackSettingsPanel(tmp_path)
     qtbot.addWidget(panel)

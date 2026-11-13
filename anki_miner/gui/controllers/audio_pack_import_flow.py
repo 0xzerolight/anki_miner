@@ -19,7 +19,7 @@ from pathlib import Path
 from PyQt6.QtCore import QCoreApplication, Qt, QTimer
 from PyQt6.QtWidgets import QMessageBox, QProgressDialog
 
-from anki_miner.config import AudioSourceEntry, insert_above_first_enabled_jpod101
+from anki_miner.config import AudioSourceEntry, insert_above_first_enabled_fallback
 from anki_miner.gui.controllers.import_flow_common import (
     PanelImportFlowBase,
     _begin_import_trace,
@@ -78,10 +78,10 @@ class AudioPackImportFlow(PanelImportFlowBase):
     _persist_chain: Callable[[tuple[AudioSourceEntry, ...]], None]
 
     def _chain_with_new_packs_inserted(self, new_pack_ids: list[str]) -> tuple[AudioSourceEntry, ...]:
-        """Return current chain with new packs inserted above first enabled jpod101.
+        """Return current chain with new packs inserted above the first enabled fallback.
 
         Priority order: newly imported packs are placed ABOVE the first enabled
-        jpod101 entry (or appended at the end if none), preserving upstream
+        jpod101 or synthetic-voice entry (or appended at the end if none), preserving upstream
         priority order among the batch itself.  Existing entries are preserved
         and any duplicate pack_id is removed before re-insertion so a re-added
         pack appears at the priority slot rather than duplicating.
@@ -93,7 +93,7 @@ class AudioPackImportFlow(PanelImportFlowBase):
         current = [e for e in current if e.kind == "jpod101" or e.pack_id not in new_pack_ids]
 
         new_entries = [AudioSourceEntry(kind="pack", pack_id=pid, enabled=True) for pid in new_pack_ids]
-        return insert_above_first_enabled_jpod101(current, new_entries)
+        return insert_above_first_enabled_fallback(current, new_entries)
 
     def add_pack(
         self,

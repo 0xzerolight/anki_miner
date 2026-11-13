@@ -35,7 +35,7 @@ from anki_miner.config import (
     FreqEntry,
     PitchSourceEntry,
     create_default_config,
-    insert_above_first_enabled_jpod101,
+    insert_above_first_enabled_fallback,
 )
 from anki_miner.config.paths import ANKI_MINER_HOME
 from anki_miner.gui.controllers.anki_probe_controller import AnkiProbeController
@@ -903,7 +903,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
             get_root=lambda: self.config.audio_packs_root,
             chain_field="expression_audio_chain",
             registry_cls=AudioPackRegistry,
-            make_chain=lambda chain, packs: insert_above_first_enabled_jpod101(
+            make_chain=lambda chain, packs: insert_above_first_enabled_fallback(
                 chain, [AudioSourceEntry(kind="pack", pack_id=pack.pack_id, enabled=True) for pack in packs]
             ),
             persist=self._persist_audio_chain_change,

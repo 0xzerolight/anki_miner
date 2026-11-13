@@ -22,9 +22,10 @@ import pytest
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QProgressDialog
 
-from anki_miner.config import AnkiMinerConfig, AudioSourceEntry
+from anki_miner.config import AnkiMinerConfig, AudioSourceEntry, insert_above_first_enabled_fallback
 from anki_miner.gui.utils import file_dialogs
 from anki_miner.gui.widgets.settings_tab import SettingsTab
+from anki_miner.languages.switching import switch_language
 from tests.unit._audio_packs import make_ajt_pack, make_forvo_pack
 from tests.unit._import_flow_harness import (
     capture_infos,
@@ -733,6 +734,35 @@ class TestAddPackPriorityOrdering:
         duplicate_pos = result.index(duplicates[0])
         jpod_pos = next(i for i, entry in enumerate(result) if entry.kind == "jpod101")
         assert duplicate_pos < jpod_pos
+
+    @pytest.mark.parametrize(
+        ("code", "expected"),
+        [
+            ("ko", ["wikimedia", "pack", "googletts"]),
+            ("zh", ["pack", "googletts"]),
+            ("fa", ["pack", "edgetts"]),
+        ],
+    )
+    def test_pack_is_inserted_above_the_enabled_synthetic_voice(self, tab, code, expected):
+        # First hit wins and a synthetic voice speaks every word, so a pack
+        # below it would never be consulted.
+        chain = switch_language(AnkiMinerConfig(), code).expression_audio_chain
+        tab.audio_panel.set_chain(chain)
+
+        result = tab._audio_pack_import_flow._chain_with_new_packs_inserted(["native"])
+
+        assert [entry.kind for entry in result] == expected
+
+    def test_source_is_appended_when_no_fallback_is_enabled(self):
+        chain = (
+            AudioSourceEntry(kind="jpod101", enabled=False),
+            AudioSourceEntry(kind="googletts", enabled=False),
+        )
+        custom = AudioSourceEntry(kind="custom_json", url="http://h/?t={term}", enabled=True)
+
+        result = insert_above_first_enabled_fallback(chain, (custom,))
+
+        assert result == (*chain, custom)
 
     def test_nhk16_before_forvo_in_chain(self, tab, monkeypatch, stub_worker, tmp_path):
         """forvo_files + nhk16_files: nhk16 must appear before forvo in chain."""
