@@ -492,46 +492,42 @@ def _format_furigana(surface: str, reading: str) -> str:
     return result
 
 
-def _leads_with_bracket(rendered: str) -> bool:
-    """True iff a ``_format_furigana`` render starts with a kanji ruby segment.
+def _render_furigana_token(token: Any) -> tuple[str, bool]:
+    """Render one token without its cross-token Anki delimiter.
 
-    Only then does a token-separator space serve its purpose (binding the
-    leading ``[...]`` to this token's kanji instead of the previous run). A
-    plain-leading render (``しっぽ 切[き]り``) must NOT get one — Anki's furigana
-    filter only consumes a space directly before a ``X[...]`` group, so a space
-    before plain kana renders literally on the card (audit F6: トカゲの しっぽ).
-    Literal ``[`` surfaces likewise have no kanji-bearing base and must not be
-    mistaken for a generated ruby group.
+    Returns ``(rendered, leads_with_ruby)``. ``leads_with_ruby`` is True iff the
+    render came from ``_format_furigana`` and its first segment is a ruby group
+    (``3[さん]か 月[げつ]``, ``卒業[そつぎょう]``). Only then does a token-separator
+    space serve its purpose (binding the leading ``[...]`` to this token's base
+    instead of the previous run). A plain-leading render (``しっぽ 切[き]り``) must
+    NOT get one — Anki's furigana filter only consumes a space directly before a
+    ``X[...]`` group, so a space before plain kana renders literally on the card
+    (audit F6: トカゲの しっぽ). A surface returned as-is (no kanji, or no usable
+    kana) is never ruby-led, so a literal ``[`` is never mistaken for a ruby group.
     """
-    bracket = rendered.find("[")
-    if bracket == -1:
-        return False
-    space = rendered.find(" ")
-    return any(_is_kanji(char) for char in rendered[:bracket]) and (space == -1 or bracket < space)
-
-
-def _render_furigana_token(token: Any) -> str:
-    """Render one token without its cross-token Anki delimiter."""
     surface: str = token.surface
     if not any(_is_kanji(c) for c in surface):
-        return surface
+        return surface, False
     try:
         kana = token.feature.kana
     except AttributeError:
-        return surface
+        return surface, False
     if not kana:
-        return surface
+        return surface, False
     hiragana = katakana_to_hiragana(kana)
     if hiragana == surface:
-        return surface
-    return _format_furigana(surface, hiragana)
+        return surface, False
+    rendered = _format_furigana(surface, hiragana)
+    bracket = rendered.find("[")
+    space = rendered.find(" ")
+    return rendered, bracket > 0 and (space == -1 or bracket < space)
 
 
 def _source_aligned_furigana_parts(
     tokens: Iterable[Any], text: str | None
-) -> tuple[list[tuple[str, int, int, int, str]], str, int]:
-    """Pair rendered tokens with source gaps omitted by MeCab."""
-    parts: list[tuple[str, int, int, int, str]] = []
+) -> tuple[list[tuple[str, int, int, int, str, bool]], str, int]:
+    """Pair rendered tokens (and their ruby-led flag) with source gaps omitted by MeCab."""
+    parts: list[tuple[str, int, int, int, str, bool]] = []
     cursor = 0
     for token in tokens:
         surface: str = token.surface
@@ -547,7 +543,7 @@ def _source_aligned_furigana_parts(
                 idx = cursor
             gap = text[cursor:idx]
         tok_end = idx + len(surface)
-        parts.append((gap, gap_start, idx, tok_end, _render_furigana_token(token)))
+        parts.append((gap, gap_start, idx, tok_end, *_render_furigana_token(token)))
         cursor = tok_end
     trailing = "" if text is None else text[cursor:]
     return parts, trailing, cursor
@@ -572,13 +568,13 @@ def generate_furigana_from_tokens(tokens: Iterable[Any], *, text: str | None = N
     result: list[str] = []
     out_has_content = False
     parts, trailing, _ = _source_aligned_furigana_parts(tokens, text)
-    for gap, _, _, _, formatted in parts:
+    for gap, _, _, _, formatted, leads_with_ruby in parts:
         result.append(gap)
         out_has_content = out_has_content or bool(gap)
         # Source whitespace and Anki's disposable ruby delimiter are separate.
         # Yomitan likewise emits unmatched text verbatim, then one leading
         # delimiter per reading group (anki-note-builder.js:createFuriganaPlain).
-        prefix = " " if out_has_content and _leads_with_bracket(formatted) else ""
+        prefix = " " if out_has_content and leads_with_ruby else ""
         result.append(f"{prefix}{formatted}")
         out_has_content = out_has_content or bool(formatted)
     result.append(trailing)
@@ -749,7 +745,7 @@ def wrap_target_furigana_from_tokens(text: str, tokens: Iterable[Any], start: in
             if source_slice:
                 bucket.append(html.escape(source_slice))
 
-    for gap, gap_start, tok_start, tok_end, formatted in parts:
+    for gap, gap_start, tok_start, tok_end, formatted, leads_with_ruby in parts:
         append_source_gap(gap, gap_start)
         out_has_content = out_has_content or bool(gap)
 
@@ -771,7 +767,7 @@ def wrap_target_furigana_from_tokens(text: str, tokens: Iterable[Any], start: in
         # Syntax delimiter is independent from any source gap. For a leading
         # bold ruby it must stay inside <b>, adjacent to the base, so Anki's
         # filter consumes it; the source gap remains outside the tag.
-        prefix = " " if out_has_content and _leads_with_bracket(formatted) else ""
+        prefix = " " if out_has_content and leads_with_ruby else ""
         bucket.append(prefix)
         bucket.append(html.escape(formatted))
         if formatted:

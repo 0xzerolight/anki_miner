@@ -833,6 +833,25 @@ class TestTokenSeparatorSpaceRule:
 
         assert result == "これは[<b> 重要[じゅうよう]</b>]です"
 
+    def test_space_before_digit_based_ruby_group(self):
+        # R4b-001: a merged number+counter (3か月) renders 3[さん]か 月[げつ]; its
+        # first ruby base is the digit, so the separator must still bind さん to 3.
+        text = "卒業まであと3か月しかない"
+        tokens = [
+            _make_mock_token("卒業", kana="ソツギョウ"),
+            _make_mock_token("まで", kana="マデ"),
+            _make_mock_token("あと", kana="アト"),
+            _make_mock_token("3か月", kana="サンカゲツ"),
+            _make_mock_token("しかない", kana="シカナイ"),
+        ]
+        start = text.index("3か月")
+
+        assert generate_furigana_from_tokens(tokens, text=text) == "卒業[そつぎょう]まであと 3[さん]か 月[げつ]しかない"
+        assert (
+            wrap_target_furigana_from_tokens(text, tokens, start, start + 3)
+            == "卒業[そつぎょう]まであと<b> 3[さん]か 月[げつ]</b>しかない"
+        )
+
 
 class TestStripInlineAnnotations:
     """Tests for strip_inline_annotations — the structural subtitle-annotation
