@@ -312,6 +312,16 @@ def merge_number_counters(text: str, tokens: list) -> list:
             return True
         return before.surface in _DIGIT_SEPARATORS and i > 1 and _is_numeral(tokens[i - 2]) and touching(i - 2)
 
+    def after_month(i: int) -> bool:
+        """Numeral i follows a merged month (4月|1日): its 1日 is the date ついたち, not 'one day'."""
+        last = out[-1] if out else None
+        return (
+            last is not None
+            and getattr(last.feature, "number_counter", False)
+            and counter_of(last.surface) == "月"
+            and touching(i - 1)
+        )
+
     out: list = []
     i = 0
     while i < len(tokens):
@@ -343,6 +353,8 @@ def merge_number_counters(text: str, tokens: list) -> list:
             out.extend(tokens[i:end])
             i = end
             continue
+        if counter == "日" and number == 1 and after_month(i):
+            reading = "ついたち"
         merged = SyntheticToken(
             surface=numeral + counter,
             pos1="名詞",
