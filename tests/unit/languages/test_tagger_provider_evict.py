@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import dataclasses
 import gc
 import threading
 import time
 import weakref
 
 from anki_miner.config import AnkiMinerConfig
+from anki_miner.gui.utils.service_factory import create_services
 from anki_miner.languages import tagger_provider
 from anki_miner.presenters import NullPresenter
 from anki_miner.services.subtitle_parser import SubtitleParserService
@@ -84,6 +86,29 @@ def test_a_worker_owned_processor_still_releases_the_engine(monkeypatch, test_co
     processor.release_dictionary_resources()
 
     assert parser.tagger is None
+
+
+def test_the_word_filter_does_not_pin_the_released_engine(monkeypatch, test_config):
+    """R3-002: create_services' word filter must not keep its own reference to the parser's engine."""
+    monkeypatch.setattr(tagger_provider, "_build", lambda language: _Engine())
+    config = dataclasses.replace(test_config, language="ar")
+    parser = SubtitleParserService(config)
+    services = create_services(config, subtitle_parser=parser)
+    processor = build_processor(
+        config=config, presenter=NullPresenter(), subtitle_parser=parser, word_filter=services.word_filter
+    )
+    engine = weakref.ref(parser.tagger)
+
+    processor.release_dictionary_resources()
+    tagger_provider.evict("ar")
+    gc.collect()
+
+    assert engine() is None
+    # A reused (queue) processor keeps annotating: the filter reaches the
+    # engine the parser re-acquires, not a stale or missing one.
+    fresh = services.word_filter.tagger
+    assert isinstance(fresh, _Engine)
+    assert fresh is parser.tagger
 
 
 def _slow_build(started: threading.Event, release: threading.Event):

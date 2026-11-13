@@ -1708,6 +1708,15 @@ class AnkiService:
         logger.debug("Anki duplicate fallback probe done: duplicates=%d", sum(is_duplicate))
         return is_duplicate
 
+    def upload_dict_media(self, html_fields: list[str]) -> dict[str, str]:
+        """Upload the dict-media files the HTML references; return ``{src: confirmed name}``.
+
+        HTML-oriented sibling of :meth:`_upload_dict_media_batch`, for callers
+        that hold field values rather than cards (Card Backfill). A referenced
+        src absent from the result was not stored.
+        """
+        return self._media_store.upload_dict_media_srcs(html_fields)
+
     def store_media_files(self, paths_by_filename: dict[str, Path]) -> dict[str, str]:
         """Upload loose media files; return ``{sent name: confirmed name}``.
 

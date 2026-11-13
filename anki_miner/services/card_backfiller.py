@@ -13,9 +13,11 @@ Definition/Glossary fields without touching their text (``_styling_changes``).
 Word audio is the one proposal that is not a pure local lookup: it fetches
 through ``config.expression_audio_chain`` during the scan, so the preview keeps
 its promise that apply writes exactly what was previewed (a word no enabled
-source has never becomes a row), and it is the only field whose value is
-rewritten at apply time — Anki media names are content-addressed, so the
-``[sound:...]`` ref can only be built once ``storeMediaFile`` confirms a name.
+source has never becomes a row). Apply rewrites only media references: the
+``[sound:...]`` ref of word audio and the ``src`` of dictionary images in
+Definition/Glossary, because Anki confirms a media name only at
+``storeMediaFile`` (content-addressed audio; a collision-safe rename for
+dictionary images, as when mining).
 
 Two phases, both GUI-free and cancellable:
 
@@ -53,6 +55,7 @@ from anki_miner.languages.tagger_provider import get_tagger
 # Generic Anki-search escaper (backslash/quote/``*``/``_``): note-type and deck
 # names need the identical escaping (``Core_2k`` would otherwise glob-match).
 from anki_miner.services._ankiconnect import escape_anki_search as _escape_anki_search
+from anki_miner.services.anki_media_store import _extract_dict_media_srcs, _rewrite_dict_media_srcs
 from anki_miner.services.anki_note_builder import (
     _HTML_TAG_RE,
     _RAW_HTML_FIELD_KEYS,
@@ -85,6 +88,7 @@ from anki_miner.utils.text_utils import (
     _format_furigana,
     front_reading,
     generate_reading,
+    is_kana_only,
     katakana_to_hiragana,
 )
 from anki_miner.utils.timing import timed_phase
@@ -280,9 +284,10 @@ class BackfillResult:
     ``notes_updated``, ``fields_filled``, and ``tagged`` count only note IDs
     confirmed by AnkiConnect. ``failed`` counts attempted note updates that
     were not confirmed. ``skipped_stale`` remains a field-change count.
-    ``media_failed`` counts media-backed field changes dropped because their
-    file could not be put into Anki's collection — the field is left alone
-    rather than pointed at media that is not there.
+    ``media_failed`` counts media-backed field changes (word audio, or a
+    definition/glossary carrying dictionary images) dropped because a file
+    could not be put into Anki's collection — the field is left alone rather
+    than pointed at media that is not there.
     """
 
     notes_updated: int
@@ -358,7 +363,9 @@ def _reading_from_furigana(value: str) -> str | None:
     its own kanji run) are dropped. NOT a split-on-space —
     ``入[い]り 口[ぐち]`` must yield ``いりぐち``, not ``いぐち``. Bracket
     content is katakana-folded so the result keys hiragana-folded lookups.
-    Returns ``None`` for malformed input (unbalanced brackets, empty).
+    Returns ``None`` for malformed input (unbalanced brackets, empty) and for
+    anything that leaves non-kana behind — Yomitan's ``{furigana}`` HTML ruby
+    (``<ruby>食<rt>た</rt></ruby>べる`` would read 食たべる) or bare kanji.
     """
     text = _HTML_TAG_RE.sub("", html.unescape(value or "")).strip()
     if not text:
@@ -379,7 +386,7 @@ def _reading_from_furigana(value: str) -> str | None:
         return None
     out.append(tail.replace(" ", ""))
     reading = katakana_to_hiragana("".join(out))
-    return reading or None
+    return reading if is_kana_only(reading) else None
 
 
 def _chunks(items: Sequence[_T], size: int) -> Iterator[Sequence[_T]]:
@@ -1442,6 +1449,17 @@ def _apply_backfill_impl(
                     continue
                 media_sources.setdefault(change.media_path.name, change.media_path)
         stored_names = anki_service.store_media_files(media_sources) if media_sources else {}
+        # Dictionary images in proposed Definition/Glossary HTML, uploaded the
+        # way mining uploads them. Styling changes are skipped: their images
+        # already carry the names Anki confirmed when the field was written.
+        dict_media_html = [
+            change.new_value
+            for note in chunk
+            if note.note_id in infos
+            for change in note.changes
+            if change.expected is None and _extract_dict_media_srcs(change.new_value)
+        ]
+        dict_media_names = anki_service.upload_dict_media(dict_media_html) if dict_media_html else {}
 
         updates: list[tuple[int, dict[str, str]]] = []
         for note in chunk:
@@ -1484,6 +1502,11 @@ def _apply_backfill_impl(
                         media_failed += 1
                         continue
                     value = f"[sound:{confirmed}]"
+                elif change.expected is None and (srcs := _extract_dict_media_srcs(value)):
+                    if any(src not in dict_media_names for src in srcs):
+                        media_failed += 1
+                        continue
+                    value = _rewrite_dict_media_srcs(value, dict_media_names)
                 payload[change.field_name] = value
             if payload:
                 updates.append((note.note_id, payload))

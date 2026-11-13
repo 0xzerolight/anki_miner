@@ -313,6 +313,7 @@ class WordFilterService:
         config: AnkiMinerConfig,
         tagger: Any | None = None,
         *,
+        tagger_source: Callable[[], Any] | None = None,
         mined_form: MinedFormPolicy | None = None,
         script: ScriptSupport | None = None,
         dedup_fold: Callable[[str], str] | None = None,
@@ -328,6 +329,10 @@ class WordFilterService:
                 line. Required only when ``config.bold_target_in_sentence``
                 is True AND ``filter_i_plus_one`` is called; otherwise the
                 bolded-field recompute is skipped and the tagger is unused.
+            tagger_source: Returns the engine at each use instead of ``tagger``
+                (the parser's own accessor). Holding no engine reference lets
+                the parser's ``release_tagger`` free it on a language switch
+                (S23), and a reused processor re-acquires it through the parser.
             mined_form: The SAME card-front policy the parser emitted these
                 words with (``languages.profile.MinedFormPolicy``). Read only
                 by ``_line_preserves_mined_form``, which must recompute a
@@ -357,12 +362,18 @@ class WordFilterService:
                 tokens.
         """
         self.config = config
-        self.tagger = tagger
+        self._tagger = tagger
+        self._tagger_source = tagger_source
         self._mined_form = mined_form
         self._script = script
         self._dedup_fold = dedup_fold
         self._tracks_surface = expression_tracks_surface or _ja_expression_tracks_surface
         self._sentence_annotation = sentence_annotation
+
+    @property
+    def tagger(self) -> Any | None:
+        """The engine for sentence annotation, resolved at use (see ``tagger_source``)."""
+        return self._tagger_source() if self._tagger_source is not None else self._tagger
 
     def filter_unknown(
         self,

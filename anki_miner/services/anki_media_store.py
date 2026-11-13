@@ -476,20 +476,46 @@ class AnkiMediaStore:
         confirmed successful store — a failed upload stays uncached so the next
         batch retries it.
         """
-        # Collect un-uploaded srcs across the whole batch (ordered, deduped).
-        seen: set[str] = set()
-        all_srcs: list[str] = []
+        html_fields: list[str] = []
         for item in word_data_list:
             for html_field in (
                 item.definition,
                 item.extra_fields.get("glossary") if item.extra_fields else None,
             ):
-                if not isinstance(html_field, str):
-                    continue
-                for src in _extract_dict_media_srcs(html_field):
-                    if src not in self._dict_media_uploaded and src not in seen:
-                        seen.add(src)
-                        all_srcs.append(src)
+                if isinstance(html_field, str):
+                    html_fields.append(html_field)
+        self.upload_dict_media_srcs(html_fields)
+
+        # CardPayload is frozen, so replace entries in the caller-owned list.
+        # AnkiService builds notes only after this pass and therefore sees the
+        # exact confirmed names in both Definition and Glossary.
+        for index, item in enumerate(word_data_list):
+            definition = _rewrite_dict_media_srcs(item.definition, self._dict_media_names)
+            extra_fields = item.extra_fields
+            if extra_fields and isinstance(extra_fields.get("glossary"), str):
+                glossary = _rewrite_dict_media_srcs(extra_fields["glossary"], self._dict_media_names)
+                if glossary != extra_fields["glossary"]:
+                    extra_fields = {**extra_fields, "glossary": glossary}
+            if definition != item.definition or extra_fields is not item.extra_fields:
+                word_data_list[index] = replace(item, definition=definition, extra_fields=extra_fields)
+
+    def upload_dict_media_srcs(self, html_fields: Iterable[str]) -> dict[str, str]:
+        """Upload the dict-media files the HTML references; return the confirmed names.
+
+        The engine behind :meth:`upload_dict_media`, for callers that hold field
+        HTML rather than ``CardPayload`` objects (Card Backfill). Returns
+        ``{logical src: name Anki confirmed}`` for every src stored this store's
+        lifetime; a referenced src absent from it was not stored (missing on
+        disk or rejected) and must not be written as-is.
+        """
+        # Collect un-uploaded srcs across the whole batch (ordered, deduped).
+        seen: set[str] = set()
+        all_srcs: list[str] = []
+        for html_field in html_fields:
+            for src in _extract_dict_media_srcs(html_field):
+                if src not in self._dict_media_uploaded and src not in seen:
+                    seen.add(src)
+                    all_srcs.append(src)
 
         # Resolve each src; cache missing ones now so we don't retry.
         items: list[tuple[str, dict]] = []
@@ -526,19 +552,7 @@ class AnkiMediaStore:
             stored = self._store_media_chunk(chunk)
             self._dict_media_uploaded.update(stored)
             self._dict_media_names.update(stored)
-
-        # CardPayload is frozen, so replace entries in the caller-owned list.
-        # AnkiService builds notes only after this pass and therefore sees the
-        # exact confirmed names in both Definition and Glossary.
-        for index, item in enumerate(word_data_list):
-            definition = _rewrite_dict_media_srcs(item.definition, self._dict_media_names)
-            extra_fields = item.extra_fields
-            if extra_fields and isinstance(extra_fields.get("glossary"), str):
-                glossary = _rewrite_dict_media_srcs(extra_fields["glossary"], self._dict_media_names)
-                if glossary != extra_fields["glossary"]:
-                    extra_fields = {**extra_fields, "glossary": glossary}
-            if definition != item.definition or extra_fields is not item.extra_fields:
-                word_data_list[index] = replace(item, definition=definition, extra_fields=extra_fields)
+        return dict(self._dict_media_names)
 
     def _store_media_chunk(self, chunk: list[tuple[str, dict]]) -> dict[str, str]:
         """Store one chunk via ``multi``; fall back to per-file POSTs on transport failure.

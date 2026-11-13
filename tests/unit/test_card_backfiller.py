@@ -7,6 +7,7 @@ import logging
 from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import patch
 
 import pytest
 
@@ -16,6 +17,7 @@ from anki_miner.languages.registry import get_profile
 from anki_miner.languages.switching import switch_language
 from anki_miner.languages.zh.render import ZhMeasureWordHook, ZhToneColorHook
 from anki_miner.models import CardPayload, MediaData
+from anki_miner.services.anki_media_store import AnkiMediaStore
 from anki_miner.services.anki_note_builder import build_note
 from anki_miner.services.card_backfiller import (
     BACKFILL_TAG,
@@ -323,6 +325,15 @@ class TestReadingFromFurigana:
 
     @pytest.mark.parametrize("value", ["", "漢字[", "漢字]", "[かんじ]漢字["])
     def test_malformed_returns_none(self, value):
+        assert _reading_from_furigana(value) is None
+
+    @pytest.mark.parametrize(
+        "value",
+        ["<ruby>食<rt>た</rt></ruby>べる", "<ruby>食べる<rt>たべる</rt></ruby>", "食べる"],
+    )
+    def test_non_bracket_furigana_returns_none(self, value):
+        # Yomitan's {furigana} HTML ruby (or bare kanji) leaves the base text
+        # in the "reading": 食たべる must never key a lookup or be written.
         assert _reading_from_furigana(value) is None
 
 
@@ -1024,6 +1035,17 @@ class TestScanReadingFurigana:
         assert changes["expression_reading"] == "かんじ"
         assert "expression_furigana" not in changes
 
+    def test_html_ruby_furigana_is_not_a_reading(self, backfill_config):
+        ruby = "<ruby>食<rt>た</rt></ruby>べる"
+        fields = _note(1, word="食べる", ExpressionReading="", ExpressionFurigana=ruby)["fields"]
+        ctx = _resolve_context(1, fields, "食べる", backfill_config.anki_fields, get_shared_tagger())
+        assert ctx.reading_source != "furigana"
+        anki = FakeAnkiService({1: _note(1, word="食べる", ExpressionReading="", ExpressionFurigana=ruby)})
+        plan = scan_backfill(
+            anki, backfill_config, _services(), _options({"expression_reading", "expression_furigana"})
+        )
+        assert plan.notes == ()
+
     def test_cross_fills_furigana_from_reading(self, backfill_config):
         anki = FakeAnkiService({1: _note(1, word="漢字", ExpressionReading="かんじ", ExpressionFurigana="")})
         plan = scan_backfill(
@@ -1208,8 +1230,11 @@ class TestScanProgressCancel:
 class RecordingAnkiService(FakeAnkiService):
     """FakeAnkiService that also records writes and tag calls."""
 
-    def __init__(self, notes=None, fail_tags: bool = False, stored_media=None):
+    def __init__(self, notes=None, fail_tags: bool = False, stored_media=None, dict_media_store=None):
         super().__init__(notes)
+        # A real AnkiMediaStore (its post_multi patched) behind upload_dict_media.
+        self.dict_media_store = dict_media_store
+        self.dict_media_calls: list[list[str]] = []
         self.updates: list[list[tuple[int, dict[str, str]]]] = []
         self.tag_calls: list[tuple[list[int], str]] = []
         self.fail_tags = fail_tags
@@ -1220,6 +1245,10 @@ class RecordingAnkiService(FakeAnkiService):
     def store_media_files(self, paths_by_filename):
         self.media_calls.append(dict(paths_by_filename))
         return {name: self.stored_media[name] for name in paths_by_filename if name in self.stored_media}
+
+    def upload_dict_media(self, html_fields):
+        self.dict_media_calls.append(list(html_fields))
+        return self.dict_media_store.upload_dict_media_srcs(html_fields)
 
     def update_notes_fields(self, updates):
         self.updates.append(list(updates))
@@ -1662,6 +1691,43 @@ class TestApplyWordAudio:
         result = apply_backfill(anki, plan)
         assert anki.updates == []
         assert result.skipped_stale == 1
+
+
+class TestApplyDictMedia:
+    """Dictionary images in a backfilled Definition are uploaded as mining does."""
+
+    _IMG = '<img class="gloss-image anki-miner-dict-media" src="dictA__img_cat.png">'
+
+    def _store(self, test_config, tmp_path, *, on_disk: bool):
+        media_dir = tmp_path / "dicts" / "dictA" / "media"
+        media_dir.mkdir(parents=True)
+        if on_disk:
+            (media_dir / "img_cat.png").write_bytes(b"PNG")
+        return AnkiMediaStore(replace(test_config, dicts_root=tmp_path / "dicts"))
+
+    def _plan(self):
+        return _plan([_note_plan(1, [("definition", "MainDefinition", "", f"cat {self._IMG}")])])
+
+    def test_uploads_and_writes_the_confirmed_name(self, test_config, tmp_path):
+        store = self._store(test_config, tmp_path, on_disk=True)
+        anki = RecordingAnkiService({1: _note(1, word="word1", MainDefinition="")}, dict_media_store=store)
+        with patch("anki_miner.services.anki_media_store.post_multi", return_value=["dictA__img_cat_1.png"]) as post:
+            result = apply_backfill(anki, self._plan())
+        sent = post.call_args.args[1]
+        assert [action["params"]["filename"] for action in sent] == ["dictA__img_cat.png"]
+        written = anki.updates[0][0][1]["MainDefinition"]
+        assert 'src="dictA__img_cat_1.png"' in written
+        assert "dictA__img_cat.png" not in written
+        assert result.media_failed == 0
+
+    def test_a_file_missing_on_disk_drops_the_field_and_counts_it(self, test_config, tmp_path):
+        store = self._store(test_config, tmp_path, on_disk=False)
+        anki = RecordingAnkiService({1: _note(1, word="word1", MainDefinition="")}, dict_media_store=store)
+        with patch("anki_miner.services.anki_media_store.post_multi") as post:
+            result = apply_backfill(anki, self._plan())
+        post.assert_not_called()
+        assert anki.updates == []
+        assert result.media_failed == 1
 
 
 # ---------------------------------------------------------------------------
