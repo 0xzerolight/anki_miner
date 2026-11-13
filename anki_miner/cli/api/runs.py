@@ -360,7 +360,7 @@ def _cut(text: str, needles: Collection[str], rules: SentenceRules) -> list[str]
     if not spans:
         return [text]
     starts, ends = _sentence_bounds(text, rules)
-    points = sorted(
+    candidates = sorted(
         {
             point
             for span in spans
@@ -369,6 +369,11 @@ def _cut(text: str, needles: Collection[str], rules: SentenceRules) -> list[str]
             if text[:point].strip() and text[point:].strip() and not any(start < point < end for start, end in spans)
         }
     )
+    # Two adjacent named sentences: the space between them stays on the first, not a blank unit of its own.
+    points: list[int] = []
+    for point in candidates:
+        if text[points[-1] if points else 0 : point].strip():
+            points.append(point)
     return [text[i:j] for i, j in zip([0, *points], [*points, len(text)], strict=True)]
 
 
