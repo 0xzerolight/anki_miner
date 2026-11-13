@@ -392,7 +392,7 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
         ``get_chain``) so an in-progress toggle isn't lost, splices *entry* in
         above the first enabled jpod101 or synthetic voice (the chain is
         first-hit-wins, so a source below either is never consulted), then emits ``chain_changed``
-        which the settings tab persists.
+        which the settings tab persists. The Edge voice, synthetic itself, is appended.
         """
         # Host only, never the full URL: the query string is the user's own
         # source list and has no place in a diagnostics bundle.
@@ -404,6 +404,10 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
         chain = self.get_chain()
         if entry.kind == "wikimedia":
             self._write_chain(_insert_above_first_synthetic(chain, entry))
+        elif entry.kind == "edgetts":
+            # A synthetic voice itself speaks every word: it joins the end of the
+            # chain rather than shadowing jpod101 or another synthetic voice.
+            self._write_chain((*chain, entry))
         else:
             self._write_chain(insert_above_first_enabled_fallback(chain, (entry,)))
         self._rebuild_list()
