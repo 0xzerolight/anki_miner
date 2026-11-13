@@ -14,6 +14,7 @@ from anki_miner.gui.controllers import profile_controller as pc
 from anki_miner.gui.resources.styles.theme import Theme
 from anki_miner.gui.utils.config_manager import GUIConfigManager
 from anki_miner.gui.utils.profile_store import Profile, ProfileStore
+from anki_miner.languages.registry import get_profile
 from tests.unit.languages.stub_registry import unregister_profile
 
 
@@ -128,6 +129,12 @@ class _FakeWindow:
         return None
 
 
+@pytest.fixture(autouse=True)
+def every_language_available(monkeypatch):
+    """Assume the zh extra is installed, so only the refusal test exercises the probe."""
+    monkeypatch.setattr(pc, "get_profile", lambda code: replace(get_profile(code), unavailable_reason=None))
+
+
 @pytest.fixture
 def switch(monkeypatch, test_config):
     """Drive one switch onto a seeded incoming config, no disk, no repaint."""
@@ -218,3 +225,25 @@ def test_a_cross_language_switch_with_empty_queues_commits_without_a_flush(monke
 
     assert result.switched is True
     assert calls == [False]
+
+
+def test_a_switch_onto_a_language_unavailable_here_is_refused(monkeypatch, switch, test_config):
+    # The selector and the settings import refuse the same move; a profile
+    # switch would otherwise leave a language with no tokenizer live.
+    reason = "Arabic mining needs the Arabic language pack."
+    monkeypatch.setattr(
+        pc,
+        "get_profile",
+        lambda code: replace(get_profile(code), unavailable_reason=(lambda: reason) if code == "ar" else None),
+    )
+    monkeypatch.setattr(
+        language_switch, "commit_language_change", lambda *a, **k: pytest.fail("committed a language change")
+    )
+
+    window, result = switch(replace(test_config, language="ar"))
+
+    assert result.switched is False
+    assert result.reason == reason
+    assert window.commits == []
+    assert window.config.language == test_config.language
+    assert GUIConfigManager.ACTIVE_PROFILE_ID == "a"
