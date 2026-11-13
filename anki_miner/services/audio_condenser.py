@@ -60,7 +60,7 @@ from anki_miner.utils.ffmpeg_resolver import resolve_ffmpeg, resolve_ffprobe
 from anki_miner.utils.file_pairing import find_sibling_subtitle, resolve_output_path
 from anki_miner.utils.subprocess_log import log_command, log_command_result, tail_for_log
 from anki_miner.utils.subprocess_utils import no_window_kwargs
-from anki_miner.utils.subtitle_encoding import load_with_fallback_encoding, script_check_kwarg
+from anki_miner.utils.subtitle_encoding import ScriptCheckKwarg, load_with_fallback_encoding, script_check_kwarg
 from anki_miner.utils.text_utils import strip_subtitle_markup
 
 if TYPE_CHECKING:
@@ -121,12 +121,8 @@ def load_subtitle_events(
     try:
         subs = pysubs2.load(str(path))
     except UnicodeDecodeError as utf8_error:
-        subs = load_with_fallback_encoding(
-            path,
-            utf8_error,
-            encodings=encodings,
-            **({} if script_check is None else {"script_check": script_check}),
-        )
+        script_kwarg: ScriptCheckKwarg = {} if script_check is None else {"script_check": script_check}
+        subs = load_with_fallback_encoding(path, utf8_error, encodings=encodings, **script_kwarg)
     except pysubs2.exceptions.FormatAutodetectionError:
         # Empty (or contentless) file — no cues to condense.
         return []

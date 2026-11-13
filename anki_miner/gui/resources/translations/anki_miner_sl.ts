@@ -3601,12 +3601,12 @@ To bo spremenilo %n zapiskov (%1) in jim dodalo oznako %2. Želite nadaljevati?<
         </translation>
     </message>
     <message numerus="yes">
-        <source>%n audio file(s) could not be added to Anki; scan again to retry.</source>
+        <source>%n media file(s) could not be added to Anki; scan again to retry.</source>
         <translation>
-            <numerusform>%n zvočne datoteke ni bilo mogoče dodati v Anki; za ponovni poskus znova preglejte.</numerusform>
-            <numerusform>%n zvočnih datotek ni bilo mogoče dodati v Anki; za ponovni poskus znova preglejte.</numerusform>
-            <numerusform>%n zvočnih datotek ni bilo mogoče dodati v Anki; za ponovni poskus znova preglejte.</numerusform>
-            <numerusform>%n zvočnih datotek ni bilo mogoče dodati v Anki; za ponovni poskus znova preglejte.</numerusform>
+            <numerusform>%n medijske datoteke ni bilo mogoče dodati v Anki; za ponovni poskus znova preglejte.</numerusform>
+            <numerusform>%n medijskih datotek ni bilo mogoče dodati v Anki; za ponovni poskus znova preglejte.</numerusform>
+            <numerusform>%n medijskih datotek ni bilo mogoče dodati v Anki; za ponovni poskus znova preglejte.</numerusform>
+            <numerusform>%n medijskih datotek ni bilo mogoče dodati v Anki; za ponovni poskus znova preglejte.</numerusform>
         </translation>
     </message>
 </context><context>
@@ -6818,6 +6818,10 @@ Nobena datoteka indeksa ne bo izbrisana.</translation>
     <message>
         <source>Lute or LWT term export</source>
         <translation>Izvoz izrazov iz Lute ali LWT</translation>
+    </message>
+    <message>
+        <source>Anki Miner known words export</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>plain word list</source>

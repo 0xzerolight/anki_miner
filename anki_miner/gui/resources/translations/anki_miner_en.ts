@@ -3556,10 +3556,10 @@ This will modify %n notes (%1) and tag them %2. Continue?</numerusform>
         </translation>
     </message>
     <message numerus="yes">
-        <source>%n audio file(s) could not be added to Anki; scan again to retry.</source>
+        <source>%n media file(s) could not be added to Anki; scan again to retry.</source>
         <translation>
-            <numerusform>%n audio file could not be added to Anki; scan again to retry.</numerusform>
-            <numerusform>%n audio files could not be added to Anki; scan again to retry.</numerusform>
+            <numerusform>%n media file could not be added to Anki; scan again to retry.</numerusform>
+            <numerusform>%n media files could not be added to Anki; scan again to retry.</numerusform>
         </translation>
     </message>
 </context><context>
@@ -6718,6 +6718,10 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Lute or LWT term export</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Anki Miner known words export</source>
         <translation type="unfinished" />
     </message>
     <message>

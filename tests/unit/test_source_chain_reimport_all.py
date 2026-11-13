@@ -282,7 +282,7 @@ class TestTriggerReimportAll:
             ("audio", "audio", "_audio_pack_import_flow"),
         ],
     )
-    def test_dispatches_to_the_right_flow_and_subtab(self, tab, monkeypatch, kind, subtab, flow_attr):
+    def test_dispatches_to_the_right_flow_and_subtab(self, tab, monkeypatch, qtbot, kind, subtab, flow_attr):
         opened: list[str] = []
         monkeypatch.setattr(tab, "open_subtab", opened.append)
         called: list[dict] = []
@@ -291,12 +291,15 @@ class TestTriggerReimportAll:
             "reimport_all",
             lambda **kwargs: called.append(kwargs),
         )
-        done = object()
+        done: list[str] = []
 
-        tab.trigger_reimport_all(frozenset({"x"}), kind=kind, on_complete=done)  # type: ignore[arg-type]
+        tab.trigger_reimport_all(frozenset({"x"}), kind=kind, on_complete=lambda: done.append(kind))
 
         assert opened == [subtab]
-        assert called == [{"only_ids": frozenset({"x"}), "on_complete": done}]
+        assert len(called) == 1 and called[0]["only_ids"] == frozenset({"x"})
+        # The flow's done hands off to the prompt once the panel is idle.
+        called[0]["on_complete"]()
+        qtbot.waitUntil(lambda: done == [kind])
 
     @pytest.mark.parametrize(
         "panel_attr",

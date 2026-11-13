@@ -53,6 +53,19 @@ def _counts(**kw):
     return base
 
 
+def _tally_on_miss(fetcher, **buckets):
+    """Make ``fetcher`` miss every word, bumping its lifetime ``stats()`` per call."""
+    counts = _counts()
+
+    def _fetch(*_args, **_kwargs):
+        for key, value in buckets.items():
+            counts[key] += value
+        return None
+
+    fetcher.fetch_candidates.side_effect = _fetch
+    fetcher.stats.side_effect = lambda: dict(counts)
+
+
 def _wire_pipeline(mock_services, pairs):
     """Wire the pipeline mocks so process_episode reaches Phase-3 audio.
 
@@ -90,8 +103,7 @@ class TestAudioStageLogging:
 
     def test_stage_summary_includes_failure_counter(self, test_config, caplog):
         fetcher = MagicMock()
-        fetcher.fetch_candidates.return_value = None
-        fetcher.stats.return_value = _counts(ssl=1)
+        _tally_on_miss(fetcher, ssl=1)
         stage = self._stage(self._enabled_config(test_config), fetcher)
 
         with caplog.at_level(logging.INFO, logger="anki_miner.orchestration.audio_stage"):
@@ -131,8 +143,7 @@ class TestAudioStageLogging:
 
     def test_diagnosis_is_logged_at_warning(self, test_config, caplog):
         fetcher = MagicMock()
-        fetcher.fetch_candidates.return_value = None
-        fetcher.stats.return_value = _counts(timeout=1)
+        _tally_on_miss(fetcher, timeout=1)
         stage = self._stage(self._enabled_config(test_config), fetcher, MagicMock())
 
         with caplog.at_level(logging.WARNING, logger="anki_miner.orchestration.audio_stage"):
@@ -756,8 +767,7 @@ class TestProcessorAudioFailureSummary:
         _wire_pipeline(mock_services, pairs)
 
         fetcher = MagicMock()
-        fetcher.fetch_candidates.return_value = None
-        fetcher.stats.return_value = _counts(ssl=1)
+        _tally_on_miss(fetcher, ssl=1)
 
         presenter = MagicMock()
         processor = build_processor(
@@ -864,8 +874,7 @@ class TestSlowPackDiagnosis:
 
     def test_stage_warning_names_the_slow_pack(self, test_config, mock_services, tmp_path):
         fetcher = MagicMock()
-        fetcher.fetch_candidates.return_value = None
-        fetcher.stats.return_value = _counts(slow=1)
+        _tally_on_miss(fetcher, slow=1)
         fetcher.slowest_pack_id.return_value = "forvo"
 
         warnings = self._run(test_config, mock_services, tmp_path, fetcher)
@@ -873,8 +882,7 @@ class TestSlowPackDiagnosis:
 
     def test_stage_warning_stays_generic_without_a_slow_pack(self, test_config, mock_services, tmp_path):
         fetcher = MagicMock()
-        fetcher.fetch_candidates.return_value = None
-        fetcher.stats.return_value = _counts(slow=1)
+        _tally_on_miss(fetcher, slow=1)
         fetcher.slowest_pack_id.return_value = None
 
         warnings = self._run(test_config, mock_services, tmp_path, fetcher)
@@ -883,8 +891,7 @@ class TestSlowPackDiagnosis:
     def test_non_string_slowest_pack_id_is_treated_as_absent(self, test_config, mock_services, tmp_path):
         """A MagicMock fetcher auto-stubs slowest_pack_id(); the stage must not crash on it."""
         fetcher = MagicMock()
-        fetcher.fetch_candidates.return_value = None
-        fetcher.stats.return_value = _counts(slow=1)
+        _tally_on_miss(fetcher, slow=1)
 
         warnings = self._run(test_config, mock_services, tmp_path, fetcher)
         assert any("Word-audio source is too slow" in w for w in warnings), warnings
@@ -1309,3 +1316,93 @@ class TestCurationFetchFn:
         candidates, kwargs = fetcher.fetch_candidates.call_args
         assert candidates[0][0] == ("食べる", "たべる")
         assert candidates[1] is cancel or kwargs.get("cancelled_check") is cancel
+
+
+class _DownWordSource:
+    """A dead first source: every request is a connection failure."""
+
+    def __init__(self):
+        self.counts = _counts()
+
+    def fetch_candidates(self, candidates, cancelled_check=None):
+        self.counts["connection"] += 1
+        return None
+
+    def stats(self):
+        return dict(self.counts)
+
+
+class _FlakyThenFine:
+    """Fails its first ``failures`` requests (non-audio), then hits."""
+
+    def __init__(self, hit, failures):
+        self.counts = _counts()
+        self.hit = hit
+        self.failures = failures
+
+    def fetch_candidates(self, candidates, cancelled_check=None):
+        if self.failures:
+            self.failures -= 1
+            self.counts["non_audio"] += 1
+            return None
+        return self.hit
+
+    def fetch(self, sentence, cancelled_check=None):
+        return self.fetch_candidates([sentence])
+
+    def stats(self):
+        return dict(self.counts)
+
+
+class TestRecoveredFailuresStayQuiet:
+    """R1b-001: failures a fallback (or a later request) recovered are no
+    'audio skipped this run' warning when every item got its audio."""
+
+    @staticmethod
+    def _words(count):
+        # A bare MediaData: no source clip, so sentence TTS is attempted.
+        from anki_miner.models import MediaData
+
+        return [(_make_word(lemma=f"word-{i}"), MediaData()) for i in range(count)]
+
+    def test_dead_first_word_source_with_good_fallback(self, test_config, tmp_path):
+        from anki_miner.services.expression_audio_fetcher import ChainedExpressionAudioFetcher
+
+        hit = tmp_path / "hit.mp3"
+        hit.write_bytes(b"x")
+        presenter = MagicMock()
+        config = TestAudioStageLogging._enabled_config(test_config)
+        chain = ChainedExpressionAudioFetcher([_DownWordSource(), _FlakyThenFine(hit, 0)])
+        stage = TestAudioStageLogging._stage(config, chain, presenter)
+
+        stage.fetch_expression_audio(self._words(20), None)
+
+        presenter.show_warning.assert_not_called()
+
+    def test_rate_limited_sentence_leg_with_good_fallback(self, test_config, tmp_path):
+        hit = tmp_path / "hit.mp3"
+        hit.write_bytes(b"x")
+        presenter = MagicMock()
+        config = replace(test_config, reading_tts_enabled=True)
+        chain = ChainedSentenceAudioFetcher([_FlakyThenFine(hit, 10**6), _FlakyThenFine(hit, 0)])
+        stage = AudioStage(config, presenter, lambda: False, None, chain)
+
+        stage.fetch_sentence_audio(self._words(20), None)
+
+        presenter.show_warning.assert_not_called()
+
+    def test_curator_prefetch_failures_are_not_charged_to_the_run(self, test_config, tmp_path):
+        from anki_miner.services.expression_audio_fetcher import ChainedExpressionAudioFetcher
+
+        hit = tmp_path / "hit.mp3"
+        hit.write_bytes(b"x")
+        presenter = MagicMock()
+        config = TestAudioStageLogging._enabled_config(test_config)
+        chain = ChainedExpressionAudioFetcher([_FlakyThenFine(hit, 15)])
+        stage = TestAudioStageLogging._stage(config, chain, presenter)
+        for word, _media in self._words(15):
+            stage.curation_fetch_fn(word, None)
+
+        stage.fetch_expression_audio(self._words(20), None)
+
+        presenter.show_warning.assert_not_called()

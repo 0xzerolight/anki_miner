@@ -243,3 +243,17 @@ def test_a_raw_newline_ends_a_string_so_a_smuggled_rule_is_scoped():
     scope = '.yomitan-glossary [data-dictionary-id="evil-dict"]'
     assert f"{scope} .card, {scope} body {{background: red !important;}}" in out
     assert "\n} .card" not in out
+
+
+def test_an_escaped_brace_outside_a_string_does_not_swallow_the_next_rule():
+    # The browser reads `\{` as an escaped ident char, so the first `}` closes
+    # `.tag` and `.card *` is a top-level rule: it must be scoped like any other.
+    out = scope_dict_css(".tag{--x:\\{}\n.card *{display:none}", "evil", "Evil")
+    assert '.yomitan-glossary [data-dictionary-id="evil"] .card *' in out
+    assert not any(line.lstrip().startswith(".card") for line in out.splitlines())
+
+
+def test_an_escaped_quote_outside_a_string_does_not_open_a_string():
+    out = scope_dict_css('.a\\"{color:red}\n.card{display:none}', "evil")
+    assert '.yomitan-glossary [data-dictionary-id="evil"] .card {display:none}' in out
+    assert not any(line.lstrip().startswith(".card") for line in out.splitlines())

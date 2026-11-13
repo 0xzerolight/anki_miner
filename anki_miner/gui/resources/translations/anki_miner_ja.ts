@@ -3550,9 +3550,9 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
         </translation>
     </message>
     <message numerus="yes">
-        <source>%n audio file(s) could not be added to Anki; scan again to retry.</source>
-        <translation>
-            <numerusform>%n 個の音声ファイルを Anki に追加できませんでした。再試行するには再度スキャンしてください。</numerusform>
+        <source>%n media file(s) could not be added to Anki; scan again to retry.</source>
+        <translation type="unfinished">
+            <numerusform />
         </translation>
     </message>
 </context><context>
@@ -6704,6 +6704,10 @@ No index files are deleted.</source>
     <message>
         <source>Lute or LWT term export</source>
         <translation>Lute または LWT の用語エクスポート</translation>
+    </message>
+    <message>
+        <source>Anki Miner known words export</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>plain word list</source>

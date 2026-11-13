@@ -1186,30 +1186,46 @@ class SubtitleParserService:
         # module-level registry import here is a circular one.
         from anki_miner.languages.registry import config_language, get_profile
 
+        def by_extension_on_sniff_failure(load: Callable[[str | None], Any]) -> Any:
+            """``load(None)``; on a failed sniff, ``load`` with the extension's format.
+
+            A UTF-8 BOM, a lowercase <sami> or a leading comment defeats the
+            sniffer; the extension names the format, as on the Reading path
+            (reading/subtitle_source.py). Shared by the UTF-8 and fallback legs.
+            """
+            try:
+                return load(None)
+            except pysubs2.exceptions.FormatAutodetectionError as autodetect_error:
+                try:
+                    format_ = pysubs2.formats.get_format_identifier(Path(subtitle_file).suffix.lower())
+                except pysubs2.exceptions.UnknownFileExtensionError:
+                    raise autodetect_error from None
+                if format_ not in _PREFIX_SNIFFED_FORMATS:
+                    raise
+                return load(format_)
+
         try:
             try:
-                try:
-                    subs = pysubs2.load(str(subtitle_file))
-                except pysubs2.exceptions.FormatAutodetectionError as autodetect_error:
-                    # A UTF-8 BOM, a lowercase <sami> or a leading comment defeats
-                    # the sniffer; the extension names the format, as on the
-                    # Reading path (reading/subtitle_source.py).
-                    try:
-                        format_ = pysubs2.formats.get_format_identifier(Path(subtitle_file).suffix.lower())
-                    except pysubs2.exceptions.UnknownFileExtensionError:
-                        raise autodetect_error from None
-                    if format_ not in _PREFIX_SNIFFED_FORMATS:
-                        raise
-                    subs = pysubs2.load(str(subtitle_file), format_=format_)
+                subs = by_extension_on_sniff_failure(
+                    lambda format_: (
+                        pysubs2.load(str(subtitle_file))
+                        if format_ is None
+                        else pysubs2.load(str(subtitle_file), format_=format_)
+                    )
+                )
             except UnicodeDecodeError as utf8_error:
                 profile = get_profile(config_language(self.config))
-                subs = load_with_fallback_encoding(
-                    subtitle_file,
-                    utf8_error,
-                    encodings=profile.import_encodings if encodings is None else encodings,
-                    # An explicit caller ladder (a secondary track, encodings=())
-                    # is not in the mining language, so its script says nothing.
-                    **(script_check_kwarg(profile.import_encodings, profile.script) if encodings is None else {}),
+                decode_error = utf8_error
+                subs = by_extension_on_sniff_failure(
+                    lambda format_: load_with_fallback_encoding(
+                        subtitle_file,
+                        decode_error,
+                        encodings=profile.import_encodings if encodings is None else encodings,
+                        # An explicit caller ladder (a secondary track, encodings=())
+                        # is not in the mining language, so its script says nothing.
+                        **(script_check_kwarg(profile.import_encodings, profile.script) if encodings is None else {}),
+                        format_=format_,
+                    )
                 )
             else:
                 # The ladder writes its own receipt only when UTF-8 failed; the
@@ -1741,7 +1757,7 @@ class SubtitleParserService:
                 override = resolve_reading_override(mined, expression_reading)
                 if override is not None:
                     # unidic-lite misreads this spelling in every context (一日→ツイタチ,
-                    # 仏→フツ, マズい→マジイ, 込む→ゴム). Take the curated reading and
+                    # 仏→フツ, 不味い→マジイ, 込む→ゴム). Take the curated reading and
                     # regenerate ruby from it — a stale per-token furigana would
                     # contradict the corrected reading field (and the corrected value
                     # flows on to the word reading and lemma_reading below).
@@ -1788,7 +1804,7 @@ class SubtitleParserService:
                 # イウ); an isolated re-tokenize of 言う picks ユウ, 得る ウル.
                 own_base_reading = self._own_base_reading(word_token, mined)
                 if override is not None:
-                    # Inflected misread spelling (マズかった→mined マズい→まじい,
+                    # Inflected misread spelling (不味かった→mined 不味い→まじい,
                     # 込んだ→mined 込む→ごむ): apply the curated reading and regenerate
                     # ruby from it, mirroring the mined==surface branch above.
                     expression_reading = override
@@ -1841,9 +1857,15 @@ class SubtitleParserService:
             # most verb/adjective tokens ``mined`` (orthBase) equals the lemma,
             # so reuse the value; a kanji-variant divergence (乞う vs 請う)
             # recomputes the lemma's reading like the surface-mined case. On a curated
-            # reading override the lemma spelling (マズい→不味い) reads the SAME wrong
+            # reading override the lemma spelling (オマエ→御前) reads the SAME wrong
             # value in isolation, so reuse the corrected reading rather than recompute.
-            lemma_reading = expression_reading if (mined == lemma or reading_overridden) else self._reading(lemma)
+            # A recomputed lemma reading takes the curated table too: a kana front
+            # reads as itself, but its lemma (マズい → 不味い) is still misread.
+            if mined == lemma or reading_overridden:
+                lemma_reading = expression_reading
+            else:
+                lemma_reading = self._reading(lemma)
+                lemma_reading = resolve_reading_override(lemma, lemma_reading) or lemma_reading
             # Same recovery for the lemma fallback used by audio and pitch: a
             # kanji-variant lemma the tokenizer cannot read gets its unique attested
             # reading, or stays on the surface fallback.

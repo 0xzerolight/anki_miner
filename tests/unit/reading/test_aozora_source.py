@@ -15,6 +15,7 @@ from anki_miner.models.reading import ReadingSourceRef
 from anki_miner.services.reading import aozora_source, detector
 from anki_miner.services.reading.aozora_source import (
     _decode,
+    _emit_units,
     _extract_header,
     _gaiji_char,
     _resolve_gaiji,
@@ -683,3 +684,30 @@ def test_headerless_ruby_novel_keeps_its_first_block(tmp_path):
     doc = load(_ref(_write(tmp_path, text, "utf-8", name="web_novel.txt")))
     assert doc.title == "web_novel"
     assert [u.text for u in doc.units] == ["彼は魔法を使った。", "空は青かった。", "少女は笑った。"]
+
+
+def test_same_line_heading_is_its_own_unit_and_the_body_splits():
+    units, _paras, _skipped = _emit_units(["一［＃「一」は同行中見出し］　朝になった。彼は窓を開けた。", "　次だ。"])
+
+    assert [(u.text, u.location_label) for u in units] == [
+        ("一", "一"),
+        ("朝になった。", "一"),
+        ("彼は窓を開けた。", "一"),
+        ("次だ。", "一"),
+    ]
+
+
+def test_half_width_bar_opening_a_ruby_base_is_stripped(tmp_path):
+    p = _write(tmp_path, "　彼は|魔導書《グリモワール》を開いた。\n　値はa|bだ。\n", "utf-8")
+
+    doc = load(_ref(p))
+
+    assert [u.text for u in doc.units] == ["彼は魔導書を開いた。", "値はa|bだ。"]
+
+
+def test_kakuyomu_emphasis_dots_keep_the_emphasised_text(tmp_path):
+    p = _write(tmp_path, "　彼は魔法《まほう》を使った。\n　それは《《絶対に》》許されない行為だった。\n", "utf-8")
+
+    doc = load(_ref(p))
+
+    assert [u.text for u in doc.units] == ["彼は魔法を使った。", "それは絶対に許されない行為だった。"]

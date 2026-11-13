@@ -3550,9 +3550,9 @@ Ez %n jegyzetet módosít (%1), és ezzel a címkével látja el őket: %2. Foly
         </translation>
     </message>
     <message numerus="yes">
-        <source>%n audio file(s) could not be added to Anki; scan again to retry.</source>
-        <translation>
-            <numerusform>%n hangfájlt nem sikerült hozzáadni az Ankihoz; az újrapróbáláshoz vizsgálja át újra.</numerusform>
+        <source>%n media file(s) could not be added to Anki; scan again to retry.</source>
+        <translation type="unfinished">
+            <numerusform />
         </translation>
     </message>
 </context><context>
@@ -6704,6 +6704,10 @@ Indexfájl nem törlődik.</translation>
     <message>
         <source>Lute or LWT term export</source>
         <translation>Lute vagy LWT kifejezésexport</translation>
+    </message>
+    <message>
+        <source>Anki Miner known words export</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>plain word list</source>

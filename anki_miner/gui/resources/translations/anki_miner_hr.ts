@@ -3584,11 +3584,9 @@ Ovo će izmijeniti %n bilježaka (%1) i dodati im oznaku %2. Nastaviti?</numerus
         </translation>
     </message>
     <message numerus="yes">
-        <source>%n audio file(s) could not be added to Anki; scan again to retry.</source>
-        <translation>
-            <numerusform>%n zvučnu datoteku nije bilo moguće dodati u Anki; ponovno skenirajte za novi pokušaj.</numerusform>
-            <numerusform>%n zvučne datoteke nije bilo moguće dodati u Anki; ponovno skenirajte za novi pokušaj.</numerusform>
-            <numerusform>%n zvučnih datoteka nije bilo moguće dodati u Anki; ponovno skenirajte za novi pokušaj.</numerusform>
+        <source>%n media file(s) could not be added to Anki; scan again to retry.</source>
+        <translation type="unfinished">
+            <numerusform />
         </translation>
     </message>
 </context><context>
@@ -6780,6 +6778,10 @@ Ne briše se nijedna datoteka indeksa.</translation>
     <message>
         <source>Lute or LWT term export</source>
         <translation>Izvoz pojmova iz Lutea ili LWT-a</translation>
+    </message>
+    <message>
+        <source>Anki Miner known words export</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>plain word list</source>

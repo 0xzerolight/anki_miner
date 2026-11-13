@@ -3567,10 +3567,9 @@ Hiermee worden %n notities gewijzigd (%1) en getagd met %2. Doorgaan?</numerusfo
         </translation>
     </message>
     <message numerus="yes">
-        <source>%n audio file(s) could not be added to Anki; scan again to retry.</source>
-        <translation>
-            <numerusform>%n audiobestand kan niet aan Anki worden toegevoegd; scan opnieuw om het nog eens te proberen.</numerusform>
-            <numerusform>%n audiobestanden konden niet aan Anki worden toegevoegd; scan opnieuw om het nog eens te proberen.</numerusform>
+        <source>%n media file(s) could not be added to Anki; scan again to retry.</source>
+        <translation type="unfinished">
+            <numerusform />
         </translation>
     </message>
 </context><context>
@@ -6742,6 +6741,10 @@ Er worden geen indexbestanden verwijderd.</translation>
     <message>
         <source>Lute or LWT term export</source>
         <translation>Termexport van Lute of LWT</translation>
+    </message>
+    <message>
+        <source>Anki Miner known words export</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>plain word list</source>

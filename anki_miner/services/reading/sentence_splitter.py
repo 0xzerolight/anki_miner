@@ -199,13 +199,17 @@ def split_sentences(
                 j += 1
             run = text[i:j]
             buf.append(run)
+            # A lone ． between digits (３．５) is a decimal point, not a full stop.
+            decimal = run == _DOT and i > 0 and text[i - 1].isdigit() and j < n and text[j].isdigit()
             i = j
             # space_aware: a terminator set containing "." only splits when the
             # run is followed by whitespace or end-of-text, so "3.14" survives,
             # and not when the next word (past a dialogue dash) is lowercase.
             # The period model (abbreviations) keeps "Dr." and "..." in the sentence.
-            terminates = _run_is_terminating(run, terminators) and (
-                not space_aware or j >= n or (text[j].isspace() and not _lowercase_follows(text, j))
+            terminates = (
+                not decimal
+                and _run_is_terminating(run, terminators)
+                and (not space_aware or j >= n or (text[j].isspace() and not _lowercase_follows(text, j)))
             )
             if terminates and not (
                 abbreviations and _period_continues(run, buf, abbreviations, openers, ordinal_leads)

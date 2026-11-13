@@ -21,7 +21,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from anki_miner.config import AudioSourceEntry, insert_above_first_enabled_jpod101
+from anki_miner.config import AudioSourceEntry, insert_above_first_enabled_fallback
 from anki_miner.gui.utils.config_commit import ConfigCommitResult
 from anki_miner.gui.utils.keyboard_shortcuts import disown_default_buttons, primary_action_shortcut
 from anki_miner.gui.utils.qt_helpers import add_min_max_buttons
@@ -386,13 +386,13 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
         return AudioSourceEntry(kind=entry.kind, pack_id=entry.pack_id, url=entry.url, enabled=enabled)
 
     def add_source_entry(self, entry: AudioSourceEntry) -> None:
-        """Add an online audio source above jpod101 and persist immediately.
+        """Add an online audio source above the fallback and persist immediately.
 
         Reads the current enabled/order state off the row widgets first (via
         ``get_chain``) so an in-progress toggle isn't lost, splices *entry* in
-        above the first enabled jpod101 entry (the chain is first-hit-wins, so
-        a source below jpod101 is never consulted), then emits ``chain_changed``
-        which the settings tab persists.
+        above the first enabled jpod101 or synthetic voice (the chain is
+        first-hit-wins, so a source below either is never consulted), then emits ``chain_changed``
+        which the settings tab persists. The Edge voice, synthetic itself, is appended.
         """
         # Host only, never the full URL: the query string is the user's own
         # source list and has no place in a diagnostics bundle.
@@ -404,8 +404,12 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
         chain = self.get_chain()
         if entry.kind == "wikimedia":
             self._write_chain(_insert_above_first_synthetic(chain, entry))
+        elif entry.kind == "edgetts":
+            # A synthetic voice itself speaks every word: it joins the end of the
+            # chain rather than shadowing jpod101 or another synthetic voice.
+            self._write_chain((*chain, entry))
         else:
-            self._write_chain(insert_above_first_enabled_jpod101(chain, (entry,)))
+            self._write_chain(insert_above_first_enabled_fallback(chain, (entry,)))
         self._rebuild_list()
         self.chain_changed.emit()
 

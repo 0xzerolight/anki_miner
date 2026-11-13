@@ -7297,6 +7297,23 @@ class TestPrefixSniffedFormatsFallBackToTheExtension:
 
         assert [text for _, _, text in entries] == ["新しい本を買いました"]
 
+    @pytest.mark.parametrize(
+        ("name", "raw"),
+        [
+            ("cp932-lower.smi", _PREFIX_SNIFF_SAMI.replace("SAMI>", "sami>").encode("cp932")),
+            ("utf16-lower.smi", _PREFIX_SNIFF_SAMI.replace("SAMI>", "sami>").encode("utf-16")),
+            ("cp932-comment.smi", ("<!-- made by SMIEditor -->\n" + _PREFIX_SNIFF_SAMI).encode("cp932")),
+        ],
+    )
+    def test_undetectable_sami_in_a_legacy_encoding_parses_by_extension(self, test_config, tmp_path, name, raw):
+        """R4a-001: the extension retry also covers the non-UTF-8 decode leg."""
+        sub_file = tmp_path / name
+        sub_file.write_bytes(raw)
+
+        entries = SubtitleParserService(test_config).parse_raw_entries(sub_file, 0.0)
+
+        assert [(start, text) for start, _, text in entries] == [(1.0, "新しい本を買いました")]
+
 
 class _FrontSpy:
     """A whitelist predicate that records every card front it is asked about."""
@@ -7486,3 +7503,26 @@ def test_a_deferred_tagger_reads_lines_without_loading_the_tokenizer(test_config
     sub.write_text("1\n00:00:01,000 --> 00:00:02,000\n<i>約束だよ</i>\n", encoding="utf-8")
     parser = module.SubtitleParserService(test_config, defer_tagger=True)
     assert parser.parse_raw_entries(sub, 0.0) == [(1.0, 2.0, "約束だよ")]
+
+
+@pytest.mark.skipif(not _fugashi_available(), reason="fugashi/unidic-lite not installed")
+def test_real_fugashi_kana_front_reads_as_itself(tmp_path):
+    """R4a-002: unidic-lite's kana for ズルい is ズリイ, for かんぞう カンソウ; a card
+    front written only in kana is its own reading (and so is the sentence reading)."""
+    srt_file = tmp_path / "kana.srt"
+    srt_file.write_text(
+        "1\n00:00:01,000 --> 00:00:02,000\nズルい！\n\n"
+        "2\n00:00:03,000 --> 00:00:04,000\nこの仕事はキツい\n\n"
+        "3\n00:00:05,000 --> 00:00:06,000\nかんぞうが悪い\n",
+        encoding="utf-8",
+    )
+    config = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
+    words = {w.surface: w for w in SubtitleParserService(config).parse_subtitle_file(srt_file)}
+
+    assert words["ズルい"].expression_reading == "ずるい"
+    assert words["ズルい"].reading == "ズルイ"
+    assert words["キツい"].expression_reading == "きつい"
+    assert words["キツい"].sentence_reading == "このしごとはきつい"
+    # A kana-only noun is mined only with a dictionary attesting it; its line's
+    # sentence reading shows the same rule without one.
+    assert words["悪い"].sentence_reading == "かんぞうがわるい"

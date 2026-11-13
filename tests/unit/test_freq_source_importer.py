@@ -679,6 +679,21 @@ class TestCsvImport:
         entries = _read_entries(dest, result.source_id)
         assert {term for term, _r, rank in entries if rank <= 10} == set(_MORE_COMMON)
 
+    def test_a_utf8_bom_does_not_hide_the_count_header(self, tmp_path: Path) -> None:
+        # Excel's "CSV UTF-8" export starts with a BOM; the header must still
+        # declare counts, and no term may carry the BOM.
+        csv_path = tmp_path / "animals.csv"
+        csv_path.write_text("\ufeffword,count\n猫,5000\n犬,900\n鳥,40\n", encoding="utf-8")
+
+        result = import_frequency_source(csv_path, tmp_path / "freq")
+
+        assert result.converted_to_ranks is True
+        assert _read_entries(tmp_path / "freq", result.source_id) == [
+            ("猫", None, 1),
+            ("犬", None, 2),
+            ("鳥", None, 3),
+        ]
+
     @pytest.mark.parametrize("header", ["count", "occurrence"])
     def test_occurrence_header_is_authoritative_without_probe_terms(self, tmp_path: Path, header: str) -> None:
         csv_path = tmp_path / f"{header}.csv"

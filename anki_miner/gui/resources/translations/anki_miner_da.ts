@@ -3567,10 +3567,9 @@ Dette ændrer %n noter (%1) og giver dem mærket %2. Vil du fortsætte?</numerus
         </translation>
     </message>
     <message numerus="yes">
-        <source>%n audio file(s) could not be added to Anki; scan again to retry.</source>
-        <translation>
-            <numerusform>%n lydfil kunne ikke føjes til Anki; scan igen for at prøve igen.</numerusform>
-            <numerusform>%n lydfiler kunne ikke føjes til Anki; scan igen for at prøve igen.</numerusform>
+        <source>%n media file(s) could not be added to Anki; scan again to retry.</source>
+        <translation type="unfinished">
+            <numerusform />
         </translation>
     </message>
 </context><context>
@@ -6742,6 +6741,10 @@ Ingen indeksfiler slettes.</translation>
     <message>
         <source>Lute or LWT term export</source>
         <translation>Termeksport fra Lute eller LWT</translation>
+    </message>
+    <message>
+        <source>Anki Miner known words export</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>plain word list</source>

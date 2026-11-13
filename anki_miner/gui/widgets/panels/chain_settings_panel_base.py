@@ -38,7 +38,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, ClassVar
 
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QAction, QShowEvent
 from PyQt6.QtWidgets import (
     QApplication,
@@ -241,6 +241,7 @@ class ChainSettingsPanelBase(ScreenIssueHost, FormPanel):
         self._remove_mutation_token: MutationToken | None = None
         self._remove_chain_commit: Callable[[tuple[Any, ...]], ConfigCommitResult] | None = None
         self._after_scan_callbacks: list[Callable[[], None]] = []
+        self._idle_callbacks: list[Callable[[], None]] = []
         # C09: whether the active language's catalogue has this family, and
         # whether reorder/remove are currently allowed (✕ also needs a selection).
         self._recommended_available = False
@@ -738,6 +739,30 @@ class ChainSettingsPanelBase(ScreenIssueHost, FormPanel):
         else:
             del self._mutation_counts[token.kind]
         self._sync_mutation_controls()
+        if not self._mutation_tokens and self._idle_callbacks:
+            QTimer.singleShot(0, self._run_idle_callbacks)
+
+    def call_when_idle(self, callback: Callable[[], None]) -> None:
+        """Run ``callback`` on a later event-loop turn, once no token is held.
+
+        A batch reports done from inside its terminal handler, before that
+        handler releases its token and while the rescan it started holds
+        another. A continuation that starts the next mutation (the startup
+        prompt's next Reimport All family) must wait for both, or that
+        mutation is refused.
+        """
+        self._idle_callbacks.append(callback)
+        if not self._mutation_tokens:
+            QTimer.singleShot(0, self._run_idle_callbacks)
+
+    def _run_idle_callbacks(self) -> None:
+        # A token taken since this turn was queued re-queues on its release.
+        if self._mutation_tokens:
+            return
+        callbacks = self._idle_callbacks
+        self._idle_callbacks = []
+        for callback in callbacks:
+            callback()
 
     def has_active_mutation(self, kind: str | None = None) -> bool:
         """Return whether any token, or any token of ``kind``, is held."""

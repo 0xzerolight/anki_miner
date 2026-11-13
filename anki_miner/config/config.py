@@ -170,20 +170,25 @@ class AudioSourceEntry:
     enabled: bool = True
 
 
-def insert_above_first_enabled_jpod101(
+def insert_above_first_enabled_fallback(
     chain: Sequence[AudioSourceEntry],
     new_entries: Sequence[AudioSourceEntry],
 ) -> tuple[AudioSourceEntry, ...]:
-    """Splice *new_entries* above the first enabled jpod101 entry (else append).
+    """Splice *new_entries* above the first enabled always-available entry (else append).
 
     The chain is first-hit-wins, so anything the user adds — a pack or a custom
-    URL source — must outrank the always-available jpod101 fallback or it is
-    never consulted for any word jpod101 can serve. A disabled jpod101 is not
+    URL source — must outrank the always-available fallback (jpod101, or the
+    Google/Edge synthetic voice, which speaks every word) or it is never
+    consulted for any word that fallback can serve. A disabled fallback is not
     an anchor: nothing needs to outrank it.
     """
     out = list(chain)
     insert_at = next(
-        (index for index, entry in enumerate(out) if entry.kind == "jpod101" and entry.enabled),
+        (
+            index
+            for index, entry in enumerate(out)
+            if entry.kind in ("jpod101", "googletts", "edgetts") and entry.enabled
+        ),
         len(out),
     )
     out[insert_at:insert_at] = new_entries

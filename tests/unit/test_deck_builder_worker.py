@@ -14,7 +14,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from anki_miner.config import AnkiMinerConfig
-from anki_miner.exceptions import AnkiConnectionError
+from anki_miner.exceptions import AnkiConnectionError, SetupError
 from anki_miner.gui.workers.deck_builder_worker import DeckBuilderWorker, deck_build_config
 from anki_miner.models.batch_queue import QueueItemStatus
 from anki_miner.models.deck_build import DeckBuildRequest, DeckCorpus, DeckSelectionMode
@@ -39,7 +39,10 @@ COUNTS = {SUB1: {"私": 3, "猫": 2, "犬": 1}, SUB2: {"私": 2, "猫": 1, "鳥"
 
 @pytest.fixture(autouse=True)
 def anki_calls(monkeypatch: pytest.MonkeyPatch) -> list[tuple[str, str]]:
-    """Records ensure_deck and the card-target preflight, in call order."""
+    """Records ensure_deck, the card-target preflight and deck removal, in call order.
+
+    The collection holds only Anki's own Default deck, so the build's deck is new.
+    """
     calls: list[tuple[str, str]] = []
 
     def _verify_card_target(service: AnkiService) -> None:
@@ -48,8 +51,14 @@ def anki_calls(monkeypatch: pytest.MonkeyPatch) -> list[tuple[str, str]]:
     def _ensure_deck(_service: AnkiService, deck_name: str) -> None:
         calls.append(("ensure_deck", deck_name))
 
+    def _delete_deck_if_empty(_service: AnkiService, deck_name: str) -> bool:
+        calls.append(("delete_deck", deck_name))
+        return True
+
     monkeypatch.setattr(AnkiService, "verify_card_target", _verify_card_target)
     monkeypatch.setattr(AnkiService, "ensure_deck", _ensure_deck)
+    monkeypatch.setattr(AnkiService, "get_deck_names", lambda _service: ["Default"])
+    monkeypatch.setattr(AnkiService, "delete_deck_if_empty", _delete_deck_if_empty)
     return calls
 
 
@@ -286,6 +295,64 @@ def test_ensure_deck_failure_emits_error_and_mines_nothing(monkeypatch, anki_cal
     assert seen["previews"] == []
     assert seen["finished"] == [0]
     assert worker.item.status == QueueItemStatus.PENDING
+
+
+def test_a_refused_preflight_removes_the_deck_the_build_created(monkeypatch, anki_calls):
+    def _refuse(_service: AnkiService) -> None:
+        raise SetupError("Note type 'Anki Miner' was not found in Anki.")
+
+    monkeypatch.setattr(AnkiService, "verify_card_target", _refuse)
+    worker = _worker()
+    worker.confirm(DeckSelectionMode.ALL, 0)
+
+    seen = _run(worker, _FakeProcessor(_words()))
+
+    assert seen["errors"] == ["Note type 'Anki Miner' was not found in Anki."]
+    assert anki_calls == [("ensure_deck", "Show"), ("delete_deck", "Show")]
+
+
+def test_cancel_at_the_build_gate_removes_the_deck_the_build_created(anki_calls):
+    worker = _worker()
+    worker.preview_ready.connect(lambda _corpus: worker.cancel())
+
+    seen = _run(worker, _FakeProcessor(_words()))
+
+    assert seen["finished"] == [0]
+    assert anki_calls[0] == ("ensure_deck", "Show")
+    assert anki_calls[-1] == ("delete_deck", "Show")
+
+
+def test_a_deck_that_already_existed_is_never_removed(monkeypatch, anki_calls):
+    # Anki deck names are case-insensitive: "show" is the request's "Show".
+    monkeypatch.setattr(AnkiService, "get_deck_names", lambda _service: ["Default", "show"])
+    worker = _worker()
+    worker.preview_ready.connect(lambda _corpus: worker.cancel())
+
+    _run(worker, _FakeProcessor(_words()))
+
+    assert ("delete_deck", "Show") not in anki_calls
+
+
+def test_a_failed_deck_probe_never_removes_the_deck(monkeypatch, anki_calls):
+    # get_deck_names answers [] when Anki cannot be asked; a collection always
+    # has a deck, so the build cannot tell the deck is its own.
+    monkeypatch.setattr(AnkiService, "get_deck_names", lambda _service: [])
+    worker = _worker()
+    worker.preview_ready.connect(lambda _corpus: worker.cancel())
+
+    _run(worker, _FakeProcessor(_words()))
+
+    assert ("delete_deck", "Show") not in anki_calls
+
+
+def test_a_build_that_created_cards_keeps_its_deck(anki_calls):
+    worker = _worker()
+    worker.confirm(DeckSelectionMode.ALL, 0)
+
+    seen = _run(worker, _FakeProcessor(_words()))
+
+    assert seen["finished"] == [3]
+    assert ("delete_deck", "Show") not in anki_calls
 
 
 def test_preview_ready_carries_counts_and_row_lemmas():

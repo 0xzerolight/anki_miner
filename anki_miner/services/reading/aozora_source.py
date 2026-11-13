@@ -152,7 +152,7 @@ def _resolve_gaiji(line: str) -> str:
 # quotation, so an unconditional strip is safe on the Aozora path.
 _RUBY_RE = re.compile(r"《[^》]*》")
 
-# A ruby span *attached* to base text: the ｜ base-marker and its bounded base
+# A ruby span *attached* to base text: the ｜ (or web-novel |) base-marker and its bounded base
 # through 《, or a kanji/kana run directly before 《 — in either case holding a
 # kana reading, which is what an Aozora ruby always is. A bare, standalone 《…》
 # (a plain novel using the double-angle bracket as title/quotation punctuation)
@@ -161,10 +161,21 @@ _RUBY_RE = re.compile(r"《[^》]*》")
 # block as a "header" and stripped every 《…》 span silently). The kana reading is
 # what keeps Chinese out: there 他读了《红楼梦》 is a work title, and the character
 # before 《 (or a ｜ used as a chapter separator earlier in the line) is no signal.
-_RUBY_ATTACHED_RE = re.compile(r"(?:｜[^｜《》\r\n]+|[々぀-ヿ一-鿿])《[ぁ-ヿ]")
+_RUBY_ATTACHED_RE = re.compile(r"(?:[|｜][^|｜《》\r\n]+|[々぀-ヿ一-鿿])《[ぁ-ヿ]")
+
+# Narou/Kakuyomu/Hameln manuscripts accept a half-width | as the ruby base
+# marker; it is markup only when it opens a base that runs to a 《 on the
+# line, otherwise it is body text (a|b).
+_HALF_WIDTH_BASE_MARKER_RE = re.compile(r"\|(?=[^|｜《》\r\n]+《)")
+
+# Kakuyomu's emphasis dots wrap body text: 《《絶対に》》. A ruby reading never
+# starts with 《, so unwrapping these first leaves true ruby untouched.
+_EMPHASIS_RE = re.compile(r"《《([^《》\r\n]+)》》")
 
 
 def _strip_ruby(line: str) -> str:
+    line = _EMPHASIS_RE.sub(r"\1", line)
+    line = _HALF_WIDTH_BASE_MARKER_RE.sub("", line)
     return _RUBY_RE.sub("", line).replace("｜", "")
 
 
@@ -182,17 +193,24 @@ def _classify(control: str) -> str:
     return "other"
 
 
-def _strip_annotations(line: str) -> tuple[str, bool, bool, bool]:
+# The quoted target of a 同行見出し / 窓見出し: ［＃「一」は同行中見出し］.
+_SAME_LINE_HEADING_TARGET_RE = re.compile(r"「([^」]+)」は(?:同行|窓)")
+
+
+def _strip_annotations(line: str) -> tuple[str, bool, bool, bool, str | None]:
     """Remove every ``［＃…］`` marker, keeping surrounding/inner body text.
 
-    Returns ``(cleaned, inline_heading, block_start, block_end)``. Heading
-    markers only set flags; 傍点/太字/割り注/改ページ and all other forms are
-    removed with their body text left intact.
+    Returns ``(cleaned, inline_heading, block_start, block_end,
+    same_line_heading)``. Heading markers only set flags;
+    傍点/太字/割り注/改ページ and all other forms are removed with their body
+    text left intact. ``same_line_heading`` is the quoted heading of a
+    同行見出し / 窓見出し, which shares its line with body text.
     """
     if "［＃" not in line:
-        return line, False, False, False
+        return line, False, False, False, None
     out: list[str] = []
     inline = block_start = block_end = False
+    same_line: str | None = None
     i = 0
     n = len(line)
     while i < n:
@@ -201,18 +219,22 @@ def _strip_annotations(line: str) -> tuple[str, bool, bool, bool]:
             if close == -1:
                 out.append(line[i:])
                 break
-            kind = _classify(line[i + 2 : close])
+            control = line[i + 2 : close]
+            kind = _classify(control)
             if kind == "block_start":
                 block_start = True
             elif kind == "block_end":
                 block_end = True
             elif kind == "inline_heading":
                 inline = True
+                target = _SAME_LINE_HEADING_TARGET_RE.match(control)
+                if target:
+                    same_line = target.group(1)
             i = close + 1
         else:
             out.append(line[i])
             i += 1
-    return "".join(out), inline, block_start, block_end
+    return "".join(out), inline, block_start, block_end, same_line
 
 
 # --- header / footer -----------------------------------------------------
@@ -334,7 +356,7 @@ def _emit_units(
         # — a plain novel's 《…》 is real punctuation, not a ruby reading (Y4).
         if aozora:
             line = _strip_ruby(line)
-        text, inline, block_start, block_end = _strip_annotations(line)
+        text, inline, block_start, block_end, same_line = _strip_annotations(line)
         stripped = text.strip()
 
         if block_start:
@@ -346,6 +368,18 @@ def _emit_units(
             if block_end:
                 heading_block = False
             continue
+
+        if same_line is not None and not heading_block and same_line in stripped:
+            # The heading is its own unit and the chapter label; the rest of
+            # the line is an ordinary body paragraph.
+            current_chapter = same_line
+            units.append(ReadingUnit(text=same_line, index=index, location_label=same_line, image_ref=None))
+            index += 1
+            text = text.replace(same_line, "", 1)
+            stripped = text.strip()
+            inline = False
+            if not stripped:
+                continue
 
         if inline or (heading_block and stripped):
             if heading_block:

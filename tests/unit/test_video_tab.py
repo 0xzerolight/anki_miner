@@ -541,6 +541,7 @@ class TestClosePathReleasesDeckBuilderWorker:
                 "anki_miner.utils.file_pairing.FilePairMatcher.find_pairs_by_episode_number",
                 return_value=pairs,
             ),
+            patch.object(AnkiService, "get_deck_names", return_value=[]),
             patch.object(AnkiService, "ensure_deck"),
             patch.object(AnkiService, "verify_card_target"),
             # A build needs an offline dictionary (audit L5-007); the isolated home has none.

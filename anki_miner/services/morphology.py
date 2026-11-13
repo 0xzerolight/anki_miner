@@ -18,7 +18,7 @@ from typing import Any, Iterator
 
 from anki_miner.languages.token import LanguageToken
 from anki_miner.utils.ja_normalize import is_cjk_ideograph
-from anki_miner.utils.text_utils import hiragana_to_katakana, is_kana_only, katakana_to_hiragana
+from anki_miner.utils.text_utils import hiragana_to_katakana, is_kana_only, is_plain_kana, katakana_to_hiragana
 
 # Batch attested-readings probe (DefinitionService.offline_term_readings):
 # term -> readings, best-first, hiragana-folded. See attest_merged_readings.
@@ -170,8 +170,9 @@ def resolve_special_reading(head_surface: str, next_surface: str | None) -> str 
 #       documented and accepted (standalone 一日 tokenizes as 一+日, unaffected).
 #   (仏, ふつ) → ほとけ: UniDic emits フツ (the 仏=France abbreviation reading)
 #       universally; no "leave ほとけ alone" token exists — France-sense loss accepted.
-#   (マズい, まじい) → まずい: the katakana-ズ spelling misreads as マジイ; the 漢字
-#       form 不味い reads correctly and is untouched.
+#   (不味い, まじい) → まずい: UniDic reads 不味い マジイ in every context. Its
+#       kana spelling マズい needs no row (a kana surface is its own reading, see
+#       ``extract_reading``), but a マズい card's lemma_reading is 不味い's.
 #   (込む, ごむ) → こむ: the isolated 込む verb misreads as the loanword ゴム
 #       (rubber); compounds (飲み込む→のみこむ) read correctly and are untouched.
 #   (私, わたくし) → わたし: UniDic emits ワタクシ for 私 in every context, so
@@ -193,7 +194,7 @@ def resolve_special_reading(head_surface: str, next_surface: str | None) -> str 
 _READING_OVERRIDES: dict[tuple[str, str], str] = {
     ("一日", "ついたち"): "いちにち",
     ("仏", "ふつ"): "ほとけ",
-    ("マズい", "まじい"): "まずい",
+    ("不味い", "まじい"): "まずい",
     ("込む", "ごむ"): "こむ",
     ("私", "わたくし"): "わたし",
     ("私たち", "わたくしたち"): "わたしたち",
@@ -453,7 +454,14 @@ def extract_reading(word_token) -> str:
         Kana reading string
     """
     try:
-        return str(word_token.feature.kana or word_token.surface)
+        surface = word_token.surface
+        if is_plain_kana(surface):
+            # A surface written only in kana is its own reading. unidic-lite's
+            # ``kana`` is not always the surface's kana (ズルい → ズリイ, かんぞう →
+            # カンソウ, ていあん → エイン), and that value would become the card's
+            # Reading, the audio identity pair and the sentence reading.
+            return hiragana_to_katakana(surface)
+        return str(word_token.feature.kana or surface)
     except AttributeError:
         _guard("extract_reading")
         return str(word_token.surface)

@@ -3567,10 +3567,9 @@ Tämä muuttaa %n muistiinpanoa (%1) ja lisää niihin tunnisteen %2. Jatketaank
         </translation>
     </message>
     <message numerus="yes">
-        <source>%n audio file(s) could not be added to Anki; scan again to retry.</source>
-        <translation>
-            <numerusform>%n äänitiedostoa ei voitu lisätä Ankiin; yritä uudelleen käymällä läpi uudestaan.</numerusform>
-            <numerusform>%n äänitiedostoa ei voitu lisätä Ankiin; yritä uudelleen käymällä läpi uudestaan.</numerusform>
+        <source>%n media file(s) could not be added to Anki; scan again to retry.</source>
+        <translation type="unfinished">
+            <numerusform />
         </translation>
     </message>
 </context><context>
@@ -6742,6 +6741,10 @@ Indeksitiedostoja ei poisteta.</translation>
     <message>
         <source>Lute or LWT term export</source>
         <translation>Luten tai LWT:n termivienti</translation>
+    </message>
+    <message>
+        <source>Anki Miner known words export</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>plain word list</source>

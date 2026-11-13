@@ -3584,11 +3584,9 @@ Zostanie zmienionych %n notatek (%1) i otrzymają tag %2. Kontynuować?</numerus
         </translation>
     </message>
     <message numerus="yes">
-        <source>%n audio file(s) could not be added to Anki; scan again to retry.</source>
-        <translation>
-            <numerusform>Nie udało się dodać %n pliku audio do Anki; zeskanuj ponownie, aby ponowić.</numerusform>
-            <numerusform>Nie udało się dodać %n plików audio do Anki; zeskanuj ponownie, aby ponowić.</numerusform>
-            <numerusform>Nie udało się dodać %n plików audio do Anki; zeskanuj ponownie, aby ponowić.</numerusform>
+        <source>%n media file(s) could not be added to Anki; scan again to retry.</source>
+        <translation type="unfinished">
+            <numerusform />
         </translation>
     </message>
 </context><context>
@@ -6780,6 +6778,10 @@ No index files are deleted.</source>
     <message>
         <source>Lute or LWT term export</source>
         <translation>Eksport terminów z Lute lub LWT</translation>
+    </message>
+    <message>
+        <source>Anki Miner known words export</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>plain word list</source>

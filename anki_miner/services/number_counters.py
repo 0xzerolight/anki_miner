@@ -261,6 +261,11 @@ def _is_numeral(token) -> bool:
     return getattr(feature, "pos1", None) == "名詞" and getattr(feature, "pos2", None) == "数詞"
 
 
+def _ends_in_counter(token) -> bool:
+    """A numeral piece the suffix pass already merged with its counter (一つ, 三人, 万人)."""
+    return counter_of(token.surface) is not None
+
+
 def _is_counter(token) -> bool:
     feature = getattr(token, "feature", None)
     pos3 = getattr(feature, "pos3", None)
@@ -308,7 +313,7 @@ def merge_number_counters(text: str, tokens: list) -> list:
         if i == 0 or not touching(i - 1):
             return False
         before = tokens[i - 1]
-        if _is_numeral(before) or before.surface == "第":
+        if (_is_numeral(before) and not _ends_in_counter(before)) or before.surface == "第":
             return True
         return before.surface in _DIGIT_SEPARATORS and i > 1 and _is_numeral(tokens[i - 2]) and touching(i - 2)
 
@@ -331,13 +336,21 @@ def merge_number_counters(text: str, tokens: list) -> list:
             i += 1
             continue
         end = i + 1
-        while end < len(tokens) and _is_numeral(tokens[end]) and touching(end - 1):
+        # A piece already ending in its counter (the suffix pass's 一つ, 一個)
+        # closes the run: 一つ|百円 is two quantities, not the number 一つ百.
+        while (
+            end < len(tokens)
+            and not _ends_in_counter(tokens[end - 1])
+            and _is_numeral(tokens[end])
+            and touching(end - 1)
+        ):
             end += 1
         numeral = "".join(t.surface for t in tokens[i:end])
         counter: str | None
-        if end < len(tokens) and touching(end - 1) and _is_counter(tokens[end]):
+        open_run = end < len(tokens) and touching(end - 1) and not _ends_in_counter(tokens[end - 1])
+        if open_run and _is_counter(tokens[end]):
             counter, consumed = tokens[end].surface, end + 1
-        elif end < len(tokens) and touching(end - 1) and (counter := counter_of(tokens[end].surface)) is not None:
+        elif open_run and (counter := counter_of(tokens[end].surface)) is not None:
             # The matcher took the number's tail with its counter (3|千円, 10|万人).
             numeral += tokens[end].surface[: -len(counter)]
             consumed = end + 1

@@ -12,6 +12,28 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Fixed
 
+- Japanese adjectives written with a katakana stem (ズルい, キツい, サムい) and kana-only words such as かんぞう now get their own kana as the card reading instead of a garbled one (ずりい, きちい, かんそう).
+- After an upgrade, the startup prompt's Reimport All now rebuilds every stale resource family (dictionaries, frequency, pitch, audio) instead of only the first one.
+- Outside Japanese, an imported audio pack or an added custom audio source now goes above Google/Edge read-aloud in Word Audio, so its recordings are used.
+- With Mine numbers with counters on, a sentence containing 3か月 or 3カ月 no longer shows the number's furigana over the words before it.
+- A dictionary stylesheet with an escaped brace can no longer push its rules outside the dictionary's own glossary and restyle the rest of the card.
+- Card Backfill no longer gives a card the pitch accent of a different word that shares its dictionary lemma (e.g. 呪言 getting 言祝ぎ's pitch).
+- A frequency list CSV saved with a UTF-8 BOM (Excel's 'CSV UTF-8') now keeps its header, so a count-based list is ranked the right way round.
+- Switching to a settings profile whose mining language cannot mine on this machine (its language pack is missing) is now refused with the reason, like the language selector, instead of leaving every mining run to fail.
+- Web articles declared as ISO-8859-1 now keep their curly quotes, apostrophes and dashes instead of turning them into invisible control characters.
+- EPUB chapters that write characters as named entities (&eacute;, &rsquo;, &nbsp;) no longer lose those characters when mined.
+- EPUB chapters written in plain HTML syntax (unclosed <br> or <img>) no longer silently drop the text after those tags.
+- A run that fails after Anki already created some cards now records them in Analytics and as known words, the same as a stopped run.
+- Stopping a queue while an item is still being parsed no longer lowers the run's comprehension in View details.
+- A mining run no longer warns that word or sentence audio was skipped when a fallback source supplied every clip.
+- A SAMI subtitle with a lowercase <sami> header or a leading comment now loads when it is saved in CP949, Shift-JIS or UTF-16, not only in UTF-8.
+- With Mine numbers with counters on, two quantities written back to back in kanji (一つ百円, 二つ三つ) now both get their cards.
+- Deck Builder no longer leaves an empty deck in Anki when you cancel at the preview or the run is refused before any card is made.
+- EPUB cards now name the right chapter in their Source when a chapter spans several files or several chapters share one file.
+- Aozora same-line headings (同行見出し, 窓見出し) no longer turn their whole paragraph into one card sentence and chapter label.
+- Web-novel .txt files that mark ruby with a half-width | no longer leave the bar in card sentences.
+- Kakuyomu emphasis markup 《《…》》 in a .txt novel no longer deletes the emphasised words.
+- Japanese reading sources no longer split a sentence at a full-width decimal point such as ３．５.
 - Card Backfill now uploads dictionary images in backfilled Definition and Glossary fields, so those cards no longer show broken images.
 - Card Backfill no longer writes a mixed kanji-and-kana reading such as 食たべる when a card's furigana field holds HTML ruby.
 - Importing a tab-separated word list whose meaning column contains a comma now imports the word itself, not the word joined to part of its meaning.

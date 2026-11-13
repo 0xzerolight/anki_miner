@@ -35,7 +35,7 @@ from anki_miner.config import (
     FreqEntry,
     PitchSourceEntry,
     create_default_config,
-    insert_above_first_enabled_jpod101,
+    insert_above_first_enabled_fallback,
 )
 from anki_miner.config.paths import ANKI_MINER_HOME
 from anki_miner.gui.controllers.anki_probe_controller import AnkiProbeController
@@ -903,7 +903,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
             get_root=lambda: self.config.audio_packs_root,
             chain_field="expression_audio_chain",
             registry_cls=AudioPackRegistry,
-            make_chain=lambda chain, packs: insert_above_first_enabled_jpod101(
+            make_chain=lambda chain, packs: insert_above_first_enabled_fallback(
                 chain, [AudioSourceEntry(kind="pack", pack_id=pack.pack_id, enabled=True) for pack in packs]
             ),
             persist=self._persist_audio_chain_change,
@@ -1523,15 +1523,20 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         Delegates to the same ``reimport_all`` each panel button drives, so the
         one-click migration and the manual path share one implementation.
         """
-        flows: dict[str, tuple[str, ReimportAllFlow]] = {
-            "dictionary": ("dictionaries", self._dict_import_flow),
-            "frequency": ("frequency", self._frequency_import_flow),
-            "pitch": ("pitch", self._pitch_import_flow),
-            "audio": ("audio", self._audio_pack_import_flow),
+        flows: dict[str, tuple[str, ReimportAllFlow, ChainSettingsPanelBase]] = {
+            "dictionary": ("dictionaries", self._dict_import_flow, self.dictionary_panel),
+            "frequency": ("frequency", self._frequency_import_flow, self.frequency_panel),
+            "pitch": ("pitch", self._pitch_import_flow, self.pitch_panel),
+            "audio": ("audio", self._audio_pack_import_flow, self.audio_panel),
         }
-        subtab, flow = flows[kind]
+        subtab, flow, panel = flows[kind]
         self.open_subtab(subtab)
-        flow.reimport_all(only_ids=only_ids, on_complete=on_complete)
+        if on_complete is None:
+            flow.reimport_all(only_ids=only_ids)
+            return
+        # The batch reports done while it still holds the panel's tokens; the
+        # next family's mutation would be refused until they are released.
+        flow.reimport_all(only_ids=only_ids, on_complete=lambda: panel.call_when_idle(on_complete))
 
     def set_dictionary_mutation_preflight(self, callback: Callable[[], bool] | None) -> None:
         """Install the startup-migration preflight for dictionary mutations."""

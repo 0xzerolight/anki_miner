@@ -3635,14 +3635,14 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
         </translation>
     </message>
     <message numerus="yes">
-        <source>%n audio file(s) could not be added to Anki; scan again to retry.</source>
+        <source>%n media file(s) could not be added to Anki; scan again to retry.</source>
         <translation>
-            <numerusform>تعذّرت إضافة %n ملف صوتي إلى Anki؛ افحص مرة أخرى لإعادة المحاولة.</numerusform>
-            <numerusform>تعذّرت إضافة ملف صوتي واحد (%n) إلى Anki؛ افحص مرة أخرى لإعادة المحاولة.</numerusform>
-            <numerusform>تعذّرت إضافة ملفين صوتيين (%n) إلى Anki؛ افحص مرة أخرى لإعادة المحاولة.</numerusform>
-            <numerusform>تعذّرت إضافة %n ملفات صوتية إلى Anki؛ افحص مرة أخرى لإعادة المحاولة.</numerusform>
-            <numerusform>تعذّرت إضافة %n ملفًا صوتيًا إلى Anki؛ افحص مرة أخرى لإعادة المحاولة.</numerusform>
-            <numerusform>تعذّرت إضافة %n ملف صوتي إلى Anki؛ افحص مرة أخرى لإعادة المحاولة.</numerusform>
+            <numerusform>تعذّرت إضافة %n ملف وسائط إلى Anki؛ افحص مرة أخرى لإعادة المحاولة.</numerusform>
+            <numerusform>تعذّرت إضافة ملف وسائط واحد (%n) إلى Anki؛ افحص مرة أخرى لإعادة المحاولة.</numerusform>
+            <numerusform>تعذّرت إضافة ملفي وسائط (%n) إلى Anki؛ افحص مرة أخرى لإعادة المحاولة.</numerusform>
+            <numerusform>تعذّرت إضافة %n ملفات وسائط إلى Anki؛ افحص مرة أخرى لإعادة المحاولة.</numerusform>
+            <numerusform>تعذّرت إضافة %n ملف وسائط إلى Anki؛ افحص مرة أخرى لإعادة المحاولة.</numerusform>
+            <numerusform>تعذّرت إضافة %n ملف وسائط إلى Anki؛ افحص مرة أخرى لإعادة المحاولة.</numerusform>
         </translation>
     </message>
 </context><context>
@@ -6894,6 +6894,10 @@ No index files are deleted.</source>
     <message>
         <source>Lute or LWT term export</source>
         <translation>تصدير مصطلحات Lute أو LWT</translation>
+    </message>
+    <message>
+        <source>Anki Miner known words export</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>plain word list</source>

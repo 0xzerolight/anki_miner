@@ -3550,9 +3550,9 @@ Ini akan mengubah %n catatan (%1) dan memberinya tag %2. Lanjutkan?</numerusform
         </translation>
     </message>
     <message numerus="yes">
-        <source>%n audio file(s) could not be added to Anki; scan again to retry.</source>
-        <translation>
-            <numerusform>%n berkas audio tidak dapat ditambahkan ke Anki; pindai lagi untuk mencoba ulang.</numerusform>
+        <source>%n media file(s) could not be added to Anki; scan again to retry.</source>
+        <translation type="unfinished">
+            <numerusform />
         </translation>
     </message>
 </context><context>
@@ -6704,6 +6704,10 @@ Tidak ada berkas indeks yang dihapus.</translation>
     <message>
         <source>Lute or LWT term export</source>
         <translation>Ekspor istilah Lute atau LWT</translation>
+    </message>
+    <message>
+        <source>Anki Miner known words export</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>plain word list</source>
