@@ -28,6 +28,8 @@ from anki_miner.services.card_backfiller import (
     NotePlan,
     _is_empty,
     _is_fillable,
+    _NoteContext,
+    _pitch_proposals,
     _reading_from_furigana,
     _resolve_context,
     apply_backfill,
@@ -40,6 +42,7 @@ from anki_miner.services.dictionary.card_style_block import (
     refresh_style_block,
 )
 from anki_miner.services.morphology import SyntheticToken
+from anki_miner.services.pitch_accent.render import render_pitch_graph_field
 from anki_miner.services.tagger import get_shared_tagger
 from anki_miner.services.validation_service import ValidationService
 
@@ -815,6 +818,37 @@ class TestScanPitch:
             anki, backfill_config, _services(pitch=FakePitchService()), _options({"pitch_graph", "pitch_text"})
         )
         assert plan.notes == ()
+
+    @staticmethod
+    def _real_pitch_service(rows):
+        from anki_miner.services.pitch_accent.multi_pitch_service import MultiPitchAccentService
+        from anki_miner.services.pitch_accent_service import (
+            PitchEntry,
+            PitchMapsStore,
+            _ParsedRow,
+            build_pitch_maps,
+        )
+
+        class _Store(PitchMapsStore):
+            display_name = "src"
+
+        store = _Store()
+        store._set_maps(build_pitch_maps([_ParsedRow(r, w, PitchEntry(p)) for w, r, p in rows]))
+        return MultiPitchAccentService([store])
+
+    @staticmethod
+    def _jugon_ctx():
+        # UniDic lemmatizes 呪言 to the different-kanji word 言祝ぎ (ことほぎ).
+        return _NoteContext(1, {}, "呪言", "じゅごん", "field", False, "言祝ぎ", False, False)
+
+    def test_pitch_keys_on_the_card_front_before_a_different_kanji_lemma(self, backfill_config):
+        svc = self._real_pitch_service([("呪言", "じゅごん", "0"), ("言祝ぎ", "ことほぎ", "2")])
+        proposals = _pitch_proposals(self._jugon_ctx(), backfill_config, {"pitch_graph"}, svc)
+        assert proposals["pitch_graph"] == render_pitch_graph_field("0", "じゅごん")
+
+    def test_a_different_kanji_lemma_never_answers_pitch(self, backfill_config):
+        svc = self._real_pitch_service([("言祝ぎ", "ことほぎ", "2")])
+        assert _pitch_proposals(self._jugon_ctx(), backfill_config, {"pitch_graph", "pitch_text"}, svc) == {}
 
 
 class TestScanDefinitionGlossary:

@@ -3795,6 +3795,27 @@ class TestEnsureDeck:
             service.ensure_deck("New Deck")
 
 
+class TestDeleteDeckIfEmpty:
+    """Tests for AnkiService.delete_deck_if_empty."""
+
+    def test_deletes_an_empty_deck(self, test_config):
+        service = AnkiService(test_config)
+        with patch("anki_miner.services.anki_service.post_action", side_effect=[[], None]) as mock_pa:
+            assert service.delete_deck_if_empty("Core_2k") is True
+
+        assert mock_pa.call_args_list[0].args[1] == "findCards"
+        assert mock_pa.call_args_list[0].kwargs["params"] == {"query": 'deck:"Core\\_2k"'}
+        assert mock_pa.call_args_list[1].args[1] == "deleteDecks"
+        assert mock_pa.call_args_list[1].kwargs["params"] == {"decks": ["Core_2k"], "cardsToo": True}
+
+    def test_never_deletes_a_deck_holding_cards(self, test_config):
+        service = AnkiService(test_config)
+        with patch("anki_miner.services.anki_service.post_action", return_value=[42]) as mock_pa:
+            assert service.delete_deck_if_empty("Show") is False
+
+        assert [c.args[1] for c in mock_pa.call_args_list] == ["findCards"]
+
+
 # ---------------------------------------------------------------------------
 # TestVerifyCardTarget
 # ---------------------------------------------------------------------------

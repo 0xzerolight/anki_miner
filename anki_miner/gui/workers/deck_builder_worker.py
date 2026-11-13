@@ -26,6 +26,7 @@ from pathlib import Path
 from PyQt6.QtCore import QCoreApplication, pyqtSignal
 
 from anki_miner.config import AnkiMinerConfig
+from anki_miner.exceptions import AnkiConnectionError
 from anki_miner.gui.workers.batch_queue_worker import BatchQueueWorkerThread
 from anki_miner.interfaces.presenter import PresenterProtocol
 from anki_miner.interfaces.progress import ProgressCallback
@@ -54,6 +55,11 @@ def deck_build_config(config: AnkiMinerConfig, request: DeckBuildRequest) -> Ank
         bypass_optional_filters=True,
         allow_duplicate_cards=True,
     )
+
+
+def _deck_key(name: str) -> str:
+    """Anki's identity for a deck name: case-insensitive, components trimmed."""
+    return "::".join(part.strip() for part in name.split("::")).casefold()
 
 
 def _accept_all(words: list) -> list:
@@ -129,6 +135,8 @@ class DeckBuilderWorker(BatchQueueWorkerThread):
         self._selection: tuple[DeckSelectionMode, float] | None = None
         self._capture: CaptureCurationCallback | None = None
         self.corpus: DeckCorpus | None = None
+        #: This run created the deck, so a run that builds nothing removes it.
+        self._created_deck = False
 
     def confirm(self, mode: DeckSelectionMode, value: float) -> None:
         """Build with this selection; valid before, at, or after the gate."""
@@ -145,17 +153,38 @@ class DeckBuilderWorker(BatchQueueWorkerThread):
         # episode's own preflight. Called only once the base's stale-index
         # gate has passed, so a stale run creates nothing; a failure here ends
         # the run in run()'s handler (logged, error, then queue_finished).
-        AnkiService(self.config).ensure_deck(self.request.deck_name)
+        anki = AnkiService(self.config)
+        # A collection always holds a deck, so an empty answer is a failed
+        # probe: the deck may exist, and the build must never remove it.
+        names = anki.get_deck_names()
+        target = _deck_key(self.request.deck_name)
+        is_new = bool(names) and all(_deck_key(name) != target for name in names)
+        anki.ensure_deck(self.request.deck_name)
+        self._created_deck = is_new
 
     def _run_queue(self, total_cards: int) -> int:
+        cards = total_cards
         try:
-            return super()._run_queue(total_cards)
+            cards = super()._run_queue(total_cards)
+            return cards
         finally:
             # A cancel or exception during the pre-pass or counting can exit
             # before _select_season_pool ever clears the per-episode pools;
             # this is the run's own exit, so it is the last chance to drop
             # them rather than let a finished worker keep holding them.
             self._capture = None
+            # A refused preflight, a cancel at the Build gate or a failure
+            # must not leave the deck this run created behind, empty.
+            if self._created_deck and cards == 0:
+                self._remove_created_deck()
+
+    def _remove_created_deck(self) -> None:
+        try:
+            AnkiService(self.config).delete_deck_if_empty(self.request.deck_name)
+        except AnkiConnectionError:
+            # Raised from this finally, it would replace the run's own result
+            # or error; the deck merely stays, as it did before.
+            logger.warning("DeckBuilderWorker could not remove its empty deck", exc_info=True)
 
     def _make_capture(self) -> CaptureCurationCallback:
         # Kept so _select_season_pool can drop the per-episode lists once merged.
