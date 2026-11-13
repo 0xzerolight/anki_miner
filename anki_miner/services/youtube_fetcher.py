@@ -233,7 +233,6 @@ class YouTubeFetcherService:
         try:
             video_id = data["id"]
             title = data["title"]
-            duration = data["duration"]
         except KeyError as e:
             _log_probe_tail("metadata", "incomplete metadata", stderr)
             raise YouTubeFetchError(
@@ -249,11 +248,13 @@ class YouTubeFetcherService:
         if not isinstance(video_id, str) or not id_re.match(video_id):
             raise YouTubeFetchError(f"Unexpected video id format: {video_id!r}")
 
-        # Live streams report ``duration: null`` — the key is present so the
-        # KeyError guard above passes, but ``int(None)`` would raise an
-        # uncaught TypeError, bypassing the caller's "Live streams not
-        # supported" rejection. Treat null as 0 so a VideoInfo is built and
-        # the is_live branch fires (a finite 0 also can't trip max-duration). T-28.
+        # Live streams report ``duration: null``, and yt-dlp drops the key when
+        # the extractor supplies none (a direct media link, many non-YouTube
+        # sites). ``int(None)`` would raise an uncaught TypeError, bypassing the
+        # caller's "Live streams not supported" rejection. Treat an unknown
+        # length as 0 so a VideoInfo is built and the is_live branch fires (a
+        # finite 0 also can't trip max-duration). T-28.
+        duration = data.get("duration")
         duration_s = 0 if duration is None else int(duration)
         if duration_s > self._config.youtube_max_duration_s:
             raise VideoTooLongError(
