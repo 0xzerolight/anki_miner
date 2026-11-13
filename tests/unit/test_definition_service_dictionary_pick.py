@@ -33,6 +33,9 @@ class _Provider:
             raise RuntimeError("broken index")
         return {word: self._entries.get(word) for word, _reading in pairs}
 
+    def lookup_fallback(self, text, _conditions, **_kwargs):
+        return self._entries.get(text)
+
 
 def _word(front: str, pick: str = "") -> TokenizedWord:
     return TokenizedWord(
@@ -95,3 +98,43 @@ def test_a_per_word_provider_serves_a_pick_too(test_config):
     legacy = _Provider("Legacy", {"猫": "<legacy>"}, batch=False)
     service = DefinitionService(test_config, [_Provider("JMdict", {"猫": "<jm>"}), legacy])
     assert service.get_definitions_batch([("猫", None)], preferred_dictionaries={"猫": "Legacy"}) == ["<legacy>"]
+
+
+def test_a_pick_answers_a_counter_word_through_its_counter(test_config):
+    # 4人 is in no dictionary; the pane shows each dictionary's 人 under its pick link.
+    first = _Provider("JMdict", {"人": "<jm person>"})
+    second = _Provider("Jitendex", {"人": "<jt counter for people>"})
+    service = DefinitionService(test_config, [first, second])
+    out = service.get_definitions_batch([("4人", "よにん")], preferred_dictionaries={"4人": "Jitendex"})
+    assert out == ["<jt counter for people>"]
+
+
+def test_a_pick_answers_a_word_through_its_lookup_ladder(test_config):
+    first = _Provider("JMdict", {"帰る": "<jm return>"})
+    second = _Provider("Jitendex", {"帰る": "<jt go home>"})
+    service = DefinitionService(test_config, [first, second])
+    out = service.get_definitions_batch(
+        [("帰れる", None)], None, {"帰れる": ("", None)}, preferred_dictionaries={"帰れる": "Jitendex"}
+    )
+    assert out == ["<jt go home>"]
+
+
+def test_a_ladder_pick_wins_over_another_dictionarys_exact_entry(test_config):
+    # JMdict lists 見れる itself; Jitendex reaches it only through 見る.
+    first = _Provider("JMdict", {"見れる": "<jm can see>"})
+    second = _Provider("Jitendex", {"見る": "<jt see>"})
+    service = DefinitionService(test_config, [first, second])
+    out = service.get_definitions_batch(
+        [("見れる", None)], None, {"見れる": ("見れる", None)}, preferred_dictionaries={"見れる": "Jitendex"}
+    )
+    assert out == ["<jt see>"]
+
+
+def test_a_pick_without_a_ladder_hit_keeps_the_chain(test_config):
+    first = _Provider("JMdict", {"見れる": "<jm can see>"})
+    second = _Provider("Jitendex", {"猫": "<jt cat>"})
+    service = DefinitionService(test_config, [first, second])
+    out = service.get_definitions_batch(
+        [("見れる", None)], None, {"見れる": ("見れる", None)}, preferred_dictionaries={"見れる": "Jitendex"}
+    )
+    assert out == ["<jm can see>"]
