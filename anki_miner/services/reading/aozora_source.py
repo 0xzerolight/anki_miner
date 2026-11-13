@@ -195,6 +195,10 @@ def _classify(control: str) -> str:
 
 # The quoted target of a 同行見出し / 窓見出し: ［＃「一」は同行中見出し］.
 _SAME_LINE_HEADING_TARGET_RE = re.compile(r"「([^」]+)」は(?:同行|窓)")
+# The bracketed pair ［＃同行中見出し］一［＃同行中見出し終わり］ (大/中/小, 同行/窓) heads
+# the same way: the text between the two markers is the heading, the rest of the
+# line is body text. Owner ruling of 2026-11-13.
+_SAME_LINE_HEADING_PAIR_RE = re.compile(r"(?:同行|窓)[大中小]見出し(終わり)?$")
 
 
 def _strip_annotations(line: str) -> tuple[str, bool, bool, bool, str | None]:
@@ -211,6 +215,7 @@ def _strip_annotations(line: str) -> tuple[str, bool, bool, bool, str | None]:
     out: list[str] = []
     inline = block_start = block_end = False
     same_line: str | None = None
+    pair_start: int | None = None  # len(out) at an open bracketed same-line heading
     i = 0
     n = len(line)
     while i < n:
@@ -228,8 +233,14 @@ def _strip_annotations(line: str) -> tuple[str, bool, bool, bool, str | None]:
             elif kind == "inline_heading":
                 inline = True
                 target = _SAME_LINE_HEADING_TARGET_RE.match(control)
+                pair = _SAME_LINE_HEADING_PAIR_RE.fullmatch(control)
                 if target:
                     same_line = target.group(1)
+                elif pair and not pair.group(1):
+                    pair_start = len(out)
+                elif pair and pair_start is not None:
+                    same_line = "".join(out[pair_start:]).strip() or None
+                    pair_start = None
             i = close + 1
         else:
             out.append(line[i])

@@ -697,6 +697,23 @@ def test_same_line_heading_is_its_own_unit_and_the_body_splits():
     ]
 
 
+@pytest.mark.parametrize(
+    "marker",
+    ["同行大見出し", "同行中見出し", "同行小見出し", "窓大見出し", "窓中見出し", "窓小見出し"],
+)
+def test_bracketed_same_line_heading_is_its_own_unit_and_the_body_splits(marker):
+    units, _paras, _skipped = _emit_units(
+        [f"［＃{marker}］一［＃{marker}終わり］　朝になった。彼は窓を開けた。", "　次だ。"]
+    )
+
+    assert [(u.text, u.location_label) for u in units] == [
+        ("一", "一"),
+        ("朝になった。", "一"),
+        ("彼は窓を開けた。", "一"),
+        ("次だ。", "一"),
+    ]
+
+
 def test_half_width_bar_opening_a_ruby_base_is_stripped(tmp_path):
     p = _write(tmp_path, "　彼は|魔導書《グリモワール》を開いた。\n　値はa|bだ。\n", "utf-8")
 
