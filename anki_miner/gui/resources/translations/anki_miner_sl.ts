@@ -3602,8 +3602,11 @@ To bo spremenilo %n zapiskov (%1) in jim dodalo oznako %2. Želite nadaljevati?<
     </message>
     <message numerus="yes">
         <source>%n media file(s) could not be added to Anki; scan again to retry.</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>%n medijske datoteke ni bilo mogoče dodati v Anki; za ponovni poskus znova preglejte.</numerusform>
+            <numerusform>%n medijskih datotek ni bilo mogoče dodati v Anki; za ponovni poskus znova preglejte.</numerusform>
+            <numerusform>%n medijskih datotek ni bilo mogoče dodati v Anki; za ponovni poskus znova preglejte.</numerusform>
+            <numerusform>%n medijskih datotek ni bilo mogoče dodati v Anki; za ponovni poskus znova preglejte.</numerusform>
         </translation>
     </message>
 </context><context>

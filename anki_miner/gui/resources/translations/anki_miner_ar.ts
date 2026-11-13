@@ -3636,8 +3636,13 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
     </message>
     <message numerus="yes">
         <source>%n media file(s) could not be added to Anki; scan again to retry.</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>تعذّرت إضافة %n ملف وسائط إلى Anki؛ افحص مرة أخرى لإعادة المحاولة.</numerusform>
+            <numerusform>تعذّرت إضافة ملف وسائط واحد (%n) إلى Anki؛ افحص مرة أخرى لإعادة المحاولة.</numerusform>
+            <numerusform>تعذّرت إضافة ملفي وسائط (%n) إلى Anki؛ افحص مرة أخرى لإعادة المحاولة.</numerusform>
+            <numerusform>تعذّرت إضافة %n ملفات وسائط إلى Anki؛ افحص مرة أخرى لإعادة المحاولة.</numerusform>
+            <numerusform>تعذّرت إضافة %n ملف وسائط إلى Anki؛ افحص مرة أخرى لإعادة المحاولة.</numerusform>
+            <numerusform>تعذّرت إضافة %n ملف وسائط إلى Anki؛ افحص مرة أخرى لإعادة المحاولة.</numerusform>
         </translation>
     </message>
 </context><context>
