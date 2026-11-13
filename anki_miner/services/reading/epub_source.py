@@ -38,7 +38,7 @@ import re
 import zipfile
 import zlib
 from collections import Counter
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from pathlib import Path
 from typing import TYPE_CHECKING
 from urllib.parse import unquote, urlsplit
@@ -286,6 +286,9 @@ def load(
 
         index = 0
         content_i = 0
+        # The label a spine file the TOC does not list continues (a chapter
+        # split over several files); None until the first listed file.
+        carried: str | None = None
         gaiji_total = 0
         matter_skipped = 0
         for idref in spine_idrefs:
@@ -335,12 +338,27 @@ def load(
             if in_zone and _is_matter_typed(body):
                 matter_skipped += 1
                 continue
+            anchors = chapter_map.get(entry)
+            if anchors:
+                label = anchors.get("", next(iter(anchors.values())))
+            else:
+                label = carried if carried is not None else f"ch.{content_i}"
             ruby: list[list[tuple[str, str]]] = []
-            paragraphs, gaiji = _walk_body(body, cancel_check=cancel_check, line_join=_line_join(rules), ruby_out=ruby)
+            labels: list[str] = []
+            paragraphs, gaiji = _walk_body(
+                body,
+                cancel_check=cancel_check,
+                line_join=_line_join(rules),
+                ruby_out=ruby,
+                chapter=label,
+                anchors=anchors,
+                labels_out=labels,
+            )
+            if anchors or carried is not None:
+                carried = labels[-1] if labels else label
             gaiji_total += gaiji
-            label = chapter_map.get(entry, f"ch.{content_i}")
             content_i += 1
-            for para, para_ruby in zip(paragraphs, ruby, strict=True):
+            for para, para_ruby, label in zip(paragraphs, ruby, labels, strict=True):
                 raise_if_cancelled(cancel_check, READING_CANCELLED)
                 printed = Counter(base for base, _reading in para_ruby)
                 for sentence in split_sentences(para, rules=rules):
@@ -895,6 +913,9 @@ def _walk_body(
     cancel_check: _CancelCheck | None = None,
     line_join: str = "",
     ruby_out: list[list[tuple[str, str]]] | None = None,
+    chapter: str = "",
+    anchors: Mapping[str, str] | None = None,
+    labels_out: list[str] | None = None,
 ) -> tuple[list[str], int]:
     """Depth-first text walk → (paragraphs, gaiji-image count).
 
@@ -904,11 +925,15 @@ def _walk_body(
     ``line_join`` replaces each source line wrap inside a paragraph
     (:func:`_line_join`). With ``ruby_out``, one list of :func:`_ruby_pair`
     pairs is appended per kept paragraph, in step with the paragraphs (SK-31).
+    With ``labels_out``, each kept paragraph's chapter label is appended: it
+    starts as ``chapter`` and switches at an element whose id ``anchors`` maps
+    to a TOC label (several chapters in one file, addressed by fragment).
     """
     paragraphs: list[str] = []
     buf: list[str] = []
     hints: list[tuple[str, str]] = []
     gaiji = 0
+    current = chapter
 
     def flush() -> None:
         if not buf:
@@ -920,14 +945,21 @@ def _walk_body(
             paragraphs.append(text)
             if ruby_out is not None:
                 ruby_out.append(list(hints))
+            if labels_out is not None:
+                labels_out.append(current)
         hints.clear()
 
     def visit(el) -> None:
-        nonlocal gaiji
+        nonlocal gaiji, current
         raise_if_cancelled(cancel_check, READING_CANCELLED)
         name = _local(el)
         if not name or name in _SKIP_TAGS:
             return  # comment/PI or skipped subtree — tail handled by the caller
+        el_id = el.get("id")
+        if anchors and el_id and el_id in anchors:
+            if name in _BLOCK_TAGS:
+                flush()  # the paragraph before a chapter's heading keeps the previous label
+            current = anchors[el_id]
         if name == "br":
             flush()
             return
@@ -968,9 +1000,13 @@ def _load_chapters(
     warnings: list[str],
     account_member: _AccountMember,
     cancel_check: _CancelCheck | None,
-) -> tuple[dict[str, str], set[str]]:
-    """Chapter labels by spine entry, and the EPUB3 landmarks' matter entries (TS-08)."""
-    entries: list[tuple[str, str]] = []
+) -> tuple[dict[str, dict[str, str]], set[str]]:
+    """Chapter labels by spine entry and fragment id, and the EPUB3 landmarks' matter entries (TS-08).
+
+    Fragment ``""`` names the whole file; within one file the TOC's first
+    entry for each fragment wins.
+    """
+    entries: list[tuple[str, str, str]] = []
     landmarks: set[str] = set()
     nav_href = None
     for href, _mt, props in manifest.values():
@@ -993,13 +1029,18 @@ def _load_chapters(
                 cancel_check,
             )
 
-    usable = [(t, lbl) for (t, lbl) in entries if lbl and lbl not in _BOILERPLATE_LABELS]
+    usable = [(t, frag, lbl) for (t, frag, lbl) in entries if lbl and lbl not in _BOILERPLATE_LABELS]
     if len(usable) < 2:
         return {}, landmarks
-    chapter_map: dict[str, str] = {}
-    for target, label in usable:
-        chapter_map.setdefault(target, label)
+    chapter_map: dict[str, dict[str, str]] = {}
+    for target, fragment, label in usable:
+        chapter_map.setdefault(target, {}).setdefault(fragment, label)
     return chapter_map, landmarks
+
+
+def _fragment(href: str) -> str:
+    """The ``#fragment`` id of a nav/NCX target, ``""`` when it names the whole file."""
+    return unquote(href.partition("#")[2])
 
 
 def _parse_nav(
@@ -1010,8 +1051,8 @@ def _parse_nav(
     warnings: list[str],
     account_member: _AccountMember,
     cancel_check: _CancelCheck | None,
-) -> tuple[list[tuple[str, str]], set[str]]:
-    """The toc nav's ``(target, label)`` entries, and the landmarks nav's matter targets (TS-08)."""
+) -> tuple[list[tuple[str, str, str]], set[str]]:
+    """The toc nav's ``(target, fragment, label)`` entries, and the landmarks nav's matter targets (TS-08)."""
     nav_entry = _resolve(opf_dir, nav_href)
     if nav_entry not in names:
         return [], set()
@@ -1050,7 +1091,7 @@ def _parse_nav(
         chosen = navs[0]
     if chosen is None:
         return [], landmarks
-    out: list[tuple[str, str]] = []
+    out: list[tuple[str, str, str]] = []
     for a in chosen.iter():
         raise_if_cancelled(cancel_check, READING_CANCELLED)
         if _local(a) != "a":
@@ -1059,7 +1100,7 @@ def _parse_nav(
         if not href:
             continue
         label = "".join(a.itertext()).strip()
-        out.append((_resolve(nav_dir, href), label))
+        out.append((_resolve(nav_dir, href), _fragment(href), label))
     return out, landmarks
 
 
@@ -1071,7 +1112,7 @@ def _parse_ncx(
     warnings: list[str],
     account_member: _AccountMember,
     cancel_check: _CancelCheck | None,
-) -> list[tuple[str, str]]:
+) -> list[tuple[str, str, str]]:
     ncx_entry = _resolve(opf_dir, ncx_href)
     if ncx_entry not in names:
         return []
@@ -1093,7 +1134,7 @@ def _parse_ncx(
     if root is None:
         return []
     ncx_dir = posixpath.dirname(ncx_entry)
-    out: list[tuple[str, str]] = []
+    out: list[tuple[str, str, str]] = []
     for point in root.iter():
         raise_if_cancelled(cancel_check, READING_CANCELLED)
         if _local(point) != "navpoint":
@@ -1107,7 +1148,7 @@ def _parse_ncx(
             elif name == "content" and src is None:
                 src = sub.get("src")
         if src:
-            out.append((_resolve(ncx_dir, src), label or ""))
+            out.append((_resolve(ncx_dir, src), _fragment(src), label or ""))
     return out
 
 

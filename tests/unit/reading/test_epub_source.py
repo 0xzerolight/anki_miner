@@ -1131,3 +1131,32 @@ def test_html_syntax_spine_document_keeps_text_after_unclosed_void_elements(tmp_
     doc = load(_ref(_build_epub(tmp_path, files)))
 
     assert [u.text for u in doc.units] == ["朝になった。", "彼は窓を開けた。", "空は青かった。"]
+
+
+def test_chapter_labels_follow_fragments_and_carry_over_unlisted_files(tmp_path: Path) -> None:
+    files = {
+        "OEBPS/content.opf": _opf(
+            [
+                ("nav", "nav.xhtml", "application/xhtml+xml", "nav"),
+                ("a", "a.xhtml", "application/xhtml+xml", ""),
+                ("a2", "a2.xhtml", "application/xhtml+xml", ""),
+                ("b", "b.xhtml", "application/xhtml+xml", ""),
+            ],
+            [("a", None), ("a2", None), ("b", None)],
+        ),
+        "OEBPS/nav.xhtml": _nav([("a.xhtml", "第一章"), ("b.xhtml#c2", "第二章"), ("b.xhtml#c3", "第三章")]),
+        "OEBPS/a.xhtml": _xhtml("<p>朝に家を出た。</p>"),
+        "OEBPS/a2.xhtml": _xhtml("<p>駅まで歩いた。</p>"),
+        "OEBPS/b.xhtml": _xhtml('<h1 id="c2">旅</h1><p>電車に乗った。</p><h1 id="c3">帰宅</h1><p>家に帰った。</p>'),
+    }
+
+    doc = load(_ref(_build_epub(tmp_path, files)))
+
+    assert [(u.location_label, u.text) for u in doc.units] == [
+        ("第一章", "朝に家を出た。"),
+        ("第一章", "駅まで歩いた。"),
+        ("第二章", "旅"),
+        ("第二章", "電車に乗った。"),
+        ("第三章", "帰宅"),
+        ("第三章", "家に帰った。"),
+    ]
