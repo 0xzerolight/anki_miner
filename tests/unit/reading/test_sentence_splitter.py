@@ -191,3 +191,16 @@ def test_real_mokuro_cover_blurb_no_longer_one_wall():
     # No piece is the whole wall, and each is a normal-length sentence.
     assert all(len(p) < len(blurb) for p in pieces)
     assert max(len(p) for p in pieces) < 120
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("距離は約３．５キロだった。彼は歩いた。", ["距離は約３．５キロだった。", "彼は歩いた。"]),
+        ("体温は３７．５度まで上がった。", ["体温は３７．５度まで上がった。"]),
+        ("A．B", ["A．", "B"]),
+        ("第３．次へ", ["第３．", "次へ"]),
+    ],
+)
+def test_a_full_width_point_between_digits_is_a_decimal(text: str, expected: list[str]) -> None:
+    assert split_sentences(text) == expected
