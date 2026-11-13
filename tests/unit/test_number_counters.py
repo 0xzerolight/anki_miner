@@ -138,6 +138,15 @@ class TestMining:
         # unidic splits 1,500 and 1.5 at the separator and 第3回 after 第.
         assert wrong not in _mine(test_config, True, line)
 
+    def test_a_merged_quantity_ends_its_number(self, test_config):
+        # R4b-002: the suffix pass's 一つ/二つ keeps the numeral tag; the next
+        # numeral starts its own quantity instead of extending 一つ into 一つ百.
+        fronts = _mine(test_config, True, "一つ百円です", "二つ三つ持ってきて")
+        assert fronts["一つ"] == "ひとつ"
+        assert fronts["百円"] == "ひゃくえん"
+        assert fronts["二つ"] == "ふたつ"
+        assert fronts["三つ"] == "みっつ"
+
     def test_the_sentence_reads_the_counter_as_the_card_does(self, test_config):
         word = next(w for w in _words(test_config, True, "ペンが三本ある") if w.mined_form == "三本")
         assert word.expression_reading == "さんぼん"

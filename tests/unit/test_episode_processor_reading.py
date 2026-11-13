@@ -1810,3 +1810,46 @@ def test_a_reading_run_reports_its_parse_rejects(test_config):
 
     assert result.not_mined is not None
     assert result.not_mined.forms(NotMinedReason.KANA_ONLY) == {"ちょっと"}
+
+
+@pytest.mark.parametrize("stop", ["cancel_in_parse", "phase2_failure"])
+def test_item_without_known_filter_does_not_drag_comprehension(test_config, stop):
+    """R1a-002: a Stop while parsing, or a failure before phase 2's known share,
+    reports no assessed words, so View details keeps the finished items' 80%."""
+    import threading
+    import time
+
+    from anki_miner.gui.controllers.run_receipt import RunReceiptAccumulator
+    from anki_miner.models.processing import ProcessingResult
+
+    words = [_word("犬", 0), _word("猫", 1)]
+    counts = collections.Counter({"犬": 1, "猫": 1})
+    cancel_event = threading.Event()
+    parse = _parse_returning(words, None, counts)
+    sp = MagicMock(name="SubtitleParser")
+    anki = _make_anki_service()
+    if stop == "cancel_in_parse":
+
+        def _parse_then_cancel(*args, **kwargs):
+            cancel_event.set()
+            return parse(*args, **kwargs)
+
+        sp.parse_text_units.side_effect = _parse_then_cancel
+    else:
+        sp.parse_text_units.side_effect = parse
+        anki.get_existing_vocabulary.side_effect = AnkiConnectionError("timed out in 'findNotes'")
+    proc = _make_processor(test_config, subtitle_parser=sp, anki_service=anki)
+
+    result = proc.process_reading(_document([_unit(0), _unit(1)]), cancel_event=cancel_event)
+
+    assert not result.success
+    assert result.total_words_found == 0
+    assert result.new_words_found == 0
+    receipt = RunReceiptAccumulator(2, monotonic_start=time.monotonic(), wall_start=time.time())
+    receipt.record_result(
+        ProcessingResult(total_words_found=15, new_words_found=3, cards_created=3, comprehension_percentage=80.0)
+    )
+    receipt.record_result(result)
+    aggregate = receipt.finish(monotonic_now=time.monotonic(), wall_now=time.time()).aggregate_result()
+    assert aggregate is not None
+    assert aggregate.comprehension_percentage == pytest.approx(80.0)

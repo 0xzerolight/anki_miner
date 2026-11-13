@@ -50,7 +50,9 @@ class TestEpisodeProcessorCancel:
 
         result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
 
-        assert result.total_words_found == 1
+        # No known-vocabulary filter ran, so no word was assessed (R1a-002): a
+        # parsed count with 0% known would drag the run's comprehension down.
+        assert result.total_words_found == 0
         assert result.cards_created == 0
         assert "cancelled" in result.errors[0].lower()
         # Phase 2 should NOT have been reached

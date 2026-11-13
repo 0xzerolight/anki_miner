@@ -451,6 +451,10 @@ class _EpisodeContext:
     # apart from "removed by active filters" (survivors, then filtered out).
     candidate_words_found: int = 0
     comprehension_percentage: float = 0.0
+    #: Phase 2 has computed ``comprehension_percentage``. Until then the item has
+    #: no assessed words: its results report 0 found, so a Stop during parsing or
+    #: a phase-2 failure does not count as 0% known in the run's View details.
+    known_share_assessed: bool = False
     difficulty_total_words: int = 0
     difficulty_unknown_words: int = 0
     # Every lemma the learner doesn't know, snapshotted BEFORE the optional
@@ -484,8 +488,8 @@ class _EpisodeContext:
         override the accumulated defaults (e.g. force ``errors``).
         """
         defaults: dict[str, Any] = {
-            "total_words_found": self.total_words_found,
-            "new_words_found": self.new_words_found,
+            "total_words_found": self.total_words_found if self.known_share_assessed else 0,
+            "new_words_found": self.new_words_found if self.known_share_assessed else 0,
             "cards_created": 0,
             "errors": list(self.errors),
             "elapsed_time": time.time() - self.start_time,
@@ -948,8 +952,8 @@ class EpisodeProcessor:
         """
         return self._make_cancelled_result(
             ctx.start_time,
-            total_words_found=ctx.total_words_found,
-            new_words_found=ctx.new_words_found,
+            total_words_found=ctx.total_words_found if ctx.known_share_assessed else 0,
+            new_words_found=ctx.new_words_found if ctx.known_share_assessed else 0,
             comprehension_percentage=ctx.comprehension_percentage,
         )
 
@@ -1345,6 +1349,7 @@ class EpisodeProcessor:
             )
         )
         ctx.comprehension_percentage = comprehension
+        ctx.known_share_assessed = True
 
         # Surface the "everything was already known" case explicitly. Without
         # this, users who enable a card-format option (bold target word, etc.)
@@ -2655,6 +2660,28 @@ class EpisodeProcessor:
         # stamped onto ProcessingResult.mined_forms for Undo (OVH-030).
         mined_words = set(confirmed_mined_forms)
 
+        mined_forms_for_undo = self._record_mined_receipt(mined_words)
+
+        media_failure_count = media_failures if isinstance(media_failures, int) and media_failures > 0 else 0
+        duplicate_count = skipped_duplicates if isinstance(skipped_duplicates, int) and skipped_duplicates > 0 else 0
+        log_summary(
+            logger,
+            "Phase 5 create",
+            attempted=len(card_data),
+            created=cards_created,
+            duplicates=duplicate_count,
+            failures=max(0, len(card_data) - cards_created - duplicate_count),
+            no_definition=len(skipped_words),
+            media_failures=media_failure_count,
+        )
+        return cards_created, created_note_ids, mined_forms_for_undo
+
+    def _record_mined_receipt(self, mined_words: set[str]) -> list[str]:
+        """Insert Anki-confirmed fronts as 'mined' known words; return Undo's receipt.
+
+        Shared by :meth:`_phase5_create` and :meth:`_partial_failure_result`: cards
+        Anki confirmed before a run failed are recorded like any other created card.
+        """
         # Add newly mined words to known word DB.
         # Store mined_form so the local DB matches what Anki stores in the
         # Expression first field (POS-aware via mined_form); Issue #5.
@@ -2681,20 +2708,7 @@ class EpisodeProcessor:
                     len(mined_words),
                     e,
                 )
-
-        media_failure_count = media_failures if isinstance(media_failures, int) and media_failures > 0 else 0
-        duplicate_count = skipped_duplicates if isinstance(skipped_duplicates, int) and skipped_duplicates > 0 else 0
-        log_summary(
-            logger,
-            "Phase 5 create",
-            attempted=len(card_data),
-            created=cards_created,
-            duplicates=duplicate_count,
-            failures=max(0, len(card_data) - cards_created - duplicate_count),
-            no_definition=len(skipped_words),
-            media_failures=media_failure_count,
-        )
-        return cards_created, created_note_ids, mined_forms_for_undo
+        return mined_forms_for_undo
 
     def _loaded_frequency_source_names(self) -> list[str]:
         """Names of the frequency providers this run actually loaded.
@@ -3806,20 +3820,30 @@ class EpisodeProcessor:
         )
 
     def _partial_failure_result(self, ctx: _EpisodeContext, partial_ids: list[int]) -> ProcessingResult:
-        """Shared except-handler tail: note any partial cards and build the failure result."""
-        if partial_ids:
-            ctx.errors.append(
-                QCoreApplication.translate(
-                    "EpisodeProcessor",
-                    "Run failed after creating %n card(s); they remain in Anki and can be undone.",
-                    "",
-                    len(partial_ids),
-                )
+        """Shared except-handler tail: note any partial cards and build the failure result.
+
+        Cards Anki confirmed before the failure are recorded like any created card:
+        their 'mined' known-words receipt (for Undo) and the run's stats session.
+        """
+        if not partial_ids:
+            return ctx.build_result(cards_created=0, card_ids=[])
+        ctx.errors.append(
+            QCoreApplication.translate(
+                "EpisodeProcessor",
+                "Run failed after creating %n card(s); they remain in Anki and can be undone.",
+                "",
+                len(partial_ids),
             )
-        return ctx.build_result(
+        )
+        mined_forms = self._record_mined_receipt(set(self.anki_service.last_created_mined_forms))
+        result = ctx.build_result(
             cards_created=len(partial_ids),
             card_ids=partial_ids,
+            mined_forms=mined_forms,
+            mined_forms_language=config_language(self.config),
         )
+        self._record_session(ctx, result)
+        return result
 
     def _phase3_reading_media(
         self,
