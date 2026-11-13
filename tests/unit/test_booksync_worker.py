@@ -16,7 +16,7 @@ import pytest
 pytest.importorskip("PyQt6.QtWidgets")
 
 from anki_miner.config import AnkiMinerConfig
-from anki_miner.exceptions import SetupError
+from anki_miner.exceptions import OperationCancelled, SetupError
 from anki_miner.gui.workers.booksync_worker import BookSyncWorker
 from anki_miner.gui.workers.file_queue_worker import UNMEASURED
 from anki_miner.models import TerminalOutcome
@@ -374,3 +374,43 @@ def test_a_book_that_timed_nothing_gets_no_report(qapp, tmp_path):
     with patch(_LOAD_BOOK, return_value=_BOOK), patch(_SYNC_ONE, return_value=BookSyncResult(BookSyncStatus.NO_MATCH)):
         _run(w)
     assert reports == []
+
+
+def _cancel_during_load(worker: BookSyncWorker):
+    """A Cancel click while the book loads: the loader's cancel check raises."""
+
+    def _load(*_a, **_kw):
+        worker.cancel()
+        raise OperationCancelled("Reading load cancelled")
+
+    return _load
+
+
+def test_a_cancel_while_a_shelf_book_loads_reports_no_failure(qapp, tmp_path):
+    """U7-002: a cancel is a run-level outcome, not a book that failed to load."""
+    jobs = (_job(tmp_path, "vol1", ("01.mp3", "02.mp3")), _job(tmp_path, "vol2", ("01.mp3",)))
+    w = BookSyncWorker(_make_config(tmp_path), [], None, books=jobs, extractor=MagicMock())
+
+    with patch(_LOAD_BOOK, side_effect=_cancel_during_load(w)), patch(_SYNC_ONE) as sync:
+        cap = _run(w)
+
+    sync.assert_not_called()
+    assert [err for _idx, _out, err in cap["finished"] if err] == []
+    assert cap["skipped"] == []
+    assert cap["error"] == []
+    assert w._failed_count == 0
+    assert cap["queue"] == [TerminalOutcome.CANCELLED]
+
+
+def test_a_cancel_while_the_one_book_loads_is_not_an_error(qapp, tmp_path):
+    audio = tmp_path / "ch01.mp3"
+    audio.touch()
+    w = _worker(tmp_path, [audio])
+
+    with patch(_LOAD_BOOK, side_effect=_cancel_during_load(w)), patch(_SYNC_ONE) as sync:
+        cap = _run(w)
+
+    sync.assert_not_called()
+    assert cap["error"] == []
+    assert [err for _idx, _out, err in cap["finished"] if err] == []
+    assert cap["queue"] == [TerminalOutcome.CANCELLED]
