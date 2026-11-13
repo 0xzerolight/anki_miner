@@ -12,6 +12,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Fixed
 
+- Card Backfill now uploads dictionary images in backfilled Definition and Glossary fields, so those cards no longer show broken images.
+- Card Backfill no longer writes a mixed kanji-and-kana reading such as 食たべる when a card's furigana field holds HTML ruby.
+- Importing a tab-separated word list whose meaning column contains a comma now imports the word itself, not the word joined to part of its meaning.
+- Switching the mining language after a run now actually frees the previous language's text analyzer memory (about 400 MB for Arabic).
 - Reading: emphasis dots printed as ruby in an EPUB (・, ヽ) no longer become the card's reading and furigana.
 - Analytics: a run finishing in the background no longer moves the Mining History selection to another run, so Delete this run's cards and Show in Anki act on the run you picked.
 - Headless API: naming two adjacent sentences of one reading unit no longer leaves a blank unit between them, so line_expansion merges the neighbouring sentence instead of whitespace.
