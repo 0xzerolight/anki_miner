@@ -1219,24 +1219,25 @@ def _pitch_proposals(
     selected: set[str],
     pitch_service: Any,
 ) -> dict[str, str]:
-    """Pitch graph/text values, lemma-keyed with a mined_form retry.
+    """Pitch graph/text values on mining's identity ladder (EpisodeProcessor._phase4).
 
-    Lemma stays the primary key (the mining pipeline's pitch invariant). The
-    reading-scoped mined_form retry is an intentional BACKFILL-ONLY coverage
-    extension: mining has the contextual lemma, backfill re-derives it from the
-    card front and may miss on rare forms — the retry recovers those while the
-    stored reading keeps homographs disambiguated.
+    Keyed on mined_form + the stored reading first, then the UniDic lemma only
+    when it differs by okurigana over the same kanji. A different-kanji lemma
+    can name another word (呪言/じゅごん → 言祝ぎ/ことほぎ), so it never answers.
     """
     if not ctx.reading:
         return {}
     position: str | None
-    key_used = ctx.lemma
-    position, _category = pitch_service.lookup_detailed(ctx.lemma, ctx.reading, None, config.pitch_category_format)
-    if not position and ctx.lemma != ctx.mined_form:
-        key_used = ctx.mined_form
-        position, _category = pitch_service.lookup_detailed(
-            ctx.mined_form, ctx.reading, None, config.pitch_category_format
-        )
+    key_used = ctx.mined_form
+    position, _category = pitch_service.lookup_detailed(ctx.mined_form, ctx.reading, None, config.pitch_category_format)
+    if (
+        not position
+        and ctx.lemma
+        and ctx.lemma != ctx.mined_form
+        and _differs_by_okurigana_only(ctx.mined_form, ctx.lemma)
+    ):
+        key_used = ctx.lemma
+        position, _category = pitch_service.lookup_detailed(ctx.lemma, ctx.reading, None, config.pitch_category_format)
     if not position:
         return {}
 
