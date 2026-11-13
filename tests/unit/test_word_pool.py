@@ -251,3 +251,27 @@ class TestMergePoolsBestSentence:
         merged = merge_pools([[dog, cat], [bird, _placed(_CLEAR, 1, EP2)]], best_sentence=_KEY)
         assert [w.mined_form for w in merged] == ["犬", "猫", "鳥"]
         assert merged[1].video_file == EP2
+
+    def test_one_card_per_sentence_never_moves_a_word_onto_a_line_another_word_holds(self):
+        def placed(surface: str, sentence: str, unknown: int, video: Path) -> TokenizedWord:
+            word = _word(surface, sentence=sentence, video=video)
+            word.line_unknown_count = unknown
+            return word
+
+        def pools() -> list[list[TokenizedWord]]:
+            ep1_cat = placed("猫", "猫と鳥と魚と虫", 4, EP1)
+            ep2_dog = placed("犬", "犬と猫", 2, EP2)
+            ep2_cat = placed("猫", "猫と鳥と魚", 3, EP2)
+            ep2_cat.sentence_candidates = [placed("猫", "犬と猫", 2, EP2), placed("猫", "猫と鳥と魚", 3, EP2)]
+            return [[ep1_cat], [ep2_dog, ep2_cat]]
+
+        merged = merge_pools(pools(), best_sentence=_KEY, one_per_sentence=True)
+        cat = next(w for w in merged if w.mined_form == "猫")
+        assert (cat.sentence, cat.video_file) == ("猫と鳥と魚", EP2)
+        lines = [(w.video_file, w.sentence) for w in merged]
+        assert len(lines) == len(set(lines)), lines
+        # The taken line stays listed, so the curator can still pick it by hand.
+        assert ("犬と猫", EP2) in [(c.sentence, c.video_file) for c in cat.sentence_candidates]
+
+        cat = next(w for w in merge_pools(pools(), best_sentence=_KEY) if w.mined_form == "猫")
+        assert cat.sentence == "犬と猫", "without the rule the clearest line still wins"

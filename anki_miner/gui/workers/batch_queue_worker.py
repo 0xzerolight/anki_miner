@@ -635,7 +635,13 @@ class BatchQueueWorkerThread(RunBoundaryControls, ProcessorOwningWorker):
             if self.config.pick_best_sentence and not self.config.bypass_optional_filters
             else None
         )
-        pool = merge_pools(capture.pools, dedup_fold=profile.dedup_fold, best_sentence=best_sentence)
+        pool = merge_pools(
+            capture.pools,
+            dedup_fold=profile.dedup_fold,
+            best_sentence=best_sentence,
+            # Phase 2's one-card-per-sentence condition: the season pick must not undo that dedup.
+            one_per_sentence=self.config.deduplicate_sentences and not self.config.use_i_plus_one_filter,
+        )
         if prepass_ok:
             selected = self._select_season_pool(pool, prepass_ok, episode_processor)
             if selected is None or self.check_cancelled():
