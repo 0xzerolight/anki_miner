@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import signal
 import subprocess
 import sys
+import time
 from dataclasses import replace
 from pathlib import Path
 
@@ -332,7 +334,8 @@ def test_bad_run_file_is_refused_before_the_lock(verdict, tmp_path) -> None:
 @pytest.mark.skipif(sys.platform == "win32", reason="SIGTERM cancels only on Linux and macOS")
 def test_a_cancel_signal_after_the_verdict_still_exits_0(tmp_path) -> None:
     """API.md: exit code 0 means the verdict was written. A caller's SIGTERM that races the
-    end of the call (here: sent once the verdict is on the pipe) must not turn it into a crash."""
+    end of the call (here: sent over and over from the verdict on, through interpreter
+    shutdown) must not turn it into a crash."""
     bad = tmp_path / "run.json"
     bad.write_text("{}", encoding="utf-8")
     repo = Path(__file__).resolve().parents[2]
@@ -345,6 +348,10 @@ def test_a_cancel_signal_after_the_verdict_still_exits_0(tmp_path) -> None:
     )
     assert proc.stdout is not None
     line = proc.stdout.readline()
-    proc.send_signal(signal.SIGTERM)
-    assert proc.wait(timeout=60) == 0
+    deadline = time.monotonic() + 60
+    while proc.poll() is None and time.monotonic() < deadline:
+        with contextlib.suppress(ProcessLookupError):
+            proc.send_signal(signal.SIGTERM)
+        time.sleep(0.001)
+    assert proc.wait(timeout=1) == 0
     assert json.loads(line)["error"] == "BAD_RUN_FILE"
