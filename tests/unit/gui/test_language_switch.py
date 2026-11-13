@@ -374,3 +374,25 @@ def test_a_confirmed_import_commits_flushes_and_runs_the_hooks(test_config, save
     assert queue_state_store.stored_keys() == ()
     assert window.prewarms == 1
     assert window.syncs == 1
+
+
+def test_an_import_onto_a_language_without_its_pack_is_refused_before_the_guard(
+    test_config, saved_snapshot, monkeypatch
+):
+    """U7-001: an import is refused for an unavailable language, as the selector is."""
+    reason = "Arabic mining needs the Arabic language pack."
+    monkeypatch.setattr(
+        language_switch,
+        "get_profile",
+        lambda code: replace(get_profile(code), unavailable_reason=(lambda: reason) if code == "ar" else None),
+    )
+    from anki_miner.languages.switching import switch_language
+
+    window = _FakeWindow(test_config, rows=1)
+
+    assert language_switch.apply_imported_language(window, switch_language(test_config, "ar")) is False
+    assert window.config.language == "ja"
+    assert window.guard_kinds == []
+    assert window.issues == [reason]
+    assert queue_state_store.stored_keys() == ("queue.youtube",)
+    assert window.screen.cleared == 0

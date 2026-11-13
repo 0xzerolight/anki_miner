@@ -598,6 +598,19 @@ def test_br_splits_paragraphs(tmp_path: Path) -> None:
     assert [u.text for u in doc.units] == ["一行目", "二行目。"]
 
 
+def test_inline_text_before_a_block_is_its_own_paragraph(tmp_path: Path) -> None:
+    files = {
+        "OEBPS/content.opf": _opf(
+            [("c1", "ch1.xhtml", "application/xhtml+xml", "")],
+            [("c1", None)],
+        ),
+        "OEBPS/ch1.xhtml": _xhtml("<div>扉の言葉<p>本文の一行目。</p></div>"),
+    }
+    doc = load(_ref(_build_epub(tmp_path, files)))
+
+    assert [u.text for u in doc.units] == ["扉の言葉", "本文の一行目。"]
+
+
 def test_missing_container_raises(tmp_path: Path) -> None:
     path = tmp_path / "broken.epub"
     with zipfile.ZipFile(path, "w") as zf:

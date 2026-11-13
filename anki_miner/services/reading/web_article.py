@@ -316,7 +316,7 @@ def decode_page(raw: bytes, content_type: str = "") -> str:
     for encoding in candidates:
         try:
             return raw.decode(encoding)
-        except (LookupError, UnicodeDecodeError):
+        except (LookupError, UnicodeError):  # UnicodeError: the "undefined" codec
             continue
     best = from_bytes(raw).best()
     if best is not None:

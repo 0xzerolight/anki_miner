@@ -42,6 +42,7 @@ from __future__ import annotations
 import argparse
 import json
 import platform
+import shutil
 import sys
 from collections.abc import Sequence
 from pathlib import Path
@@ -193,6 +194,9 @@ def seed(codes: Sequence[str], dest: Path) -> int:
                 f"the {code} bundle smoke will be skipped. NOT failing the release.",
                 flush=True,
             )
+            # The installer made the directory before the first byte, and bundle_smoke.sh runs a leg whose
+            # seed directory exists (the pack-less languages need that), so a fell-open pack leaves none.
+            shutil.rmtree(root, ignore_errors=True)
             continue
         except SetupError as exc:
             print(f"::error::{code} {noun} seed failed: {exc}", flush=True)

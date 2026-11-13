@@ -12,6 +12,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Fixed
 
+- Reading: emphasis dots printed as ruby in an EPUB (・, ヽ) no longer become the card's reading and furigana.
+- Analytics: a run finishing in the background no longer moves the Mining History selection to another run, so Delete this run's cards and Show in Anki act on the run you picked.
+- Headless API: naming two adjacent sentences of one reading unit no longer leaves a blank unit between them, so line_expansion merges the neighbouring sentence instead of whitespace.
+- Season mode with 'one card per sentence' on no longer gives two words the same sentence, audio and picture when it picks the clearest sentence across episodes.
+- Mine numbers with counters now joins 5分で ('in 5 minutes') into 5分 read ごふん instead of mining 分 read ぶん.
+- Mine numbers with counters reads the first of a month (4月1日) as ついたち instead of いちにち.
+- Word Curator: choosing a dictionary for a counter word (4人) or an inflected/variant word now puts that dictionary's entry on the card, as the pane says.
+- Reading → Text: a fetched web page's Q&A lists, preformatted blocks and bylines no longer run into the next sentence.
+- Reading: an AES-locked PDF is now refused as protected instead of being called a scanned PDF or failing with a cryptography error.
+- Video → YouTube: links whose site reports no video length (such as direct video links) are no longer refused with 'update yt-dlp'.
+- Importing settings for a mining language whose language pack is not installed is now refused with the reason, instead of switching to a language that cannot mine.
+- Word Curator, season curation: the Translation column now shows each word's own episode's translation, not the first episode's.
+- Word Curator, season curation: a sentence picked from an episode not yet shown now gets the full-sentence merge, like any other pick.
+- Reading > Text: text pasted over a fetched article (select all, then paste) is now mined with the Source "Text" instead of the old page's title.
+- Reading: furigana printed over one kanji of a compound in an EPUB no longer changes the reading of the same kanji used as its own word.
+- Reading → Text: a page that declares a bogus 'undefined' charset no longer makes the whole fetch fail.
+- Video: a lowercase subtitle name with a language word in its title (the.danish.girl.srt) is no longer taken for another language's subtitle.
+- Audiobook Sync: cancelling while a book is loading no longer reports that book as failing to load.
+- Manage Known Words: importing a CSV exported by Manage Known Words no longer adds its header "word" as a known word.
+- Analytics: a run that finishes while Known Words is being counted is now included, instead of waiting up to ten minutes.
+- A desktop shortcut created while Anki Miner was started from another AppImage application's terminal or launcher no longer points at that application.
 - 外に and 後に in lines like 外に出る are no longer mined as ほかに / のちに, and the sentence furigana keeps そと / あと.
 - Dual-language subtitle files with staggered twin lines, and files with per-syllable karaoke effects, no longer have their cues cut to a fraction of a second.
 - Skip songs/signs now drops a karaoke opening written one cue per syllable and keeps positioned dialogue lines in such files.

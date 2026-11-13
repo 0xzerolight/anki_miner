@@ -78,3 +78,17 @@ def test_an_epub_with_ruby_mines_the_authors_reading_end_to_end(tmp_path: Path) 
     words = _parse(tmp_path, doc.units)
 
     assert words["今日"].expression_reading == "こんにち"
+
+
+def test_ruby_over_one_kanji_of_a_compound_skips_that_kanji_standing_alone(tmp_path: Path) -> None:
+    body = "<p>その人は<ruby>人<rt>にん</rt></ruby><ruby>間<rt>げん</rt></ruby>だ。</p>"
+    files = {
+        "OEBPS/content.opf": _opf([("c1", "ch1.xhtml", "application/xhtml+xml", "")], [("c1", None)]),
+        "OEBPS/ch1.xhtml": _xhtml(body),
+    }
+    doc = load(_ref(_build_epub(tmp_path, files)), rules=get_profile("ja").sentence_rules)
+
+    hito = _parse(tmp_path, doc.units)["人"]
+
+    assert hito.expression_reading == "ひと"
+    assert hito.expression_furigana != "人[にん]"

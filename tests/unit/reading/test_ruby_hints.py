@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 from anki_miner.models import TokenizedWord
 from anki_miner.services.reading.ruby_hints import apply_author_ruby
 from anki_miner.utils.text_utils import hiragana_to_katakana
@@ -82,3 +84,19 @@ def test_a_hint_that_matches_the_parsed_reading_changes_nothing() -> None:
     word = _noun("天気", "てんき")
 
     assert apply_author_ruby([word], [("天気", "てんき")]) == []
+
+
+@pytest.mark.parametrize(
+    ("surface", "kana", "marks"),
+    [("嘘", "うそ", "・"), ("絶対", "ぜったい", "・・"), ("男", "おとこ", "ヽ")],
+)
+def test_emphasis_dots_written_as_ruby_are_not_a_reading(surface: str, kana: str, marks: str) -> None:
+    word = _noun(surface, kana)
+
+    assert apply_author_ruby([word], [(surface, marks)]) == []
+    assert (word.expression_reading, word.expression_furigana, word.reading, word.lemma_reading) == (
+        kana,
+        f"{surface}[{kana}]",
+        hiragana_to_katakana(kana),
+        kana,
+    )

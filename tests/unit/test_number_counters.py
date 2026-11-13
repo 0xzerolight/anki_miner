@@ -143,3 +143,24 @@ class TestMining:
         assert word.expression_reading == "さんぼん"
         assert "三本[さんぼん]" in word.sentence_furigana
         assert "さんぼん" in word.sentence_reading
+
+    @pytest.mark.parametrize(("line", "front"), [("5分で着く。", "5分"), ("10分で終わる。", "10分")])
+    def test_reads_minutes_before_de(self, test_config, line, front):
+        # unidic tags 分 before で 副詞可能 read ブン ('part'), not the counter.
+        word = next(w for w in _words(test_config, True, line) if w.mined_form == front)
+        assert word.expression_reading == {"5分": "ごふん", "10分": "じゅっぷん"}[front]
+        assert f"{front}[{word.expression_reading}]" in word.sentence_furigana
+        assert "分" not in _mine(test_config, True, line)
+
+    @pytest.mark.parametrize(
+        ("line", "month", "day"), [("4月1日に会おう。", "4月", "1日"), ("12月1日が誕生日。", "12月", "1日")]
+    )
+    def test_reads_the_first_of_a_month_as_the_date(self, test_config, line, month, day):
+        words = {w.mined_form: w for w in _words(test_config, True, line)}
+        assert words[month].expression_reading == {"4月": "しがつ", "12月": "じゅうにがつ"}[month]
+        assert words[day].expression_reading == "ついたち"
+        assert f"{day}[ついたち]" in words[day].sentence_furigana
+
+    @pytest.mark.parametrize("line", ["1日で終わる。", "3か月1日かかった。"])
+    def test_one_day_not_after_a_month_stays_ichinichi(self, test_config, line):
+        assert _mine(test_config, True, line)["1日"] == "いちにち"

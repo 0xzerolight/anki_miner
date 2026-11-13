@@ -871,6 +871,18 @@ def test_a_cut_never_splits_another_named_line(named):
     assert "".join(texts) == "前の文。" + _QUOTE, "nothing lost, nothing added"
 
 
+def test_two_adjacent_named_sentences_leave_no_blank_unit_between_them():
+    from anki_miner.cli.api.files import WordRequest
+
+    unit = "「え！　本当に約束した？　今日は学校で勉強する。」と彼は言った。"
+    named = ["本当に約束した？", "今日は学校で勉強する。"]
+    doc, _sources = runs.cut_at_named_lines(_book(unit), [WordRequest("w", line_text=t) for t in named], _JA)
+    texts = [u.text for u in doc.units]
+    assert all(text.strip() for text in texts), texts
+    assert all(any(t in text for text in texts) for t in named), texts
+    assert "".join(texts) == unit, "nothing lost, nothing added"
+
+
 def test_only_whole_sentences_are_cut_out():
     from anki_miner.cli.api.files import WordRequest
 

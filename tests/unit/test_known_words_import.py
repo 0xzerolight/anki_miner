@@ -284,6 +284,20 @@ class TestEncodingAndSize:
         assert result.words == frozenset({"食べる"})
 
 
+class TestOwnExport:
+    def test_the_manage_known_words_csv_round_trips_without_its_header(self, tmp_path):
+        from anki_miner.services.known_word_db import KnownWordRow
+        from anki_miner.services.word_export import write_known_words_csv
+
+        path = tmp_path / "known_words.csv"
+        write_known_words_csv(
+            path, [KnownWordRow(word, "user", "2026-11-12 10:00:00") for word in ("house", "garden", "river")]
+        )
+        result = parse_known_words_file(path)
+        assert result.words == frozenset({"house", "garden", "river"})
+        assert result.format_key == "anki_miner_csv"
+
+
 class TestContract:
     def test_format_keys_enumeration(self):
         assert FORMAT_KEYS == (
@@ -294,6 +308,7 @@ class TestContract:
             "migaku_csv",
             "kindle_vocab",
             "lute_csv",
+            "anki_miner_csv",
             "generic",
         )
 

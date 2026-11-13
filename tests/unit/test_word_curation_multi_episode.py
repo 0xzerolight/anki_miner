@@ -10,9 +10,11 @@ import pytest
 from anki_miner.gui.utils.phrase_wrap import WORD_JOINER
 from anki_miner.gui.widgets.dialogs import word_curation_dialog as wcd
 from anki_miner.gui.widgets.dialogs.word_curation_dialog import (
+    TRANSLATION_COLUMN,
     CurationMediaContext,
     WordCurationDialog,
 )
+from anki_miner.languages.registry import get_profile
 from anki_miner.models import TokenizedWord
 from anki_miner.services.media_extractor import resolve_screenshot_time
 
@@ -330,3 +332,65 @@ class TestAutoMergeAcrossEpisodes:
         assert dlg.clip_editor.current_window() == (1.0 - 0.3, 5.5 + 0.3)
         # The Sentences pane, seeded from the same fragment, follows the row.
         assert dlg.chosen_sentence_label.text().replace(WORD_JOINER, "") == merged
+
+
+class TestPerEpisodeTracks:
+    """Each row reads its own episode's cues, as the card does."""
+
+    def test_translation_cell_reads_the_rows_own_episode(self, qtbot, ep1, ep2, sync_off_thread):
+        def resolver(video):
+            return CurationMediaContext(
+                video_file=video,
+                subtitle_entries=[(10.0, 12.0, "犬の文")],
+                secondary_entries=[(10.0, 12.0, "EP2 line")],
+            )
+
+        ctx = CurationMediaContext(
+            video_file=ep1,
+            subtitle_entries=[(10.0, 12.0, "猫の文")],
+            secondary_entries=[(10.0, 12.0, "EP1 line")],
+            context_resolver=resolver,
+        )
+        words = [_word("猫", start_time=10.0, video=ep1), _word("犬", start_time=10.0, video=ep2)]
+        dlg, _player = _build_dialog(qtbot, words, ctx)
+
+        def tooltip(idx):
+            return dlg.table.item(dlg._visual_row_for_index(idx), TRANSLATION_COLUMN).toolTip()
+
+        assert tooltip(1) == ""  # ep2's track has not loaded yet
+        _focus_row(dlg, dlg._visual_row_for_index(1))
+        assert tooltip(1) == "EP2 line"
+        assert tooltip(0) == "EP1 line"
+
+    def test_a_pick_from_an_unloaded_episode_gets_its_merge_once_it_lands(self, qtbot, ep1, ep2, sync_off_thread):
+        from PyQt6.QtCore import Qt
+        from PyQt6.QtWidgets import QApplication
+
+        rules = get_profile("ja").sentence_rules
+
+        def resolver(video):
+            return CurationMediaContext(
+                video_file=video,
+                subtitle_entries=[(20.0, 22.0, "もう一度食べる"), (22.5, 24.0, "続きです。")],
+                auto_merge_rules=rules,
+            )
+
+        ctx = CurationMediaContext(
+            video_file=ep1,
+            subtitle_entries=[(5.0, 7.0, "食べるのテスト。")],
+            auto_merge_rules=rules,
+            context_resolver=resolver,
+        )
+        primary = _word("食べる", start_time=5.0, video=ep1, sentence="食べるのテスト。")
+        primary.sentence_candidates = [
+            _word("食べる", start_time=5.0, video=ep1, sentence="食べるのテスト。"),
+            _word("食べる", start_time=20.0, video=ep2, sentence="もう一度食べる"),
+        ]
+        dlg, _player = _build_dialog(qtbot, [primary], ctx)
+        _focus_row(dlg, 0)
+        dlg.table.item(0, 0).setCheckState(Qt.CheckState.Checked)
+        dlg._on_candidate_chosen(1)  # ep2's cues are not loaded yet
+        qtbot.wait(20)  # the deferred preview resolves ep2
+        QApplication.processEvents()
+        assert ep2 in dlg._media_ctx_cache
+        assert dlg.get_selected_words()[0].line_expansion == (0, 1)

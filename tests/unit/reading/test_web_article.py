@@ -14,6 +14,7 @@ from anki_miner.services.reading import web_article
 from anki_miner.services.reading.web_article import (
     ArticleFetchError,
     WebArticle,
+    decode_page,
     extract_article,
     fetch_article,
     fetch_articles,
@@ -104,6 +105,36 @@ def test_japanese_joins_a_wrapped_line_without_a_space() -> None:
     article = extract_article(page, "https://www.example.com/neko", rules=get_profile("ja").sentence_rules)
 
     assert "名前はまだ無い。" in article.text
+
+
+def test_each_dt_and_dd_is_its_own_paragraph() -> None:
+    page = (
+        "<html><body><main><div><dl><dt>Interviewer</dt>"
+        "<dd>Thank you for joining us today. How long did the film take to make?</dd>"
+        "<dt>Director</dt>"
+        "<dd>About three years in total. The script alone went through ten full drafts.</dd>"
+        "</dl></div></main></body></html>"
+    )
+
+    article = extract_article(page, "https://example.com/interview", rules=get_profile("en").sentence_rules)
+
+    assert article.text.split("\n\n") == [
+        "Interviewer",
+        "Thank you for joining us today. How long did the film take to make?",
+        "Director",
+        "About three years in total. The script alone went through ten full drafts.",
+    ]
+
+
+def test_a_byline_before_the_first_paragraph_is_its_own_paragraph() -> None:
+    body = "今日は朝から雨が降っていました。駅までの道はすっかり濡れていて、傘を差していても足元がびしょびしょになりました。それでも電車は時間どおりに来ました。"
+    page = f"<html><body><article><h1>雨の日</h1><time>2024年5月1日</time><p>{body}</p></article></body></html>"
+
+    article = extract_article(page, "https://example.com/rain", rules=get_profile("ja").sentence_rules)
+
+    paragraphs = article.text.split("\n\n")
+    assert "2024年5月1日" in paragraphs
+    assert body in paragraphs
 
 
 def test_a_javascript_only_page_reports_no_article_text() -> None:
@@ -222,6 +253,19 @@ def test_fetch_decodes_by_the_pages_meta_charset() -> None:
     url, kwargs = session.calls[0]
     assert url == "https://www.example.com/neko"
     assert kwargs["stream"] is True and kwargs["timeout"] == (10, 30)
+
+
+@pytest.mark.parametrize(
+    ("body", "content_type"),
+    [
+        ("<html><p>héllo</p></html>", "text/html; charset=undefined"),
+        ('<html><head><meta charset="undefined"></head><p>héllo</p></html>', "text/html"),
+    ],
+    ids=["header", "meta"],
+)
+def test_a_charset_named_undefined_falls_through_to_the_next_rung(body: str, content_type: str) -> None:
+    """Python's ``undefined`` codec raises a plain UnicodeError on every decode."""
+    assert decode_page(body.encode("utf-8"), content_type) == body
 
 
 def test_fetch_prefers_the_header_charset_and_names_the_site_after_redirects() -> None:

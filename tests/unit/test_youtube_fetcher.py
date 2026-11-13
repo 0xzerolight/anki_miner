@@ -347,6 +347,16 @@ class TestProbeMetadata:
         ):
             service.probe_metadata("https://youtu.be/abc123")
 
+    def test_absent_duration_is_an_unknown_length(self, service: YouTubeFetcherService) -> None:
+        """yt-dlp drops ``duration`` from -J output when the extractor supplies none."""
+        payload = _make_metadata()
+        del payload["duration"]
+        with patch(
+            "anki_miner.services.youtube_fetcher.run_supervised", return_value=_fake_run(0, json.dumps(payload))
+        ):
+            info = service.probe_metadata("https://youtu.be/abc123")
+        assert info.duration_s == 0
+
     def test_missing_optional_keys_ok(self, service: YouTubeFetcherService) -> None:
         payload = _make_metadata()
         del payload["thumbnail"]
@@ -506,6 +516,12 @@ class TestProbeOtherSites:
         info, _ = self._probe(service, _make_metadata(id="BV12N4y1M7rh_p2", extractor_key="BiliBili"))
         assert info.video_id == "BV12N4y1M7rh_p2"
         assert info.site == "Bilibili"  # yt-dlp's "BiliBili", spelled as the site does
+
+    def test_an_extractor_without_a_duration_is_accepted(self, service: YouTubeFetcherService) -> None:
+        payload = _make_metadata(id="clip", extractor_key="Generic")
+        del payload["duration"]
+        info, _ = self._probe(service, payload)
+        assert (info.video_id, info.duration_s) == ("clip", 0)
 
     def test_other_extractor_keys_are_kept_as_given(self, service: YouTubeFetcherService) -> None:
         info, _ = self._probe(service, _make_metadata(id="sm9", extractor_key="Niconico"))

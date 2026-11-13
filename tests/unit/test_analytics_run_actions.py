@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import inspect
-from datetime import datetime
+from datetime import datetime, timedelta
 from unittest.mock import MagicMock
 
 import pytest
@@ -273,3 +273,63 @@ def test_a_delete_refreshes_the_page(make_tab, monkeypatch, message_boxes):
     tab.delete_run_button.click()
 
     assert tab.stats_service.get_overall_stats.call_count == before + 1
+
+
+def _named(session_id: int, name: str, mined_at: datetime) -> MiningSession:
+    return MiningSession(
+        id=session_id,
+        series_name=name,
+        episode_name="ep",
+        cards_created=1,
+        note_count=1,
+        mined_at=mined_at,
+    )
+
+
+def _show_without_scan(tab: AnalyticsTab, qtbot) -> None:
+    # The known-words scan reaches Anki; these tests are about the history table.
+    tab._maybe_refresh_knowledge = lambda: None  # type: ignore[method-assign]
+    tab.show()
+    qtbot.waitExposed(tab)
+
+
+def test_a_refresh_keeps_the_selection_on_the_same_run(make_tab, qtbot, monkeypatch, message_boxes):
+    """U8b-001: a run finishing between select and click must not retarget the delete."""
+    fake = _FakeAnki(existing=(1001, 1002, 1003, 1004, 2000))
+    monkeypatch.setattr(_POST, fake)
+    sessions = [_named(i, f"OLD-{i}", datetime(2026, 10, 10 + i, 12, 0)) for i in (4, 3, 2, 1)]
+    tab = make_tab(sessions)
+    tab.stats_service.get_run_receipt.side_effect = lambda sid: RunReceipt(
+        sid, "ja", (2000,) if sid == 5 else (1000 + sid,), ()
+    )
+    _show_without_scan(tab, qtbot)
+    _select(tab, 3)
+    assert tab._selected_session().series_name == "OLD-3"
+
+    tab.stats_service.get_recent_sessions.return_value = [
+        _named(5, "JUST-MINED", datetime(2026, 10, 20, 12, 0)),
+        *sessions,
+    ]
+    tab.mark_stale()
+    assert tab.sessions_table.rowCount() == 5
+
+    assert tab._selected_session().series_name == "OLD-3"
+    tab.delete_run_button.click()
+    tab.stats_service.get_run_receipt.assert_called_with(3)
+    assert fake.deleted == [[1003]]
+
+
+def test_a_refresh_that_drops_the_selected_run_clears_the_selection(make_tab, qtbot):
+    now = datetime.now()
+    recent = _named(1, "RECENT", now - timedelta(days=1))
+    old = _named(2, "OLD", now - timedelta(days=60))
+    tab = make_tab([recent, old])
+    _show_without_scan(tab, qtbot)
+    _select(tab, 2)
+    assert tab.delete_run_button.isEnabled()
+
+    tab.history_range_combo.setCurrentIndex(tab.history_range_combo.findData(7))
+
+    assert tab.sessions_table.rowCount() == 1
+    assert tab._selected_session() is None
+    assert not tab.delete_run_button.isEnabled()

@@ -11,6 +11,7 @@ from pathlib import Path
 
 import pytest
 from pypdf import PdfReader, PdfWriter
+from pypdf.errors import DependencyError
 
 from anki_miner.exceptions import OperationCancelled, SetupError
 from anki_miner.languages.registry import get_profile
@@ -93,6 +94,41 @@ def test_an_owner_only_lock_still_mines(tmp_path: Path) -> None:
     doc = pdf_source.load(_encrypted(tmp_path, ""))
 
     assert [u.text for u in doc.units] == ["秘密の本です。"]
+
+
+_NO_AES = "cryptography>=3.1 is required for AES algorithm"
+
+
+def _raise_no_aes(*_args: object, **_kwargs: object) -> None:
+    raise DependencyError(_NO_AES)
+
+
+class _AesPage:
+    extract_text = staticmethod(_raise_no_aes)
+
+
+class _AesOwnerLockedReader:
+    """AES-128 owner lock: the empty user password verifies, every page then needs ``cryptography``."""
+
+    is_encrypted = True
+    pages = [_AesPage(), _AesPage()]
+
+    def __init__(self, *_args: object) -> None:
+        pass
+
+    def decrypt(self, _password: str) -> int:
+        return 1
+
+
+@pytest.mark.parametrize("reader", [_raise_no_aes, _AesOwnerLockedReader], ids=["aes-256", "aes-128"])
+def test_an_aes_encrypted_pdf_is_refused_as_password_protected(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, reader: object
+) -> None:
+    """``cryptography`` is deliberately not a dependency, so pypdf cannot read an AES-encrypted book."""
+    monkeypatch.setattr(pdf_source, "PdfReader", reader)
+
+    with pytest.raises(SetupError, match=r"^'book\.pdf' is password-protected and cannot be mined\.$"):
+        pdf_source.load(_ref(tmp_path, [["一文目。"]]))
 
 
 def test_cancel_stops_the_load(tmp_path: Path) -> None:

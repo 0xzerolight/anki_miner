@@ -37,6 +37,7 @@ import posixpath
 import re
 import zipfile
 import zlib
+from collections import Counter
 from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -87,7 +88,7 @@ _FONT_MEDIA_TYPES = frozenset(f"font/{ext[1:]}" for ext in _FONT_EXTS) | frozens
 
 # Subtrees whose text is never body prose (ruby readings live in rt/rp).
 _SKIP_TAGS = frozenset({"script", "style", "head", "rt", "rp"})
-# Closing one of these — or a <br> — ends a paragraph.
+# Opening or closing one of these — or a <br> — ends a paragraph.
 _BLOCK_TAGS = frozenset(
     {
         "p",
@@ -106,6 +107,11 @@ _BLOCK_TAGS = frozenset(
         "th",
         "figure",
         "figcaption",
+        "dt",
+        "dd",
+        "pre",
+        "tr",
+        "caption",
     }
 )
 
@@ -336,6 +342,7 @@ def load(
             content_i += 1
             for para, para_ruby in zip(paragraphs, ruby, strict=True):
                 raise_if_cancelled(cancel_check, READING_CANCELLED)
+                printed = Counter(base for base, _reading in para_ruby)
                 for sentence in split_sentences(para, rules=rules):
                     raise_if_cancelled(cancel_check, READING_CANCELLED)
                     doc.units.append(
@@ -344,7 +351,14 @@ def load(
                             index=index,
                             location_label=label,
                             image_ref=cover_ref,
-                            ruby=tuple(dict.fromkeys(pair for pair in para_ruby if pair[0] in sentence)),
+                            # A base the sentence holds more often than the paragraph's ruby
+                            # covers it (人 beside mono-ruby 人間) may land on an occurrence
+                            # it was not printed over, so it is dropped there.
+                            ruby=tuple(
+                                dict.fromkeys(
+                                    pair for pair in para_ruby if 0 < sentence.count(pair[0]) <= printed[pair[0]]
+                                )
+                            ),
                         )
                     )
                     index += 1
@@ -858,7 +872,7 @@ def _walk_body(
     """Depth-first text walk → (paragraphs, gaiji-image count).
 
     Ruby/script/style subtrees are skipped; ``<img>`` counts toward gaiji and
-    contributes no text; a paragraph flushes on a block close or ``<br>``, then
+    contributes no text; a paragraph flushes on a block open or close or ``<br>``, then
     has its leading whitespace (incl. U+3000) stripped and empties dropped.
     ``line_join`` replaces each source line wrap inside a paragraph
     (:func:`_line_join`). With ``ruby_out``, one list of :func:`_ruby_pair`
@@ -893,6 +907,8 @@ def _walk_body(
         if name == "img":
             gaiji += 1
             return
+        if name in _BLOCK_TAGS:
+            flush()  # inline text before a block is a paragraph of its own
         if name == "ruby" and ruby_out is not None:
             pair = _ruby_pair(el)
             if pair is not None:
