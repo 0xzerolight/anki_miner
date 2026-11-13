@@ -33,7 +33,7 @@ from anki_miner.cli.api.contract import (
     JOB_COMMANDS,
     ApiError,
 )
-from anki_miner.cli.entry import _prepare_process, _private_stdout, _set_cancel_on_signals
+from anki_miner.cli.entry import _ignore_cancel_signals, _prepare_process, _private_stdout, _set_cancel_on_signals
 
 logger = logging.getLogger(__name__)
 
@@ -92,13 +92,16 @@ def main(argv: Sequence[str]) -> int:
     """Run one API command; its verdict is the only line on stdout."""
     argv = list(argv)
     cancel = threading.Event()
-    if argv[:1] and argv[0] in _CANCELLABLE:
+    cancellable = bool(argv[:1]) and argv[0] in _CANCELLABLE
+    if cancellable:
         # Never restored: a signal that lands after the last run, even after the
         # verdict is written, leaves the result as it is and the exit code 0.
         _set_cancel_on_signals(cancel)
     with _private_stdout() as write:
         verdict = _verdict(argv, cancel)
         write((json.dumps(verdict, ensure_ascii=True) + "\n").encode("ascii"))
+        if cancellable:
+            _ignore_cancel_signals()  # nothing left to cancel, through interpreter shutdown too
     return 0
 
 

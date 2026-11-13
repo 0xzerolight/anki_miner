@@ -360,12 +360,13 @@ def _discard(_data: bytes) -> None:
 def _set_cancel_on_signals(cancel: threading.Event) -> dict[int, Any]:
     """From now on SIGINT/SIGTERM set *cancel*; returns the handlers they replaced (none off the main thread).
 
-    The ``--api`` call keeps them until the process exits: a cancel that lands
-    after the last run, even after the verdict is written, must leave exit 0.
+    The ``--api`` call never restores them: a cancel that lands after the last
+    run must leave exit 0. Once its verdict is written it ignores both signals
+    (``_ignore_cancel_signals``).
     """
     if threading.current_thread() is not threading.main_thread():
         return {}
-    signums = [getattr(signal, name) for name in ("SIGINT", "SIGTERM") if hasattr(signal, name)]
+    signums = _cancel_signums()
     previous = {signum: signal.getsignal(signum) for signum in signums}
 
     def handler(signum: int, _frame: object) -> None:
@@ -375,6 +376,23 @@ def _set_cancel_on_signals(cancel: threading.Event) -> dict[int, Any]:
     for signum in signums:
         signal.signal(signum, handler)
     return previous
+
+
+def _ignore_cancel_signals() -> None:
+    """From now on SIGINT/SIGTERM do nothing: for an ``--api`` call whose verdict is written.
+
+    Its Python handlers are not enough: interpreter shutdown resets them to the
+    default action before it tears the modules down, and a signal in that
+    stretch would kill a call that already succeeded. Shutdown leaves SIG_IGN.
+    """
+    if threading.current_thread() is not threading.main_thread():
+        return
+    for signum in _cancel_signums():
+        signal.signal(signum, signal.SIG_IGN)
+
+
+def _cancel_signums() -> list[int]:
+    return [getattr(signal, name) for name in ("SIGINT", "SIGTERM") if hasattr(signal, name)]
 
 
 @contextlib.contextmanager
