@@ -268,6 +268,20 @@ def test_a_charset_named_undefined_falls_through_to_the_next_rung(body: str, con
     assert decode_page(body.encode("utf-8"), content_type) == body
 
 
+@pytest.mark.parametrize("label", ["ISO-8859-1", "latin1", "us-ascii"])
+@pytest.mark.parametrize("where", ["header", "meta"])
+def test_a_declared_latin1_page_decodes_as_windows_1252_like_a_browser(label: str, where: str) -> None:
+    """WHATWG maps the Latin-1 and ASCII labels to windows-1252: 0x80-0x9F are curly quotes, not C1."""
+    text = "“dit l’homme — x"
+    if where == "header":
+        raw, content_type = text.encode("cp1252"), f"text/html; charset={label}"
+    else:
+        raw, content_type = f'<meta charset="{label}"><p>{text}</p>'.encode("cp1252"), "text/html"
+        text = f'<meta charset="{label}"><p>{text}</p>'
+
+    assert decode_page(raw, content_type) == text
+
+
 def test_fetch_prefers_the_header_charset_and_names_the_site_after_redirects() -> None:
     response = _FakeResponse(
         _NEWS_JA.encode("utf-8"), content_type="text/html; charset=UTF-8", url="https://news.example.jp/a/1"
