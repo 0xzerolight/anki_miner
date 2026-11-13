@@ -529,10 +529,15 @@ class ProfileController:
 
         # 2b. Trigger 2 of the mining-language switch (spec 6.1). The snapshot
         # already carries that language's scoped values, so there is no stash
-        # swap to run here — what is still owed is the queue rule, refused
-        # BEFORE the commit, where a refusal is still free. After it, a refusal
-        # would cost the user the profile switch as well.
+        # swap to run here — what is still owed is the availability probe and
+        # the queue rule, refused BEFORE the commit, where a refusal is still
+        # free. After it, a refusal would cost the user the profile switch as well.
         language_change = _language_change(outgoing_config, incoming)
+        if language_change:
+            code = config_language(incoming)
+            unavailable = language_switch.unavailable_refusal(code, get_profile(code))
+            if unavailable is not None:
+                return SwitchResult(switched=False, reason=unavailable)
         pending = language_switch.queued_screens(window) if language_change else ()
         if pending and not language_switch.confirm_queue_flush(window, pending, _incoming_language_name(incoming)):
             return SwitchResult(switched=False, reason=self._queued_work())

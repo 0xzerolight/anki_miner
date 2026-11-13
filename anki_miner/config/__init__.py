@@ -7,7 +7,7 @@ from .config import (
     ChainEntry,
     FreqEntry,
     PitchSourceEntry,
-    insert_above_first_enabled_jpod101,
+    insert_above_first_enabled_fallback,
 )
 from .defaults import create_default_config
 
@@ -19,5 +19,5 @@ __all__ = [
     "FreqEntry",
     "PitchSourceEntry",
     "create_default_config",
-    "insert_above_first_enabled_jpod101",
+    "insert_above_first_enabled_fallback",
 ]

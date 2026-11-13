@@ -356,20 +356,29 @@ def apply_imported_language(window: Any, imported: Any) -> bool:
     return True
 
 
-def _refused_as_unavailable(window: Any, code: str, profile: Any) -> bool:
-    """Refuse a change onto a language that cannot mine here; return whether it refused.
+def unavailable_refusal(code: str, profile: Any) -> str | None:
+    """The reason a change onto *code* is refused because it cannot mine here, else ``None``.
 
     A profile builds without the packages it parses with - every zh
     third-party import is function-local, a pack language's data is a
     download - so the profile's own probe is what decides whether the
     destination can mine a word. Every trigger runs this BEFORE the guard:
-    this costs the user nothing, and the reason names what is missing.
+    this costs the user nothing, and the reason names what is missing. The
+    profile switch reports the reason through its own result.
     """
     probe = profile.unavailable_reason
     reason = probe() if probe is not None else None
     if not reason:
-        return False
+        return None
     logger.info("Refusing a switch to %r: %s", code, reason)
+    return str(reason)
+
+
+def _refused_as_unavailable(window: Any, code: str, profile: Any) -> bool:
+    """Refuse a change onto a language that cannot mine here; return whether it refused."""
+    reason = unavailable_refusal(code, profile)
+    if reason is None:
+        return False
     _refuse(window, reason)
     return True
 
