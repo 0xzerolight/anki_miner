@@ -451,6 +451,10 @@ class _EpisodeContext:
     # apart from "removed by active filters" (survivors, then filtered out).
     candidate_words_found: int = 0
     comprehension_percentage: float = 0.0
+    #: Phase 2 has computed ``comprehension_percentage``. Until then the item has
+    #: no assessed words: its results report 0 found, so a Stop during parsing or
+    #: a phase-2 failure does not count as 0% known in the run's View details.
+    known_share_assessed: bool = False
     difficulty_total_words: int = 0
     difficulty_unknown_words: int = 0
     # Every lemma the learner doesn't know, snapshotted BEFORE the optional
@@ -484,8 +488,8 @@ class _EpisodeContext:
         override the accumulated defaults (e.g. force ``errors``).
         """
         defaults: dict[str, Any] = {
-            "total_words_found": self.total_words_found,
-            "new_words_found": self.new_words_found,
+            "total_words_found": self.total_words_found if self.known_share_assessed else 0,
+            "new_words_found": self.new_words_found if self.known_share_assessed else 0,
             "cards_created": 0,
             "errors": list(self.errors),
             "elapsed_time": time.time() - self.start_time,
@@ -948,8 +952,8 @@ class EpisodeProcessor:
         """
         return self._make_cancelled_result(
             ctx.start_time,
-            total_words_found=ctx.total_words_found,
-            new_words_found=ctx.new_words_found,
+            total_words_found=ctx.total_words_found if ctx.known_share_assessed else 0,
+            new_words_found=ctx.new_words_found if ctx.known_share_assessed else 0,
             comprehension_percentage=ctx.comprehension_percentage,
         )
 
@@ -1345,6 +1349,7 @@ class EpisodeProcessor:
             )
         )
         ctx.comprehension_percentage = comprehension
+        ctx.known_share_assessed = True
 
         # Surface the "everything was already known" case explicitly. Without
         # this, users who enable a card-format option (bold target word, etc.)
