@@ -59,7 +59,8 @@ class ReadingUnit:
 
     ``ruby`` is set only by the EPUB loader (SK-31): the ``(base, reading)``
     pairs of the author's ``<ruby>`` furigana whose base occurs in this unit's
-    text, raw and language-neutral. The parser applies them only for a profile
+    text, and no more often than the paragraph's ruby prints it, raw and
+    language-neutral. The parser applies them only for a profile
     that takes author ruby (``LanguageProfile.takes_author_ruby``).
     """
 

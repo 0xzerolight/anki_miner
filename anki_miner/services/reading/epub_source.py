@@ -37,6 +37,7 @@ import posixpath
 import re
 import zipfile
 import zlib
+from collections import Counter
 from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -341,6 +342,7 @@ def load(
             content_i += 1
             for para, para_ruby in zip(paragraphs, ruby, strict=True):
                 raise_if_cancelled(cancel_check, READING_CANCELLED)
+                printed = Counter(base for base, _reading in para_ruby)
                 for sentence in split_sentences(para, rules=rules):
                     raise_if_cancelled(cancel_check, READING_CANCELLED)
                     doc.units.append(
@@ -349,7 +351,14 @@ def load(
                             index=index,
                             location_label=label,
                             image_ref=cover_ref,
-                            ruby=tuple(dict.fromkeys(pair for pair in para_ruby if pair[0] in sentence)),
+                            # A base the sentence holds more often than the paragraph's ruby
+                            # covers it (人 beside mono-ruby 人間) may land on an occurrence
+                            # it was not printed over, so it is dropped there.
+                            ruby=tuple(
+                                dict.fromkeys(
+                                    pair for pair in para_ruby if 0 < sentence.count(pair[0]) <= printed[pair[0]]
+                                )
+                            ),
                         )
                     )
                     index += 1
