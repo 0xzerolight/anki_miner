@@ -424,6 +424,9 @@ class AnalyticsTab(ScreenIssueHost, QWidget):
         # page is on screen (a hidden tab never reaches into Anki).
         self._knowledge_in_flight = False
         self._knowledge_at: float | None = None
+        # Known words changed while a scan was in flight: that scan may predate
+        # the change, so _on_knowledge_done scans again instead of ticking the TTL.
+        self._knowledge_stale_pending = False
         self._has_history = False
         # ST-07: the last coverage shown, and whether the language has a numeric list.
         self._coverage: FrequencyCoverage | None = None
@@ -876,7 +879,7 @@ class AnalyticsTab(ScreenIssueHost, QWidget):
         already in flight may predate the run, so it re-runs when it lands.
         """
         # A run may have added known words: count again on this or the next visit.
-        self._knowledge_at = None
+        self._forget_knowledge()
         self._last_refresh = None
         if self._refresh_in_flight:
             self._stale_pending = True
@@ -1363,6 +1366,8 @@ class AnalyticsTab(ScreenIssueHost, QWidget):
         count = deleted if isinstance(deleted, int) else 0
         with contextlib.suppress(RuntimeError):
             self._show_run_note(tr_format(self.tr("Cards deleted from Anki: %1."), f"{count:,}"))
+            # The run's words left Anki and known_words.db: count again.
+            self._forget_knowledge()
             self.refresh_data(force=True)
 
     def _on_delete_run_error(self, msg: str) -> None:
@@ -1425,6 +1430,12 @@ class AnalyticsTab(ScreenIssueHost, QWidget):
 
     # === ST-05/ST-07: known words and frequency coverage ===
 
+    def _forget_knowledge(self) -> None:
+        """Known words changed: the next scan must postdate the change, TTL or not."""
+        self._knowledge_at = None
+        if self._knowledge_in_flight:
+            self._knowledge_stale_pending = True
+
     def _maybe_refresh_knowledge(self) -> None:
         """Start the off-thread Anki scan when the page is on screen and the last one is old."""
         if self._config_provider is None or self._knowledge_in_flight or self._teardown_generation:
@@ -1446,6 +1457,8 @@ class AnalyticsTab(ScreenIssueHost, QWidget):
     def _on_knowledge_done(self, bundle: object) -> None:
         """GUI thread: render the scan; only a scan that reached Anki starts the TTL."""
         self._knowledge_in_flight = False
+        stale = self._knowledge_stale_pending
+        self._knowledge_stale_pending = False
         if self._teardown_generation:
             return
         with contextlib.suppress(RuntimeError):
@@ -1461,6 +1474,11 @@ class AnalyticsTab(ScreenIssueHost, QWidget):
             issue = banner.current_issue() if banner is not None else None
             if issue is not None and issue.action_id == "analytics.knowledge-retry":
                 self.clear_screen_issue()
+            if stale:
+                # Show what landed, then count again: it may predate the change.
+                self._apply_knowledge(bundle)
+                self._maybe_refresh_knowledge()
+                return
             if bundle.known_count is not None:
                 self._knowledge_at = time.monotonic()
             self._apply_knowledge(bundle)
@@ -1468,6 +1486,8 @@ class AnalyticsTab(ScreenIssueHost, QWidget):
     def _on_knowledge_error(self, msg: str) -> None:
         """GUI thread: report on screen, with Retry (D24)."""
         self._knowledge_in_flight = False
+        # The clock is still clear, so the next visit or Retry counts anyway.
+        self._knowledge_stale_pending = False
         logging.getLogger(__name__).warning("Analytics: counting known words failed: %s", msg)
         if self._teardown_generation:
             return

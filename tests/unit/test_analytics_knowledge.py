@@ -390,3 +390,30 @@ def test_anki_down_explains_instead_of_a_table(qtbot, knowledge):
     assert tab.coverage_status_label.isVisible()
     assert tab.coverage_status_label.text() == "Coverage needs Anki running: it compares the list with your cards."
     assert not tab.coverage_table.isVisible()
+
+
+def test_a_run_that_finishes_during_a_scan_is_counted_when_it_lands(qtbot, knowledge):
+    """U8b-002: the scan in flight predates the run, so another scan follows it."""
+    tab = knowledge["make"]()
+    _show(qtbot, tab)
+    assert knowledge["calls"] == ["ja"]
+    knowledge["bundle"] = _bundle(known_count=1300)
+
+    # A scan is in flight (it read Anki before the run) when the run finishes.
+    tab._knowledge_in_flight = True
+    tab.mark_stale()
+    tab._on_knowledge_done(_bundle(known_count=1270))
+
+    assert knowledge["calls"] == ["ja", "ja"]
+    assert tab.card_known_words.value_label.text() == "1,300"
+    assert tab._knowledge_at is not None
+
+
+def test_deleting_a_runs_cards_counts_known_words_again(qtbot, knowledge):
+    tab = knowledge["make"]()
+    _show(qtbot, tab)
+    assert knowledge["calls"] == ["ja"]
+
+    tab._on_delete_run_done(3)
+
+    assert knowledge["calls"] == ["ja", "ja"]
