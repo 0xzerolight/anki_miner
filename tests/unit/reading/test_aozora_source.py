@@ -695,3 +695,11 @@ def test_same_line_heading_is_its_own_unit_and_the_body_splits():
         ("彼は窓を開けた。", "一"),
         ("次だ。", "一"),
     ]
+
+
+def test_half_width_bar_opening_a_ruby_base_is_stripped(tmp_path):
+    p = _write(tmp_path, "　彼は|魔導書《グリモワール》を開いた。\n　値はa|bだ。\n", "utf-8")
+
+    doc = load(_ref(p))
+
+    assert [u.text for u in doc.units] == ["彼は魔導書を開いた。", "値はa|bだ。"]

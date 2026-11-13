@@ -152,7 +152,7 @@ def _resolve_gaiji(line: str) -> str:
 # quotation, so an unconditional strip is safe on the Aozora path.
 _RUBY_RE = re.compile(r"《[^》]*》")
 
-# A ruby span *attached* to base text: the ｜ base-marker and its bounded base
+# A ruby span *attached* to base text: the ｜ (or web-novel |) base-marker and its bounded base
 # through 《, or a kanji/kana run directly before 《 — in either case holding a
 # kana reading, which is what an Aozora ruby always is. A bare, standalone 《…》
 # (a plain novel using the double-angle bracket as title/quotation punctuation)
@@ -161,10 +161,16 @@ _RUBY_RE = re.compile(r"《[^》]*》")
 # block as a "header" and stripped every 《…》 span silently). The kana reading is
 # what keeps Chinese out: there 他读了《红楼梦》 is a work title, and the character
 # before 《 (or a ｜ used as a chapter separator earlier in the line) is no signal.
-_RUBY_ATTACHED_RE = re.compile(r"(?:｜[^｜《》\r\n]+|[々぀-ヿ一-鿿])《[ぁ-ヿ]")
+_RUBY_ATTACHED_RE = re.compile(r"(?:[|｜][^|｜《》\r\n]+|[々぀-ヿ一-鿿])《[ぁ-ヿ]")
+
+# Narou/Kakuyomu/Hameln manuscripts accept a half-width | as the ruby base
+# marker; it is markup only when it opens a base that runs to a 《 on the
+# line, otherwise it is body text (a|b).
+_HALF_WIDTH_BASE_MARKER_RE = re.compile(r"\|(?=[^|｜《》\r\n]+《)")
 
 
 def _strip_ruby(line: str) -> str:
+    line = _HALF_WIDTH_BASE_MARKER_RE.sub("", line)
     return _RUBY_RE.sub("", line).replace("｜", "")
 
 
