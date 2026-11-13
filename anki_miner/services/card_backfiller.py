@@ -88,6 +88,7 @@ from anki_miner.utils.text_utils import (
     _format_furigana,
     front_reading,
     generate_reading,
+    is_kana_only,
     katakana_to_hiragana,
 )
 from anki_miner.utils.timing import timed_phase
@@ -362,7 +363,9 @@ def _reading_from_furigana(value: str) -> str | None:
     its own kanji run) are dropped. NOT a split-on-space —
     ``入[い]り 口[ぐち]`` must yield ``いりぐち``, not ``いぐち``. Bracket
     content is katakana-folded so the result keys hiragana-folded lookups.
-    Returns ``None`` for malformed input (unbalanced brackets, empty).
+    Returns ``None`` for malformed input (unbalanced brackets, empty) and for
+    anything that leaves non-kana behind — Yomitan's ``{furigana}`` HTML ruby
+    (``<ruby>食<rt>た</rt></ruby>べる`` would read 食たべる) or bare kanji.
     """
     text = _HTML_TAG_RE.sub("", html.unescape(value or "")).strip()
     if not text:
@@ -383,7 +386,7 @@ def _reading_from_furigana(value: str) -> str | None:
         return None
     out.append(tail.replace(" ", ""))
     reading = katakana_to_hiragana("".join(out))
-    return reading or None
+    return reading if is_kana_only(reading) else None
 
 
 def _chunks(items: Sequence[_T], size: int) -> Iterator[Sequence[_T]]:

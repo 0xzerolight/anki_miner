@@ -327,6 +327,15 @@ class TestReadingFromFurigana:
     def test_malformed_returns_none(self, value):
         assert _reading_from_furigana(value) is None
 
+    @pytest.mark.parametrize(
+        "value",
+        ["<ruby>食<rt>た</rt></ruby>べる", "<ruby>食べる<rt>たべる</rt></ruby>", "食べる"],
+    )
+    def test_non_bracket_furigana_returns_none(self, value):
+        # Yomitan's {furigana} HTML ruby (or bare kanji) leaves the base text
+        # in the "reading": 食たべる must never key a lookup or be written.
+        assert _reading_from_furigana(value) is None
+
 
 # ---------------------------------------------------------------------------
 # scan_backfill
@@ -1025,6 +1034,17 @@ class TestScanReadingFurigana:
         changes = _changes_by_key(plan, 1)
         assert changes["expression_reading"] == "かんじ"
         assert "expression_furigana" not in changes
+
+    def test_html_ruby_furigana_is_not_a_reading(self, backfill_config):
+        ruby = "<ruby>食<rt>た</rt></ruby>べる"
+        fields = _note(1, word="食べる", ExpressionReading="", ExpressionFurigana=ruby)["fields"]
+        ctx = _resolve_context(1, fields, "食べる", backfill_config.anki_fields, get_shared_tagger())
+        assert ctx.reading_source != "furigana"
+        anki = FakeAnkiService({1: _note(1, word="食べる", ExpressionReading="", ExpressionFurigana=ruby)})
+        plan = scan_backfill(
+            anki, backfill_config, _services(), _options({"expression_reading", "expression_furigana"})
+        )
+        assert plan.notes == ()
 
     def test_cross_fills_furigana_from_reading(self, backfill_config):
         anki = FakeAnkiService({1: _note(1, word="漢字", ExpressionReading="かんじ", ExpressionFurigana="")})
