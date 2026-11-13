@@ -28,6 +28,7 @@ from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import pyqtSignal
 
+from anki_miner.exceptions import OperationCancelled
 from anki_miner.gui.utils.service_factory import import_decode_ladder
 from anki_miner.gui.workers.file_queue_worker import UNMEASURED, FileQueueWorker
 from anki_miner.languages.registry import config_language, get_profile
@@ -131,6 +132,8 @@ class BookSyncWorker(FileQueueWorker):
                 encodings=import_decode_ladder(self._config),
                 cancel_check=lambda: self.is_cancelled,
             )
+        except OperationCancelled:
+            return  # A cancel is a run-level outcome, never a book that failed to load.
         except Exception as exc:  # noqa: BLE001 — a shelf moves on to its next book; one book re-raises
             if raise_on_failure:
                 raise
@@ -158,6 +161,8 @@ class BookSyncWorker(FileQueueWorker):
         if job_idx != self._job_idx:
             self._finish_book()
             self._start_book(job_idx)
+            if self.is_cancelled:
+                return  # Cancelled while the book loaded: nothing to report per item.
             if len(self._jobs) > 1:
                 self.file_progress.emit(idx, UNMEASURED, tr_format(self.tr("Book: %1"), job.book.name))
             if self._book_error is not None:
