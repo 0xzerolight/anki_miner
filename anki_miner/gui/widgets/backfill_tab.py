@@ -782,7 +782,7 @@ class CardBackfillTab(RunOptionsMixin, _AnkiPlanTabBase):
             self._run_failed = True
         if result.media_failed:
             parts.append(
-                self.tr("%n audio file(s) could not be added to Anki; scan again to retry.", "", result.media_failed)
+                self.tr("%n media file(s) could not be added to Anki; scan again to retry.", "", result.media_failed)
             )
             self._run_failed = True
         self._set_run_line(" ".join(parts))
