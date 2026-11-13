@@ -78,6 +78,33 @@ def test_the_panel_offers_edge_for_a_voiced_language_until_it_is_in_the_chain(qt
     assert [(e.kind, e.enabled) for e in panel.get_chain()] == [("googletts", True), ("edgetts", True)]
 
 
+@pytest.mark.parametrize(
+    ("chain", "expected"),
+    [
+        # Japanese: above the first enabled jpod101, synthetic voices or not.
+        (
+            ("jpod101", True, "googletts", True),
+            ["edgetts", "jpod101", "googletts"],
+        ),
+        # A disabled jpod101 is no anchor.
+        (("jpod101", False, "googletts", True), ["jpod101", "googletts", "edgetts"]),
+        # Another language: appended below the Google voice.
+        (("pack", True, "googletts", True), ["pack", "googletts", "edgetts"]),
+    ],
+    ids=["ja-jpod101", "jpod101-disabled", "other-language"],
+)
+def test_an_added_edge_voice_anchors_on_jpod101_only(qtbot, tmp_path, chain, expected):
+    entries = tuple(
+        AudioSourceEntry(kind=kind, pack_id="p" if kind == "pack" else None, enabled=enabled)
+        for kind, enabled in zip(chain[::2], chain[1::2], strict=True)
+    )
+    panel = _panel(qtbot, tmp_path)
+    panel.set_chain(entries)
+    with qtbot.waitSignal(panel.chain_changed, timeout=1000):
+        panel.add_source_entry(EDGE)
+    assert [e.kind for e in panel.get_chain()] == expected
+
+
 @pytest.fixture
 def tab(test_config: AnkiMinerConfig, qtbot):
     widget = SettingsTab(test_config)
