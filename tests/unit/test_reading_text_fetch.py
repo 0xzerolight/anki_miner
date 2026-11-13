@@ -12,6 +12,8 @@ import dataclasses
 from unittest.mock import MagicMock, patch
 
 import pytest
+from PyQt6.QtGui import QTextCursor
+from PyQt6.QtWidgets import QApplication
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.widgets import reading_text_tab
@@ -69,6 +71,15 @@ def _items(tab) -> list:
 
 def _log(tab) -> str:
     return tab.log_widget.text_edit.toPlainText()
+
+
+def _delete(tab, fragment: str) -> None:
+    """Edit the box the way a user does: select *fragment* and delete it."""
+    start = tab.text_edit.toPlainText().index(fragment)
+    cursor = tab.text_edit.textCursor()
+    cursor.setPosition(start)
+    cursor.setPosition(start + len(fragment), QTextCursor.MoveMode.KeepAnchor)
+    cursor.removeSelectedText()
 
 
 def test_fetch_puts_the_article_text_in_the_editor(tab, monkeypatch):
@@ -182,7 +193,7 @@ def test_mine_after_fetch_makes_one_item_per_article_with_its_source(tab, monkey
 
 def test_an_edited_single_article_keeps_its_source(tab, monkeypatch):
     _fetch(tab, monkeypatch, "https://example.com/neko", [_NEKO])
-    tab.text_edit.setPlainText("吾輩は猫である。")
+    _delete(tab, "\n\n名前はまだ無い。")
 
     tab._on_mine_clicked()
 
@@ -192,7 +203,7 @@ def test_an_edited_single_article_keeps_its_source(tab, monkeypatch):
 
 def test_edited_text_from_several_pages_is_mined_as_one_text(tab, monkeypatch):
     _fetch(tab, monkeypatch, "https://example.com/neko\nhttps://example.org/inu", [_NEKO, _INU])
-    tab.text_edit.setPlainText("吾輩は猫である。犬が走る。")
+    _delete(tab, "\n\n名前はまだ無い。")
 
     tab._on_mine_clicked()
 
@@ -210,6 +221,19 @@ def test_clearing_the_editor_forgets_the_fetched_pages(tab, monkeypatch):
 
     [item] = _items(tab)
     assert item.title == "Text"
+
+
+def test_pasting_over_the_whole_fetched_text_forgets_the_fetched_page(tab, monkeypatch):
+    """U9-001: select all and paste is one edit that never empties the box; it is pasted text."""
+    _fetch(tab, monkeypatch, "https://example.com/neko", [_NEKO])
+    QApplication.clipboard().setText("今日は友達と映画を見に行きました。")
+    tab.text_edit.selectAll()
+    tab.text_edit.paste()
+
+    tab._on_mine_clicked()
+
+    [item] = _items(tab)
+    assert (item.title, item.source.text) == ("Text", "今日は友達と映画を見に行きました。")
 
 
 def test_pasted_text_still_mines_as_text(tab):

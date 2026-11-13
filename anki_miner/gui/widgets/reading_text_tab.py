@@ -221,6 +221,9 @@ class ReadingTextTab(_ReadingMiningTabBase):
         self._fetching = False
         self._fetched: list[WebArticle] = []
         self._fetched_text = ""
+        # The box's text before the latest edit, so one edit that replaced all
+        # of it (select all, paste) is told apart from an edit of the article.
+        self._box_text = ""
         self._setup_ui()
         self._recompute_buttons()
 
@@ -329,7 +332,7 @@ class ReadingTextTab(_ReadingMiningTabBase):
         # tests count to prove the Japanese leading keeper is (un)wired.
         document = self.text_edit.document()
         if document is not None:
-            document.contentsChanged.connect(self._forget_fetch_if_cleared)
+            document.contentsChange.connect(self._forget_fetch_if_replaced)
         card_layout.addWidget(self.text_edit)
 
         # Pasted text has no page of its own, so the one picture every card in
@@ -490,9 +493,21 @@ class ReadingTextTab(_ReadingMiningTabBase):
             return self.tr("This is not a web address.")
         return self.tr("No article text found on this page. Pages that draw their text with JavaScript cannot be read.")
 
-    def _forget_fetch_if_cleared(self) -> None:
-        """An emptied box ends the fetched text's claim to its pages' Source."""
-        if self._fetched and not self.text_edit.toPlainText().strip():
+    def _forget_fetch_if_replaced(self, position: int, removed: int, _added: int) -> None:
+        """An emptied or wholly replaced box ends the fetched text's claim to its pages' Source.
+
+        Select all and paste is one edit that never shows an empty box, so it
+        counts as emptying it: one edit that removed every character the box
+        held. A format-only change reports the same span but leaves the text
+        as it was.
+        """
+        previous = self._box_text
+        text = self.text_edit.toPlainText()
+        self._box_text = text
+        if not self._fetched:
+            return
+        replaced = position == 0 and removed >= len(previous) and text != previous
+        if replaced or not text.strip():
             self._fetched = []
             self._fetched_text = ""
 
