@@ -459,6 +459,11 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         self._line_expansions: dict[int, tuple[int, int]] = {
             index: word.line_expansion for index, word in enumerate(words) if word.line_expansion != (0, 0)
         }
+        # Season curation: sentence picks whose automatic merge could not be
+        # re-derived because their episode's cues had not loaded yet, by
+        # original word index. The episode's landing restamps them; a new pick
+        # or an explicit +line/Reset drops the index.
+        self._unstamped_picks: set[int] = set()
         # Per-word screenshot frames the user picked off the player, keyed by
         # original word index exactly like _clip_overrides. Stamped onto the
         # selection as TokenizedWord.screenshot_override; empty for every run
@@ -1763,8 +1768,11 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         ctx = self._media_context
         if ctx is None or ctx.auto_merge_rules is None:
             return
+        self._unstamped_picks.discard(idx)
         resolved = self._expansion_entries(chosen)
         if resolved is None:
+            if chosen.video_file is not None and chosen.video_file not in self._media_ctx_cache:
+                self._unstamped_picks.add(idx)
             return
         entries, offset = resolved
         cue = find_cue_index(entries, chosen.start_time, chosen.sentence, offset=offset)
@@ -1784,6 +1792,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         if word is None or idx is None:
             return
         chosen = self._chosen.get(idx, word)
+        self._unstamped_picks.discard(idx)
         prev_count, next_count = self._line_expansions.get(idx, (0, 0))
         if direction < 0:
             prev_count += 1
@@ -1796,6 +1805,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         word, idx = self._pending_word, self._pending_index
         if word is None or idx is None:
             return
+        self._unstamped_picks.discard(idx)
         self._line_expansions.pop(idx, None)
         self._apply_expansion(self._chosen.get(idx, word), idx, snap=True)
 
@@ -3342,6 +3352,10 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
             self._media_ctx_cache[video_file] = new_ctx
             self._apply_media_context(new_ctx)
             self._repaint_translation_cells(video_file)
+            for pick in [
+                i for i in self._unstamped_picks if self._chosen.get(i, self._words[i]).video_file == video_file
+            ]:
+                self._restamp_auto_expansion(self._chosen[pick], pick)
             self._repaint_expanded_rows(video_file)
             # Re-fire the preview for the still-focused word (its chosen
             # variant may have moved on; only seek if it still matches).
