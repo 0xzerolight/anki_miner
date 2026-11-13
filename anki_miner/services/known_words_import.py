@@ -409,7 +409,9 @@ def _parse_generic(text: str) -> KnownWordsImportResult:
         if not stripped or stripped.startswith("#"):
             continue
         if "," in stripped or "\t" in stripped:
-            delimiter = "," if "," in stripped else "\t"
+            # The delimiter that ends the first cell: a tab-separated gloss may
+            # itself hold commas ("食べる<TAB>to eat, to consume").
+            delimiter = min((",", "\t"), key=lambda d: (stripped.find(d) == -1, stripped.find(d)))
             stripped = next(csv.reader([stripped], delimiter=delimiter))[0].strip()
             if not stripped:
                 continue

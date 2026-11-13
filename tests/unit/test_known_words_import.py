@@ -221,6 +221,12 @@ class TestGenericFallback:
         result = parse_known_words_file(_write(tmp_path, "words.txt", text))
         assert result.words == frozenset({"食べる", "犬"})
 
+    def test_tab_delimited_with_comma_in_later_column(self, tmp_path):
+        text = "食べる\tto eat, to consume\n飲む\tto drink\n"
+        result = parse_known_words_file(_write(tmp_path, "words.tsv", text))
+        assert result.format_key == "generic"
+        assert result.words == frozenset({"食べる", "飲む"})
+
     def test_whitespace_stripped_and_duplicates_collapsed(self, tmp_path):
         text = "  食べる  \n食べる\n"
         result = parse_known_words_file(_write(tmp_path, "words.txt", text))
