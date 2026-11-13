@@ -1523,15 +1523,20 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         Delegates to the same ``reimport_all`` each panel button drives, so the
         one-click migration and the manual path share one implementation.
         """
-        flows: dict[str, tuple[str, ReimportAllFlow]] = {
-            "dictionary": ("dictionaries", self._dict_import_flow),
-            "frequency": ("frequency", self._frequency_import_flow),
-            "pitch": ("pitch", self._pitch_import_flow),
-            "audio": ("audio", self._audio_pack_import_flow),
+        flows: dict[str, tuple[str, ReimportAllFlow, ChainSettingsPanelBase]] = {
+            "dictionary": ("dictionaries", self._dict_import_flow, self.dictionary_panel),
+            "frequency": ("frequency", self._frequency_import_flow, self.frequency_panel),
+            "pitch": ("pitch", self._pitch_import_flow, self.pitch_panel),
+            "audio": ("audio", self._audio_pack_import_flow, self.audio_panel),
         }
-        subtab, flow = flows[kind]
+        subtab, flow, panel = flows[kind]
         self.open_subtab(subtab)
-        flow.reimport_all(only_ids=only_ids, on_complete=on_complete)
+        if on_complete is None:
+            flow.reimport_all(only_ids=only_ids)
+            return
+        # The batch reports done while it still holds the panel's tokens; the
+        # next family's mutation would be refused until they are released.
+        flow.reimport_all(only_ids=only_ids, on_complete=lambda: panel.call_when_idle(on_complete))
 
     def set_dictionary_mutation_preflight(self, callback: Callable[[], bool] | None) -> None:
         """Install the startup-migration preflight for dictionary mutations."""

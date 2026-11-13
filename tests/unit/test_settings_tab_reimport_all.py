@@ -608,3 +608,30 @@ def test_trigger_reimport_all_dispatches_both_slot_kinds(tab_for_reimport_all, m
     stubbed_workers["jmdict_factory"].assert_called_once()
     # Landed on the Dictionaries page.
     assert tab.pages.currentIndex() == tab._subtab_index["dictionaries"]
+
+
+def test_trigger_reimport_all_chains_next_family_after_batch_releases(
+    tab_for_reimport_all, monkeypatch, stubbed_workers, qtbot
+):
+    """The startup prompt chains families through ``on_complete``: the next
+    family must start once the finished batch has released its panel tokens,
+    not be refused while the 'reimport-all' and rescan tokens are still held."""
+    tab = tab_for_reimport_all
+    _make_dict_on_disk(tab.config.dicts_root, "dict-a", fmt="yomitan", source_name="Dict A")
+    tab.dictionary_panel.set_chain((ChainEntry(kind="indexed", dict_id="dict-a", enabled=True),))
+    tab.frequency_panel.set_chain(())
+    tab._frequency_import_flow._run_latest_scan = run_scan_sync
+    summaries = capture_infos(monkeypatch)
+    events: list[str] = []
+
+    def after_dictionary() -> None:
+        events.append("dictionary")
+        tab.trigger_reimport_all(kind="frequency", on_complete=lambda: events.append("frequency"))
+
+    tab.trigger_reimport_all(frozenset({"dict-a"}), kind="dictionary", on_complete=after_dictionary)
+    _complete_in_flight_worker(stubbed_workers)
+    qtbot.waitUntil(lambda: events == ["dictionary", "frequency"])
+
+    # The frequency family ran its own scan and reported on it.
+    assert [title for title, _body in summaries][0] == "Reimport All"
+    assert len(summaries) == 2, summaries
