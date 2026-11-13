@@ -1021,6 +1021,11 @@ class AnalyticsTab(ScreenIssueHost, QWidget):
 
     def _update_recent_sessions(self, sessions: list[MiningSession]) -> None:
         has_sessions = len(sessions) > 0
+        # Qt keeps a selection by row index, and a refill (a run finished, the
+        # range changed) can put another run on that row: the run actions would
+        # then delete the wrong run's cards. The selection follows the run's id.
+        selected = self._selected_session()
+        selected_id = selected.id if selected is not None else None
         self.sessions_table.setVisible(has_sessions)
         self.sessions_empty_label.setVisible(not has_sessions)
         self._sessions_by_id = {session.id: session for session in sessions if session.id is not None}
@@ -1052,6 +1057,17 @@ class AnalyticsTab(ScreenIssueHost, QWidget):
         finally:
             self.sessions_table.setSortingEnabled(was_sorting)
             self.sessions_table.setUpdatesEnabled(True)
+        # Rows are in their final (sorted) places now; the buttons re-arm once, below.
+        was_blocked = self.sessions_table.blockSignals(True)
+        try:
+            self.sessions_table.clearSelection()
+            for row in range(self.sessions_table.rowCount()):
+                id_cell = self.sessions_table.item(row, 0)
+                if selected_id is not None and id_cell is not None and id_cell.data(_SESSION_ID_ROLE) == selected_id:
+                    self.sessions_table.selectRow(row)
+                    break
+        finally:
+            self.sessions_table.blockSignals(was_blocked)
         hold_numeric_columns(self.sessions_table, _SESSION_COUNT_COLUMNS)
         self._sync_run_actions()
 
