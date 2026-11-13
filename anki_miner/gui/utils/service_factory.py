@@ -1004,10 +1004,12 @@ def create_services(
         )
     # Share the parser's tagger with the word filter so i+1 swap can
     # rebuild bolded sentence fields without spinning up a second tagger
-    # (fugashi.Tagger initialization is non-trivial).
+    # (fugashi.Tagger initialization is non-trivial). Through the parser's
+    # accessor, not the engine object: a second reference would survive the
+    # parser's S23 release_tagger and keep the outgoing language's engine.
     word_filter = WordFilterService(
         config,
-        tagger=subtitle_parser.tagger,
+        tagger_source=subtitle_parser._tagger,
         mined_form=bound_mined_form(profile, config),
         script=profile.script,
         dedup_fold=profile.dedup_fold,
