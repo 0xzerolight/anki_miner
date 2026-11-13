@@ -87,7 +87,7 @@ _FONT_MEDIA_TYPES = frozenset(f"font/{ext[1:]}" for ext in _FONT_EXTS) | frozens
 
 # Subtrees whose text is never body prose (ruby readings live in rt/rp).
 _SKIP_TAGS = frozenset({"script", "style", "head", "rt", "rp"})
-# Closing one of these — or a <br> — ends a paragraph.
+# Opening or closing one of these — or a <br> — ends a paragraph.
 _BLOCK_TAGS = frozenset(
     {
         "p",
@@ -106,6 +106,11 @@ _BLOCK_TAGS = frozenset(
         "th",
         "figure",
         "figcaption",
+        "dt",
+        "dd",
+        "pre",
+        "tr",
+        "caption",
     }
 )
 
@@ -858,7 +863,7 @@ def _walk_body(
     """Depth-first text walk → (paragraphs, gaiji-image count).
 
     Ruby/script/style subtrees are skipped; ``<img>`` counts toward gaiji and
-    contributes no text; a paragraph flushes on a block close or ``<br>``, then
+    contributes no text; a paragraph flushes on a block open or close or ``<br>``, then
     has its leading whitespace (incl. U+3000) stripped and empties dropped.
     ``line_join`` replaces each source line wrap inside a paragraph
     (:func:`_line_join`). With ``ruby_out``, one list of :func:`_ruby_pair`
@@ -893,6 +898,8 @@ def _walk_body(
         if name == "img":
             gaiji += 1
             return
+        if name in _BLOCK_TAGS:
+            flush()  # inline text before a block is a paragraph of its own
         if name == "ruby" and ruby_out is not None:
             pair = _ruby_pair(el)
             if pair is not None:

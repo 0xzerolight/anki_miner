@@ -106,6 +106,36 @@ def test_japanese_joins_a_wrapped_line_without_a_space() -> None:
     assert "名前はまだ無い。" in article.text
 
 
+def test_each_dt_and_dd_is_its_own_paragraph() -> None:
+    page = (
+        "<html><body><main><div><dl><dt>Interviewer</dt>"
+        "<dd>Thank you for joining us today. How long did the film take to make?</dd>"
+        "<dt>Director</dt>"
+        "<dd>About three years in total. The script alone went through ten full drafts.</dd>"
+        "</dl></div></main></body></html>"
+    )
+
+    article = extract_article(page, "https://example.com/interview", rules=get_profile("en").sentence_rules)
+
+    assert article.text.split("\n\n") == [
+        "Interviewer",
+        "Thank you for joining us today. How long did the film take to make?",
+        "Director",
+        "About three years in total. The script alone went through ten full drafts.",
+    ]
+
+
+def test_a_byline_before_the_first_paragraph_is_its_own_paragraph() -> None:
+    body = "今日は朝から雨が降っていました。駅までの道はすっかり濡れていて、傘を差していても足元がびしょびしょになりました。それでも電車は時間どおりに来ました。"
+    page = f"<html><body><article><h1>雨の日</h1><time>2024年5月1日</time><p>{body}</p></article></body></html>"
+
+    article = extract_article(page, "https://example.com/rain", rules=get_profile("ja").sentence_rules)
+
+    paragraphs = article.text.split("\n\n")
+    assert "2024年5月1日" in paragraphs
+    assert body in paragraphs
+
+
 def test_a_javascript_only_page_reports_no_article_text() -> None:
     with pytest.raises(ArticleFetchError) as excinfo:
         extract_article(_JS_ONLY, "https://spa.example.com/")
