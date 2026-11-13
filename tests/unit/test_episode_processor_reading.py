@@ -1468,9 +1468,15 @@ class TestReadingSentenceTts:
         sp.parse_text_units.side_effect = _parse_returning([w1, w2, w3], None, counts)
         presenter = MagicMock(name="Presenter")
         fetcher = MagicMock(name="SentenceFetcher")
-        fetcher.fetch.side_effect = lambda sentence, cancelled_check=None: None
-        # Both unique sentences failed with connection errors -> dominant cause.
-        fetcher.stats.return_value = {"ssl": 0, "connection": 2, "timeout": 0, "http_status": 0, "non_audio": 0}
+        # Both unique sentences fail with connection errors -> dominant cause. The
+        # tally is lifetime-cumulative: the stage diffs it against its start.
+        tally = {"ssl": 0, "connection": 0, "timeout": 0, "http_status": 0, "non_audio": 0}
+
+        def _fail(sentence, cancelled_check=None):
+            tally["connection"] += 1
+
+        fetcher.fetch.side_effect = _fail
+        fetcher.stats.side_effect = lambda: dict(tally)
         cfg = _tts_config(test_config, deduplicate_sentences=False)
         proc = _make_processor(cfg, subtitle_parser=sp, presenter=presenter, sentence_audio_fetcher=fetcher)
 
