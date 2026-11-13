@@ -32,7 +32,8 @@ def _usable_readings(hints: Sequence[tuple[str, str]]) -> dict[str, str]:
     readings: dict[str, str | None] = {}
     for base, raw in hints:
         kana = katakana_to_hiragana(raw.strip())
-        if not is_kana_only(kana):
+        # A rt of marks alone (傍点 written as ruby: ・, ヽ, ゝ) is emphasis, not a reading.
+        if not is_kana_only(kana) or not any("ぁ" <= ch <= "ゖ" for ch in kana):
             continue
         seen = readings.get(base, kana)
         readings[base] = kana if seen == kana else None

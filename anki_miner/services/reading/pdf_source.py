@@ -20,7 +20,7 @@ from collections.abc import Callable
 from typing import TYPE_CHECKING
 
 from pypdf import PdfReader
-from pypdf.errors import PyPdfError
+from pypdf.errors import DependencyError, PyPdfError
 
 from anki_miner.exceptions import SetupError, raise_if_cancelled
 from anki_miner.models.reading import ReadingDocument, ReadingSourceRef, ReadingUnit
@@ -29,6 +29,8 @@ from anki_miner.services.reading.sentence_splitter import split_sentences
 from anki_miner.utils.logging_ext import log_summary
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     from anki_miner.languages.profile import SentenceRules
 
 logger = logging.getLogger(__name__)
@@ -63,6 +65,10 @@ def _join_page_lines(lines: list[str], rules: SentenceRules | None) -> str:
     return out
 
 
+def _password_protected(pdf_path: Path) -> SetupError:
+    return SetupError(f"'{pdf_path.name}' is password-protected and cannot be mined.")
+
+
 def _open(ref: ReadingSourceRef) -> PdfReader:
     assert ref.path is not None
     pdf_path = ref.path
@@ -71,10 +77,12 @@ def _open(ref: ReadingSourceRef) -> PdfReader:
             raise SetupError(f"'{pdf_path.name}' is too large to mine.")
         reader = PdfReader(pdf_path)
         if reader.is_encrypted and not reader.decrypt(""):
-            raise SetupError(f"'{pdf_path.name}' is password-protected and cannot be mined.")
+            raise _password_protected(pdf_path)
         return reader
     except SetupError:
         raise
+    except DependencyError as exc:  # AES needs ``cryptography``, which is deliberately not a dependency
+        raise _password_protected(pdf_path) from exc
     except (PyPdfError, OSError, ValueError, KeyError, TypeError) as exc:
         log_summary(logger, "PDF rejected", level=logging.WARNING, file=pdf_path, error=type(exc).__name__)
         raise SetupError(f"'{pdf_path.name}' is not a readable PDF.") from exc
@@ -107,6 +115,8 @@ def load(
         pages += 1
         try:
             raw = page.extract_text() or ""
+        except DependencyError as exc:  # an AES-encrypted page: none of the book can be read
+            raise _password_protected(ref.path) from exc
         except Exception as exc:  # noqa: BLE001 — one damaged page must not lose the book
             logger.debug("Ignored failure during PDF page %d text extraction: %s: %s", page_no, type(exc).__name__, exc)
             unreadable += 1
