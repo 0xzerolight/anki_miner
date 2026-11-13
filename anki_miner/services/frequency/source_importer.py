@@ -490,7 +490,7 @@ def _import_csv(
             skip_examples.append(delimiter.join(row))
 
     try:
-        with open(csv_path, encoding="utf-8") as f:
+        with open(csv_path, encoding="utf-8-sig") as f:
             sample = f.read(4096)
             f.seek(0)
             delimiter = detect_delimiter(sample)
