@@ -416,6 +416,35 @@ class AnkiService:
         )
         logger.debug("Anki ensure deck done: deck=%s", deck_name)
 
+    def delete_deck_if_empty(self, deck_name: str) -> bool:
+        """Delete the named deck only when it and its subdecks hold no card.
+
+        AnkiConnect's ``deleteDecks`` requires ``cardsToo``, so the emptiness
+        check is what keeps every card safe.
+
+        Returns:
+            True when the deck was deleted.
+
+        Raises:
+            AnkiConnectionError: On connection failure or AnkiConnect error.
+        """
+        query = f'deck:"{escape_anki_search(deck_name)}"'
+        cards = _expect_list(
+            post_action(self.config.ankiconnect_url, "findCards", params={"query": query}, timeout=15) or [],
+            "findCards",
+        )
+        if cards:
+            logger.debug("Anki delete empty deck skipped: deck=%s cards=%d", deck_name, len(cards))
+            return False
+        post_action(
+            self.config.ankiconnect_url,
+            "deleteDecks",
+            params={"decks": [deck_name], "cardsToo": True},
+            timeout=15,
+        )
+        logger.debug("Anki delete empty deck done: deck=%s", deck_name)
+        return True
+
     def note_type_names(self) -> list[str]:
         """Every note type in the collection (AnkiConnect ``modelNames``)."""
         names = _expect_list(
