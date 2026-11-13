@@ -280,6 +280,28 @@ def _drop_symbol_block(lines: list[str]) -> list[str]:
     return lines[:r1] + lines[r2 + 1 :]
 
 
+# Project Gutenberg wraps every .txt in a metadata header and a licence of some
+# 3,500 words. Owner ruling of 2026-11-13: with both marker lines present only the
+# text between them is mined; with one or none the file loads as given.
+_GUTENBERG_MARKER_RE = re.compile(r"^\s*\*{3}\s*(START|END) OF (?:THE|THIS) PROJECT GUTENBERG EBOOK\b", re.IGNORECASE)
+
+
+def _gutenberg_body(lines: list[str]) -> list[str]:
+    """The lines between a Gutenberg START marker and the END marker after it."""
+    start = next((i for i, ln in enumerate(lines) if _marker_kind(ln) == "START"), None)
+    if start is None:
+        return lines
+    end = next((i for i in range(start + 1, len(lines)) if _marker_kind(lines[i]) == "END"), None)
+    if end is None:
+        return lines
+    return lines[start + 1 : end]
+
+
+def _marker_kind(line: str) -> str | None:
+    match = _GUTENBERG_MARKER_RE.match(line)
+    return match.group(1).upper() if match else None
+
+
 def _is_aozora(text: str) -> bool:
     """Detect a genuine Aozora Bunko file (vs. a plain ``.txt`` novel).
 
@@ -552,7 +574,7 @@ def load(
     first_part = ref.byte_range is None or ref.byte_range[0] == 0
     last_part = ref.byte_range is None or ref.byte_range[1] is None
     text = _decode(raw, encodings=encodings, script_check=script_check)
-    lines = _splitlines(text)
+    lines = _gutenberg_body(_splitlines(text))
     if last_part:
         lines = _cut_footer(lines)
 

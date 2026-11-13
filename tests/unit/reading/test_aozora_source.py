@@ -711,3 +711,54 @@ def test_kakuyomu_emphasis_dots_keep_the_emphasised_text(tmp_path):
     doc = load(_ref(p))
 
     assert [u.text for u in doc.units] == ["彼は魔法を使った。", "それは絶対に許されない行為だった。"]
+
+
+_GUTENBERG = """The Project Gutenberg eBook of The Great Gatsby
+
+This ebook is for the use of anyone anywhere in the United States.
+
+Title: The Great Gatsby
+
+{start}
+
+In my younger and more vulnerable years my father gave me some advice.
+
+{end}
+
+Updated editions will replace the previous one.
+"""
+
+
+@pytest.mark.parametrize(
+    ("start", "end"),
+    [
+        (
+            "*** START OF THE PROJECT GUTENBERG EBOOK THE GREAT GATSBY ***",
+            "*** END OF THE PROJECT GUTENBERG EBOOK THE GREAT GATSBY ***",
+        ),
+        (
+            "*** START OF THIS PROJECT GUTENBERG EBOOK THE GREAT GATSBY ***",
+            "*** END OF THIS PROJECT GUTENBERG EBOOK THE GREAT GATSBY ***",
+        ),
+        ("***START OF THE PROJECT GUTENBERG EBOOK THE GREAT GATSBY***", "***END OF THE PROJECT GUTENBERG EBOOK***"),
+        (
+            "*** Start of the Project Gutenberg eBook The Great Gatsby ***",
+            "*** end of this project gutenberg ebook the great gatsby ***",
+        ),
+    ],
+)
+def test_gutenberg_text_mines_only_between_its_markers(tmp_path, start, end):
+    doc = _en_doc(tmp_path, _GUTENBERG.format(start=start, end=end))
+    assert [u.text for u in doc.units] == ["In my younger and more vulnerable years my father gave me some advice."]
+
+
+@pytest.mark.parametrize(
+    "end", ["", "*** END OF THE PROJECT GUTENBERG EBOOK THE GREAT GATSBY ***"], ids=["start-only", "end-only"]
+)
+def test_gutenberg_text_with_one_marker_loads_as_before(tmp_path, end):
+    start = "*** START OF THE PROJECT GUTENBERG EBOOK THE GREAT GATSBY ***" if not end else ""
+    text = _GUTENBERG.format(start=start, end=end)
+    plain = _en_doc(tmp_path, text.replace(start or end, "Plain line."), name="plain.txt")
+    doc = _en_doc(tmp_path, text)
+    assert len(doc.units) == len(plain.units)
+    assert doc.units[0].text.startswith("The Project Gutenberg eBook")

@@ -14,6 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 - The default subtitle cleanup strips a speaker label that contains a digit (男1：) again, while still keeping clock times such as 10:30.
 - Settings, other mining languages' settings and saved profiles that still hold an earlier default subtitle cleanup pattern now get the current one, so clock times and number ranges are no longer cut; an edited pattern is kept.
+- A Project Gutenberg text file now mines only the book between its START and END lines, not its header and licence.
 - Japanese adjectives written with a katakana stem (ズルい, キツい, サムい) and kana-only words such as かんぞう now get their own kana as the card reading instead of a garbled one (ずりい, きちい, かんそう).
 - After an upgrade, the startup prompt's Reimport All now rebuilds every stale resource family (dictionaries, frequency, pitch, audio) instead of only the first one.
 - Outside Japanese, an imported audio pack or an added custom audio source now goes above Google/Edge read-aloud in Word Audio, so its recordings are used.
