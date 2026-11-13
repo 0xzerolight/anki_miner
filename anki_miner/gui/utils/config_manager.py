@@ -14,6 +14,7 @@ from typing import Any, ClassVar
 
 import anki_miner.config.config as _config_module
 from anki_miner.config import ZOOM_PRESETS, AnkiMinerConfig, create_default_config
+from anki_miner.config.config import DEFAULT_SUBTITLE_CLEANUP_PATTERN, PREVIOUS_SUBTITLE_CLEANUP_DEFAULTS
 from anki_miner.config.paths import ANKI_MINER_HOME
 from anki_miner.languages.switching import switch_language
 from anki_miner.services._ankiconnect import redact_ankiconnect_url
@@ -515,6 +516,13 @@ class GUIConfigManager:
         # Rebuild chain entries parked for inactive languages.
         config_dict = cls._rebuild_language_stash(config_dict, shims)
 
+        # An untouched old cleanup default, live or parked, becomes today's.
+        cls._refresh_cleanup_default(config_dict, shims)
+        stash = config_dict.get("language_stash")
+        if isinstance(stash, dict):
+            for entry in stash.values():
+                cls._refresh_cleanup_default(entry, shims)
+
         # Default-ON seed for name wordsets (junk-reduction r3). A config
         # written under schema < 2 that carries no enabled wordsets predates
         # the default-ON rollout, so seed the full bundled set. This is the
@@ -603,6 +611,19 @@ class GUIConfigManager:
                 dropped_keys=capped(sorted(dropped), 20),
             )
         return {k: v for k, v in config_dict.items() if k in valid_keys}
+
+    @staticmethod
+    def _refresh_cleanup_default(values: dict[str, Any], shims: list[str]) -> None:
+        """Replace a ``subtitle_regex_filter`` that is exactly a previous default.
+
+        Owner ruling of 2026-11-13: the old defaults cut real text (clock times,
+        number ranges), and an exact match means the user never edited it. Any
+        other value is the user's own and is kept. Idempotent: the current
+        default is not in the previous set.
+        """
+        if values.get("subtitle_regex_filter") in PREVIOUS_SUBTITLE_CLEANUP_DEFAULTS:
+            values["subtitle_regex_filter"] = DEFAULT_SUBTITLE_CLEANUP_PATTERN
+            shims.append("refresh_cleanup_default")
 
     @staticmethod
     def _fold_removed_fields(config_dict: dict[str, Any], shims: list[str]) -> None:

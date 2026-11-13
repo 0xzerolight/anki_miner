@@ -82,6 +82,33 @@ SUBTITLE_CLEANUP_PIECES: tuple[str, ...] = (
     r"(?:^|(?<=[.!?…]\s))[-–—]\s+",
 )
 DEFAULT_SUBTITLE_CLEANUP_PATTERN = "|".join(SUBTITLE_CLEANUP_PIECES)
+# Earlier defaults of the joined pattern: the v3.10.0 one and the 2026-11-12 interim
+# one. A saved subtitle_regex_filter equal to one of them is the untouched default
+# and loads as the current one; any other value is the user's own and is kept
+# (GUIConfigManager._refresh_cleanup_default). Owner ruling of 2026-11-13. When the
+# default changes again, add the outgoing string here.
+PREVIOUS_SUBTITLE_CLEANUP_DEFAULTS: frozenset[str] = frozenset(
+    {
+        "|".join(
+            (
+                r"\([^)]*\)|（[^）]*）",
+                r"\[[^\]]*\]|［[^］]*］",
+                r"[♪♬♫#～〜]+",
+                r"^[^「『:：]+[:：]\s*",
+                r"(?:^|(?<=[.!?…]\s))[-–—]\s+",
+            )
+        ),
+        "|".join(
+            (
+                r"\([^)]*\)|（[^）]*）",
+                r"\[[^\]]*\]|［[^］]*］",
+                r"[♪♬♫#]+|(?<!\d)[～〜]+|[～〜]+(?!\d)",
+                r"^[^「『:：\d]+[:：](?!\d)\s*",
+                r"(?:^|(?<=[.!?…]\s))[-–—]\s+",
+            )
+        ),
+    }
+)
 
 # Discrete whole-UI zoom presets (whole percents) offered in the Zoom dropdown
 # (gui/widgets/panels/ui_settings_panel.py) and used to snap a folded legacy
