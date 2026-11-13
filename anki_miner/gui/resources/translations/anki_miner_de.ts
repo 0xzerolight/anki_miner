@@ -3567,10 +3567,10 @@ Dies ändert %n Notizen (%1) und versieht sie mit dem Tag %2. Fortfahren?</numer
         </translation>
     </message>
     <message numerus="yes">
-        <source>%n audio file(s) could not be added to Anki; scan again to retry.</source>
+        <source>%n media file(s) could not be added to Anki; scan again to retry.</source>
         <translation>
-            <numerusform>%n Audiodatei konnte nicht zu Anki hinzugefügt werden; erneut scannen, um es noch einmal zu versuchen.</numerusform>
-            <numerusform>%n Audiodateien konnten nicht zu Anki hinzugefügt werden; erneut scannen, um es noch einmal zu versuchen.</numerusform>
+            <numerusform>%n Mediendatei konnte nicht zu Anki hinzugefügt werden; erneut scannen, um es noch einmal zu versuchen.</numerusform>
+            <numerusform>%n Mediendateien konnten nicht zu Anki hinzugefügt werden; erneut scannen, um es noch einmal zu versuchen.</numerusform>
         </translation>
     </message>
 </context><context>
@@ -6742,6 +6742,10 @@ Es werden keine Indexdateien gelöscht.</translation>
     <message>
         <source>Lute or LWT term export</source>
         <translation>Begriffsexport aus Lute oder LWT</translation>
+    </message>
+    <message>
+        <source>Anki Miner known words export</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>plain word list</source>

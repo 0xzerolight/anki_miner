@@ -3550,9 +3550,9 @@ Thao tác này sẽ sửa %n ghi chú (%1) và gắn thẻ %2 cho chúng. Tiếp
         </translation>
     </message>
     <message numerus="yes">
-        <source>%n audio file(s) could not be added to Anki; scan again to retry.</source>
-        <translation>
-            <numerusform>Không thể thêm %n tệp âm thanh vào Anki; hãy quét lại để thử lại.</numerusform>
+        <source>%n media file(s) could not be added to Anki; scan again to retry.</source>
+        <translation type="unfinished">
+            <numerusform />
         </translation>
     </message>
 </context><context>
@@ -6704,6 +6704,10 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     <message>
         <source>Lute or LWT term export</source>
         <translation>Bản xuất thuật ngữ Lute hoặc LWT</translation>
+    </message>
+    <message>
+        <source>Anki Miner known words export</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>plain word list</source>

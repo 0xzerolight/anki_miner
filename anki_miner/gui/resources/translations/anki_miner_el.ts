@@ -3567,10 +3567,9 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
         </translation>
     </message>
     <message numerus="yes">
-        <source>%n audio file(s) could not be added to Anki; scan again to retry.</source>
-        <translation>
-            <numerusform>Δεν ήταν δυνατή η προσθήκη %n αρχείου ήχου στο Anki· σαρώστε ξανά για νέα δοκιμή.</numerusform>
-            <numerusform>Δεν ήταν δυνατή η προσθήκη %n αρχείων ήχου στο Anki· σαρώστε ξανά για νέα δοκιμή.</numerusform>
+        <source>%n media file(s) could not be added to Anki; scan again to retry.</source>
+        <translation type="unfinished">
+            <numerusform />
         </translation>
     </message>
 </context><context>
@@ -6742,6 +6741,10 @@ No index files are deleted.</source>
     <message>
         <source>Lute or LWT term export</source>
         <translation>Εξαγωγή όρων Lute ή LWT</translation>
+    </message>
+    <message>
+        <source>Anki Miner known words export</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>plain word list</source>

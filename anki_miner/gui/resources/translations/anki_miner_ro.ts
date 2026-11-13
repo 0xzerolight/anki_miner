@@ -3584,11 +3584,9 @@ Se vor modifica %n de note (%1), care vor primi eticheta %2. Continuați?</numer
         </translation>
     </message>
     <message numerus="yes">
-        <source>%n audio file(s) could not be added to Anki; scan again to retry.</source>
-        <translation>
-            <numerusform>%n fișier audio nu a putut fi adăugat în Anki; scanați din nou pentru a reîncerca.</numerusform>
-            <numerusform>%n fișiere audio nu au putut fi adăugate în Anki; scanați din nou pentru a reîncerca.</numerusform>
-            <numerusform>%n de fișiere audio nu au putut fi adăugate în Anki; scanați din nou pentru a reîncerca.</numerusform>
+        <source>%n media file(s) could not be added to Anki; scan again to retry.</source>
+        <translation type="unfinished">
+            <numerusform />
         </translation>
     </message>
 </context><context>
@@ -6780,6 +6778,10 @@ Nu se șterge niciun fișier index.</translation>
     <message>
         <source>Lute or LWT term export</source>
         <translation>Export de termeni Lute sau LWT</translation>
+    </message>
+    <message>
+        <source>Anki Miner known words export</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>plain word list</source>

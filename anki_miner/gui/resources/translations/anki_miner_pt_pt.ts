@@ -3567,10 +3567,9 @@ Isto vai alterar %n notas (%1) e etiquetá-las com %2. Continuar?</numerusform>
         </translation>
     </message>
     <message numerus="yes">
-        <source>%n audio file(s) could not be added to Anki; scan again to retry.</source>
-        <translation>
-            <numerusform>Não foi possível adicionar %n ficheiro de áudio ao Anki; volte a analisar para tentar novamente.</numerusform>
-            <numerusform>Não foi possível adicionar %n ficheiros de áudio ao Anki; volte a analisar para tentar novamente.</numerusform>
+        <source>%n media file(s) could not be added to Anki; scan again to retry.</source>
+        <translation type="unfinished">
+            <numerusform />
         </translation>
     </message>
 </context><context>
@@ -6742,6 +6741,10 @@ Nenhum ficheiro de índice é eliminado.</translation>
     <message>
         <source>Lute or LWT term export</source>
         <translation>Exportação de termos do Lute ou LWT</translation>
+    </message>
+    <message>
+        <source>Anki Miner known words export</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>plain word list</source>
