@@ -97,6 +97,7 @@ class TestFindExecutable:
         mount_exe = tmp_path / ".mount_AnkiMiNXXXXXX" / "usr" / "bin" / "AnkiMiner"
 
         monkeypatch.setenv("APPIMAGE", str(real_appimage))
+        monkeypatch.setenv("APPDIR", str(tmp_path / ".mount_AnkiMiNXXXXXX"))
         with (
             patch.object(sys, "executable", str(mount_exe)),
             patch.object(sys, "frozen", True, create=True),
@@ -105,6 +106,27 @@ class TestFindExecutable:
 
         assert result == real_appimage.resolve()
         assert result != mount_exe.resolve()
+
+    def test_ignores_another_appimages_inherited_env(self, tmp_path, monkeypatch):
+        """Started from another AppImage app's terminal, the shortcut still starts this install, not that app."""
+        other = tmp_path / "Editor-x86_64.AppImage"
+        other.touch()
+        monkeypatch.setenv("APPIMAGE", str(other))
+        monkeypatch.setenv("APPDIR", str(tmp_path / ".mount_EditorXXXXXX"))
+        own_bin = tmp_path / "venv" / ("Scripts" if sys.platform == "win32" else "bin")
+        own_bin.mkdir(parents=True)
+        own = own_bin / ("anki_miner_gui.exe" if sys.platform == "win32" else "anki_miner_gui")
+        own.touch()
+        monkeypatch.setattr(sys, "frozen", False, raising=False)
+        monkeypatch.setattr(sys, "prefix", str(tmp_path / "venv"))
+        assert ShortcutService.resolve_executable() == own.resolve()
+
+        frozen_exe = tmp_path / "opt" / "AnkiMiner"
+        with (
+            patch.object(sys, "executable", str(frozen_exe)),
+            patch.object(sys, "frozen", True, create=True),
+        ):
+            assert ShortcutService.resolve_executable() == frozen_exe.resolve()
 
     def test_finds_via_path_when_not_frozen(self, tmp_path, monkeypatch):
         fake_exe = tmp_path / "anki_miner_gui"

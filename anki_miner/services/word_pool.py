@@ -11,11 +11,13 @@ from __future__ import annotations
 
 import dataclasses
 import logging
+from collections import Counter
 from collections.abc import Callable
 from pathlib import Path
 
 from anki_miner.models.word import TokenizedWord
 from anki_miner.services.stats_service import StatsService
+from anki_miner.services.word_filter import _normalize_sentence
 
 logger = logging.getLogger(__name__)
 
@@ -43,10 +45,16 @@ def _leaf_copy(word: TokenizedWord) -> TokenizedWord:
 SentenceKey = Callable[[TokenizedWord], tuple[bool, int, bool, int]]
 
 
+def _line_of(word: TokenizedWord) -> tuple[Path | None, str]:
+    """The line ``word`` would mine from, keyed as phase 2's one-card-per-sentence dedup keys it."""
+    return word.video_file, _normalize_sentence(word.sentence)
+
+
 def _clearest_primary(
     primary: TokenizedWord,
     contributions: list[TokenizedWord],
     best_sentence: SentenceKey,
+    held: Counter[tuple[Path | None, str]] | None = None,
 ) -> TokenizedWord:
     """``primary`` moved to the clearest line any episode offered (F-07 across episodes, C6).
 
@@ -61,10 +69,17 @@ def _clearest_primary(
     when the user picks that line, so ``split_selection`` mines it from that
     leaf's episode and the curator's picker opens on it. Only the season total
     ``occurrence_count`` is carried over.
+
+    ``held`` (one card per sentence on) counts the lines the other words of the
+    pool mine from: a line one of them holds is never picked, as phase 2's dedup
+    never gives one line two cards. It stays listed for the curator.
     """
     if primary.line_expansion != (0, 0):
         return primary
-    best = min(contributions, key=best_sentence)
+    free = [c for c in contributions if held is None or not held[_line_of(c)]]
+    if not free:
+        return primary
+    best = min(free, key=best_sentence)
     if best_sentence(best) >= best_sentence(primary):
         return primary
     return dataclasses.replace(best, occurrence_count=primary.occurrence_count)
@@ -76,6 +91,7 @@ def merge_pools(
     max_candidates: int | None = None,
     dedup_fold: Callable[[str], str] | None = None,
     best_sentence: SentenceKey | None = None,
+    one_per_sentence: bool = False,
 ) -> list[TokenizedWord]:
     """Fold per-episode word lists into one deduped season pool.
 
@@ -99,6 +115,10 @@ def merge_pools(
     so a season word keeps every line it was mineable on. Merging builds
     no new variants (the per-episode pass already did), so the only cost
     of the concatenation is memory. Pass an int to bound the list.
+
+    ``one_per_sentence`` is phase 2's "one card per sentence" (the Sentences
+    rule, off under i+1): the pick then only moves a word to a line no other
+    word of the pool holds, settled in pool order.
     """
     merged: dict[str, TokenizedWord] = {}
     candidates: dict[str, list[TokenizedWord]] = {}
@@ -115,11 +135,16 @@ def merge_pools(
                 primary = merged[key]
                 primary.occurrence_count += word.occurrence_count
                 candidates[key].extend(contribution)
+    held = Counter(_line_of(word) for word in merged.values()) if one_per_sentence else None
     for key in list(merged):
         primary = merged[key]
         if best_sentence is not None:
+            if held is not None:
+                held[_line_of(primary)] -= 1
             # Over the full list, before any max_candidates cut.
-            primary = merged[key] = _clearest_primary(primary, candidates[key], best_sentence)
+            primary = merged[key] = _clearest_primary(primary, candidates[key], best_sentence, held)
+            if held is not None:
+                held[_line_of(primary)] += 1
         cands = candidates[key] if max_candidates is None else candidates[key][:max_candidates]
         # Single-episode, single-line word: leave the picker off.
         primary.sentence_candidates = cands if len(cands) > 1 else []

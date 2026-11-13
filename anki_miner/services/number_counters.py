@@ -151,6 +151,9 @@ _COUNTERS: dict[str, _Counter] = {
 
 #: unidic tags most counters 助数詞 or 助数詞可能; 人, 冊 and 軒 are 一般.
 _COUNTER_POS3 = frozenset({"助数詞", "助数詞可能", "一般"})
+#: Before で (5分で着く) unidic tags the minute counter 分 副詞可能 read ブン; no
+#: other counter takes that tag after a numeral. 3分の1 stays a fraction.
+_MINUTE_POS3 = "副詞可能"
 
 
 def parse_number(text: str) -> int | None:
@@ -260,10 +263,11 @@ def _is_numeral(token) -> bool:
 
 def _is_counter(token) -> bool:
     feature = getattr(token, "feature", None)
+    pos3 = getattr(feature, "pos3", None)
     return (
         token.surface in _COUNTERS
         and getattr(feature, "pos1", None) in ("名詞", "接尾辞")
-        and getattr(feature, "pos3", None) in _COUNTER_POS3
+        and (pos3 in _COUNTER_POS3 or (token.surface == "分" and pos3 == _MINUTE_POS3))
     )
 
 
@@ -308,6 +312,16 @@ def merge_number_counters(text: str, tokens: list) -> list:
             return True
         return before.surface in _DIGIT_SEPARATORS and i > 1 and _is_numeral(tokens[i - 2]) and touching(i - 2)
 
+    def after_month(i: int) -> bool:
+        """Numeral i follows a merged month (4月|1日): its 1日 is the date ついたち, not 'one day'."""
+        last = out[-1] if out else None
+        return (
+            last is not None
+            and getattr(last.feature, "number_counter", False)
+            and counter_of(last.surface) == "月"
+            and touching(i - 1)
+        )
+
     out: list = []
     i = 0
     while i < len(tokens):
@@ -339,6 +353,8 @@ def merge_number_counters(text: str, tokens: list) -> list:
             out.extend(tokens[i:end])
             i = end
             continue
+        if counter == "日" and number == 1 and after_month(i):
+            reading = "ついたち"
         merged = SyntheticToken(
             surface=numeral + counter,
             pos1="名詞",
