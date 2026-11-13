@@ -151,6 +151,9 @@ _COUNTERS: dict[str, _Counter] = {
 
 #: unidic tags most counters 助数詞 or 助数詞可能; 人, 冊 and 軒 are 一般.
 _COUNTER_POS3 = frozenset({"助数詞", "助数詞可能", "一般"})
+#: Before で (5分で着く) unidic tags the minute counter 分 副詞可能 read ブン; no
+#: other counter takes that tag after a numeral. 3分の1 stays a fraction.
+_MINUTE_POS3 = "副詞可能"
 
 
 def parse_number(text: str) -> int | None:
@@ -260,10 +263,11 @@ def _is_numeral(token) -> bool:
 
 def _is_counter(token) -> bool:
     feature = getattr(token, "feature", None)
+    pos3 = getattr(feature, "pos3", None)
     return (
         token.surface in _COUNTERS
         and getattr(feature, "pos1", None) in ("名詞", "接尾辞")
-        and getattr(feature, "pos3", None) in _COUNTER_POS3
+        and (pos3 in _COUNTER_POS3 or (token.surface == "分" and pos3 == _MINUTE_POS3))
     )
 
 

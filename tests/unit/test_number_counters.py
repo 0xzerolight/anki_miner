@@ -143,3 +143,11 @@ class TestMining:
         assert word.expression_reading == "さんぼん"
         assert "三本[さんぼん]" in word.sentence_furigana
         assert "さんぼん" in word.sentence_reading
+
+    @pytest.mark.parametrize(("line", "front"), [("5分で着く。", "5分"), ("10分で終わる。", "10分")])
+    def test_reads_minutes_before_de(self, test_config, line, front):
+        # unidic tags 分 before で 副詞可能 read ブン ('part'), not the counter.
+        word = next(w for w in _words(test_config, True, line) if w.mined_form == front)
+        assert word.expression_reading == {"5分": "ごふん", "10分": "じゅっぷん"}[front]
+        assert f"{front}[{word.expression_reading}]" in word.sentence_furigana
+        assert "分" not in _mine(test_config, True, line)
