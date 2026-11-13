@@ -302,6 +302,7 @@ def load_with_fallback_encoding(
     *,
     encodings: tuple[str, ...] | None = None,
     script_check: Callable[[str], bool] | None = None,
+    format_: str | None = None,
 ) -> pysubs2.SSAFile:
     """Retry loading *path* from its BOM, the *encodings* ladder, then detection (D10).
 
@@ -324,14 +325,16 @@ def load_with_fallback_encoding(
     *script_check* is the mining script's ``contains_target_script``: a
     single-byte ladder leg wins only when its decode of the head passes
     :func:`plausible_single_byte_text` (see :func:`script_check_kwarg`).
+
+    *format_* is passed to every load (``None``: pysubs2 sniffs the format).
     """
     path = Path(path)
     if original_error.object.startswith((codecs.BOM_UTF32_LE, codecs.BOM_UTF32_BE)):
-        subs = pysubs2.load(str(path), encoding="utf_32")
+        subs = pysubs2.load(str(path), encoding="utf_32", format_=format_)
         _log_decode(path, bom="utf-32", ladder=(), tried=(), chosen="utf_32")
         return subs
     if original_error.object.startswith((codecs.BOM_UTF16_LE, codecs.BOM_UTF16_BE)):
-        subs = pysubs2.load(str(path), encoding="utf_16")
+        subs = pysubs2.load(str(path), encoding="utf_16", format_=format_)
         _log_decode(path, bom="utf-16", ladder=(), tried=(), chosen="utf_16")
         return subs
 
@@ -340,7 +343,7 @@ def load_with_fallback_encoding(
     # The caller's strict UTF-8 attempt is this ladder's first leg; a file
     # that is UTF-8 but for a few stray bytes stays UTF-8 (see mostly_utf8).
     if mostly_utf8(head):
-        subs = pysubs2.load(str(path), encoding="utf-8", errors="replace")
+        subs = pysubs2.load(str(path), encoding="utf-8", errors="replace", format_=format_)
         _log_decode(path, bom="-", ladder=ladder, tried=("utf-8",), chosen="utf-8", errors="replace")
         return subs
     # Every candidate actually attempted, in order. It is deliberately not the
@@ -359,7 +362,7 @@ def load_with_fallback_encoding(
             # instead of falling through to the detector. Pre-ladder behaviour,
             # kept exactly.
             tried.append(candidate)
-            subs = pysubs2.load(str(path), encoding=candidate)
+            subs = pysubs2.load(str(path), encoding=candidate, format_=format_)
             _log_decode(path, bom="-", ladder=ladder, tried=tried, chosen=candidate)
             return subs
         # gb18030 accepts every valid Big5 sequence and decodes it into PUA
@@ -376,7 +379,7 @@ def load_with_fallback_encoding(
         if is_single_byte_codec(candidate) and _single_byte_leg_fails(head, candidate, script_check):
             continue
         try:
-            subs = pysubs2.load(str(path), encoding=candidate)
+            subs = pysubs2.load(str(path), encoding=candidate, format_=format_)
         except (UnicodeDecodeError, LookupError):
             continue
         _log_decode(path, bom="-", ladder=ladder, tried=tried, chosen=candidate)
@@ -385,7 +388,7 @@ def load_with_fallback_encoding(
     encoding = _detect_encoding(head)
     if encoding:
         try:
-            subs = pysubs2.load(str(path), encoding=encoding)
+            subs = pysubs2.load(str(path), encoding=encoding, format_=format_)
         except (UnicodeDecodeError, LookupError):
             pass
         else:

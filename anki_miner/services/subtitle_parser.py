@@ -1186,30 +1186,46 @@ class SubtitleParserService:
         # module-level registry import here is a circular one.
         from anki_miner.languages.registry import config_language, get_profile
 
+        def by_extension_on_sniff_failure(load: Callable[[str | None], Any]) -> Any:
+            """``load(None)``; on a failed sniff, ``load`` with the extension's format.
+
+            A UTF-8 BOM, a lowercase <sami> or a leading comment defeats the
+            sniffer; the extension names the format, as on the Reading path
+            (reading/subtitle_source.py). Shared by the UTF-8 and fallback legs.
+            """
+            try:
+                return load(None)
+            except pysubs2.exceptions.FormatAutodetectionError as autodetect_error:
+                try:
+                    format_ = pysubs2.formats.get_format_identifier(Path(subtitle_file).suffix.lower())
+                except pysubs2.exceptions.UnknownFileExtensionError:
+                    raise autodetect_error from None
+                if format_ not in _PREFIX_SNIFFED_FORMATS:
+                    raise
+                return load(format_)
+
         try:
             try:
-                try:
-                    subs = pysubs2.load(str(subtitle_file))
-                except pysubs2.exceptions.FormatAutodetectionError as autodetect_error:
-                    # A UTF-8 BOM, a lowercase <sami> or a leading comment defeats
-                    # the sniffer; the extension names the format, as on the
-                    # Reading path (reading/subtitle_source.py).
-                    try:
-                        format_ = pysubs2.formats.get_format_identifier(Path(subtitle_file).suffix.lower())
-                    except pysubs2.exceptions.UnknownFileExtensionError:
-                        raise autodetect_error from None
-                    if format_ not in _PREFIX_SNIFFED_FORMATS:
-                        raise
-                    subs = pysubs2.load(str(subtitle_file), format_=format_)
+                subs = by_extension_on_sniff_failure(
+                    lambda format_: (
+                        pysubs2.load(str(subtitle_file))
+                        if format_ is None
+                        else pysubs2.load(str(subtitle_file), format_=format_)
+                    )
+                )
             except UnicodeDecodeError as utf8_error:
                 profile = get_profile(config_language(self.config))
-                subs = load_with_fallback_encoding(
-                    subtitle_file,
-                    utf8_error,
-                    encodings=profile.import_encodings if encodings is None else encodings,
-                    # An explicit caller ladder (a secondary track, encodings=())
-                    # is not in the mining language, so its script says nothing.
-                    **(script_check_kwarg(profile.import_encodings, profile.script) if encodings is None else {}),
+                decode_error = utf8_error
+                subs = by_extension_on_sniff_failure(
+                    lambda format_: load_with_fallback_encoding(
+                        subtitle_file,
+                        decode_error,
+                        encodings=profile.import_encodings if encodings is None else encodings,
+                        # An explicit caller ladder (a secondary track, encodings=())
+                        # is not in the mining language, so its script says nothing.
+                        **(script_check_kwarg(profile.import_encodings, profile.script) if encodings is None else {}),
+                        format_=format_,
+                    )
                 )
             else:
                 # The ladder writes its own receipt only when UTF-8 failed; the

@@ -7297,6 +7297,23 @@ class TestPrefixSniffedFormatsFallBackToTheExtension:
 
         assert [text for _, _, text in entries] == ["新しい本を買いました"]
 
+    @pytest.mark.parametrize(
+        ("name", "raw"),
+        [
+            ("cp932-lower.smi", _PREFIX_SNIFF_SAMI.replace("SAMI>", "sami>").encode("cp932")),
+            ("utf16-lower.smi", _PREFIX_SNIFF_SAMI.replace("SAMI>", "sami>").encode("utf-16")),
+            ("cp932-comment.smi", ("<!-- made by SMIEditor -->\n" + _PREFIX_SNIFF_SAMI).encode("cp932")),
+        ],
+    )
+    def test_undetectable_sami_in_a_legacy_encoding_parses_by_extension(self, test_config, tmp_path, name, raw):
+        """R4a-001: the extension retry also covers the non-UTF-8 decode leg."""
+        sub_file = tmp_path / name
+        sub_file.write_bytes(raw)
+
+        entries = SubtitleParserService(test_config).parse_raw_entries(sub_file, 0.0)
+
+        assert [(start, text) for start, _, text in entries] == [(1.0, "新しい本を買いました")]
+
 
 class _FrontSpy:
     """A whitelist predicate that records every card front it is asked about."""
