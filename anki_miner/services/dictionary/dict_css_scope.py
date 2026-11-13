@@ -134,7 +134,9 @@ def _iter_rules(css: str):
     ``body`` is ``None`` for a statement at-rule (``@import …;``) — no block.
     Comments and whitespace between rules are skipped. Strings, comments, and
     brace nesting inside a rule are respected so a ``{``/``}``/``;`` embedded in
-    any of them does not split a rule prematurely.
+    any of them does not split a rule prematurely. A backslash outside a string
+    escapes the next character, as in the browser tokenizer, so ``\\{`` is ident
+    text and never opens a block (the same applies in every scanner below).
     """
     i, n = 0, len(css)
     prelude_start = 0
@@ -145,6 +147,9 @@ def _iter_rules(css: str):
         if ch == "/" and i + 1 < n and css[i + 1] == "*":
             end = css.find("*/", i + 2)
             i = n if end == -1 else end + 2
+            continue
+        if ch == "\\":
+            i += 2  # escape: the next char is ident text (e.g. ``\{``), as in the browser
             continue
         if ch in "\"'":
             i = _skip_string(css, i)
@@ -209,6 +214,9 @@ def _read_block(css: str, open_idx: int) -> tuple[str, int]:
             end = css.find("*/", i + 2)
             i = n if end == -1 else end + 2
             continue
+        if c == "\\":
+            i += 2
+            continue
         if c in "\"'":
             i = _skip_string(css, i)
             continue
@@ -233,6 +241,10 @@ def _strip_css_comments(s: str) -> str:
             end = s.find("*/", i + 2)
             i = n if end == -1 else end + 2
             continue
+        if c == "\\":
+            out.append(s[i : i + 2])
+            i += 2
+            continue
         if c in "\"'":
             j = _skip_string(s, i)
             out.append(s[i:j])
@@ -251,6 +263,9 @@ def _split_top_level_commas(prelude: str) -> list[str]:
     i, n = 0, len(prelude)
     while i < n:
         c = prelude[i]
+        if c == "\\":
+            i += 2
+            continue
         if c in "\"'":
             i = _skip_string(prelude, i)
             continue
