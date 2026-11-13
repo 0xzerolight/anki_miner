@@ -468,6 +468,7 @@ class KnownWordsManagerDialog(ScreenIssueHost, EnhancedDialog):
             "migaku_csv": self.tr("Migaku word export (CSV)"),
             "kindle_vocab": self.tr("Kindle Vocabulary Builder"),
             "lute_csv": self.tr("Lute or LWT term export"),
+            "anki_miner_csv": self.tr("Anki Miner known words export"),
             "generic": self.tr("plain word list"),
         }
         return labels.get(format_key, format_key)

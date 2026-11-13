@@ -365,6 +365,7 @@ class DefinitionService:
         ctype: str | None,
         is_cancelled: Callable[[], bool] | None = None,
         pos: str | None = None,
+        providers: list[DictionaryProvider] | None = None,
     ) -> list[str]:
         """Every offline provider's rules-validated hit for the first candidate any of them answers.
 
@@ -379,11 +380,14 @@ class DefinitionService:
         candidate's form row reads only the target rows the profile lets that
         class read, as the direct lookup does. Passed only when known, the
         ``_token_kwargs`` convention.
+
+        ``providers`` narrows the walk to those providers (the F-10 pick's own
+        ladder); ``None`` walks the whole chain.
         """
         token_kwargs = {"pos": pos} if pos else {}
         hits: list[str] = []
         for cand_text, cand_conditions in self.fallback_candidates(word, orth_base, ctype):
-            for provider in self._providers:
+            for provider in self._providers if providers is None else providers:
                 if is_cancelled is not None and is_cancelled():
                     return hits
                 if not provider.is_available():
@@ -476,11 +480,17 @@ class DefinitionService:
         hits_by_provider: Counter[str],
         lemma_context: dict[str, str] | None,
         pos_context: dict[str, str] | None,
+        fallback_context: dict[str, tuple[str, str | None]] | None,
+        is_cancelled: Callable[[], bool] | None,
     ) -> list[tuple[str, str | None]]:
         """F-10: answer each picked word from its picked dictionary; return the pairs still open.
 
+        The picked dictionary gets every rung the batch would give it, before
+        the chain walk: the exact front, then the counter rung, then its own
+        lookup ladder. The curator pane offers the pick on entries any of those
+        rungs found, and another dictionary's exact entry must not beat it.
         A pick naming a dictionary that is not in the chain, not loaded, or
-        without an entry for the word leaves that word to the normal walk.
+        without an entry on any rung leaves that word to the normal walk.
         Picks name a provider's display name (``provider.name``, what the
         curator pane shows); two providers with one name resolve to the first.
         """
@@ -495,6 +505,33 @@ class DefinitionService:
             for pair, html in self._lookup_pairs(picked, wanted, lemma_context, pos_context).items():
                 resolved[pair] = html
                 hits_by_provider[picked.name] += 1
+            for pair in wanted:
+                if pair in resolved:
+                    continue
+                word = pair[0]
+                entry = counter_entry(word)
+                if entry is not None and any(
+                    text == entry[0] for text, _conditions in self.fallback_candidates(word, "", None)
+                ):
+                    counter_html = self._lookup_pairs(picked, [entry], None, None).get(entry)
+                    if counter_html:
+                        resolved[pair] = counter_html
+                        hits_by_provider[picked.name] += 1
+                        continue
+                ctx = fallback_context.get(word) if fallback_context else None
+                if ctx is None:
+                    continue
+                hits = self._fallback_hits_offline(
+                    word,
+                    ctx[0],
+                    ctx[1],
+                    is_cancelled,
+                    pos_context.get(word) if pos_context else None,
+                    providers=[picked],
+                )
+                if hits:
+                    resolved[pair] = hits[0]
+                    hits_by_provider[picked.name] += 1
         return [pair for pair in remaining if pair not in resolved]
 
     def get_definitions_batch(
@@ -546,8 +583,9 @@ class DefinitionService:
 
         ``preferred_dictionaries`` maps a lookup word to the display name of the
         dictionary the Word Curator picked for it (F-10). Those words are
-        answered by that dictionary first; one it cannot answer, or that is not
-        loaded, walks the chain as before. Absent/empty: unchanged behaviour.
+        answered by that dictionary first, on every rung (exact, counter, its
+        lookup ladder); one it cannot answer, or that is not loaded, walks the
+        chain as before. Absent/empty: unchanged behaviour.
         """
         if progress_callback:
             progress_callback.on_start(
@@ -575,7 +613,14 @@ class DefinitionService:
         hits_by_provider: Counter[str] = Counter()
         if preferred_dictionaries:
             remaining = self._resolve_preferred(
-                remaining, preferred_dictionaries, resolved, hits_by_provider, lemma_context, pos_context
+                remaining,
+                preferred_dictionaries,
+                resolved,
+                hits_by_provider,
+                lemma_context,
+                pos_context,
+                fallback_context,
+                is_cancelled,
             )
 
         # NOTE: the two ``except Exception`` clauses below are deliberately broad,

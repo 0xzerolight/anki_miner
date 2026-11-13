@@ -459,6 +459,11 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         self._line_expansions: dict[int, tuple[int, int]] = {
             index: word.line_expansion for index, word in enumerate(words) if word.line_expansion != (0, 0)
         }
+        # Season curation: sentence picks whose automatic merge could not be
+        # re-derived because their episode's cues had not loaded yet, by
+        # original word index. The episode's landing restamps them; a new pick
+        # or an explicit +line/Reset drops the index.
+        self._unstamped_picks: set[int] = set()
         # Per-word screenshot frames the user picked off the player, keyed by
         # original word index exactly like _clip_overrides. Stamped onto the
         # selection as TokenizedWord.screenshot_override; empty for every run
@@ -1763,8 +1768,11 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         ctx = self._media_context
         if ctx is None or ctx.auto_merge_rules is None:
             return
+        self._unstamped_picks.discard(idx)
         resolved = self._expansion_entries(chosen)
         if resolved is None:
+            if chosen.video_file is not None and chosen.video_file not in self._media_ctx_cache:
+                self._unstamped_picks.add(idx)
             return
         entries, offset = resolved
         cue = find_cue_index(entries, chosen.start_time, chosen.sentence, offset=offset)
@@ -1784,6 +1792,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         if word is None or idx is None:
             return
         chosen = self._chosen.get(idx, word)
+        self._unstamped_picks.discard(idx)
         prev_count, next_count = self._line_expansions.get(idx, (0, 0))
         if direction < 0:
             prev_count += 1
@@ -1796,6 +1805,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         word, idx = self._pending_word, self._pending_index
         if word is None or idx is None:
             return
+        self._unstamped_picks.discard(idx)
         self._line_expansions.pop(idx, None)
         self._apply_expansion(self._chosen.get(idx, word), idx, snap=True)
 
@@ -2488,14 +2498,22 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         repaints through a display copy whose sentence is already merged, and
         the cue lookup needs the real one. Empty text when the run has no
         second track, which is also when the column is hidden.
+
+        Season curation: the variant's own episode's track, resolved like
+        ``_expansion_entries``; an episode not resolved yet shows an empty cell
+        until ``_repaint_translation_cells`` runs for it.
         """
         ctx = self._media_context
         if ctx is None or not ctx.secondary_entries:
             return ((TRANSLATION_COLUMN, "", "", ""),)
         chosen = self._chosen.get(idx, self._words[idx])
+        video = chosen.video_file or ctx.video_file
+        active = ctx if video is None or ctx.video_file == video else self._media_ctx_cache.get(video)
+        if active is None or not active.secondary_entries:
+            return ((TRANSLATION_COLUMN, "", "", ""),)
         window = self._expanded_window(chosen, idx)
         start, end = (window.start, window.end) if window is not None else (chosen.start_time, chosen.end_time)
-        text = match_secondary_line(ctx.secondary_entries, start, end, offset=ctx.secondary_offset)
+        text = match_secondary_line(active.secondary_entries, start, end, offset=active.secondary_offset)
         return ((TRANSLATION_COLUMN, self._sentence_display(text, 1), text, text),)
 
     def _pick_cell_values(self, word: TokenizedWord, chosen: TokenizedWord) -> tuple[tuple[int, str, str, str], ...]:
@@ -3333,6 +3351,11 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
                 return
             self._media_ctx_cache[video_file] = new_ctx
             self._apply_media_context(new_ctx)
+            self._repaint_translation_cells(video_file)
+            for pick in [
+                i for i in self._unstamped_picks if self._chosen.get(i, self._words[i]).video_file == video_file
+            ]:
+                self._restamp_auto_expansion(self._chosen[pick], pick)
             self._repaint_expanded_rows(video_file)
             # Re-fire the preview for the still-focused word (its chosen
             # variant may have moved on; only seek if it still matches).
@@ -3372,6 +3395,35 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         # and it decides whether the frame on screen is the focused word's.
         self._refresh_expansion_buttons()
         self._refresh_frame_buttons()
+
+    def _repaint_translation_cells(self, video_file: Path) -> None:
+        """Paint ``video_file``'s rows' Translation cells from its own track, now that it landed.
+
+        Until then ``_translation_cell_values`` leaves them empty rather than
+        matching another episode's cues at the same timestamps.
+        """
+        if not self._has_translations:
+            return
+        sorting = self.table.isSortingEnabled()
+        self.table.blockSignals(True)
+        self.table.setSortingEnabled(False)
+        try:
+            for row in range(self.table.rowCount()):
+                anchor = self.table.item(row, 0)
+                if anchor is None:
+                    continue
+                idx = anchor.data(Qt.ItemDataRole.UserRole)
+                if self._chosen.get(idx, self._words[idx]).video_file != video_file:
+                    continue
+                for column, text, tooltip, copy_text in self._translation_cell_values(idx):
+                    item = self.table.item(row, column)
+                    if item is not None:
+                        update_table_item(item, text, tooltip=tooltip, copy_text=copy_text)
+        finally:
+            if sorting:
+                self.table.setSortingEnabled(True)
+                self._apply_data_surface()
+            self.table.blockSignals(False)
 
     def _repaint_expanded_rows(self, video_file: Path) -> None:
         """Show ``video_file``'s merged rows now that its cues have landed.
