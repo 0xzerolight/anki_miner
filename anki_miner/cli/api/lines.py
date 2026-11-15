@@ -119,6 +119,8 @@ class Fates:
     created: Mapping[str, int] = field(default_factory=dict)
     #: mined_form -> "duplicate" | "refused" | "uncertain" (AnkiService.last_not_created)
     not_created: Mapping[str, str] = field(default_factory=dict)
+    #: mined_form -> Anki's message for a "refused" word that got one (AnkiService.last_refusal_reasons)
+    reasons: Mapping[str, str] = field(default_factory=dict)
     #: mined_form -> "media_failed" | "no_definition" (EpisodeProcessor.last_word_drops)
     dropped: Mapping[str, str] = field(default_factory=dict)
     #: the words the phase-2 offline-definition probe removed (EpisodeProcessor.last_definition_rejects)
@@ -203,10 +205,11 @@ class _Placed:
 
 @dataclass(frozen=True)
 class _Picked:
-    word: TokenizedWord  # the variant handed on, its line_expansion set
+    word: TokenizedWord  # the variant handed on, its line_expansion and line_skip set
     line: int | None
     expansion: tuple[int, int]
     from_line: bool = False
+    skip: tuple[int, ...] = ()
 
 
 class WordSelection:
@@ -297,8 +300,14 @@ class WordSelection:
             if request.reading and not placed.from_line and self._line_words is not None:
                 variant = self._line_words.with_reading(variant, request.reading)  # a made word has it already
             expansion = self._expansion(request, placed)
-            chosen = replace(variant, line_expansion=expansion, clip_override=None, screenshot_override=None)
-            self._chosen[i] = _Picked(chosen, placed.line, expansion, placed.from_line)
+            chosen = replace(
+                variant,
+                line_expansion=expansion,
+                line_skip=request.line_skip,
+                clip_override=None,
+                screenshot_override=None,
+            )
+            self._chosen[i] = _Picked(chosen, placed.line, expansion, placed.from_line, request.line_skip)
             selected.append(chosen)
         return [] if self._dry_run else selected
 
@@ -400,6 +409,7 @@ class WordSelection:
             "unit_index": None,  # a reading run's unit and its location_label
             "location": None,
             "filter": None,  # the step that removed a named word (API.md): "duplicate-expression" or null
+            "reason": None,  # Anki's message on a refused word
         }
         chosen = self._chosen.get(i)
         if chosen is not None:
@@ -410,6 +420,7 @@ class WordSelection:
                 mined_form=form,
                 status=status,
                 note_id=fates.created.get(form),
+                reason=fates.reasons.get(form) if status == "refused" else None,
                 from_line=chosen.from_line,
                 media_missing=[] if status == "not_attempted" else list(fates.media_missing.get(form, [])),
             )
@@ -432,7 +443,7 @@ class WordSelection:
         if self._units is not None:  # a unit has no times: its index (the word's dummy time) and location
             window_text = word.sentence
             if chosen.line is not None:
-                window_text = merge_cue_window(self._entries, chosen.line, *chosen.expansion).text
+                window_text = merge_cue_window(self._entries, chosen.line, *chosen.expansion, chosen.skip).text
             unit = int(word.start_time)
             source, location = self._units.get(unit, (unit, None))
             return {
@@ -446,7 +457,7 @@ class WordSelection:
         if chosen.line is None:
             return {"line_start": None, "sentence": word.sentence, "start": word.start_time, "end": word.end_time}
         before, after = chosen.expansion
-        window = merge_cue_window(self._entries, chosen.line, before, after)
+        window = merge_cue_window(self._entries, chosen.line, before, after, chosen.skip)
         return {
             "line_start": self._raw[chosen.line][0],
             "sentence": window.text,

@@ -47,7 +47,9 @@ _EPISODE_KEYS = frozenset(
     }
 )
 _EPISODE_REQUIRED = frozenset({"run_id", "words"})
-_WORD_KEYS = frozenset({"word", "line_start", "line_text", "line_expansion", "surface", "reading", "unit_index"})
+_WORD_KEYS = frozenset(
+    {"word", "line_start", "line_text", "line_expansion", "line_skip", "surface", "reading", "unit_index"}
+)
 _MEDIA_EPISODE_KEYS = frozenset(
     {
         "run_id",
@@ -208,6 +210,8 @@ class WordRequest:
     reading: str | None = None
     #: A reading_file's unit, by its index (``inspect`` lists them)
     unit_index: int | None = None
+    #: Merged lines whose text the sentence leaves out, as offsets from the chosen line
+    line_skip: tuple[int, ...] = ()
 
 
 def _word_request(raw: object, where: str, *, reading_episode: bool = False) -> WordRequest:
@@ -227,12 +231,13 @@ def _word_request(raw: object, where: str, *, reading_episode: bool = False) -> 
     if line_text is not None and not line_text.strip():
         raise bad(f"{where}.line_text is empty.")
     expansion = parse_expansion(obj.get("line_expansion"), where)
+    skip = parse_skip(obj.get("line_skip"), expansion, where)
     surface = opt_text(obj.get("surface"), f"{where}.surface")
     reading = opt_text(obj.get("reading"), f"{where}.reading")
     for key, value in (("surface", surface), ("reading", reading)):
         if value is not None and not value.strip():
             raise bad(f"{where}.{key} is empty.")
-    return WordRequest(word, line_start, line_text, expansion, surface, reading, unit_index)
+    return WordRequest(word, line_start, line_text, expansion, surface, reading, unit_index, skip)
 
 
 def _unit_index(raw: object, where: str, *, reading_episode: bool) -> int | None:
@@ -258,6 +263,24 @@ def parse_expansion(raw: object, where: str) -> tuple[int, int] | None:
     ):
         raise bad(f"{where}.line_expansion must be [before, after], two whole numbers of 0 or more.")
     return (raw[0], raw[1])
+
+
+def parse_skip(raw: object, expansion: tuple[int, int] | None, where: str) -> tuple[int, ...]:
+    """A ``line_skip``: lines of *expansion* by their offset from the chosen line, () when left out."""
+    if raw is None:
+        return ()
+    if expansion is None:
+        raise bad(f"{where}.line_skip needs line_expansion: it names lines that merge brings in.")
+    before, after = expansion
+    if not (
+        isinstance(raw, list)
+        and all(isinstance(n, int) and not isinstance(n, bool) and n != 0 and -before <= n <= after for n in raw)
+    ):
+        raise bad(
+            f"{where}.line_skip must list lines inside line_expansion by their offset from the chosen line: "
+            f"whole numbers from -{before} to {after}, never 0."
+        )
+    return tuple(sorted(set(raw)))
 
 
 #: A ``reading_file``: a path, or a web address (a ``str``) whose article is fetched.
@@ -441,6 +464,8 @@ class LineRequest:
     line_expansion: tuple[int, int] | None = None
     #: a reading_file's unit (reading episodes)
     unit_index: int | None = None
+    #: merged lines whose text ``text`` leaves out, as offsets from the line
+    line_skip: tuple[int, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -477,20 +502,21 @@ def opt_positive(value: object, where: str) -> int | None:
 def _line_request(raw: object, where: str, *, reading: bool) -> LineRequest:
     """One line to cut: a ``unit_index`` on a reading episode, else a ``line_start``."""
     obj = json_object(raw, where)
-    check_keys(obj, frozenset({"line_start", "unit_index", "line_expansion"}), frozenset(), where)
+    check_keys(obj, frozenset({"line_start", "unit_index", "line_expansion", "line_skip"}), frozenset(), where)
     expansion = parse_expansion(obj.get("line_expansion"), where)
+    skip = parse_skip(obj.get("line_skip"), expansion, where)
     if reading:
         if obj.get("line_start") is not None:
             raise bad(f"{where}.line_start names a subtitle line: a reading_file's lines name a unit_index.")
         index = _unit_index(obj.get("unit_index"), where, reading_episode=True)
         if index is None:
             raise bad(f"{where} is missing: unit_index")
-        return LineRequest(line_expansion=expansion, unit_index=index)
+        return LineRequest(line_expansion=expansion, unit_index=index, line_skip=skip)
     _unit_index(obj.get("unit_index"), where, reading_episode=False)
     start = opt_float(obj.get("line_start"), f"{where}.line_start")
     if start is None or start < 0:
         raise bad(f"{where}.line_start must be a number of 0 or more.")
-    return LineRequest(start, expansion)
+    return LineRequest(start, expansion, line_skip=skip)
 
 
 def parse_media_file(data: object) -> MediaFile:

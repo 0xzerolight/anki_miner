@@ -105,7 +105,7 @@ def _cut_one(media_file: MediaFile, episode: MediaEpisode, config: AnkiMinerConf
             if request.line_expansion is not None
             else line_merge(config, entries, index)
         )
-        chosen.append((index, merge_cue_window(entries, index, before, after)))
+        chosen.append((index, merge_cue_window(entries, index, before, after, request.line_skip)))
     words = [
         TokenizedWord(
             surface=str(k),
@@ -188,7 +188,7 @@ def _read_one(folder: Path, episode: MediaEpisode, config: AnkiMinerConfig) -> d
                 _row(
                     unit_index=unit.index,
                     location=unit.location_label,
-                    text=merge_cue_window(entries, index, before, after).text,
+                    text=merge_cue_window(entries, index, before, after, request.line_skip).text,
                     picture=_picture(unit, out, k, archives),
                 )
             )

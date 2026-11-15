@@ -293,6 +293,7 @@ def _mine(
             fates=Fates(
                 created=dict(zip(anki.last_created_mined_forms, anki.last_created_note_ids, strict=True)),
                 not_created=dict(anki.last_not_created),
+                reasons=dict(anki.last_refusal_reasons),
                 dropped=dict(processor.last_word_drops),
                 rejected=list(processor.last_definition_rejects),
                 media_missing=dict(processor.last_media_missing),

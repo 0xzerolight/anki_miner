@@ -12,6 +12,7 @@ import pytest
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.languages.yue.reading import YueReadingSupport, jyutping_syllables, word_jyutping
 from anki_miner.languages.yue.render import _TONE_COLORS, YUE_RENDER_HOOKS, YueJyutpingHook, YueMeasureWordHook
+from tests.unit.languages.cc_cedict_gloss import cc_cedict_gloss, classifier
 from tests.unit.languages.test_zh_render import (
     CARD_BACKGROUNDS,
     MIN_CONTRAST,
@@ -106,6 +107,14 @@ def test_the_mandarin_only_classifiers_become_the_cantonese_ones(front, gloss, e
     config = replace(AnkiMinerConfig(), script_variant="")
     word = SimpleNamespace(definition_html=gloss, mined_form=front, sentence="")
     assert YUE_RENDER_HOOKS[0].render(word, config=config) == {"measure_word": expected}
+
+
+def test_the_yomitan_pack_gloss_gets_the_cantonese_classifier():
+    """CC-CEDICT.Canto ships the same styled ``CL:`` and ruby links as the zh pack (Z-27)."""
+    config = replace(AnkiMinerConfig(), script_variant="")
+    gloss = cc_cedict_gloss(["company; firm"], classifier((("家", "jiā"),)))
+    word = SimpleNamespace(definition_html=gloss, mined_form="公司", sentence="")
+    assert YUE_RENDER_HOOKS[0].render(word, config=config) == {"measure_word": "間"}
 
 
 def test_zh_keeps_the_mandarin_classifier():

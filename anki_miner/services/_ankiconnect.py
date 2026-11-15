@@ -24,7 +24,7 @@ from urllib.parse import unquote, urlsplit, urlunsplit
 
 import requests
 
-from anki_miner.exceptions import AnkiBusyError, AnkiConnectionError
+from anki_miner.exceptions import AnkiActionError, AnkiBusyError, AnkiConnectionError
 from anki_miner.utils.logging_ext import log_summary
 
 logger = logging.getLogger(__name__)
@@ -293,8 +293,8 @@ def post_action(
         The ``result`` field from the AnkiConnect response.
 
     Raises:
-        AnkiConnectionError: on connection failure, HTTP/JSON parse failure,
-            or AnkiConnect-side error (where ``result["error"]`` is set).
+        AnkiConnectionError: on connection failure or HTTP/JSON parse failure.
+        AnkiActionError: AnkiConnect answered with an error (``result["error"]``).
         AnkiBusyError: AnkiConnect refused because a sync holds the collection.
     """
     logger.debug(
@@ -360,7 +360,7 @@ def post_action(
             time.monotonic() - started,
             result["error"],
         )
-        raise AnkiConnectionError(f"AnkiConnect error in '{action}': {result['error']}")
+        raise AnkiActionError(f"AnkiConnect error in '{action}': {result['error']}", str(result["error"]))
     _log_ready(log_url, action, result)
     return result.get("result")
 

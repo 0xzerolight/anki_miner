@@ -70,6 +70,7 @@ def services(test_config):
     anki = processor.anki_service
     anki.last_created_mined_forms, anki.last_created_note_ids = [], []
     anki.last_not_created, anki.last_media_store_failures = {}, 0
+    anki.last_refusal_reasons = {}
     processor.last_word_drops, processor.last_definition_rejects, processor.last_media_missing = {}, [], {}
     processor.last_collapsed = []
 
@@ -154,6 +155,17 @@ def test_statuses_come_from_the_processor_and_its_anki_service(services, tmp_pat
     runs.mine_runs(_run_file(tmp_path, video, words=words), threading.Event())
     statuses = [w["status"] for w in _result_file(tmp_path)["words"]]
     assert statuses == ["not_attempted", "uncertain", "no_definition", "no_definition"]
+
+
+def test_a_refused_word_carries_ankis_reason(services, tmp_path, video) -> None:
+    services.processor.anki_service.last_not_created = {"今日": "refused"}
+    services.processor.anki_service.last_refusal_reasons = {"今日": "cannot create note for unknown reason"}
+    runs.mine_runs(_run_file(tmp_path, video, words=[{"word": "約束"}, {"word": "今日"}]), threading.Event())
+    rows = _result_file(tmp_path)["words"]
+    assert [(w["status"], w["reason"]) for w in rows] == [
+        ("not_attempted", None),
+        ("refused", "cannot create note for unknown reason"),
+    ]
 
 
 def test_a_run_that_finished_before_curation_reports_not_found(services, tmp_path, video) -> None:

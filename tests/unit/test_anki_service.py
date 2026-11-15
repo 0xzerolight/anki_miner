@@ -1084,21 +1084,96 @@ class TestCreateCardsBatch:
         assert all(repeated_payload not in batch for batch in stored_batches)
         assert service.last_skipped_duplicates == 1
 
-    def test_non_duplicate_batch_error_propagates(self, test_config, make_tokenized_word):
-        """A non-duplicate addNotes error (e.g. missing deck) still aborts."""
-        service = AnkiService(test_config)
-        items = self._make_word_data(make_tokenized_word, n=2)
+    @staticmethod
+    def _fronted_items(make_tokenized_word, n):
+        """Payloads with a card front of their own each: statuses are keyed by front."""
+        return [
+            CardPayload(
+                word=make_tokenized_word(surface=f"word_{i}", lemma=f"word_{i}"),
+                media=MediaData(),
+                definition=f"def_{i}",
+            )
+            for i in range(n)
+        ]
 
-        err_resp = _mock_response(error="deck was not found: Anki Miner")
+    @staticmethod
+    def _anki_refusing(refusals, *, drop_on=None):
+        """``requests.post`` for an Anki that refuses the notes whose front is a key of *refusals*.
+
+        An ``addNotes`` holding one is answered with AnkiConnect's error (the
+        request rolled back); ``addNote`` adds a note, or answers with its
+        refusal. A note whose front is *drop_on* loses the connection instead.
+        """
+        next_id = iter(range(1000, 2000))
+
+        def post(*args, **kwargs):
+            body = kwargs["json"]
+            if body["action"] == "addNotes":
+                fronts = [next(iter(note["fields"].values())) for note in body["params"]["notes"]]
+                refused = [refusals[front] for front in fronts if front in refusals]
+                if refused:
+                    return _mock_response(error=str(refused))
+                return _mock_response(result=[next(next_id) for _ in fronts])
+            assert body["action"] == "addNote"
+            front = next(iter(body["params"]["note"]["fields"].values()))
+            if front == drop_on:
+                raise requests.exceptions.ConnectionError("reset by peer")
+            if front in refusals:
+                return _mock_response(error=refusals[front])
+            return _mock_response(result=next(next_id))
+
+        return post
+
+    def test_an_error_answer_adds_the_batch_one_note_at_a_time(self, test_config, make_tokenized_word):
+        """One note Anki refuses costs that card, not the run (Z-28)."""
+        service = AnkiService(test_config)
+        items = self._fronted_items(make_tokenized_word, 40)
+        post = self._anki_refusing({"word_7": "cannot create note for unknown reason"})
+
+        with patch("anki_miner.services._ankiconnect.requests.post", side_effect=post) as mock_post:
+            created = service.create_cards_batch(items)
+
+        actions = [c[1]["json"]["action"] for c in mock_post.call_args_list]
+        assert actions == ["addNotes", *["addNote"] * 40]
+        assert len(created) == 39
+        assert "word_7" not in service.last_created_mined_forms
+        assert service.last_not_created == {"word_7": "refused"}
+        assert service.last_refusal_reasons == {"word_7": "cannot create note for unknown reason"}
+        assert service.last_skipped_duplicates == 1
+        assert service.anki_write_state is AnkiWriteState.NOTE_WRITE_CONFIRMED
+
+    def test_a_note_refused_as_a_duplicate_on_its_own_is_a_duplicate(self, test_config, make_tokenized_word):
+        """A duplicate that landed after the probe is named as one, with no reason."""
+        service = AnkiService(test_config)
+        items = self._fronted_items(make_tokenized_word, 3)
+        post = self._anki_refusing({"word_1": "cannot create note because it is a duplicate"})
+
+        with patch("anki_miner.services._ankiconnect.requests.post", side_effect=post):
+            assert len(service.create_cards_batch(items)) == 2
+
+        assert service.last_not_created == {"word_1": "duplicate"}
+        assert service.last_refusal_reasons == {}
+
+    def test_a_drop_while_adding_one_at_a_time_keeps_the_cards_made(self, test_config, make_tokenized_word):
+        """Only the note in flight is uncertain; the ones before it stay recorded (Undo), the rest never went."""
+        service = AnkiService(test_config)
+        items = self._fronted_items(make_tokenized_word, 4)
+        post = self._anki_refusing({"word_0": "cannot create note for unknown reason"}, drop_on="word_2")
 
         with (
-            patch("anki_miner.services._ankiconnect.requests.post", return_value=err_resp),
-            pytest.raises(AnkiConnectionError, match="deck was not found"),
+            patch("anki_miner.services._ankiconnect.requests.post", side_effect=post),
+            pytest.raises(AnkiConnectionError, match="Cannot connect"),
         ):
             service.create_cards_batch(items)
 
+        assert service.last_created_mined_forms == ["word_1"]
+        assert len(service.last_created_note_ids) == 1
+        assert service.last_not_created == {"word_0": "refused", "word_2": "uncertain"}
+        assert service.last_refusal_reasons == {"word_0": "cannot create note for unknown reason"}
+        assert service.anki_write_state is AnkiWriteState.NOTE_WRITE_UNCERTAIN
+
     def test_mid_run_batch_failure_persists_earlier_batches(self, test_config, make_tokenized_word):
-        """A non-duplicate failure in a later batch must not discard earlier
+        """A failure in a later batch (a dropped connection) must not discard earlier
         batches' results: their note IDs stay recorded (so Undo works) and the
         vocab cache is merged (not wiped) with the batch's mined_forms so the
         filter stays accurate, while the error still propagates to the pipeline
@@ -1109,16 +1184,16 @@ class TestCreateCardsBatch:
         # Prime the vocab cache.
         service._existing_vocab_cache = {"既知"}
 
-        # Batch 1 succeeds with ids 0..99; batch 2 raises a non-duplicate error.
+        # Batch 1 succeeds with ids 0..99; batch 2 loses the connection.
         batch1_resp = _mock_response(result=list(range(100)))
-        batch2_err = _mock_response(error="deck was not found: Anki Miner")
+        batch2_err = requests.exceptions.ConnectionError("reset by peer")
 
         with (
             patch(
                 "anki_miner.services._ankiconnect.requests.post",
                 side_effect=[batch1_resp, batch2_err],
             ),
-            pytest.raises(AnkiConnectionError, match="deck was not found"),
+            pytest.raises(AnkiConnectionError, match="Cannot connect"),
         ):
             service.create_cards_batch(items)
 
@@ -1197,23 +1272,20 @@ class TestCreateCardsBatch:
             "Cards created: 110/150",
         ]
 
-    def test_batch_error_in_response_propagates(self, test_config, make_tokenized_word, recording_progress):
-        """AnkiConnect error payloads now propagate as AnkiConnectionError.
-
-        Pre-T2.3 the batch path swallowed errors and reported them via the
-        progress callback. The unified ``post_action`` helper raises, and
-        callers catch at the pipeline boundary instead.
-        """
+    def test_an_error_answer_on_every_note_completes_the_run(
+        self, test_config, make_tokenized_word, recording_progress
+    ):
+        """Each note Anki refuses on its own is reported refused; nothing propagates."""
         service = AnkiService(test_config)
-        items = self._make_word_data(make_tokenized_word, n=3)
+        items = self._fronted_items(make_tokenized_word, 3)
+        post = self._anki_refusing(dict.fromkeys(("word_0", "word_1", "word_2"), "deck not found"))
 
-        resp = _mock_response(error="deck not found")
+        with patch("anki_miner.services._ankiconnect.requests.post", side_effect=post):
+            assert service.create_cards_batch(items, recording_progress) == []
 
-        with (
-            patch("anki_miner.services._ankiconnect.requests.post", return_value=resp),
-            pytest.raises(AnkiConnectionError, match="deck not found"),
-        ):
-            service.create_cards_batch(items, recording_progress)
+        assert service.last_not_created == dict.fromkeys(("word_0", "word_1", "word_2"), "refused")
+        assert recording_progress.completes == 1
+        assert service.anki_write_state is AnkiWriteState.NO_NOTE_WRITE
 
     def test_request_exception_propagates(self, test_config, make_tokenized_word, recording_progress):
         """Connection errors now propagate as AnkiConnectionError."""
@@ -4777,6 +4849,18 @@ class TestAnkiWriteState:
             service.create_cards_batch(items)
 
         assert service.anki_write_state is AnkiWriteState.NOTE_WRITE_UNCERTAIN
+
+    def test_an_error_answer_to_addnotes_proves_nothing_was_written(self, test_config):
+        """AnkiConnect rolls a request back before it answers it with an error."""
+        service = AnkiService(test_config)
+
+        with (
+            patch("anki_miner.services._ankiconnect.requests.post", return_value=_mock_response(error="refused")),
+            pytest.raises(AnkiConnectionError, match="refused"),
+        ):
+            service.add_notes_raw([{"deckName": "D", "modelName": "M", "fields": {"Word": "w"}}])
+
+        assert service.anki_write_state is AnkiWriteState.NO_NOTE_WRITE
 
     def test_created_note_confirms_the_write(self, test_config, make_tokenized_word):
         service = AnkiService(test_config)

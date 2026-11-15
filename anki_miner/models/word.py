@@ -241,6 +241,12 @@ class TokenizedWord:
     # WordFilterService.expand_word_lines before phase 3 — the dialog stores
     # intent, the processor rebuilds text/spans/furigana.
     line_expansion: tuple[int, int] = (0, 0)
+    # --api ``line_skip`` intent (Z-26): offsets from the word's own line,
+    # inside line_expansion, whose TEXT the merged sentence leaves out while
+    # their TIME still spans the media window (a line streaming subtitles
+    # repeat). () = none, every path but the --api callback. Absorbed with
+    # line_expansion by WordFilterService.expand_word_lines.
+    line_skip: tuple[int, ...] = ()
     # User-chosen screenshot frame: absolute seconds on the source video's own
     # timeline, stamped by the word curator's "Use current frame" button. None
     # (the default, and every non-interactive path) means the computed default
