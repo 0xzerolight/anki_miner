@@ -189,10 +189,12 @@ Episodes run one at a time, and each run's `result-<n>.json` is written as it en
  "error": null, "message": null, "media_store_failures": 0,
  "words": [{"word": "約束", "mined_form": "約束", "status": "created", "note_id": 1727000000001,
             "from_line": false, "media_missing": [], "line_start": 812.3, "sentence": "…",
-            "start": 812.3, "end": 815.0, "unit_index": null, "location": null, "filter": null},
+            "start": 812.3, "end": 815.0, "unit_index": null, "location": null, "filter": null,
+            "reason": null},
            {"word": "頑張る", "mined_form": null, "status": "not_found", "note_id": null,
             "from_line": false, "media_missing": [], "line_start": null, "sentence": null,
-            "start": null, "end": null, "unit_index": null, "location": null, "filter": null}]}
+            "start": null, "end": null, "unit_index": null, "location": null, "filter": null,
+            "reason": null}]}
 ```
 
 - `outcome` is `success`, `failed` or `cancelled`. `error` and `message` say why a run failed.
@@ -204,7 +206,7 @@ Episodes run one at a time, and each run's `result-<n>.json` is written as it en
 |---|---|
 | `created` | a note was added; `note_id` is its ID |
 | `duplicate` | Anki already has the word, or an earlier entry named the same word |
-| `refused` | Anki added no note although its duplicate check passed |
+| `refused` | Anki added no note although its duplicate check passed; `reason` has Anki's message |
 | `no_definition` | no dictionary defines it |
 | `media_failed` | no card: its picture could not be cut (its audio clip, when no picture field is mapped) |
 | `not_found` | the episode does not produce the word, or the merge of words that share one dictionary entry removed it (then `filter` says `duplicate-expression`) |
@@ -213,6 +215,7 @@ Episodes run one at a time, and each run's `result-<n>.json` is written as it en
 | `ready` | dry run only: the run would mine it |
 | `rendered` | render only: its note's fields and media are in the run folder |
 
+- `reason` is Anki's own message on a `refused` word, `null` when Anki gave none, and `null` on every other status. A note Anki refuses stops only its own word: the run adds the others.
 - `media_missing` lists `picture` and `audio` when that clip or picture could not be cut. Missing pronunciation audio is not reported.
 - `media_store_failures` counts the media files Anki could not store during the run.
 - `word` is the entry's own; `mined_form` is the card front it matched.

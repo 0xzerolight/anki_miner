@@ -12,7 +12,7 @@ import requests
 from PyQt6.QtCore import QCoreApplication
 
 from anki_miner.config import AnkiMinerConfig
-from anki_miner.exceptions import AnkiBusyError, AnkiConnectionError, SetupError
+from anki_miner.exceptions import AnkiActionError, AnkiBusyError, AnkiConnectionError, SetupError
 from anki_miner.interfaces import ProgressCallback
 from anki_miner.languages.profile import CARD_FRONT_KEY
 from anki_miner.models import AnkiWriteState, CardPayload
@@ -285,12 +285,17 @@ class AnkiService:
         self.last_media_store_failures: int = 0
         # Why each payload of the last create_cards_batch call did not become a
         # note, by mined_form: "duplicate" (the pre-add probe or the scanned-
-        # vocabulary admission refused it), "refused" (the probe cleared it but its
-        # addNotes slot came back null) or "uncertain" (its addNotes request
-        # failed in flight, so Anki may hold it). A payload in neither this nor
-        # last_created_mined_forms was never submitted (a Stop, or an earlier
-        # failure). Read by the --api result's word statuses.
+        # vocabulary admission refused it, or Anki did when it was added on its
+        # own), "refused" (the probe cleared it but Anki did not add it: a null
+        # addNotes slot, or an error answer once it was added on its own) or
+        # "uncertain" (its request failed in flight, so Anki may hold it). A
+        # payload in neither this nor last_created_mined_forms was never
+        # submitted (a Stop, or an earlier failure). Read by the --api result's
+        # word statuses.
         self.last_not_created: dict[str, str] = {}
+        # Anki's own message for each "refused" word that got one, by
+        # mined_form (a null addNotes slot carries none). The --api row's reason.
+        self.last_refusal_reasons: dict[str, str] = {}
         # Owns the storeMediaFile upload pipeline (chunking, per-file fallback)
         # and the per-run dict-media upload cache.
         self._media_store = AnkiMediaStore(config)
@@ -1089,6 +1094,7 @@ class AnkiService:
         # missing, never which or why.
         failed_words: list[str] = []
         null_notes: list[dict] = []
+        refusal_reasons: dict[str, str] = {}
         # Diagnostic counters for the bold path (Issue #20). Surface whether
         # the precomputed bolded strings actually made it to the note body,
         # so users who enable the option but see no bold can tell from the
@@ -1098,6 +1104,40 @@ class AnkiService:
         media_store_failures = 0
         in_flight: list[str] = []
         cancelled_between_batches = False
+
+        def settle(
+            payloads: list[CardPayload], built: list[dict], note_ids: list[int | None], reason: str | None = None
+        ) -> None:
+            """Record what Anki made of *built*: ids align with *payloads*, None = not created.
+
+            A None is a note the probe had cleared that Anki still didn't create
+            (a duplicate that landed between probe and add, or a refusal), with
+            Anki's *reason* when a note added on its own was refused. Each is
+            folded into the not-created count so the gap is never silent.
+            """
+            nonlocal skipped_duplicates, total_created
+            created = sum(1 for nid in note_ids if nid is not None)
+            skipped_duplicates += len(note_ids) - created
+            total_created += created
+            for item, note, nid in zip(payloads, built, note_ids, strict=True):
+                form = item.word.mined_form
+                if nid is not None:
+                    all_created_ids.append(nid)
+                    created_forms.append(form)
+                    created_lemmas.append(item.word.lemma)
+                    if front := (item.extra_fields or {}).get(CARD_FRONT_KEY):
+                        created_fronts.append(front)
+                elif reason is not None and _DUPLICATE_ERROR_SUBSTRING in reason:
+                    not_created[form] = "duplicate"
+                else:
+                    failed_words.append(form)
+                    not_created[form] = "refused"
+                    if reason is not None:
+                        refusal_reasons[form] = reason
+                    elif len(null_notes) < _NULL_SLOT_PROBE_NOTES:
+                        # A sample for the after-the-run explanation probe; the
+                        # probe itself must not run inside the loop (see below).
+                        null_notes.append(note)
 
         # Persist progress even if a later batch raises. Earlier batches'
         # cards already exist in Anki; on a mid-run failure we must still
@@ -1166,53 +1206,34 @@ class AnkiService:
                         note["options"] = {"allowDuplicate": True}
                     notes.append(note)
 
-                submit_notes = notes
-                submit_payloads = batch
-
-                # Submit only the non-duplicates; the slots align positionally
-                # with submit_notes (see _submit_add_notes), which the zips
-                # below rely on.
                 # The request's words stay "uncertain" if it escapes (D30).
-                in_flight = [item.word.mined_form for item in submit_payloads]
-                note_ids = self._submit_add_notes(submit_notes) if submit_notes else []
-                in_flight = []
-
-                # Count successful creations (non-null IDs). A null slot here is a
-                # note the probe had cleared that addNotes still didn't create — a
-                # rare race (a duplicate landed between probe and add). Fold those
-                # into the not-created count so the gap is never silent.
-                batch_created = sum(1 for nid in note_ids if nid is not None)
-                skipped_duplicates += len(submit_notes) - batch_created
-                if batch_created < len(submit_notes):
-                    refused_forms = [
-                        item.word.mined_form for item, nid in zip(submit_payloads, note_ids, strict=True) if nid is None
-                    ]
-                    failed_words.extend(refused_forms)
-                    not_created.update(dict.fromkeys(refused_forms, "refused"))
-                    # Keep a sample of the refused payloads for the after-the-run
-                    # explanation probe; the probe itself must not run inside the
-                    # loop (see below).
-                    null_notes.extend(
-                        note
-                        for note, nid in zip(submit_notes, note_ids, strict=True)
-                        if nid is None and len(null_notes) < _NULL_SLOT_PROBE_NOTES
+                in_flight = [item.word.mined_form for item in batch]
+                try:
+                    note_ids = self._submit_add_notes(notes)
+                except AnkiActionError as e:
+                    # Anki answered with an error and rolled the whole request
+                    # back. Add the batch's notes one at a time, so a note Anki
+                    # refuses costs one card instead of the run (Z-28). Each is
+                    # settled as it lands: a connection lost part-way leaves the
+                    # cards already made on record and only its own note uncertain.
+                    log_summary(
+                        logger,
+                        "Anki refused a batch, adding its notes one at a time",
+                        level=logging.WARNING,
+                        notes=len(notes),
+                        error=e.anki_error[:_NULL_REASON_CHARS],
                     )
-                total_created += batch_created
-                all_created_ids.extend(nid for nid in note_ids if nid is not None)
-                # note_ids align positionally with `submit_payloads` (both derive
-                # from the same probe partition and addNotes is length-checked by
-                # _expect_list), so only the submitted, created words are merged.
-                created_forms.extend(
-                    item.word.mined_form for item, nid in zip(submit_payloads, note_ids, strict=True) if nid is not None
-                )
-                created_fronts.extend(
-                    front
-                    for item, nid in zip(submit_payloads, note_ids, strict=True)
-                    if nid is not None and (front := (item.extra_fields or {}).get(CARD_FRONT_KEY))
-                )
-                created_lemmas.extend(
-                    item.word.lemma for item, nid in zip(submit_payloads, note_ids, strict=True) if nid is not None
-                )
+                    for item, note in zip(batch, notes, strict=True):
+                        in_flight = [item.word.mined_form]
+                        note_id, reason = self._add_note_alone(note)
+                        in_flight = []
+                        settle([item], [note], [note_id], reason)
+                else:
+                    in_flight = []
+                    # note_ids align positionally with `batch` (both derive from
+                    # the same probe partition and addNotes is length-checked by
+                    # _expect_list).
+                    settle(batch, notes, note_ids)
 
                 if progress_callback:
                     # Report the CUMULATIVE run total, never per-chunk figures:
@@ -1234,6 +1255,7 @@ class AnkiService:
             # re-raises.
             not_created.update(dict.fromkeys(in_flight, "uncertain"))
             self.last_not_created = not_created
+            self.last_refusal_reasons = refusal_reasons
             self.last_created_note_ids = all_created_ids
             self.last_created_mined_forms = created_forms
             self.last_created_lemmas = created_lemmas
@@ -1276,9 +1298,9 @@ class AnkiService:
         # so it cannot slow a working run, cannot multiply across batches, and
         # cannot interleave with the writes above. A partial run keeps
         # `failed_words` alone; the words are enough to find the cards by hand.
-        null_reasons: Counter[str] = Counter()
+        null_reasons = Counter(reason[:_NULL_REASON_CHARS] for reason in refusal_reasons.values())
         if null_notes and total_created == 0 and not cancelled_between_batches:
-            null_reasons = self._explain_null_slots(null_notes)
+            null_reasons.update(self._explain_null_slots(null_notes))
         log_summary(
             logger,
             "Anki create cards done",
@@ -1323,6 +1345,7 @@ class AnkiService:
         self.last_skipped_duplicates = 0
         self.last_media_store_failures = 0
         self.last_not_created = {}
+        self.last_refusal_reasons = {}
 
     def _admit_against_scanned_vocabulary(
         self, word_data_list: list[CardPayload]
@@ -1380,27 +1403,55 @@ class AnkiService:
         # automatic retry. Only the validated response downgrades it
         # again — and only back to what held BEFORE this batch, so a
         # later all-duplicate batch cannot erase an earlier batch's
-        # confirmed write.
+        # confirmed write. So does an error ANSWER (AnkiActionError):
+        # AnkiConnect rolls the whole request back before it answers
+        # with one, so Anki holds none of its notes.
         state_before_request = self.anki_write_state
         self.anki_write_state = AnkiWriteState.NOTE_WRITE_UNCERTAIN
         logger.debug("Anki write state: %s", self.anki_write_state.value)
-        note_ids = _expect_list(
-            post_action(
+        try:
+            reply = post_action(
                 self.config.ankiconnect_url,
                 "addNotes",
                 params={"notes": notes},
                 timeout=60,
-            ),
-            "addNotes",
-            len(notes),
-            (int, type(None)),
-        )
+            )
+        except AnkiActionError:
+            self.anki_write_state = state_before_request
+            raise
+        note_ids = _expect_list(reply, "addNotes", len(notes), (int, type(None)))
         if any(nid is not None for nid in note_ids):
             self.anki_write_state = AnkiWriteState.NOTE_WRITE_CONFIRMED
         else:
             self.anki_write_state = state_before_request
         logger.debug("Anki write state: %s", self.anki_write_state.value)
         return note_ids
+
+    def _add_note_alone(self, note: dict) -> tuple[int | None, str | None]:
+        """Add one note with ``addNote``: its id, or None and Anki's reason when it refuses.
+
+        For a batch whose ``addNotes`` Anki answered with an error and rolled
+        back: its notes go one at a time, so one refusal costs one card.
+        ``addNote``, not a one-note ``addNotes``, because it answers with Anki's
+        own message on every AnkiConnect build (``addNotes`` wraps it in a
+        list, or older builds answer a bare null). Same write-state guard as
+        :meth:`_submit_add_notes`; a dropped connection or an unreadable reply
+        raises with the state left uncertain.
+        """
+        state_before_request = self.anki_write_state
+        self.anki_write_state = AnkiWriteState.NOTE_WRITE_UNCERTAIN
+        try:
+            note_id = post_action(self.config.ankiconnect_url, "addNote", params={"note": note}, timeout=60)
+        except AnkiActionError as e:
+            self.anki_write_state = state_before_request
+            return None, e.anki_error
+        if note_id is None:
+            self.anki_write_state = state_before_request
+            return None, None
+        if not isinstance(note_id, int) or isinstance(note_id, bool):
+            raise AnkiConnectionError("Anki sent an unusable reply.")
+        self.anki_write_state = AnkiWriteState.NOTE_WRITE_CONFIRMED
+        return note_id, None
 
     def add_notes_raw(self, notes: list[dict]) -> list[int | None]:
         """POST caller-built note dicts via ``addNotes`` in chunks of 100.

@@ -119,6 +119,8 @@ class Fates:
     created: Mapping[str, int] = field(default_factory=dict)
     #: mined_form -> "duplicate" | "refused" | "uncertain" (AnkiService.last_not_created)
     not_created: Mapping[str, str] = field(default_factory=dict)
+    #: mined_form -> Anki's message for a "refused" word that got one (AnkiService.last_refusal_reasons)
+    reasons: Mapping[str, str] = field(default_factory=dict)
     #: mined_form -> "media_failed" | "no_definition" (EpisodeProcessor.last_word_drops)
     dropped: Mapping[str, str] = field(default_factory=dict)
     #: the words the phase-2 offline-definition probe removed (EpisodeProcessor.last_definition_rejects)
@@ -400,6 +402,7 @@ class WordSelection:
             "unit_index": None,  # a reading run's unit and its location_label
             "location": None,
             "filter": None,  # the step that removed a named word (API.md): "duplicate-expression" or null
+            "reason": None,  # Anki's message on a refused word
         }
         chosen = self._chosen.get(i)
         if chosen is not None:
@@ -410,6 +413,7 @@ class WordSelection:
                 mined_form=form,
                 status=status,
                 note_id=fates.created.get(form),
+                reason=fates.reasons.get(form) if status == "refused" else None,
                 from_line=chosen.from_line,
                 media_missing=[] if status == "not_attempted" else list(fates.media_missing.get(form, [])),
             )

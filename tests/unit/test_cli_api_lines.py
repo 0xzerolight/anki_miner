@@ -60,6 +60,7 @@ KEYS = {
     "unit_index",
     "location",
     "filter",
+    "reason",
 }
 
 
@@ -94,6 +95,7 @@ def test_word_keeps_its_own_line_with_that_lines_merge() -> None:
         "unit_index": None,
         "location": None,
         "filter": None,
+        "reason": None,
     }
 
 
@@ -203,6 +205,7 @@ def test_report_statuses() -> None:
         lines.Fates(
             created={"約束": 11},
             not_created={"今日": "duplicate"},
+            reasons={"今日": "a reason only a refused row shows"},
             dropped={"別": "media_failed"},
             rejected=[_word("走る", 3)],
             media_missing={"別": ["picture", "audio"], "学校": ["picture", "audio"]},
@@ -217,6 +220,7 @@ def test_report_statuses() -> None:
         (None, "not_found"),
     ]
     assert rows[0]["note_id"] == 11 and rows[1]["note_id"] is None
+    assert {r["reason"] for r in rows} == {None}
     assert rows[2]["media_missing"] == ["picture", "audio"]
     assert rows[3]["media_missing"] == []  # nothing failed for a word the run never reached
     assert all(set(r) == KEYS for r in rows)

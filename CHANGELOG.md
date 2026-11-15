@@ -10,6 +10,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Changed
 
+- When Anki refuses one card, the rest of the run's cards are still added; the refused word shows in the not-mined report, and the `--api` result gives Anki's reason for it.
+
 ### Fixed
 
 - Chinese and Cantonese cards made with the downloadable CC-CEDICT dictionaries get their Measure Word again (个 for 东西, 家 for 店), in new cards and in Card Backfill.
