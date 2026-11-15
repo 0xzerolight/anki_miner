@@ -6,7 +6,7 @@ import dataclasses
 import logging
 import sys
 import unicodedata
-from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
+from collections.abc import Callable, Collection, Iterable, Iterator, Mapping, Sequence
 from typing import TYPE_CHECKING, Any, NamedTuple, TypedDict
 
 from anki_miner.config import AnkiMinerConfig
@@ -140,20 +140,25 @@ def merge_cue_window(
     index: int,
     prev_count: int,
     next_count: int,
+    skip: Collection[int] = (),
 ) -> MergedLineWindow:
     """Merge ``entries[index - prev_count : index + next_count + 1]``.
 
     Counts clamp at the file edges. Times span min start to max end over the
-    merged range (defensive against out-of-order ASS events).
+    merged range (defensive against out-of-order ASS events). ``skip`` holds
+    offsets from ``index`` (``-1`` the line before) whose text is left out
+    while their time still counts: a line streaming subtitles repeat within
+    the window (Z-26). An offset outside the merged range skips nothing.
     """
     lo = max(0, index - prev_count)
     hi = min(len(entries) - 1, index + next_count)
     cues = entries[lo : hi + 1]
+    kept = [(i, cue) for i, cue in enumerate(cues, start=lo) if i - index not in skip]
     return MergedLineWindow(
         start=min(cue[0] for cue in cues),
         end=max(cue[1] for cue in cues),
-        text=CUE_JOINER.join(cue[2] for cue in cues),
-        prefix_len=sum(len(cue[2]) + len(CUE_JOINER) for cue in entries[lo:index]),
+        text=CUE_JOINER.join(cue[2] for _, cue in kept),
+        prefix_len=sum(len(cue[2]) + len(CUE_JOINER) for i, cue in kept if i < index),
     )
 
 
@@ -1163,8 +1168,9 @@ class WordFilterService:
 
         Returns ``word`` unchanged for the ``(0, 0)`` default and for a cue
         miss (pathological: the curator matched the same parse). The result's
-        ``line_expansion`` resets to ``(0, 0)`` — the intent is absorbed, so a
-        second pass cannot double-apply it. ``clip_override`` is preserved: the
+        ``line_expansion`` resets to ``(0, 0)`` and its ``line_skip`` (the
+        merged lines whose text the sentence leaves out) to ``()`` — the intent
+        is absorbed, so a second pass cannot double-apply it. ``clip_override`` is preserved: the
         curator only lets an override exist that postdates the expansion.
         """
         prev_count, next_count = word.line_expansion
@@ -1186,7 +1192,7 @@ class WordFilterService:
                 word.sentence,
             )
             return word
-        window = merge_cue_window(entries, index, prev_count, next_count)
+        window = merge_cue_window(entries, index, prev_count, next_count, word.line_skip)
         shift = window.prefix_len
         new_start = word.surface_start + shift if word.surface_start >= 0 else -1
         new_end = word.surface_end + shift if word.surface_end >= 0 else -1
@@ -1215,6 +1221,7 @@ class WordFilterService:
             sentence_furigana_bolded=new_furi_bolded,
             sentence_candidates=[],
             line_expansion=(0, 0),
+            line_skip=(),
         )
 
     @staticmethod

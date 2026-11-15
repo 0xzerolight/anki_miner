@@ -155,6 +155,7 @@ A word:
 | `line_text` | text the line to use contains |
 | `unit_index` | a reading source's unit, as `inspect` lists it (reading episodes only) |
 | `line_expansion` | `[before, after]`: the lines merged into the sentence and the clip |
+| `line_skip` | merged lines whose text the sentence leaves out, by their offset from the chosen line (`-1` the line before, `1` the line after); the clip still covers them |
 | `surface` | the word as written on its line, when it differs from `word` (走り出した for 走り出す) |
 | `reading` | its reading, to choose among dictionary entries |
 
@@ -165,8 +166,9 @@ A word:
   - When the episode produces no such word on that line, the run makes the word from the line: it finds `surface` (else `word`) in the line, compared as `line_text` is, first match. The card's front is `word` (through the fold, the line's spelling, or the episode's own front when only a surface matched); its reading is `reading`, else the one the episode or the parser gives the word, else the dictionary's when it has only one; its sentence, clip and picture are that line's, the match in bold when bold is on. The row says `from_line: true`. A word the dictionary check or the merge removed is never made from a line. Not in the line: `not_found`.
   - With neither key, or a `line_text` no line contains, the word keeps its own line: its first in the episode.
 - **Merging lines.** Left out, `line_expansion` is the automatic merge Anki Miner gives the chosen line (none with `merge_incomplete_cues` off); `[0, 0]` means no merge. Merged lines stop at the file's ends and at 30 seconds including the audio padding, as in the Word Curator. Lines after the chosen one are added first, then lines before.
+- **Leaving a merged line out.** `line_skip` takes a line's text out of the sentence while the clip still runs over it, for a line the subtitle repeats: with `line_expansion` `[0, 2]`, `line_skip` `[2]` keeps the third line's time and drops its text. Furigana, reading and bold are made over the sentence as kept. A skipped line the 30-second limit left out of the merge changes nothing.
 - **Repeats.** When two entries reach the same word (fronts compared as one card per run compares them), the first mines it and the rest come back `duplicate`. Entries for a word the run never produced, or that the dictionary check removed, all share that status (`not_found` or `no_definition`).
-- **Refusals.** These refuse the whole call with `BAD_RUN_FILE` before anything runs: an empty or non-string `word`, `line_text`, `surface` or `reading`, a negative or non-finite `line_start`, or a negative `line_expansion`.
+- **Refusals.** These refuse the whole call with `BAD_RUN_FILE` before anything runs: an empty or non-string `word`, `line_text`, `surface` or `reading`, a negative or non-finite `line_start`, a negative `line_expansion`, or a `line_skip` without `line_expansion`, with 0, or with an offset outside `line_expansion`.
 
 Before any episode runs, `mine` checks:
 - the language pack;
@@ -250,7 +252,7 @@ The lines are the source's units, numbered from 0 in order: a book's or a text's
 - When no word of the episode names a `unit_index`, a unit that holds a requested `line_text` exactly as one or more whole sentences, among more text, is cut around it for the run: the text before, the named text, the text after, never inside another requested `line_text`. A unit is one sentence of the splitter, which never ends a sentence inside 「…」, so a long quoted speech is one unit; cut this way, the card's sentence is the sentence that was named, not the whole speech. A `line_text` that is part of a sentence cuts nothing. The units `inspect` lists, and a row's `unit_index`, are the source's own.
 - With neither, the word keeps its first unit.
 - A word the source does not produce on its named unit is made from it, as from a subtitle line.
-- `line_expansion` merges neighbouring units into the sentence, stopping only at the source's ends: units have no times, so there is no 30-second limit. Left out, units are not merged.
+- `line_expansion` merges neighbouring units into the sentence, stopping only at the source's ends: units have no times, so there is no 30-second limit. Left out, units are not merged. `line_skip` leaves merged units out of the sentence.
 
 Each card has the sentence and no clip.
 - **Picture:** a manga card's picture is the crop of its text block on the page, even when the profile shows the whole page. A book's is its cover (EPUB). Text, PDF and subtitle sources have none.
@@ -300,7 +302,7 @@ An episode:
 | `subtitle_offset` | seconds added to every subtitle time; `0` when left out |
 | `audio_track_override` | 0-based audio track (0 or more), or `null` to find the mining language's track |
 
-Each line is a `line_start` (a reading source: a `unit_index`) and an optional `line_expansion`, chosen and merged as for `mine`. `media` needs no parse, no dictionary and no Anki, and runs any time. It takes no `cancel` file, and a signal ends it without a verdict. `media-<n>.json` lists per line its `line_start`, `start`, `end`, `unit_index`, `location`, `text`, `picture` and `audio` (paths in the run folder, `null` when that cut failed).
+Each line is a `line_start` (a reading source: a `unit_index`) and an optional `line_expansion` and `line_skip`, chosen and merged as for `mine`. `media` needs no parse, no dictionary and no Anki, and runs any time. It takes no `cancel` file, and a signal ends it without a verdict. `media-<n>.json` lists per line its `line_start`, `start`, `end`, `unit_index`, `location`, `text`, `picture` and `audio` (paths in the run folder, `null` when that cut failed).
 - **Audiobook:** the picture is the audio's embedded cover.
 - **Reading source:** a line has its `unit_index`, `location`, `text` and `picture`, which is a manga unit's crop or a book's cover. Its `audio` is `null`, and it needs no ffmpeg. `still_height` does not apply: the picture is the card's. A unit past the source's end gives a line of `null`s but its `unit_index`. The files are `media-<n>/<k>.<ext>`, `k` being the line's place in `lines`, from 1. `still_height` and `audio_bitrate` are whole numbers of 1 or more. Without ffmpeg or ffprobe the call gives `SETUP_ERROR`. Per episode, a video that does not open gives `VIDEO_UNREADABLE`, an audio file `AUDIO_UNREADABLE`, a reading source `SOURCE_UNREADABLE`, and a subtitle that cannot be read or has no lines `SUBTITLE_UNREADABLE`.
 

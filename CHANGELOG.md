@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Added
 
+- `--api` `mine`, `render` and `media` take `line_skip` on a word or line: merged subtitle lines whose text the sentence leaves out while the clip still covers them, so a line the subtitle repeats shows once on the card.
+
 ### Changed
 
 - When Anki refuses one card, the rest of the run's cards are still added; the refused word shows in the not-mined report, and the `--api` result gives Anki's reason for it.

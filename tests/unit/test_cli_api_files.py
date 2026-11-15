@@ -163,6 +163,13 @@ def test_parse_words(tmp_path: Path) -> None:
         [{"word": "a", "line_expansion": [1]}],
         [{"word": "a", "line_expansion": [0, -1]}],
         [{"word": "a", "line_expansion": [True, 0]}],
+        [{"word": "a", "line_skip": [1]}],
+        [{"word": "a", "line_expansion": [0, 2], "line_skip": [0]}],
+        [{"word": "a", "line_expansion": [0, 2], "line_skip": [3]}],
+        [{"word": "a", "line_expansion": [1, 2], "line_skip": [-2]}],
+        [{"word": "a", "line_expansion": [0, 2], "line_skip": [True]}],
+        [{"word": "a", "line_expansion": [0, 2], "line_skip": 2}],
+        [{"word": "a", "line_expansion": [0, 2], "line_skip": [1.0]}],
         [{"word": "a", "extra": 1}],
     ],
 )
@@ -170,6 +177,12 @@ def test_parse_words_rejects(tmp_path: Path, words) -> None:
     with pytest.raises(ApiError) as err:
         files.parse_run_file(_run_file(tmp_path, words=words))
     assert err.value.code == "BAD_RUN_FILE"
+
+
+def test_a_word_takes_line_skip_inside_its_line_expansion(tmp_path: Path) -> None:
+    words = [{"word": "大丈夫", "line_start": 412.6, "line_expansion": [1, 2], "line_skip": [2, -1, 2]}]
+    [request] = files.parse_run_file(_run_file(tmp_path, words=words)).episodes[0].words
+    assert (request.line_expansion, request.line_skip) == ((1, 2), (-1, 2))
 
 
 def test_a_word_takes_surface_and_reading(tmp_path: Path) -> None:
@@ -311,6 +324,16 @@ def _media(**top) -> dict:
             }
         ],
     }
+
+
+def test_a_media_line_takes_line_skip() -> None:
+    raw = _media()
+    raw["episodes"][0]["lines"] = [{"line_start": 1.0, "line_expansion": [0, 2], "line_skip": [2]}]
+    assert files.parse_media_file(raw).episodes[0].lines[0].line_skip == (2,)
+    raw["episodes"][0]["lines"] = [{"line_start": 1.0, "line_skip": [2]}]
+    with pytest.raises(ApiError) as err:
+        files.parse_media_file(raw)
+    assert err.value.code == "BAD_RUN_FILE"
 
 
 def test_a_media_file_takes_lines_and_the_two_media_keys() -> None:

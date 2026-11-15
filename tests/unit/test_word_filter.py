@@ -2227,6 +2227,23 @@ class TestMergeCueWindow:
         window = merge_cue_window(EXPANSION_ENTRIES, 1, 1, 1)
         assert (window.start, window.end) == (1.0, 11.0)
 
+    def test_a_skipped_line_leaves_the_text_and_keeps_the_time(self):
+        """A repeated line's copy is left out of the sentence; the window still runs to its end (Z-26)."""
+        entries = [(1.0, 2.0, "もう大丈夫だよ"), (2.0, 3.0, "本当？"), (2.0, 3.5, "もう大丈夫だよ")]
+        window = merge_cue_window(entries, 0, 0, 2, skip=(2,))
+        assert window.text == "もう大丈夫だよ" + CUE_JOINER + "本当？"
+        assert (window.start, window.end, window.prefix_len) == (1.0, 3.5, 0)
+
+    def test_a_skipped_line_before_the_chosen_one_shortens_the_prefix(self):
+        window = merge_cue_window(EXPANSION_ENTRIES, 1, 1, 1, skip=(-1,))
+        assert window.text == "彼はりんごを食べた" + CUE_JOINER + "次の行です"
+        assert (window.start, window.prefix_len) == (1.0, 0)
+
+    def test_an_offset_outside_the_merged_lines_skips_nothing(self):
+        assert merge_cue_window(EXPANSION_ENTRIES, 1, 0, 1, skip=(-1, 2)) == merge_cue_window(
+            EXPANSION_ENTRIES, 1, 0, 1
+        )
+
 
 class TestExpandWordLines:
     """Tests for WordFilterService.expand_word_lines (Issue #120)."""
@@ -2276,6 +2293,15 @@ class TestExpandWordLines:
         result = service.expand_word_lines(_expansion_word(line_expansion=(1, 1)), EXPANSION_ENTRIES)
         assert (result.start_time, result.end_time) == (1.0, 11.0)
         assert result.duration == 10.0
+
+    def test_a_skipped_line_is_left_out_of_the_sentence_not_the_window(self, test_config):
+        service = WordFilterService(test_config)
+        word = _expansion_word(line_expansion=(1, 1), line_skip=(-1,))
+        result = service.expand_word_lines(word, EXPANSION_ENTRIES)
+        assert result.sentence == "彼はりんごを食べた" + CUE_JOINER + "次の行です"
+        assert result.sentence[result.surface_start : result.surface_end] == "食べた"
+        assert (result.start_time, result.end_time) == (1.0, 11.0)
+        assert (result.line_expansion, result.line_skip) == ((0, 0), ())
 
     def test_taggerless_clears_sentence_furigana_and_reading(self, test_config):
         service = WordFilterService(test_config)  # no tagger

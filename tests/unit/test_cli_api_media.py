@@ -93,6 +93,18 @@ def test_media_cuts_each_named_line_and_lists_it(episode, test_config) -> None:
     assert cut.call_count == 2
 
 
+def test_a_skipped_line_leaves_the_text_and_keeps_the_clip(episode, test_config) -> None:
+    with (
+        patch.object(media.settings, "resolve_run_config", return_value=test_config),
+        patch.object(media, "require_ffmpeg"),
+        patch.object(media, "check_video"),
+        patch.object(MediaExtractorService, "extract_media", side_effect=_cut),
+    ):
+        media.media_runs(_file(episode, [{"line_start": 12.48, "line_expansion": [0, 2], "line_skip": [1]}]))
+    [line] = json.loads((episode / "ep-01" / "media-1.json").read_text(encoding="utf-8"))["lines"]
+    assert (line["text"], line["start"], line["end"]) == ("約束したでしょう ちゃんと", 12.48, 20.1)
+
+
 def test_media_cuts_its_lines_side_by_side(episode, test_config) -> None:
     together = threading.Barrier(2, timeout=5)
 

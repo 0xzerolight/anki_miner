@@ -189,6 +189,23 @@ def test_a_second_request_reaching_the_same_word_by_its_dictionary_form_is_dupli
     assert (second["mined_form"], second["status"], second["note_id"]) == ("いう", "duplicate", None)
 
 
+def test_line_skip_leaves_a_lines_text_out_of_the_sentence_not_the_window() -> None:
+    """Z-26: the clip runs to the last merged line; the skipped line's text is not in the sentence."""
+    selection = _selection([R("約束", line_start=12.48, line_expansion=(0, 2), line_skip=(1,))])
+    [chosen] = selection([_word("約束", 0)])
+    assert (chosen.line_expansion, chosen.line_skip) == ((0, 2), (1,))
+    [row] = selection.report(lines.Fates())
+    assert (row["sentence"], row["start"], row["end"]) == ("約束したでしょう ちゃんと", 12.48, 20.10)
+
+
+def test_a_skipped_line_the_budget_cut_off_skips_nothing() -> None:
+    selection = _selection([R("今日", line_start=15.02, line_expansion=(0, 2), line_skip=(2,))], budget=6.0)
+    [chosen] = selection([_word("今日", 1)])
+    assert chosen.line_expansion == (0, 1)  # 30.0..32.0 would break 6 s
+    [row] = selection.report(lines.Fates())
+    assert row["sentence"] == "今日こそは言うよ ちゃんと"
+
+
 def test_explicit_expansion_stops_at_the_file_ends_and_the_budget() -> None:
     wide = _selection([R("今日", line_expansion=(5, 5))])
     assert wide([_word("今日", 1)])[0].line_expansion == (1, 2)  # all four lines: 12.48..32.0 fits 30 s
