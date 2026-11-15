@@ -8,86 +8,91 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Added
 
-- `--api` `mine`, `render` and `media` take `line_skip` on a word or line: merged subtitle lines whose text the sentence leaves out while the clip still covers them, so a line the subtitle repeats shows once on the card.
-
 ### Changed
-
-- When Anki refuses one card, the rest of the run's cards are still added; the refused word shows in the not-mined report, and the `--api` result gives Anki's reason for it.
 
 ### Fixed
 
-- Chinese and Cantonese cards made with the downloadable CC-CEDICT dictionaries get their Measure Word again (个 for 东西, 家 for 店), in new cards and in Card Backfill.
-- The default subtitle cleanup strips a speaker label that contains a digit (男1：) again, while still keeping clock times such as 10:30.
-- Settings, other mining languages' settings and saved profiles that still hold an earlier default subtitle cleanup pattern now get the current one, so clock times and number ranges are no longer cut; an edited pattern is kept.
-- A Project Gutenberg text file now mines only the book between its START and END lines, not its header and licence.
-- In an Aozora novel, a same-line heading written as a bracketed pair (［＃同行中見出し］…［＃同行中見出し終わり］) no longer turns the rest of its line into part of the heading.
-- When curating a season, the Word Curator now shows the Translation column once an episode with a translation track loads, even if the first episode has none.
-- Japanese adjectives written with a katakana stem (ズルい, キツい, サムい) and kana-only words such as かんぞう now get their own kana as the card reading instead of a garbled one (ずりい, きちい, かんそう).
-- After an upgrade, the startup prompt's Reimport All now rebuilds every stale resource family (dictionaries, frequency, pitch, audio) instead of only the first one.
-- Outside Japanese, an imported audio pack or an added custom audio source now goes above Google/Edge read-aloud in Word Audio, so its recordings are used.
-- With Mine numbers with counters on, a sentence containing 3か月 or 3カ月 no longer shows the number's furigana over the words before it.
-- A dictionary stylesheet with an escaped brace can no longer push its rules outside the dictionary's own glossary and restyle the rest of the card.
-- Card Backfill no longer gives a card the pitch accent of a different word that shares its dictionary lemma (e.g. 呪言 getting 言祝ぎ's pitch).
-- A frequency list CSV saved with a UTF-8 BOM (Excel's 'CSV UTF-8') now keeps its header, so a count-based list is ranked the right way round.
-- Switching to a settings profile whose mining language cannot mine on this machine (its language pack is missing) is now refused with the reason, like the language selector, instead of leaving every mining run to fail.
-- Web articles declared as ISO-8859-1 now keep their curly quotes, apostrophes and dashes instead of turning them into invisible control characters.
-- EPUB chapters that write characters as named entities (&eacute;, &rsquo;, &nbsp;) no longer lose those characters when mined.
-- EPUB chapters written in plain HTML syntax (unclosed <br> or <img>) no longer silently drop the text after those tags.
-- A run that fails after Anki already created some cards now records them in Analytics and as known words, the same as a stopped run.
-- Stopping a queue while an item is still being parsed no longer lowers the run's comprehension in View details.
-- A mining run no longer warns that word or sentence audio was skipped when a fallback source supplied every clip.
-- A SAMI subtitle with a lowercase <sami> header or a leading comment now loads when it is saved in CP949, Shift-JIS or UTF-16, not only in UTF-8.
-- With Mine numbers with counters on, two quantities written back to back in kanji (一つ百円, 二つ三つ) now both get their cards.
-- Deck Builder no longer leaves an empty deck in Anki when you cancel at the preview or the run is refused before any card is made.
-- EPUB cards now name the right chapter in their Source when a chapter spans several files or several chapters share one file.
-- Aozora same-line headings (同行見出し, 窓見出し) no longer turn their whole paragraph into one card sentence and chapter label.
-- Web-novel .txt files that mark ruby with a half-width | no longer leave the bar in card sentences.
-- Kakuyomu emphasis markup 《《…》》 in a .txt novel no longer deletes the emphasised words.
-- Japanese reading sources no longer split a sentence at a full-width decimal point such as ３．５.
-- Card Backfill now uploads dictionary images in backfilled Definition and Glossary fields, so those cards no longer show broken images.
-- Card Backfill no longer writes a mixed kanji-and-kana reading such as 食たべる when a card's furigana field holds HTML ruby.
-- Importing a tab-separated word list whose meaning column contains a comma now imports the word itself, not the word joined to part of its meaning.
-- Switching the mining language after a run now actually frees the previous language's text analyzer memory (about 400 MB for Arabic).
-- Reading: emphasis dots printed as ruby in an EPUB (・, ヽ) no longer become the card's reading and furigana.
-- Analytics: a run finishing in the background no longer moves the Mining History selection to another run, so Delete this run's cards and Show in Anki act on the run you picked.
-- Headless API: naming two adjacent sentences of one reading unit no longer leaves a blank unit between them, so line_expansion merges the neighbouring sentence instead of whitespace.
-- Season mode with 'one card per sentence' on no longer gives two words the same sentence, audio and picture when it picks the clearest sentence across episodes.
-- Mine numbers with counters now joins 5分で ('in 5 minutes') into 5分 read ごふん instead of mining 分 read ぶん.
-- Mine numbers with counters reads the first of a month (4月1日) as ついたち instead of いちにち.
-- Word Curator: choosing a dictionary for a counter word (4人) or an inflected/variant word now puts that dictionary's entry on the card, as the pane says.
-- Reading → Text: a fetched web page's Q&A lists, preformatted blocks and bylines no longer run into the next sentence.
-- Reading: an AES-locked PDF is now refused as protected instead of being called a scanned PDF or failing with a cryptography error.
-- Video → YouTube: links whose site reports no video length (such as direct video links) are no longer refused with 'update yt-dlp'.
-- Importing settings for a mining language whose language pack is not installed is now refused with the reason, instead of switching to a language that cannot mine.
-- Word Curator, season curation: the Translation column now shows each word's own episode's translation, not the first episode's.
-- Word Curator, season curation: a sentence picked from an episode not yet shown now gets the full-sentence merge, like any other pick.
-- Reading > Text: text pasted over a fetched article (select all, then paste) is now mined with the Source "Text" instead of the old page's title.
-- Reading: furigana printed over one kanji of a compound in an EPUB no longer changes the reading of the same kanji used as its own word.
-- Reading → Text: a page that declares a bogus 'undefined' charset no longer makes the whole fetch fail.
-- Video: a lowercase subtitle name with a language word in its title (the.danish.girl.srt) is no longer taken for another language's subtitle.
-- Audiobook Sync: cancelling while a book is loading no longer reports that book as failing to load.
-- Manage Known Words: importing a CSV exported by Manage Known Words no longer adds its header "word" as a known word.
-- Analytics: a run that finishes while Known Words is being counted is now included, instead of waiting up to ten minutes.
-- A desktop shortcut created while Anki Miner was started from another AppImage application's terminal or launcher no longer points at that application.
-- 外に and 後に in lines like 外に出る are no longer mined as ほかに / のちに, and the sentence furigana keeps そと / あと.
-- Dual-language subtitle files with staggered twin lines, and files with per-syllable karaoke effects, no longer have their cues cut to a fraction of a second.
-- Skip songs/signs now drops a karaoke opening written one cue per syllable and keeps positioned dialogue lines in such files.
-- Inflected そう言う (そう言った, そう言えば) now gets the reading そういう instead of そうゆう.
-- The Translation field no longer loses lines of a translation track that the mining language's bilingual-cue filter took for a translation.
-- The default subtitle cleanup no longer deletes the start of a line that contains a time like 10:30, or the wave dash in a range like 2〜3日.
-- "Update now" no longer overwrites another AppImage application's file when Anki Miner was started from that application's terminal or launcher.
-- Restoring a backup made before the data folder was moved now restores into the current data folder instead of the old location.
-- Vietnamese words like "mua" no longer get a duplicate card on every run when suspended cards are ignored or a deck is excluded.
-- Card Backfill no longer writes raw {{c1::...}} cloze markup from dictionaries into definitions, matching what mining writes.
-- StarDict archives made on macOS (with __MACOSX or ._ sidecar files) import instead of failing as "2 StarDict dictionaries".
-- Video OCR: Cancel now stops at once while an image subtitle track of a large video is being read, instead of after the whole file is scanned.
-- Audiobook Sync: a chapter file no longer times a later, unread sentence at its very end, which made the next file skip about 30 sentences.
-- Headless API: a relative input path whose name starts with '~' (like '~ep.srt') is read from the calling folder instead of failing the whole call with INTERNAL.
-- Headless API: a SIGINT/SIGTERM cancel that arrives as a call finishes no longer turns a written verdict into a non-zero exit code.
-- A card whose dictionary glossary holds Anki cloze markup (`{{c1::…}}`, as some example sentences in Bee's Ultimate Grammar Dictionary do) is no longer refused by Anki on a non-Cloze note type with "cannot create note for unknown reason": the markup is unwrapped to its text in every field before the note is sent.
-- An API reading run whose word names a whole sentence with `line_text` inside a longer unit (a quoted speech, which the splitter keeps whole) now gives the card that sentence rather than the whole unit: the unit is cut around it for the run (a 241-character speech became the card's sentence where one 33-character sentence of it was named).
-
 ### Removed
+
+## [3.13.0] - 2026-11-15
+
+When Anki refuses one card, the rest of a run's cards are still added, and `--api` can leave a repeated subtitle line out of a card's sentence. The rest is fixes from a full bug audit: Japanese readings and counters, EPUB, Aozora, web-novel and Project Gutenberg text, subtitle cleanup, Card Backfill, season curation and the headless API. Some changes alter card output: a Whitelist entry in kanji no longer forces its kana spelling past "Skip all kana-only words"; the default subtitle cleanup keeps clock times and number ranges (10:30, 2〜3日); a track counts as rolling only when most of its lines overlap; "Skip openings, endings and signs" judges the main style by screen time; EPUB and web pages break paragraphs at more block elements; Japanese readings change for kana-only words, 不味い, そう言う, 外に and 後に, 4月1日 and 5分で; counters mine both quantities of 一つ百円; Project Gutenberg headers, Aozora same-line headings, Kakuyomu emphasis, ruby bars and printed ruby and emphasis dots in EPUBs change card sentences and readings; EPUB cards can name a different chapter; season curation gives each sentence one card; the Translation field keeps more lines; Chinese and Cantonese cards gain a Measure Word; Card Backfill takes pitch from the card front; and an `--api` reading run's card sentence is the named `line_text`.
+
+### Added
+- **`--api` `mine`, `render` and `media` take `line_skip` on a word or line.** It names merged subtitle lines whose text the sentence leaves out while the clip still covers them, so a line the subtitle repeats shows once on the card.
+
+### Changed
+- **When Anki refuses one card, the rest of the run's cards are still added.** The refused word shows in the not-mined report, and the `--api` result gives Anki's reason for it.
+- **A Whitelist entry written in kanji no longer forces its kana spelling past "Skip all kana-only words" (Settings → Filtering).** A whitelisted 丁度 matched ちょうど through their shared lemma and put it on cards with the filter on, in mining and in Deck Filter. A kana word listed as itself still bypasses the filter.
+- **The default subtitle cleanup keeps clock times and number ranges.** It deleted the start of a line that contains a time like 10:30, and the wave dash in a range like 2〜3日; a speaker label that contains a digit (男1：) is still stripped. Settings, other mining languages' settings and saved profiles that still hold an earlier default pattern get the current one; an edited pattern is kept.
+- **A subtitle track counts as rolling only when 4 in 5 of its line transitions overlap.** Dual-language files with staggered twin lines, and files with per-syllable karaoke effects, had their cues cut to a fraction of a second.
+- **"Skip openings, endings and signs" picks the main style by screen time, not cue count (Settings → Sentences).** A karaoke opening written one cue per syllable is now dropped, and positioned dialogue lines in such files are kept.
+- **EPUB chapters and fetched web pages break paragraphs at Q&A lists, preformatted blocks and before a block opens.** Their dt/dd lists, pre blocks and bylines no longer run into the next sentence.
+
+### Fixed
+- **Japanese kana-only words get their own kana as the card reading.** Adjectives with a katakana stem (ズルい, キツい, サムい) and words such as かんぞう got a garbled one (ずりい, きちい, かんそう), and kanji 不味い now reads まずい, not まじい.
+- **外に and 後に in lines like 外に出る are no longer mined as ほかに / のちに.** The sentence furigana keeps そと / あと.
+- **Inflected そう言う (そう言った, そう言えば) reads そういう instead of そうゆう.**
+- **"Mine numbers with their counters" joins 5分で ('in 5 minutes') into 5分 read ごふん** instead of mining 分 read ぶん.
+- **"Mine numbers with their counters" reads the first of a month (4月1日) as ついたち** instead of いちにち.
+- **"Mine numbers with their counters" mines both of two quantities written back to back in kanji (一つ百円, 二つ三つ).**
+- **"Mine numbers with their counters" no longer shows a number's furigana over the words before it in a sentence with 3か月 or 3カ月.**
+- **A Project Gutenberg text file mines only the book between its START and END lines,** not its header and licence.
+- **Aozora same-line headings (同行見出し, 窓見出し) no longer turn their whole paragraph into one card sentence and chapter label.** A heading written as a bracketed pair (［＃同行中見出し］…［＃同行中見出し終わり］) no longer turns the rest of its line into part of the heading either.
+- **Kakuyomu emphasis markup 《《…》》 in a .txt novel no longer deletes the emphasised words.**
+- **Web-novel .txt files that mark ruby with a half-width | no longer leave the bar in card sentences.**
+- **Japanese reading sources no longer split a sentence at a full-width decimal point such as ３．５.**
+- **Emphasis dots printed as ruby in an EPUB (・, ヽ) no longer become the card's reading and furigana.**
+- **Furigana printed over one kanji of a compound in an EPUB no longer changes the reading of the same kanji used as its own word.**
+- **EPUB chapters that write characters as named entities (&eacute;, &rsquo;, &nbsp;) keep those characters when mined.**
+- **EPUB chapters written in plain HTML syntax (unclosed <br> or <img>) no longer silently drop the text after those tags.**
+- **EPUB cards name the right chapter in their Source** when a chapter spans several files or several chapters share one file.
+- **Chinese and Cantonese cards made with the downloadable CC-CEDICT dictionaries now get their Measure Word (个 for 东西, 家 for 店),** in new cards and in Card Backfill.
+- **A card whose dictionary glossary holds Anki cloze markup is no longer refused by Anki.** Some example sentences in Bee's Ultimate Grammar Dictionary carry `{{c1::…}}`, and Anki refused the note on a non-Cloze note type with "cannot create note for unknown reason". The markup is unwrapped to its text in every field before the note is sent.
+- **Card Backfill no longer writes raw {{c1::...}} cloze markup from dictionaries into definitions,** matching what mining writes.
+- **Card Backfill no longer gives a card the pitch accent of a different word that shares its dictionary lemma** (呪言 getting 言祝ぎ's pitch).
+- **Card Backfill uploads dictionary images in backfilled Definition and Glossary fields,** so those cards no longer show broken images.
+- **Card Backfill no longer writes a mixed kanji-and-kana reading such as 食たべる when a card's furigana field holds HTML ruby.**
+- **A dictionary stylesheet with an escaped brace can no longer push its rules outside the dictionary's own glossary** and restyle the rest of the card.
+- **Season mode with "One card per sentence" on no longer gives two words the same sentence, audio and picture** when it picks the clearest sentence across episodes.
+- **The Translation field no longer loses lines of a translation track that the mining language's bilingual-cue filter took for a translation.**
+- **Video: a lowercase subtitle name with a language word in its title (the.danish.girl.srt) is no longer taken for another language's subtitle.**
+- **Vietnamese words like "mua" no longer get a duplicate card on every run** when suspended cards are ignored or a deck is excluded.
+- **Word Curator: choosing a dictionary for a counter word (4人) or an inflected or variant word puts that dictionary's entry on the card,** as the pane says.
+- **Word Curator, season curation: the Translation column shows each word's own episode's translation,** not the first episode's.
+- **Word Curator, season curation: the Translation column appears once any episode with a translation track loads,** even if the first episode has none.
+- **Word Curator, season curation: a sentence picked from an episode not yet shown gets the full-sentence merge,** like any other pick.
+- **A run that fails after Anki already created some cards records them in Analytics and as known words,** the same as a stopped run.
+- **Stopping a queue while an item is still being parsed no longer lowers the run's comprehension in View details.**
+- **A mining run no longer warns that word or sentence audio was skipped when a fallback source supplied every clip.**
+- **Deck Builder no longer leaves an empty deck in Anki** when you cancel at the preview or the run is refused before any card is made.
+- **Outside Japanese, an imported audio pack or an added custom audio source goes above Google/Edge read-aloud in Word Audio,** so its recordings are used.
+- **After an upgrade, the startup prompt's Reimport All rebuilds every stale resource family** (dictionaries, frequency, pitch, audio) instead of only the first one.
+- **A frequency list CSV saved with a UTF-8 BOM (Excel's "CSV UTF-8") keeps its header,** so a count-based list is ranked the right way round.
+- **StarDict archives made on macOS (with __MACOSX or ._ sidecar files) import** instead of failing as "2 StarDict dictionaries".
+- **Switching to a settings profile whose mining language cannot mine on this machine is refused with the reason,** like the language selector, instead of leaving every mining run to fail on the missing language pack.
+- **Importing settings for a mining language whose language pack is not installed is refused with the reason,** instead of switching to a language that cannot mine.
+- **Switching the mining language after a run frees the previous language's text analyzer memory** (about 400 MB for Arabic).
+- **Importing a tab-separated word list whose meaning column contains a comma imports the word itself,** not the word joined to part of its meaning.
+- **Manage Known Words: importing a CSV exported by Manage Known Words no longer adds its header "word" as a known word.**
+- **A SAMI subtitle with a lowercase <sami> header or a leading comment loads when it is saved in CP949, Shift-JIS or UTF-16,** not only in UTF-8.
+- **Web articles declared as ISO-8859-1 keep their curly quotes, apostrophes and dashes** instead of turning them into invisible control characters.
+- **Reading → Text: a page that declares a bogus "undefined" charset no longer makes the whole fetch fail.**
+- **Reading → Text: text pasted over a fetched article (select all, then paste) is mined with the Source "Text"** instead of the old page's title.
+- **Reading: an AES-locked PDF is refused as protected** instead of being called a scanned PDF or failing with a cryptography error.
+- **Video → YouTube: links whose site reports no video length (such as direct video links) are no longer refused with "update yt-dlp".**
+- **Video OCR: Cancel stops at once while an image subtitle track of a large video is being read,** instead of after the whole file is scanned.
+- **Audiobook Sync: a chapter file no longer times a later, unread sentence at its very end,** which made the next file skip about 30 sentences.
+- **Audiobook Sync: cancelling while a book is loading no longer reports that book as failing to load.**
+- **Analytics: a run finishing in the background no longer moves the Mining History selection to another run,** so Delete this run's cards and Show in Anki act on the run you picked.
+- **Analytics: a run that finishes while Known Words is being counted is included,** instead of waiting up to ten minutes.
+- **Restoring a backup made before the data folder was moved restores into the current data folder** instead of the old location.
+- **"Update now" no longer overwrites another AppImage application's file** when Anki Miner was started from that application's terminal or launcher.
+- **A desktop shortcut created while Anki Miner was started from another AppImage application's terminal or launcher no longer points at that application.**
+- **Headless API: a reading run whose word names a whole sentence with `line_text` inside a longer unit gives the card that sentence rather than the whole unit.** A quoted speech, which the splitter keeps whole, is cut around the named sentence for the run (a 241-character speech became the card's sentence where one 33-character sentence of it was named).
+- **Headless API: naming two adjacent sentences of one reading unit no longer leaves a blank unit between them,** so `line_expansion` merges the neighbouring sentence instead of whitespace.
+- **Headless API: a relative input path whose name starts with "~" (like `~ep.srt`) is read from the calling folder** instead of failing the whole call with `INTERNAL`.
+- **Headless API: a SIGINT/SIGTERM cancel that arrives as a call finishes no longer turns a written verdict into a non-zero exit code.**
 
 ## [3.12.0] - 2026-11-08
 
