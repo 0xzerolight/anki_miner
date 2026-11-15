@@ -22,6 +22,7 @@ from anki_miner.languages.zh.render import (
     ZhTraditionalHook,
     _script_is_simplified,
 )
+from tests.unit.languages.cc_cedict_gloss import cc_cedict_gloss, classifier
 
 TONE_ON = dataclasses.replace(AnkiMinerConfig(), reading_tone_color=True)
 TONE_OFF = dataclasses.replace(AnkiMinerConfig(), reading_tone_color=False)
@@ -126,6 +127,27 @@ def test_a_simplified_sentence_holding_a_taiwan_variant_still_reads_as_simplifie
     assert _script_is_simplified(sentence) is True
     hook_word = _word("狗", "dog; CL:隻|只[zhi1],條|条[tiao2]", sentence=sentence)
     assert ZhMeasureWordHook().render(hook_word, config=config) == {"measure_word": "只"}
+
+
+@pytest.mark.parametrize(
+    ("items", "variant", "expected"),
+    [
+        # 东西: thing / stuff / person / CL:個｜个,件
+        ((["thing"], ["stuff"], classifier((("個", "gè"), ("个", "gè")), (("件", "jiàn"),))), "simplified", "个"),
+        ((["thing"], classifier((("個", "gè"), ("个", "gè")), (("件", "jiàn"),))), "traditional", "個"),
+        # 店: "inn; old-style hotel (CL:家)", then another gloss line
+        ((["inn; old-style hotel (", *classifier((("家", "jiā"),)), ")"], ["shop; store"]), "simplified", "家"),
+        # one classifier ending its line, the next line's text right after it
+        ((classifier((("家", "jiā"),)), ["store"]), "simplified", "家"),
+        ((["lightbulb"], classifier((("燈泡", "dēng pào"), ("灯泡", "dēng pào")))), "simplified", "灯泡"),
+        ((["no classifier here"],), "simplified", None),
+    ],
+)
+def test_measure_word_reads_the_yomitan_pack_gloss(items, variant, expected):
+    """The pack styles ``CL:`` as a label and the classifier as ruby (Z-27): read the text a reader sees."""
+    config = dataclasses.replace(AnkiMinerConfig(), script_variant=variant)
+    out = ZhMeasureWordHook().render(_word("东西", cc_cedict_gloss(*items)), config=config)
+    assert out == ({"measure_word": expected} if expected else {})
 
 
 @pytest.mark.parametrize(("prefer", "expected"), [("simplified", "只"), ("traditional", "隻")])

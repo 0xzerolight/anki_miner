@@ -9,10 +9,11 @@ is opt-in exactly like frequency/pitch/expression_audio.
 because that is the script every yue card is in: CC-CEDICT-Canto writes
 classifiers inline as ``CL:套[tou3]`` in 2,458 of its 166,267 rows (measured
 2026-09-20) and CC-Canto in none, so the field fills only when the
-CC-CEDICT-Canto slot is the hit -- and the bracketed reading there is Mandarin
-pinyin, which that hook already strips. Importing it pulls ``zh.reading`` and
-``zh.variants``, whose engine imports are function-local, so no jieba, pypinyin
-or opencc is loaded (pinned by test_yue_imports_no_zh_engine).
+CC-CEDICT-Canto slot is the hit -- and the reading there (bracketed, or ruby in
+the Yomitan pack) is Mandarin pinyin, which that hook already drops. Importing
+it pulls ``zh.reading`` and ``zh.variants``, whose engine imports are
+function-local, so no jieba, pypinyin or opencc is loaded (pinned by
+test_yue_imports_no_zh_engine).
 
 The classifier itself is Mandarin data too, so :class:`YueMeasureWordHook`
 wraps that hook and swaps the two Mandarin-only classifiers for the ones Hong

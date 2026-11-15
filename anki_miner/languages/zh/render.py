@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import html
 import re
+from html.parser import HTMLParser
 from typing import TYPE_CHECKING, Any
 
 from anki_miner.languages.zh.reading import pinyin_syllables, syllable_tone
@@ -20,8 +21,18 @@ if TYPE_CHECKING:  # annotation-only: keeps profile.py's resource_catalog import
     from anki_miner.languages.profile import CardRenderHook
 
 # CC-CEDICT writes classifiers inline in the gloss: "CL:家[jia1],個|个[ge4]".
-# Capture the first group, stop at the first separator or tag boundary.
-_CL_RE = re.compile(r"CL\s*:\s*([^\s;,<]+)")
+# MarvNC's Yomitan packs (zh CC-CEDICT, yue CC-CEDICT.Canto) style the "CL:"
+# as a label and each classifier as a ruby link, a pair joined by a full-width
+# ｜, so the gloss's text reads "CL:個｜个,件" or "inn (CL:家)". Matched on
+# _gloss_text: capture the first group, stop at a separator or a bracket.
+_CL_RE = re.compile(r"CL\s*:\s*([^\s;,()]+)")
+_PAIR_RE = re.compile(r"[|｜]")
+#: A block boundary is a newline in the text, so a classifier that ends one
+#: gloss item never runs into the next item's text.
+_BLOCK_TAGS = frozenset({"br", "div", "li", "ol", "ul", "p"})
+#: Not gloss text: ruby readings (the pack's pinyin over each classifier) and
+#: the stylesheet attach_card_style_block appends to the card definition.
+_SKIPPED_TAGS = frozenset({"rt", "rp", "style", "script"})
 # 1 red / 2 orange / 3 green / 4 blue / 5 grey (surveyed convention, spec 9.1).
 # The hex is the fallback every other note type renders; Anki Miner Note sets
 # per-theme --amn-tone-* values that clear 4.5:1 in both themes. The fallback's
@@ -40,8 +51,8 @@ _TONE_COLORS = {
 class ZhMeasureWordHook:
     """Measure word / classifier, best-effort from the fetched CC-CEDICT gloss.
 
-    CC-CEDICT writes a two-script classifier as ``trad|simp`` (``CL:輛|辆``), so
-    the half the card shows follows ``config.script_variant`` — printing both
+    CC-CEDICT writes a two-script classifier as ``trad|simp`` (``CL:輛|辆``; the
+    Yomitan packs render it ``輛｜辆`` with pinyin ruby), so the half the card shows follows ``config.script_variant`` — printing both
     put a traditional glyph on a simplified learner's card and read as two
     classifiers. The halves are PICKED, never converted: ``to_script`` does not
     fold 隻 to 只, and the dictionary already supplies the pair.
@@ -64,10 +75,10 @@ class ZhMeasureWordHook:
         return ("measure_word",)
 
     def render(self, word: Any, *, config: AnkiMinerConfig) -> dict[str, str]:
-        match = _CL_RE.search(getattr(word, "definition_html", "") or "")
+        match = _CL_RE.search(_gloss_text(getattr(word, "definition_html", "") or ""))
         if not match:
             return {}
-        halves = [part.split("[")[0].strip() for part in match.group(1).split("|")]
+        halves = [part.split("[")[0].strip() for part in _PAIR_RE.split(match.group(1))]
         halves = [half for half in halves if half]
         if not halves:
             return {}
@@ -85,6 +96,39 @@ class ZhMeasureWordHook:
             if simplified is not None:
                 return simplified
         return self._prefer == "simplified"
+
+
+class _GlossText(HTMLParser):
+    """A rendered gloss's visible text, without ruby readings, a newline at each block."""
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.parts: list[str] = []
+        self._skipped = 0
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag in _SKIPPED_TAGS:
+            self._skipped += 1
+        elif tag in _BLOCK_TAGS:
+            self.parts.append("\n")
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag in _SKIPPED_TAGS:
+            self._skipped = max(0, self._skipped - 1)
+        elif tag in _BLOCK_TAGS:
+            self.parts.append("\n")
+
+    def handle_data(self, data: str) -> None:
+        if not self._skipped:
+            self.parts.append(data)
+
+
+def _gloss_text(markup: str) -> str:
+    """The text of a definition as a reader sees it; plain text comes back as it is."""
+    parser = _GlossText()
+    parser.feed(markup)
+    parser.close()
+    return "".join(parser.parts)
 
 
 def _script_is_simplified(text: str) -> bool | None:
