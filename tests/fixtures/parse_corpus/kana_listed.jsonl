@@ -8,3 +8,4 @@
 {"id":"kn10","sentence":"やっぱ無理だ","expected":["やっぱ","無理"],"category":"kana-listed","note":"JMdict gives the spoken やっぱ no priority tag; the list names it."}
 {"id":"kn11","sentence":"あんなこと言うな","expected":["あんな","こと","言う"],"category":"kana-listed","note":"あんな is 連体詞 before a noun, though every carrier sentence tags it 形状詞."}
 {"id":"kn12","sentence":"あとは頼むよ","expected":["あと","頼む"],"category":"kana-listed","note":"The kana spelling of 後, a two-kana noun named in SHORT_NOUNS."}
+{"id":"kn13","sentence":"自分ちに帰る","expected":["自分","帰る"],"category":"kana-listed","note":"unidic-lite cuts colloquial 自分ち into 自 + 分ち (わかち); the post-pass re-cuts it 自分 + ち."}

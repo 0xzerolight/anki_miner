@@ -73,3 +73,11 @@ class TestUnknownKatakanaNoun:
 
     def test_needs_a_dictionary(self, test_config):
         assert "スマホ" not in _mine(test_config, "スマホを見て")
+
+
+class TestJibunchiResplit:
+    @pytest.mark.parametrize("line", ["自分ちに帰る", "自分ちで食う"])
+    def test_mines_jibun_not_its_pieces(self, test_config, line):
+        fronts = _mine(test_config, line)
+        assert "自分" in fronts
+        assert not {"自", "分ち"} & set(fronts)

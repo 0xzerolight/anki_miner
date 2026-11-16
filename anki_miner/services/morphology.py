@@ -943,8 +943,8 @@ class RetaggedToken:
 
     __slots__ = ("surface", "feature", "white_space")
 
-    def __init__(self, token, fields: dict[str, str]):
-        self.surface = token.surface
+    def __init__(self, token, fields: dict[str, str], surface: str | None = None):
+        self.surface = token.surface if surface is None else surface
         self.feature = token.feature._replace(**fields)
         self.white_space = getattr(token, "white_space", "")
 
@@ -977,6 +977,24 @@ _PREFIX_NOUNS: dict[str, dict[str, str]] = {
 }
 
 
+#: Two tagger tokens cut at the wrong place, by their (surface, lemma), and the
+#: two (surface, fields) they are re-cut into. 自分ち 'my place' (ち from うち)
+#: has no path in unidic-lite, which reads 自 + 分ち (わかち 'division').
+_MISSPLITS: dict[tuple[tuple[str, str | None], ...], tuple[tuple[str, dict[str, str]], ...]] = {
+    (("自", "自"), ("分ち", "分かち")): (
+        (
+            "自分",
+            {
+                "pos3": "一般",
+                **dict.fromkeys(("lemma", "orth", "orthBase"), "自分"),
+                **dict.fromkeys(("lForm", "pron", "pronBase", "kana", "kanaBase", "form", "formBase"), "ジブン"),
+            },
+        ),
+        ("ち", {**dict.fromkeys(("lemma", "orth", "orthBase"), "ち"), **dict.fromkeys(("lForm", "kana"), "チ")}),
+    ),
+}
+
+
 def _unknown_katakana_noun(token) -> bool:
     """A katakana word the tagger does not know: a 名詞 with no lemma (スマホ, コスパ)."""
     feature = getattr(token, "feature", None)
@@ -993,6 +1011,11 @@ def _unknown_katakana_noun(token) -> bool:
 #: Entry tags of a sound or a cry, which JMdict often also tags ``n``
 #: (ピーポー 'nee-naw', オラオラ).
 _SOUND_TAGS = frozenset({"int", "on-mim"})
+
+
+def _lemma_or_none(token) -> str | None:
+    lemma = getattr(getattr(token, "feature", None), "lemma", None)
+    return lemma if isinstance(lemma, str) else None
 
 
 def _dictionary_nouns(surfaces: set[str], form_lookup: FormLookup) -> set[str]:
@@ -1025,16 +1048,29 @@ def _retag_mistagged_tokens(tokens: list, form_lookup: FormLookup | None = None)
       for it, its surface becomes its lemma. The noun entry is required, and a
       sound or cry sense refused, because the dictionary also lists katakana
       interjections and sound words (ワーオ, ピーポー), some of them as nouns.
+    - Two tokens cut at the wrong place (``_MISSPLITS``: 自|分ち) are re-cut
+      (自分|ち); the pair's surfaces join to the same text.
     """
     unknown = {token.surface for token in tokens if _unknown_katakana_noun(token)}
     nouns = _dictionary_nouns(unknown, form_lookup) if unknown and form_lookup is not None else set()
     out: list = []
+    resplit: tuple[tuple[str, dict[str, str]], ...] | None = None
     for i, token in enumerate(tokens):
+        if resplit is not None:
+            out.append(RetaggedToken(token, resplit[1][1], resplit[1][0]))
+            resplit = None
+            continue
         pos1 = getattr(getattr(token, "feature", None), "pos1", None)
         nxt = tokens[i + 1] if i + 1 < len(tokens) else None
         white_space = getattr(nxt, "white_space", "")
         spaced = isinstance(white_space, str) and bool(white_space)
-        fields = None
+        if nxt is not None and not spaced:
+            pair = ((token.surface, _lemma_or_none(token)), (nxt.surface, _lemma_or_none(nxt)))
+            resplit = _MISSPLITS.get(pair)
+            if resplit is not None:
+                out.append(RetaggedToken(token, resplit[0][1], resplit[0][0]))
+                continue
+        fields: dict[str, str] | None = None
         if pos1 == "感動詞" and nxt is not None and not spaced:
             if getattr(getattr(nxt, "feature", None), "pos1", None) == "名詞":
                 fields = _FILLER_PRENOUNS.get(token.surface)
