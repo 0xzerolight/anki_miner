@@ -13,3 +13,5 @@
 {"id":"vv13","sentence":"ナイフが刺さった","expected":["ナイフ","刺さる"],"category":"verb-voice","note":"guard: the -aru verb itself stays"}
 {"id":"vv15","sentence":"彼女にフラれた","expected":["彼女","ふる"],"category":"verb-voice","note":"katakana verb フラ (orthBase フル, lemma 振る): フル is attested only as the adjective 'full', so the front folds to the lemma's reading"}
 {"id":"vv16","sentence":"今日はツイてる","expected":["今日","つく"],"category":"verb-voice","note":"katakana verb ツイ (orthBase ツク, lemma 付く) with no katakana entry folds to the lemma's reading"}
+{"id":"vv17","sentence":"まっ いいか","expected":[],"category":"verb-voice","note":"the filler まっ the tagger reads as the 促音便 stem of 待つ: nothing continues it, so it is a cut sound, not まつ"}
+{"id":"vv18","sentence":"ちょっとまって","expected":["まつ"],"category":"verb-voice","note":"guard: a 促音便 stem continued by て stays the verb (まつ is attested on purpose)"}

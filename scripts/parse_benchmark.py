@@ -288,6 +288,9 @@ _ANCHOR_HEADWORDS: tuple[str, ...] = (
     "フル",
     "振る",
     "付く",
+    # verb-voice: まつ is DELIBERATELY attested so vv17 fails on the cut-stem
+    # reject, not on a dict miss
+    "まつ",
     # jiru-zuru modern headwords (the fix's targets)
     "感じる",
     "論じる",
@@ -454,7 +457,7 @@ _ANCHOR_RULES: dict[str, str] = {
     "行く": "v5",
     "聞かす": "v5s",
     **dict.fromkeys(("刺す", "刺さる"), "v5"),
-    **dict.fromkeys(("振る", "付く"), "v5"),
+    **dict.fromkeys(("振る", "付く", "まつ"), "v5"),
     # ichidan (jiru-zuru targets + other ichidan guards)
     **dict.fromkeys(("感じる", "論じる", "信じる", "生じる", "演じる", "通じる", "準じる", "かんじる"), "v1"),
     **dict.fromkeys(("報いる", "帰れる", "見る", "恐れる", "いる", "くれる"), "v1"),

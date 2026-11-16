@@ -200,6 +200,11 @@ _KANA_FUSED_LEMMAS: frozenset[str] = frozenset({"逸る", "抗する"})
 # the bare token is turned away. The cost is a bare kana imperative いえ ('say it').
 _KANA_BARE_INTERJECTIONS: frozenset[str] = frozenset({"いえ"})
 
+# What continues a verb's 促音便 stem (待っ|て, 取っ|たって, 行っ|ちゃう, 放っ|とこ). A
+# recovered kana stem cut at っ with none of these after it is a filler or a
+# stutter (まっ いいか, もっ もちろん), not the verb.
+_SOKUON_CONTINUATIONS: frozenset[str] = frozenset("たてだでちじと")
+
 # How _kana_recovery brought a hiragana word back: by the content gate, or by
 # name from the kana word list (services/kana_words.py). A recovered word takes
 # the U4 window reject, and so does a listed kana spelling of a kanji-written
@@ -2900,6 +2905,8 @@ class SubtitleParserService:
                 and self._find_highlight_end(text, raw_tokens, tok_start, tok_end, word_token) == tok_end
             ):
                 return False
+            if self._is_cut_sokuon_stem(word_token, text, tok_end):
+                return False
             return not self._ellipsis_reject(word_token, text, tok_start, tok_end)
         if not self._whitelist_rescues(word_token, text, tok_start, tok_end, tokens, raw_tokens):
             if rejects is not None:
@@ -2908,6 +2915,14 @@ class SubtitleParserService:
         if self._is_katakana_run_fragment(word_token, text, tok_start, tok_end):
             return False
         return not self._ellipsis_reject(word_token, text, tok_start, tok_end)
+
+    @staticmethod
+    def _is_cut_sokuon_stem(word_token, text: str, tok_end: int) -> bool:
+        """Whether a recovered kana verb is a 促音便 stem nothing continues (まっ, もっ before a space)."""
+        cform = getattr(getattr(word_token, "feature", None), "cForm", None)
+        if not isinstance(cform, str) or not cform.startswith("連用形-促音便"):
+            return False
+        return tok_end >= len(text) or text[tok_end] not in _SOKUON_CONTINUATIONS
 
     def _rescue_eligible(self, word_token) -> bool:
         """Whether any whitelist entry could rescue this token: ``_whitelist_rescues``' token-only checks.
