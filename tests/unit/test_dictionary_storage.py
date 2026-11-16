@@ -1623,15 +1623,16 @@ class TestHomographScoping:
 
 
 class TestLemmaScoping:
-    """Rule A': lemma-exact scoping for kana fronts with no term-exact row.
+    """Rule A': lemma-exact scoping for kana fronts.
 
     A kana-spelled token (mined_form ゆう, lemma 言う) resolves purely through the
     folded-reading scan, where every ゆう-reading homograph qualifies and score
     ranking buries the right lexeme (有 1999800 > 夕 > 結う > 言う 989800 in the
     real JMdict build). When the caller supplies the token's lemma and at least
     one fetched row's term equals it, the scope keeps only those rows (plus
-    same-content duplicates — the Rule A carve-out). Rule A (term-exact) still
-    takes precedence; no lemma row ⇒ fall through to Rule B unchanged.
+    same-content duplicates — the Rule A carve-out). On a hiragana front the
+    lemma outranks a same-spelled headword; on a katakana front the headword
+    (Rule A) still wins. No lemma row ⇒ fall through to Rule A or B unchanged.
     """
 
     def _seed_yuu(self, db_path: Path) -> None:
@@ -1677,23 +1678,68 @@ class TestLemmaScoping:
         finally:
             conn.close()
 
-    def test_rule_a_precedence_over_lemma(self, tmp_path: Path):
-        """A term-exact row still wins: the dictionary's own ゆう headword is
-        kept and the lemma plays no part (Rule A checked before Rule A')."""
-        db_path = tmp_path / "exact.sqlite"
+    def test_hiragana_front_follows_lemma_over_unrelated_kana_headword(self, tmp_path: Path):
+        """かつ the conjunction (lemma 且つ) is not カツ the cutlet, though the
+        cutlet entry also lists the spelling かつ and so matches term-exact."""
+        db_path = tmp_path / "katsu.sqlite"
         create_index(db_path)
         bulk_insert(
             db_path,
             [
-                DictRow(term="ゆう", reading="ゆう", content="<div>kana headword</div>", sequence=1),
-                DictRow(term="言う", reading="ゆう", content="<div>to say</div>", sequence=2),
+                DictRow(term="かつ", reading="かつ", content="<div>cutlet</div>", sequence=1),
+                DictRow(term="カツ", reading="かつ", content="<div>cutlet</div>", score=999800, sequence=1),
+                DictRow(term="且つ", reading="かつ", content="<div>and; moreover</div>", score=999800, sequence=2),
+                DictRow(term="勝つ", reading="かつ", content="<div>to win</div>", score=1999800, sequence=3),
             ],
         )
         conn = open_readonly(db_path)
         try:
-            scoped = lookup(conn, "ゆう", "ゆう", lemma="言う")
-            assert scoped == [("<div>kana headword</div>", "", 1)]
-            assert lookup_many(conn, [("ゆう", "ゆう")], lemmas={"ゆう": "言う"})["ゆう"] == scoped
+            scoped = lookup(conn, "かつ", "かつ", lemma="且つ")
+            assert scoped == [("<div>and; moreover</div>", "", 2)]
+            assert lookup_many(conn, [("かつ", "かつ")], lemmas={"かつ": "且つ"})["かつ"] == scoped
+            # No lemma in hand: the spelling is all there is to go on.
+            assert [c for c, _, _ in lookup(conn, "かつ", "かつ")] == ["<div>cutlet</div>", "<div>cutlet</div>"]
+        finally:
+            conn.close()
+
+    def test_hiragana_front_keeps_the_lemma_entrys_own_kana_headword(self, tmp_path: Path):
+        """こう (lemma 斯う): the entry's kana headword row carries the lemma
+        row's content and stays, ahead of it; the stork spelled こう goes."""
+        db_path = tmp_path / "kou.sqlite"
+        create_index(db_path)
+        bulk_insert(
+            db_path,
+            [
+                DictRow(term="こう", reading="こう", content="<div>in this way</div>", tags="common", sequence=1),
+                DictRow(term="斯う", reading="こう", content="<div>in this way</div>", tags="rare", sequence=1),
+                DictRow(term="こう", reading="こう", content="<div>stork</div>", sequence=2),
+            ],
+        )
+        conn = open_readonly(db_path)
+        try:
+            scoped = lookup(conn, "こう", "こう", lemma="斯う")
+            assert scoped == [("<div>in this way</div>", "common", 1), ("<div>in this way</div>", "rare", 1)]
+            assert lookup_many(conn, [("こう", "こう")], lemmas={"こう": "斯う"})["こう"] == scoped
+        finally:
+            conn.close()
+
+    def test_katakana_front_keeps_term_exact_over_lemma(self, tmp_path: Path):
+        """サイコ "psycho" is tagged with the native lemma 柴胡: on a katakana
+        front the spelling wins and the lemma plays no part."""
+        db_path = tmp_path / "saiko.sqlite"
+        create_index(db_path)
+        bulk_insert(
+            db_path,
+            [
+                DictRow(term="サイコ", reading="さいこ", content="<div>psycho</div>", sequence=1),
+                DictRow(term="柴胡", reading="さいこ", content="<div>Bupleurum root</div>", sequence=2),
+            ],
+        )
+        conn = open_readonly(db_path)
+        try:
+            scoped = lookup(conn, "サイコ", "さいこ", lemma="柴胡")
+            assert scoped == [("<div>psycho</div>", "", 1)]
+            assert lookup_many(conn, [("サイコ", "さいこ")], lemmas={"サイコ": "柴胡"})["サイコ"] == scoped
         finally:
             conn.close()
 
