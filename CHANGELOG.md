@@ -20,7 +20,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Fixed
 - **Japanese verb cards show the verb the line uses.** An imperative (持て) mined 持てる, a passive (刺された) mined 刺さる, a potential (帰れない) mined 帰れる, a short causative (行かされた) mined 行かす and katakana フラれた mined the loanword フル; they now mine 持つ, 刺す, 帰る, 行く and ふる. The last three fronts had no dictionary entry, so the card was dropped.
 - **Kana fillers no longer become verb cards.** いえ ('no') mined いえる, a sound cut at っ (まっ, たっ) mined まつ and たつ, and the tagger's glues いたんだ, 違かった and ういっす mined 痛む, 買う and 逸する.
-- **その子, きれいな子 and 家の前 are no longer taken for names.** A name list has そのこ, なこ and いえのまえ, so the name filter dropped 子, 家 and 前 with them.
+- **その子, きれいな子 and 家の前 are no longer taken for names.** Name lists have その子, な子 and 家の前 as names, so the name filter dropped 子, 家 and 前 with them.
 - **自分ち mines 自分** instead of 自 and 分ち, and お父上様 or 母上殿 no longer mine 上様 and 上殿.
 - **Chinese lines in a Japanese subtitle file are not mined.** A fansub's credit line and the Chinese half of a bilingual file passed as Japanese because every kanji counts as Japanese script. A line is dropped when it holds a simplified character, or has no kana and a Chinese-only pronoun or particle; other Chinese lines still pass.
 - **Half-width caption punctuation (｡､｢｣) is read as punctuation, and →, ☎ and invisible left-to-right marks are removed from sentences.** After a half-width ｡ the tagger glued a particle to the next word (オレはやる｡ mined はやる).
