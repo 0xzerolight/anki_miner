@@ -551,6 +551,7 @@ class SubtitleParserService:
         token_post_pass: TokenPostPass | None = None,
         normalize: Callable[[str], str] | None = None,
         has_target_script: Callable[[str], bool] | None = None,
+        skip_line: Callable[[str], bool] | None = None,
         ellipsis_fragment_guard: bool = True,
         sentence_annotation: bool = True,
         attested_reading_fallback: bool = False,
@@ -662,6 +663,11 @@ class SubtitleParserService:
                 multi-line cue written in another script — the English half of
                 a bilingual zh subtitle. ``None`` — every ja/ko path — keeps
                 every physical line of every cue.
+            skip_line: True for a cleaned line that shares the mining language's
+                script but is another language (a Chinese line in a Japanese
+                file). Such a line is listed and previewed like any other and
+                never tokenized, so no word is mined from it. ``None`` — every
+                language but ja — tokenizes every line.
             ellipsis_fragment_guard: Whether the U8 truncation-fragment reject
                 (``_is_ellipsis_truncation_fragment``) runs at all. Both of its
                 signals read Japanese: a severed conjugation is recognised by a
@@ -731,6 +737,8 @@ class SubtitleParserService:
         # Injected once per instance, so the per-FILE line cache below can never
         # replay line state tokenized under a different gate.
         self._has_target_script = has_target_script
+        # Same-script foreign-line reject (see the skip_line argument); None ⇒ off.
+        self._skip_line = skip_line
         # Sentence furigana/reading generation (spec 6.1 #2); False ⇒ the three
         # annotation fields stay "".
         self._sentence_annotation = sentence_annotation
@@ -1479,6 +1487,8 @@ class SubtitleParserService:
         locates these tokens in it.
         """
         stored_text, text = text, self._tokenizer_text(text)
+        if self._skip_line is not None and self._skip_line(text):
+            return (stored_text, [], [], start, end, end - start)
         tokenize_start = time.perf_counter()
         raw_tokens = list(self._tagger()(text))
         self._tokenize_time_s += time.perf_counter() - tokenize_start

@@ -56,6 +56,7 @@ from anki_miner.services.word_list_service import WordListService, active_whitel
 from anki_miner.services.wordset_service import WordsetService
 from anki_miner.services.youtube_fetcher import YouTubeFetcherService
 from anki_miner.utils.i18n import tr_format
+from anki_miner.utils.ja_normalize import is_chinese_line
 from anki_miner.utils.subtitle_encoding import script_check_kwarg
 
 logger = logging.getLogger(__name__)
@@ -791,8 +792,8 @@ def _create_subtitle_parser(config: AnkiMinerConfig, **lookups: Any) -> Subtitle
     way ``_lookup_kwarg`` gates on the strategy object. For the ja profile the
     construction stays the literal ``SubtitleParserService(...)`` call this
     module has always made: ja's ``_create_parser`` forwards to the same class
-    with ja's script gate, which this branch passes too, so the two build the
-    same object, but only the direct call reaches this module's
+    with ja's script gate and Chinese-line skip, which this branch passes too,
+    so the two build the same object, but only the direct call reaches this module's
     ``SubtitleParserService`` attribute — which
     ``test_batch_queue_worker.test_one_subtitle_parser_service_for_the_whole_queue``
     patches to count the parsers a queue run builds. A profile-routed ja build
@@ -803,7 +804,12 @@ def _create_subtitle_parser(config: AnkiMinerConfig, **lookups: Any) -> Subtitle
     """
     profile = get_profile(config_language(config))
     if profile.create_parser is get_profile("ja").create_parser:
-        return SubtitleParserService(config, has_target_script=profile.script.contains_target_script, **lookups)
+        return SubtitleParserService(
+            config,
+            has_target_script=profile.script.contains_target_script,
+            skip_line=is_chinese_line,
+            **lookups,
+        )
     return cast(SubtitleParserService, profile.create_parser(config, **lookups))
 
 
