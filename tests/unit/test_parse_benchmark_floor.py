@@ -505,3 +505,17 @@ def test_anchor_meets_lexical_join_floor() -> None:
 # ellipsis-truncation (U8), katakana-verb-front, front-remap, masu-stem-nominal,
 # prefix-compound, plain-causative, reading-gate and lexical-join floors are
 # gated above; linebreak-split is scoreboard-only.
+
+
+# Categories whose every record must mine exactly its expected fronts. They have
+# no orthbase-versus-anchor contrast to score, so each row is asserted by itself.
+_EXACT_CATEGORIES = ("kana-listed", "span-window")
+
+
+def _exact_records() -> list[dict]:
+    return [r for r in load_corpus(DEFAULT_CORPUS_DIR) if r["category"] in _EXACT_CATEGORIES]
+
+
+@pytest.mark.parametrize("record", _exact_records(), ids=lambda r: r["id"])
+def test_anchor_mines_each_exact_record(record: dict) -> None:
+    assert mine_lite_anchor(record["sentence"]) == set(record["expected"])
