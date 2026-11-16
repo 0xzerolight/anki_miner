@@ -11,3 +11,5 @@
 {"id":"vv11","sentence":"話を聞かす","expected":["話","聞かす"],"category":"verb-voice","note":"guard: an attested -asu verb (聞かす) is a real word and stays"}
 {"id":"vv12","sentence":"ナイフで刺された","expected":["ナイフ","刺す"],"category":"verb-voice","note":"godan passive: 刺さる's potential spells 刺される, but the tagger split off the passive れる after the 未然形 刺さ"}
 {"id":"vv13","sentence":"ナイフが刺さった","expected":["ナイフ","刺さる"],"category":"verb-voice","note":"guard: the -aru verb itself stays"}
+{"id":"vv15","sentence":"彼女にフラれた","expected":["彼女","ふる"],"category":"verb-voice","note":"katakana verb フラ (orthBase フル, lemma 振る): フル is attested only as the adjective 'full', so the front folds to the lemma's reading"}
+{"id":"vv16","sentence":"今日はツイてる","expected":["今日","つく"],"category":"verb-voice","note":"katakana verb ツイ (orthBase ツク, lemma 付く) with no katakana entry folds to the lemma's reading"}

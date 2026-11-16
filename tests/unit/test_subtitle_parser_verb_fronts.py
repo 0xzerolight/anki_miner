@@ -181,3 +181,44 @@ class TestGodanPassiveFront:
         service = _service(test_config, {"救う", "救われる"})
         token = _verb_token("救わ", "救う", "五段-ワア行", "未然形-一般")
         assert service._resolve_front(token, "救う", "救われた", 0, 4) == "救われる"
+
+
+class TestKatakanaVerbFoldToLemmaReading:
+    """An all-katakana verb orthBase that is no verb entry folds to its lemma's reading."""
+
+    @staticmethod
+    def _service(test_config, *, verbs=(), others=(), readings=None):
+        from anki_miner.services.deinflection import condition_flags_from_rules, conditions_match
+
+        rules = {**dict.fromkeys(others, ""), **dict.fromkeys(verbs, "v5")}
+        readings = readings or {}
+        with patch("anki_miner.services.subtitle_parser.get_shared_tagger"):
+            return SubtitleParserService(
+                test_config,
+                term_lookup=lambda terms: {t for t in terms if t in rules},
+                term_common_lookup=lambda terms: dict.fromkeys(terms, False),
+                term_rules_lookup=lambda candidates: {
+                    text
+                    for text, mask in candidates
+                    if text in rules
+                    and (conditions_match(mask, condition_flags_from_rules(rules[text])) if mask else not rules[text])
+                },
+                reading_lookup=lambda terms: {t: readings[t] for t in terms if t in readings},
+            )
+
+    def test_non_verb_katakana_entry_folds_to_the_lemma_reading(self, test_config):
+        service = self._service(test_config, verbs=("振る",), others=("フル",), readings={"振る": ["ふる"]})
+        assert service._fold_katakana_verb_front("フル", "振る") == "ふる"
+
+    def test_katakana_verb_entry_is_kept(self, test_config):
+        service = self._service(test_config, verbs=("イク", "行く"), readings={"行く": ["いく", "ゆく"]})
+        assert service._fold_katakana_verb_front("イク", "行く") == "イク"
+
+    def test_lemma_read_otherwise_keeps_the_front(self, test_config):
+        service = self._service(test_config, verbs=("振る",), others=("フル",), readings={"振る": ["ふる"]})
+        assert service._fold_katakana_verb_front("ツク", "振る") == "ツク"
+
+    def test_katakana_adjective_keeps_the_old_gate(self, test_config):
+        # No lemma is passed for an adjective: カワイイ stays katakana by ruling.
+        service = self._service(test_config, others=("カワイイ",), readings={"可愛い": ["かわいい"]})
+        assert service._fold_katakana_verb_front("カワイイ") == "カワイイ"

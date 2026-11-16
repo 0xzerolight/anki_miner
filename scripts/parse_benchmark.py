@@ -283,6 +283,11 @@ _ANCHOR_HEADWORDS: tuple[str, ...] = (
     # verb-voice: a godan passive (刺された) against the -aru verb 刺さる
     "刺す",
     "刺さる",
+    # verb-voice: katakana verbs whose katakana spelling is no verb entry (フル is
+    # the adjective 'full') fold to the lemma's reading (振る, 付く read ふる, つく)
+    "フル",
+    "振る",
+    "付く",
     # jiru-zuru modern headwords (the fix's targets)
     "感じる",
     "論じる",
@@ -449,6 +454,7 @@ _ANCHOR_RULES: dict[str, str] = {
     "行く": "v5",
     "聞かす": "v5s",
     **dict.fromkeys(("刺す", "刺さる"), "v5"),
+    **dict.fromkeys(("振る", "付く"), "v5"),
     # ichidan (jiru-zuru targets + other ichidan guards)
     **dict.fromkeys(("感じる", "論じる", "信じる", "生じる", "演じる", "通じる", "準じる", "かんじる"), "v1"),
     **dict.fromkeys(("報いる", "帰れる", "見る", "恐れる", "いる", "くれる"), "v1"),
@@ -477,6 +483,8 @@ _ANCHOR_RULES: dict[str, str] = {
 # Readings for the rows the reading-gate category needs. Every other row keeps
 # reading=None, which the gate treats as "no reading recorded" (it passes).
 _ANCHOR_READINGS: dict[str, str] = {
+    "振る": "ふる",
+    "付く": "つく",
     "彼の方": "あのかた",
     "木の下": "このした",
     "目の前": "めのまえ",

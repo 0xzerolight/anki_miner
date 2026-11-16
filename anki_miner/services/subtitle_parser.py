@@ -28,6 +28,7 @@ from anki_miner.services.deinflection import (
     _is_pure_hiragana,
     find_highlight_end,
     find_highlight_end_with_trace,
+    get_highlight_deinflector,
     resolve_dictionary_form,
 )
 from anki_miner.services.kana_words import is_kanji_spelled, is_listed
@@ -2657,7 +2658,8 @@ class SubtitleParserService:
             # untouched (ヤル) folds to its common hiragana headword (やる) — its
             # equal lForm/kanaBase readings keep both seams above from firing.
             if cached == orth_base:
-                cached = self._fold_katakana_verb_front(orth_base)
+                verb_lemma = extract_lemma(word_token) if getattr(feature, "pos1", None) == "動詞" else None
+                cached = self._fold_katakana_verb_front(orth_base, verb_lemma)
             if len(self._front_cache) >= _FRONT_CACHE_CAP:
                 self._front_cache.clear()
             self._front_cache[key] = cached
@@ -2748,7 +2750,7 @@ class SubtitleParserService:
             return orth_base  # no attested target to remap onto
         return lemma
 
-    def _fold_katakana_verb_front(self, orth_base: str) -> str:
+    def _fold_katakana_verb_front(self, orth_base: str, lemma: str | None = None) -> str:
         """Fold an all-katakana verb orthBase to its common hiragana headword.
 
         unidic-lite tags a katakana-written verb spelling (ヤル for やる) with its
@@ -2770,16 +2772,22 @@ class SubtitleParserService:
           so the gate never fires — its orthBase is the correct card front and is
           kept untouched.
         * the offline dictionary does NOT attest the katakana ``orth_base`` as a
-          term (exact headword, no folding). An attested katakana verb is a real
-          word and is KEPT — attestation, not a fold table, decides.
-        * the dictionary DOES attest the hiragana fold as a term AND a
-          commonness-aware dict tags it common. Never fold onto an unattested or
-          rare/wrong target; a chain with no commonness-aware dict (probe returns
-          ``None``) cannot prove commonness, so the fold safe-degrades to keeping
-          ``orth_base`` (byte-identical to pre-fold — the U11 degrade contract).
+          verb (exact headword with verb rules). An attested katakana verb (イク)
+          is a real word and is KEPT — attestation, not a fold table, decides. A
+          katakana entry of another part of speech does not keep it: フル is the
+          adjective 'full', never the verb of フラれた. With no rules-aware probe
+          wired, any attestation keeps it.
+        * and EITHER the dictionary attests the hiragana fold as a term that a
+          commonness-aware dict tags common (ヤル → やる; a chain with no aware
+          dict cannot prove commonness), OR the tagger's ``lemma`` is attested
+          with the fold as its reading (フル, lemma 振る read ふる; ツク, lemma 付く):
+          the hiragana front then follows that lemma for its definition. Never
+          fold onto a reading nothing attests.
 
-        Only ``ヤル`` reaches this gate in both mining corpora (blast radius 1);
-        the guards keep it that way for any future all-katakana verb orthBase.
+        ``lemma`` is passed for a 動詞 token only: without it (a katakana
+        adjective such as カワイイ, which stays katakana by ruling, or the
+        ``_is_katakana_run_fragment`` probe) any attestation keeps the front and
+        only the common-headword fold applies.
         """
         if not _is_all_katakana(orth_base):
             return orth_base
@@ -2787,12 +2795,21 @@ class SubtitleParserService:
         if fold == orth_base:
             return orth_base
         attested = self._memoized_attest([orth_base, fold])
-        if orth_base in attested or fold not in attested:
+        if orth_base in attested and (lemma is None or self._attested_as_verb(orth_base)):
             return orth_base
-        common = self._memoized_term_common([fold])
-        if common is None or not common.get(fold):
-            return orth_base
-        return fold
+        if fold in attested:
+            common = self._memoized_term_common([fold])
+            if common is not None and common.get(fold):
+                return fold
+        if lemma and fold in (katakana_to_hiragana(reading) for reading in self._attested_readings(lemma)):
+            return fold
+        return orth_base
+
+    def _attested_as_verb(self, term: str) -> bool:
+        """Whether a dictionary entry for ``term`` carries verb rules (True when no rules-aware probe is wired)."""
+        if self._term_rules_lookup is None:
+            return True
+        return term in self._term_rules_lookup([(term, get_highlight_deinflector().condition_flags("v"))])
 
     def _extract_reading(self, word_token) -> str:
         """Extract kana reading from a token (see morphology.extract_reading)."""
