@@ -15,3 +15,5 @@
 {"id":"vv16","sentence":"今日はツイてる","expected":["今日","つく"],"category":"verb-voice","note":"katakana verb ツイ (orthBase ツク, lemma 付く) with no katakana entry folds to the lemma's reading"}
 {"id":"vv17","sentence":"まっ いいか","expected":[],"category":"verb-voice","note":"the filler まっ the tagger reads as the 促音便 stem of 待つ: nothing continues it, so it is a cut sound, not まつ"}
 {"id":"vv18","sentence":"ちょっとまって","expected":["まつ"],"category":"verb-voice","note":"guard: a 促音便 stem continued by て stays the verb (まつ is attested on purpose)"}
+{"id":"vv19","sentence":"彼氏いたんだ","expected":["彼氏"],"category":"verb-voice","note":"tagger glue: いた+んだ read as 痛む (いたむ is attested on purpose)"}
+{"id":"vv20","sentence":"膝が痛む","expected":["膝","痛む"],"category":"verb-voice","note":"guard: the glued-lemma list gates kana recovery only, so kanji 痛む is mined"}

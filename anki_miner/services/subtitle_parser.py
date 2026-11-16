@@ -192,7 +192,10 @@ _KANA_RECOVER_REJECT_POS2: frozenset[str] = frozenset({"助動詞語幹", "非�
 # こう + する (こうするつもり). Each glue shows up only in some contexts, and a real
 # 流行る (はやってる) carries its own lemma, so the lemma tells them apart. The
 # cost is a real 逸る written in kana (はやる気持ち), which is no longer mined.
-_KANA_FUSED_LEMMAS: frozenset[str] = frozenset({"逸る", "抗する"})
+# 痛む is いた + んだ/みたい (彼氏いたんだ), 買う the かっ/かい of 違かった, からかう
+# and 芝居がかって, 逸する the いっす of ういっす; each costs the kana spelling of
+# the real verb (恨みをかう).
+_KANA_FUSED_LEMMAS: frozenset[str] = frozenset({"逸る", "抗する", "痛む", "買う", "逸する"})
 
 # An interjection the tagger reads as a kana verb when it stands alone: いえ ('no')
 # as the potential いえる or the imperative of 言う. The verb inflects on (いえない,
