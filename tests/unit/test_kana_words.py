@@ -188,6 +188,8 @@ class TestMining:
             ("うそをつくな", "うそ"),
             ("てめえの番だ", "てめえ"),
             ("こないだの話", "こないだ"),
+            ("あとは頼む", "あと"),
+            ("そんなわけない", "わけ"),
         ],
     )
     def test_mines_a_common_short_kana_word(self, test_config, line, front):

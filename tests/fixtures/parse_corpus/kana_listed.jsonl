@@ -7,3 +7,4 @@
 {"id":"kn09","sentence":"あんなに怒るなんて","expected":["あんなに","怒る"],"category":"kana-listed","note":"Join row あんな|に, like そんなに; あんな alone is the window-rejected piece."}
 {"id":"kn10","sentence":"やっぱ無理だ","expected":["やっぱ","無理"],"category":"kana-listed","note":"JMdict gives the spoken やっぱ no priority tag; the list names it."}
 {"id":"kn11","sentence":"あんなこと言うな","expected":["あんな","こと","言う"],"category":"kana-listed","note":"あんな is 連体詞 before a noun, though every carrier sentence tags it 形状詞."}
+{"id":"kn12","sentence":"あとは頼むよ","expected":["あと","頼む"],"category":"kana-listed","note":"The kana spelling of 後, a two-kana noun named in SHORT_NOUNS."}

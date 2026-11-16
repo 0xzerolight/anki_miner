@@ -44,6 +44,7 @@ SHORT_NOUNS: frozenset[str] = frozenset(
     {"こと", "もの", "ため", "うち", "はず", "せい", "やつ", "まま", "ほか", "よそ", "そば", "だめ", "みな"}
     | {"ひと", "いぬ", "ねこ", "ごみ", "くそ"}
     | {"うそ", "ばか", "ただ", "ふう", "うえ", "いま", "けが", "むちゃ"}
+    | {"くせ", "ほう", "まね", "ふり", "たび", "あと", "わけ", "とこ", "ころ"}
 )
 
 #: The only two-kana spellings of kanji-written words listed outside the nouns.
@@ -54,7 +55,7 @@ SHORT_READINGS: frozenset[str] = frozenset({"きみ", "ぼく", "おれ", "か�
 #: of a longer kana word (いい|かげん, つ|くろう) or a given name (しずく).
 SHORT_SPELLED_NOUNS: frozenset[str] = frozenset(
     {"とおり", "おなか", "ゆうべ", "かぎり", "におい", "しょうゆ", "けんか", "うわさ", "まぬけ", "あげく"}
-    | {"おかげ", "ほんと", "ほんま", "ごはん", "あした", "しかた", "ふだん"}
+    | {"おかげ", "ほんと", "ほんま", "ごはん", "あした", "しかた", "ふだん", "ことし"}
 )
 
 #: Spoken kana spellings JMdict gives no priority tag (やっぱ for 矢っ張り, the
