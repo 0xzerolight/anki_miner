@@ -177,3 +177,18 @@ class TestMining:
         fronts = _mine(test_config, line)
         assert front in fronts
         assert not pieces & set(fronts)
+
+    @pytest.mark.parametrize(
+        ("line", "front"),
+        [
+            ("あんなこと言うな", "あんな"),
+            ("やっぱ無理だ", "やっぱ"),
+            ("ぜひ来てください", "ぜひ"),
+            ("ただの人間だ", "ただ"),
+            ("うそをつくな", "うそ"),
+            ("てめえの番だ", "てめえ"),
+            ("こないだの話", "こないだ"),
+        ],
+    )
+    def test_mines_a_common_short_kana_word(self, test_config, line, front):
+        assert front in _mine_attested(test_config, {front}, line)

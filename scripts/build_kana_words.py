@@ -43,17 +43,31 @@ WORD_POS1: tuple[str, ...] = ("副詞", "代名詞", "連体詞", "接続詞", "
 SHORT_NOUNS: frozenset[str] = frozenset(
     {"こと", "もの", "ため", "うち", "はず", "せい", "やつ", "まま", "ほか", "よそ", "そば", "だめ", "みな"}
     | {"ひと", "いぬ", "ねこ", "ごみ", "くそ"}
+    | {"うそ", "ばか", "ただ", "ふう", "うえ", "いま", "けが", "むちゃ"}
 )
 
 #: The only two-kana spellings of kanji-written words listed outside the nouns.
-SHORT_READINGS: frozenset[str] = frozenset({"きみ", "ぼく", "おれ", "かれ", "だれ"})
+SHORT_READINGS: frozenset[str] = frozenset({"きみ", "ぼく", "おれ", "かれ", "だれ", "ぜひ"})
 
 #: The only kanji-written nouns of three morae listed by their kana spelling: those
 #: commonly written in kana. A three-mora kana noun is otherwise as often the tail
 #: of a longer kana word (いい|かげん, つ|くろう) or a given name (しずく).
 SHORT_SPELLED_NOUNS: frozenset[str] = frozenset(
     {"とおり", "おなか", "ゆうべ", "かぎり", "におい", "しょうゆ", "けんか", "うわさ", "まぬけ", "あげく"}
+    | {"おかげ", "ほんと", "ほんま", "ごはん", "あした", "しかた", "ふだん"}
 )
+
+#: Spoken kana spellings JMdict gives no priority tag (やっぱ for 矢っ張り, the
+#: colloquial てめえ), listed as if it did: each is as common in dialogue as its
+#: tagged form.
+UNTAGGED_COMMON: frozenset[str] = frozenset(
+    {"やっぱ", "とっても", "あくまで", "とっとと", "めっちゃ", "ちょい", "そこそこ", "またまた", "まんまと", "ばっちり"}
+    | {"おかげ", "こないだ", "ほんと", "ほんま", "とことん", "ごっこ", "こだわり", "てめえ", "おめえ", "わたくし"}
+)
+
+#: Tags a line gives a word that no carrier sentence does: あんな is 形状詞 in every
+#: carrier but 連体詞 before a noun (あんなこと), as そんな and こんな are.
+EXTRA_TAGS: dict[str, frozenset[str]] = {"あんな": frozenset({"連体詞"}), "めちゃくちゃ": frozenset({"名詞"})}
 
 #: The JMdict part-of-speech text a kanji-written word needs for each tag.
 JMDICT_POS: dict[str, tuple[str, ...]] = {
@@ -215,7 +229,7 @@ def _scan(jmdict: Path) -> tuple[set[str], dict[str, set[str]], set[str]]:
         for r_ele in entry.findall("r_ele"):
             reb = r_ele.findtext("reb") or ""
             spellings.add(reb)
-            common = {p.text for p in r_ele.findall("re_pri")} & COMMON_PRIORITY_TAGS
+            common = {p.text for p in r_ele.findall("re_pri")} & COMMON_PRIORITY_TAGS or reb in UNTAGGED_COMMON
             if not (common and len(reb) >= 2 and _is_hiragana(reb)):
                 continue
             if in_kana:
@@ -249,7 +263,7 @@ def build(jmdict: Path) -> list[str]:
         raise SystemExit(f"not JMdict spellings: {', '.join(missing)}")
     rows: dict[tuple[str, str], bool] = {}  # (form, pos1) -> a kanji-written word's spelling
     for form in kana_written | kanji_readings.keys():
-        for pos1 in _single_token_tags(form):
+        for pos1 in _single_token_tags(form) | EXTRA_TAGS.get(form, frozenset()):
             if pos1 not in WORD_POS1 or (form, pos1) in EXCLUDED:
                 continue
             if form in kana_written and not (pos1 == "名詞" and len(form) == 2 and form not in SHORT_NOUNS):

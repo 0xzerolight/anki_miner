@@ -5,3 +5,5 @@
 {"id":"kn05","sentence":"今大会で優勝した","expected":["大会","優勝"],"category":"kana-listed","note":"The unspaced prefix stays a prefix."}
 {"id":"kn08","sentence":"ちなみに私は行かない","expected":["ちなみに","私","行く"],"category":"kana-listed","note":"Join row ちなみ|に: JMdict spells it 因みに, with the kana only as a reading."}
 {"id":"kn09","sentence":"あんなに怒るなんて","expected":["あんなに","怒る"],"category":"kana-listed","note":"Join row あんな|に, like そんなに; あんな alone is the window-rejected piece."}
+{"id":"kn10","sentence":"やっぱ無理だ","expected":["やっぱ","無理"],"category":"kana-listed","note":"JMdict gives the spoken やっぱ no priority tag; the list names it."}
+{"id":"kn11","sentence":"あんなこと言うな","expected":["あんな","こと","言う"],"category":"kana-listed","note":"あんな is 連体詞 before a noun, though every carrier sentence tags it 形状詞."}
