@@ -154,3 +154,30 @@ class TestShortCausativeFront:
         service = _service(test_config, {"出す", "出る"})
         token = self._causative("出さす", "ダサス")
         assert service._resolve_front(token, "出さす", "出さす", 0, 3) == "出す"
+
+
+class TestGodanPassiveFront:
+    """A godan 未然形 the tagger splits from a passive れる keeps its own verb as the front."""
+
+    def test_passive_is_not_carded_as_the_aru_verb(self, test_config):
+        service = _service(test_config, {"刺す", "刺さる"})
+        token = _verb_token("刺さ", "刺す", "五段-サ行", "未然形-一般")
+        assert service._resolve_front(token, "刺す", "刺された", 0, 4) == "刺す"
+
+    def test_kana_stem_is_left_to_the_resolver(self, test_config):
+        # なされた is mostly the honorific なさる; only a kanji stem takes the rule.
+        service = _service(test_config, {"なす", "なさる"})
+        token = _verb_token("なさ", "なす", "五段-サ行", "未然形-一般")
+        assert service._resolve_front(token, "なす", "なされた", 0, 4) == "なさる"
+
+    def test_honorific_kudasaru_is_kept(self, test_config):
+        # 来て下された is the honorific 下さる, not the passive of 下す.
+        service = _service(test_config, {"下す", "下さる"})
+        token = _verb_token("下さ", "下す", "五段-サ行", "未然形-一般")
+        assert service._resolve_front(token, "下す", "下された", 0, 4) == "下さる"
+
+    def test_lexicalized_passive_headword_is_kept(self, test_config):
+        # 救われる is a headword of its own; only the -aru verb leaves the pool.
+        service = _service(test_config, {"救う", "救われる"})
+        token = _verb_token("救わ", "救う", "五段-ワア行", "未然形-一般")
+        assert service._resolve_front(token, "救う", "救われた", 0, 4) == "救われる"

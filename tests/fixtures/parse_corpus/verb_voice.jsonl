@@ -9,3 +9,5 @@
 {"id":"vv09","sentence":"セミナーに行かされた","expected":["セミナー","行く"],"category":"verb-voice","note":"short causative-passive: UniDic lemmatizes 行かさ to 行かす, which no dictionary has; the base verb is the card"}
 {"id":"vv10","sentence":"子供に野菜を食べさす","expected":["子供","野菜","食べる"],"category":"verb-voice","note":"ichidan short causative 食べさす carded as 食べる"}
 {"id":"vv11","sentence":"話を聞かす","expected":["話","聞かす"],"category":"verb-voice","note":"guard: an attested -asu verb (聞かす) is a real word and stays"}
+{"id":"vv12","sentence":"ナイフで刺された","expected":["ナイフ","刺す"],"category":"verb-voice","note":"godan passive: 刺さる's potential spells 刺される, but the tagger split off the passive れる after the 未然形 刺さ"}
+{"id":"vv13","sentence":"ナイフが刺さった","expected":["ナイフ","刺さる"],"category":"verb-voice","note":"guard: the -aru verb itself stays"}

@@ -391,6 +391,7 @@ def resolve_dictionary_form(
     orth_base: str,
     term_rules_lookup: TermRulesLookup | None,
     term_common_lookup: TermCommonLookup | None = None,
+    excluded: str = "",
 ) -> str:
     """Best modern JMdict-attested dictionary form for a 動詞/形容詞 card front.
 
@@ -437,6 +438,9 @@ def resolve_dictionary_form(
       own — self-limiting so a verb whose orthBase is already the longest prefix
       (乞う, 彷徨った, 帰れる, 立った) is kept unchanged.
 
+    ``excluded`` is one candidate the caller knows is wrong for this token (the
+    -aru verb 刺さる for the tagger's passive 刺さ|れ|た); it never competes.
+
     Safe degrade: ``term_rules_lookup is None`` (no rules-aware offline
     dictionary path) or an empty input returns ``orth_base`` unchanged — the fix
     never hard-depends on a dict.
@@ -447,7 +451,7 @@ def resolve_dictionary_form(
     candidates = {
         (result.text, result.conditions)
         for result in deinflector.transform(inflected_surface)
-        if result.text != inflected_surface
+        if result.text != inflected_surface and result.text != excluded
     }
     # The surface competes too, but only as a verb headword: 知らせる tokenizes
     # 知ら+せる (orthBase 知る) and has nothing left to deinflect, while 知らせた

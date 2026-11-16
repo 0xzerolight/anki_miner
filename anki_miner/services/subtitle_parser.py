@@ -428,6 +428,35 @@ def _is_godan_imperative(feature: Any) -> bool:
     return isinstance(ctype, str) and ctype.startswith("五段") and isinstance(cform, str) and cform.startswith("命令形")
 
 
+# Godan 未然形 endings before the passive auxiliary れる (刺さ|れ|た, 抜か|れ|た).
+_GODAN_MIZEN_A_ROW: frozenset[str] = frozenset("かがさざただなばまらわぱ")
+# Honorifics a 未然形 + れ spells by their own conjugation (来て下された is 下さる).
+_HONORIFIC_ARU_VERBS: frozenset[str] = frozenset({"下さる"})
+
+
+def _godan_passive_aru_verb(token: Any, inflected_surface: str) -> str:
+    """The -aru verb a godan passive spells (刺さ|れ|た → 刺さる), or ``""``.
+
+    Only a kanji-stem godan 未然形 the tagger split from a れ that inflects on:
+    a kana stem is left out (なされた is mostly the honorific なさる), and so are
+    the honorific 下さる and a span that ends at れ.
+    """
+    feature = getattr(token, "feature", None)
+    ctype = getattr(feature, "cType", None)
+    cform = getattr(feature, "cForm", None)
+    surface = getattr(token, "surface", None)
+    if not (isinstance(ctype, str) and ctype.startswith("五段") and isinstance(cform, str)):
+        return ""
+    if not cform.startswith("未然形") or not isinstance(surface, str) or len(surface) < 2:
+        return ""
+    if surface[-1] not in _GODAN_MIZEN_A_ROW or _is_pure_hiragana(surface):
+        return ""
+    if not (inflected_surface.startswith(surface + "れ") and len(inflected_surface) > len(surface) + 1):
+        return ""
+    aru_verb = surface + "る"
+    return "" if aru_verb in _HONORIFIC_ARU_VERBS else aru_verb
+
+
 def _token_morph(token: Any) -> str:
     """A duck token's morphological features, or "" (fugashi nodes have none).
 
@@ -847,7 +876,7 @@ class SubtitleParserService:
         # like _line_cache): the deinflect + offline existence lookup is
         # deterministic per (inflected_surface, orth_base, cType), so it survives
         # across parse_* calls and is bounded by clear-on-cap (_FRONT_CACHE_CAP).
-        self._front_cache: dict[tuple[str, str, str, bool], str] = {}
+        self._front_cache: dict[tuple[str, str, str, bool, str], str] = {}
         # Kana-recovery memo (same lifetime/bounding rationale as _front_cache):
         # the recovery decision — content_gate_ok + the SQLite existence probe —
         # is deterministic per token shape (the key _kana_recovery builds), so
@@ -2599,7 +2628,10 @@ class SubtitleParserService:
         # longer prefix and would win the resolver's rank. The tagger's 命令形
         # already names the verb, so the resolver is skipped for it.
         godan_imperative = _is_godan_imperative(feature)
-        key = (inflected_surface, orth_base, ctype if isinstance(ctype, str) else "", godan_imperative)
+        # A godan passive (刺さ|れ|た) is never the -aru verb 刺さる whose potential
+        # spells 刺される: that one candidate is taken out of the resolver's pool.
+        passive_aru = _godan_passive_aru_verb(word_token, inflected_surface)
+        key = (inflected_surface, orth_base, ctype if isinstance(ctype, str) else "", godan_imperative, passive_aru)
         cached = self._front_cache.get(key)
         if cached is None:
             cached = (
@@ -2610,6 +2642,7 @@ class SubtitleParserService:
                     orth_base,
                     self._term_rules_lookup,
                     self._memoized_term_common,
+                    excluded=passive_aru,
                 )
             )
             # The deinflection resolver only rewrites じる/ずる (and leaves every

@@ -5773,12 +5773,13 @@ class TestVerbFrontCommonnessResolver:
 
     def test_probe_none_degrades_to_pre_u11_junk(self, tmp_path):
         # Same fixture, but term_common_lookup NOT wired → the full attested pool,
-        # so the rare 呼ばる wins the override exactly as pre-U11 (attests the
-        # degrade: the junk longer-prefix front comes back).
+        # so the rare 立たす wins the override exactly as pre-U11 (attests the
+        # degrade: the junk longer-prefix front comes back). 呼ばれる no longer
+        # shows it: the tagger's passive れる takes 呼ばる out of the pool.
         service = _build_commonness_service(tmp_path)
-        forms = self._mine(service, "“最終兵器”と呼ばれるハンター", term_common=False)
-        assert "呼ばる" in forms
-        assert "呼ぶ" not in forms
+        forms = self._mine(service, "あいつをまた戦場に立たせることは してほしくありません", term_common=False)
+        assert "立たす" in forms
+        assert "立つ" not in forms
 
 
 class TestPerParseCacheCaps:

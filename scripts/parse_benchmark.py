@@ -280,6 +280,9 @@ _ANCHOR_HEADWORDS: tuple[str, ...] = (
     # an attested -asu verb and stays
     "行く",
     "聞かす",
+    # verb-voice: a godan passive (刺された) against the -aru verb 刺さる
+    "刺す",
+    "刺さる",
     # jiru-zuru modern headwords (the fix's targets)
     "感じる",
     "論じる",
@@ -445,6 +448,7 @@ _ANCHOR_RULES: dict[str, str] = {
     **dict.fromkeys(("近づける", "いえる"), "v1"),
     "行く": "v5",
     "聞かす": "v5s",
+    **dict.fromkeys(("刺す", "刺さる"), "v5"),
     # ichidan (jiru-zuru targets + other ichidan guards)
     **dict.fromkeys(("感じる", "論じる", "信じる", "生じる", "演じる", "通じる", "準じる", "かんじる"), "v1"),
     **dict.fromkeys(("報いる", "帰れる", "見る", "恐れる", "いる", "くれる"), "v1"),
