@@ -1,0 +1,3 @@
+{"id":"kn01","sentence":"あの女は嫌いだ","expected":["あの","女","嫌い"],"category":"kana-listed","note":"unidic-lite tags this あの as the filler; right before a noun it is the listed pre-noun adjective."}
+{"id":"kn02","sentence":"あのね、聞いて","expected":["聞く"],"category":"kana-listed","note":"A filler before a particle stays unmined."}
+{"id":"kn03","sentence":"あの 山田さん","expected":[],"category":"kana-listed","note":"A filler before a space stays unmined; the name is excluded by default."}

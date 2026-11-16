@@ -409,6 +409,8 @@ _ANCHOR_HEADWORDS: tuple[str, ...] = (
     "かつ",
     "はやる",
     "こうする",
+    # kana-listed: the pre-noun adjective the tagger reads as a filler
+    "あの",
 )
 
 # Yomitan `ruleIdentifiers` per fixture headword. A real term bank ships these,

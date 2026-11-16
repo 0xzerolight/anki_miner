@@ -536,6 +536,8 @@ def merge_compound_suffixes(tokens: list, attest: AttestLookup | None = None) ->
     """Run all compound-merge passes in dependency order.
 
     Order matters:
+    0. _retag_mistagged_tokens  — corrects a tag the next token disproves
+       (あの filler before a noun → 連体詞), so every pass below sees it.
     1. _merge_prefix_compounds  — 接頭辞 + 名詞/形状詞 (e.g. 不+可能 → 不可能).
        Must run first so that downstream 名詞-suffix merge sees the
        synthetic 不可能 (pos1=名詞) as a valid head and chains correctly
@@ -559,6 +561,7 @@ def merge_compound_suffixes(tokens: list, attest: AttestLookup | None = None) ->
     productive, near-zero junk. ``attest=None`` (the default that keeps every
     existing direct caller byte-identical) leaves all three passes ungated.
     """
+    tokens = _retag_mistagged_tokens(tokens)
     tokens = _merge_prefix_compounds(tokens, attest)
     tokens = _merge_noun_suffixes(tokens, attest)
     tokens = _merge_verb_nominalizers(tokens)
@@ -925,6 +928,51 @@ def _attested_prefix_surfaces(tokens: list, attest: AttestLookup) -> set[str]:
     if not surfaces:
         return set()
     return attest(sorted(surfaces))
+
+
+class RetaggedToken:
+    """A tagger token whose part of speech ``_retag_mistagged_tokens`` corrected.
+
+    Every feature the replacement does not name stays the tagger's own, so the
+    token mines exactly as the tagger's other reading of the same word would.
+    """
+
+    __slots__ = ("surface", "feature", "white_space")
+
+    def __init__(self, token, fields: dict[str, str]):
+        self.surface = token.surface
+        self.feature = token.feature._replace(**fields)
+        self.white_space = getattr(token, "white_space", "")
+
+
+#: The pre-noun adjectives unidic-lite also reads as the homograph filler, with
+#: the fields its 連体詞 reading carries (あの時 tags 連体詞, あの女 the filler).
+_FILLER_PRENOUNS: dict[str, dict[str, str]] = {
+    "あの": {"pos1": "連体詞", "pos2": "*", "lemma": "彼の"},
+    "その": {"pos1": "連体詞", "pos2": "*", "lemma": "其の"},
+}
+
+
+def _retag_mistagged_tokens(tokens: list) -> list:
+    """Correct a tagger part of speech the next token disproves.
+
+    あの/その tagged as the filler directly before a noun, with no space or mark
+    between, are the pre-noun adjective (あの女, あの橋): a filler is followed by
+    a pause or a particle (あの…, あの 山田さん, あのね). A pronoun is left out on
+    purpose: あの私 is "um, I". Fugashi tokens carry the space before them as
+    ``white_space``; a token without one counts as unspaced.
+    """
+    out: list = []
+    for i, token in enumerate(tokens):
+        fields = _FILLER_PRENOUNS.get(token.surface)
+        feature = getattr(token, "feature", None)
+        if fields is not None and getattr(feature, "pos1", None) == "感動詞" and i + 1 < len(tokens):
+            nxt = tokens[i + 1]
+            if getattr(getattr(nxt, "feature", None), "pos1", None) == "名詞" and not getattr(nxt, "white_space", ""):
+                out.append(RetaggedToken(token, fields))
+                continue
+        out.append(token)
+    return out
 
 
 def _merge_prefix_compounds(tokens: list, attest: AttestLookup | None = None) -> list:
