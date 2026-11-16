@@ -112,7 +112,10 @@ class TestJapanese:
         parser = _create_subtitle_parser(test_config)
         path = _srt(tmp_path, "ja.srt", "りんごを食べた\nI ate an apple")
 
-        assert parser.has_target_script == get_profile("ja").script.contains_target_script
+        # The profile's script gate, less a line the parser skips as Chinese:
+        # in a multi-line cue that line goes the way the English one does.
+        gate = parser.has_target_script
+        assert gate("りんごを食べた") and not gate("I ate an apple") and not gate("翻译 校对")
         assert _texts(parser, path) == ["りんごを食べた"]
 
 
