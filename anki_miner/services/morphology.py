@@ -532,10 +532,16 @@ def iter_token_spans(text: str, tokens: list) -> Iterator[tuple[Any, int, int]]:
         yield token, idx, tok_end
 
 
-def merge_compound_suffixes(tokens: list, attest: AttestLookup | None = None) -> list:
+def merge_compound_suffixes(
+    tokens: list, attest: AttestLookup | None = None, form_lookup: FormLookup | None = None
+) -> list:
     """Run all compound-merge passes in dependency order.
 
     Order matters:
+    0. _retag_mistagged_tokens  — corrects a tag the next token disproves
+       (あの filler before a noun → 連体詞, 今 prefix before a space → 名詞),
+       so every pass below sees it; with ``form_lookup``, an unknown katakana
+       noun the dictionary lists (スマホ) also gets its surface as lemma.
     1. _merge_prefix_compounds  — 接頭辞 + 名詞/形状詞 (e.g. 不+可能 → 不可能).
        Must run first so that downstream 名詞-suffix merge sees the
        synthetic 不可能 (pos1=名詞) as a valid head and chains correctly
@@ -559,6 +565,7 @@ def merge_compound_suffixes(tokens: list, attest: AttestLookup | None = None) ->
     productive, near-zero junk. ``attest=None`` (the default that keeps every
     existing direct caller byte-identical) leaves all three passes ungated.
     """
+    tokens = _retag_mistagged_tokens(tokens, form_lookup)
     tokens = _merge_prefix_compounds(tokens, attest)
     tokens = _merge_noun_suffixes(tokens, attest)
     tokens = _merge_verb_nominalizers(tokens)
@@ -925,6 +932,154 @@ def _attested_prefix_surfaces(tokens: list, attest: AttestLookup) -> set[str]:
     if not surfaces:
         return set()
     return attest(sorted(surfaces))
+
+
+class RetaggedToken:
+    """A tagger token whose part of speech ``_retag_mistagged_tokens`` corrected.
+
+    Every feature the replacement does not name stays the tagger's own, so the
+    token mines exactly as the tagger's other reading of the same word would.
+    """
+
+    __slots__ = ("surface", "feature", "white_space")
+
+    def __init__(self, token, fields: dict[str, str], surface: str | None = None):
+        self.surface = token.surface if surface is None else surface
+        self.feature = token.feature._replace(**fields)
+        self.white_space = getattr(token, "white_space", "")
+
+
+#: The pre-noun adjectives unidic-lite also reads as the homograph filler, with
+#: the fields its 連体詞 reading carries (あの時 tags 連体詞, あの女 the filler).
+_FILLER_PRENOUNS: dict[str, dict[str, str]] = {
+    "あの": {"pos1": "連体詞", "pos2": "*", "lemma": "彼の"},
+    "その": {"pos1": "連体詞", "pos2": "*", "lemma": "其の"},
+}
+
+
+#: The nouns unidic-lite also reads as a one-kanji prefix (今 コン, 次 ジ), with
+#: the fields its noun reading carries (今は, 次は tag 名詞).
+_PREFIX_NOUNS: dict[str, dict[str, str]] = {
+    "今": {
+        "pos1": "名詞",
+        "pos2": "普通名詞",
+        "pos3": "副詞可能",
+        **dict.fromkeys(("lForm", "pron", "pronBase", "kana", "kanaBase", "form", "formBase"), "イマ"),
+        "goshu": "和",
+    },
+    "次": {
+        "pos1": "名詞",
+        "pos2": "普通名詞",
+        "pos3": "一般",
+        **dict.fromkeys(("lForm", "pron", "pronBase", "kana", "kanaBase", "form", "formBase"), "ツギ"),
+        "goshu": "和",
+    },
+}
+
+
+#: Two tagger tokens cut at the wrong place, by their (surface, lemma), and the
+#: two (surface, fields) they are re-cut into. 自分ち 'my place' (ち from うち)
+#: has no path in unidic-lite, which reads 自 + 分ち (わかち 'division').
+_MISSPLITS: dict[tuple[tuple[str, str | None], ...], tuple[tuple[str, dict[str, str]], ...]] = {
+    (("自", "自"), ("分ち", "分かち")): (
+        (
+            "自分",
+            {
+                "pos3": "一般",
+                **dict.fromkeys(("lemma", "orth", "orthBase"), "自分"),
+                **dict.fromkeys(("lForm", "pron", "pronBase", "kana", "kanaBase", "form", "formBase"), "ジブン"),
+            },
+        ),
+        ("ち", {**dict.fromkeys(("lemma", "orth", "orthBase"), "ち"), **dict.fromkeys(("lForm", "kana"), "チ")}),
+    ),
+}
+
+
+def _unknown_katakana_noun(token) -> bool:
+    """A katakana word the tagger does not know: a 名詞 with no lemma (スマホ, コスパ)."""
+    feature = getattr(token, "feature", None)
+    surface = getattr(token, "surface", "")
+    return (
+        getattr(feature, "pos1", None) == "名詞"
+        and not getattr(feature, "lemma", None)
+        and isinstance(surface, str)
+        and len(surface) >= 3
+        and all("ァ" <= ch <= "ヺ" or ch == "ー" for ch in surface)
+    )
+
+
+#: Entry tags of a sound or a cry, which JMdict often also tags ``n``
+#: (ピーポー 'nee-naw', オラオラ).
+_SOUND_TAGS = frozenset({"int", "on-mim"})
+
+
+def _lemma_or_none(token) -> str | None:
+    lemma = getattr(getattr(token, "feature", None), "lemma", None)
+    return lemma if isinstance(lemma, str) else None
+
+
+def _dictionary_nouns(surfaces: set[str], form_lookup: FormLookup) -> set[str]:
+    """The surfaces the dictionary has a noun entry for (tag ``n``) and no sound or cry sense, in one probe."""
+    rows = form_lookup(sorted(surfaces))
+    nouns: set[str] = set()
+    for term, found in rows.items():
+        tags = {tag for _content, row_tags in found for tag in row_tags.split()}
+        if "n" in tags and not tags & _SOUND_TAGS:
+            nouns.add(term)
+    return nouns
+
+
+def _retag_mistagged_tokens(tokens: list, form_lookup: FormLookup | None = None) -> list:
+    """Correct a tagger part of speech the next token disproves, or fill in a lemma it lacks.
+
+    Fugashi tokens carry the space before them as ``white_space``; a token
+    without one counts as unspaced.
+
+    - あの/その tagged as the filler directly before a noun, with no space or
+      mark between, are the pre-noun adjective (あの女, あの橋): a filler is
+      followed by a pause or a particle (あの…, あの 山田さん, あのね). A pronoun
+      is left out on purpose: あの私 is "um, I".
+    - 今/次 tagged as a prefix with a space after them are the nouns 'now' and
+      'next' (今 駅にいる): the tagger skips the subtitle space and reads 今 駅
+      as it reads 今大会. A prefix is never spaced from its noun, so the
+      unspaced prefix (今大会, 次年度) stays one.
+    - A katakana word the tagger does not know (スマホ) is a 名詞 with no lemma,
+      which no inclusion check takes. With a dictionary that has a noun entry
+      for it, its surface becomes its lemma. The noun entry is required, and a
+      sound or cry sense refused, because the dictionary also lists katakana
+      interjections and sound words (ワーオ, ピーポー), some of them as nouns.
+    - Two tokens cut at the wrong place (``_MISSPLITS``: 自|分ち) are re-cut
+      (自分|ち); the pair's surfaces join to the same text.
+    """
+    unknown = {token.surface for token in tokens if _unknown_katakana_noun(token)}
+    nouns = _dictionary_nouns(unknown, form_lookup) if unknown and form_lookup is not None else set()
+    out: list = []
+    resplit: tuple[tuple[str, dict[str, str]], ...] | None = None
+    for i, token in enumerate(tokens):
+        if resplit is not None:
+            out.append(RetaggedToken(token, resplit[1][1], resplit[1][0]))
+            resplit = None
+            continue
+        pos1 = getattr(getattr(token, "feature", None), "pos1", None)
+        nxt = tokens[i + 1] if i + 1 < len(tokens) else None
+        white_space = getattr(nxt, "white_space", "")
+        spaced = isinstance(white_space, str) and bool(white_space)
+        if nxt is not None and not spaced:
+            pair = ((token.surface, _lemma_or_none(token)), (nxt.surface, _lemma_or_none(nxt)))
+            resplit = _MISSPLITS.get(pair)
+            if resplit is not None:
+                out.append(RetaggedToken(token, resplit[0][1], resplit[0][0]))
+                continue
+        fields: dict[str, str] | None = None
+        if pos1 == "感動詞" and nxt is not None and not spaced:
+            if getattr(getattr(nxt, "feature", None), "pos1", None) == "名詞":
+                fields = _FILLER_PRENOUNS.get(token.surface)
+        elif pos1 == "接頭辞" and spaced:
+            fields = _PREFIX_NOUNS.get(token.surface)
+        elif token.surface in nouns and _unknown_katakana_noun(token):
+            fields = dict.fromkeys(("lemma", "orthBase", "kana"), token.surface)
+        out.append(token if fields is None else RetaggedToken(token, fields))
+    return out
 
 
 def _merge_prefix_compounds(tokens: list, attest: AttestLookup | None = None) -> list:

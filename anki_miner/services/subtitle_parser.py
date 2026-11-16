@@ -2527,11 +2527,12 @@ class SubtitleParserService:
     def _merge_compound_suffixes(self, tokens: list) -> list:
         """Run all compound-merge passes (see morphology.merge_compound_suffixes).
 
-        Threads the per-instance memoized attest probe: with an offline dict the
-        junk-prone noun-suffix/prefix passes are attested-or-bail gated; ``None``
+        Threads the per-instance memoized attest probe and the form lookup: with
+        an offline dict the junk-prone noun-suffix/prefix passes are
+        attested-or-bail gated; ``None``
         (no dict) leaves them ungated — output byte-identical to pre-gate.
         """
-        return merge_compound_suffixes(tokens, attest=self._attest)
+        return merge_compound_suffixes(tokens, attest=self._attest, form_lookup=self._form_lookup)
 
     def _extract_lemma(self, word_token) -> str:
         """Extract lemma (dictionary form) from a token (see morphology.extract_lemma)."""

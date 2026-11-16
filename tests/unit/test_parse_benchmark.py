@@ -163,6 +163,7 @@ _EXPECTED_CATEGORIES = {
     "lexical-join",
     "kana-words",
     "place-names",
+    "kana-listed",
 }
 
 
