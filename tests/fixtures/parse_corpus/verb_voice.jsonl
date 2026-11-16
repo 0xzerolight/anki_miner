@@ -4,3 +4,5 @@
 {"id":"vv04","sentence":"人生をやり直せる","expected":["人生","やり直す"],"category":"verb-voice","note":"potential whose tagger lemma is spelled 遣り直す: fold in the line's spelling, as 保てる already folds"}
 {"id":"vv05","sentence":"病気を治せる","expected":["病気","治す"],"category":"verb-voice","note":"potential whose lemma swaps the kanji (直す): the fold keeps the line's 治"}
 {"id":"vv06","sentence":"顔を近づける","expected":["顔","近づける"],"category":"verb-voice","note":"guard: an attested -eru front is a real word and stays"}
+{"id":"vv07","sentence":"いえ そうじゃないんです","expected":[],"category":"verb-voice","note":"the interjection いえ the tagger reads as the potential いえる: a bare いえ with no inflection after it is not the verb"}
+{"id":"vv08","sentence":"本当のことはいえない","expected":["本当","いえる"],"category":"verb-voice","note":"guard: いえない inflects, so it stays the verb (いえる is attested on purpose)"}

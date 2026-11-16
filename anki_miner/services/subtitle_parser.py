@@ -192,6 +192,12 @@ _KANA_RECOVER_REJECT_POS2: frozenset[str] = frozenset({"助動詞語幹", "非�
 # cost is a real 逸る written in kana (はやる気持ち), which is no longer mined.
 _KANA_FUSED_LEMMAS: frozenset[str] = frozenset({"逸る", "抗する"})
 
+# An interjection the tagger reads as a kana verb when it stands alone: いえ ('no')
+# as the potential いえる or the imperative of 言う. The verb inflects on (いえない,
+# いえば, いえます); a bare いえ with nothing after it is the interjection, so only
+# the bare token is turned away. The cost is a bare kana imperative いえ ('say it').
+_KANA_BARE_INTERJECTIONS: frozenset[str] = frozenset({"いえ"})
+
 # How _kana_recovery brought a hiragana word back: by the content gate, or by
 # name from the kana word list (services/kana_words.py). A recovered word takes
 # the U4 window reject, and so does a listed kana spelling of a kanji-written
@@ -2826,6 +2832,11 @@ class SubtitleParserService:
         how = self._kana_recovery(word_token)
         if how is not None:
             if how != _KANA_LISTED and self._rejected_by_lexicalized_window(word_token, tokens):
+                return False
+            if (
+                word_token.surface in _KANA_BARE_INTERJECTIONS
+                and self._find_highlight_end(text, raw_tokens, tok_start, tok_end, word_token) == tok_end
+            ):
                 return False
             return not self._ellipsis_reject(word_token, text, tok_start, tok_end)
         if not self._whitelist_rescues(word_token, text, tok_start, tok_end, tokens, raw_tokens):
