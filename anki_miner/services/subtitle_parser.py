@@ -58,6 +58,7 @@ from anki_miner.services.morphology import (
     replace_overridden_spans,
     resolve_attested_reading,
     resolve_reading_override,
+    source_spelling_fold,
 )
 from anki_miner.services.number_counters import merge_number_counters
 from anki_miner.services.reading.ruby_hints import apply_author_ruby
@@ -2674,6 +2675,17 @@ class SubtitleParserService:
         if katakana_to_hiragana(l_form) == katakana_to_hiragana(kana_base):
             # Equal-reading okurigana variant: preserve the source orthography.
             return orth_base
+        if getattr(feature, "pos1", None) == "動詞" and not _is_pure_hiragana(orth_base):
+            # A potential whose lemma is spelled otherwise (帰れる → 返る, やり直せる
+            # → 遣り直す) folds on its own stem (帰る, やり直す), never the lemma's
+            # kanji; an attested potential spelling (近づける) is a real word and stays.
+            # A kana spelling is left alone: the exact-headword probe cannot see
+            # that いれる (淹れる), もてる or ほれる are words the tagger misread.
+            fold = source_spelling_fold(orth_base, l_form, kana_base)
+            if fold is not None:
+                attested = self._memoized_attest([orth_base, fold])
+                if orth_base not in attested and fold in attested:
+                    return fold
         if not _differs_by_okurigana_only(orth_base, lemma):
             # Kanji differs ⇒ unidic lemma canonicalization onto a homograph
             # (帰れる→返る, 殺る→遣る): never let it swap the card front's kanji.

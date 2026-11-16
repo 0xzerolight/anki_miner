@@ -444,6 +444,26 @@ def mining_base(word_token) -> str:
     return orth_base
 
 
+def source_spelling_fold(orth_base: str, l_form: str, kana_base: str) -> str | None:
+    """The base verb of a potential in the line's own spelling, when the readings prove it.
+
+    ``mining_base`` folds a potential only when the tagger's lemma is its
+    orthBase with the suffix swapped byte for byte. UniDic often spells that
+    lemma otherwise (帰れる → 返る, やり直せる → 遣り直す), so the fold is
+    built here on the source stem instead (帰る, やり直す), and only when the
+    same swap on the orthBase reading gives the lemma reading (カエレル →
+    カエル). The caller decides whether to use it (attestation).
+    """
+    reading = katakana_to_hiragana(kana_base)
+    lemma_reading = katakana_to_hiragana(l_form)
+    for derived, base in _FOLD_SUFFIX_PAIRS:
+        if not (orth_base.endswith(derived) and len(orth_base) > len(derived) and reading.endswith(derived)):
+            continue
+        if reading[: -len(derived)] + base == lemma_reading:
+            return orth_base[: -len(derived)] + base
+    return None
+
+
 def extract_reading(word_token) -> str:
     """Extract kana reading from word token.
 

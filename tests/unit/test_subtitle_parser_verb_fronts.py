@@ -82,3 +82,42 @@ class TestGodanImperativeFront:
         service = _service(test_config, {"感じる"})
         token = _verb_token("感じ", "感ずる", "サ行変格", "連用形-一般")
         assert service._resolve_front(token, "感ずる", "感じた", 0, 3) == "感じる"
+
+
+class TestPotentialFoldInSourceSpelling:
+    """A potential whose tagger lemma is spelled otherwise folds to the base verb in the line's spelling."""
+
+    @staticmethod
+    def _potential(orth_base: str, lemma: str, l_form: str, kana_base: str) -> MagicMock:
+        token = _verb_token(orth_base, orth_base, "下一段-ラ行", "終止形-一般", lemma=lemma)
+        token.feature.lForm = l_form
+        token.feature.kanaBase = kana_base
+        return token
+
+    def test_kanji_swapped_lemma_folds_on_the_source_stem(self, test_config):
+        service = _service(test_config, {"帰る", "返る"})
+        token = self._potential("帰れる", "返る", "カエル", "カエレル")
+        assert service._resolve_front(token, "帰れる", "帰れる", 0, 3) == "帰る"
+
+    def test_attested_potential_spelling_is_kept(self, test_config):
+        service = _service(test_config, {"近づける", "近づく", "近付く"})
+        token = self._potential("近づける", "近付く", "チカヅク", "チカヅケル")
+        assert service._resolve_front(token, "近づける", "近づける", 0, 4) == "近づける"
+
+    def test_unattested_fold_keeps_the_front(self, test_config):
+        service = _service(test_config, {"返る"})
+        token = self._potential("帰れる", "返る", "カエル", "カエレル")
+        assert service._resolve_front(token, "帰れる", "帰れる", 0, 3) == "帰れる"
+
+    def test_reading_that_is_not_the_swap_does_not_fold(self, test_config):
+        # 帰れる read as something other than the potential of its lemma.
+        service = _service(test_config, {"帰る", "返す"})
+        token = self._potential("帰れる", "返す", "カエス", "カエレル")
+        assert service._resolve_front(token, "帰れる", "帰れる", 0, 3) == "帰れる"
+
+    def test_kana_spelling_is_left_alone(self, test_config):
+        # いれる read as the ra-nuki potential of いる: the exact-headword probe
+        # attests いる but cannot see いれる (淹れる), so a kana front never folds.
+        service = _service(test_config, {"いる"})
+        token = self._potential("いれる", "居る", "イル", "イレル")
+        assert service._resolve_front(token, "いれる", "いれる", 0, 3) == "いれる"

@@ -268,6 +268,11 @@ _ANCHOR_HEADWORDS: tuple[str, ...] = (
     "持つ",
     "従える",
     "従う",
+    # verb-voice: potentials whose tagger lemma is spelled otherwise fold in the
+    # line's spelling (やり直せる → やり直す, 治せる → 治す); 近づける is attested
+    "やり直す",
+    "治す",
+    "近づける",
     # jiru-zuru modern headwords (the fix's targets)
     "感じる",
     "論じる",
@@ -429,6 +434,8 @@ _ANCHOR_RULES: dict[str, str] = {
     **dict.fromkeys(("持てる", "従える"), "v1"),
     "持つ": "v5t",
     "従う": "v5u",
+    **dict.fromkeys(("やり直す", "治す"), "v5s"),
+    "近づける": "v1",
     # ichidan (jiru-zuru targets + other ichidan guards)
     **dict.fromkeys(("感じる", "論じる", "信じる", "生じる", "演じる", "通じる", "準じる", "かんじる"), "v1"),
     **dict.fromkeys(("報いる", "帰れる", "見る", "恐れる", "いる", "くれる"), "v1"),

@@ -1,3 +1,6 @@
 {"id":"vv01","sentence":"自信を持て","expected":["自信","持つ"],"category":"verb-voice","note":"godan imperative: 持てる is attested and shares the longer prefix, but the tagger's 五段 命令形 names 持つ"}
 {"id":"vv02","sentence":"命令に従え","expected":["命令","従う"],"category":"verb-voice","note":"godan imperative against the attested ichidan 従える"}
 {"id":"vv03","sentence":"自信が持てる","expected":["自信","持つ"],"category":"verb-voice","note":"guard: the same-spelling potential still folds to its base"}
+{"id":"vv04","sentence":"人生をやり直せる","expected":["人生","やり直す"],"category":"verb-voice","note":"potential whose tagger lemma is spelled 遣り直す: fold in the line's spelling, as 保てる already folds"}
+{"id":"vv05","sentence":"病気を治せる","expected":["病気","治す"],"category":"verb-voice","note":"potential whose lemma swaps the kanji (直す): the fold keeps the line's 治"}
+{"id":"vv06","sentence":"顔を近づける","expected":["顔","近づける"],"category":"verb-voice","note":"guard: an attested -eru front is a real word and stays"}
