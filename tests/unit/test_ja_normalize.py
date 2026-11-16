@@ -244,6 +244,15 @@ def test_normalize_for_tokenization_combined_line():
     assert "が" in result and _DAKUTEN not in result  # NFD kana composed
 
 
+def test_normalize_for_tokenization_widens_halfwidth_punctuation():
+    # Broadcast captions end sentences with a halfwidth ｡, which MeCab reads as a
+    # plain symbol, not a full stop: オレはやる｡ then tags は + やる as one verb.
+    line = "｢行くぞ｣と言った､オレはやる｡"
+    result = normalize_for_tokenization(line)
+    assert result == "「行くぞ」と言った、オレはやる。"
+    assert len(result) == len(line)  # one character for one: offsets carry over
+
+
 def test_standardize_kanji_variants():
     assert standardize_kanji_variants("𠮟") == "叱"
     assert standardize_kanji_variants("𠮟られた") == "叱られた"
@@ -297,6 +306,9 @@ class TestStripDecorationGlyphs:
             (" そう考えると", "そう考えると"),  # BMP private-use (audited U+F4FA)
             ("変換�エラー", "変換 エラー"),  # replacement character
             ("➡", ""),  # glyph-only line
+            ("頑張んないと。→", "頑張んないと。"),  # the plain arrow other stations continue a line with
+            ("証人は落ちていた五円玉を→》", "証人は落ちていた五円玉を 》"),  # ... also inside a bracketed line
+            ("☎どの防犯カメラにも 写っていません", "どの防犯カメラにも 写っていません"),  # phone-voice marker
         ],
     )
     def test_strips_decoration_runs(self, raw, expected):

@@ -46,6 +46,11 @@ Owned deviations from Yomitan (see the pinned plan item 1.3):
   on 42% of sentences. Yomitan never sees such text (its input is user-selected
   words); mined card sentences do, so the strip is owned here. Length-changing,
   hence pre-tokenization only — offsets are always computed after this chain.
+
+* :func:`convert_halfwidth_punctuation` is owned too: Yomitan's halfwidth table
+  covers kana only. Broadcast captions write ｡､｢｣ beside their halfwidth kana,
+  and MeCab reads a halfwidth ｡ as a plain symbol, not a sentence end, which
+  changes the words before it (オレはやる｡ tags は + やる as the one verb 逸る).
 """
 
 from __future__ import annotations
@@ -215,6 +220,18 @@ def convert_halfwidth_katakana(text: str) -> str:
     return "".join(result)
 
 
+_HALFWIDTH_PUNCTUATION = str.maketrans("｡｢｣､", "。「」、")
+
+
+def convert_halfwidth_punctuation(text: str) -> str:
+    """Widen the halfwidth full stop, corner brackets and comma (｡｢｣､ → 。「」、).
+
+    One character for one, so offsets carry over. The halfwidth middle dot is
+    already widened with the kana (:func:`convert_halfwidth_katakana`).
+    """
+    return text.translate(_HALFWIDTH_PUNCTUATION)
+
+
 def normalize_cjk_compat(text: str) -> str:
     """NFKD-fold CJK Compatibility characters (U+3300–33FF) in place.
 
@@ -268,17 +285,21 @@ def standardize_kanji_variants(text: str) -> str:
 
 # TV-caption decoration glyphs stripped from mined text (owned, non-Yomitan —
 # see module docstring). Arrows: line-continuation marks (➡ dominant in the
-# audited broadcast subs, plus the double-arrow/curved variants seen in other
-# stations' captions). Emoji: device/speaker markers (📱 phone-call lines),
-# including U+FE0E/U+FE0F presentation selectors attached to stripped glyphs.
+# audited broadcast subs, plus the plain, double-arrow and curved variants seen
+# in other stations' captions: of 266,173 plain arrows in a 12,184-file subtitle
+# library, all but 695 end a line, and those sit before its closing bracket).
+# Device/speaker markers (📱 and ☎ phone-call lines), including U+FE0E/U+FE0F
+# presentation selectors attached to stripped glyphs.
 # Deliberately NOT stripped: ♪♫ music marks (the opt-in subtitle regex-filter
 # presets own that choice) and 《》〈〉 narration brackets (linguistic content).
 _CAPTION_GLYPHS = (
     "\u27a1"  # ➡
+    "\u2192"  # →
     "\u2b05-\u2b07"  # ⬅⬆⬇
     "\u21d0\u21d2"  # ⇐⇒
     "\u2934\u2935"  # ⤴⤵
     "\U0001f4f1\U0001f4de\U0001f50a\U0001f4ac"  # 📱📞🔊💬
+    "\u260e"  # ☎
 )
 # Renderer garbage by definition, in any language's captions. This is the half
 # of the strip that is separable, and the reason :func:`strip_renderer_garbage`
@@ -329,8 +350,8 @@ def normalize_for_tokenization(text: str) -> str:
     """Ordered pre-tokenization normalization chain (Yomitan ja preprocessor order).
 
     Applies, in order: decoration-glyph strip (owned, non-Yomitan), halfwidth-
-    katakana folding, CJK-compatibility NFKD, radical NFKD, then a final NFC
-    pass. NFC both composes input NFD kana (か + U+3099 → が) and recomposes the
+    katakana folding, halfwidth-punctuation widening (owned), CJK-compatibility
+    NFKD, radical NFKD, then a final NFC pass. NFC both composes input NFD kana (か + U+3099 → が) and recomposes the
     katakana the NFKD steps decomposed, so MeCab always receives precomposed
     text. See the module docstring for the owned deviations from Yomitan
     (stdlib NFC in place of the guarded combining fold, NFC as the final rather
@@ -338,6 +359,7 @@ def normalize_for_tokenization(text: str) -> str:
     """
     text = strip_decoration_glyphs(text)
     text = convert_halfwidth_katakana(text)
+    text = convert_halfwidth_punctuation(text)
     text = normalize_cjk_compat(text)
     text = normalize_radicals(text)
     return unicodedata.normalize("NFC", text)
