@@ -213,26 +213,43 @@ class TestRawNameSpanMerge:
 
         assert _name_matcher(set()).merge_line("狗巻君", tokens) == tokens
 
-    def test_exact_name_can_end_on_non_content_token(self):
+    def test_exact_name_can_end_on_kanji_tagged_auxiliary(self):
         tokens = [
-            _tok("君", "代名詞", "*", kana="キミ"),
-            _tok("の", "助詞", "格助詞", kana="ノ"),
+            _tok("貴", "名詞", "普通名詞", kana="タカ"),
+            _tok("也", "助動詞", "*", kana="ナリ"),
         ]
 
-        out = _name_matcher({"君の"}).merge_line("君の", tokens)
+        out = _name_matcher({"貴也"}).merge_line("貴也", tokens)
 
-        assert [token.surface for token in out] == ["君の"]
+        assert [token.surface for token in out] == ["貴也"]
 
-    def test_exact_name_can_start_and_end_on_non_content_tokens(self):
-        tokens = [
-            _tok("か", "助詞", "副助詞", kana="カ"),
-            _tok("津", "名詞", "普通名詞", kana="ツ"),
-            _tok("よ", "助詞", "終助詞", kana="ヨ"),
+    def test_name_never_starts_on_hiragana_grammar_word(self):
+        # その子 (Sonoko), な子, てる子 and いう子 are wordset names; in these
+        # lines they are a word and the noun 子.
+        cases = [
+            ("その子", [_tok("その", "連体詞", "*"), _tok("子", "名詞", "普通名詞")]),
+            (
+                "きれいな子",
+                [_tok("きれい", "形状詞", "一般"), _tok("な", "助動詞", "*"), _tok("子", "名詞", "普通名詞")],
+            ),
+            ("寝てる子", [_tok("寝", "動詞", "一般"), _tok("てる", "助動詞", "*"), _tok("子", "名詞", "普通名詞")]),
+            ("ああいう子", [_tok("ああ", "副詞", "*"), _tok("いう", "動詞", "一般"), _tok("子", "名詞", "普通名詞")]),
         ]
+        for text, tokens in cases:
+            out = _name_matcher({"その子", "な子", "てる子", "いう子"}).merge_line(text, tokens)
 
-        out = _name_matcher({"か津よ"}).merge_line("か津よ", tokens)
+            assert [token.surface for token in out] == [token.surface for token in tokens], text
 
-        assert [token.surface for token in out] == ["か津よ"]
+    def test_name_never_ends_on_hiragana_particle_or_auxiliary(self):
+        cases = [
+            ("夢か", [_tok("夢", "名詞", "普通名詞"), _tok("か", "助詞", "終助詞")]),
+            ("山だ", [_tok("山", "名詞", "普通名詞"), _tok("だ", "助動詞", "*")]),
+            ("流され", [_tok("流さ", "動詞", "一般"), _tok("れ", "助動詞", "*")]),
+        ]
+        for text, tokens in cases:
+            out = _name_matcher({"夢か", "山だ", "流され"}).merge_line(text, tokens)
+
+            assert [token.surface for token in out] == [token.surface for token in tokens], text
 
     def test_whitespace_pair_not_merged_when_same_name_occurs_later(self):
         tokens = [

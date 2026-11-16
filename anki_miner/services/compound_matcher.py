@@ -486,6 +486,19 @@ class CompoundDictionaryMatcher:
         )
 
 
+# A name span never starts on a hiragana particle, auxiliary, pre-noun
+# adjective or verb (その子, な子, てる女, いう子), nor ends on a hiragana
+# particle or auxiliary (夢か, 山だ). Only hiragana tokens are checked: kanji
+# tags are unreliable here (see _can_start), and 也 in 貴也 is tagged 助動詞.
+_NAME_START_GRAMMAR = frozenset({"助詞", "助動詞", "連体詞", "動詞"})
+_NAME_END_GRAMMAR = frozenset({"助詞", "助動詞"})
+
+
+def _hiragana_tagged(token, pos1s: frozenset[str]) -> bool:
+    surface = getattr(token, "surface", None) or ""
+    return bool(_HIRAGANA_RE.fullmatch(surface)) and _pos1(token) in pos1s
+
+
 class NameSpanMatcher(CompoundDictionaryMatcher):
     """Merge exact name-wordset spans without trusting UniDic word forms.
 
@@ -511,13 +524,18 @@ class NameSpanMatcher(CompoundDictionaryMatcher):
         # The combined-line probe can tag 狗 as 接尾辞 and 巻 as 固有名詞 even
         # though the same source phrase tags both 普通名詞; trusting either tag
         # here would recreate the fragment bug at a different POS boundary.
+        # A hiragana grammar word is the exception (_NAME_START_GRAMMAR): the
+        # wordsets hold その子, な子, てる子 and いう子, which glue a word to
+        # a noun in その子が, きれいな子, 寝てる子 and ああいう子.
         surface = getattr(token, "surface", None)
-        return bool(surface and surface.strip())
+        return bool(surface and surface.strip()) and not _hiragana_tagged(token, _NAME_START_GRAMMAR)
 
     @staticmethod
     def _can_end(token) -> bool:
+        # 夢か, 山だ, 時や and 流され (流さ|れ) are names too; ending on a
+        # hiragana particle or auxiliary they are a word and its grammar.
         surface = getattr(token, "surface", None)
-        return bool(surface and surface.strip())
+        return bool(surface and surface.strip()) and not _hiragana_tagged(token, _NAME_END_GRAMMAR)
 
     def _build_synthetic(self, span: list, headword: str, kind: str) -> CompoundSyntheticToken:
         surface = "".join(token.surface for token in span)
