@@ -335,7 +335,16 @@ class TestExpressionAcrossParticle:
 class TestAdverbialParticleEnd:
     """A word + particle JMdict lists as an adverb, expression, pronoun or conjunction merges."""
 
-    TAGS = {"本当に": {"adv"}, "時に": {"adv", "conj"}, "急いで": {"adv"}, "神様": {"n"}, "外に": {"adv"}}
+    TAGS = {
+        "本当に": {"adv"},
+        "時に": {"adv", "conj"},
+        "急いで": {"adv"},
+        "神様": {"n"},
+        "外に": {"adv"},
+        "二度と": {"adv"},
+        "何だと": {"exp"},
+        "何と": {"adv"},
+    }
 
     def _matcher(self, dictionary, tags=TAGS, readings=None):
         return CompoundDictionaryMatcher(
@@ -392,6 +401,33 @@ class TestAdverbialParticleEnd:
         tokens = [_tok("神様", "名詞", "普通名詞", kana="カミサマ"), _tok("に", "助詞", "格助詞", kana="ニ")]
         out = self._matcher({"神様に"}).merge_line("神様に", tokens)
         assert [t.surface for t in out] == ["神様", "に"]
+
+    def test_merges_an_adverb_ending_on_to(self):
+        # 二度と来るな: 'never again', not the counter 二度 'twice'.
+        tokens = [
+            _tok("二", "名詞", "数詞", kana="ニ"),
+            _tok("度", "名詞", "普通名詞", kana="ド"),
+            _tok("と", "助詞", "格助詞", kana="ト"),
+            _tok("来る", "動詞", "非自立可能", lemma="来る", kana="クル", orth_base="来る"),
+        ]
+        out = self._matcher({"二度", "二度と"}).merge_line("二度と来る", tokens)
+        assert [t.surface for t in out] == ["二度と", "来る"]
+
+    def test_a_to_span_with_an_auxiliary_stays_apart(self):
+        # 何だと: 'what did you say' is 何 + the copula + the quoting と.
+        tokens = [
+            _tok("何", "代名詞", kana="ナン"),
+            _tok("だ", "助動詞", kana="ダ"),
+            _tok("と", "助詞", "格助詞", kana="ト"),
+        ]
+        out = self._matcher({"何だと"}).merge_line("何だと", tokens)
+        assert [t.surface for t in out] == ["何", "だ", "と"]
+
+    def test_a_lone_pronoun_keeps_its_to(self):
+        # 何となく / 何と書かれて: 何 and its particle, not the adverb 何と.
+        tokens = [_tok("何", "代名詞", kana="ナン"), _tok("と", "助詞", "格助詞", kana="ト")]
+        out = self._matcher({"何と"}).merge_line("何と", tokens)
+        assert [t.surface for t in out] == ["何", "と"]
 
 
 class TestLongestMatchAndGreedyScan:

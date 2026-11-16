@@ -92,7 +92,10 @@ _NON_CONTENT_POS1 = frozenset({"助詞", "助動詞", "記号", "補助記号", 
 # greeting, 彼の a phrase), and so does a word something modifies: その時に and
 # 行く時に are the noun 時 with its case particle, not the adverb 時に. A span
 # with a verb or adjective in it is that word inflected (急いで), never the entry.
-_ADVERBIAL_PARTICLES = frozenset({"に", "も", "で", "か", "から", "まで", "や", "でも", "しか"})
+# と joins too (二度と 'never again', not 二度 'twice'), but never across an
+# auxiliary (何だと is 何 + the copula + the quoting と) nor onto a lone pronoun:
+# 何と is mostly 何となく, 何としても or a quoted 何と書かれて.
+_ADVERBIAL_PARTICLES = frozenset({"に", "も", "で", "か", "から", "まで", "や", "でも", "しか", "と"})
 _ADVERBIAL_TAGS = frozenset({"adv", "exp", "pn", "conj"})
 
 # A dictionary entry's tags, by headword (JMdict's adv, exp, n, …).
@@ -285,6 +288,11 @@ class CompoundDictionaryMatcher:
         # nominalizing の (何なのか).
         if _pos1(tokens[start]) in ("接尾辞", "連体詞") or any(
             _pos1(token) in _INFLECTABLE_POS1 or _pos2(token) == "準体助詞" for token in tokens[start : end + 1]
+        ):
+            return False
+        if tokens[end].surface == "と" and (
+            (end - start == 1 and _pos1(tokens[start]) == "代名詞")
+            or any(_pos1(token) == "助動詞" for token in tokens[start:end])
         ):
             return False
         if headword not in self._tags_cache:
