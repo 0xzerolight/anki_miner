@@ -859,3 +859,22 @@ class TestHottoku:
         assert [t.surface for t in out] == ["放っとい", "て"]
         assert out[0].feature.lemma == "放っとく"
         assert out[0].feature.pos1 == "動詞"
+
+
+class TestSuffixStart:
+    def test_suffix_after_a_noun_never_starts_a_word(self):
+        # 義母|上|様: the leftover 上 + 様 is not 上様 'the shogun'.
+        tokens = [
+            _tok("義母", "名詞", "普通名詞", kana="ギボ"),
+            _tok("上", "接尾辞", "名詞的", kana="ウエ"),
+            _tok("様", "接尾辞", "名詞的", kana="サマ"),
+        ]
+        for token in tokens:
+            token.white_space = ""
+        out = _matcher({"上様"}).merge_line("義母上様", tokens)
+        assert [t.surface for t in out] == ["義母", "上", "様"]
+
+    def test_line_initial_suffix_still_starts(self):
+        tokens = [_tok("上", "接尾辞", "名詞的", kana="ウエ"), _tok("様", "接尾辞", "名詞的", kana="サマ")]
+        out = _matcher({"上様"}).merge_line("上様", tokens)
+        assert [t.surface for t in out] == ["上様"]

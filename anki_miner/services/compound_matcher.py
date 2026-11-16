@@ -311,7 +311,7 @@ class CompoundDictionaryMatcher:
             token = tokens[i]
             replacement = None
             consumed_end = i
-            if self._can_start(token):
+            if self._can_start_at(tokens, i):
                 # Longest span first — Yomitan ranks by source length.
                 for j in range(min(i + self._max_span - 1, n - 1), i, -1):
                     alternatives = candidates.get((i, j))
@@ -405,6 +405,26 @@ class CompoundDictionaryMatcher:
         """Whether candidate spans may start at ``token``."""
         return self._can_end(token)
 
+    def _can_start_at(self, tokens: list, i: int) -> bool:
+        """``_can_start``, and not a suffix attached to the word before it.
+
+        A suffix belongs to the word on its left: when the noun-suffix pass
+        bails 義母|上|様 or 母上|殿, the leftover suffix and the address 様, 殿
+        or さん must not join as a word of their own (上様 'the shogun', 上殿,
+        長殿). Other suffix pairs keep their joins. After a space, or at the
+        line start, a suffix-tagged token may still begin one (上様は茶室に).
+        """
+        if not self._can_start(tokens[i]):
+            return False
+        return not (
+            0 < i < len(tokens) - 1
+            and _pos1(tokens[i]) == "接尾辞"
+            and _pos1(tokens[i + 1]) == "接尾辞"
+            and tokens[i + 1].surface in ("様", "殿", "さん")
+            and _pos1(tokens[i - 1]) in ("名詞", "接尾辞")
+            and not getattr(tokens[i], "white_space", "")
+        )
+
     @staticmethod
     def _can_end(token) -> bool:
         """Whether candidate spans may end at ``token``."""
@@ -440,7 +460,7 @@ class CompoundDictionaryMatcher:
         source_spans = self._source_spans(text, tokens)
         for i in range(n - 1):
             start_span = source_spans.get(i)
-            if start_span is None or not self._can_start(tokens[i]):
+            if start_span is None or not self._can_start_at(tokens, i):
                 continue
             prefix = tokens[i].surface
             source_end = start_span[1]
@@ -627,6 +647,9 @@ class NameSpanMatcher(CompoundDictionaryMatcher):
         if prefix.endswith("の") and tail.surface in _NAME_POSITION_TAILS:
             return ()
         return ((joined, "B"),)
+
+    def _can_start_at(self, tokens: list, i: int) -> bool:
+        return self._can_start(tokens[i])
 
     def _can_start(self, token) -> bool:
         # Exact raw-name attestation, not UniDic POS, licenses this boundary.
