@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any
 
 from anki_miner.utils.furigana_distribute import distribute_furigana
 from anki_miner.utils.ja_normalize import (
+    drop_chinese_lines,
     is_cjk_ideograph,
     normalize_for_tokenization,
     standardize_kanji_variants,
@@ -69,7 +70,9 @@ def clean_subtitle_text(
     Markup stripping runs first, then one ``html.unescape`` pass, then
     :func:`normalize_for_tokenization` (halfwidth katakana → fullwidth, NFC combining-mark
     composition, CJK-compat and radical NFKD folding) and the minimal kanji-variant map
-    (𠮟 → 叱). Physical lines stay separate through normalization and are
+    (𠮟 → 叱). The Japanese pair also deletes invisible format characters
+    first and drops a Chinese line last (:func:`drop_chinese_lines`). Physical
+    lines stay separate through normalization and are
     annotation-stripped (:func:`strip_inline_annotations`) before whitespace is
     flattened. The returned string *is* the stored card sentence; for Japanese
     it is also the exact text MeCab tokenizes, so token offsets, dedup keys, and
@@ -104,8 +107,13 @@ def clean_subtitle_text(
     text = html.unescape(text)
     if normalize is None:
         # Japanese pre-tokenization normalization (see anki_miner.utils.ja_normalize).
-        text = normalize_for_tokenization(text)
+        # Format characters first: a left-to-right mark (streaming-service
+        # captions put one before a bracket) is invisible on the card and a
+        # symbol to the tagger. Japanese only: Persian writes a zero-width
+        # non-joiner inside a word, and Arabic and Hebrew lines carry bidi marks.
+        text = normalize_for_tokenization(strip_format_chars(text))
         text = standardize_kanji_variants(text)
+        text = drop_chinese_lines(text)
     else:
         text = normalize(text)
     text = strip_inline_annotations(text)

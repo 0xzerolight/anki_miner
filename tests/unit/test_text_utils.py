@@ -156,6 +156,24 @@ class TestCleanSubtitleText:
         """``normalize=None`` is the Japanese pair: NBSP and NNBSP collapse like any space."""
         assert clean_subtitle_text("a\u00a0b\u202fc", normalize=None) == "a b c"
 
+    def test_japanese_drops_invisible_format_marks(self):
+        """A left-to-right mark before a bracket is invisible on the card and a symbol to the tagger."""
+        assert clean_subtitle_text("\u200e〈\u200e光の盾\u200eから伝言だ〉") == "〈光の盾から伝言だ〉"
+        assert clean_subtitle_text("&lrm;はっ…\ufeff") == "はっ…"
+
+    def test_other_languages_keep_their_format_marks(self):
+        """Persian writes a zero-width non-joiner inside a word: only the Japanese pair drops them."""
+        assert clean_subtitle_text("می\u200cخواهم", normalize=_identity) == "می\u200cخواهم"
+
+    def test_japanese_drops_a_chinese_line(self):
+        """A fansub file's Chinese credit or translation line is not a Japanese sentence to mine."""
+        assert clean_subtitle_text("翻译 校对 时间轴") == ""
+        assert clean_subtitle_text("太好了 完成了呢\\Nやった できたね") == "やった できたね"
+        assert clean_subtitle_text("了解 中村先生") == "了解 中村先生"
+
+    def test_other_languages_keep_a_chinese_line(self):
+        assert clean_subtitle_text("翻译 校对 时间轴", normalize=_identity) == "翻译 校对 时间轴"
+
     def test_other_languages_keep_no_break_spaces(self):
         """French puts one before ``? ! : ; »``: the stored line keeps it, so the card never wraps there."""
         cue = "Tu  viens\u202f?\\N Oui\u00a0!"

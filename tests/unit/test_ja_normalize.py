@@ -16,6 +16,7 @@ import pytest
 from anki_miner.utils.ja_normalize import (
     CJK_IDEOGRAPH_RANGES,
     convert_halfwidth_katakana,
+    drop_chinese_lines,
     is_cjk_ideograph,
     normalize_cjk_compat,
     normalize_for_tokenization,
@@ -251,6 +252,44 @@ def test_normalize_for_tokenization_widens_halfwidth_punctuation():
     result = normalize_for_tokenization(line)
     assert result == "「行くぞ」と言った、オレはやる。"
     assert len(result) == len(line)  # one character for one: offsets carry over
+
+
+# --- Chinese lines in a Japanese subtitle file --------------------------------
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        "翻译 校对 时间轴",  # simplified characters no Japanese character set has
+        "翻译：小林 校对：マキ",  # a credit line stays Chinese when a staff name has kana
+        "你們在做什麼",  # traditional: no kana, and 你 們 麼 are not written in Japanese
+        "太好了 完成了呢",
+    ],
+)
+def test_drop_chinese_lines_drops_a_chinese_line(line):
+    assert drop_chinese_lines(line) == ""
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        "了解 中村先生",  # Japanese with no kana
+        "南無阿弥陀仏",
+        "髙橋先生 﨑山先生",  # name kanji outside JIS X 0213 that Japanese systems still write
+        "噓 頰 剝離 草彅",
+        "「你好」って言ってみて",  # a quoted Chinese word in a Japanese line
+        "今日は晴れ",
+        "OK",
+        "",
+    ],
+)
+def test_drop_chinese_lines_keeps_a_japanese_line(line):
+    assert drop_chinese_lines(line) == line
+
+
+def test_drop_chinese_lines_works_on_each_physical_line():
+    assert drop_chinese_lines("太好了 完成了呢\nやった できたね") == "やった できたね"
+    assert drop_chinese_lines("了解\n中村先生") == "了解\n中村先生"
 
 
 def test_standardize_kanji_variants():

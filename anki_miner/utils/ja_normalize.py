@@ -55,6 +55,7 @@ Owned deviations from Yomitan (see the pinned plan item 1.3):
 
 from __future__ import annotations
 
+import functools
 import re
 import unicodedata
 
@@ -363,3 +364,55 @@ def normalize_for_tokenization(text: str) -> str:
     text = normalize_cjk_compat(text)
     text = normalize_radicals(text)
     return unicodedata.normalize("NFC", text)
+
+
+# A Chinese line in a Japanese subtitle file: a fansub's credit line (staff
+# roles in simplified characters) or the Chinese half of a bilingual file. Every
+# kanji is "Japanese script" to the script gate, so the line was mined as
+# Japanese: cards for its kanji, with a Chinese sentence.
+_KANA_RE = re.compile(r"[\u3041-\u309f\u30a1-\u30ff]")
+_HAN_RE = re.compile(r"[\u4e00-\u9fff\u3400-\u4dbf]")
+# Chinese pronouns and sentence particles that Japanese text does not write.
+# Each is in a Japanese character set as an old or rare form, so only a line
+# with no kana at all is judged by them: 「你好」って言ってみて stays.
+_CHINESE_ONLY_HAN = frozenset("你您妳她它們嗎呢吧啊哦嗯麼沒怎很哪")
+
+
+@functools.cache
+def _japanese_charset_has(char: str) -> bool:
+    """True iff a Japanese character set encodes *char*.
+
+    JIS X 0213 (``euc_jis_2004``) holds every kanji Japanese text prints,
+    simplified Chinese forms excluded; ``cp932`` adds the name variants (髙, 﨑)
+    Japanese systems write that the standard left out.
+    """
+    for codec in ("euc_jis_2004", "cp932"):
+        try:
+            char.encode(codec)
+        except UnicodeEncodeError:
+            continue
+        return True
+    return False
+
+
+def _is_chinese_line(line: str) -> bool:
+    han = set(_HAN_RE.findall(line))
+    if not han:
+        return False
+    if not _CHINESE_ONLY_HAN.isdisjoint(han) and _KANA_RE.search(line) is None:
+        return True
+    return not all(_japanese_charset_has(char) for char in han)
+
+
+def drop_chinese_lines(text: str) -> str:
+    """Remove the physical lines of *text* that are written in Chinese.
+
+    A line is Chinese when it holds a kanji no Japanese character set has (a
+    simplified form: 译, 对, 轴), kana beside it or not, or when it has no kana
+    and holds a character from ``_CHINESE_ONLY_HAN``. Japanese with no kana
+    (了解, 中村先生) has neither. A Chinese line with neither is kept: the rule
+    names the lines it is sure of, it does not classify the language.
+    """
+    if _HAN_RE.search(text) is None:
+        return text
+    return "\n".join(line for line in text.split("\n") if not _is_chinese_line(line))
