@@ -3,3 +3,5 @@
 {"id":"kn03","sentence":"あの 山田さん","expected":[],"category":"kana-listed","note":"A filler before a space stays unmined; the name is excluded by default."}
 {"id":"kn04","sentence":"今 駅にいる","expected":["今","駅"],"category":"kana-listed","note":"unidic-lite reads 今 before a subtitle space as the prefix コン (as in 今大会); spaced, it is the noun いま."}
 {"id":"kn05","sentence":"今大会で優勝した","expected":["大会","優勝"],"category":"kana-listed","note":"The unspaced prefix stays a prefix."}
+{"id":"kn08","sentence":"ちなみに私は行かない","expected":["ちなみに","私","行く"],"category":"kana-listed","note":"Join row ちなみ|に: JMdict spells it 因みに, with the kana only as a reading."}
+{"id":"kn09","sentence":"あんなに怒るなんて","expected":["あんなに","怒る"],"category":"kana-listed","note":"Join row あんな|に, like そんなに; あんな alone is the window-rejected piece."}
