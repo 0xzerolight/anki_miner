@@ -184,6 +184,13 @@ _KANA_RECOVER_POS1: frozenset[str] = frozenset({"動詞", "形容詞", "形状�
 #   should_include and never reach this path.
 _KANA_RECOVER_REJECT_POS2: frozenset[str] = frozenset({"助動詞語幹", "非自立可能"})
 
+# Kana verbs the tagger makes by gluing two words together, named by the lemma
+# it gives the result: 逸る is は + やる (オレはやる, やる時はやるやつ) and 抗する is
+# こう + する (こうするつもり). Each glue shows up only in some contexts, and a real
+# 流行る (はやってる) carries its own lemma, so the lemma tells them apart. The
+# cost is a real 逸る written in kana (はやる気持ち), which is no longer mined.
+_KANA_FUSED_LEMMAS: frozenset[str] = frozenset({"逸る", "抗する"})
+
 # How _kana_recovery brought a hiragana word back: by the content gate, or by
 # name from the kana word list (services/kana_words.py). A recovered word takes
 # the U4 window reject, and so does a listed kana spelling of a kanji-written
@@ -3085,9 +3092,11 @@ class SubtitleParserService:
            ようだ/みたいな) and auxiliary-capable verbs (いる/ある/くれる in
            ている/てくれる) content_gate_ok alone would let through — or the card
            front is on the kana word list (listed: もう, この, いつも).
-        4. A recovered word passes ``content_gate_ok``, a listed one
+        4. The tagger's lemma is not one it gives two glued words
+           (``_KANA_FUSED_LEMMAS``).
+        5. A recovered word passes ``content_gate_ok``, a listed one
            ``structural_ok``, and the mined-form card front is attested
-           (memoized per token shape — steps 4+ run once per distinct token,
+           (memoized per token shape — steps 5+ run once per distinct token,
            never per occurrence).
         """
         if self._kana_attest_lookup is None:
@@ -3103,6 +3112,9 @@ class SubtitleParserService:
         # grammar, not vocabulary; the list names the few words among them.
         pos2 = getattr(feature, "pos2", None)
         recoverable = pos1 in _KANA_RECOVER_POS1 and pos2 not in _KANA_RECOVER_REJECT_POS2
+        # Before the memo: its key has no lemma, and はやる is also 流行る.
+        if self._extract_lemma(word_token) in _KANA_FUSED_LEMMAS:
+            return None
         merged = getattr(word_token, "compound", False) is True
         # pos2 is part of the key: the auxiliary-capable つける (気をつける) and the
         # main verb つける share surface and pos1 but not the verdict, nor do the
