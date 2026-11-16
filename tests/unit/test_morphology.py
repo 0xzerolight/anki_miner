@@ -778,7 +778,7 @@ class TestMergeCompoundSuffixesAttestGate:
     raw tokens), attested compounds mint as before, and curated kinship
     compounds mint even though the dictionary never attests them. ``attest=None``
     (the default) leaves every pass ungated — byte-identical to the pre-gate
-    behavior. ``_merge_verb_nominalizers`` is NEVER gated.
+    behavior. ``_merge_verb_nominalizers`` mints only an attested compound.
     """
 
     @staticmethod
@@ -917,18 +917,18 @@ class TestMergeCompoundSuffixesAttestGate:
         assert [t.surface for t in merged] == ["兄ちゃん的"]
         assert merged[0].feature.kana == "ニイチャンテキ"
 
-    # --- verb nominalizer is NEVER gated ----------------------------------
+    # --- verb nominalizer mints when attested -----------------------------
 
-    def test_verb_nominalizer_is_ungated(self):
-        # 言い方 mints even with an empty dictionary — the {方,手,様} whitelist
-        # is productive and never gated.
+    def test_verb_nominalizer_mints_when_attested(self):
+        # 言い方 is a dictionary word; an unattested 戦い方 would bail
+        # (tests/unit/test_verb_nominalizer_gate.py).
         verb = SimpleNamespace(
             surface="言い",
             feature=SimpleNamespace(
                 pos1="動詞", pos2="一般", lemma="言う", kana="イイ", orthBase="言う", cForm="連用形-一般"
             ),
         )
-        merged = merge_compound_suffixes([verb, _suffix_token("方", "カタ")], attest=self._attest(set()))
+        merged = merge_compound_suffixes([verb, _suffix_token("方", "カタ")], attest=self._attest({"言い方"}))
         assert len(merged) == 1
         assert merged[0].surface == "言い方"
 

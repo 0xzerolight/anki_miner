@@ -416,6 +416,17 @@ _ANCHOR_HEADWORDS: tuple[str, ...] = (
     "詰まらない",
     "時に",
     "残らず",
+    # span-window: 読み方 attested so the gated verb-nominalizer pass keeps it
+    # whole; 戦い方 deliberately absent so the pass leaves 戦う and 方 apart
+    "読み方",
+    # span-window: a word listed only in its inflected form (折り入る absent).
+    # 済む and 残る are attested as in JMdict: an attested base keeps its own
+    # word, so 済まない (pv03) and 残らず (lj07) stay the verb.
+    "折り入って",
+    "済む",
+    "残る",
+    # span-window: 放っておく, joined through the potential tail おけ (おける)
+    "放っておく",
     # kana-words: listed kana words, plus これは and でも attested on purpose so
     # only the list's own rules keep これ and leave 学校でも unjoined
     "もう",
@@ -494,6 +505,10 @@ _ANCHOR_RULES: dict[str, str] = {
     # lexical-join
     "下らない": "adj-i",
     "詰まらない": "adj-i",
+    # span-window
+    "済む": "v5m",
+    "残る": "v5r",
+    "放っておく": "v5k",
 }
 
 # Readings for the rows the reading-gate category needs. Every other row keeps

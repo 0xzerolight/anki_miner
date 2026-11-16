@@ -617,14 +617,15 @@ def merge_compound_suffixes(
     must be preserved even though no dictionary attests it). An unattested
     candidate bails the WHOLE greedy chain to its bare components, letting the
     downstream dictionary matcher recover the longest attested sub-span
-    (入院中的 → 入院中). Pass 3 is NEVER gated — its {方,手,様} whitelist is
-    productive, near-zero junk. ``attest=None`` (the default that keeps every
-    existing direct caller byte-identical) leaves all three passes ungated.
+    (入院中的 → 入院中). Pass 3 mints only an attested compound: an unattested
+    戦い方 gets no definition and is dropped, costing the line its verb.
+    ``attest=None`` (the default that keeps every existing direct caller
+    byte-identical) leaves all three passes ungated.
     """
     tokens = _retag_mistagged_tokens(tokens, form_lookup)
     tokens = _merge_prefix_compounds(tokens, attest)
     tokens = _merge_noun_suffixes(tokens, attest)
-    tokens = _merge_verb_nominalizers(tokens)
+    tokens = _merge_verb_nominalizers(tokens, attest)
     return tokens
 
 
@@ -1232,7 +1233,29 @@ def _merge_prefix_compounds(tokens: list, attest: AttestLookup | None = None) ->
     return merged
 
 
-def _merge_verb_nominalizers(tokens: list) -> list:
+def _verb_nominalizer_suffix(tokens: list, i: int) -> bool:
+    """Whether ``tokens[i]`` is a 連用形 verb and ``tokens[i + 1]`` a {方, 手, 様} nominalizer."""
+    if i + 1 >= len(tokens):
+        return False
+    head, suffix = tokens[i], tokens[i + 1]
+    try:
+        head_pos1 = head.feature.pos1
+        head_c_form = head.feature.cForm
+        suf_pos1 = suffix.feature.pos1
+        suf_pos2 = suffix.feature.pos2
+    except AttributeError:
+        return False
+    return (
+        head_pos1 == "動詞"
+        and isinstance(head_c_form, str)
+        and head_c_form.startswith("連用形")
+        and suf_pos1 == "接尾辞"
+        and suf_pos2 == "名詞的"
+        and suffix.surface in _VERB_NOMINALIZER_SUFFIXES
+    )
+
+
+def _merge_verb_nominalizers(tokens: list, attest: AttestLookup | None = None) -> list:
     """Merge 動詞(連用形) + 接尾辞(名詞的) verb-stem nominalizers.
 
     Only fires when the suffix surface is in _VERB_NOMINALIZER_SUFFIXES
@@ -1244,7 +1267,21 @@ def _merge_verb_nominalizers(tokens: list) -> list:
     ``lemma`` is set to the merged surface (NOT head.lemma + suffix.lemma)
     because the dictionary entry IS 言い方 / 読み方 — using 言う + 方 would
     yield 言う方, which is not a headword and would miss dictionary lookups.
+
+    With ``attest`` the merge needs a dictionary entry (言い方): an unattested
+    戦い方 has no definition and is dropped before it reaches a card, so the
+    merge would only cost the line its verb. Left apart, 戦い mines as 戦う and
+    方 falls to the suffix reject. いい方 keeps the merge: it is mostly 良い方
+    'the better one', and apart it would mine the tagger's 言う.
     """
+    attested: set[str] | None = None
+    if attest is not None:
+        candidates = {
+            tokens[i].surface + tokens[i + 1].surface
+            for i in range(len(tokens))
+            if _verb_nominalizer_suffix(tokens, i) and tokens[i].surface != "いい"
+        }
+        attested = attest(sorted(candidates)) if candidates else set()
     merged: list = []
     i, n = 0, len(tokens)
     while i < n:
@@ -1267,7 +1304,12 @@ def _merge_verb_nominalizers(tokens: list) -> list:
                 merged.append(head)
                 i += 1
                 continue
-            if suf_pos1 == "接尾辞" and suf_pos2 == "名詞的" and suffix.surface in _VERB_NOMINALIZER_SUFFIXES:
+            if (
+                suf_pos1 == "接尾辞"
+                and suf_pos2 == "名詞的"
+                and suffix.surface in _VERB_NOMINALIZER_SUFFIXES
+                and (attested is None or head.surface == "いい" or head.surface + suffix.surface in attested)
+            ):
                 surf = head.surface + suffix.surface
                 try:
                     head_kana = head.feature.kana or head.surface

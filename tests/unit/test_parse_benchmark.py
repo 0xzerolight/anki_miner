@@ -162,6 +162,7 @@ _EXPECTED_CATEGORIES = {
     "plain-causative",
     "reading-gate",
     "lexical-join",
+    "span-window",
     "kana-words",
     "place-names",
     "kana-listed",

@@ -6318,11 +6318,12 @@ class TestCompoundMergeAttestGate:
         # and 的 is dropped by the inclusion gate.
         assert self._mine("入院中的", dictionary={"入院中"}) == {"入院中"}
 
-    def test_verb_nominalizer_never_gated(self):
-        # 言い方 (方 nominalizer) mints even with an empty dictionary AND with no
-        # dictionary — the verb-nominalizer pass is never gated.
-        assert self._mine("言い方", dictionary=set()) == {"言い方"}
+    def test_verb_nominalizer_needs_an_entry(self):
+        # 言い方 (方 nominalizer) mints when attested and with no dictionary; an
+        # unattested one leaves the verb, which mines as 言う.
+        assert self._mine("言い方", dictionary={"言い方"}) == {"言い方"}
         assert self._mine("言い方", dictionary=None) == {"言い方"}
+        assert self._mine("言い方", dictionary=set()) == {"言う"}
 
     def test_non_continuative_verb_does_not_merge_nominalizer(self):
         assert self._mine("食べる方", dictionary=set()) == {"食べる"}
