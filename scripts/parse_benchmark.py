@@ -262,6 +262,38 @@ def mine_lite_orthbase(sentence: str) -> set[str]:
 # itself is rebuilt from it at benchmark start (no binary blob in git, fully
 # reproducible, network-free).
 _ANCHOR_HEADWORDS: tuple[str, ...] = (
+    # verb-voice: a godan imperative (持て, 従え) against the attested ichidan
+    # verb of the same spelling (持てる, 従える)
+    "持てる",
+    "持つ",
+    "従える",
+    "従う",
+    # verb-voice: potentials whose tagger lemma is spelled otherwise fold in the
+    # line's spelling (やり直せる → やり直す, 治せる → 治す); 近づける is attested
+    "やり直す",
+    "治す",
+    "近づける",
+    # verb-voice: いえる is DELIBERATELY attested so vv07 fails on the bare-いえ
+    # reject, not on a dict miss
+    "いえる",
+    # verb-voice: short causatives (行かす, 食べさす) card the base verb; 聞かす is
+    # an attested -asu verb and stays
+    "行く",
+    "聞かす",
+    # verb-voice: a godan passive (刺された) against the -aru verb 刺さる
+    "刺す",
+    "刺さる",
+    # verb-voice: katakana verbs whose katakana spelling is no verb entry (フル is
+    # the adjective 'full') fold to the lemma's reading (振る, 付く read ふる, つく)
+    "フル",
+    "振る",
+    "付く",
+    # verb-voice: まつ is DELIBERATELY attested so vv17 fails on the cut-stem
+    # reject, not on a dict miss
+    "まつ",
+    # verb-voice: いたむ is DELIBERATELY attested so vv19 fails on the glued-lemma
+    # reject, not on a dict miss
+    "いたむ",
     # jiru-zuru modern headwords (the fix's targets)
     "感じる",
     "論じる",
@@ -429,6 +461,16 @@ _ANCHOR_HEADWORDS: tuple[str, ...] = (
 # off and flatline the jiru-zuru recall floor rather than fail loudly.
 # Unlisted headwords keep "" on purpose: nouns and collocations do not inflect.
 _ANCHOR_RULES: dict[str, str] = {
+    # verb-voice
+    **dict.fromkeys(("持てる", "従える"), "v1"),
+    "持つ": "v5t",
+    "従う": "v5u",
+    **dict.fromkeys(("やり直す", "治す"), "v5s"),
+    **dict.fromkeys(("近づける", "いえる"), "v1"),
+    "行く": "v5",
+    "聞かす": "v5s",
+    **dict.fromkeys(("刺す", "刺さる"), "v5"),
+    **dict.fromkeys(("振る", "付く", "まつ", "いたむ"), "v5"),
     # ichidan (jiru-zuru targets + other ichidan guards)
     **dict.fromkeys(("感じる", "論じる", "信じる", "生じる", "演じる", "通じる", "準じる", "かんじる"), "v1"),
     **dict.fromkeys(("報いる", "帰れる", "見る", "恐れる", "いる", "くれる"), "v1"),
@@ -457,6 +499,8 @@ _ANCHOR_RULES: dict[str, str] = {
 # Readings for the rows the reading-gate category needs. Every other row keeps
 # reading=None, which the gate treats as "no reading recorded" (it passes).
 _ANCHOR_READINGS: dict[str, str] = {
+    "振る": "ふる",
+    "付く": "つく",
     "彼の方": "あのかた",
     "木の下": "このした",
     "目の前": "めのまえ",

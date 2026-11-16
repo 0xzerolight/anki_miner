@@ -28,6 +28,7 @@ from anki_miner.services.deinflection import (
     _is_pure_hiragana,
     find_highlight_end,
     find_highlight_end_with_trace,
+    get_highlight_deinflector,
     resolve_dictionary_form,
 )
 from anki_miner.services.kana_words import is_kanji_spelled, is_listed
@@ -58,6 +59,8 @@ from anki_miner.services.morphology import (
     replace_overridden_spans,
     resolve_attested_reading,
     resolve_reading_override,
+    short_causative_bases,
+    source_spelling_fold,
 )
 from anki_miner.services.number_counters import merge_number_counters
 from anki_miner.services.reading.ruby_hints import apply_author_ruby
@@ -189,7 +192,21 @@ _KANA_RECOVER_REJECT_POS2: frozenset[str] = frozenset({"助動詞語幹", "非�
 # こう + する (こうするつもり). Each glue shows up only in some contexts, and a real
 # 流行る (はやってる) carries its own lemma, so the lemma tells them apart. The
 # cost is a real 逸る written in kana (はやる気持ち), which is no longer mined.
-_KANA_FUSED_LEMMAS: frozenset[str] = frozenset({"逸る", "抗する"})
+# 痛む is いた + んだ/みたい (彼氏いたんだ), 買う the かっ/かい of 違かった, からかう
+# and 芝居がかって, 逸する the いっす of ういっす; each costs the kana spelling of
+# the real verb (恨みをかう).
+_KANA_FUSED_LEMMAS: frozenset[str] = frozenset({"逸る", "抗する", "痛む", "買う", "逸する"})
+
+# An interjection the tagger reads as a kana verb when it stands alone: いえ ('no')
+# as the potential いえる or the imperative of 言う. The verb inflects on (いえない,
+# いえば, いえます); a bare いえ with nothing after it is the interjection, so only
+# the bare token is turned away. The cost is a bare kana imperative いえ ('say it').
+_KANA_BARE_INTERJECTIONS: frozenset[str] = frozenset({"いえ"})
+
+# What continues a verb's 促音便 stem (待っ|て, 取っ|たって, 行っ|ちゃう, 放っ|とこ). A
+# recovered kana stem cut at っ with none of these after it is a filler or a
+# stutter (まっ いいか, もっ もちろん), not the verb.
+_SOKUON_CONTINUATIONS: frozenset[str] = frozenset("たてだでちじと")
 
 # How _kana_recovery brought a hiragana word back: by the content gate, or by
 # name from the kana word list (services/kana_words.py). A recovered word takes
@@ -411,6 +428,42 @@ def _is_all_katakana(surface: str) -> bool:
     """
     non_ws = [c for c in surface if not c.isspace()]
     return bool(non_ws) and all(_is_katakana_surface_char(c) for c in non_ws)
+
+
+def _is_godan_imperative(feature: Any) -> bool:
+    """Whether the tagger read the token as a godan verb's 命令形 (持て, 従え)."""
+    ctype = getattr(feature, "cType", None)
+    cform = getattr(feature, "cForm", None)
+    return isinstance(ctype, str) and ctype.startswith("五段") and isinstance(cform, str) and cform.startswith("命令形")
+
+
+# Godan 未然形 endings before the passive auxiliary れる (刺さ|れ|た, 抜か|れ|た).
+_GODAN_MIZEN_A_ROW: frozenset[str] = frozenset("かがさざただなばまらわぱ")
+# Honorifics a 未然形 + れ spells by their own conjugation (来て下された is 下さる).
+_HONORIFIC_ARU_VERBS: frozenset[str] = frozenset({"下さる"})
+
+
+def _godan_passive_aru_verb(token: Any, inflected_surface: str) -> str:
+    """The -aru verb a godan passive spells (刺さ|れ|た → 刺さる), or ``""``.
+
+    Only a kanji-stem godan 未然形 the tagger split from a れ that inflects on:
+    a kana stem is left out (なされた is mostly the honorific なさる), and so are
+    the honorific 下さる and a span that ends at れ.
+    """
+    feature = getattr(token, "feature", None)
+    ctype = getattr(feature, "cType", None)
+    cform = getattr(feature, "cForm", None)
+    surface = getattr(token, "surface", None)
+    if not (isinstance(ctype, str) and ctype.startswith("五段") and isinstance(cform, str)):
+        return ""
+    if not cform.startswith("未然形") or not isinstance(surface, str) or len(surface) < 2:
+        return ""
+    if surface[-1] not in _GODAN_MIZEN_A_ROW or _is_pure_hiragana(surface):
+        return ""
+    if not (inflected_surface.startswith(surface + "れ") and len(inflected_surface) > len(surface) + 1):
+        return ""
+    aru_verb = surface + "る"
+    return "" if aru_verb in _HONORIFIC_ARU_VERBS else aru_verb
 
 
 def _token_morph(token: Any) -> str:
@@ -832,14 +885,14 @@ class SubtitleParserService:
         # like _line_cache): the deinflect + offline existence lookup is
         # deterministic per (inflected_surface, orth_base, cType), so it survives
         # across parse_* calls and is bounded by clear-on-cap (_FRONT_CACHE_CAP).
-        self._front_cache: dict[tuple[str, str, str], str] = {}
+        self._front_cache: dict[tuple[str, str, str, bool, str], str] = {}
         # Kana-recovery memo (same lifetime/bounding rationale as _front_cache):
         # the recovery decision — content_gate_ok + the SQLite existence probe —
         # is deterministic per token shape (the key _kana_recovery builds), so
         # _should_include_word runs it once per distinct token instead of once
         # per occurrence (count_lemmas is a hot path: tens of thousands of
         # tokens). Caches misses too.
-        self._kana_recover_cache: dict[tuple[str, str, str | None, bool, str, str], str | None] = {}
+        self._kana_recover_cache: dict[tuple[str, str, str | None, bool, str, str, bool], str | None] = {}
         # U4 lexicalized-window attestation memo (see _rejected_by_lexicalized_window).
         # Keyed on the JOINED WINDOW STRING, never on (surface, pos1): the window
         # verdict is context-dependent, so the same recovery candidate can be
@@ -2580,14 +2633,27 @@ class SubtitleParserService:
         # keeps the archaic 感ずる.
         inflected_surface = text[tok_start:highlight_end]
         ctype = getattr(feature, "cType", None)
-        key = (inflected_surface, orth_base, ctype if isinstance(ctype, str) else "")
+        # A godan imperative (持て, 従え) is never an -eru verb: its e-stem spelling
+        # is also the stem of the attested ichidan 持てる/従える, which shares the
+        # longer prefix and would win the resolver's rank. The tagger's 命令形
+        # already names the verb, so the resolver is skipped for it.
+        godan_imperative = _is_godan_imperative(feature)
+        # A godan passive (刺さ|れ|た) is never the -aru verb 刺さる whose potential
+        # spells 刺される: that one candidate is taken out of the resolver's pool.
+        passive_aru = _godan_passive_aru_verb(word_token, inflected_surface)
+        key = (inflected_surface, orth_base, ctype if isinstance(ctype, str) else "", godan_imperative, passive_aru)
         cached = self._front_cache.get(key)
         if cached is None:
-            cached = resolve_dictionary_form(
-                inflected_surface,
-                orth_base,
-                self._term_rules_lookup,
-                self._memoized_term_common,
+            cached = (
+                orth_base
+                if godan_imperative
+                else resolve_dictionary_form(
+                    inflected_surface,
+                    orth_base,
+                    self._term_rules_lookup,
+                    self._memoized_term_common,
+                    excluded=passive_aru,
+                )
             )
             # The deinflection resolver only rewrites じる/ずる (and leaves every
             # other form == orth_base). Where it made no change, run the
@@ -2601,7 +2667,8 @@ class SubtitleParserService:
             # untouched (ヤル) folds to its common hiragana headword (やる) — its
             # equal lForm/kanaBase readings keep both seams above from firing.
             if cached == orth_base:
-                cached = self._fold_katakana_verb_front(orth_base)
+                verb_lemma = extract_lemma(word_token) if getattr(feature, "pos1", None) == "動詞" else None
+                cached = self._fold_katakana_verb_front(orth_base, verb_lemma)
             if len(self._front_cache) >= _FRONT_CACHE_CAP:
                 self._front_cache.clear()
             self._front_cache[key] = cached
@@ -2646,10 +2713,21 @@ class SubtitleParserService:
         prove divergence, so the front is conservatively kept. Attestation is
         memoized via the shared ``_memoized_attest`` probe.
         """
+        feature = getattr(word_token, "feature", None)
+        if getattr(feature, "pos1", None) == "動詞" and not _is_pure_hiragana(orth_base):
+            # A short causative is its own -す lexeme to UniDic (行かさ|れ|た: lemma
+            # and orthBase 行かす), which no dictionary has: card the base verb in
+            # the line's spelling. An attested -asu verb (聞かす, 驚かす) stays.
+            bases = short_causative_bases(orth_base)
+            if bases:
+                attested = self._memoized_attest([orth_base, *bases])
+                if orth_base not in attested:
+                    for base in bases:
+                        if base in attested:
+                            return base
         lemma = extract_lemma(word_token)
         if not lemma or lemma == orth_base:
             return orth_base
-        feature = getattr(word_token, "feature", None)
         l_form = getattr(feature, "lForm", None)
         kana_base = getattr(feature, "kanaBase", None)
         if not isinstance(l_form, str) or not isinstance(kana_base, str):
@@ -2659,6 +2737,17 @@ class SubtitleParserService:
         if katakana_to_hiragana(l_form) == katakana_to_hiragana(kana_base):
             # Equal-reading okurigana variant: preserve the source orthography.
             return orth_base
+        if getattr(feature, "pos1", None) == "動詞" and not _is_pure_hiragana(orth_base):
+            # A potential whose lemma is spelled otherwise (帰れる → 返る, やり直せる
+            # → 遣り直す) folds on its own stem (帰る, やり直す), never the lemma's
+            # kanji; an attested potential spelling (近づける) is a real word and stays.
+            # A kana spelling is left alone: the exact-headword probe cannot see
+            # that いれる (淹れる), もてる or ほれる are words the tagger misread.
+            fold = source_spelling_fold(orth_base, l_form, kana_base)
+            if fold is not None:
+                attested = self._memoized_attest([orth_base, fold])
+                if orth_base not in attested and fold in attested:
+                    return fold
         if not _differs_by_okurigana_only(orth_base, lemma):
             # Kanji differs ⇒ unidic lemma canonicalization onto a homograph
             # (帰れる→返る, 殺る→遣る): never let it swap the card front's kanji.
@@ -2670,7 +2759,7 @@ class SubtitleParserService:
             return orth_base  # no attested target to remap onto
         return lemma
 
-    def _fold_katakana_verb_front(self, orth_base: str) -> str:
+    def _fold_katakana_verb_front(self, orth_base: str, lemma: str | None = None) -> str:
         """Fold an all-katakana verb orthBase to its common hiragana headword.
 
         unidic-lite tags a katakana-written verb spelling (ヤル for やる) with its
@@ -2692,16 +2781,22 @@ class SubtitleParserService:
           so the gate never fires — its orthBase is the correct card front and is
           kept untouched.
         * the offline dictionary does NOT attest the katakana ``orth_base`` as a
-          term (exact headword, no folding). An attested katakana verb is a real
-          word and is KEPT — attestation, not a fold table, decides.
-        * the dictionary DOES attest the hiragana fold as a term AND a
-          commonness-aware dict tags it common. Never fold onto an unattested or
-          rare/wrong target; a chain with no commonness-aware dict (probe returns
-          ``None``) cannot prove commonness, so the fold safe-degrades to keeping
-          ``orth_base`` (byte-identical to pre-fold — the U11 degrade contract).
+          verb (exact headword with verb rules). An attested katakana verb (イク)
+          is a real word and is KEPT — attestation, not a fold table, decides. A
+          katakana entry of another part of speech does not keep it: フル is the
+          adjective 'full', never the verb of フラれた. With no rules-aware probe
+          wired, any attestation keeps it.
+        * and EITHER the dictionary attests the hiragana fold as a term that a
+          commonness-aware dict tags common (ヤル → やる; a chain with no aware
+          dict cannot prove commonness), OR the tagger's ``lemma`` is attested
+          with the fold as its reading (フル, lemma 振る read ふる; ツク, lemma 付く):
+          the hiragana front then follows that lemma for its definition. Never
+          fold onto a reading nothing attests.
 
-        Only ``ヤル`` reaches this gate in both mining corpora (blast radius 1);
-        the guards keep it that way for any future all-katakana verb orthBase.
+        ``lemma`` is passed for a 動詞 token only: without it (a katakana
+        adjective such as カワイイ, which stays katakana by ruling, or the
+        ``_is_katakana_run_fragment`` probe) any attestation keeps the front and
+        only the common-headword fold applies.
         """
         if not _is_all_katakana(orth_base):
             return orth_base
@@ -2709,12 +2804,21 @@ class SubtitleParserService:
         if fold == orth_base:
             return orth_base
         attested = self._memoized_attest([orth_base, fold])
-        if orth_base in attested or fold not in attested:
+        if orth_base in attested and (lemma is None or self._attested_as_verb(orth_base)):
             return orth_base
-        common = self._memoized_term_common([fold])
-        if common is None or not common.get(fold):
-            return orth_base
-        return fold
+        if fold in attested:
+            common = self._memoized_term_common([fold])
+            if common is not None and common.get(fold):
+                return fold
+        if lemma and fold in (katakana_to_hiragana(reading) for reading in self._attested_readings(lemma)):
+            return fold
+        return orth_base
+
+    def _attested_as_verb(self, term: str) -> bool:
+        """Whether a dictionary entry for ``term`` carries verb rules (True when no rules-aware probe is wired)."""
+        if self._term_rules_lookup is None:
+            return True
+        return term in self._term_rules_lookup([(term, get_highlight_deinflector().condition_flags("v"))])
 
     def _extract_reading(self, word_token) -> str:
         """Extract kana reading from a token (see morphology.extract_reading)."""
@@ -2800,6 +2904,13 @@ class SubtitleParserService:
         if how is not None:
             if how != _KANA_LISTED and self._rejected_by_lexicalized_window(word_token, tokens):
                 return False
+            if (
+                word_token.surface in _KANA_BARE_INTERJECTIONS
+                and self._find_highlight_end(text, raw_tokens, tok_start, tok_end, word_token) == tok_end
+            ):
+                return False
+            if self._is_cut_sokuon_stem(word_token, text, tok_end):
+                return False
             return not self._ellipsis_reject(word_token, text, tok_start, tok_end)
         if not self._whitelist_rescues(word_token, text, tok_start, tok_end, tokens, raw_tokens):
             if rejects is not None:
@@ -2808,6 +2919,14 @@ class SubtitleParserService:
         if self._is_katakana_run_fragment(word_token, text, tok_start, tok_end):
             return False
         return not self._ellipsis_reject(word_token, text, tok_start, tok_end)
+
+    @staticmethod
+    def _is_cut_sokuon_stem(word_token, text: str, tok_end: int) -> bool:
+        """Whether a recovered kana verb is a 促音便 stem nothing continues (まっ, もっ before a space)."""
+        cform = getattr(getattr(word_token, "feature", None), "cForm", None)
+        if not isinstance(cform, str) or not cform.startswith("連用形-促音便"):
+            return False
+        return tok_end >= len(text) or text[tok_end] not in _SOKUON_CONTINUATIONS
 
     def _rescue_eligible(self, word_token) -> bool:
         """Whether any whitelist entry could rescue this token: ``_whitelist_rescues``' token-only checks.
@@ -3125,7 +3244,9 @@ class SubtitleParserService:
         # from: つかめ is the imperative of つかむ and the stem of the potential
         # つかめる. The memo outlives a parse, so a key without them lets the first
         # file of a batch decide the word for every later one.
-        key = (surface, pos1, pos2, merged, extract_orth_base(word_token), lemma)
+        # A godan imperative skips the front resolver (_resolve_front), so it is
+        # keyed apart from the same spelling in another form (やれ, やれば's やれ).
+        key = (surface, pos1, pos2, merged, extract_orth_base(word_token), lemma, _is_godan_imperative(feature))
         if key not in self._kana_recover_cache:
             if len(self._kana_recover_cache) >= _FRONT_CACHE_CAP:
                 self._kana_recover_cache.clear()
