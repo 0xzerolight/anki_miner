@@ -395,24 +395,23 @@ def _japanese_charset_has(char: str) -> bool:
     return False
 
 
-def _is_chinese_line(line: str) -> bool:
+def is_chinese_line(line: str) -> bool:
+    """True iff *line*, from a Japanese subtitle file, is written in Chinese.
+
+    It is when it holds a kanji no Japanese character set has (a simplified
+    form: 译, 对, 轴), kana beside it or not, or when it has no kana and holds a
+    character from ``_CHINESE_ONLY_HAN``. Japanese with no kana (了解,
+    中村先生) has neither. A Chinese line with neither is not recognized: the
+    rule names the lines it is sure of, it does not classify the language.
+
+    The Japanese parser is given this as its ``skip_line`` and mines nothing
+    from such a line. It is not part of the text cleaning, which also serves
+    Korean and a config whose language fell back to Japanese: there the line
+    is the mining language, or the preview of a file that will not be mined.
+    """
     han = set(_HAN_RE.findall(line))
     if not han:
         return False
     if not _CHINESE_ONLY_HAN.isdisjoint(han) and _KANA_RE.search(line) is None:
         return True
     return not all(_japanese_charset_has(char) for char in han)
-
-
-def drop_chinese_lines(text: str) -> str:
-    """Remove the physical lines of *text* that are written in Chinese.
-
-    A line is Chinese when it holds a kanji no Japanese character set has (a
-    simplified form: 译, 对, 轴), kana beside it or not, or when it has no kana
-    and holds a character from ``_CHINESE_ONLY_HAN``. Japanese with no kana
-    (了解, 中村先生) has neither. A Chinese line with neither is kept: the rule
-    names the lines it is sure of, it does not classify the language.
-    """
-    if _HAN_RE.search(text) is None:
-        return text
-    return "\n".join(line for line in text.split("\n") if not _is_chinese_line(line))

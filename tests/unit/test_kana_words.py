@@ -158,3 +158,39 @@ class TestMining:
             [ReadingUnit(text="もう行こう", index=0, location_label="t")], want_line_index=False
         )
         assert "もう" not in [word.mined_form for word in words]
+
+    @pytest.mark.parametrize(
+        ("line", "front", "pieces"),
+        [
+            ("あんなに怒るなんて", "あんなに", {"あんな"}),
+            ("ちなみに私は行かない", "ちなみに", {"ちなみ"}),
+            ("とっくに終わった", "とっくに", {"とっく"}),
+            ("いまだに信じられない", "いまだに", {"いまだ"}),
+            ("くれぐれも気をつけて", "くれぐれも", {"くれぐれ"}),
+            ("とんでもない話だ", "とんでもない", {"とんでも"}),
+            ("もったいない話だ", "もったいない", {"もったい"}),
+            ("ひょっとしたら来るかも", "ひょっとしたら", {"ひょっと"}),
+            ("しょうがない人だ", "しょうがない", {"しょう"}),
+        ],
+    )
+    def test_joins_an_adverb_or_adjective_the_tagger_cuts(self, test_config, line, front, pieces):
+        fronts = _mine(test_config, line)
+        assert front in fronts
+        assert not pieces & set(fronts)
+
+    @pytest.mark.parametrize(
+        ("line", "front"),
+        [
+            ("あんなこと言うな", "あんな"),
+            ("やっぱ無理だ", "やっぱ"),
+            ("ぜひ来てください", "ぜひ"),
+            ("ただの人間だ", "ただ"),
+            ("うそをつくな", "うそ"),
+            ("てめえの番だ", "てめえ"),
+            ("こないだの話", "こないだ"),
+            ("あとは頼む", "あと"),
+            ("そんなわけない", "わけ"),
+        ],
+    )
+    def test_mines_a_common_short_kana_word(self, test_config, line, front):
+        assert front in _mine_attested(test_config, {front}, line)

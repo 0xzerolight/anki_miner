@@ -213,26 +213,58 @@ class TestRawNameSpanMerge:
 
         assert _name_matcher(set()).merge_line("狗巻君", tokens) == tokens
 
-    def test_exact_name_can_end_on_non_content_token(self):
+    def test_exact_name_can_end_on_kanji_tagged_auxiliary(self):
         tokens = [
-            _tok("君", "代名詞", "*", kana="キミ"),
-            _tok("の", "助詞", "格助詞", kana="ノ"),
+            _tok("貴", "名詞", "普通名詞", kana="タカ"),
+            _tok("也", "助動詞", "*", kana="ナリ"),
         ]
 
-        out = _name_matcher({"君の"}).merge_line("君の", tokens)
+        out = _name_matcher({"貴也"}).merge_line("貴也", tokens)
 
-        assert [token.surface for token in out] == ["君の"]
+        assert [token.surface for token in out] == ["貴也"]
 
-    def test_exact_name_can_start_and_end_on_non_content_tokens(self):
-        tokens = [
-            _tok("か", "助詞", "副助詞", kana="カ"),
-            _tok("津", "名詞", "普通名詞", kana="ツ"),
-            _tok("よ", "助詞", "終助詞", kana="ヨ"),
+    def test_name_never_starts_on_hiragana_grammar_word(self):
+        # その子 (Sonoko), な子, てる子 and いう子 are wordset names; in these
+        # lines they are a word and the noun 子.
+        cases = [
+            ("その子", [_tok("その", "連体詞", "*"), _tok("子", "名詞", "普通名詞")]),
+            (
+                "きれいな子",
+                [_tok("きれい", "形状詞", "一般"), _tok("な", "助動詞", "*"), _tok("子", "名詞", "普通名詞")],
+            ),
+            ("寝てる子", [_tok("寝", "動詞", "一般"), _tok("てる", "助動詞", "*"), _tok("子", "名詞", "普通名詞")]),
+            ("ああいう子", [_tok("ああ", "副詞", "*"), _tok("いう", "動詞", "一般"), _tok("子", "名詞", "普通名詞")]),
         ]
+        for text, tokens in cases:
+            out = _name_matcher({"その子", "な子", "てる子", "いう子"}).merge_line(text, tokens)
 
-        out = _name_matcher({"か津よ"}).merge_line("か津よ", tokens)
+            assert [token.surface for token in out] == [token.surface for token in tokens], text
 
-        assert [token.surface for token in out] == ["か津よ"]
+    def test_name_never_ends_on_hiragana_particle_or_auxiliary(self):
+        cases = [
+            ("夢か", [_tok("夢", "名詞", "普通名詞"), _tok("か", "助詞", "終助詞")]),
+            ("山だ", [_tok("山", "名詞", "普通名詞"), _tok("だ", "助動詞", "*")]),
+            ("流され", [_tok("流さ", "動詞", "一般"), _tok("れ", "助動詞", "*")]),
+        ]
+        for text, tokens in cases:
+            out = _name_matcher({"夢か", "山だ", "流され"}).merge_line(text, tokens)
+
+            assert [token.surface for token in out] == [token.surface for token in tokens], text
+
+    def test_place_name_of_a_place_word_and_a_position_does_not_merge(self):
+        # 家の前 is a place name in the wordset; in 家の前で待つ it is 'in front of the house'.
+        tokens = [_tok("家", "名詞", "普通名詞"), _tok("の", "助詞", "格助詞"), _tok("前", "名詞", "普通名詞")]
+
+        out = _name_matcher({"家の前"}).merge_line("家の前", tokens)
+
+        assert [token.surface for token in out] == ["家", "の", "前"]
+
+    def test_name_with_inner_no_still_merges(self):
+        tokens = [_tok("鞆", "名詞", "固有名詞"), _tok("の", "助詞", "格助詞"), _tok("浦", "名詞", "普通名詞")]
+
+        out = _name_matcher({"鞆の浦"}).merge_line("鞆の浦", tokens)
+
+        assert [token.surface for token in out] == ["鞆の浦"]
 
     def test_whitespace_pair_not_merged_when_same_name_occurs_later(self):
         tokens = [
@@ -303,7 +335,19 @@ class TestExpressionAcrossParticle:
 class TestAdverbialParticleEnd:
     """A word + particle JMdict lists as an adverb, expression, pronoun or conjunction merges."""
 
-    TAGS = {"本当に": {"adv"}, "時に": {"adv", "conj"}, "急いで": {"adv"}, "神様": {"n"}, "外に": {"adv"}}
+    TAGS = {
+        "本当に": {"adv"},
+        "時に": {"adv", "conj"},
+        "急いで": {"adv"},
+        "神様": {"n"},
+        "外に": {"adv"},
+        "二度と": {"adv"},
+        "何だと": {"exp"},
+        "何と": {"adv"},
+        "確かに": {"adv"},
+        "静かに": {"n"},
+        "毎日のように": {"exp"},
+    }
 
     def _matcher(self, dictionary, tags=TAGS, readings=None):
         return CompoundDictionaryMatcher(
@@ -353,13 +397,67 @@ class TestAdverbialParticleEnd:
             _tok("急い", "動詞", "一般", lemma="急ぐ", kana="イソイ", orth_base="急ぐ", c_form="連用形-イ音便"),
             _tok("で", "助詞", "接続助詞", kana="デ"),
         ]
-        out = self._matcher({"急いで"}).merge_line("急いで", tokens)
+        out = self._matcher({"急ぐ", "急いで"}).merge_line("急いで", tokens)
         assert [t.surface for t in out] == ["急い", "で"]
 
     def test_a_noun_entry_does_not_take_the_particle(self):
         tokens = [_tok("神様", "名詞", "普通名詞", kana="カミサマ"), _tok("に", "助詞", "格助詞", kana="ニ")]
         out = self._matcher({"神様に"}).merge_line("神様に", tokens)
         assert [t.surface for t in out] == ["神様", "に"]
+
+    def test_merges_an_adverb_ending_on_to(self):
+        # 二度と来るな: 'never again', not the counter 二度 'twice'.
+        tokens = [
+            _tok("二", "名詞", "数詞", kana="ニ"),
+            _tok("度", "名詞", "普通名詞", kana="ド"),
+            _tok("と", "助詞", "格助詞", kana="ト"),
+            _tok("来る", "動詞", "非自立可能", lemma="来る", kana="クル", orth_base="来る"),
+        ]
+        out = self._matcher({"二度", "二度と"}).merge_line("二度と来る", tokens)
+        assert [t.surface for t in out] == ["二度と", "来る"]
+
+    def test_a_to_span_with_an_auxiliary_stays_apart(self):
+        # 何だと: 'what did you say' is 何 + the copula + the quoting と.
+        tokens = [
+            _tok("何", "代名詞", kana="ナン"),
+            _tok("だ", "助動詞", kana="ダ"),
+            _tok("と", "助詞", "格助詞", kana="ト"),
+        ]
+        out = self._matcher({"何だと"}).merge_line("何だと", tokens)
+        assert [t.surface for t in out] == ["何", "だ", "と"]
+
+    def test_a_lone_pronoun_keeps_its_to(self):
+        # 何となく / 何と書かれて: 何 and its particle, not the adverb 何と.
+        tokens = [_tok("何", "代名詞", kana="ナン"), _tok("と", "助詞", "格助詞", kana="ト")]
+        out = self._matcher({"何と"}).merge_line("何と", tokens)
+        assert [t.surface for t in out] == ["何", "と"]
+
+    def test_merges_a_na_adjective_and_its_copula_ni_listed_as_an_adverb(self):
+        # 確か|に: に is the copula's adverbial form (助動詞 だ), not a particle.
+        tokens = [
+            _tok("確か", "形状詞", "一般", kana="タシカ"),
+            _tok("に", "助動詞", lemma="だ", kana="ニ", c_form="連用形-ニ"),
+        ]
+        out = self._matcher({"確かに"}).merge_line("確かに", tokens)
+        assert [t.surface for t in out] == ["確かに"]
+
+    def test_a_na_adjective_whose_ni_form_is_not_an_adverb_stays_apart(self):
+        tokens = [
+            _tok("静か", "形状詞", "一般", kana="シズカ"),
+            _tok("に", "助動詞", lemma="だ", kana="ニ", c_form="連用形-ニ"),
+        ]
+        out = self._matcher({"静かに"}).merge_line("静かに", tokens)
+        assert [t.surface for t in out] == ["静か", "に"]
+
+    def test_a_span_with_the_grammar_youni_stays_apart(self):
+        tokens = [
+            _tok("毎日", "名詞", "普通名詞", kana="マイニチ"),
+            _tok("の", "助詞", "格助詞", kana="ノ"),
+            _tok("よう", "形状詞", "助動詞語幹", kana="ヨウ"),
+            _tok("に", "助動詞", lemma="だ", kana="ニ", c_form="連用形-ニ"),
+        ]
+        out = self._matcher({"毎日のように"}).merge_line("毎日のように", tokens)
+        assert [t.surface for t in out] == ["毎日", "の", "よう", "に"]
 
 
 class TestLongestMatchAndGreedyScan:
@@ -695,3 +793,88 @@ class TestReadingAgreementAcrossNo:
         tokens[2].feature.kanaBase = "ハイル"
         out = _matcher({"気に入る"}, readings={"気に入る": ["きにいる"]}).merge_line("気に入る", tokens)
         assert [t.surface for t in out] == ["気に入る"]
+
+
+class TestFixedInflectedForm:
+    """A word JMdict lists only inflected (計り知れない, 折り入って) merges when its base has no entry."""
+
+    def test_fixed_negative_form_merges_when_the_base_is_unattested(self):
+        tokens = [
+            _tok("計り知れ", "動詞", "一般", lemma="計り知れる", kana="ハカリシレ", c_form="未然形-一般"),
+            _tok("ない", "助動詞", kana="ナイ", c_form="連体形-一般"),
+            _tok("事情", "名詞", "普通名詞", kana="ジジョウ"),
+        ]
+        out = _matcher({"計り知れない"}).merge_line("計り知れない事情", tokens)
+        assert [t.surface for t in out] == ["計り知れない", "事情"]
+        assert out[0].feature.lemma == "計り知れない"
+
+    def test_fixed_te_form_merges(self):
+        tokens = [
+            _tok("折り入っ", "動詞", "一般", lemma="折り入る", kana="オリイッ", c_form="連用形-促音便"),
+            _tok("て", "助詞", "接続助詞", kana="テ"),
+        ]
+        out = _matcher({"折り入って"}).merge_line("折り入って", tokens)
+        assert [t.surface for t in out] == ["折り入って"]
+
+    def test_noun_head_with_naranai_merges(self):
+        tokens = [
+            _tok("聞き捨て", "名詞", "普通名詞", kana="キキズテ"),
+            _tok("なら", "動詞", "非自立可能", lemma="成る", kana="ナラ", orth_base="なる", c_form="未然形-一般"),
+            _tok("ない", "助動詞", kana="ナイ", c_form="終止形-一般"),
+        ]
+        out = _matcher({"聞き捨てならない"}).merge_line("聞き捨てならない", tokens)
+        assert [t.surface for t in out] == ["聞き捨てならない"]
+
+    def test_attested_base_keeps_its_own_word(self):
+        # 構う has an entry: 構わない stays the verb and its auxiliary.
+        tokens = [
+            _tok("構わ", "動詞", "一般", lemma="構う", kana="カマワ", c_form="未然形-一般"),
+            _tok("ない", "助動詞", kana="ナイ", c_form="終止形-一般"),
+        ]
+        out = _matcher({"構う", "構わない"}).merge_line("構わない", tokens)
+        assert [t.surface for t in out] == ["構わ", "ない"]
+
+
+class TestHottoku:
+    """放っておく / 放っとく join through a potential or contracted tail."""
+
+    @staticmethod
+    def _hou():
+        return _tok("放っ", "動詞", "一般", lemma="放る", kana="ホウッ", orth_base="放る", c_form="連用形-促音便")
+
+    def test_potential_tail_folds_to_the_attested_base(self):
+        oke = _tok("おけ", "動詞", "非自立可能", lemma="置く", kana="オケ", orth_base="おける", c_form="未然形-一般")
+        oke.feature.kanaBase = "オケル"
+        oke.feature.lForm = "オク"
+        tokens = [self._hou(), _tok("て", "助詞", "接続助詞", kana="テ"), oke, _tok("ない", "助動詞", kana="ナイ")]
+        out = _matcher({"放っておく"}).merge_line("放っておけない", tokens)
+        assert [t.surface for t in out] == ["放っておけ", "ない"]
+        assert out[0].feature.lemma == "放っておく"
+        assert out[0].feature.pos1 == "動詞"
+
+    def test_contracted_toku_tail_joins(self):
+        toi = _tok("とい", "助動詞", lemma="とく", kana="トイ", orth_base="とく", c_form="連用形-イ音便")
+        tokens = [self._hou(), toi, _tok("て", "助詞", "接続助詞", kana="テ")]
+        out = _matcher({"放っとく"}).merge_line("放っといて", tokens)
+        assert [t.surface for t in out] == ["放っとい", "て"]
+        assert out[0].feature.lemma == "放っとく"
+        assert out[0].feature.pos1 == "動詞"
+
+
+class TestSuffixStart:
+    def test_suffix_after_a_noun_never_starts_a_word(self):
+        # 義母|上|様: the leftover 上 + 様 is not 上様 'the shogun'.
+        tokens = [
+            _tok("義母", "名詞", "普通名詞", kana="ギボ"),
+            _tok("上", "接尾辞", "名詞的", kana="ウエ"),
+            _tok("様", "接尾辞", "名詞的", kana="サマ"),
+        ]
+        for token in tokens:
+            token.white_space = ""
+        out = _matcher({"上様"}).merge_line("義母上様", tokens)
+        assert [t.surface for t in out] == ["義母", "上", "様"]
+
+    def test_line_initial_suffix_still_starts(self):
+        tokens = [_tok("上", "接尾辞", "名詞的", kana="ウエ"), _tok("様", "接尾辞", "名詞的", kana="サマ")]
+        out = _matcher({"上様"}).merge_line("上様", tokens)
+        assert [t.surface for t in out] == ["上様"]

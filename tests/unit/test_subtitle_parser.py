@@ -5773,12 +5773,13 @@ class TestVerbFrontCommonnessResolver:
 
     def test_probe_none_degrades_to_pre_u11_junk(self, tmp_path):
         # Same fixture, but term_common_lookup NOT wired → the full attested pool,
-        # so the rare 呼ばる wins the override exactly as pre-U11 (attests the
-        # degrade: the junk longer-prefix front comes back).
+        # so the rare 立たす wins the override exactly as pre-U11 (attests the
+        # degrade: the junk longer-prefix front comes back). 呼ばれる no longer
+        # shows it: the tagger's passive れる takes 呼ばる out of the pool.
         service = _build_commonness_service(tmp_path)
-        forms = self._mine(service, "“最終兵器”と呼ばれるハンター", term_common=False)
-        assert "呼ばる" in forms
-        assert "呼ぶ" not in forms
+        forms = self._mine(service, "あいつをまた戦場に立たせることは してほしくありません", term_common=False)
+        assert "立たす" in forms
+        assert "立つ" not in forms
 
 
 class TestPerParseCacheCaps:
@@ -6317,11 +6318,12 @@ class TestCompoundMergeAttestGate:
         # and 的 is dropped by the inclusion gate.
         assert self._mine("入院中的", dictionary={"入院中"}) == {"入院中"}
 
-    def test_verb_nominalizer_never_gated(self):
-        # 言い方 (方 nominalizer) mints even with an empty dictionary AND with no
-        # dictionary — the verb-nominalizer pass is never gated.
-        assert self._mine("言い方", dictionary=set()) == {"言い方"}
+    def test_verb_nominalizer_needs_an_entry(self):
+        # 言い方 (方 nominalizer) mints when attested and with no dictionary; an
+        # unattested one leaves the verb, which mines as 言う.
+        assert self._mine("言い方", dictionary={"言い方"}) == {"言い方"}
         assert self._mine("言い方", dictionary=None) == {"言い方"}
+        assert self._mine("言い方", dictionary=set()) == {"言う"}
 
     def test_non_continuative_verb_does_not_merge_nominalizer(self):
         assert self._mine("食べる方", dictionary=set()) == {"食べる"}

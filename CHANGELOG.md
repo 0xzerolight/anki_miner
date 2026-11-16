@@ -9,8 +9,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Added
 
 ### Changed
+- **Japanese mines more everyday words written in kana.** あの and その before a noun, やっぱ, ぜひ, おかげ, あんな, わけ, とこ, ほう, and words the tagger cut apart (ちなみに, とっくに, もったいない, とんでもない). The tagger read a pre-noun あの as a filler, and the kana word list did not name the rest.
+- **今 and 次 before a space are mined as いま and つぎ.** The tagger skips the subtitle space and reads them as the prefixes こん and じ, which were dropped.
+- **Katakana nouns the tagger does not know (スマホ, コスパ) are mined when a dictionary lists them as nouns.** They carry no lemma, so they were turned away before any dictionary was asked.
+- **二度と, and a na-adjective with its own に (静かに, 絶対に), are mined as the dictionary's one word** instead of 二度 and 静か.
+- **A verb stem + 方 is one word only when a dictionary has it (言い方, やり方).** 戦い方 now mines 戦う; the joined front had no entry and its card was dropped for lack of a definition.
+- **Words a dictionary lists only in an inflected form are mined in that form (折り入って, 計り知れない),** not as a base verb no dictionary has.
+- **放っておけない and 放っとく are mined as 放っておく,** not 放つ. A dictionary phrase now also joins through a potential ending (生きていけない → 生きていく).
 
 ### Fixed
+- **Japanese verb cards show the verb the line uses.** An imperative (持て) mined 持てる, a passive (刺された) mined 刺さる, a potential (帰れない) mined 帰れる, a short causative (行かされた) mined 行かす and katakana フラれた mined the loanword フル; they now mine 持つ, 刺す, 帰る, 行く and ふる. The last three fronts had no dictionary entry, so the card was dropped.
+- **Kana fillers no longer become verb cards.** いえ ('no') mined いえる, a sound cut at っ (まっ, たっ) mined まつ and たつ, and the tagger's glues いたんだ, 違かった and ういっす mined 痛む, 買う and 逸する.
+- **その子, きれいな子 and 家の前 are no longer taken for names.** Name lists have その子, な子 and 家の前 as names, so the name filter dropped 子, 家 and 前 with them.
+- **自分ち mines 自分** instead of 自 and 分ち, and お父上様 or 母上殿 no longer mine 上様 and 上殿.
+- **Chinese lines in a Japanese subtitle file are not mined.** A fansub's credit line and the Chinese half of a bilingual file passed as Japanese because every kanji counts as Japanese script. A line is dropped when it holds a simplified character, or has no kana and a Chinese-only pronoun or particle; other Chinese lines still pass.
+- **Half-width caption punctuation (｡､｢｣) is read as punctuation, and →, ☎ and invisible left-to-right marks are removed from sentences.** After a half-width ｡ the tagger glued a particle to the next word (オレはやる｡ mined はやる).
+- **A batch no longer lets one file decide how a kana verb is treated in the next.** The verdict for つかめ (つかむ or つかめる) was remembered by spelling alone, so the same episode could mine differently depending on what was mined before it.
 
 ### Removed
 

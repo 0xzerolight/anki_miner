@@ -444,6 +444,62 @@ def mining_base(word_token) -> str:
     return orth_base
 
 
+def source_spelling_fold(orth_base: str, l_form: str, kana_base: str) -> str | None:
+    """The base verb of a potential in the line's own spelling, when the readings prove it.
+
+    ``mining_base`` folds a potential only when the tagger's lemma is its
+    orthBase with the suffix swapped byte for byte. UniDic often spells that
+    lemma otherwise (帰れる → 返る, やり直せる → 遣り直す), so the fold is
+    built here on the source stem instead (帰る, やり直す), and only when the
+    same swap on the orthBase reading gives the lemma reading (カエレル →
+    カエル). The caller decides whether to use it (attestation).
+    """
+    reading = katakana_to_hiragana(kana_base)
+    lemma_reading = katakana_to_hiragana(l_form)
+    for derived, base in _FOLD_SUFFIX_PAIRS:
+        if not (orth_base.endswith(derived) and len(orth_base) > len(derived) and reading.endswith(derived)):
+            continue
+        if reading[: -len(derived)] + base == lemma_reading:
+            return orth_base[: -len(derived)] + base
+    return None
+
+
+# Godan 未然形 a-row kana → the dictionary-form u-row kana (行か → 行く).
+_A_ROW_TO_U_ROW = {
+    "か": "く",
+    "が": "ぐ",
+    "さ": "す",
+    "た": "つ",
+    "な": "ぬ",
+    "ば": "ぶ",
+    "ま": "む",
+    "ら": "る",
+    "わ": "う",
+}
+# Ichidan stem endings: the e/i-row kana before a short causative さす (食べさす).
+_ICHIDAN_STEM_KANA = frozenset("えけげせぜてでねべぺめれいきぎしじちにびみり")
+
+
+def short_causative_bases(orth_base: str) -> list[str]:
+    """Base verbs a short causative headword can come from, in the line's spelling.
+
+    UniDic gives the short causative its own -す lexeme (行かさ|れ|た: 行かす,
+    食べさす), which a dictionary rarely lists. 行かす → 行く; 食べさす → 食べる,
+    only when a kana e/i-row stem proves the ichidan reading (出さす stays 出す).
+    The caller keeps the -す front when it is attested and uses the first
+    attested base otherwise.
+    """
+    bases: list[str] = []
+    if not orth_base.endswith("す") or len(orth_base) < 3:
+        return bases
+    if orth_base.endswith("さす") and orth_base[-3] in _ICHIDAN_STEM_KANA:
+        bases.append(orth_base[:-2] + "る")
+    u_row = _A_ROW_TO_U_ROW.get(orth_base[-2])
+    if u_row is not None:
+        bases.append(orth_base[:-2] + u_row)
+    return bases
+
+
 def extract_reading(word_token) -> str:
     """Extract kana reading from word token.
 
@@ -532,10 +588,16 @@ def iter_token_spans(text: str, tokens: list) -> Iterator[tuple[Any, int, int]]:
         yield token, idx, tok_end
 
 
-def merge_compound_suffixes(tokens: list, attest: AttestLookup | None = None) -> list:
+def merge_compound_suffixes(
+    tokens: list, attest: AttestLookup | None = None, form_lookup: FormLookup | None = None
+) -> list:
     """Run all compound-merge passes in dependency order.
 
     Order matters:
+    0. retag_mistagged_tokens  — corrects a tag the next token disproves
+       (あの filler before a noun → 連体詞, 今 prefix before a space → 名詞),
+       so every pass below sees it; with ``form_lookup``, an unknown katakana
+       noun the dictionary lists (スマホ) also gets its surface as lemma.
     1. _merge_prefix_compounds  — 接頭辞 + 名詞/形状詞 (e.g. 不+可能 → 不可能).
        Must run first so that downstream 名詞-suffix merge sees the
        synthetic 不可能 (pos1=名詞) as a valid head and chains correctly
@@ -555,13 +617,15 @@ def merge_compound_suffixes(tokens: list, attest: AttestLookup | None = None) ->
     must be preserved even though no dictionary attests it). An unattested
     candidate bails the WHOLE greedy chain to its bare components, letting the
     downstream dictionary matcher recover the longest attested sub-span
-    (入院中的 → 入院中). Pass 3 is NEVER gated — its {方,手,様} whitelist is
-    productive, near-zero junk. ``attest=None`` (the default that keeps every
-    existing direct caller byte-identical) leaves all three passes ungated.
+    (入院中的 → 入院中). Pass 3 mints only an attested compound: an unattested
+    戦い方 gets no definition and is dropped, costing the line its verb.
+    ``attest=None`` (the default that keeps every existing direct caller
+    byte-identical) leaves all three passes ungated.
     """
+    tokens = retag_mistagged_tokens(tokens, form_lookup)
     tokens = _merge_prefix_compounds(tokens, attest)
     tokens = _merge_noun_suffixes(tokens, attest)
-    tokens = _merge_verb_nominalizers(tokens)
+    tokens = _merge_verb_nominalizers(tokens, attest)
     return tokens
 
 
@@ -927,6 +991,154 @@ def _attested_prefix_surfaces(tokens: list, attest: AttestLookup) -> set[str]:
     return attest(sorted(surfaces))
 
 
+class RetaggedToken:
+    """A tagger token whose part of speech ``retag_mistagged_tokens`` corrected.
+
+    Every feature the replacement does not name stays the tagger's own, so the
+    token mines exactly as the tagger's other reading of the same word would.
+    """
+
+    __slots__ = ("surface", "feature", "white_space")
+
+    def __init__(self, token, fields: dict[str, str], surface: str | None = None):
+        self.surface = token.surface if surface is None else surface
+        self.feature = token.feature._replace(**fields)
+        self.white_space = getattr(token, "white_space", "")
+
+
+#: The pre-noun adjectives unidic-lite also reads as the homograph filler, with
+#: the fields its 連体詞 reading carries (あの時 tags 連体詞, あの女 the filler).
+_FILLER_PRENOUNS: dict[str, dict[str, str]] = {
+    "あの": {"pos1": "連体詞", "pos2": "*", "lemma": "彼の"},
+    "その": {"pos1": "連体詞", "pos2": "*", "lemma": "其の"},
+}
+
+
+#: The nouns unidic-lite also reads as a one-kanji prefix (今 コン, 次 ジ), with
+#: the fields its noun reading carries (今は, 次は tag 名詞).
+_PREFIX_NOUNS: dict[str, dict[str, str]] = {
+    "今": {
+        "pos1": "名詞",
+        "pos2": "普通名詞",
+        "pos3": "副詞可能",
+        **dict.fromkeys(("lForm", "pron", "pronBase", "kana", "kanaBase", "form", "formBase"), "イマ"),
+        "goshu": "和",
+    },
+    "次": {
+        "pos1": "名詞",
+        "pos2": "普通名詞",
+        "pos3": "一般",
+        **dict.fromkeys(("lForm", "pron", "pronBase", "kana", "kanaBase", "form", "formBase"), "ツギ"),
+        "goshu": "和",
+    },
+}
+
+
+#: Two tagger tokens cut at the wrong place, by their (surface, lemma), and the
+#: two (surface, fields) they are re-cut into. 自分ち 'my place' (ち from うち)
+#: has no path in unidic-lite, which reads 自 + 分ち (わかち 'division').
+_MISSPLITS: dict[tuple[tuple[str, str | None], ...], tuple[tuple[str, dict[str, str]], ...]] = {
+    (("自", "自"), ("分ち", "分かち")): (
+        (
+            "自分",
+            {
+                "pos3": "一般",
+                **dict.fromkeys(("lemma", "orth", "orthBase"), "自分"),
+                **dict.fromkeys(("lForm", "pron", "pronBase", "kana", "kanaBase", "form", "formBase"), "ジブン"),
+            },
+        ),
+        ("ち", {**dict.fromkeys(("lemma", "orth", "orthBase"), "ち"), **dict.fromkeys(("lForm", "kana"), "チ")}),
+    ),
+}
+
+
+def _unknown_katakana_noun(token) -> bool:
+    """A katakana word the tagger does not know: a 名詞 with no lemma (スマホ, コスパ)."""
+    feature = getattr(token, "feature", None)
+    surface = getattr(token, "surface", "")
+    return (
+        getattr(feature, "pos1", None) == "名詞"
+        and not getattr(feature, "lemma", None)
+        and isinstance(surface, str)
+        and len(surface) >= 3
+        and all("ァ" <= ch <= "ヺ" or ch == "ー" for ch in surface)
+    )
+
+
+#: Entry tags of a sound or a cry, which JMdict often also tags ``n``
+#: (ピーポー 'nee-naw', オラオラ).
+_SOUND_TAGS = frozenset({"int", "on-mim"})
+
+
+def _lemma_or_none(token) -> str | None:
+    lemma = getattr(getattr(token, "feature", None), "lemma", None)
+    return lemma if isinstance(lemma, str) else None
+
+
+def _dictionary_nouns(surfaces: set[str], form_lookup: FormLookup) -> set[str]:
+    """The surfaces the dictionary has a noun entry for (tag ``n``) and no sound or cry sense, in one probe."""
+    rows = form_lookup(sorted(surfaces))
+    nouns: set[str] = set()
+    for term, found in rows.items():
+        tags = {tag for _content, row_tags in found for tag in row_tags.split()}
+        if "n" in tags and not tags & _SOUND_TAGS:
+            nouns.add(term)
+    return nouns
+
+
+def retag_mistagged_tokens(tokens: list, form_lookup: FormLookup | None = None) -> list:
+    """Correct a tagger part of speech the next token disproves, or fill in a lemma it lacks.
+
+    Fugashi tokens carry the space before them as ``white_space``; a token
+    without one counts as unspaced.
+
+    - あの/その tagged as the filler directly before a noun, with no space or
+      mark between, are the pre-noun adjective (あの女, あの橋): a filler is
+      followed by a pause or a particle (あの…, あの 山田さん, あのね). A pronoun
+      is left out on purpose: あの私 is "um, I".
+    - 今/次 tagged as a prefix with a space after them are the nouns 'now' and
+      'next' (今 駅にいる): the tagger skips the subtitle space and reads 今 駅
+      as it reads 今大会. A prefix is never spaced from its noun, so the
+      unspaced prefix (今大会, 次年度) stays one.
+    - A katakana word the tagger does not know (スマホ) is a 名詞 with no lemma,
+      which no inclusion check takes. With a dictionary that has a noun entry
+      for it, its surface becomes its lemma. The noun entry is required, and a
+      sound or cry sense refused, because the dictionary also lists katakana
+      interjections and sound words (ワーオ, ピーポー), some of them as nouns.
+    - Two tokens cut at the wrong place (``_MISSPLITS``: 自|分ち) are re-cut
+      (自分|ち); the pair's surfaces join to the same text.
+    """
+    unknown = {token.surface for token in tokens if _unknown_katakana_noun(token)}
+    nouns = _dictionary_nouns(unknown, form_lookup) if unknown and form_lookup is not None else set()
+    out: list = []
+    resplit: tuple[tuple[str, dict[str, str]], ...] | None = None
+    for i, token in enumerate(tokens):
+        if resplit is not None:
+            out.append(RetaggedToken(token, resplit[1][1], resplit[1][0]))
+            resplit = None
+            continue
+        pos1 = getattr(getattr(token, "feature", None), "pos1", None)
+        nxt = tokens[i + 1] if i + 1 < len(tokens) else None
+        white_space = getattr(nxt, "white_space", "")
+        spaced = isinstance(white_space, str) and bool(white_space)
+        if nxt is not None and not spaced:
+            pair = ((token.surface, _lemma_or_none(token)), (nxt.surface, _lemma_or_none(nxt)))
+            resplit = _MISSPLITS.get(pair)
+            if resplit is not None:
+                out.append(RetaggedToken(token, resplit[0][1], resplit[0][0]))
+                continue
+        fields: dict[str, str] | None = None
+        if pos1 == "感動詞" and nxt is not None and not spaced:
+            if getattr(getattr(nxt, "feature", None), "pos1", None) == "名詞":
+                fields = _FILLER_PRENOUNS.get(token.surface)
+        elif pos1 == "接頭辞" and spaced:
+            fields = _PREFIX_NOUNS.get(token.surface)
+        elif token.surface in nouns and _unknown_katakana_noun(token):
+            fields = dict.fromkeys(("lemma", "orthBase", "kana"), token.surface)
+        out.append(token if fields is None else RetaggedToken(token, fields))
+    return out
+
+
 def _merge_prefix_compounds(tokens: list, attest: AttestLookup | None = None) -> list:
     """Merge 接頭辞 + 名詞/形状詞 pairs into a single token.
 
@@ -1021,7 +1233,29 @@ def _merge_prefix_compounds(tokens: list, attest: AttestLookup | None = None) ->
     return merged
 
 
-def _merge_verb_nominalizers(tokens: list) -> list:
+def _verb_nominalizer_suffix(tokens: list, i: int) -> bool:
+    """Whether ``tokens[i]`` is a 連用形 verb and ``tokens[i + 1]`` a {方, 手, 様} nominalizer."""
+    if i + 1 >= len(tokens):
+        return False
+    head, suffix = tokens[i], tokens[i + 1]
+    try:
+        head_pos1 = head.feature.pos1
+        head_c_form = head.feature.cForm
+        suf_pos1 = suffix.feature.pos1
+        suf_pos2 = suffix.feature.pos2
+    except AttributeError:
+        return False
+    return (
+        head_pos1 == "動詞"
+        and isinstance(head_c_form, str)
+        and head_c_form.startswith("連用形")
+        and suf_pos1 == "接尾辞"
+        and suf_pos2 == "名詞的"
+        and suffix.surface in _VERB_NOMINALIZER_SUFFIXES
+    )
+
+
+def _merge_verb_nominalizers(tokens: list, attest: AttestLookup | None = None) -> list:
     """Merge 動詞(連用形) + 接尾辞(名詞的) verb-stem nominalizers.
 
     Only fires when the suffix surface is in _VERB_NOMINALIZER_SUFFIXES
@@ -1033,7 +1267,21 @@ def _merge_verb_nominalizers(tokens: list) -> list:
     ``lemma`` is set to the merged surface (NOT head.lemma + suffix.lemma)
     because the dictionary entry IS 言い方 / 読み方 — using 言う + 方 would
     yield 言う方, which is not a headword and would miss dictionary lookups.
+
+    With ``attest`` the merge needs a dictionary entry (言い方): an unattested
+    戦い方 has no definition and is dropped before it reaches a card, so the
+    merge would only cost the line its verb. Left apart, 戦い mines as 戦う and
+    方 falls to the suffix reject. いい方 keeps the merge: it is mostly 良い方
+    'the better one', and apart it would mine the tagger's 言う.
     """
+    attested: set[str] | None = None
+    if attest is not None:
+        candidates = {
+            tokens[i].surface + tokens[i + 1].surface
+            for i in range(len(tokens))
+            if _verb_nominalizer_suffix(tokens, i) and tokens[i].surface != "いい"
+        }
+        attested = attest(sorted(candidates)) if candidates else set()
     merged: list = []
     i, n = 0, len(tokens)
     while i < n:
@@ -1056,7 +1304,12 @@ def _merge_verb_nominalizers(tokens: list) -> list:
                 merged.append(head)
                 i += 1
                 continue
-            if suf_pos1 == "接尾辞" and suf_pos2 == "名詞的" and suffix.surface in _VERB_NOMINALIZER_SUFFIXES:
+            if (
+                suf_pos1 == "接尾辞"
+                and suf_pos2 == "名詞的"
+                and suffix.surface in _VERB_NOMINALIZER_SUFFIXES
+                and (attested is None or head.surface == "いい" or head.surface + suffix.surface in attested)
+            ):
                 surf = head.surface + suffix.surface
                 try:
                     head_kana = head.feature.kana or head.surface

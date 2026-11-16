@@ -130,6 +130,7 @@ def test_counts_of_is_single_record_helper() -> None:
 # ---------------------------------------------------------------------------
 
 _EXPECTED_CATEGORIES = {
+    "verb-voice",
     "jiru-zuru",
     "archaic-lemma",
     "kanji-variant",
@@ -161,8 +162,10 @@ _EXPECTED_CATEGORIES = {
     "plain-causative",
     "reading-gate",
     "lexical-join",
+    "span-window",
     "kana-words",
     "place-names",
+    "kana-listed",
 }
 
 

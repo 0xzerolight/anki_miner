@@ -165,14 +165,9 @@ class TestCleanSubtitleText:
         """Persian writes a zero-width non-joiner inside a word: only the Japanese pair drops them."""
         assert clean_subtitle_text("می\u200cخواهم", normalize=_identity) == "می\u200cخواهم"
 
-    def test_japanese_drops_a_chinese_line(self):
-        """A fansub file's Chinese credit or translation line is not a Japanese sentence to mine."""
-        assert clean_subtitle_text("翻译 校对 时间轴") == ""
-        assert clean_subtitle_text("太好了 完成了呢\\Nやった できたね") == "やった できたね"
-        assert clean_subtitle_text("了解 中村先生") == "了解 中村先生"
-
-    def test_other_languages_keep_a_chinese_line(self):
-        assert clean_subtitle_text("翻译 校对 时间轴", normalize=_identity) == "翻译 校对 时间轴"
+    def test_a_chinese_line_is_cleaned_like_any_other(self):
+        """The Japanese pair is also Korean's and a fallen-back config's: the line stays, mining skips it."""
+        assert clean_subtitle_text("翻译 校对 时间轴") == "翻译 校对 时间轴"
 
     def test_other_languages_keep_no_break_spaces(self):
         """French puts one before ``? ! : ; »``: the stored line keeps it, so the card never wraps there."""

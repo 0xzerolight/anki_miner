@@ -16,7 +16,7 @@ import pytest
 from anki_miner.utils.ja_normalize import (
     CJK_IDEOGRAPH_RANGES,
     convert_halfwidth_katakana,
-    drop_chinese_lines,
+    is_chinese_line,
     is_cjk_ideograph,
     normalize_cjk_compat,
     normalize_for_tokenization,
@@ -266,8 +266,8 @@ def test_normalize_for_tokenization_widens_halfwidth_punctuation():
         "太好了 完成了呢",
     ],
 )
-def test_drop_chinese_lines_drops_a_chinese_line(line):
-    assert drop_chinese_lines(line) == ""
+def test_is_chinese_line_names_a_chinese_line(line):
+    assert is_chinese_line(line)
 
 
 @pytest.mark.parametrize(
@@ -283,13 +283,8 @@ def test_drop_chinese_lines_drops_a_chinese_line(line):
         "",
     ],
 )
-def test_drop_chinese_lines_keeps_a_japanese_line(line):
-    assert drop_chinese_lines(line) == line
-
-
-def test_drop_chinese_lines_works_on_each_physical_line():
-    assert drop_chinese_lines("太好了 完成了呢\nやった できたね") == "やった できたね"
-    assert drop_chinese_lines("了解\n中村先生") == "了解\n中村先生"
+def test_is_chinese_line_leaves_a_japanese_line(line):
+    assert not is_chinese_line(line)
 
 
 def test_standardize_kanji_variants():

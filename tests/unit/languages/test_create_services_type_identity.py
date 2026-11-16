@@ -311,6 +311,9 @@ JA_PARSER_KEYWORDS = {
     # The bilingual-cue gate ja's own factory adds: a romaji line under the
     # Japanese one stays out of the Sentence.
     "has_target_script",
+    # The Chinese-line skip ja's own factory adds too: a fansub credit line is
+    # kanji, so it passes that gate.
+    "skip_line",
 }
 
 

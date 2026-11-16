@@ -1,0 +1,19 @@
+{"id":"vv01","sentence":"自信を持て","expected":["自信","持つ"],"category":"verb-voice","note":"godan imperative: 持てる is attested and shares the longer prefix, but the tagger's 五段 命令形 names 持つ"}
+{"id":"vv02","sentence":"命令に従え","expected":["命令","従う"],"category":"verb-voice","note":"godan imperative against the attested ichidan 従える"}
+{"id":"vv03","sentence":"自信が持てる","expected":["自信","持つ"],"category":"verb-voice","note":"guard: the same-spelling potential still folds to its base"}
+{"id":"vv04","sentence":"人生をやり直せる","expected":["人生","やり直す"],"category":"verb-voice","note":"potential whose tagger lemma is spelled 遣り直す: fold in the line's spelling, as 保てる already folds"}
+{"id":"vv05","sentence":"病気を治せる","expected":["病気","治す"],"category":"verb-voice","note":"potential whose lemma swaps the kanji (直す): the fold keeps the line's 治"}
+{"id":"vv06","sentence":"顔を近づける","expected":["顔","近づける"],"category":"verb-voice","note":"guard: an attested -eru front is a real word and stays"}
+{"id":"vv07","sentence":"いえ そうじゃないんです","expected":[],"category":"verb-voice","note":"the interjection いえ the tagger reads as the potential いえる: a bare いえ with no inflection after it is not the verb"}
+{"id":"vv08","sentence":"本当のことはいえない","expected":["本当","こと","いえる"],"category":"verb-voice","note":"guard: いえない inflects, so it stays the verb (いえる is attested on purpose)"}
+{"id":"vv09","sentence":"セミナーに行かされた","expected":["セミナー","行く"],"category":"verb-voice","note":"short causative-passive: UniDic lemmatizes 行かさ to 行かす, which no dictionary has; the base verb is the card"}
+{"id":"vv10","sentence":"子供に野菜を食べさす","expected":["子供","野菜","食べる"],"category":"verb-voice","note":"ichidan short causative 食べさす carded as 食べる"}
+{"id":"vv11","sentence":"話を聞かす","expected":["話","聞かす"],"category":"verb-voice","note":"guard: an attested -asu verb (聞かす) is a real word and stays"}
+{"id":"vv12","sentence":"ナイフで刺された","expected":["ナイフ","刺す"],"category":"verb-voice","note":"godan passive: 刺さる's potential spells 刺される, but the tagger split off the passive れる after the 未然形 刺さ"}
+{"id":"vv13","sentence":"ナイフが刺さった","expected":["ナイフ","刺さる"],"category":"verb-voice","note":"guard: the -aru verb itself stays"}
+{"id":"vv15","sentence":"彼女にフラれた","expected":["彼女","ふる"],"category":"verb-voice","note":"katakana verb フラ (orthBase フル, lemma 振る): フル is attested only as the adjective 'full', so the front folds to the lemma's reading"}
+{"id":"vv16","sentence":"今日はツイてる","expected":["今日","つく"],"category":"verb-voice","note":"katakana verb ツイ (orthBase ツク, lemma 付く) with no katakana entry folds to the lemma's reading"}
+{"id":"vv17","sentence":"まっ いいか","expected":[],"category":"verb-voice","note":"the filler まっ the tagger reads as the 促音便 stem of 待つ: nothing continues it, so it is a cut sound, not まつ"}
+{"id":"vv18","sentence":"ちょっとまって","expected":["まつ"],"category":"verb-voice","note":"guard: a 促音便 stem continued by て stays the verb (まつ is attested on purpose)"}
+{"id":"vv19","sentence":"彼氏いたんだ","expected":["彼氏"],"category":"verb-voice","note":"tagger glue: いた+んだ read as 痛む (いたむ is attested on purpose)"}
+{"id":"vv20","sentence":"膝が痛む","expected":["膝","痛む"],"category":"verb-voice","note":"guard: the glued-lemma list gates kana recovery only, so kanji 痛む is mined"}

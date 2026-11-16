@@ -28,6 +28,7 @@ import unicodedata
 from typing import Callable
 
 from anki_miner.services.morphology import (
+    _FOLD_SUFFIX_PAIRS,
     SyntheticToken,
     TokenInclusionRule,
     extract_orth_base,
@@ -81,6 +82,37 @@ def _unvoiced(kana: str) -> str:
 # never become card fronts.
 _INFLECTABLE_POS1 = frozenset({"動詞", "形容詞"})
 
+# The ておく contraction (放っ|とい|て): UniDic tags とく 助動詞, but JMdict lists
+# 放っとく as a verb, so a span may end on it and is looked up by its base とく.
+_CONTRACTION_TAILS = frozenset({"とく"})
+
+
+def _contraction_tail(token) -> bool:
+    return _pos1(token) == "助動詞" and extract_orth_base(token) in _CONTRACTION_TAILS
+
+
+def _potential_base(token) -> str:
+    """A potential verb's base in its own spelling (おける → おく), or "".
+
+    UniDic gives 放って|おけ|ない the potential base おける, which no dictionary
+    joins; the swap is taken only when the swapped reading is the lemma's
+    (オケル → オク), so 帰れる (lemma 返る) or a real ichidan verb never folds.
+    """
+    feature = getattr(token, "feature", None)
+    orth_base = extract_orth_base(token)
+    kana_base, l_form = getattr(feature, "kanaBase", None), getattr(feature, "lForm", None)
+    if _pos1(token) != "動詞" or not isinstance(kana_base, str) or not isinstance(l_form, str):
+        return ""
+    for derived, base in _FOLD_SUFFIX_PAIRS:
+        # The godan potential pairs only (ける → く), not the adjective or サ変 ones.
+        if len(base) != 1 or not derived.endswith("る") or not orth_base.endswith(derived):
+            continue
+        swapped = katakana_to_hiragana(kana_base)[: -len(derived)] + base
+        if orth_base[: -len(derived)] and swapped == katakana_to_hiragana(l_form):
+            return orth_base[: -len(derived)] + base
+    return ""
+
+
 # A span must END on a content token. Without this rule, JMdict's thousands of
 # inflected-form headwords (気にするな, 気をつけて, ああ言った …) would match a
 # raw surface join and ship an inflected card front.
@@ -92,8 +124,37 @@ _NON_CONTENT_POS1 = frozenset({"助詞", "助動詞", "記号", "補助記号", 
 # greeting, 彼の a phrase), and so does a word something modifies: その時に and
 # 行く時に are the noun 時 with its case particle, not the adverb 時に. A span
 # with a verb or adjective in it is that word inflected (急いで), never the entry.
-_ADVERBIAL_PARTICLES = frozenset({"に", "も", "で", "か", "から", "まで", "や", "でも", "しか"})
+# と joins too (二度と 'never again', not 二度 'twice'), but never across an
+# auxiliary (何だと is 何 + the copula + the quoting と) nor onto a lone pronoun:
+# 何と is mostly 何となく, 何としても or a quoted 何と書かれて.
+_ADVERBIAL_PARTICLES = frozenset({"に", "も", "で", "か", "から", "まで", "や", "でも", "しか", "と"})
 _ADVERBIAL_TAGS = frozenset({"adv", "exp", "pn", "conj"})
+
+
+def _adverbial_end(token) -> bool:
+    """Whether a word + particle span may end on ``token``.
+
+    An _ADVERBIAL_PARTICLES particle (本当|に), or the copula's own に after a
+    na-adjective (確か|に, まとも|に: UniDic tags it 助動詞 だ), which JMdict
+    lists as the adverb 確かに.
+    """
+    if _pos1(token) == "助詞":
+        return token.surface in _ADVERBIAL_PARTICLES
+    return (
+        _pos1(token) == "助動詞"
+        and token.surface == "に"
+        and getattr(getattr(token, "feature", None), "lemma", None) == "だ"
+    )
+
+
+# A word JMdict lists only inflected (計り知れない, 折り入って, 思いがけず,
+# 心置きなく, 聞き捨てならない): UniDic gives the stem a base no dictionary has
+# (計り知れる, 折り入る), and the end-on-content rule never lets a span reach the
+# tail. When the head's own base is unattested, the line's surface through one
+# of these tails (past なら) is offered too; an attested base (構う) keeps its
+# own word, so 構わない never merges.
+_FIXED_FORM_TAILS = frozenset({"て", "で", "ない", "ず", "ぬ", "なく"})
+_FIXED_FORM_LINKS = frozenset({"なら"})
 
 # A dictionary entry's tags, by headword (JMdict's adv, exp, n, …).
 EntryTagsLookup = Callable[[list[str]], dict[str, set[str]]]
@@ -198,6 +259,7 @@ class CompoundDictionaryMatcher:
     """
 
     _default_max_span_chars = _MAX_SPAN_CHARS
+    _fixed_forms = True
 
     def __init__(
         self,
@@ -224,6 +286,8 @@ class CompoundDictionaryMatcher:
         char_bound = self._default_max_span_chars if max_span_chars is None else max_span_chars
         self._max_span_chars = max(2, char_bound)
         self._exist_cache: dict[str, bool] = {}
+        # This line's fixed-form spans -> their head's own base (_FIXED_FORM_TAILS).
+        self._fixed_heads: dict[tuple[int, int], str] = {}
 
     def merge_line(self, text: str, tokens: list) -> list:
         """Return a new token list with dictionary-attested spans merged.
@@ -247,7 +311,7 @@ class CompoundDictionaryMatcher:
             token = tokens[i]
             replacement = None
             consumed_end = i
-            if self._can_start(token):
+            if self._can_start_at(tokens, i):
                 # Longest span first — Yomitan ranks by source length.
                 for j in range(min(i + self._max_span - 1, n - 1), i, -1):
                     alternatives = candidates.get((i, j))
@@ -256,9 +320,14 @@ class CompoundDictionaryMatcher:
                     for candidate, kind in alternatives:
                         if not self._exist_cache.get(candidate):
                             continue
-                        if not self._reading_fits(tokens[i : j + 1], candidate, kind):
-                            continue
-                        if not self._can_end(tokens[j]) and not self._adverbial_fits(tokens, i, j, candidate):
+                        if kind == "F":
+                            if self._exist_cache.get(self._fixed_heads[(i, j)]):
+                                continue
+                        elif not self._reading_fits(tokens[i : j + 1], candidate, kind) or (
+                            not self._can_end(tokens[j])
+                            and not (kind == "A" and _contraction_tail(tokens[j]))
+                            and not self._adverbial_fits(tokens, i, j, candidate)
+                        ):
                             continue
                         synthetic = self._build_synthetic(tokens[i : j + 1], candidate, kind)
                         # Never consume tokens for a word the gate would then drop.
@@ -282,9 +351,15 @@ class CompoundDictionaryMatcher:
             return False
         # A verb's te-form is the verb (回収を急いでいます), a suffix or pre-noun
         # adjective heads a phrase, not a word (神様に, その下に), and so does a
-        # nominalizing の (何なのか).
+        # nominalizing の (何なのか) or the grammar ように (毎日のように).
         if _pos1(tokens[start]) in ("接尾辞", "連体詞") or any(
-            _pos1(token) in _INFLECTABLE_POS1 or _pos2(token) == "準体助詞" for token in tokens[start : end + 1]
+            _pos1(token) in _INFLECTABLE_POS1 or _pos2(token) in ("準体助詞", "助動詞語幹")
+            for token in tokens[start : end + 1]
+        ):
+            return False
+        if tokens[end].surface == "と" and (
+            (end - start == 1 and _pos1(tokens[start]) == "代名詞")
+            or any(_pos1(token) == "助動詞" for token in tokens[start:end])
         ):
             return False
         if headword not in self._tags_cache:
@@ -295,9 +370,9 @@ class CompoundDictionaryMatcher:
 
     def _can_end_span(self, token) -> bool:
         """Whether a span may end at ``token``: a content token, or an adverbial particle when tags are wired."""
-        if self._can_end(token):
+        if self._can_end(token) or _contraction_tail(token):
             return True
-        return self._entry_tags is not None and _pos1(token) == "助詞" and token.surface in _ADVERBIAL_PARTICLES
+        return self._entry_tags is not None and _adverbial_end(token)
 
     def _whitelisted(self, synthetic, headword: str) -> bool:
         """Whether the whitelist rescues a synthetic the inclusion gate refuses (R1)."""
@@ -315,7 +390,7 @@ class CompoundDictionaryMatcher:
         """
         if self._readings is None:
             return True
-        ends_on_particle = _pos1(span[-1]) == "助詞" and span[-1].surface in _ADVERBIAL_PARTICLES
+        ends_on_particle = _adverbial_end(span[-1])
         if not ends_on_particle and not any(
             _pos1(token) == "助詞" and token.surface == _READING_CHECKED_PARTICLE for token in span
         ):
@@ -329,6 +404,26 @@ class CompoundDictionaryMatcher:
     def _can_start(self, token) -> bool:
         """Whether candidate spans may start at ``token``."""
         return self._can_end(token)
+
+    def _can_start_at(self, tokens: list, i: int) -> bool:
+        """``_can_start``, and not a suffix attached to the word before it.
+
+        A suffix belongs to the word on its left: when the noun-suffix pass
+        bails 義母|上|様 or 母上|殿, the leftover suffix and the address 様, 殿
+        or さん must not join as a word of their own (上様 'the shogun', 上殿,
+        長殿). Other suffix pairs keep their joins. After a space, or at the
+        line start, a suffix-tagged token may still begin one (上様は茶室に).
+        """
+        if not self._can_start(tokens[i]):
+            return False
+        return not (
+            0 < i < len(tokens) - 1
+            and _pos1(tokens[i]) == "接尾辞"
+            and _pos1(tokens[i + 1]) == "接尾辞"
+            and tokens[i + 1].surface in ("様", "殿", "さん")
+            and _pos1(tokens[i - 1]) in ("名詞", "接尾辞")
+            and not getattr(tokens[i], "white_space", "")
+        )
 
     @staticmethod
     def _can_end(token) -> bool:
@@ -361,10 +456,11 @@ class CompoundDictionaryMatcher:
         """
         n = len(tokens)
         out: dict[tuple[int, int], Alternatives] = {}
+        self._fixed_heads = {}
         source_spans = self._source_spans(text, tokens)
         for i in range(n - 1):
             start_span = source_spans.get(i)
-            if start_span is None or not self._can_start(tokens[i]):
+            if start_span is None or not self._can_start_at(tokens, i):
                 continue
             prefix = tokens[i].surface
             source_end = start_span[1]
@@ -384,9 +480,24 @@ class CompoundDictionaryMatcher:
                 # (0..2) span ending on する is reachable through the な).
                 if self._can_end_span(tail):
                     out[(i, j)] = self._candidate_for_tail(prefix, tail, joined, tokens[i])
+                head_base = self._fixed_form_head(tokens, i, j)
+                if head_base is not None:
+                    out[(i, j)] = out.get((i, j), ()) + ((joined, "F"),)
+                    self._fixed_heads[(i, j)] = head_base
                 prefix = joined
                 source_end = tail_span[1]
         return out
+
+    def _fixed_form_head(self, tokens: list, i: int, j: int) -> str | None:
+        """The head's own base when ``tokens[i..j]`` is a word + a _FIXED_FORM_TAILS tail, else None."""
+        head, tail = tokens[i], tokens[j]
+        if not self._fixed_forms or j - i > 2 or _pos1(head) not in ("動詞", "名詞"):
+            return None
+        if tail.surface not in _FIXED_FORM_TAILS or any(t.surface not in _FIXED_FORM_LINKS for t in tokens[i + 1 : j]):
+            return None
+        if tail.surface in ("て", "で") and _pos2(tail) != "接続助詞":
+            return None
+        return extract_orth_base(head) if _pos1(head) == "動詞" else head.surface
 
     @staticmethod
     def _candidate_for_tail(prefix: str, tail, joined: str, head) -> Alternatives:
@@ -407,10 +518,18 @@ class CompoundDictionaryMatcher:
         接頭辞 heads would re-open the 気をつけて hole.
 
         kind A stays FIRST so a span that attests both keeps its pre-fix front.
+
+        A potential tail also offers its folded base (放って|おけ: おける → 放っておく),
+        and the ておく contraction とく its base (放っ|とい → 放っとく).
         """
+        if _contraction_tail(tail):
+            return ((prefix + extract_orth_base(tail), "A"),)
         if _pos1(tail) not in _INFLECTABLE_POS1:
             return ((joined, "B"),)
         alternatives: Alternatives = ((prefix + extract_orth_base(tail), "A"),)
+        folded = _potential_base(tail)
+        if folded:
+            alternatives += ((prefix + folded, "A"),)
         if _pos1(head) == "接頭辞" and _c_form(tail).startswith("連用形"):
             alternatives += ((joined, "B"),)
         return alternatives
@@ -422,6 +541,7 @@ class CompoundDictionaryMatcher:
         alternatives is two independent entries resolved in the same batch.
         """
         current = {c for alternatives in candidates.values() for c, _kind in alternatives}
+        current.update(self._fixed_heads.values())
         verdicts = {c: self._exist_cache[c] for c in current if c in self._exist_cache}
         unknown = {c for c in current if c not in verdicts}
         if not unknown:
@@ -458,7 +578,8 @@ class CompoundDictionaryMatcher:
         surface = "".join(t.surface for t in span)
         kana = "".join(extract_reading(t) for t in span)
         if kind == "A":
-            pos1 = _pos1(span[-1]) or "動詞"
+            # A contraction tail (とく) is 助動詞; the attested headword is a verb.
+            pos1 = "動詞" if _contraction_tail(span[-1]) else (_pos1(span[-1]) or "動詞")
             pos2 = "一般"
         else:
             # Inherit the tail's POS only when the tail is itself a content
@@ -486,6 +607,24 @@ class CompoundDictionaryMatcher:
         )
 
 
+# A name span never starts on a hiragana particle, auxiliary, pre-noun
+# adjective or verb (その子, な子, てる女, いう子), nor ends on a hiragana
+# particle or auxiliary (夢か, 山だ). Only hiragana tokens are checked: kanji
+# tags are unreliable here (see _can_start), and 也 in 貴也 is tagged 助動詞.
+_NAME_START_GRAMMAR = frozenset({"助詞", "助動詞", "連体詞", "動詞"})
+_NAME_END_GRAMMAR = frozenset({"助詞", "助動詞"})
+
+# 家の前, 山の上 and 坂の下 are place names in the wordsets, and in nearly every
+# line 'in front of the house'. A name ending on の + a position word is refused;
+# other names with an inner の (鞆の浦, 華厳の滝) still merge.
+_NAME_POSITION_TAILS = frozenset({"前", "上", "下", "奥", "中", "横", "後", "裏", "外", "内", "隣", "側", "脇"})
+
+
+def _hiragana_tagged(token, pos1s: frozenset[str]) -> bool:
+    surface = getattr(token, "surface", None) or ""
+    return bool(_HIRAGANA_RE.fullmatch(surface)) and _pos1(token) in pos1s
+
+
 class NameSpanMatcher(CompoundDictionaryMatcher):
     """Merge exact name-wordset spans without trusting UniDic word forms.
 
@@ -501,23 +640,34 @@ class NameSpanMatcher(CompoundDictionaryMatcher):
     """
 
     _default_max_span_chars = _MAX_NAME_SPAN_CHARS
+    _fixed_forms = False
 
     @staticmethod
     def _candidate_for_tail(prefix: str, tail, joined: str, head) -> Alternatives:
+        if prefix.endswith("の") and tail.surface in _NAME_POSITION_TAILS:
+            return ()
         return ((joined, "B"),)
+
+    def _can_start_at(self, tokens: list, i: int) -> bool:
+        return self._can_start(tokens[i])
 
     def _can_start(self, token) -> bool:
         # Exact raw-name attestation, not UniDic POS, licenses this boundary.
         # The combined-line probe can tag 狗 as 接尾辞 and 巻 as 固有名詞 even
         # though the same source phrase tags both 普通名詞; trusting either tag
         # here would recreate the fragment bug at a different POS boundary.
+        # A hiragana grammar word is the exception (_NAME_START_GRAMMAR): the
+        # wordsets hold その子, な子, てる子 and いう子, which glue a word to
+        # a noun in その子が, きれいな子, 寝てる子 and ああいう子.
         surface = getattr(token, "surface", None)
-        return bool(surface and surface.strip())
+        return bool(surface and surface.strip()) and not _hiragana_tagged(token, _NAME_START_GRAMMAR)
 
     @staticmethod
     def _can_end(token) -> bool:
+        # 夢か, 山だ, 時や and 流され (流さ|れ) are names too; ending on a
+        # hiragana particle or auxiliary they are a word and its grammar.
         surface = getattr(token, "surface", None)
-        return bool(surface and surface.strip())
+        return bool(surface and surface.strip()) and not _hiragana_tagged(token, _NAME_END_GRAMMAR)
 
     def _build_synthetic(self, span: list, headword: str, kind: str) -> CompoundSyntheticToken:
         surface = "".join(token.surface for token in span)

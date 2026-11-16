@@ -34,6 +34,7 @@ from anki_miner.services.resource_catalog import RECOMMENDED_DEFAULT_SET
 from anki_miner.services.sentence_tts_fetcher import PAPAGO_SPEAKER_JA
 from anki_miner.services.subtitle_parser import SubtitleParserService
 from anki_miner.utils.audio_track_detector import JAPANESE_LANGUAGE_CODES
+from anki_miner.utils.ja_normalize import is_chinese_line
 
 __all__ = ["JA_AUDIO", "build_profile"]
 
@@ -66,8 +67,11 @@ def _create_parser(*args: Any, **kwargs: Any) -> SubtitleParserService:
     YouTube lyric captions put a romaji line under the Japanese one, and the
     flattened cue becomes the card's Sentence: the script gate drops that line,
     as it drops a bilingual cue's English line in the other non-Latin languages.
+    A Chinese line passes that gate (its kanji are Japanese script), so it is
+    named by ``is_chinese_line`` and not mined.
     """
     kwargs.setdefault("has_target_script", _JA_SCRIPT.contains_target_script)
+    kwargs.setdefault("skip_line", is_chinese_line)
     return SubtitleParserService(*args, **kwargs)
 
 
