@@ -98,6 +98,23 @@ _NON_CONTENT_POS1 = frozenset({"助詞", "助動詞", "記号", "補助記号", 
 _ADVERBIAL_PARTICLES = frozenset({"に", "も", "で", "か", "から", "まで", "や", "でも", "しか", "と"})
 _ADVERBIAL_TAGS = frozenset({"adv", "exp", "pn", "conj"})
 
+
+def _adverbial_end(token) -> bool:
+    """Whether a word + particle span may end on ``token``.
+
+    An _ADVERBIAL_PARTICLES particle (本当|に), or the copula's own に after a
+    na-adjective (確か|に, まとも|に: UniDic tags it 助動詞 だ), which JMdict
+    lists as the adverb 確かに.
+    """
+    if _pos1(token) == "助詞":
+        return token.surface in _ADVERBIAL_PARTICLES
+    return (
+        _pos1(token) == "助動詞"
+        and token.surface == "に"
+        and getattr(getattr(token, "feature", None), "lemma", None) == "だ"
+    )
+
+
 # A dictionary entry's tags, by headword (JMdict's adv, exp, n, …).
 EntryTagsLookup = Callable[[list[str]], dict[str, set[str]]]
 
@@ -285,9 +302,10 @@ class CompoundDictionaryMatcher:
             return False
         # A verb's te-form is the verb (回収を急いでいます), a suffix or pre-noun
         # adjective heads a phrase, not a word (神様に, その下に), and so does a
-        # nominalizing の (何なのか).
+        # nominalizing の (何なのか) or the grammar ように (毎日のように).
         if _pos1(tokens[start]) in ("接尾辞", "連体詞") or any(
-            _pos1(token) in _INFLECTABLE_POS1 or _pos2(token) == "準体助詞" for token in tokens[start : end + 1]
+            _pos1(token) in _INFLECTABLE_POS1 or _pos2(token) in ("準体助詞", "助動詞語幹")
+            for token in tokens[start : end + 1]
         ):
             return False
         if tokens[end].surface == "と" and (
@@ -305,7 +323,7 @@ class CompoundDictionaryMatcher:
         """Whether a span may end at ``token``: a content token, or an adverbial particle when tags are wired."""
         if self._can_end(token):
             return True
-        return self._entry_tags is not None and _pos1(token) == "助詞" and token.surface in _ADVERBIAL_PARTICLES
+        return self._entry_tags is not None and _adverbial_end(token)
 
     def _whitelisted(self, synthetic, headword: str) -> bool:
         """Whether the whitelist rescues a synthetic the inclusion gate refuses (R1)."""
@@ -323,7 +341,7 @@ class CompoundDictionaryMatcher:
         """
         if self._readings is None:
             return True
-        ends_on_particle = _pos1(span[-1]) == "助詞" and span[-1].surface in _ADVERBIAL_PARTICLES
+        ends_on_particle = _adverbial_end(span[-1])
         if not ends_on_particle and not any(
             _pos1(token) == "助詞" and token.surface == _READING_CHECKED_PARTICLE for token in span
         ):

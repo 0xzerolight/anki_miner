@@ -344,6 +344,9 @@ class TestAdverbialParticleEnd:
         "二度と": {"adv"},
         "何だと": {"exp"},
         "何と": {"adv"},
+        "確かに": {"adv"},
+        "静かに": {"n"},
+        "毎日のように": {"exp"},
     }
 
     def _matcher(self, dictionary, tags=TAGS, readings=None):
@@ -428,6 +431,33 @@ class TestAdverbialParticleEnd:
         tokens = [_tok("何", "代名詞", kana="ナン"), _tok("と", "助詞", "格助詞", kana="ト")]
         out = self._matcher({"何と"}).merge_line("何と", tokens)
         assert [t.surface for t in out] == ["何", "と"]
+
+    def test_merges_a_na_adjective_and_its_copula_ni_listed_as_an_adverb(self):
+        # 確か|に: に is the copula's adverbial form (助動詞 だ), not a particle.
+        tokens = [
+            _tok("確か", "形状詞", "一般", kana="タシカ"),
+            _tok("に", "助動詞", lemma="だ", kana="ニ", c_form="連用形-ニ"),
+        ]
+        out = self._matcher({"確かに"}).merge_line("確かに", tokens)
+        assert [t.surface for t in out] == ["確かに"]
+
+    def test_a_na_adjective_whose_ni_form_is_not_an_adverb_stays_apart(self):
+        tokens = [
+            _tok("静か", "形状詞", "一般", kana="シズカ"),
+            _tok("に", "助動詞", lemma="だ", kana="ニ", c_form="連用形-ニ"),
+        ]
+        out = self._matcher({"静かに"}).merge_line("静かに", tokens)
+        assert [t.surface for t in out] == ["静か", "に"]
+
+    def test_a_span_with_the_grammar_youni_stays_apart(self):
+        tokens = [
+            _tok("毎日", "名詞", "普通名詞", kana="マイニチ"),
+            _tok("の", "助詞", "格助詞", kana="ノ"),
+            _tok("よう", "形状詞", "助動詞語幹", kana="ヨウ"),
+            _tok("に", "助動詞", lemma="だ", kana="ニ", c_form="連用形-ニ"),
+        ]
+        out = self._matcher({"毎日のように"}).merge_line("毎日のように", tokens)
+        assert [t.surface for t in out] == ["毎日", "の", "よう", "に"]
 
 
 class TestLongestMatchAndGreedyScan:
