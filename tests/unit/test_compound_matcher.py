@@ -397,7 +397,7 @@ class TestAdverbialParticleEnd:
             _tok("急い", "動詞", "一般", lemma="急ぐ", kana="イソイ", orth_base="急ぐ", c_form="連用形-イ音便"),
             _tok("で", "助詞", "接続助詞", kana="デ"),
         ]
-        out = self._matcher({"急いで"}).merge_line("急いで", tokens)
+        out = self._matcher({"急ぐ", "急いで"}).merge_line("急いで", tokens)
         assert [t.surface for t in out] == ["急い", "で"]
 
     def test_a_noun_entry_does_not_take_the_particle(self):
@@ -793,3 +793,43 @@ class TestReadingAgreementAcrossNo:
         tokens[2].feature.kanaBase = "ハイル"
         out = _matcher({"気に入る"}, readings={"気に入る": ["きにいる"]}).merge_line("気に入る", tokens)
         assert [t.surface for t in out] == ["気に入る"]
+
+
+class TestFixedInflectedForm:
+    """A word JMdict lists only inflected (計り知れない, 折り入って) merges when its base has no entry."""
+
+    def test_fixed_negative_form_merges_when_the_base_is_unattested(self):
+        tokens = [
+            _tok("計り知れ", "動詞", "一般", lemma="計り知れる", kana="ハカリシレ", c_form="未然形-一般"),
+            _tok("ない", "助動詞", kana="ナイ", c_form="連体形-一般"),
+            _tok("事情", "名詞", "普通名詞", kana="ジジョウ"),
+        ]
+        out = _matcher({"計り知れない"}).merge_line("計り知れない事情", tokens)
+        assert [t.surface for t in out] == ["計り知れない", "事情"]
+        assert out[0].feature.lemma == "計り知れない"
+
+    def test_fixed_te_form_merges(self):
+        tokens = [
+            _tok("折り入っ", "動詞", "一般", lemma="折り入る", kana="オリイッ", c_form="連用形-促音便"),
+            _tok("て", "助詞", "接続助詞", kana="テ"),
+        ]
+        out = _matcher({"折り入って"}).merge_line("折り入って", tokens)
+        assert [t.surface for t in out] == ["折り入って"]
+
+    def test_noun_head_with_naranai_merges(self):
+        tokens = [
+            _tok("聞き捨て", "名詞", "普通名詞", kana="キキズテ"),
+            _tok("なら", "動詞", "非自立可能", lemma="成る", kana="ナラ", orth_base="なる", c_form="未然形-一般"),
+            _tok("ない", "助動詞", kana="ナイ", c_form="終止形-一般"),
+        ]
+        out = _matcher({"聞き捨てならない"}).merge_line("聞き捨てならない", tokens)
+        assert [t.surface for t in out] == ["聞き捨てならない"]
+
+    def test_attested_base_keeps_its_own_word(self):
+        # 構う has an entry: 構わない stays the verb and its auxiliary.
+        tokens = [
+            _tok("構わ", "動詞", "一般", lemma="構う", kana="カマワ", c_form="未然形-一般"),
+            _tok("ない", "助動詞", kana="ナイ", c_form="終止形-一般"),
+        ]
+        out = _matcher({"構う", "構わない"}).merge_line("構わない", tokens)
+        assert [t.surface for t in out] == ["構わ", "ない"]

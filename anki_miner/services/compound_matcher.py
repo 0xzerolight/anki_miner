@@ -115,6 +115,15 @@ def _adverbial_end(token) -> bool:
     )
 
 
+# A word JMdict lists only inflected (計り知れない, 折り入って, 思いがけず,
+# 心置きなく, 聞き捨てならない): UniDic gives the stem a base no dictionary has
+# (計り知れる, 折り入る), and the end-on-content rule never lets a span reach the
+# tail. When the head's own base is unattested, the line's surface through one
+# of these tails (past なら) is offered too; an attested base (構う) keeps its
+# own word, so 構わない never merges.
+_FIXED_FORM_TAILS = frozenset({"て", "で", "ない", "ず", "ぬ", "なく"})
+_FIXED_FORM_LINKS = frozenset({"なら"})
+
 # A dictionary entry's tags, by headword (JMdict's adv, exp, n, …).
 EntryTagsLookup = Callable[[list[str]], dict[str, set[str]]]
 
@@ -218,6 +227,7 @@ class CompoundDictionaryMatcher:
     """
 
     _default_max_span_chars = _MAX_SPAN_CHARS
+    _fixed_forms = True
 
     def __init__(
         self,
@@ -244,6 +254,8 @@ class CompoundDictionaryMatcher:
         char_bound = self._default_max_span_chars if max_span_chars is None else max_span_chars
         self._max_span_chars = max(2, char_bound)
         self._exist_cache: dict[str, bool] = {}
+        # This line's fixed-form spans -> their head's own base (_FIXED_FORM_TAILS).
+        self._fixed_heads: dict[tuple[int, int], str] = {}
 
     def merge_line(self, text: str, tokens: list) -> list:
         """Return a new token list with dictionary-attested spans merged.
@@ -276,9 +288,12 @@ class CompoundDictionaryMatcher:
                     for candidate, kind in alternatives:
                         if not self._exist_cache.get(candidate):
                             continue
-                        if not self._reading_fits(tokens[i : j + 1], candidate, kind):
-                            continue
-                        if not self._can_end(tokens[j]) and not self._adverbial_fits(tokens, i, j, candidate):
+                        if kind == "F":
+                            if self._exist_cache.get(self._fixed_heads[(i, j)]):
+                                continue
+                        elif not self._reading_fits(tokens[i : j + 1], candidate, kind) or (
+                            not self._can_end(tokens[j]) and not self._adverbial_fits(tokens, i, j, candidate)
+                        ):
                             continue
                         synthetic = self._build_synthetic(tokens[i : j + 1], candidate, kind)
                         # Never consume tokens for a word the gate would then drop.
@@ -387,6 +402,7 @@ class CompoundDictionaryMatcher:
         """
         n = len(tokens)
         out: dict[tuple[int, int], Alternatives] = {}
+        self._fixed_heads = {}
         source_spans = self._source_spans(text, tokens)
         for i in range(n - 1):
             start_span = source_spans.get(i)
@@ -410,9 +426,24 @@ class CompoundDictionaryMatcher:
                 # (0..2) span ending on する is reachable through the な).
                 if self._can_end_span(tail):
                     out[(i, j)] = self._candidate_for_tail(prefix, tail, joined, tokens[i])
+                head_base = self._fixed_form_head(tokens, i, j)
+                if head_base is not None:
+                    out[(i, j)] = out.get((i, j), ()) + ((joined, "F"),)
+                    self._fixed_heads[(i, j)] = head_base
                 prefix = joined
                 source_end = tail_span[1]
         return out
+
+    def _fixed_form_head(self, tokens: list, i: int, j: int) -> str | None:
+        """The head's own base when ``tokens[i..j]`` is a word + a _FIXED_FORM_TAILS tail, else None."""
+        head, tail = tokens[i], tokens[j]
+        if not self._fixed_forms or j - i > 2 or _pos1(head) not in ("動詞", "名詞"):
+            return None
+        if tail.surface not in _FIXED_FORM_TAILS or any(t.surface not in _FIXED_FORM_LINKS for t in tokens[i + 1 : j]):
+            return None
+        if tail.surface in ("て", "で") and _pos2(tail) != "接続助詞":
+            return None
+        return extract_orth_base(head) if _pos1(head) == "動詞" else head.surface
 
     @staticmethod
     def _candidate_for_tail(prefix: str, tail, joined: str, head) -> Alternatives:
@@ -448,6 +479,7 @@ class CompoundDictionaryMatcher:
         alternatives is two independent entries resolved in the same batch.
         """
         current = {c for alternatives in candidates.values() for c, _kind in alternatives}
+        current.update(self._fixed_heads.values())
         verdicts = {c: self._exist_cache[c] for c in current if c in self._exist_cache}
         unknown = {c for c in current if c not in verdicts}
         if not unknown:
@@ -545,6 +577,7 @@ class NameSpanMatcher(CompoundDictionaryMatcher):
     """
 
     _default_max_span_chars = _MAX_NAME_SPAN_CHARS
+    _fixed_forms = False
 
     @staticmethod
     def _candidate_for_tail(prefix: str, tail, joined: str, head) -> Alternatives:
