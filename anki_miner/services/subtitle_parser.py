@@ -835,10 +835,11 @@ class SubtitleParserService:
         self._front_cache: dict[tuple[str, str, str], str] = {}
         # Kana-recovery memo (same lifetime/bounding rationale as _front_cache):
         # the recovery decision — content_gate_ok + the SQLite existence probe —
-        # is deterministic per (surface, pos1), so _should_include_word runs it
-        # once per distinct token instead of once per occurrence (count_lemmas is
-        # a hot path: tens of thousands of tokens). Caches misses too.
-        self._kana_recover_cache: dict[tuple[str, str, str | None, bool], str | None] = {}
+        # is deterministic per token shape (the key _kana_recovery builds), so
+        # _should_include_word runs it once per distinct token instead of once
+        # per occurrence (count_lemmas is a hot path: tens of thousands of
+        # tokens). Caches misses too.
+        self._kana_recover_cache: dict[tuple[str, str, str | None, bool, str, str], str | None] = {}
         # U4 lexicalized-window attestation memo (see _rejected_by_lexicalized_window).
         # Keyed on the JOINED WINDOW STRING, never on (surface, pos1): the window
         # verdict is context-dependent, so the same recovery candidate can be
@@ -3112,14 +3113,18 @@ class SubtitleParserService:
         # grammar, not vocabulary; the list names the few words among them.
         pos2 = getattr(feature, "pos2", None)
         recoverable = pos1 in _KANA_RECOVER_POS1 and pos2 not in _KANA_RECOVER_REJECT_POS2
-        # Before the memo: its key has no lemma, and はやる is also 流行る.
-        if self._extract_lemma(word_token) in _KANA_FUSED_LEMMAS:
+        lemma = self._extract_lemma(word_token)
+        if lemma in _KANA_FUSED_LEMMAS:
             return None
         merged = getattr(word_token, "compound", False) is True
         # pos2 is part of the key: the auxiliary-capable つける (気をつける) and the
         # main verb つける share surface and pos1 but not the verdict, nor do the
         # noun ちどり and the name ちどり (固有名詞, an excluded subtype).
-        key = (surface, pos1, pos2, merged)
+        # So are the orthBase and the lemma, which the probed card front is built
+        # from: つかめ is the imperative of つかむ and the stem of the potential
+        # つかめる. The memo outlives a parse, so a key without them lets the first
+        # file of a batch decide the word for every later one.
+        key = (surface, pos1, pos2, merged, extract_orth_base(word_token), lemma)
         if key not in self._kana_recover_cache:
             if len(self._kana_recover_cache) >= _FRONT_CACHE_CAP:
                 self._kana_recover_cache.clear()

@@ -1364,6 +1364,17 @@ class TestKanaWordRecovery:
         assert service._should_include_word(name) is False
         assert service._should_include_word(noun) is True
 
+    def test_one_surface_of_two_verbs_does_not_share_a_verdict(self, test_config):
+        # つかめ is the imperative of つかむ (a headword) and the stem of the
+        # potential つかめる (not one): same surface, pos1 and pos2. Which of the
+        # two a batch met first must not decide the other, in either order.
+        imperative = _make_token("つかめ", "動詞", pos2="一般", lemma="掴む", orth_base="つかむ")
+        potential = _make_token("つかめ", "動詞", pos2="一般", lemma="掴む", orth_base="つかめる")
+        for first, second in ((imperative, potential), (potential, imperative)):
+            service = self._service(test_config, _attest_lookup("つかむ"))
+            verdicts = {t.feature.orthBase: service._should_include_word(t) for t in (first, second)}
+            assert verdicts == {"つかむ": True, "つかめる": False}
+
     @pytest.mark.parametrize(
         ("surface", "pos1", "lemma"),
         [("って", "助詞", "って"), ("の", "助詞", "の"), ("けど", "接続詞", "けれど")],
