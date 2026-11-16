@@ -413,6 +413,13 @@ def _is_all_katakana(surface: str) -> bool:
     return bool(non_ws) and all(_is_katakana_surface_char(c) for c in non_ws)
 
 
+def _is_godan_imperative(feature: Any) -> bool:
+    """Whether the tagger read the token as a godan verb's 命令形 (持て, 従え)."""
+    ctype = getattr(feature, "cType", None)
+    cform = getattr(feature, "cForm", None)
+    return isinstance(ctype, str) and ctype.startswith("五段") and isinstance(cform, str) and cform.startswith("命令形")
+
+
 def _token_morph(token: Any) -> str:
     """A duck token's morphological features, or "" (fugashi nodes have none).
 
@@ -832,14 +839,14 @@ class SubtitleParserService:
         # like _line_cache): the deinflect + offline existence lookup is
         # deterministic per (inflected_surface, orth_base, cType), so it survives
         # across parse_* calls and is bounded by clear-on-cap (_FRONT_CACHE_CAP).
-        self._front_cache: dict[tuple[str, str, str], str] = {}
+        self._front_cache: dict[tuple[str, str, str, bool], str] = {}
         # Kana-recovery memo (same lifetime/bounding rationale as _front_cache):
         # the recovery decision — content_gate_ok + the SQLite existence probe —
         # is deterministic per token shape (the key _kana_recovery builds), so
         # _should_include_word runs it once per distinct token instead of once
         # per occurrence (count_lemmas is a hot path: tens of thousands of
         # tokens). Caches misses too.
-        self._kana_recover_cache: dict[tuple[str, str, str | None, bool, str, str], str | None] = {}
+        self._kana_recover_cache: dict[tuple[str, str, str | None, bool, str, str, bool], str | None] = {}
         # U4 lexicalized-window attestation memo (see _rejected_by_lexicalized_window).
         # Keyed on the JOINED WINDOW STRING, never on (surface, pos1): the window
         # verdict is context-dependent, so the same recovery candidate can be
@@ -2579,14 +2586,23 @@ class SubtitleParserService:
         # keeps the archaic 感ずる.
         inflected_surface = text[tok_start:highlight_end]
         ctype = getattr(feature, "cType", None)
-        key = (inflected_surface, orth_base, ctype if isinstance(ctype, str) else "")
+        # A godan imperative (持て, 従え) is never an -eru verb: its e-stem spelling
+        # is also the stem of the attested ichidan 持てる/従える, which shares the
+        # longer prefix and would win the resolver's rank. The tagger's 命令形
+        # already names the verb, so the resolver is skipped for it.
+        godan_imperative = _is_godan_imperative(feature)
+        key = (inflected_surface, orth_base, ctype if isinstance(ctype, str) else "", godan_imperative)
         cached = self._front_cache.get(key)
         if cached is None:
-            cached = resolve_dictionary_form(
-                inflected_surface,
-                orth_base,
-                self._term_rules_lookup,
-                self._memoized_term_common,
+            cached = (
+                orth_base
+                if godan_imperative
+                else resolve_dictionary_form(
+                    inflected_surface,
+                    orth_base,
+                    self._term_rules_lookup,
+                    self._memoized_term_common,
+                )
             )
             # The deinflection resolver only rewrites じる/ずる (and leaves every
             # other form == orth_base). Where it made no change, run the
@@ -3124,7 +3140,9 @@ class SubtitleParserService:
         # from: つかめ is the imperative of つかむ and the stem of the potential
         # つかめる. The memo outlives a parse, so a key without them lets the first
         # file of a batch decide the word for every later one.
-        key = (surface, pos1, pos2, merged, extract_orth_base(word_token), lemma)
+        # A godan imperative skips the front resolver (_resolve_front), so it is
+        # keyed apart from the same spelling in another form (やれ, やれば's やれ).
+        key = (surface, pos1, pos2, merged, extract_orth_base(word_token), lemma, _is_godan_imperative(feature))
         if key not in self._kana_recover_cache:
             if len(self._kana_recover_cache) >= _FRONT_CACHE_CAP:
                 self._kana_recover_cache.clear()

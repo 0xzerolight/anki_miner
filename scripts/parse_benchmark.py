@@ -262,6 +262,12 @@ def mine_lite_orthbase(sentence: str) -> set[str]:
 # itself is rebuilt from it at benchmark start (no binary blob in git, fully
 # reproducible, network-free).
 _ANCHOR_HEADWORDS: tuple[str, ...] = (
+    # verb-voice: a godan imperative (持て, 従え) against the attested ichidan
+    # verb of the same spelling (持てる, 従える)
+    "持てる",
+    "持つ",
+    "従える",
+    "従う",
     # jiru-zuru modern headwords (the fix's targets)
     "感じる",
     "論じる",
@@ -419,6 +425,10 @@ _ANCHOR_HEADWORDS: tuple[str, ...] = (
 # off and flatline the jiru-zuru recall floor rather than fail loudly.
 # Unlisted headwords keep "" on purpose: nouns and collocations do not inflect.
 _ANCHOR_RULES: dict[str, str] = {
+    # verb-voice
+    **dict.fromkeys(("持てる", "従える"), "v1"),
+    "持つ": "v5t",
+    "従う": "v5u",
     # ichidan (jiru-zuru targets + other ichidan guards)
     **dict.fromkeys(("感じる", "論じる", "信じる", "生じる", "演じる", "通じる", "準じる", "かんじる"), "v1"),
     **dict.fromkeys(("報いる", "帰れる", "見る", "恐れる", "いる", "くれる"), "v1"),
