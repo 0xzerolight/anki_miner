@@ -3077,6 +3077,18 @@ class SubtitleParserService:
             right += 1
         windows: list[str] = []
         for start in range(left, idx + 1):
+            # No lexicalized sequence starts with a topic は attached to the word
+            # before it, and one that does is a homophone across a word boundary
+            # (嘘は|やめて reads はやめ 早め, お金は|いらん 入らん). A window through
+            # it (とはいえ) still counts, and so does a は that starts the line or
+            # follows a space: that は may be a word's first kana (はかない).
+            if (
+                0 < start < idx
+                and tokens[start].surface == "は"
+                and getattr(tokens[start].feature, "pos2", None) == "係助詞"
+                and not getattr(tokens[start], "white_space", "")
+            ):
+                continue
             for end in range(idx, right + 1):
                 if start == idx and end == idx:
                     continue
