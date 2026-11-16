@@ -1,3 +1,4 @@
 {"id":"swk01","sentence":"戦い方が悪い","expected":["戦う","悪い"],"category":"span-window","note":"戦い方 has no dictionary entry: the verb-nominalizer pass leaves the verb, which mines as 戦う."}
 {"id":"swk02","sentence":"読み方が悪い","expected":["読み方","悪い"],"category":"span-window","note":"読み方 is attested, so it stays one word."}
 {"id":"swf01","sentence":"折り入って相談が","expected":["折り入って","相談"],"category":"span-window","note":"JMdict lists only the te-form 折り入って; its base 折り入る has no entry."}
+{"id":"swh01","sentence":"彼を放っておけない","expected":["彼","放っておく"],"category":"span-window","note":"The potential tail おけ (base おける) folds to おく, so the 放っておく entry joins instead of 放つ."}

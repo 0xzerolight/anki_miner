@@ -833,3 +833,29 @@ class TestFixedInflectedForm:
         ]
         out = _matcher({"構う", "構わない"}).merge_line("構わない", tokens)
         assert [t.surface for t in out] == ["構わ", "ない"]
+
+
+class TestHottoku:
+    """放っておく / 放っとく join through a potential or contracted tail."""
+
+    @staticmethod
+    def _hou():
+        return _tok("放っ", "動詞", "一般", lemma="放る", kana="ホウッ", orth_base="放る", c_form="連用形-促音便")
+
+    def test_potential_tail_folds_to_the_attested_base(self):
+        oke = _tok("おけ", "動詞", "非自立可能", lemma="置く", kana="オケ", orth_base="おける", c_form="未然形-一般")
+        oke.feature.kanaBase = "オケル"
+        oke.feature.lForm = "オク"
+        tokens = [self._hou(), _tok("て", "助詞", "接続助詞", kana="テ"), oke, _tok("ない", "助動詞", kana="ナイ")]
+        out = _matcher({"放っておく"}).merge_line("放っておけない", tokens)
+        assert [t.surface for t in out] == ["放っておけ", "ない"]
+        assert out[0].feature.lemma == "放っておく"
+        assert out[0].feature.pos1 == "動詞"
+
+    def test_contracted_toku_tail_joins(self):
+        toi = _tok("とい", "助動詞", lemma="とく", kana="トイ", orth_base="とく", c_form="連用形-イ音便")
+        tokens = [self._hou(), toi, _tok("て", "助詞", "接続助詞", kana="テ")]
+        out = _matcher({"放っとく"}).merge_line("放っといて", tokens)
+        assert [t.surface for t in out] == ["放っとい", "て"]
+        assert out[0].feature.lemma == "放っとく"
+        assert out[0].feature.pos1 == "動詞"

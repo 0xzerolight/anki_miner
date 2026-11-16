@@ -28,6 +28,7 @@ import unicodedata
 from typing import Callable
 
 from anki_miner.services.morphology import (
+    _FOLD_SUFFIX_PAIRS,
     SyntheticToken,
     TokenInclusionRule,
     extract_orth_base,
@@ -80,6 +81,37 @@ def _unvoiced(kana: str) -> str:
 # auxiliary, and JMdict attests some aux-inclusive strings (やった) that must
 # never become card fronts.
 _INFLECTABLE_POS1 = frozenset({"動詞", "形容詞"})
+
+# The ておく contraction (放っ|とい|て): UniDic tags とく 助動詞, but JMdict lists
+# 放っとく as a verb, so a span may end on it and is looked up by its base とく.
+_CONTRACTION_TAILS = frozenset({"とく"})
+
+
+def _contraction_tail(token) -> bool:
+    return _pos1(token) == "助動詞" and extract_orth_base(token) in _CONTRACTION_TAILS
+
+
+def _potential_base(token) -> str:
+    """A potential verb's base in its own spelling (おける → おく), or "".
+
+    UniDic gives 放って|おけ|ない the potential base おける, which no dictionary
+    joins; the swap is taken only when the swapped reading is the lemma's
+    (オケル → オク), so 帰れる (lemma 返る) or a real ichidan verb never folds.
+    """
+    feature = getattr(token, "feature", None)
+    orth_base = extract_orth_base(token)
+    kana_base, l_form = getattr(feature, "kanaBase", None), getattr(feature, "lForm", None)
+    if _pos1(token) != "動詞" or not isinstance(kana_base, str) or not isinstance(l_form, str):
+        return ""
+    for derived, base in _FOLD_SUFFIX_PAIRS:
+        # The godan potential pairs only (ける → く), not the adjective or サ変 ones.
+        if len(base) != 1 or not derived.endswith("る") or not orth_base.endswith(derived):
+            continue
+        swapped = katakana_to_hiragana(kana_base)[: -len(derived)] + base
+        if orth_base[: -len(derived)] and swapped == katakana_to_hiragana(l_form):
+            return orth_base[: -len(derived)] + base
+    return ""
+
 
 # A span must END on a content token. Without this rule, JMdict's thousands of
 # inflected-form headwords (気にするな, 気をつけて, ああ言った …) would match a
@@ -292,7 +324,9 @@ class CompoundDictionaryMatcher:
                             if self._exist_cache.get(self._fixed_heads[(i, j)]):
                                 continue
                         elif not self._reading_fits(tokens[i : j + 1], candidate, kind) or (
-                            not self._can_end(tokens[j]) and not self._adverbial_fits(tokens, i, j, candidate)
+                            not self._can_end(tokens[j])
+                            and not (kind == "A" and _contraction_tail(tokens[j]))
+                            and not self._adverbial_fits(tokens, i, j, candidate)
                         ):
                             continue
                         synthetic = self._build_synthetic(tokens[i : j + 1], candidate, kind)
@@ -336,7 +370,7 @@ class CompoundDictionaryMatcher:
 
     def _can_end_span(self, token) -> bool:
         """Whether a span may end at ``token``: a content token, or an adverbial particle when tags are wired."""
-        if self._can_end(token):
+        if self._can_end(token) or _contraction_tail(token):
             return True
         return self._entry_tags is not None and _adverbial_end(token)
 
@@ -464,10 +498,18 @@ class CompoundDictionaryMatcher:
         接頭辞 heads would re-open the 気をつけて hole.
 
         kind A stays FIRST so a span that attests both keeps its pre-fix front.
+
+        A potential tail also offers its folded base (放って|おけ: おける → 放っておく),
+        and the ておく contraction とく its base (放っ|とい → 放っとく).
         """
+        if _contraction_tail(tail):
+            return ((prefix + extract_orth_base(tail), "A"),)
         if _pos1(tail) not in _INFLECTABLE_POS1:
             return ((joined, "B"),)
         alternatives: Alternatives = ((prefix + extract_orth_base(tail), "A"),)
+        folded = _potential_base(tail)
+        if folded:
+            alternatives += ((prefix + folded, "A"),)
         if _pos1(head) == "接頭辞" and _c_form(tail).startswith("連用形"):
             alternatives += ((joined, "B"),)
         return alternatives
@@ -516,7 +558,8 @@ class CompoundDictionaryMatcher:
         surface = "".join(t.surface for t in span)
         kana = "".join(extract_reading(t) for t in span)
         if kind == "A":
-            pos1 = _pos1(span[-1]) or "動詞"
+            # A contraction tail (とく) is 助動詞; the attested headword is a verb.
+            pos1 = "動詞" if _contraction_tail(span[-1]) else (_pos1(span[-1]) or "動詞")
             pos2 = "一般"
         else:
             # Inherit the tail's POS only when the tail is itself a content

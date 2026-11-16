@@ -393,6 +393,8 @@ _ANCHOR_HEADWORDS: tuple[str, ...] = (
     "折り入って",
     "済む",
     "残る",
+    # span-window: 放っておく, joined through the potential tail おけ (おける)
+    "放っておく",
     # kana-words: listed kana words, plus これは and でも attested on purpose so
     # only the list's own rules keep これ and leave 学校でも unjoined
     "もう",
@@ -454,6 +456,7 @@ _ANCHOR_RULES: dict[str, str] = {
     # span-window
     "済む": "v5m",
     "残る": "v5r",
+    "放っておく": "v5k",
 }
 
 # Readings for the rows the reading-gate category needs. Every other row keeps
