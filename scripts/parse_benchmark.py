@@ -402,6 +402,13 @@ _ANCHOR_HEADWORDS: tuple[str, ...] = (
     "北海道",
     "パリ",
     "秋葉原",
+    # kana-written: こく and かつ are words. はやる and こうする are DELIBERATELY
+    # attested (流行る and 抗する read that way), so kw09-kw11 fail on the
+    # glued-lemma reject, not on a dict miss.
+    "こく",
+    "かつ",
+    "はやる",
+    "こうする",
 )
 
 # Yomitan `ruleIdentifiers` per fixture headword. A real term bank ships these,
@@ -417,12 +424,13 @@ _ANCHOR_RULES: dict[str, str] = {
     **dict.fromkeys(("報いる", "帰れる", "見る", "恐れる", "いる", "くれる"), "v1"),
     **dict.fromkeys(("食べる", "気をつける"), "v1"),
     **dict.fromkeys(("笑う",), "v5u"),
-    **dict.fromkeys(("歩く", "動く"), "v5k"),
+    **dict.fromkeys(("歩く", "動く", "こく"), "v5k"),
     "帰る": "v5r",
     # godan, keyed by their final mora
     **dict.fromkeys(("乞う", "彷徨う", "出逢う", "言う", "しまう"), "v5u"),
     **dict.fromkeys(("保つ", "立つ", "待つ"), "v5t"),
-    **dict.fromkeys(("サボる", "やる", "わかる", "ある"), "v5r"),
+    **dict.fromkeys(("サボる", "やる", "わかる", "ある", "はやる"), "v5r"),
+    "こうする": "vs",
     "走り出す": "v5s",
     "すむ": "v5m",
     "おく": "v5k",

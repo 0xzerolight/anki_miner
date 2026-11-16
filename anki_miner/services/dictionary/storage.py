@@ -25,7 +25,7 @@ from anki_miner.exceptions import OperationCancelled
 from anki_miner.languages._spaced.form_of import form_targets, is_lemma_row
 from anki_miner.services._sqlite_index import open_readonly as open_readonly
 from anki_miner.services._sqlite_index import read_meta as read_meta
-from anki_miner.utils.text_utils import _is_kana_only, _is_kanji, katakana_to_hiragana
+from anki_miner.utils.text_utils import _is_kana_only, _is_kanji, is_hiragana_only, katakana_to_hiragana
 
 if TYPE_CHECKING:
     from anki_miner.languages.profile import DictKeyFolding
@@ -273,38 +273,49 @@ def _homograph_keep_mask(word: str, rows: list[tuple[str, str]], lemma: str | No
       union (OVH-026): a dictionary that double-keys ONE entry under both a kanji
       term (日本語, reading にほんご) and the bare kana term (にほんご) still unions
       both rows' tags on a kana query — that reading-only row is the SAME gloss,
-      not a wrong homograph. Monotone-safe: term-exact rows always survive, so a
-      word with one can never be emptied.
-    * **Rule A′** — no term-exact row, but the caller supplied the token's
-      lemma and at least one row's term equals it ⇒ keep the lemma-exact rows
-      (plus same-content duplicates, the Rule A carve-out). This is the
-      kana-front fix: mined_form ゆう (lemma 言う) resolves purely through the
-      folded-reading scan where every ゆう-reading homograph qualifies and
-      score ranking buries 言う under 有/夕/結う — the tokenizer already chose
-      the lexeme, so its lemma names the right rows. Kanji fronts can't reach
-      this rule: a kanji query fetches no reading matches, so it either has
-      term-exact rows (Rule A) or zero rows (miss → 5.2 fallback).
+      not a wrong homograph.
+    * **Rule A′** — the caller supplied the token's lemma and at least one
+      row's term equals it ⇒ keep the lemma-exact rows (plus same-content
+      duplicates, the Rule A carve-out). The tokenizer already chose the
+      lexeme, so its lemma names the right rows: mined_form ゆう (lemma 言う)
+      resolves purely through the folded-reading scan, where every ゆう-reading
+      homograph qualifies and score ranking buries 言う under 有/夕/結う.
+
+      For a hiragana front this rule runs BEFORE Rule A: an unrelated entry
+      that happens to be spelled the same (かつ "cutlet", こと the particle)
+      would otherwise shadow the word in the sentence (且つ, 事). A term-exact
+      row of the lemma's own entry shares its content and survives through the
+      carve-out. For any other front it runs only when no term-exact row
+      exists: UniDic gives a katakana token a native lemma as often wrongly
+      (サイコ → 柴胡, ノリ → 乗り) as rightly, so the spelling stays the better
+      evidence there. Kanji fronts can't reach this rule: a kanji query fetches
+      no reading matches, so it either has term-exact rows (Rule A) or zero
+      rows (miss → 5.2 fallback).
     * **Rule B** — kana-only query with NO term-exact (or lemma-exact) row ⇒
       keep only reading matches whose term carries at least one kanji (しゃべる
       keeps 喋る, drops the kana-term シャベル). May legitimately empty a junk
       kana front (accepted). Same-script kanji-vs-kanji ordering (汁 vs 知る)
       is out of scope.
 
-    Any other case (kanji query with no term-exact row — reading matches against a
-    kanji query are impossible) leaves the set intact.
+    Rules A and A′ always keep the rows they matched on, so neither can empty a
+    word. Any other case (kanji query with no term-exact row — reading matches
+    against a kanji query are impossible) leaves the set intact.
     """
     term_exact = [term == word for term, _ in rows]
+    lemma_exact = [term == lemma for term, _ in rows] if lemma and lemma != word else []
+    if any(lemma_exact) and (is_hiragana_only(word) or not any(term_exact)):
+        return _with_same_content(rows, lemma_exact)
     if any(term_exact):
-        exact_contents = {content for (_, content), ex in zip(rows, term_exact, strict=True) if ex}
-        return [ex or content in exact_contents for (_, content), ex in zip(rows, term_exact, strict=True)]
-    if lemma and lemma != word:
-        lemma_exact = [term == lemma for term, _ in rows]
-        if any(lemma_exact):
-            lemma_contents = {content for (_, content), ex in zip(rows, lemma_exact, strict=True) if ex}
-            return [ex or content in lemma_contents for (_, content), ex in zip(rows, lemma_exact, strict=True)]
+        return _with_same_content(rows, term_exact)
     if _is_kana_only(word):
         return [any(_is_kanji(c) for c in term) for term, _ in rows]
     return [True] * len(rows)
+
+
+def _with_same_content(rows: list[tuple[str, str]], matched: list[bool]) -> list[bool]:
+    """``matched`` widened to every row whose content a matched row already carries."""
+    contents = {content for (_, content), hit in zip(rows, matched, strict=True) if hit}
+    return [hit or content in contents for (_, content), hit in zip(rows, matched, strict=True)]
 
 
 def _nfc(value: str) -> str:

@@ -112,11 +112,13 @@ def test_anchor_strictly_beats_orthbase_on_kana_written() -> None:
     assert b_kw > a_kw, f"strategy (b) kana-written recall {b_kw} did not beat (a) {a_kw}"
 
 
-def test_anchor_meets_kana_written_recall_floor() -> None:
+def test_anchor_meets_kana_written_floor() -> None:
     results = _scored()
-    b_kw = recall(results["b-lite-anchor"].by_category["kana-written"])
-    # All 6 kana-written records must resolve, including archaic かんずる → かんじる.
-    assert b_kw == 1.0, f"strategy (b) kana-written recall {b_kw} below 1.0"
+    b_kw = results["b-lite-anchor"].by_category["kana-written"]
+    # Every kana-written record must resolve, including archaic かんずる → かんじる.
+    assert recall(b_kw) == 1.0, f"strategy (b) kana-written recall {recall(b_kw)} below 1.0"
+    # はやる glued from は + やる and こうする from こう + する are attested, and still not cards.
+    assert junk_rate(b_kw) == 0.0, f"strategy (b) kana-written junk_rate {junk_rate(b_kw)} above 0.0"
 
 
 def test_anchor_does_not_regress_guard_categories() -> None:

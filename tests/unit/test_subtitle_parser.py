@@ -1293,6 +1293,35 @@ class TestKanaWordRecovery:
         assert service._should_include_word(aux) is False
         assert service._should_include_word(main) is True
 
+    @pytest.mark.parametrize(
+        ("context", "surface", "lemma", "orth_base"),
+        [
+            ("オレはやる (は + やる)", "はやる", "逸る", "はやる"),
+            ("こうするつもり (こう + する)", "こうする", "抗する", "こうする"),
+            ("こうすりゃ良かった", "こうすりゃ", "抗する", "こうする"),
+        ],
+    )
+    def test_does_not_recover_a_verb_the_tagger_glued_from_two_words(
+        self, test_config, context, surface, lemma, orth_base
+    ):
+        # Attested on purpose (はやる reads 流行る too, こうする reads 抗する): the
+        # lemma, not a dict miss, must drop them (see _KANA_FUSED_LEMMAS).
+        lookup = _attest_lookup(orth_base)
+        service = self._service(test_config, lookup)
+        token = _make_token(surface, "動詞", pos2="一般", lemma=lemma, orth_base=orth_base)
+        assert service._should_include_word(token) is False, context
+        assert lookup.calls == []
+
+    def test_glued_verb_does_not_cache_away_its_real_homograph(self, test_config):
+        # 僕はやること tags はやる 逸る and 風邪がはやる tags it 流行る: same surface,
+        # pos1 and pos2, opposite verdicts, in either order.
+        glued = _make_token("はやる", "動詞", pos2="一般", lemma="逸る", orth_base="はやる")
+        real = _make_token("はやる", "動詞", pos2="一般", lemma="流行る", orth_base="はやる")
+        for first, second in ((glued, real), (real, glued)):
+            service = self._service(test_config, _attest_lookup("はやる"))
+            verdicts = {t.feature.lemma: service._should_include_word(t) for t in (first, second)}
+            assert verdicts == {"逸る": False, "流行る": True}
+
     def test_does_not_recover_only_prolonged_sound_marks(self, test_config):
         lookup = _attest_lookup("すごい")
         service = self._service(test_config, lookup)
