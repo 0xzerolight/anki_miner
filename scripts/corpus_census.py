@@ -152,8 +152,11 @@ def hook_rejects(parser: SubtitleParserService, sink: list[tuple[Any, str, str]]
             reason = rule.rejection(word_token)
             if reason is None:
                 reason = "fragment"  # included by the rule, then cut as a run or ellipsis fragment
-            elif parser._kana_recovery(word_token) is not None:
-                reason = "window"  # recovered as a kana word, then lost to a longer attested expression
+            elif (how := parser._kana_recovery(word_token)) is not None:
+                # Recovered as a kana word, then lost to a longer attested expression, or cut as a
+                # fragment (a bare いえ, a っ stem nothing continues, an ellipsis stutter).
+                windowed = how != "listed" and parser._rejected_by_lexicalized_window(word_token, tokens)
+                reason = "window" if windowed else "fragment"
             sink.append((word_token, reason, text))
         return accepted
 
