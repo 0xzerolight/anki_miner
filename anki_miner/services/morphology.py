@@ -532,13 +532,16 @@ def iter_token_spans(text: str, tokens: list) -> Iterator[tuple[Any, int, int]]:
         yield token, idx, tok_end
 
 
-def merge_compound_suffixes(tokens: list, attest: AttestLookup | None = None) -> list:
+def merge_compound_suffixes(
+    tokens: list, attest: AttestLookup | None = None, form_lookup: FormLookup | None = None
+) -> list:
     """Run all compound-merge passes in dependency order.
 
     Order matters:
     0. _retag_mistagged_tokens  — corrects a tag the next token disproves
        (あの filler before a noun → 連体詞, 今 prefix before a space → 名詞),
-       so every pass below sees it.
+       so every pass below sees it; with ``form_lookup``, an unknown katakana
+       noun the dictionary lists (スマホ) also gets its surface as lemma.
     1. _merge_prefix_compounds  — 接頭辞 + 名詞/形状詞 (e.g. 不+可能 → 不可能).
        Must run first so that downstream 名詞-suffix merge sees the
        synthetic 不可能 (pos1=名詞) as a valid head and chains correctly
@@ -562,7 +565,7 @@ def merge_compound_suffixes(tokens: list, attest: AttestLookup | None = None) ->
     productive, near-zero junk. ``attest=None`` (the default that keeps every
     existing direct caller byte-identical) leaves all three passes ungated.
     """
-    tokens = _retag_mistagged_tokens(tokens)
+    tokens = _retag_mistagged_tokens(tokens, form_lookup)
     tokens = _merge_prefix_compounds(tokens, attest)
     tokens = _merge_noun_suffixes(tokens, attest)
     tokens = _merge_verb_nominalizers(tokens)
@@ -974,8 +977,37 @@ _PREFIX_NOUNS: dict[str, dict[str, str]] = {
 }
 
 
-def _retag_mistagged_tokens(tokens: list) -> list:
-    """Correct a tagger part of speech the next token disproves.
+def _unknown_katakana_noun(token) -> bool:
+    """A katakana word the tagger does not know: a 名詞 with no lemma (スマホ, コスパ)."""
+    feature = getattr(token, "feature", None)
+    surface = getattr(token, "surface", "")
+    return (
+        getattr(feature, "pos1", None) == "名詞"
+        and not getattr(feature, "lemma", None)
+        and isinstance(surface, str)
+        and len(surface) >= 3
+        and all("ァ" <= ch <= "ヺ" or ch == "ー" for ch in surface)
+    )
+
+
+#: Entry tags of a sound or a cry, which JMdict often also tags ``n``
+#: (ピーポー 'nee-naw', オラオラ).
+_SOUND_TAGS = frozenset({"int", "on-mim"})
+
+
+def _dictionary_nouns(surfaces: set[str], form_lookup: FormLookup) -> set[str]:
+    """The surfaces the dictionary has a noun entry for (tag ``n``) and no sound or cry sense, in one probe."""
+    rows = form_lookup(sorted(surfaces))
+    nouns: set[str] = set()
+    for term, found in rows.items():
+        tags = {tag for _content, row_tags in found for tag in row_tags.split()}
+        if "n" in tags and not tags & _SOUND_TAGS:
+            nouns.add(term)
+    return nouns
+
+
+def _retag_mistagged_tokens(tokens: list, form_lookup: FormLookup | None = None) -> list:
+    """Correct a tagger part of speech the next token disproves, or fill in a lemma it lacks.
 
     Fugashi tokens carry the space before them as ``white_space``; a token
     without one counts as unspaced.
@@ -988,7 +1020,14 @@ def _retag_mistagged_tokens(tokens: list) -> list:
       'next' (今 駅にいる): the tagger skips the subtitle space and reads 今 駅
       as it reads 今大会. A prefix is never spaced from its noun, so the
       unspaced prefix (今大会, 次年度) stays one.
+    - A katakana word the tagger does not know (スマホ) is a 名詞 with no lemma,
+      which no inclusion check takes. With a dictionary that has a noun entry
+      for it, its surface becomes its lemma. The noun entry is required, and a
+      sound or cry sense refused, because the dictionary also lists katakana
+      interjections and sound words (ワーオ, ピーポー), some of them as nouns.
     """
+    unknown = {token.surface for token in tokens if _unknown_katakana_noun(token)}
+    nouns = _dictionary_nouns(unknown, form_lookup) if unknown and form_lookup is not None else set()
     out: list = []
     for i, token in enumerate(tokens):
         pos1 = getattr(getattr(token, "feature", None), "pos1", None)
@@ -1001,6 +1040,8 @@ def _retag_mistagged_tokens(tokens: list) -> list:
                 fields = _FILLER_PRENOUNS.get(token.surface)
         elif pos1 == "接頭辞" and spaced:
             fields = _PREFIX_NOUNS.get(token.surface)
+        elif token.surface in nouns and _unknown_katakana_noun(token):
+            fields = dict.fromkeys(("lemma", "orthBase", "kana"), token.surface)
         out.append(token if fields is None else RetaggedToken(token, fields))
     return out
 

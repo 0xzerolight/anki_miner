@@ -44,3 +44,32 @@ class TestNounReadAsAPrefixAcrossASpace:
         fronts = _mine(test_config, line)
         assert "今" not in fronts
         assert "次" not in fronts
+
+
+class TestUnknownKatakanaNoun:
+    _ROWS = {
+        "スマホ": [("smartphone", "n abbr"), ("", "forms")],
+        "ワーオ": [("wow", "int"), ("", "forms")],
+        "ピーポー": [("nee-naw", "n on-mim"), ("", "forms")],
+    }
+
+    def _mine_with_rows(self, test_config, line):
+        service = SubtitleParserService(
+            test_config,
+            term_lookup=lambda terms: set(),
+            form_lookup=lambda terms: {term: self._ROWS[term] for term in terms if term in self._ROWS},
+        )
+        words, _index, _counts = service.parse_text_units(
+            [ReadingUnit(text=line, index=0, location_label="t")], want_line_index=False
+        )
+        return {word.mined_form: word.reading for word in words}
+
+    def test_mines_a_loanword_the_tagger_does_not_know(self, test_config):
+        assert self._mine_with_rows(test_config, "スマホを見て")["スマホ"] == "スマホ"
+
+    @pytest.mark.parametrize(("line", "front"), [("ワーオ！すごい", "ワーオ"), ("ピーポーと鳴る", "ピーポー")])
+    def test_a_sound_or_cry_the_dictionary_lists_stays_unmined(self, test_config, line, front):
+        assert front not in self._mine_with_rows(test_config, line)
+
+    def test_needs_a_dictionary(self, test_config):
+        assert "スマホ" not in _mine(test_config, "スマホを見て")
