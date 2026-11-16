@@ -1,0 +1,2 @@
+{"id":"swk01","sentence":"戦い方が悪い","expected":["戦う","悪い"],"category":"span-window","note":"戦い方 has no dictionary entry: the verb-nominalizer pass leaves the verb, which mines as 戦う."}
+{"id":"swk02","sentence":"読み方が悪い","expected":["読み方","悪い"],"category":"span-window","note":"読み方 is attested, so it stays one word."}

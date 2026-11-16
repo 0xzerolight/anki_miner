@@ -384,6 +384,9 @@ _ANCHOR_HEADWORDS: tuple[str, ...] = (
     "詰まらない",
     "時に",
     "残らず",
+    # span-window: 読み方 attested so the gated verb-nominalizer pass keeps it
+    # whole; 戦い方 deliberately absent so the pass leaves 戦う and 方 apart
+    "読み方",
     # kana-words: listed kana words, plus これは and でも attested on purpose so
     # only the list's own rules keep これ and leave 学校でも unjoined
     "もう",
