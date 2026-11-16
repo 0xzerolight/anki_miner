@@ -251,6 +251,21 @@ class TestRawNameSpanMerge:
 
             assert [token.surface for token in out] == [token.surface for token in tokens], text
 
+    def test_place_name_of_a_place_word_and_a_position_does_not_merge(self):
+        # 家の前 is a place name in the wordset; in 家の前で待つ it is 'in front of the house'.
+        tokens = [_tok("家", "名詞", "普通名詞"), _tok("の", "助詞", "格助詞"), _tok("前", "名詞", "普通名詞")]
+
+        out = _name_matcher({"家の前"}).merge_line("家の前", tokens)
+
+        assert [token.surface for token in out] == ["家", "の", "前"]
+
+    def test_name_with_inner_no_still_merges(self):
+        tokens = [_tok("鞆", "名詞", "固有名詞"), _tok("の", "助詞", "格助詞"), _tok("浦", "名詞", "普通名詞")]
+
+        out = _name_matcher({"鞆の浦"}).merge_line("鞆の浦", tokens)
+
+        assert [token.surface for token in out] == ["鞆の浦"]
+
     def test_whitespace_pair_not_merged_when_same_name_occurs_later(self):
         tokens = [
             _tok("夏", "名詞", "普通名詞", kana="ナツ"),

@@ -493,6 +493,11 @@ class CompoundDictionaryMatcher:
 _NAME_START_GRAMMAR = frozenset({"助詞", "助動詞", "連体詞", "動詞"})
 _NAME_END_GRAMMAR = frozenset({"助詞", "助動詞"})
 
+# 家の前, 山の上 and 坂の下 are place names in the wordsets, and in nearly every
+# line 'in front of the house'. A name ending on の + a position word is refused;
+# other names with an inner の (鞆の浦, 華厳の滝) still merge.
+_NAME_POSITION_TAILS = frozenset({"前", "上", "下", "奥", "中", "横", "後", "裏", "外", "内", "隣", "側", "脇"})
+
 
 def _hiragana_tagged(token, pos1s: frozenset[str]) -> bool:
     surface = getattr(token, "surface", None) or ""
@@ -517,6 +522,8 @@ class NameSpanMatcher(CompoundDictionaryMatcher):
 
     @staticmethod
     def _candidate_for_tail(prefix: str, tail, joined: str, head) -> Alternatives:
+        if prefix.endswith("の") and tail.surface in _NAME_POSITION_TAILS:
+            return ()
         return ((joined, "B"),)
 
     def _can_start(self, token) -> bool:
