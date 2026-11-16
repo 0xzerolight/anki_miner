@@ -1,3 +1,5 @@
 {"id":"kn01","sentence":"あの女は嫌いだ","expected":["あの","女","嫌い"],"category":"kana-listed","note":"unidic-lite tags this あの as the filler; right before a noun it is the listed pre-noun adjective."}
 {"id":"kn02","sentence":"あのね、聞いて","expected":["聞く"],"category":"kana-listed","note":"A filler before a particle stays unmined."}
 {"id":"kn03","sentence":"あの 山田さん","expected":[],"category":"kana-listed","note":"A filler before a space stays unmined; the name is excluded by default."}
+{"id":"kn04","sentence":"今 駅にいる","expected":["今","駅"],"category":"kana-listed","note":"unidic-lite reads 今 before a subtitle space as the prefix コン (as in 今大会); spaced, it is the noun いま."}
+{"id":"kn05","sentence":"今大会で優勝した","expected":["大会","優勝"],"category":"kana-listed","note":"The unspaced prefix stays a prefix."}

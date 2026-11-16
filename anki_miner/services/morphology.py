@@ -537,7 +537,8 @@ def merge_compound_suffixes(tokens: list, attest: AttestLookup | None = None) ->
 
     Order matters:
     0. _retag_mistagged_tokens  — corrects a tag the next token disproves
-       (あの filler before a noun → 連体詞), so every pass below sees it.
+       (あの filler before a noun → 連体詞, 今 prefix before a space → 名詞),
+       so every pass below sees it.
     1. _merge_prefix_compounds  — 接頭辞 + 名詞/形状詞 (e.g. 不+可能 → 不可能).
        Must run first so that downstream 名詞-suffix merge sees the
        synthetic 不可能 (pos1=名詞) as a valid head and chains correctly
@@ -953,25 +954,54 @@ _FILLER_PRENOUNS: dict[str, dict[str, str]] = {
 }
 
 
+#: The nouns unidic-lite also reads as a one-kanji prefix (今 コン, 次 ジ), with
+#: the fields its noun reading carries (今は, 次は tag 名詞).
+_PREFIX_NOUNS: dict[str, dict[str, str]] = {
+    "今": {
+        "pos1": "名詞",
+        "pos2": "普通名詞",
+        "pos3": "副詞可能",
+        **dict.fromkeys(("lForm", "pron", "pronBase", "kana", "kanaBase", "form", "formBase"), "イマ"),
+        "goshu": "和",
+    },
+    "次": {
+        "pos1": "名詞",
+        "pos2": "普通名詞",
+        "pos3": "一般",
+        **dict.fromkeys(("lForm", "pron", "pronBase", "kana", "kanaBase", "form", "formBase"), "ツギ"),
+        "goshu": "和",
+    },
+}
+
+
 def _retag_mistagged_tokens(tokens: list) -> list:
     """Correct a tagger part of speech the next token disproves.
 
-    あの/その tagged as the filler directly before a noun, with no space or mark
-    between, are the pre-noun adjective (あの女, あの橋): a filler is followed by
-    a pause or a particle (あの…, あの 山田さん, あのね). A pronoun is left out on
-    purpose: あの私 is "um, I". Fugashi tokens carry the space before them as
-    ``white_space``; a token without one counts as unspaced.
+    Fugashi tokens carry the space before them as ``white_space``; a token
+    without one counts as unspaced.
+
+    - あの/その tagged as the filler directly before a noun, with no space or
+      mark between, are the pre-noun adjective (あの女, あの橋): a filler is
+      followed by a pause or a particle (あの…, あの 山田さん, あのね). A pronoun
+      is left out on purpose: あの私 is "um, I".
+    - 今/次 tagged as a prefix with a space after them are the nouns 'now' and
+      'next' (今 駅にいる): the tagger skips the subtitle space and reads 今 駅
+      as it reads 今大会. A prefix is never spaced from its noun, so the
+      unspaced prefix (今大会, 次年度) stays one.
     """
     out: list = []
     for i, token in enumerate(tokens):
-        fields = _FILLER_PRENOUNS.get(token.surface)
-        feature = getattr(token, "feature", None)
-        if fields is not None and getattr(feature, "pos1", None) == "感動詞" and i + 1 < len(tokens):
-            nxt = tokens[i + 1]
-            if getattr(getattr(nxt, "feature", None), "pos1", None) == "名詞" and not getattr(nxt, "white_space", ""):
-                out.append(RetaggedToken(token, fields))
-                continue
-        out.append(token)
+        pos1 = getattr(getattr(token, "feature", None), "pos1", None)
+        nxt = tokens[i + 1] if i + 1 < len(tokens) else None
+        white_space = getattr(nxt, "white_space", "")
+        spaced = isinstance(white_space, str) and bool(white_space)
+        fields = None
+        if pos1 == "感動詞" and nxt is not None and not spaced:
+            if getattr(getattr(nxt, "feature", None), "pos1", None) == "名詞":
+                fields = _FILLER_PRENOUNS.get(token.surface)
+        elif pos1 == "接頭辞" and spaced:
+            fields = _PREFIX_NOUNS.get(token.surface)
+        out.append(token if fields is None else RetaggedToken(token, fields))
     return out
 
 

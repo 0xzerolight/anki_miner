@@ -26,3 +26,21 @@ class TestFillerBeforeANoun:
     def test_a_filler_before_a_pronoun_stays_unmined(self, test_config):
         # あの私 is "um, I": a pronoun after the filler is the start of the reply.
         assert "あの" not in _mine(test_config, "あの私は")
+
+
+class TestNounReadAsAPrefixAcrossASpace:
+    @pytest.mark.parametrize(("line", "front"), [("今 駅にいる", "今"), ("次 頑張ります", "次")])
+    def test_mines_the_noun(self, test_config, line, front):
+        assert front in _mine(test_config, line)
+
+    def test_reads_the_noun(self, test_config):
+        service = SubtitleParserService(test_config, kana_attest_lookup=lambda forms: dict.fromkeys(forms, True))
+        units = [ReadingUnit(text="今 駅にいる", index=0, location_label="t")]
+        words, _index, _counts = service.parse_text_units(units, want_line_index=False)
+        assert {word.mined_form: word.reading for word in words}["今"] == "イマ"
+
+    @pytest.mark.parametrize("line", ["今大会で優勝した", "次年度の予算"])
+    def test_the_prefix_stays_a_prefix(self, test_config, line):
+        fronts = _mine(test_config, line)
+        assert "今" not in fronts
+        assert "次" not in fronts
