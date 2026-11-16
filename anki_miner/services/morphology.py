@@ -464,6 +464,42 @@ def source_spelling_fold(orth_base: str, l_form: str, kana_base: str) -> str | N
     return None
 
 
+# Godan 未然形 a-row kana → the dictionary-form u-row kana (行か → 行く).
+_A_ROW_TO_U_ROW = {
+    "か": "く",
+    "が": "ぐ",
+    "さ": "す",
+    "た": "つ",
+    "な": "ぬ",
+    "ば": "ぶ",
+    "ま": "む",
+    "ら": "る",
+    "わ": "う",
+}
+# Ichidan stem endings: the e/i-row kana before a short causative さす (食べさす).
+_ICHIDAN_STEM_KANA = frozenset("えけげせぜてでねべぺめれいきぎしじちにびみり")
+
+
+def short_causative_bases(orth_base: str) -> list[str]:
+    """Base verbs a short causative headword can come from, in the line's spelling.
+
+    UniDic gives the short causative its own -す lexeme (行かさ|れ|た: 行かす,
+    食べさす), which a dictionary rarely lists. 行かす → 行く; 食べさす → 食べる,
+    only when a kana e/i-row stem proves the ichidan reading (出さす stays 出す).
+    The caller keeps the -す front when it is attested and uses the first
+    attested base otherwise.
+    """
+    bases: list[str] = []
+    if not orth_base.endswith("す") or len(orth_base) < 3:
+        return bases
+    if orth_base.endswith("さす") and orth_base[-3] in _ICHIDAN_STEM_KANA:
+        bases.append(orth_base[:-2] + "る")
+    u_row = _A_ROW_TO_U_ROW.get(orth_base[-2])
+    if u_row is not None:
+        bases.append(orth_base[:-2] + u_row)
+    return bases
+
+
 def extract_reading(word_token) -> str:
     """Extract kana reading from word token.
 

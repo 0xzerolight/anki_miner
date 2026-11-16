@@ -121,3 +121,36 @@ class TestPotentialFoldInSourceSpelling:
         service = _service(test_config, {"いる"})
         token = self._potential("いれる", "居る", "イル", "イレル")
         assert service._resolve_front(token, "いれる", "いれる", 0, 3) == "いれる"
+
+
+class TestShortCausativeFront:
+    """A short causative UniDic lemmatizes to an unattested -す verb cards the base verb."""
+
+    @staticmethod
+    def _causative(orth_base: str, reading: str) -> MagicMock:
+        token = _verb_token(orth_base, orth_base, "五段-サ行", "未然形-一般")
+        token.feature.lForm = reading
+        token.feature.kanaBase = reading
+        return token
+
+    def test_godan_short_causative_cards_the_base_verb(self, test_config):
+        service = _service(test_config, {"行く"})
+        token = self._causative("行かす", "イカス")
+        assert service._resolve_front(token, "行かす", "行かさ", 0, 3) == "行く"
+
+    def test_ichidan_short_causative_cards_the_base_verb(self, test_config):
+        service = _service(test_config, {"食べる"})
+        token = self._causative("食べさす", "タベサス")
+        assert service._resolve_front(token, "食べさす", "食べさす", 0, 4) == "食べる"
+
+    def test_attested_asu_verb_is_kept(self, test_config):
+        service = _service(test_config, {"聞かす", "聞く"})
+        token = self._causative("聞かす", "キカス")
+        assert service._resolve_front(token, "聞かす", "聞かす", 0, 3) == "聞かす"
+
+    def test_kanji_before_sasu_is_the_godan_verb(self, test_config):
+        # 出さす is the short causative of 出す or of 出る; only a kana e/i-row
+        # stem proves the ichidan reading, so 出さす cards 出す.
+        service = _service(test_config, {"出す", "出る"})
+        token = self._causative("出さす", "ダサス")
+        assert service._resolve_front(token, "出さす", "出さす", 0, 3) == "出す"

@@ -58,6 +58,7 @@ from anki_miner.services.morphology import (
     replace_overridden_spans,
     resolve_attested_reading,
     resolve_reading_override,
+    short_causative_bases,
     source_spelling_fold,
 )
 from anki_miner.services.number_counters import merge_number_counters
@@ -2668,10 +2669,21 @@ class SubtitleParserService:
         prove divergence, so the front is conservatively kept. Attestation is
         memoized via the shared ``_memoized_attest`` probe.
         """
+        feature = getattr(word_token, "feature", None)
+        if getattr(feature, "pos1", None) == "動詞" and not _is_pure_hiragana(orth_base):
+            # A short causative is its own -す lexeme to UniDic (行かさ|れ|た: lemma
+            # and orthBase 行かす), which no dictionary has: card the base verb in
+            # the line's spelling. An attested -asu verb (聞かす, 驚かす) stays.
+            bases = short_causative_bases(orth_base)
+            if bases:
+                attested = self._memoized_attest([orth_base, *bases])
+                if orth_base not in attested:
+                    for base in bases:
+                        if base in attested:
+                            return base
         lemma = extract_lemma(word_token)
         if not lemma or lemma == orth_base:
             return orth_base
-        feature = getattr(word_token, "feature", None)
         l_form = getattr(feature, "lForm", None)
         kana_base = getattr(feature, "kanaBase", None)
         if not isinstance(l_form, str) or not isinstance(kana_base, str):

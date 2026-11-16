@@ -276,6 +276,10 @@ _ANCHOR_HEADWORDS: tuple[str, ...] = (
     # verb-voice: いえる is DELIBERATELY attested so vv07 fails on the bare-いえ
     # reject, not on a dict miss
     "いえる",
+    # verb-voice: short causatives (行かす, 食べさす) card the base verb; 聞かす is
+    # an attested -asu verb and stays
+    "行く",
+    "聞かす",
     # jiru-zuru modern headwords (the fix's targets)
     "感じる",
     "論じる",
@@ -439,6 +443,8 @@ _ANCHOR_RULES: dict[str, str] = {
     "従う": "v5u",
     **dict.fromkeys(("やり直す", "治す"), "v5s"),
     **dict.fromkeys(("近づける", "いえる"), "v1"),
+    "行く": "v5",
+    "聞かす": "v5s",
     # ichidan (jiru-zuru targets + other ichidan guards)
     **dict.fromkeys(("感じる", "論じる", "信じる", "生じる", "演じる", "通じる", "準じる", "かんじる"), "v1"),
     **dict.fromkeys(("報いる", "帰れる", "見る", "恐れる", "いる", "くれる"), "v1"),
