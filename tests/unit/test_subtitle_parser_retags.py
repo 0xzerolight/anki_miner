@@ -1,4 +1,4 @@
-"""Tagger parts of speech the token post-pass corrects (morphology._retag_mistagged_tokens)."""
+"""Tagger parts of speech the token post-pass corrects (morphology.retag_mistagged_tokens)."""
 
 import pytest
 

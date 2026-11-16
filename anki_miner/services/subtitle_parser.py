@@ -59,6 +59,7 @@ from anki_miner.services.morphology import (
     replace_overridden_spans,
     resolve_attested_reading,
     resolve_reading_override,
+    retag_mistagged_tokens,
     short_causative_bases,
     source_spelling_fold,
 )
@@ -430,6 +431,15 @@ def _is_all_katakana(surface: str) -> bool:
     return bool(non_ws) and all(_is_katakana_surface_char(c) for c in non_ws)
 
 
+def _cue_line_gate(
+    has_target_script: Callable[[str], bool] | None, skip_line: Callable[[str], bool] | None
+) -> Callable[[str], bool] | None:
+    """The bilingual-cue line gate: a line in the mining script that ``skip_line`` does not name."""
+    if has_target_script is None or skip_line is None:
+        return has_target_script
+    return lambda line: has_target_script(line) and not skip_line(line)
+
+
 def _is_godan_imperative(feature: Any) -> bool:
     """Whether the tagger read the token as a godan verb's 命令形 (持て, 従え)."""
     ctype = getattr(feature, "cType", None)
@@ -736,8 +746,11 @@ class SubtitleParserService:
         # Bilingual-cue line gate; None ⇒ every physical line of a cue is kept.
         # Injected once per instance, so the per-FILE line cache below can never
         # replay line state tokenized under a different gate.
-        self._has_target_script = has_target_script
-        # Same-script foreign-line reject (see the skip_line argument); None ⇒ off.
+        # In a multi-line cue a line skip_line names goes with the other-script
+        # lines: it is judged per physical line here, before the cue is flattened.
+        self._has_target_script = _cue_line_gate(has_target_script, skip_line)
+        # Same-script foreign-line reject for the flattened cue (see the
+        # skip_line argument): what is left for it is a cue of such lines only.
         self._skip_line = skip_line
         # Sentence furigana/reading generation (spec 6.1 #2); False ⇒ the three
         # annotation fields stay "".
@@ -1099,19 +1112,30 @@ class SubtitleParserService:
     def _own_base_reading(word_token: Any, mined: str) -> str:
         """Hiragana ``kanaBase`` of a real token whose card front is its own orthBase.
 
-        Returns ``""`` for synthetic/compound tokens, a front that is not the
-        token's own ``orthBase`` (folded or resolver-overridden), or a missing /
-        ``*`` / non-string ``kanaBase``; the caller then re-derives the reading.
+        A front that is the token's potential folded on its own stem takes the
+        lemma reading instead. Returns ``""`` for synthetic/compound tokens, any
+        other front that is not the token's own ``orthBase`` (folded or
+        resolver-overridden), or a missing / ``*`` / non-string ``kanaBase``;
+        the caller then re-derives the reading.
         """
         if isinstance(word_token, SyntheticToken) or getattr(word_token, "compound", False) is True:
             return ""
         feature = getattr(word_token, "feature", None)
+        orth_base = getattr(feature, "orthBase", None)
         kana_base = getattr(feature, "kanaBase", None)
-        if getattr(feature, "orthBase", None) != mined or not isinstance(kana_base, str):
+        if not isinstance(kana_base, str) or kana_base in ("", "*"):
             return ""
-        if kana_base in ("", "*"):
+        if orth_base == mined:
+            return katakana_to_hiragana(kana_base)
+        # A potential folded on its own stem (帰せる → 帰す): the fold exists only
+        # because the same swap on kanaBase gives the lemma's reading, so that
+        # reading is the front's. Tagged alone, 帰す reads きす and 見出す みだす.
+        l_form = getattr(feature, "lForm", None)
+        if not isinstance(orth_base, str) or not isinstance(l_form, str):
             return ""
-        return katakana_to_hiragana(kana_base)
+        if source_spelling_fold(orth_base, l_form, kana_base) != mined:
+            return ""
+        return katakana_to_hiragana(l_form)
 
     def _reading(self, s: str) -> str:
         """Return generate_reading(s, tagger), memoized within the current parse pass."""
@@ -1494,6 +1518,10 @@ class SubtitleParserService:
         self._tokenize_time_s += time.perf_counter() - tokenize_start
         if self._token_post_pass is not None:
             raw_tokens = list(self._token_post_pass(raw_tokens, self._attest, self._form_lookup))
+        # Tagger corrections go on the raw stream: the sentence display is built
+        # from it, and a correction that re-cuts two tokens (自|分ち) would
+        # otherwise leave the raw and merged streams out of step for the line.
+        raw_tokens = retag_mistagged_tokens(raw_tokens, self._form_lookup)
         merged_tokens = self._merge_compound_suffixes(raw_tokens)
         # Language-specific merge (ko: 공부 + 하 → 공부하다). Placed with the other
         # merge passes and gated on the same probe; no probe ⇒ no merge.
@@ -2590,12 +2618,14 @@ class SubtitleParserService:
     def _merge_compound_suffixes(self, tokens: list) -> list:
         """Run all compound-merge passes (see morphology.merge_compound_suffixes).
 
-        Threads the per-instance memoized attest probe and the form lookup: with
+        Threads the per-instance memoized attest probe: with
         an offline dict the junk-prone noun-suffix/prefix passes are
         attested-or-bail gated; ``None``
         (no dict) leaves them ungated — output byte-identical to pre-gate.
+        The tokens are already tagger-corrected (``_build_line_state``), so no
+        form lookup is handed on: the pass's own correction step finds nothing.
         """
-        return merge_compound_suffixes(tokens, attest=self._attest, form_lookup=self._form_lookup)
+        return merge_compound_suffixes(tokens, attest=self._attest)
 
     def _extract_lemma(self, word_token) -> str:
         """Extract lemma (dictionary form) from a token (see morphology.extract_lemma)."""
@@ -2646,8 +2676,11 @@ class SubtitleParserService:
         # A godan imperative (持て, 従え) is never an -eru verb: its e-stem spelling
         # is also the stem of the attested ichidan 持てる/従える, which shares the
         # longer prefix and would win the resolver's rank. The tagger's 命令形
-        # already names the verb, so the resolver is skipped for it.
-        godan_imperative = _is_godan_imperative(feature)
+        # already names the verb, so the resolver is skipped for it. Only for a
+        # verb the dictionary has: the tagger also reads a line-final ichidan
+        # stem (仲間に引き入れ) as the imperative of a godan verb that does not
+        # exist (引き入る), and the resolver finds 引き入れる for that.
+        godan_imperative = _is_godan_imperative(feature) and self._godan_verb_exists(orth_base)
         # A godan passive (刺さ|れ|た) is never the -aru verb 刺さる whose potential
         # spells 刺される: that one candidate is taken out of the resolver's pool.
         passive_aru = _godan_passive_aru_verb(word_token, inflected_surface)
@@ -2683,6 +2716,10 @@ class SubtitleParserService:
                 self._front_cache.clear()
             self._front_cache[key] = cached
         return cached
+
+    def _godan_verb_exists(self, orth_base: str) -> bool:
+        """Whether the dictionary has *orth_base*; True with no dictionary wired (nothing to ask)."""
+        return self._attest is None or orth_base in self._attest([orth_base])
 
     def _attest_or_remap_front(self, word_token, orth_base: str) -> str:
         """Remap a non-attested derived 動詞/形容詞 front to its attested lemma.

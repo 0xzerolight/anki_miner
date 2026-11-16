@@ -594,7 +594,7 @@ def merge_compound_suffixes(
     """Run all compound-merge passes in dependency order.
 
     Order matters:
-    0. _retag_mistagged_tokens  — corrects a tag the next token disproves
+    0. retag_mistagged_tokens  — corrects a tag the next token disproves
        (あの filler before a noun → 連体詞, 今 prefix before a space → 名詞),
        so every pass below sees it; with ``form_lookup``, an unknown katakana
        noun the dictionary lists (スマホ) also gets its surface as lemma.
@@ -622,7 +622,7 @@ def merge_compound_suffixes(
     ``attest=None`` (the default that keeps every existing direct caller
     byte-identical) leaves all three passes ungated.
     """
-    tokens = _retag_mistagged_tokens(tokens, form_lookup)
+    tokens = retag_mistagged_tokens(tokens, form_lookup)
     tokens = _merge_prefix_compounds(tokens, attest)
     tokens = _merge_noun_suffixes(tokens, attest)
     tokens = _merge_verb_nominalizers(tokens, attest)
@@ -992,7 +992,7 @@ def _attested_prefix_surfaces(tokens: list, attest: AttestLookup) -> set[str]:
 
 
 class RetaggedToken:
-    """A tagger token whose part of speech ``_retag_mistagged_tokens`` corrected.
+    """A tagger token whose part of speech ``retag_mistagged_tokens`` corrected.
 
     Every feature the replacement does not name stays the tagger's own, so the
     token mines exactly as the tagger's other reading of the same word would.
@@ -1086,7 +1086,7 @@ def _dictionary_nouns(surfaces: set[str], form_lookup: FormLookup) -> set[str]:
     return nouns
 
 
-def _retag_mistagged_tokens(tokens: list, form_lookup: FormLookup | None = None) -> list:
+def retag_mistagged_tokens(tokens: list, form_lookup: FormLookup | None = None) -> list:
     """Correct a tagger part of speech the next token disproves, or fill in a lemma it lacks.
 
     Fugashi tokens carry the space before them as ``white_space``; a token

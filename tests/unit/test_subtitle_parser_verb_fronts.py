@@ -77,6 +77,13 @@ class TestGodanImperativeFront:
         token = _verb_token("持て", "持つ", "五段-タ行", "命令形")
         assert service._resolve_front(token, "持つ", "持て", 0, 2) == "持つ"
 
+    def test_imperative_of_a_godan_verb_that_does_not_exist_goes_to_the_resolver(self, test_config):
+        # The tagger reads a line-final 引き入れ (仲間に引き入れ) as the imperative
+        # of 引き入る, which no dictionary has; the resolver finds 引き入れる.
+        service = _service(test_config, {"引き入れる"})
+        token = _verb_token("引き入れ", "引き入る", "五段-ラ行", "命令形")
+        assert service._resolve_front(token, "引き入る", "引き入れ", 0, 4) == "引き入れる"
+
     def test_ichidan_stem_still_resolves(self, test_config):
         # The じる/ずる rewrite the resolver exists for is not a godan imperative.
         service = _service(test_config, {"感じる"})
@@ -222,3 +229,38 @@ class TestKatakanaVerbFoldToLemmaReading:
         # No lemma is passed for an adjective: カワイイ stays katakana by ruling.
         service = self._service(test_config, others=("カワイイ",), readings={"可愛い": ["かわいい"]})
         assert service._fold_katakana_verb_front("カワイイ") == "カワイイ"
+
+
+@pytest.mark.skipif(not _fugashi_available(), reason="fugashi/unidic-lite not installed")
+class TestReviewRegressions:
+    """Real-tagger cases the integration review found."""
+
+    @staticmethod
+    def _words(text: str, attested: set[str]):
+        from anki_miner.config.config import AnkiMinerConfig
+        from anki_miner.models.reading import ReadingUnit
+        from anki_miner.services.subtitle_parser import SubtitleParserService
+
+        service = SubtitleParserService(
+            AnkiMinerConfig(), term_lookup=lambda terms: {term for term in terms if term in attested}
+        )
+        words, _index, _counts = service.parse_text_units(
+            [ReadingUnit(text=text, index=0, location_label="t")], want_line_index=False
+        )
+        return {word.mined_form: word for word in words}
+
+    @pytest.mark.parametrize(
+        ("text", "front", "reading"),
+        [("今夜は帰せない", "帰す", "かえす"), ("答えを見出せない", "見出す", "みいだす")],
+    )
+    def test_folded_potential_keeps_the_lines_reading(self, text, front, reading):
+        # Tagged alone, 帰す reads きす and 見出す reads みだす.
+        words = self._words(text, {front})
+
+        assert words[front].expression_reading == reading
+
+    def test_a_tagger_correction_reaches_the_sentence_furigana(self):
+        words = self._words("今 駅にいる", {"今", "駅"})
+
+        assert "今[いま]" in words["今"].sentence_furigana
+        assert "今[こん]" not in words["今"].sentence_furigana

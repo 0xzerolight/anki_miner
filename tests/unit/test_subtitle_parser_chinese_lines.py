@@ -61,3 +61,22 @@ def test_korean_parser_has_no_chinese_line_skip():
     parser = _create_subtitle_parser(switch_language(AnkiMinerConfig(), "ko"), defer_tagger=True)
 
     assert parser._skip_line is None
+
+
+@pytest.mark.parametrize(
+    "chinese",
+    [
+        "你真的没事吗？",  # simplified
+        "你真的沒事嗎？",  # traditional: only the kana-less line itself shows it is Chinese
+    ],
+)
+def test_a_bilingual_cue_keeps_its_japanese_line(tmp_path, chinese):
+    # Judged as one flattened cue, the simplified pair lost its Japanese half
+    # and the traditional pair kept the Chinese in the card sentence.
+    parser = _create_subtitle_parser(AnkiMinerConfig())
+    path = _srt(tmp_path, f"本当に大丈夫ですか？\n{chinese}")
+
+    words = parser.parse_subtitle_file(path)
+
+    assert {word.sentence for word in words} == {"本当に大丈夫ですか？"}
+    assert "大丈夫" in {word.mined_form for word in words}
