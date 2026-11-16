@@ -5,7 +5,7 @@
 {"id":"vv05","sentence":"病気を治せる","expected":["病気","治す"],"category":"verb-voice","note":"potential whose lemma swaps the kanji (直す): the fold keeps the line's 治"}
 {"id":"vv06","sentence":"顔を近づける","expected":["顔","近づける"],"category":"verb-voice","note":"guard: an attested -eru front is a real word and stays"}
 {"id":"vv07","sentence":"いえ そうじゃないんです","expected":[],"category":"verb-voice","note":"the interjection いえ the tagger reads as the potential いえる: a bare いえ with no inflection after it is not the verb"}
-{"id":"vv08","sentence":"本当のことはいえない","expected":["本当","いえる"],"category":"verb-voice","note":"guard: いえない inflects, so it stays the verb (いえる is attested on purpose)"}
+{"id":"vv08","sentence":"本当のことはいえない","expected":["本当","こと","いえる"],"category":"verb-voice","note":"guard: いえない inflects, so it stays the verb (いえる is attested on purpose)"}
 {"id":"vv09","sentence":"セミナーに行かされた","expected":["セミナー","行く"],"category":"verb-voice","note":"short causative-passive: UniDic lemmatizes 行かさ to 行かす, which no dictionary has; the base verb is the card"}
 {"id":"vv10","sentence":"子供に野菜を食べさす","expected":["子供","野菜","食べる"],"category":"verb-voice","note":"ichidan short causative 食べさす carded as 食べる"}
 {"id":"vv11","sentence":"話を聞かす","expected":["話","聞かす"],"category":"verb-voice","note":"guard: an attested -asu verb (聞かす) is a real word and stays"}
