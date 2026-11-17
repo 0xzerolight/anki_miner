@@ -515,6 +515,22 @@ class SubtitlePlayerWidget(QWidget):
         controls_layout.addWidget(self.frame_back_button)
         controls_layout.addWidget(self.frame_forward_button)
         controls_layout.addStretch()
+        # Subtitles on/off, at the row's end as in a media player. Only the
+        # overlay has it: a cue drawn over the picture covers subtitles burned
+        # into the video, the strips under it never do. Checked = shown.
+        label = self.tr("Show subtitles over the video")
+        self.subtitles_button = QToolButton()
+        self.subtitles_button.setObjectName("subtitles_toggle")
+        self.subtitles_button.setText("CC")
+        self.subtitles_button.setToolTip(label)
+        self.subtitles_button.setAccessibleName(label)
+        self.subtitles_button.setAutoRaise(True)
+        self.subtitles_button.setCheckable(True)
+        self.subtitles_button.setChecked(True)
+        self.subtitles_button.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        self.subtitles_button.toggled.connect(lambda _shown: self._update_subtitle(self.current_seconds))
+        self.subtitles_button.setVisible(self.subtitle_overlay is not None)
+        controls_layout.addWidget(self.subtitles_button)
         layout.addLayout(controls_layout)
 
         self.setLayout(layout)
@@ -1060,6 +1076,8 @@ class SubtitlePlayerWidget(QWidget):
         # No picture to float over: the strips take the cue back, with their
         # two-line reservation, and keep it for this widget's lifetime.
         overlay, self.subtitle_overlay = self.subtitle_overlay, None
+        # No picture, so no burned-in subtitles for the cue to cover.
+        self.subtitles_button.setVisible(False)
         if overlay is not None:
             cue = overlay.lines()
             overlay.setVisible(False)
@@ -1127,6 +1145,11 @@ class SubtitlePlayerWidget(QWidget):
         Args:
             current_seconds: Current playback position in seconds.
         """
+        if self.subtitle_overlay is not None and not self.subtitles_button.isChecked():
+            # Turned off over the picture. Only position cues are withheld: a
+            # playback error goes to _show_cues directly and still shows.
+            self._show_cues("", "")
+            return
         self._show_cues(
             self._cue_at(self.subtitle_entries, self._offset, current_seconds),
             self._cue_at(self.secondary_entries, self._secondary_offset, current_seconds),

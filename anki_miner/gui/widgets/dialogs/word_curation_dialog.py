@@ -2045,6 +2045,11 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         # Subtitles over the picture, as in Anki Miner for Android: the strips
         # under the video would take their reserved lines from the pane's height.
         widget = SubtitlePlayerWidget(self, content_style=self._content_style, subtitle_overlay=True)
+        # Remembered across curators: a queue rebuilds one per episode, and a
+        # series with burned-in subtitles wants them off every time. Connected
+        # after the restore, so opening the curator writes nothing.
+        widget.subtitles_button.setChecked(session_state.load_curator_subtitles_shown())
+        widget.subtitles_button.toggled.connect(session_state.save_curator_subtitles_shown)
         ctx = self._media_context
         assert ctx is not None  # guarded by self._show_player
         widget.audio_track_codes = ctx.audio_track_codes
@@ -2067,8 +2072,8 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
 
     def _install_pane_keys(self, widget: QWidget) -> None:
         """Install every widget-scoped PLAYER key on ``widget``: play/pause (Space
-        unless rebound), play just this clip, the two frame steps, and starting
-        or ending the clip at the playhead.
+        unless rebound), play just this clip, the two frame steps, starting
+        or ending the clip at the playhead, and subtitles on/off.
 
         ``WidgetWithChildrenShortcut`` so they only fire when ``widget`` (or one of
         its children) has focus — never the Search box. Installed on the table and
@@ -2094,6 +2099,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         self._bind("curator.frame_forward", widget, lambda: self._step_frame(1))
         self._bind("curator.clip_start_here", widget, lambda: self._set_clip_edge_at_playhead(out=False))
         self._bind("curator.clip_end_here", widget, lambda: self._set_clip_edge_at_playhead(out=True))
+        self._bind("curator.toggle_subtitles", widget, self._toggle_subtitles)
 
     def _setup_shortcuts(self) -> None:
         """Install the curator's keys from ``self._keys`` (Settings -> Keyboard).
@@ -2232,6 +2238,14 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
             self.clip_editor.toggle_play()
         elif self._clip_audio is not None:
             self._play_focused_clip()
+
+    def _toggle_subtitles(self) -> None:
+        """The subtitles key: the player's CC button, which exists only while the
+        cue is drawn over a picture. getattr: tests substitute a bare QWidget
+        for the player."""
+        button = getattr(getattr(self, "player_widget", None), "subtitles_button", None)
+        if button is not None and not button.isHidden():
+            button.toggle()
 
     def _step_frame(self, direction: int) -> None:
         """The frame-step keys: the player's own steppers, which exist only with

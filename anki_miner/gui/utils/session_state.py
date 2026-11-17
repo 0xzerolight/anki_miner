@@ -43,6 +43,7 @@ _CURATOR_SPLIT_KEY = "curator/split_main"
 _CURATOR_SIDE_GROUP = "curator/split_side"
 _CURATOR_COLUMNS_KEY = "curator/columns"
 _CURATOR_COLUMN_COUNT_KEY = "curator/column_count"
+_CURATOR_SUBTITLES_KEY = "curator/subtitles_shown"
 _MAIN_TAB_KEY = "navigation/main_tab"
 _SUBTAB_GROUP = "navigation/subtab"
 _DIRECTORY_GROUP = "directories"
@@ -223,6 +224,32 @@ def save_curator_columns(state: QByteArray, column_count: int) -> None:
         _commit(settings)
     except Exception:
         logger.warning("Could not save the word curator columns", exc_info=True)
+
+
+def load_curator_subtitles_shown() -> bool:
+    """Whether the curator draws subtitles over the video; ``True`` until turned off."""
+    settings = _open()
+    if settings is None:
+        return True
+    try:
+        saved = settings.value(_CURATOR_SUBTITLES_KEY)
+    except Exception:
+        logger.debug("Unreadable curator subtitles state in the UI session state", exc_info=True)
+        return True
+    # The INI hands a stored bool back as the string "false"/"true".
+    return str(saved).lower() != "false"
+
+
+def save_curator_subtitles_shown(shown: bool) -> None:
+    """Store the curator's subtitles on/off choice."""
+    settings = _open(for_write=True)
+    if settings is None:
+        return
+    try:
+        settings.setValue(_CURATOR_SUBTITLES_KEY, bool(shown))
+        _commit(settings)
+    except Exception:
+        logger.warning("Could not save the word curator subtitles state", exc_info=True)
 
 
 # ---------------------------------------------------------------------------

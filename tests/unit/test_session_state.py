@@ -126,6 +126,23 @@ def test_a_non_numeric_column_count_reads_none(state_home: Path) -> None:
     assert session_state.load_curator_columns_for(7) is None
 
 
+def test_curator_subtitles_default_to_shown(state_home: Path) -> None:
+    assert session_state.load_curator_subtitles_shown() is True
+
+
+@pytest.mark.parametrize("shown", [False, True])
+def test_curator_subtitles_round_trip(state_home: Path, shown: bool) -> None:
+    session_state.save_curator_subtitles_shown(shown)
+
+    assert session_state.load_curator_subtitles_shown() is shown
+
+
+def test_unreadable_curator_subtitles_read_as_shown(state_home: Path) -> None:
+    (state_home / "ui_state.ini").write_text("[curator]\nsubtitles_shown=maybe\n", encoding="utf-8")
+
+    assert session_state.load_curator_subtitles_shown() is True
+
+
 # ---------------------------------------------------------------------------
 # Route
 # ---------------------------------------------------------------------------

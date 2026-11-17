@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
-from PyQt6.QtWidgets import QWidget
+from PyQt6.QtWidgets import QToolButton, QWidget
 
 from anki_miner.gui.widgets.dialogs.word_curation_dialog import (
     TRANSLATION_COLUMN,
@@ -112,6 +112,7 @@ def test_the_player_receives_the_second_track(qtbot, tmp_path):
         def __init__(self, *args, **kwargs):
             super().__init__()
             self.set_source = MagicMock()
+            self.subtitles_button = QToolButton()
 
     stub = _Stub()
     video = tmp_path / "ep.mkv"

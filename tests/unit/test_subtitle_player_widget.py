@@ -1406,6 +1406,63 @@ class TestCueOverVideo:
         assert widget.subtitle_strip.toPlainText() == "こんにちは"
 
 
+class TestSubtitlesButton:
+    """The CC button: turns the overlay off for videos with burned-in subtitles."""
+
+    def test_only_the_overlay_has_it(self, qtbot, fake_mpv):
+        overlay_host = _overlay_widget(qtbot)
+        strip_host = _widget(qtbot)
+        assert overlay_host.subtitles_button.isVisibleTo(overlay_host)
+        assert not strip_host.subtitles_button.isVisibleTo(strip_host)
+
+    def test_starts_on(self, qtbot, fake_mpv):
+        button = _overlay_widget(qtbot).subtitles_button
+        assert button.isCheckable() and button.isChecked()
+
+    def test_off_keeps_the_plate_hidden_through_ticks(self, qtbot, fake_mpv):
+        widget = _overlay_widget(qtbot)
+        widget.set_source(VIDEO, ENTRIES, secondary_entries=SECONDARY)
+        widget._update_subtitle(1.5)
+        widget.subtitles_button.setChecked(False)
+        assert not widget.subtitle_overlay.isVisibleTo(widget)
+        widget._update_subtitle(1.6)
+        widget._update_subtitle(3.5)
+        assert widget.subtitle_overlay.lines() == ("", "")
+        assert not widget.subtitle_overlay.isVisibleTo(widget)
+        assert not widget.subtitle_strip.isVisibleTo(widget)
+
+    def test_back_on_shows_the_cue_at_the_playhead_while_paused(self, qtbot, fake_mpv):
+        widget = _overlay_widget(qtbot)
+        widget.set_source(VIDEO, ENTRIES, secondary_entries=SECONDARY)
+        widget.subtitles_button.setChecked(False)
+        fake_mpv["player"].time_pos = 1.5
+        widget.subtitles_button.setChecked(True)
+        assert widget.subtitle_overlay.lines() == ("こんにちは", "Hello.")
+        assert widget.subtitle_overlay.isVisibleTo(widget)
+
+    def test_a_playback_error_still_shows_while_off(self, qtbot, fake_mpv):
+        widget = _overlay_widget(qtbot)
+        widget.set_source(VIDEO, ENTRIES)
+        widget.subtitles_button.setChecked(False)
+        widget._on_playback_error("demux failure")
+        assert "demux failure" in widget.subtitle_overlay.lines()[0]
+        assert widget.subtitle_overlay.isVisibleTo(widget)
+
+    def test_render_failed_hides_it_and_the_strips_carry_the_cue(self, qtbot, fake_mpv):
+        widget = _overlay_widget(qtbot)
+        widget.set_source(VIDEO, ENTRIES)
+        widget.subtitles_button.setChecked(False)
+        widget.video_widget.render_failed.emit("no GL")
+        assert not widget.subtitles_button.isVisibleTo(widget)
+        widget._update_subtitle(1.5)
+        assert widget.subtitle_strip.toPlainText() == "こんにちは"
+
+    def test_no_video_surface_has_no_button(self, qtbot):
+        with patch(f"{MODULE}.mpv_available", return_value=False):
+            widget = _overlay_widget(qtbot)
+        assert not widget.subtitles_button.isVisibleTo(widget)
+
+
 class TestPreviewSuppressed:
     """The preview turned off by ``ANKI_MINER_NO_VIDEO_PREVIEW``.
 

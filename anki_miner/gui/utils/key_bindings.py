@@ -119,6 +119,7 @@ KEY_ACTIONS: tuple[KeyAction, ...] = (
         QT_TRANSLATE_NOOP("KeyBindings", "End the clip at the playhead"),
         "O",
     ),
+    KeyAction("curator.toggle_subtitles", CURATOR, QT_TRANSLATE_NOOP("KeyBindings", "Show or hide subtitles"), "C"),
     KeyAction("app.usage_guide", APP, QT_TRANSLATE_NOOP("KeyBindings", "Usage Guide"), "F1"),
     KeyAction(tab_action_id("video"), APP, QT_TRANSLATE_NOOP("KeyBindings", "Go to Video"), "Ctrl+1"),
     KeyAction(tab_action_id("audiobook"), APP, QT_TRANSLATE_NOOP("KeyBindings", "Go to Audiobooks"), "Ctrl+2"),

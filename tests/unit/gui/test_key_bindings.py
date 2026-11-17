@@ -79,6 +79,12 @@ class TestTable:
         assert defaults["curator.clip_start_here"] == "I"
         assert defaults["curator.clip_end_here"] == "O"
 
+    def test_subtitles_toggle_on_c_after_the_playhead_rows(self) -> None:
+        ids = [action.id for action in KEY_ACTIONS]
+        assert ids[ids.index("curator.clip_end_here") + 1] == "curator.toggle_subtitles"
+        assert key_action("curator.toggle_subtitles").group == CURATOR
+        assert key_action("curator.toggle_subtitles").default == "C"
+
     def test_the_playhead_rows_follow_next_sentence(self) -> None:
         ids = [action.id for action in KEY_ACTIONS]
         start = ids.index("curator.next_sentence") + 1
@@ -237,8 +243,11 @@ class TestBindingProblem:
         # And free for another curator action once their default is cleared.
         assert self._problem("curator.next_word", text, {action_id: ""}) is None
 
-    @pytest.mark.parametrize(("action_id", "text"), [("curator.clip_start_here", "I"), ("curator.clip_end_here", "O")])
-    def test_the_playhead_defaults_are_valid_curator_keys(self, qapp, action_id: str, text: str) -> None:
+    @pytest.mark.parametrize(
+        ("action_id", "text"),
+        [("curator.clip_start_here", "I"), ("curator.clip_end_here", "O"), ("curator.toggle_subtitles", "C")],
+    )
+    def test_the_letter_defaults_are_valid_curator_keys(self, qapp, action_id: str, text: str) -> None:
         assert self._problem(action_id, text) is None
 
     @pytest.mark.parametrize("text", ["D", "Shift+D", "Space", "Delete"])

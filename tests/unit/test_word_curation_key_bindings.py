@@ -190,13 +190,13 @@ def test_rebound_play_pause_fires_once_from_the_player_pane(qtbot, tmp_path) -> 
 
 
 def test_the_table_answers_to_the_shipped_keys(qtbot, make_tokenized_words) -> None:
-    """Defaults: no next/previous key, F2 edits, D (not K) marks known. Ctrl+C is install_copy_rows."""
+    """Defaults: no next/previous key, F2 edits, D (not K) marks known, C toggles subtitles. Ctrl+C is install_copy_rows."""
     dialog = _curator(qtbot, make_tokenized_words(3))
     keys = {
         shortcut.key().toString(PORTABLE)
         for shortcut in dialog.table.findChildren(QShortcut, options=Qt.FindChildOption.FindDirectChildrenOnly)
     }
-    assert keys == {"Space", "Shift+Space", ",", ".", "I", "O", "S", "D", "Ctrl+A", "Ctrl+D", "F2", "Ctrl+C"}
+    assert keys == {"Space", "Shift+Space", ",", ".", "I", "O", "C", "S", "D", "Ctrl+A", "Ctrl+D", "F2", "Ctrl+C"}
 
 
 def test_an_unbound_action_installs_nothing(qtbot, make_tokenized_words) -> None:
@@ -252,7 +252,7 @@ def test_a_modified_next_word_key_moves_the_highlight_instead_of_adding_to_it(qt
 # ---------------------------------------------------------------------------
 
 #: Every key _install_pane_keys puts on each pane, at the shipped bindings.
-PLAYER_KEYS = ("Space", "Shift+Space", ",", ".", "I", "O")
+PLAYER_KEYS = ("Space", "Shift+Space", ",", ".", "I", "O", "C")
 
 PLAYER_MODULE = "anki_miner.gui.widgets.subtitle_player_widget"
 
@@ -398,6 +398,41 @@ def test_i_and_o_put_the_clip_ends_at_the_playhead(qtbot, tmp_path, fake_mpv) ->
     assert dialog._line_expansions == {}
     assert ambiguous == []
     dialog.hide()
+
+
+def test_c_turns_the_subtitles_off_and_the_next_curator_remembers(qtbot, tmp_path, fake_mpv) -> None:
+    from anki_miner.gui.utils import session_state
+
+    dialog = _live_curator(qtbot, tmp_path)
+    assert dialog.player_widget.subtitles_button.isChecked()
+
+    # Emitted, not typed: offscreen, showing the dialog fails its GL surface,
+    # which takes the overlay and the button away (the render_failed test).
+    _table_shortcut(dialog, "C").activated.emit()
+
+    assert not dialog.player_widget.subtitles_button.isChecked()
+    assert session_state.load_curator_subtitles_shown() is False
+    assert not _live_curator(qtbot, tmp_path).player_widget.subtitles_button.isChecked()
+
+
+def test_opening_the_curator_saves_nothing(qtbot, tmp_path, fake_mpv) -> None:
+    with patch("anki_miner.gui.utils.session_state.save_curator_subtitles_shown") as save:
+        _live_curator(qtbot, tmp_path)
+    save.assert_not_called()
+
+
+def test_the_subtitles_key_does_nothing_once_the_overlay_is_gone(qtbot, tmp_path, fake_mpv) -> None:
+    """A failed render hands the cue to the strips, and the button goes with the overlay."""
+    dialog = _live_curator(qtbot, tmp_path)
+    dialog.player_widget.video_widget.render_failed.emit("no GL")
+
+    _table_shortcut(dialog, "C").activated.emit()
+
+    assert dialog.player_widget.subtitles_button.isChecked()
+
+
+def test_the_subtitles_key_tolerates_a_bare_player(qtbot, tmp_path) -> None:
+    _four_pane_curator(qtbot, tmp_path, None)._toggle_subtitles()
 
 
 def test_the_playhead_keys_wait_for_the_chosen_episode(qtbot, tmp_path, fake_mpv) -> None:
