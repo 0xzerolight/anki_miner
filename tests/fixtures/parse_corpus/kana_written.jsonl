@@ -6,7 +6,7 @@
 {"id":"kw06","sentence":"かんじた","expected":["かんじる"],"category":"kana-written"}
 {"id":"kw07","sentence":"余裕こいて休んでやがるぜ","expected":["余裕","こく","休む"],"category":"kana-written","note":"こく (放く) is a kana verb of its own."}
 {"id":"kw08","sentence":"単純かつ明快な方法","expected":["単純","かつ","明快","方法"],"category":"kana-written","note":"Listed conjunction かつ (且つ)."}
-{"id":"kw09","sentence":"オレはやる｡ オレの手で","expected":["オレ","手"],"category":"kana-written","note":"Before the halfwidth ｡ the tagger glues は + やる into はやる (lemma 逸る); widened to 。 it reads は + やる. No card either way."}
+{"id":"kw09","sentence":"オレはやる｡ オレの手で","expected":["オレ","やる","手"],"category":"kana-written","note":"Before the halfwidth ｡ the tagger glues は + やる into はやる (lemma 逸る); widened to 。 it reads は + やる, and やる is the line's own verb."}
 {"id":"kw10","sentence":"やる時はやる男だ","expected":["やる","時","男"],"category":"kana-written","note":"Same glue inside a clause; the line-start やる is the main verb and is mined."}
 {"id":"kw11","sentence":"早くに こうする予定だった","expected":["早く","予定"],"category":"kana-written","note":"The tagger glues こう + する into こうする (lemma 抗する): no card."}
 {"id":"kw12","sentence":"風邪がはやっている","expected":["風邪","はやる"],"category":"kana-written","note":"A real はやる (lemma 流行る) is still mined."}
