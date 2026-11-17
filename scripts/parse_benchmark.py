@@ -462,6 +462,12 @@ _ANCHOR_HEADWORDS: tuple[str, ...] = (
     "あんな",
     "こと",
     "あと",
+    # aux-context: auxiliary-capable kana words mined as the line's main word
+    # (なる, ない, ほしい, よい); いる and ある are anchored above
+    "なる",
+    "ない",
+    "ほしい",
+    "よい",
 )
 
 # Yomitan `ruleIdentifiers` per fixture headword. A real term bank ships these,
@@ -509,6 +515,9 @@ _ANCHOR_RULES: dict[str, str] = {
     "済む": "v5m",
     "残る": "v5r",
     "放っておく": "v5k",
+    # aux-context
+    "なる": "v5r",
+    **dict.fromkeys(("ない", "ほしい", "よい"), "adj-i"),
 }
 
 # Readings for the rows the reading-gate category needs. Every other row keeps

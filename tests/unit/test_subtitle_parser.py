@@ -1247,19 +1247,16 @@ class TestKanaWordRecovery:
     @pytest.mark.parametrize(
         ("context", "surface", "lemma", "orth_base"),
         [
-            ("見ている", "いる", "居る", "いる"),
-            ("そこにある", "ある", "有る", "ある"),
-            ("買ってくれる", "くれる", "呉れる", "くれる"),
             ("書いておく", "おく", "置く", "おく"),
             ("読んでしまう", "しまう", "仕舞う", "しまう"),
         ],
     )
     def test_does_not_recover_auxiliary_capable_verb(self, test_config, context, surface, lemma, orth_base):
-        # 動詞 pos2=非自立可能 (real unidic tag for いる/ある/くれる/おく/しまう —
-        # in AUX context and standalone alike, the tokens are byte-identical).
-        # Attested on purpose: the pos2 backstop, not a dict miss, must drop them,
-        # or every ている line mints an いる card. Standalone main-verb uses are
-        # the accepted casualty (see _KANA_RECOVER_REJECT_POS2).
+        # 動詞 pos2=非自立可能 (real unidic tag for おく/しまう — in AUX context and
+        # standalone alike, the tokens are byte-identical). Attested on purpose:
+        # the pos2 backstop, not a dict miss, must drop them, or every ておく line
+        # mints an おく card. いる/ある/くれる come back by name and are judged by
+        # the token before them (test_subtitle_parser_reopened.py).
         lookup = _attest_lookup(surface)
         service = self._service(test_config, lookup)
         token = _make_token(surface, "動詞", pos2="非自立可能", lemma=lemma, orth_base=orth_base)
@@ -1518,7 +1515,6 @@ class TestKanaWordRecovery:
         assert "いる" not in {w.mined_form for w in words}  # mine side too
         assert counts.get("見る") == 1  # kanji 非自立可能 verb is untouched
         assert "見る" in {w.mined_form for w in words}
-        assert lookup.calls == []  # pos2 reject fired before any probe
 
     def test_count_and_mine_both_recover_identically(self, test_config, tmp_path):
         # count==mine parity (T-38): count_lemmas and parse_subtitle_file both
@@ -3505,8 +3501,8 @@ class TestSurfaceOffsetsAndBolding:
 
     def test_hiragana_benefactive_not_mined_separately(self, tmp_path):
         """くれ (呉れる, 非自立可能) must not be mined from 買ってくれた even with
-        the kana recovery active AND くれる attested — the pos2 reject, not a
-        dict miss, drops it. (Without the wired lookup this test was false-safe:
+        the kana recovery active AND くれる attested — the reject after a て, not
+        a dict miss, drops it. (Without the wired lookup this test was false-safe:
         recovery short-circuited before the gate under test ever ran.)"""
         srt_file = tmp_path / "benefactive.srt"
         srt_file.write_text(
@@ -3529,7 +3525,6 @@ class TestSurfaceOffsetsAndBolding:
             ("本を読んでしまった", {"本", "読む"}, "しまう"),
             ("手紙を書いておく", {"手紙", "書く"}, "おく"),
             ("犬を飼ってくれる", {"犬", "飼う"}, "くれる"),
-            ("そこにある", set(), "ある"),
         ],
     )
     def test_real_fugashi_aux_context_mints_no_aux_card(self, tmp_path, line, wanted, aux_front):

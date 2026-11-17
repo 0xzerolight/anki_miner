@@ -1,0 +1,10 @@
+{"id":"xa01","sentence":"猫がいる","expected":["猫","いる"],"category":"aux-context","note":"いる as the line's main verb, after a case particle: mined."}
+{"id":"xa02","sentence":"時間がある","expected":["時間","ある"],"category":"aux-context","note":"ある as the main verb: mined."}
+{"id":"xa03","sentence":"先生になる","expected":["先生","なる"],"category":"aux-context","note":"なる after に: mined."}
+{"id":"xa04","sentence":"答えがない","expected":["答え","ない"],"category":"aux-context","note":"The adjective ない after が: mined."}
+{"id":"xa05","sentence":"水がほしい","expected":["水","ほしい"],"category":"aux-context","note":"ほしい after が: mined."}
+{"id":"xa06","sentence":"味はよくない","expected":["味","よい"],"category":"aux-context","note":"よく is the adjective, mined as よい; ない right after an adjective is the negation, not mined."}
+{"id":"xa07","sentence":"食べてもいい","expected":["食べる"],"category":"aux-context","note":"いい after て+も is the permission pattern, not mined."}
+{"id":"xa08","sentence":"学生ではない","expected":["学生"],"category":"aux-context","note":"ない after で+は is the copula's negation, not mined."}
+{"id":"xa09","sentence":"学生である","expected":["学生"],"category":"aux-context","note":"ある after the copula で is grammar, not mined."}
+{"id":"xa10","sentence":"来てほしい","expected":["来る"],"category":"aux-context","note":"ほしい after て asks someone to do it, not mined."}
