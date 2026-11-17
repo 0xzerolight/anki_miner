@@ -6551,6 +6551,10 @@ Ingen indeksfiler slettes.</translation>
         <translation>Avslutt klippet ved avspillingsposisjonen</translation>
     </message>
     <message>
+        <source>Show or hide subtitles</source>
+        <translation>Vis eller skjul undertekster</translation>
+    </message>
+    <message>
         <source>Usage Guide</source>
         <translation>Brukerveiledning</translation>
     </message>
@@ -11976,6 +11980,10 @@ De installerte ressursene og temaet ditt beholdes.</translation>
     <message>
         <source>Step one frame forward</source>
         <translation>Gå ett bilde frem</translation>
+    </message>
+    <message>
+        <source>Show subtitles over the video</source>
+        <translation>Vis undertekster over videoen</translation>
     </message>
     <message>
         <source>Video preview is unavailable: the bundled video component (libmpv) could not be loaded on this PC. Try reinstalling Anki Miner; if the problem persists, report it and attach your log from %USERPROFILE%\.anki_miner\anki_miner.log.</source>

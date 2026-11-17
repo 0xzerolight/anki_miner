@@ -6514,6 +6514,10 @@ No index files are deleted.</source>
         <translation>클립 끝을 재생 위치로 설정</translation>
     </message>
     <message>
+        <source>Show or hide subtitles</source>
+        <translation>자막 표시 또는 숨기기</translation>
+    </message>
+    <message>
         <source>Usage Guide</source>
         <translation>사용 가이드</translation>
     </message>
@@ -11928,6 +11932,10 @@ Your installed resources and your theme are kept.</source>
     <message>
         <source>Step one frame forward</source>
         <translation>한 프레임 앞으로</translation>
+    </message>
+    <message>
+        <source>Show subtitles over the video</source>
+        <translation>동영상 위에 자막 표시</translation>
     </message>
     <message>
         <source>Video preview is unavailable: the bundled video component (libmpv) could not be loaded on this PC. Try reinstalling Anki Miner; if the problem persists, report it and attach your log from %USERPROFILE%\.anki_miner\anki_miner.log.</source>

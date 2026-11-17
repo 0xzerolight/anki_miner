@@ -6588,6 +6588,10 @@ Nu se șterge niciun fișier index.</translation>
         <translation>Termină clipul la cursorul de redare</translation>
     </message>
     <message>
+        <source>Show or hide subtitles</source>
+        <translation>Afișează sau ascunde subtitrările</translation>
+    </message>
+    <message>
         <source>Usage Guide</source>
         <translation>Ghid de utilizare</translation>
     </message>
@@ -12024,6 +12028,10 @@ Resursele instalate și tema se păstrează.</translation>
     <message>
         <source>Step one frame forward</source>
         <translation>Un cadru înainte</translation>
+    </message>
+    <message>
+        <source>Show subtitles over the video</source>
+        <translation>Afișează subtitrările peste videoclip</translation>
     </message>
     <message>
         <source>Video preview is unavailable: the bundled video component (libmpv) could not be loaded on this PC. Try reinstalling Anki Miner; if the problem persists, report it and attach your log from %USERPROFILE%\.anki_miner\anki_miner.log.</source>

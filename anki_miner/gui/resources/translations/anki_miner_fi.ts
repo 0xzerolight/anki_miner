@@ -6551,6 +6551,10 @@ Indeksitiedostoja ei poisteta.</translation>
         <translation>Lopeta leike toistokohtaan</translation>
     </message>
     <message>
+        <source>Show or hide subtitles</source>
+        <translation>Näytä tai piilota tekstitykset</translation>
+    </message>
+    <message>
         <source>Usage Guide</source>
         <translation>Käyttöopas</translation>
     </message>
@@ -11976,6 +11980,10 @@ Asennetut resurssit ja teema säilytetään.</translation>
     <message>
         <source>Step one frame forward</source>
         <translation>Siirry yksi kuva eteenpäin</translation>
+    </message>
+    <message>
+        <source>Show subtitles over the video</source>
+        <translation>Näytä tekstitykset videon päällä</translation>
     </message>
     <message>
         <source>Video preview is unavailable: the bundled video component (libmpv) could not be loaded on this PC. Try reinstalling Anki Miner; if the problem persists, report it and attach your log from %USERPROFILE%\.anki_miner\anki_miner.log.</source>

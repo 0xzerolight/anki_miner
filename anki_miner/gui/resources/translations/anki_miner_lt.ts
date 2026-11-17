@@ -6588,6 +6588,10 @@ Indekso failai neištrinami.</translation>
         <translation>Baigti įrašą ties grojimo vieta</translation>
     </message>
     <message>
+        <source>Show or hide subtitles</source>
+        <translation>Rodyti arba slėpti subtitrus</translation>
+    </message>
+    <message>
         <source>Usage Guide</source>
         <translation>Naudojimo vadovas</translation>
     </message>
@@ -12024,6 +12028,10 @@ Your installed resources and your theme are kept.</source>
     <message>
         <source>Step one frame forward</source>
         <translation>Vienu kadru pirmyn</translation>
+    </message>
+    <message>
+        <source>Show subtitles over the video</source>
+        <translation>Rodyti subtitrus ant vaizdo įrašo</translation>
     </message>
     <message>
         <source>Video preview is unavailable: the bundled video component (libmpv) could not be loaded on this PC. Try reinstalling Anki Miner; if the problem persists, report it and attach your log from %USERPROFILE%\.anki_miner\anki_miner.log.</source>

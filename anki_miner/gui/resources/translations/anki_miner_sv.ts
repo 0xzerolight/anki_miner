@@ -6551,6 +6551,10 @@ Inga indexfiler raderas.</translation>
         <translation>Avsluta klippet vid uppspelningspositionen</translation>
     </message>
     <message>
+        <source>Show or hide subtitles</source>
+        <translation>Visa eller dölj undertexter</translation>
+    </message>
+    <message>
         <source>Usage Guide</source>
         <translation>Användarguide</translation>
     </message>
@@ -11976,6 +11980,10 @@ Dina installerade resurser och ditt tema behålls.</translation>
     <message>
         <source>Step one frame forward</source>
         <translation>Stega en bildruta framåt</translation>
+    </message>
+    <message>
+        <source>Show subtitles over the video</source>
+        <translation>Visa undertexter över videon</translation>
     </message>
     <message>
         <source>Video preview is unavailable: the bundled video component (libmpv) could not be loaded on this PC. Try reinstalling Anki Miner; if the problem persists, report it and attach your log from %USERPROFILE%\.anki_miner\anki_miner.log.</source>

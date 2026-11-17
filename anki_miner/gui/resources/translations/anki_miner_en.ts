@@ -6529,6 +6529,10 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Show or hide subtitles</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Usage Guide</source>
         <translation type="unfinished" />
     </message>
@@ -11931,6 +11935,10 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>Step one frame forward</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Show subtitles over the video</source>
         <translation type="unfinished" />
     </message>
     <message>

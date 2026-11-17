@@ -6551,6 +6551,10 @@ No se elimina ningún archivo de índice.</translation>
         <translation>Terminar el clip en el cabezal de reproducción</translation>
     </message>
     <message>
+        <source>Show or hide subtitles</source>
+        <translation>Mostrar u ocultar los subtítulos</translation>
+    </message>
+    <message>
         <source>Usage Guide</source>
         <translation>Guía de uso</translation>
     </message>
@@ -11976,6 +11980,10 @@ Sus recursos instalados y su tema se conservan.</translation>
     <message>
         <source>Step one frame forward</source>
         <translation>Avanzar un fotograma</translation>
+    </message>
+    <message>
+        <source>Show subtitles over the video</source>
+        <translation>Mostrar los subtítulos sobre el video</translation>
     </message>
     <message>
         <source>Video preview is unavailable: the bundled video component (libmpv) could not be loaded on this PC. Try reinstalling Anki Miner; if the problem persists, report it and attach your log from %USERPROFILE%\.anki_miner\anki_miner.log.</source>

@@ -6628,6 +6628,10 @@ Nobena datoteka indeksa ne bo izbrisana.</translation>
         <translation>Končaj posnetek na trenutnem mestu predvajanja</translation>
     </message>
     <message>
+        <source>Show or hide subtitles</source>
+        <translation>Prikaži ali skrij podnapise</translation>
+    </message>
+    <message>
         <source>Usage Guide</source>
         <translation>Navodila za uporabo</translation>
     </message>
@@ -12075,6 +12079,10 @@ Nameščeni viri in tema se ohranijo.</translation>
     <message>
         <source>Step one frame forward</source>
         <translation>Eno sličico naprej</translation>
+    </message>
+    <message>
+        <source>Show subtitles over the video</source>
+        <translation>Prikaži podnapise čez video</translation>
     </message>
     <message>
         <source>Video preview is unavailable: the bundled video component (libmpv) could not be loaded on this PC. Try reinstalling Anki Miner; if the problem persists, report it and attach your log from %USERPROFILE%\.anki_miner\anki_miner.log.</source>

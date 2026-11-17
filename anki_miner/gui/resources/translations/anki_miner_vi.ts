@@ -6514,6 +6514,10 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Đặt điểm cuối đoạn âm thanh tại vị trí phát</translation>
     </message>
     <message>
+        <source>Show or hide subtitles</source>
+        <translation>Hiển thị hoặc ẩn phụ đề</translation>
+    </message>
+    <message>
         <source>Usage Guide</source>
         <translation>Hướng dẫn sử dụng</translation>
     </message>
@@ -11928,6 +11932,10 @@ Tài nguyên đã cài đặt và chủ đề của bạn được giữ nguyên
     <message>
         <source>Step one frame forward</source>
         <translation>Tiến một khung hình</translation>
+    </message>
+    <message>
+        <source>Show subtitles over the video</source>
+        <translation>Hiển thị phụ đề trên video</translation>
     </message>
     <message>
         <source>Video preview is unavailable: the bundled video component (libmpv) could not be loaded on this PC. Try reinstalling Anki Miner; if the problem persists, report it and attach your log from %USERPROFILE%\.anki_miner\anki_miner.log.</source>

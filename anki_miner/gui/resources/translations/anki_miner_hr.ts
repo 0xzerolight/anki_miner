@@ -6588,6 +6588,10 @@ Ne briše se nijedna datoteka indeksa.</translation>
         <translation>Završi isječak na trenutačnom položaju reprodukcije</translation>
     </message>
     <message>
+        <source>Show or hide subtitles</source>
+        <translation>Prikaži ili sakrij titlove</translation>
+    </message>
+    <message>
         <source>Usage Guide</source>
         <translation>Vodič za korištenje</translation>
     </message>
@@ -12024,6 +12028,10 @@ Instalirani resursi i tema zadržavaju se.</translation>
     <message>
         <source>Step one frame forward</source>
         <translation>Jedna sličica unaprijed</translation>
+    </message>
+    <message>
+        <source>Show subtitles over the video</source>
+        <translation>Prikaži titlove preko videozapisa</translation>
     </message>
     <message>
         <source>Video preview is unavailable: the bundled video component (libmpv) could not be loaded on this PC. Try reinstalling Anki Miner; if the problem persists, report it and attach your log from %USERPROFILE%\.anki_miner\anki_miner.log.</source>
