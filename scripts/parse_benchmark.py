@@ -493,6 +493,11 @@ _ANCHOR_HEADWORDS: tuple[str, ...] = (
     "ない",
     "ほしい",
     "よい",
+    # aux-context: words whose READING a particle + いる spells (がいる, にい), so
+    # xa01/xa11 fail on a reading-only window; しかない is spelled so, and takes ない
+    "ガイル",
+    "二位",
+    "しかない",
 )
 
 # Yomitan `ruleIdentifiers` per fixture headword. A real term bank ships these,
@@ -562,6 +567,8 @@ _ANCHOR_READINGS: dict[str, str] = {
     "気の利く": "きのきく",
     "下らない": "くだらない",
     "詰まらない": "つまらない",
+    "ガイル": "がいる",
+    "二位": "にい",
 }
 
 _ANCHOR_COMMON_HEADWORDS = frozenset({"やる", "北海道", "パリ"})

@@ -3148,9 +3148,12 @@ class SubtitleParserService:
     def _rejected_by_lexicalized_window(self, word_token, tokens: list, *, from_left: bool = False) -> bool:
         """Whether a recovered kana fragment sits inside an attested lexicalized expression.
 
-        ``from_left`` counts only the windows that open before the candidate: an
-        auxiliary-capable word joined with its own inflection is often another
-        word's reading (い|た is 板, き|た is 北), while しか|ない is the expression.
+        ``from_left`` is the check for an auxiliary-capable word. Only the windows
+        that open before it count: joined with its own inflection it is often
+        another word's reading (い|た is 板, き|た is 北), while しか|ない is the
+        expression. And only a window a dictionary spells that way counts: one that
+        is just the reading of a word written otherwise is a homophone across the
+        word boundary (猫が|いる reads ガイル, ここに|い|た reads 兄, それが|いい 害意).
 
         Runs ONLY on a kana-recovery acceptance (see ``_mine_token``). Locates the
         candidate in ``tokens`` by identity — it is an element of that list (yielded
@@ -3173,6 +3176,8 @@ class SubtitleParserService:
         windows = self._lexicalized_window_surfaces(tokens, idx, from_left=from_left)
         if not windows:
             return False
+        if from_left:
+            return self._attest is not None and bool(self._attest(windows))
         uncached = [w for w in windows if w not in self._kana_window_cache]
         # Snapshot the already-cached verdicts BEFORE the clear-on-cap below can
         # evict a window this candidate still needs: the shared cache may be wiped

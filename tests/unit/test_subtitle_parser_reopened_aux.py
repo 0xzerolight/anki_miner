@@ -38,11 +38,13 @@ _AUX_WORDS = (
 )
 
 
-def _service(attested) -> SubtitleParserService:
-    wanted = set(attested)
+def _service(attested, headwords=()) -> SubtitleParserService:
+    """``attested`` answers the term-or-reading probe; ``headwords`` are also spelled that way in the dictionary."""
+    spelled = set(headwords)
+    wanted = set(attested) | spelled
     return SubtitleParserService(
         AnkiMinerConfig(),
-        term_lookup=lambda terms: set(),
+        term_lookup=lambda terms: spelled.intersection(terms),
         kana_attest_lookup=lambda forms: {form: form in wanted for form in forms},
     )
 
@@ -103,7 +105,21 @@ class TestAuxCapableWordsAsMainWords:
         assert "くる" in _fronts(service, "彼がきた")
 
     def test_an_expression_opening_before_it_still_takes_it(self):
-        assert "ない" not in _fronts(_service((*_AUX_WORDS, "しかない")), "行くしかない")
+        assert "ない" not in _fronts(_service(_AUX_WORDS, headwords=("しかない",)), "行くしかない")
+
+    @pytest.mark.parametrize(
+        ("text", "reading", "front"),
+        [
+            ("猫がいる", "がいる", "いる"),  # ガイル
+            ("ここにいた", "にい", "いる"),  # 兄, 二位
+            ("これがいい", "がいい", "いい"),  # 害意
+            ("彼しかいない", "しかい", "いる"),  # 司会
+            ("春がきた", "がき", "くる"),  # 餓鬼
+        ],
+    )
+    def test_another_words_reading_across_the_boundary_does_not(self, text, reading, front):
+        # No dictionary spells the kana run that way: it is the reading of a word written otherwise.
+        assert front in _fronts(_service((*_AUX_WORDS, reading)), text)
 
     def test_a_contracted_spelling_is_not_its_word(self):
         # ねぇ is the spoken ない: the card would teach ない from a line that never says it.

@@ -28,3 +28,5 @@
 {"id":"xa08","sentence":"学生ではない","expected":["学生"],"category":"aux-context","note":"ない after で+は is the copula's negation, not mined."}
 {"id":"xa09","sentence":"学生である","expected":["学生"],"category":"aux-context","note":"ある after the copula で is grammar, not mined."}
 {"id":"xa10","sentence":"来てほしい","expected":["来る"],"category":"aux-context","note":"ほしい after て asks someone to do it, not mined."}
+{"id":"xa11","sentence":"駅にいた","expected":["駅","いる"],"category":"aux-context","note":"に|い is also 二位's reading: a reading across the word boundary is not an expression, so いる is mined."}
+{"id":"xa12","sentence":"行くしかない","expected":["行く"],"category":"aux-context","note":"しかない is a dictionary headword spelled so: the expression takes ない."}
