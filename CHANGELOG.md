@@ -22,6 +22,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Kana fillers no longer become verb cards.** いえ ('no') mined いえる, a sound cut at っ (まっ, たっ) mined まつ and たつ, and the tagger's glues いたんだ, 違かった and ういっす mined 痛む, 買う and 逸する.
 - **その子, きれいな子 and 家の前 are no longer taken for names.** Name lists have その子, な子 and 家の前 as names, so the name filter dropped 子, 家 and 前 with them.
 - **自分ち mines 自分** instead of 自 and 分ち, and お父上様 or 母上殿 no longer mine 上様 and 上殿.
+- **Pieces of a name are no longer mined as words.** The 介 or 助 that ends a given name (雁助, 欧介), 神さん and 守殿 after a name's last kanji (夜神さん, 伊豆守殿), and 犯る read out of 殺人犯って.
 - **Chinese lines in a Japanese subtitle file are not mined.** A fansub's credit line and the Chinese half of a bilingual file passed as Japanese because every kanji counts as Japanese script. A line is dropped when it holds a simplified character, or has no kana and a Chinese-only pronoun or particle; other Chinese lines still pass.
 - **Half-width caption punctuation (｡､｢｣) is read as punctuation, and →, ☎ and invisible left-to-right marks are removed from sentences.** After a half-width ｡ the tagger glued a particle to the next word (オレはやる｡ mined はやる).
 - **A batch no longer lets one file decide how a kana verb is treated in the next.** The verdict for つかめ (つかむ or つかめる) was remembered by spelling alone, so the same episode could mine differently depending on what was mined before it.
