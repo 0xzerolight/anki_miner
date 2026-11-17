@@ -77,6 +77,7 @@ from anki_miner.utils import (
     wrap_target_plain,
 )
 from anki_miner.utils.ja_normalize import (
+    is_cjk_ideograph,
     normalize_for_tokenization,
     standardize_kanji_variants,
 )
@@ -209,6 +210,12 @@ _KANJI_NAME_PIECE_LEMMAS: frozenset[str] = frozenset({"助"})
 # orthBase: 犯る (vulgar やる) is the crime suffix 犯 before a quoting って
 # (殺人犯って, 同一犯って); the verb itself never stands alone in a line.
 _KANJI_FUSED_ORTH_BASES: frozenset[str] = frozenset({"犯る"})
+
+# Honorific compounds the tagger (or the noun-suffix merge) makes from a name's
+# last kanji: 夜|神さん is no 神さん 'wife', 夜|神君 no 神君 'deified Ieyasu',
+# 快|人君, 伊豆|守殿. Turned away only right after a kanji, where they are the
+# tail of a name; at a clause start (神さん！) they are the word.
+_NAME_HONORIFIC_TAILS: frozenset[str] = frozenset({"神さん", "神君", "人君", "守殿", "主殿", "左殿", "内君"})
 
 # An interjection the tagger reads as a kana verb when it stands alone: いえ ('no')
 # as the potential いえる or the imperative of 言う. The verb inflects on (いえない,
@@ -2958,7 +2965,7 @@ class SubtitleParserService:
         if rejection is None:
             if self._is_katakana_run_fragment(word_token, text, tok_start, tok_end):
                 return False
-            if self._is_kanji_glue(word_token):
+            if self._is_kanji_glue(word_token) or self._is_name_honorific_tail(word_token, text, tok_start):
                 return False
             return not self._ellipsis_reject(word_token, text, tok_start, tok_end)
         how = self._kana_recovery(word_token)
@@ -2991,6 +2998,11 @@ class SubtitleParserService:
         if getattr(feature, "orthBase", None) in _KANJI_FUSED_ORTH_BASES:
             return True
         return getattr(feature, "lemma", None) in _KANJI_NAME_PIECE_LEMMAS and not _is_all_katakana(word_token.surface)
+
+    @staticmethod
+    def _is_name_honorific_tail(word_token, text: str, tok_start: int) -> bool:
+        """Whether an honorific compound (``_NAME_HONORIFIC_TAILS``) ends a name: a kanji right before it."""
+        return word_token.surface in _NAME_HONORIFIC_TAILS and tok_start > 0 and is_cjk_ideograph(text[tok_start - 1])
 
     @staticmethod
     def _is_cut_sokuon_stem(word_token, text: str, tok_end: int) -> bool:

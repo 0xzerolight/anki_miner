@@ -22,8 +22,8 @@ def _fugashi_available() -> bool:
 pytestmark = pytest.mark.skipif(not _fugashi_available(), reason="fugashi/unidic-lite not installed")
 
 
-def _fronts(text: str) -> list[str]:
-    service = SubtitleParserService(AnkiMinerConfig(), term_lookup=lambda terms: set())
+def _fronts(text: str, attested: frozenset[str] = frozenset()) -> list[str]:
+    service = SubtitleParserService(AnkiMinerConfig(), term_lookup=lambda terms: set(terms) & attested)
     words, _index, _counts = service.parse_text_units(
         [ReadingUnit(text=text, index=0, location_label="t")], want_line_index=False
     )
@@ -45,3 +45,15 @@ class TestKanjiVerbGlues:
         fronts = _fronts("殺人犯って何")
         assert "犯る" not in fronts
         assert "殺人" in fronts
+
+
+class TestNameHonorifics:
+    @pytest.mark.parametrize(
+        ("text", "glue"),
+        [("夜神さんが来た", "神さん"), ("夜神君が来た", "神君"), ("上総守殿だ", "守殿"), ("快人君", "人君")],
+    )
+    def test_a_names_last_kanji_and_honorific_is_no_word(self, text, glue):
+        assert glue not in _fronts(text, frozenset({glue}))
+
+    def test_the_word_itself_stays_at_a_clause_start(self):
+        assert "神さん" in _fronts("神さん！ 助けて", frozenset({"神さん"}))
