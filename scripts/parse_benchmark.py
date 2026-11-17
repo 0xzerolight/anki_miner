@@ -476,6 +476,16 @@ _ANCHOR_HEADWORDS: tuple[str, ...] = (
     "なければならない",
     # kana-listed: a kinship word the tagger cuts apart
     "おばあちゃん",
+    # kana-listed: interjections; ええ and えっと are DELIBERATELY attested, so
+    # xi05/xi06 fail on the list's exclusion, not on a dict miss
+    "はい",
+    "うん",
+    "おい",
+    "すみません",
+    "ええ",
+    "えっと",
+    # lexicalized-window: しれる is recoverable alone, かもしれない is the window
+    "しれる",
 )
 
 # Yomitan `ruleIdentifiers` per fixture headword. A real term bank ships these,
@@ -527,6 +537,8 @@ _ANCHOR_RULES: dict[str, str] = {
     "ことがある": "v5r",
     **dict.fromkeys(("かもしれない", "なければならない"), "adj-i"),
     "やめる": "v1",
+    # lexicalized-window
+    "しれる": "v1",
 }
 
 # Readings for the rows the reading-gate category needs. Every other row keeps
