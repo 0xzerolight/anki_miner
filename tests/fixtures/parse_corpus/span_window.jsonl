@@ -2,3 +2,4 @@
 {"id":"swk02","sentence":"読み方が悪い","expected":["読み方","悪い"],"category":"span-window","note":"読み方 is attested, so it stays one word."}
 {"id":"swf01","sentence":"折り入って相談が","expected":["折り入って","相談"],"category":"span-window","note":"JMdict lists only the te-form 折り入って; its base 折り入る has no entry."}
 {"id":"swh01","sentence":"彼を放っておけない","expected":["彼","放っておく"],"category":"span-window","note":"The potential tail おけ (base おける) folds to おく, so the 放っておく entry joins instead of 放つ."}
+{"id":"sw01","sentence":"嘘はやめて","expected":["嘘","やめる"],"category":"span-window","note":"は+やめ reads as はやめ (早め), a homophone across the topic particle, not a lexicalized window: やめる stays."}
