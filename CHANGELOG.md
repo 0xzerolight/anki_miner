@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [Unreleased]
 
 ### Added
+- **A CC button on the Word Curator's video turns its subtitles off.** On videos with subtitles burned into the picture, the curator's own subtitles covered them. C does the same from the keyboard (Settings → Keyboard), and the curator remembers the choice for the next video.
 
 ### Changed
 - **Japanese mines more everyday words written in kana.** あの and その before a noun, やっぱ, ぜひ, おかげ, あんな, わけ, とこ, ほう, and words the tagger cut apart (ちなみに, とっくに, もったいない, とんでもない). The tagger read a pre-noun あの as a filler, and the kana word list did not name the rest.
