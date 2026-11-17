@@ -1,1 +1,1 @@
-{"id":"lw01","sentence":"雨かもしれない","expected":["雨"],"category":"lexicalized-window","note":"Anchor both しれる and the joined window かもしれない so only the lexicalized-window reject prevents しれる junk (すみません is now a listed apology)."}
+{"id":"lw01","sentence":"彼にとって","expected":["彼"],"category":"lexicalized-window","note":"Anchor both とる and the joined window にとって so only the lexicalized-window reject prevents とる junk (すみません is a listed apology and かもしれない a joined expression: both are mined)."}

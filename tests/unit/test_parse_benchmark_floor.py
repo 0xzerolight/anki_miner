@@ -202,8 +202,8 @@ def test_anchor_meets_lexicalized_window_floor() -> None:
     # apology, joined before any window is judged.
     assert mine_lite_anchor("すみます") == {"すむ"}
     assert mine_lite_anchor("すみません") == {"すみません"}
-    # しれる and かもしれない are both attested, so the window alone keeps しれる off.
-    assert mine_lite_anchor("雨かもしれない") == {"雨"}
+    # とる and にとって are both attested, so the window alone keeps とる off.
+    assert mine_lite_anchor("彼にとって") == {"彼"}
     # No dictionary keeps the byte-identical safe-degrade baseline.
     assert mine_lite_orthbase("すみません") == set()
 

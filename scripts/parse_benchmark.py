@@ -484,8 +484,9 @@ _ANCHOR_HEADWORDS: tuple[str, ...] = (
     "すみません",
     "ええ",
     "えっと",
-    # lexicalized-window: しれる is recoverable alone, かもしれない is the window
-    "しれる",
+    # lexicalized-window: とる is recoverable alone, にとって is the window
+    "とる",
+    "にとって",
 )
 
 # Yomitan `ruleIdentifiers` per fixture headword. A real term bank ships these,
@@ -538,7 +539,7 @@ _ANCHOR_RULES: dict[str, str] = {
     **dict.fromkeys(("かもしれない", "なければならない"), "adj-i"),
     "やめる": "v1",
     # lexicalized-window
-    "しれる": "v1",
+    "とる": "v5r",
 }
 
 # Readings for the rows the reading-gate category needs. Every other row keeps

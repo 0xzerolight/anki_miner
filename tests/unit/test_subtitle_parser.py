@@ -1658,15 +1658,14 @@ class TestKanaRecoveryLexicalizedWindow:
     # --- 6. T-38 count==mine parity: the reject fires identically at all four sites. ---
 
     def test_count_equals_mine_all_sites_reject(self, test_config, tmp_path):
-        text = "本当かもしれない"
+        text = "彼にとって"
 
         def tokens():
             return [
-                _make_token("本当", "名詞", "普通名詞", lemma="本当", kana="ホントウ", orth_base="本当"),
-                _make_token("か", "助詞", "副助詞", lemma="か", kana="カ", orth_base="か"),
-                _make_token("も", "助詞", "係助詞", lemma="も", kana="モ", orth_base="も"),
-                _make_token("しれ", "動詞", "一般", lemma="知れる", kana="シレ", orth_base="しれる"),
-                _make_token("ない", "助動詞", "*", lemma="ない", kana="ナイ", orth_base="ない"),
+                _make_token("彼", "代名詞", "*", lemma="彼", kana="カレ", orth_base="彼"),
+                _make_token("に", "助詞", "格助詞", lemma="に", kana="ニ", orth_base="に"),
+                _make_token("とっ", "動詞", "一般", lemma="取る", kana="トッ", orth_base="とる"),
+                _make_token("て", "助詞", "接続助詞", lemma="て", kana="テ", orth_base="て"),
             ]
 
         def invoke(fn):
@@ -1685,9 +1684,7 @@ class TestKanaRecoveryLexicalizedWindow:
                 patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
                 patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
             ):
-                service = SubtitleParserService(
-                    test_config, kana_attest_lookup=_attest_lookup("しれる", "かもしれない")
-                )
+                service = SubtitleParserService(test_config, kana_attest_lookup=_attest_lookup("とる", "にとって"))
                 return fn(service, sub_file)
 
         mine = invoke(lambda s, f: s.parse_subtitle_file(f))
@@ -1699,14 +1696,14 @@ class TestKanaRecoveryLexicalizedWindow:
 
         pt_words, pt_index, pt_counts = invoke(parse_units)
 
-        # 本当 mined everywhere; the しれる fragment rejected everywhere.
-        assert {w.lemma for w in mine} == {"本当"}
-        assert {w.lemma for w in idx_words} == {"本当"}
-        assert {lm for line in idx_lines for lm in line.lemmas} == {"本当"}
-        assert set(counts) == {"本当"}
-        assert {w.lemma for w in pt_words} == {"本当"}
-        assert {lm for line in pt_index for lm in line.lemmas} == {"本当"}
-        assert set(pt_counts) == {"本当"}
+        # 彼 mined everywhere; the とる fragment rejected everywhere.
+        assert {w.lemma for w in mine} == {"彼"}
+        assert {w.lemma for w in idx_words} == {"彼"}
+        assert {lm for line in idx_lines for lm in line.lemmas} == {"彼"}
+        assert set(counts) == {"彼"}
+        assert {w.lemma for w in pt_words} == {"彼"}
+        assert {lm for line in pt_index for lm in line.lemmas} == {"彼"}
+        assert set(pt_counts) == {"彼"}
 
     # --- 7. No probe wired → recovery (and the window layer) is byte-identical off. ---
 
