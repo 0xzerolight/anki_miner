@@ -10,6 +10,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Changed
 - **Japanese mines more everyday words written in kana.** あの and その before a noun, やっぱ, ぜひ, おかげ, あんな, わけ, とこ, ほう, and words the tagger cut apart (ちなみに, とっくに, もったいない, とんでもない). The tagger read a pre-noun あの as a filler, and the kana word list did not name the rest.
+- **Japanese grammar expressions are mined as one word, in every inflection.** という, として, について, によって, ように, ような, ことがある, ことができる, ことになる, ことにする, かもしれない and なければならない (会ったことがあった mines ことがある). The tagger cuts them at their particles and every piece was dropped. という and として join only after a noun, ことがある only after a verb.
+- **Common Japanese interjections are mined:** はい, うん, いいえ, いや, ありがとう, おはよう, こんにちは, さようなら, もしもし, ほら, よし, and すみません or すいません as one word. Fillers and gasps (えっと, うーん, あっ) and ええ are still left out.
+- **ある, いる, なる, できる, くる, いく, やる, くれる, もらう, ない, いい, よい and ほしい are mined where they are the line's own word** (猫がいる, 問題ない, もういい). After a verb, an adjective or て they are grammar (見ている, 食べてもいい) and are still skipped. The tagger marks all of them as possible helper words, so every use was dropped.
+- **Family words written in kana are mined whole (おばあちゃん, おじさん, おかあさん, にいちゃん).** The tagger cuts them into お, ばあ and ちゃん, and every piece was dropped.
 - **今 and 次 before a space are mined as いま and つぎ.** The tagger skips the subtitle space and reads them as the prefixes こん and じ, which were dropped.
 - **Katakana nouns the tagger does not know (スマホ, コスパ) are mined when a dictionary lists them as nouns.** They carry no lemma, so they were turned away before any dictionary was asked.
 - **二度と, and a na-adjective with its own に (静かに, 絶対に), are mined as the dictionary's one word** instead of 二度 and 静か.
@@ -20,6 +24,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Fixed
 - **Japanese verb cards show the verb the line uses.** An imperative (持て) mined 持てる, a passive (刺された) mined 刺さる, a potential (帰れない) mined 帰れる, a short causative (行かされた) mined 行かす and katakana フラれた mined the loanword フル; they now mine 持つ, 刺す, 帰る, 行く and ふる. The last three fronts had no dictionary entry, so the card was dropped.
 - **Kana fillers no longer become verb cards.** いえ ('no') mined いえる, a sound cut at っ (まっ, たっ) mined まつ and たつ, and the tagger's glues いたんだ, 違かった and ういっす mined 痛む, 買う and 逸する.
+- **やめる after は is mined (それはやめて).** は and やめ together read as はやめ (早め), and the rule that drops a word swallowed by a longer one threw やめる away. The same goes for つらい and 要る after は.
 - **その子, きれいな子 and 家の前 are no longer taken for names.** Name lists have その子, な子 and 家の前 as names, so the name filter dropped 子, 家 and 前 with them.
 - **自分ち mines 自分** instead of 自 and 分ち, and お父上様 or 母上殿 no longer mine 上様 and 上殿.
 - **Pieces of a name are no longer mined as words.** The 介 or 助 that ends a given name (雁助, 欧介), 神さん and 守殿 after a name's last kanji (夜神さん, 伊豆守殿), and 犯る read out of 殺人犯って.
