@@ -166,6 +166,7 @@ _EXPECTED_CATEGORIES = {
     "kana-words",
     "place-names",
     "kana-listed",
+    "kanji-glue",
 }
 
 

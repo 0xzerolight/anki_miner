@@ -198,6 +198,13 @@ _KANA_RECOVER_REJECT_POS2: frozenset[str] = frozenset({"助動詞語幹", "非�
 # the real verb (恨みをかう).
 _KANA_FUSED_LEMMAS: frozenset[str] = frozenset({"逸る", "抗する", "痛む", "買う", "逸する"})
 
+# Kanji tokens the tagger cuts out of a name, by the lemma it gives them. 助 is
+# UniDic's name-forming すけ, whose surfaces 介, 助, 亮 and 佐 end given names
+# (雁助, 欧介) and court ranks (上総介); no word a learner wants is spelled with
+# it (助手 and 紹介 are their own tokens), and 介 would take JMdict's かい
+# 'shell'. The katakana slang スケ shares the lemma and stays.
+_KANJI_NAME_PIECE_LEMMAS: frozenset[str] = frozenset({"助"})
+
 # An interjection the tagger reads as a kana verb when it stands alone: いえ ('no')
 # as the potential いえる or the imperative of 言う. The verb inflects on (いえない,
 # いえば, いえます); a bare いえ with nothing after it is the interjection, so only
@@ -2946,6 +2953,8 @@ class SubtitleParserService:
         if rejection is None:
             if self._is_katakana_run_fragment(word_token, text, tok_start, tok_end):
                 return False
+            if self._is_name_piece(word_token):
+                return False
             return not self._ellipsis_reject(word_token, text, tok_start, tok_end)
         how = self._kana_recovery(word_token)
         if how is not None:
@@ -2966,6 +2975,12 @@ class SubtitleParserService:
         if self._is_katakana_run_fragment(word_token, text, tok_start, tok_end):
             return False
         return not self._ellipsis_reject(word_token, text, tok_start, tok_end)
+
+    @staticmethod
+    def _is_name_piece(word_token) -> bool:
+        """Whether a kanji token is a piece the tagger cuts out of a name (``_KANJI_NAME_PIECE_LEMMAS``)."""
+        lemma = getattr(getattr(word_token, "feature", None), "lemma", None)
+        return lemma in _KANJI_NAME_PIECE_LEMMAS and not _is_all_katakana(word_token.surface)
 
     @staticmethod
     def _is_cut_sokuon_stem(word_token, text: str, tok_end: int) -> bool:

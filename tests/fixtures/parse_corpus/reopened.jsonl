@@ -1,0 +1,2 @@
+{"id":"xg01","sentence":"父が雁助と会う","expected":["父","会う"],"category":"kanji-glue","note":"助 here is UniDic's name-forming すけ (lemma 助): no card. 雁 is still mined as a name piece, by no rule of this category."}
+{"id":"xg02","sentence":"スケが来た","expected":["スケ","来る"],"category":"kanji-glue","note":"The katakana slang スケ shares the lemma 助 and stays."}
