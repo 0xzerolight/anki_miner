@@ -183,11 +183,31 @@ _KANA_RECOVER_POS1: frozenset[str] = frozenset({"動詞", "形容詞", "形状�
 #   lexical, so 見ている's いる and 猫がいる's いる are byte-identical tokens — no
 #   token-local rule can split aux from main-verb use, and recovering the class
 #   would mint an いる card from every ている line (the dominant kana-recovery
-#   junk source). Rejecting wholesale is the deliberate precision-over-recall
-#   call: standalone kana いる/ある are N5 basics that were never mined pre-WS2
-#   either. Kanji-spelled 非自立可能 tokens (見る, 来る) are untouched — they pass
+#   junk source). Only the words of _KANA_AUX_WORDS come back, and only where
+#   the token before them shows the main-word use (_used_as_auxiliary).
+#   Kanji-spelled 非自立可能 tokens (見る, 来る) are untouched — they pass
 #   should_include and never reach this path.
 _KANA_RECOVER_REJECT_POS2: frozenset[str] = frozenset({"助動詞語幹", "非自立可能"})
+
+# The auxiliary-capable kana words mined where the line uses them as its main
+# verb or adjective (猫がいる, 時間がない, 水がほしい). Left out: する, which after a
+# noun is that noun's verb (勉強する) and alone is mostly a mis-split's tail; the
+# honorific and dialect ones (なさる, くださる, いたす, まいる, おる); and the
+# aspect auxiliaries (しまう, おく, みる), whose bare kana is the auxiliary.
+_KANA_AUX_WORDS: frozenset[str] = frozenset(
+    {"いる", "ある", "なる", "できる", "くる", "いく", "やる", "くれる", "もらう", "ない", "いい", "よい", "ほしい"}
+)
+
+# What the token before an auxiliary-capable word is when the word is grammar:
+# a verb, an adjective or an auxiliary (よくない, 行かなくなる, 静かである), or a
+# conjunctive particle (見ている, 来てくれた, やればいい).
+_AUX_AFTER_POS1: frozenset[str] = frozenset({"動詞", "形容詞", "助動詞"})
+
+# Cries the tagger reads as an auxiliary-capable word, by their tokens: やった
+# ('yes!', not 'did') and いてっ/いたっ ('ouch', 痛っ). Each is a cry only alone
+# between pauses: after a line start, a punctuation mark or an interjection.
+_AUX_CRIES: tuple[tuple[str, ...], ...] = (("やっ", "た"), ("やっ", "たー"), ("い", "て", "っ"), ("い", "た", "っ"))
+_AUX_CRY_AFTER_POS1: frozenset[str] = frozenset({"補助記号", "感動詞", "フィラー"})
 
 # Kana verbs the tagger makes by gluing two words together, named by the lemma
 # it gives the result: 逸る is は + やる (オレはやる, やる時はやるやつ) and 抗する is
@@ -234,6 +254,7 @@ _SOKUON_CONTINUATIONS: frozenset[str] = frozenset("たてだでちじと")
 # word (ご|ちそう, お|しまい); a word JMdict writes in kana does not, as its
 # longer expressions are listed spans, merged or joined before it is judged alone.
 _KANA_RECOVERED = "recovered"
+_KANA_AUX = "aux"
 _KANA_LISTED = "listed"
 _KANA_LISTED_SPELLING = "listed spelling"
 
@@ -2970,7 +2991,11 @@ class SubtitleParserService:
             return not self._ellipsis_reject(word_token, text, tok_start, tok_end)
         how = self._kana_recovery(word_token)
         if how is not None:
-            if how != _KANA_LISTED and self._rejected_by_lexicalized_window(word_token, tokens):
+            if how == _KANA_AUX and self._used_as_auxiliary(word_token, tokens):
+                return False
+            if how != _KANA_LISTED and self._rejected_by_lexicalized_window(
+                word_token, tokens, from_left=how == _KANA_AUX
+            ):
                 return False
             if (
                 word_token.surface in _KANA_BARE_INTERJECTIONS
@@ -3003,6 +3028,36 @@ class SubtitleParserService:
     def _is_name_honorific_tail(word_token, text: str, tok_start: int) -> bool:
         """Whether an honorific compound (``_NAME_HONORIFIC_TAILS``) ends a name: a kanji right before it."""
         return word_token.surface in _NAME_HONORIFIC_TAILS and tok_start > 0 and is_cjk_ideograph(text[tok_start - 1])
+
+    @staticmethod
+    def _used_as_auxiliary(word_token, tokens: list) -> bool:
+        """Whether an auxiliary-capable kana word is grammar here, by the tokens around it.
+
+        After a verb, an adjective, an auxiliary or a conjunctive particle
+        (``_AUX_AFTER_POS1``), or after て/で + も/は (食べてもいい, 学生ではない).
+        At the line start, or after a case particle, a noun or an adverb, it is
+        the line's own word (猫がいる, 問題ない, もういい). A cry the tagger reads
+        as the word (``_AUX_CRIES``) is no word either, when it stands alone
+        between pauses (やった！, いてっ！) and not after a word (上で やった).
+        """
+        idx = next((i for i, tok in enumerate(tokens) if tok is word_token), None)
+        if idx is None:
+            return False
+        prev = getattr(tokens[idx - 1], "feature", None) if idx else None
+        pos1 = getattr(prev, "pos1", None)
+        if pos1 in _AUX_AFTER_POS1 or (pos1 == "助詞" and getattr(prev, "pos2", None) == "接続助詞"):
+            return True
+        if idx >= 2 and tokens[idx - 1].surface in ("も", "は") and tokens[idx - 2].surface in ("て", "で"):
+            return True
+        if pos1 not in (None, *_AUX_CRY_AFTER_POS1):
+            return False
+        for cry in _AUX_CRIES:
+            end = idx + len(cry)
+            if tuple(tok.surface for tok in tokens[idx:end]) == cry and (
+                end == len(tokens) or getattr(tokens[end].feature, "pos1", None) == "補助記号"
+            ):
+                return True
+        return False
 
     @staticmethod
     def _is_cut_sokuon_stem(word_token, text: str, tok_end: int) -> bool:
@@ -3090,8 +3145,12 @@ class SubtitleParserService:
             return False
         return self._is_ellipsis_truncation_fragment(word_token, text, tok_start, tok_end)
 
-    def _rejected_by_lexicalized_window(self, word_token, tokens: list) -> bool:
+    def _rejected_by_lexicalized_window(self, word_token, tokens: list, *, from_left: bool = False) -> bool:
         """Whether a recovered kana fragment sits inside an attested lexicalized expression.
+
+        ``from_left`` counts only the windows that open before the candidate: an
+        auxiliary-capable word joined with its own inflection is often another
+        word's reading (い|た is 板, き|た is 北), while しか|ない is the expression.
 
         Runs ONLY on a kana-recovery acceptance (see ``_mine_token``). Locates the
         candidate in ``tokens`` by identity — it is an element of that list (yielded
@@ -3111,7 +3170,7 @@ class SubtitleParserService:
         idx = next((i for i, tok in enumerate(tokens) if tok is word_token), None)
         if idx is None:  # defensive: candidate not in the list ⇒ no context to judge
             return False
-        windows = self._lexicalized_window_surfaces(tokens, idx)
+        windows = self._lexicalized_window_surfaces(tokens, idx, from_left=from_left)
         if not windows:
             return False
         uncached = [w for w in windows if w not in self._kana_window_cache]
@@ -3132,7 +3191,7 @@ class SubtitleParserService:
                 verdicts[w] = self._kana_window_cache[w] = bool(hits.get(w))
         return any(verdicts[w] for w in windows)
 
-    def _lexicalized_window_surfaces(self, tokens: list, idx: int) -> list[str]:
+    def _lexicalized_window_surfaces(self, tokens: list, idx: int, *, from_left: bool = False) -> list[str]:
         """Joined surfaces of every functional-neighbor window strictly containing ``tokens[idx]``.
 
         Walks up to ``_KANA_RECOVER_WINDOW_MAX_SIDE`` contiguous FUNCTIONAL neighbors
@@ -3160,7 +3219,7 @@ class SubtitleParserService:
         ):
             right += 1
         windows: list[str] = []
-        for start in range(left, idx + 1):
+        for start in range(left, idx if from_left else idx + 1):
             # No lexicalized sequence starts with a topic は attached to the word
             # before it, and one that does is a homophone across a word boundary
             # (嘘は|やめて reads はやめ 早め, お金は|いらん 入らん). A window through
@@ -3292,7 +3351,7 @@ class SubtitleParserService:
         return self._kana_recovery(word_token) is not None
 
     def _kana_recovery(self, word_token) -> str | None:
-        """How an otherwise-rejected hiragana word comes back: ``_KANA_RECOVERED``, ``_KANA_LISTED``, ``_KANA_LISTED_SPELLING`` or None.
+        """How an otherwise-rejected hiragana word comes back: ``_KANA_RECOVERED``, ``_KANA_AUX``, ``_KANA_LISTED``, ``_KANA_LISTED_SPELLING`` or None.
 
         Gate (ALL must hold; cheap checks first so the SQLite probe is the last
         resort and only distinct tokens ever reach it):
@@ -3349,6 +3408,21 @@ class SubtitleParserService:
             self._kana_recover_cache[key] = self._probe_kana_recovery(word_token, pos1, surface, recoverable, merged)
         return self._kana_recover_cache[key]
 
+    def _aux_word(self, word_token, pos1: str, surface: str, form: str, merged: bool) -> bool:
+        """Whether a 非自立可能 kana token is one of ``_KANA_AUX_WORDS``, spelled as that word.
+
+        The surface must start as the card front does: ねぇ is the spoken ない and
+        づける the voiced tail of a compound (景気づける), neither the word on the
+        card. A カ変 verb is the exception, as くる's own stem changes (きた, こい).
+        """
+        feature = word_token.feature
+        if merged or pos1 not in _KANA_RECOVER_POS1 or getattr(feature, "pos2", None) != "非自立可能":
+            return False
+        if form not in _KANA_AUX_WORDS or not self._inclusion_rule.content_gate_ok(word_token):
+            return False
+        c_type = getattr(feature, "cType", None)
+        return surface[0] == form[0] or (isinstance(c_type, str) and c_type.startswith("カ行変格"))
+
     def _probe_kana_recovery(self, word_token, pos1: str, surface: str, recoverable: bool, merged: bool) -> str | None:
         """The content gate (recovered) or list membership (listed), then attestation of the front.
 
@@ -3376,7 +3450,8 @@ class SubtitleParserService:
         form = select_mined_form(pos1, resolved_front, lemma, surface)
         if not form:
             return None
-        if not recoverable and not is_listed(form, pos1, merged=merged):
+        aux = not recoverable and self._aux_word(word_token, pos1, surface, form, merged)
+        if not recoverable and not aux and not is_listed(form, pos1, merged=merged):
             return None
         probe_start = time.perf_counter()
         attested = bool(lookup([form]).get(form))
@@ -3387,4 +3462,6 @@ class SubtitleParserService:
         # tag is recoverable: its window is its own inflection (かもしれません).
         if recoverable and not (merged and is_listed(form, pos1, merged=True)):
             return _KANA_RECOVERED
+        if aux:
+            return _KANA_AUX
         return _KANA_LISTED_SPELLING if not merged and is_kanji_spelled(form, pos1) else _KANA_LISTED

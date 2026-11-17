@@ -24,8 +24,8 @@ under a temp dir at import). It pins three things:
 
 Aux-context pins the 非自立可能 kana-recovery reject: its fixtures deliberately
 attest いる/ある/くれる/おく/しまう so the floor can only be green because the
-pos2 reject fires, never via a fixture-dict miss (the false-safe class this
-suite exists to prevent). Linebreak-split is scoreboard-only (G4 incidence
+pos2 reject and the aux-context reject fire, never via a fixture-dict miss (the
+false-safe class this suite exists to prevent). Linebreak-split is scoreboard-only (G4 incidence
 measurement, no fix shipped).
 """
 
@@ -212,9 +212,10 @@ def test_anchor_meets_aux_context_floor() -> None:
     results = _scored()
     b_ac = results["b-lite-anchor"].by_category["aux-context"]
     # Load-bearing (A1): the fixtures deliberately ATTEST いる/ある/くれる/おく/
-    # しまう, so only the 非自立可能 pos2 reject keeps them out of the mined set.
-    # Junk here means the reject was reverted and every ている line mints an aux
-    # card again; a miss means a real content word (猫/見る/読む…) was lost.
+    # しまう, so only the 非自立可能 pos2 reject (おく, しまう) and the context
+    # reject after a て, verb or auxiliary (ている, てくれる) keep them out of the
+    # mined set. Junk here means a reject was reverted and every ている line mints
+    # an aux card again; a miss means a real word (猫/見る, or いる in 猫がいる) was lost.
     assert recall(b_ac) == 1.0, f"strategy (b) aux-context recall {recall(b_ac)} below 1.0"
     assert junk_rate(b_ac) == 0.0, f"strategy (b) aux-context junk_rate {junk_rate(b_ac)} above 0.0"
 
