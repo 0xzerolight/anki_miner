@@ -3371,6 +3371,8 @@ class SubtitleParserService:
         self._probe_time_s += time.perf_counter() - probe_start
         if not attested:
             return None
-        if recoverable:
+        # A joined list row (かもしれない, しょうがない) is a listed word even when its
+        # tag is recoverable: its window is its own inflection (かもしれません).
+        if recoverable and not (merged and is_listed(form, pos1, merged=True)):
             return _KANA_RECOVERED
         return _KANA_LISTED_SPELLING if not merged and is_kanji_spelled(form, pos1) else _KANA_LISTED

@@ -462,6 +462,14 @@ _ANCHOR_HEADWORDS: tuple[str, ...] = (
     "あんな",
     "こと",
     "あと",
+    # lexical-join: grammar expressions the joiner rebuilds from kana list rows
+    "という",
+    "として",
+    "について",
+    "ことがある",
+    "かもしれない",
+    "ような",
+    "なければならない",
 )
 
 # Yomitan `ruleIdentifiers` per fixture headword. A real term bank ships these,
@@ -509,6 +517,9 @@ _ANCHOR_RULES: dict[str, str] = {
     "済む": "v5m",
     "残る": "v5r",
     "放っておく": "v5k",
+    # lexical-join expressions
+    "ことがある": "v5r",
+    **dict.fromkeys(("かもしれない", "なければならない"), "adj-i"),
 }
 
 # Readings for the rows the reading-gate category needs. Every other row keeps

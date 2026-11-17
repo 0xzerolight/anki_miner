@@ -16,7 +16,10 @@ the parser still checks it against the window around it.
 A join row names a word the tagger cuts apart (いつ|も, どう|いう), which
 ``LexicalJoiner`` joins back; the merged token then matches on its front alone.
 A ``start`` row joins only where it opens a line or clause, as there it is a
-conjunction (でも, だから) and elsewhere the particles (学校でも).
+conjunction (でも, だから) and elsewhere the particles (学校でも); a ``noun`` or
+``verb`` row only right after one (猫という, 会ったことがある). A last token
+written ``=X`` matches any token whose dictionary form is X, so a grammar
+expression joins in every inflection (こと|が|あっ|た is ことがある).
 """
 
 from __future__ import annotations
@@ -32,6 +35,8 @@ class KanaJoin(NamedTuple):
     headword: str
     pos1: str
     line_start: bool
+    #: "noun" or "verb": joined only right after one; "" anywhere.
+    after: str = ""
 
 
 class KanaWords(NamedTuple):
@@ -40,6 +45,9 @@ class KanaWords(NamedTuple):
     joined: frozenset[str]
     #: The word rows that spell a kanji-written word in kana.
     kanji_spelled: frozenset[tuple[str, str]]
+    #: Joins whose last token matches by dictionary form, keyed on the surfaces
+    #: before it plus that form (こと, が, ある).
+    base_joins: dict[tuple[str, ...], KanaJoin]
 
 
 @cache
@@ -49,19 +57,25 @@ def kana_words() -> KanaWords:
     words: set[tuple[str, str]] = set()
     kanji_spelled: set[tuple[str, str]] = set()
     joins: dict[tuple[str, ...], KanaJoin] = {}
+    base_joins: dict[tuple[str, ...], KanaJoin] = {}
     for line in text.splitlines():
         if not line.strip() or line.startswith("#"):
             continue
         form, pos1, *rest = line.split("\t")
         if rest and rest[0] != "kanji":
-            joins[tuple(rest[0].split("|"))] = KanaJoin(form, pos1, rest[1:] == ["start"])
+            *head, last = rest[0].split("|")
+            where = rest[1] if len(rest) > 1 else ""
+            join = KanaJoin(form, pos1, where == "start", "" if where == "start" else where)
+            if last.startswith("="):
+                base_joins[(*head, last[1:])] = join
+            else:
+                joins[(*head, last)] = join
             continue
         words.add((form, pos1))
         if rest:
             kanji_spelled.add((form, pos1))
-    return KanaWords(
-        frozenset(words), joins, frozenset(row.headword for row in joins.values()), frozenset(kanji_spelled)
-    )
+    joined = frozenset(row.headword for row in (*joins.values(), *base_joins.values()))
+    return KanaWords(frozenset(words), joins, joined, frozenset(kanji_spelled), base_joins)
 
 
 def is_listed(front: str, pos1: str, *, merged: bool) -> bool:

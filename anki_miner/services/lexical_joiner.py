@@ -23,7 +23,7 @@ from __future__ import annotations
 
 from typing import Callable, NamedTuple
 
-from anki_miner.services.compound_matcher import CompoundDictionaryMatcher, CompoundSyntheticToken, _pos1
+from anki_miner.services.compound_matcher import CompoundDictionaryMatcher, CompoundSyntheticToken, _pos1, _pos2
 from anki_miner.services.kana_words import kana_words
 from anki_miner.services.morphology import extract_orth_base, extract_reading
 
@@ -85,8 +85,10 @@ _NEGATIVE_ADJECTIVES: dict[str, str] = {
 
 _GRAMMAR_POS1 = frozenset({"助詞", "助動詞"})
 _MAX_FIXED_TOKENS = max(len(key) for key in _FIXED_JOINS)
-_MAX_KANA_TOKENS = max(len(key) for key in kana_words().joins)
+_MAX_KANA_TOKENS = max(len(key) for key in (*kana_words().joins, *kana_words().base_joins))
 _CLAUSE_BREAK_POS1 = frozenset({"補助記号", "記号"})
+_NOUN_POS1 = frozenset({"名詞", "代名詞", "接尾辞"})
+_VERB_POS1 = frozenset({"動詞", "助動詞"})
 
 # 思わず read as a negated verb, not the adverb: followed by に (思わずに
 # 'without thinking') or after とは/とも (そうとは思わず 'not thinking so'). A bare
@@ -106,6 +108,8 @@ class _Join(NamedTuple):
     # open a line or clause.
     listed: bool = False
     line_start: bool = False
+    # A kana row's "noun" or "verb": joined only right after one.
+    after: str = ""
 
 
 def _negated_verb_context(tokens: list, start: int, end: int) -> bool:
@@ -142,12 +146,16 @@ def _negative_adjective(tokens: list, i: int) -> _Join | None:
 
 
 def _kana_join(tokens: list, i: int) -> _Join | None:
-    """The longest kana word list join starting at ``tokens[i]``."""
-    joins = kana_words().joins
+    """The longest kana word list join starting at ``tokens[i]``: by surfaces, or ending on a dictionary form."""
+    listed = kana_words()
     for size in range(min(_MAX_KANA_TOKENS, len(tokens) - i), 1, -1):
-        row = joins.get(tuple(token.surface for token in tokens[i : i + size]))
+        span = tokens[i : i + size]
+        surfaces = tuple(token.surface for token in span)
+        row = listed.joins.get(surfaces) or listed.base_joins.get((*surfaces[:-1], extract_orth_base(span[-1])))
         if row is not None:
-            return _Join(i, i + size - 1, row.headword, row.pos1, listed=True, line_start=row.line_start)
+            return _Join(
+                i, i + size - 1, row.headword, row.pos1, listed=True, line_start=row.line_start, after=row.after
+            )
     return None
 
 
@@ -159,6 +167,21 @@ def _opens_clause(tokens: list, spans: dict[int, tuple[int, int]], i: int) -> bo
         return True
     left, right = spans.get(i - 1), spans.get(i)
     return left is None or right is None or left[1] != right[0]
+
+
+def _follows(tokens: list, i: int, after: str) -> bool:
+    """Whether ``tokens[i]`` comes right after the kind of word a kana row asks for ("" asks for none).
+
+    A noun row also follows a closing quote (「本」という): what is quoted is named.
+    """
+    if not after:
+        return True
+    if i == 0:
+        return False
+    before = tokens[i - 1]
+    if after == "noun":
+        return _pos1(before) in _NOUN_POS1 or _pos2(before) == "括弧閉"
+    return _pos1(before) in _VERB_POS1
 
 
 def _contiguous(spans: dict[int, tuple[int, int]], start: int, end: int) -> bool:
@@ -198,6 +221,7 @@ class LexicalJoiner:
             for join in joins
             if _contiguous(spans, join.start, join.end)
             and not (join.line_start and not _opens_clause(tokens, spans, join.start))
+            and _follows(tokens, join.start, join.after)
         ]
         unknown = sorted({join.headword for join in joins} - self._attested.keys())
         if unknown:
