@@ -121,6 +121,10 @@ class TestAuxCapableWordsAsMainWords:
         # No dictionary spells the kana run that way: it is the reading of a word written otherwise.
         assert front in _fronts(_service((*_AUX_WORDS, reading)), text)
 
+    def test_kun_after_a_nickname_is_not_kureru(self):
+        # The tagger reads the くん after a nickname it does not know as a contracted くれ.
+        assert "くれる" not in _fronts(_service(_AUX_WORDS), "まあくんって呼んで")
+
     def test_a_contracted_spelling_is_not_its_word(self):
         # ねぇ is the spoken ない: the card would teach ない from a line that never says it.
         assert "ない" not in _fronts(_service(_AUX_WORDS), "そんなもんねぇよ")

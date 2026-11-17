@@ -3419,11 +3419,13 @@ class SubtitleParserService:
         The surface must start as the card front does: ねぇ is the spoken ない and
         づける the voiced tail of a compound (景気づける), neither the word on the
         card. A カ変 verb is the exception, as くる's own stem changes (きた, こい).
+        くん is the honorific after a nickname the tagger does not know (あっくん)
+        as often as it is a contracted くれ.
         """
         feature = word_token.feature
         if merged or pos1 not in _KANA_RECOVER_POS1 or getattr(feature, "pos2", None) != "非自立可能":
             return False
-        if form not in _KANA_AUX_WORDS or not self._inclusion_rule.content_gate_ok(word_token):
+        if form not in _KANA_AUX_WORDS or surface == "くん" or not self._inclusion_rule.content_gate_ok(word_token):
             return False
         c_type = getattr(feature, "cType", None)
         return surface[0] == form[0] or (isinstance(c_type, str) and c_type.startswith("カ行変格"))
