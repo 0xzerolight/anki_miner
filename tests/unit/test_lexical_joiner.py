@@ -230,3 +230,29 @@ def test_input_tokens_never_mutated():
     before = [(t.surface, t.feature.pos1) for t in tokens]
     _joiner({"思わず"}).join_line("思わず笑った", tokens)
     assert [(t.surface, t.feature.pos1) for t in tokens] == before
+
+
+def test_a_row_ending_on_a_dictionary_form_joins_every_inflection():
+    # こと|が|=ある: the last token matches by its dictionary form (あっ of あった).
+    tokens = [
+        _tok("見", "動詞", orth_base="見る"),
+        _tok("た", "助動詞"),
+        _tok("こと", "名詞"),
+        _tok("が", "助詞"),
+        _tok("あっ", "動詞", orth_base="ある"),
+        _tok("た", "助動詞"),
+    ]
+    out = _joiner({"ことがある"}).join_line("見たことがあった", tokens)
+    assert [t.surface for t in out] == ["見", "た", "ことがあっ", "た"]
+    assert (out[2].feature.pos1, out[2].feature.lemma) == ("動詞", "ことがある")
+
+
+def test_a_verb_row_joins_only_after_a_verb():
+    # あんなことがあって: a thing happened, not the 'have done' expression.
+    tokens = [
+        _tok("あんな", "連体詞"),
+        _tok("こと", "名詞"),
+        _tok("が", "助詞"),
+        _tok("あっ", "動詞", orth_base="ある"),
+    ]
+    assert _joiner({"ことがある"}).join_line("あんなことがあっ", tokens) is tokens

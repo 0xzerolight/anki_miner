@@ -1,0 +1,8 @@
+{"id":"xe01","sentence":"猫という動物","expected":["猫","という","動物"],"category":"lexical-join","note":"と|いう joined as the expression という."}
+{"id":"xe02","sentence":"先生として働く","expected":["先生","として","働く"],"category":"lexical-join","note":"と|し|て joined as として."}
+{"id":"xe03","sentence":"音楽について話す","expected":["音楽","について","話す"],"category":"lexical-join","note":"に|つい|て joined as について."}
+{"id":"xe04","sentence":"会ったことがある","expected":["会う","ことがある"],"category":"lexical-join","note":"こと|が|ある joined; こと is no longer mined alone here."}
+{"id":"xe05","sentence":"会ったことがあった","expected":["会う","ことがある"],"category":"lexical-join","note":"The last token matches by its dictionary form, so the past joins too."}
+{"id":"xe06","sentence":"雨かもしれません","expected":["雨","かもしれない"],"category":"lexical-join","note":"か|も|しれ joined in any inflection, carded as かもしれない."}
+{"id":"xe07","sentence":"夢のような話","expected":["夢","ような","話"],"category":"lexical-join","note":"よう|な joined as ような."}
+{"id":"xe08","sentence":"行かなければならない","expected":["行く","なければならない"],"category":"lexical-join","note":"なけれ|ば|なら joined as なければならない."}

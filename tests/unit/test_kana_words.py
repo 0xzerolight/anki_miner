@@ -65,8 +65,8 @@ class TestList:
 
     def test_joins_carry_their_line_start_rule(self):
         joins = kana_words().joins
-        assert joins[("で", "も")] == ("でも", "接続詞", True)
-        assert joins[("いつ", "も")] == ("いつも", "副詞", False)
+        assert joins[("で", "も")] == ("でも", "接続詞", True, "")
+        assert joins[("いつ", "も")] == ("いつも", "副詞", False, "")
 
     @pytest.mark.parametrize(
         ("front", "pos1"), [("わたし", "代名詞"), ("じっと", "副詞"), ("おなか", "名詞"), ("べんとう", "名詞")]
