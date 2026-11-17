@@ -165,6 +165,16 @@ JOINS: tuple[tuple[str, str, str, str], ...] = (
     ("こいつら", "代名詞", "こいつ|ら", ""),
     ("これら", "代名詞", "これ|ら", ""),
     ("それら", "代名詞", "それ|ら", ""),
+    # Kinship words in kana: the tagger cuts お + ばあ + ちゃん, and JMdict has the
+    # whole word only as the reading of a kanji spelling (お祖母ちゃん). The bare
+    # root (ばあ, とう) is no row: alone it is as often another word (とうに).
+    *(
+        (prefix + root + suffix, "名詞", "|".join(filter(None, (prefix, root, suffix))), "")
+        for root in ("ばあ", "じい", "かあ", "とう", "にい", "ねえ")
+        for prefix in ("お", "")
+        for suffix in ("ちゃん", "さん")
+    ),
+    *((root + suffix, "名詞", f"{root}|{suffix}", "") for root in ("おじ", "おば") for suffix in ("ちゃん", "さん")),
     ("いいかげん", "形状詞", "いい|かげん", ""),
     ("なぜか", "副詞", "なぜ|か", ""),
     ("すぐに", "副詞", "すぐ|に", ""),

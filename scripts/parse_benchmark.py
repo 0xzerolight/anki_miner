@@ -470,6 +470,8 @@ _ANCHOR_HEADWORDS: tuple[str, ...] = (
     "かもしれない",
     "ような",
     "なければならない",
+    # kana-listed: a kinship word the tagger cuts apart
+    "おばあちゃん",
 )
 
 # Yomitan `ruleIdentifiers` per fixture headword. A real term bank ships these,
