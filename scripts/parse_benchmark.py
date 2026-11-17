@@ -462,6 +462,17 @@ _ANCHOR_HEADWORDS: tuple[str, ...] = (
     "あんな",
     "こと",
     "あと",
+    # kana-listed: interjections; ええ and えっと are DELIBERATELY attested, so
+    # xi05/xi06 fail on the list's exclusion, not on a dict miss
+    "はい",
+    "うん",
+    "おい",
+    "すみません",
+    "ええ",
+    "えっと",
+    # lexicalized-window: しれる is recoverable alone, かもしれない is the window
+    "しれる",
+    "かもしれない",
 )
 
 # Yomitan `ruleIdentifiers` per fixture headword. A real term bank ships these,
@@ -509,6 +520,8 @@ _ANCHOR_RULES: dict[str, str] = {
     "済む": "v5m",
     "残る": "v5r",
     "放っておく": "v5k",
+    # lexicalized-window
+    "しれる": "v1",
 }
 
 # Readings for the rows the reading-gate category needs. Every other row keeps

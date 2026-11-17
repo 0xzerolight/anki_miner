@@ -198,10 +198,12 @@ def test_anchor_meets_lexicalized_window_floor() -> None:
     results = _scored()
     b_lw = results["b-lite-anchor"].by_category["lexicalized-window"]
     assert junk_rate(b_lw) == 0.0, f"strategy (b) lexicalized-window junk_rate {junk_rate(b_lw)} above 0.0"
-    # The standalone recovery proves すむ is attested; the joined attestation is
-    # therefore the only reason strategy (b) suppresses it inside すみません.
+    # The standalone recovery proves すむ is attested; すみません is the listed
+    # apology, joined before any window is judged.
     assert mine_lite_anchor("すみます") == {"すむ"}
-    assert mine_lite_anchor("すみません") == set()
+    assert mine_lite_anchor("すみません") == {"すみません"}
+    # しれる and かもしれない are both attested, so the window alone keeps しれる off.
+    assert mine_lite_anchor("雨かもしれない") == {"雨"}
     # No dictionary keeps the byte-identical safe-degrade baseline.
     assert mine_lite_orthbase("すみません") == set()
 

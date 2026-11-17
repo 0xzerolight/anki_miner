@@ -1,0 +1,6 @@
+{"id":"xi01","sentence":"はい、行きます","expected":["はい","行く"],"category":"kana-listed","note":"A listed interjection overrides the interjection skip."}
+{"id":"xi02","sentence":"うん、分かった","expected":["うん","分かる"],"category":"kana-listed","note":"うん 'yeah' is listed."}
+{"id":"xi03","sentence":"おい、待て","expected":["おい","待つ"],"category":"kana-listed","note":"おい 'hey' is listed."}
+{"id":"xi04","sentence":"すみません、遅れました","expected":["すみません","遅れる"],"category":"kana-listed","note":"すみ|ませ|ん joined as the apology, not the verb 済む."}
+{"id":"xi05","sentence":"ええ、行きます","expected":["行く"],"category":"kana-listed","note":"ええ (attested) stays out: it is as often the Kansai いい."}
+{"id":"xi06","sentence":"えっと、行きます","expected":["行く"],"category":"kana-listed","note":"A filler (attested) stays out."}

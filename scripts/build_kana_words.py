@@ -34,8 +34,9 @@ from anki_miner.services.tagger import get_shared_tagger
 _USUALLY_KANA = "word usually written using kana alone"
 
 #: The unidic pos1 tags whose kana words are listed. 動詞/形容詞/形状詞 stay out:
-#: kana recovery already brings those back by attestation.
-WORD_POS1: tuple[str, ...] = ("副詞", "代名詞", "連体詞", "接続詞", "名詞")
+#: kana recovery already brings those back by attestation. A listed 感動詞 (はい,
+#: ありがとう) overrides the parser's interjection skip.
+WORD_POS1: tuple[str, ...] = ("副詞", "代名詞", "連体詞", "接続詞", "名詞", "感動詞")
 
 #: The only two-kana nouns listed. A two-kana noun is as often a piece of a
 #: longer word the tagger split (まね|た → ねた, や|つら, すり|ガラス) or a
@@ -77,6 +78,7 @@ JMDICT_POS: dict[str, tuple[str, ...]] = {
     "連体詞": ("pre-noun adjectival",),
     "接続詞": ("conjunction",),
     "名詞": ("noun (common)",),
+    "感動詞": ("interjection",),
 }
 
 #: Sentences a candidate is tagged in; any single-token tag it gets counts.
@@ -112,6 +114,14 @@ EXCLUDED: dict[tuple[str, str], str] = {
     # 単に is as often the tail of a dialect past (待っちょったんに).
     ("たんに", "副詞"): "fragment",
     ("にゃー", "副詞"): "animal sound",
+    # ええ is as often the Kansai いい (これでええ) as 'yes'; あら is mostly the
+    # drawn-out あらぁ of a surprised line.
+    **dict.fromkeys((("ええ", "感動詞"), ("あら", "感動詞")), "interjection"),
+    # Fillers, hesitations and gasps: a sound, not a word to learn.
+    **dict.fromkeys((("あの", "感動詞"), ("あのー", "感動詞"), ("その", "感動詞"), ("えっと", "感動詞")), "filler"),
+    **dict.fromkeys((("えと", "感動詞"), ("うーん", "感動詞"), ("まー", "感動詞"), ("なー", "感動詞")), "filler"),
+    **dict.fromkeys((("あっ", "感動詞"), ("あん", "感動詞"), ("あう", "感動詞"), ("あい", "感動詞")), "filler"),
+    **dict.fromkeys((("ふん", "感動詞"), ("おす", "感動詞")), "filler"),
 }
 
 #: Words the tagger cuts apart: (headword, pos1, tokens, line start only). Kana
@@ -181,6 +191,9 @@ JOINS: tuple[tuple[str, str, str, bool], ...] = (
     ("もったいない", "形容詞", "もったい|ない", False),
     ("めんどくさい", "形容詞", "めんど|くさい", False),
     ("しょうがない", "形容詞", "しょう|が|ない", False),
+    # Apologies the tagger reads as the verb 済む and its negative.
+    ("すみません", "感動詞", "すみ|ませ|ん", False),
+    ("すいません", "感動詞", "すい|ませ|ん", False),
     ("でも", "接続詞", "で|も", True),
     ("だから", "接続詞", "だ|から", True),
     ("だって", "接続詞", "だ|って", True),
