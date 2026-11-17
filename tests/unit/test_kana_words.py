@@ -65,8 +65,8 @@ class TestList:
 
     def test_joins_carry_their_line_start_rule(self):
         joins = kana_words().joins
-        assert joins[("で", "も")] == ("でも", "接続詞", True)
-        assert joins[("いつ", "も")] == ("いつも", "副詞", False)
+        assert joins[("で", "も")] == ("でも", "接続詞", True, "")
+        assert joins[("いつ", "も")] == ("いつも", "副詞", False, "")
 
     @pytest.mark.parametrize(
         ("front", "pos1"), [("わたし", "代名詞"), ("じっと", "副詞"), ("おなか", "名詞"), ("べんとう", "名詞")]
@@ -194,3 +194,32 @@ class TestMining:
     )
     def test_mines_a_common_short_kana_word(self, test_config, line, front):
         assert front in _mine_attested(test_config, {front}, line)
+
+    @pytest.mark.parametrize(
+        ("line", "front", "pieces"),
+        [
+            ("おばあちゃんが来た", "おばあちゃん", {"ばあ", "ばあちゃん"}),
+            ("じいさんは元気だ", "じいさん", {"じい"}),
+            ("あのおじさんは誰", "おじさん", {"おじ"}),
+            ("おかあさんと行く", "おかあさん", {"かあ", "かあさん"}),
+        ],
+    )
+    def test_joins_a_kana_kinship_word(self, test_config, line, front, pieces):
+        # A dictionary wired, as in the app: without one the noun-suffix pass
+        # glues ばあ + ちゃん unattested and the join never sees its tokens.
+        # JMdict has the kana word only as a reading, so no term attests it.
+        service = SubtitleParserService(
+            test_config,
+            term_lookup=lambda terms: set(),
+            kana_attest_lookup=lambda forms: {form: form in {front, "あの", "もう"} for form in forms},
+        )
+        words, _index, _counts = service.parse_text_units(
+            [ReadingUnit(text=line, index=0, location_label="t")], want_line_index=False
+        )
+        fronts = [word.mined_form for word in words]
+        assert front in fronts
+        assert not pieces & set(fronts)
+
+    def test_leaves_a_kinship_root_without_its_suffix(self, test_config):
+        # とうに 'long ago': no さん/ちゃん after とう, so nothing joins.
+        assert "とうさん" not in _mine(test_config, "とうに過ぎた")

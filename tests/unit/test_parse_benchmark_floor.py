@@ -24,8 +24,8 @@ under a temp dir at import). It pins three things:
 
 Aux-context pins the 非自立可能 kana-recovery reject: its fixtures deliberately
 attest いる/ある/くれる/おく/しまう so the floor can only be green because the
-pos2 reject fires, never via a fixture-dict miss (the false-safe class this
-suite exists to prevent). Linebreak-split is scoreboard-only (G4 incidence
+pos2 reject and the aux-context reject fire, never via a fixture-dict miss (the
+false-safe class this suite exists to prevent). Linebreak-split is scoreboard-only (G4 incidence
 measurement, no fix shipped).
 """
 
@@ -198,10 +198,12 @@ def test_anchor_meets_lexicalized_window_floor() -> None:
     results = _scored()
     b_lw = results["b-lite-anchor"].by_category["lexicalized-window"]
     assert junk_rate(b_lw) == 0.0, f"strategy (b) lexicalized-window junk_rate {junk_rate(b_lw)} above 0.0"
-    # The standalone recovery proves すむ is attested; the joined attestation is
-    # therefore the only reason strategy (b) suppresses it inside すみません.
+    # The standalone recovery proves すむ is attested; すみません is the listed
+    # apology, joined before any window is judged.
     assert mine_lite_anchor("すみます") == {"すむ"}
-    assert mine_lite_anchor("すみません") == set()
+    assert mine_lite_anchor("すみません") == {"すみません"}
+    # とる and にとって are both attested, so the window alone keeps とる off.
+    assert mine_lite_anchor("彼にとって") == {"彼"}
     # No dictionary keeps the byte-identical safe-degrade baseline.
     assert mine_lite_orthbase("すみません") == set()
 
@@ -210,9 +212,10 @@ def test_anchor_meets_aux_context_floor() -> None:
     results = _scored()
     b_ac = results["b-lite-anchor"].by_category["aux-context"]
     # Load-bearing (A1): the fixtures deliberately ATTEST いる/ある/くれる/おく/
-    # しまう, so only the 非自立可能 pos2 reject keeps them out of the mined set.
-    # Junk here means the reject was reverted and every ている line mints an aux
-    # card again; a miss means a real content word (猫/見る/読む…) was lost.
+    # しまう, so only the 非自立可能 pos2 reject (おく, しまう) and the context
+    # reject after a て, verb or auxiliary (ている, てくれる) keep them out of the
+    # mined set. Junk here means a reject was reverted and every ている line mints
+    # an aux card again; a miss means a real word (猫/見る, or いる in 猫がいる) was lost.
     assert recall(b_ac) == 1.0, f"strategy (b) aux-context recall {recall(b_ac)} below 1.0"
     assert junk_rate(b_ac) == 0.0, f"strategy (b) aux-context junk_rate {junk_rate(b_ac)} above 0.0"
 

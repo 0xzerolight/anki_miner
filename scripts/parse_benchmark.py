@@ -427,6 +427,10 @@ _ANCHOR_HEADWORDS: tuple[str, ...] = (
     "残る",
     # span-window: 放っておく, joined through the potential tail おけ (おける)
     "放っておく",
+    # span-window: やめる, and はやめ (早め's reading) attested so only a window
+    # reaching left over the topic は could reject it
+    "やめる",
+    "はやめ",
     # kana-words: listed kana words, plus これは and でも attested on purpose so
     # only the list's own rules keep これ and leave 学校でも unjoined
     "もう",
@@ -462,6 +466,33 @@ _ANCHOR_HEADWORDS: tuple[str, ...] = (
     "あんな",
     "こと",
     "あと",
+    # lexical-join: grammar expressions the joiner rebuilds from kana list rows
+    "という",
+    "として",
+    "について",
+    "ことがある",
+    "かもしれない",
+    "ような",
+    "なければならない",
+    # kana-listed: a kinship word the tagger cuts apart
+    "おばあちゃん",
+    # kana-listed: interjections; ええ and えっと are DELIBERATELY attested, so
+    # xi05/xi06 fail on the list's exclusion, not on a dict miss
+    "はい",
+    "うん",
+    "おい",
+    "すみません",
+    "ええ",
+    "えっと",
+    # lexicalized-window: とる is recoverable alone, にとって is the window
+    "とる",
+    "にとって",
+    # aux-context: auxiliary-capable kana words mined as the line's main word
+    # (なる, ない, ほしい, よい); いる and ある are anchored above
+    "なる",
+    "ない",
+    "ほしい",
+    "よい",
 )
 
 # Yomitan `ruleIdentifiers` per fixture headword. A real term bank ships these,
@@ -509,6 +540,15 @@ _ANCHOR_RULES: dict[str, str] = {
     "済む": "v5m",
     "残る": "v5r",
     "放っておく": "v5k",
+    # lexical-join expressions
+    "ことがある": "v5r",
+    **dict.fromkeys(("かもしれない", "なければならない"), "adj-i"),
+    "やめる": "v1",
+    # lexicalized-window
+    "とる": "v5r",
+    # aux-context
+    "なる": "v5r",
+    **dict.fromkeys(("ない", "ほしい", "よい"), "adj-i"),
 }
 
 # Readings for the rows the reading-gate category needs. Every other row keeps

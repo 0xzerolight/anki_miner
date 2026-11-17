@@ -34,8 +34,9 @@ from anki_miner.services.tagger import get_shared_tagger
 _USUALLY_KANA = "word usually written using kana alone"
 
 #: The unidic pos1 tags whose kana words are listed. 動詞/形容詞/形状詞 stay out:
-#: kana recovery already brings those back by attestation.
-WORD_POS1: tuple[str, ...] = ("副詞", "代名詞", "連体詞", "接続詞", "名詞")
+#: kana recovery already brings those back by attestation. A listed 感動詞 (はい,
+#: ありがとう) overrides the parser's interjection skip.
+WORD_POS1: tuple[str, ...] = ("副詞", "代名詞", "連体詞", "接続詞", "名詞", "感動詞")
 
 #: The only two-kana nouns listed. A two-kana noun is as often a piece of a
 #: longer word the tagger split (まね|た → ねた, や|つら, すり|ガラス) or a
@@ -77,6 +78,7 @@ JMDICT_POS: dict[str, tuple[str, ...]] = {
     "連体詞": ("pre-noun adjectival",),
     "接続詞": ("conjunction",),
     "名詞": ("noun (common)",),
+    "感動詞": ("interjection",),
 }
 
 #: Sentences a candidate is tagged in; any single-token tag it gets counts.
@@ -112,93 +114,143 @@ EXCLUDED: dict[tuple[str, str], str] = {
     # 単に is as often the tail of a dialect past (待っちょったんに).
     ("たんに", "副詞"): "fragment",
     ("にゃー", "副詞"): "animal sound",
+    # ええ is as often the Kansai いい (これでええ) as 'yes'; あら is mostly the
+    # drawn-out あらぁ of a surprised line.
+    **dict.fromkeys((("ええ", "感動詞"), ("あら", "感動詞")), "interjection"),
+    # Fillers, hesitations and gasps: a sound, not a word to learn.
+    **dict.fromkeys((("あの", "感動詞"), ("あのー", "感動詞"), ("その", "感動詞"), ("えっと", "感動詞")), "filler"),
+    **dict.fromkeys((("えと", "感動詞"), ("うーん", "感動詞"), ("まー", "感動詞"), ("なー", "感動詞")), "filler"),
+    **dict.fromkeys((("あっ", "感動詞"), ("あん", "感動詞"), ("あう", "感動詞"), ("あい", "感動詞")), "filler"),
+    **dict.fromkeys((("ふん", "感動詞"), ("おす", "感動詞")), "filler"),
 }
 
-#: Words the tagger cuts apart: (headword, pos1, tokens, line start only). Kana
+#: Words the tagger cuts apart: (headword, pos1, tokens, where). Kana
 #: spans join in LexicalJoiner rather than the compound matcher, which attests
 #: a span by its exact term and so misses words JMdict spells in kana only as a
 #: reading (どういう, そのうち). The pos1 is the joined token's, so it decides the
-#: card front like any token's. A line-start row is a conjunction only where it opens a
-#: line or clause: で|も inside one is the particles (学校でも). Left out: それ|に,
+#: card front like any token's. ``where`` is "" (anywhere), "start" (opening a line or
+#: clause: a conjunction there, で|も inside one is the particles, 学校でも), "noun"
+#: (after a noun) or "verb" (after a verb or an auxiliary). Left out: それ|に,
 #: as a subtitle space before それに伴う reads as a clause break, and その|うち,
 #: which is "of those" before の (そのうちの１本).
-JOINS: tuple[tuple[str, str, str, bool], ...] = (
-    ("そのまま", "副詞", "その|まま", False),
-    ("このまま", "副詞", "この|まま", False),
-    ("そのうえ", "接続詞", "その|うえ", False),
-    ("このあいだ", "名詞", "この|あいだ", False),
-    ("どのくらい", "副詞", "どの|くらい", False),
-    ("どのぐらい", "副詞", "どの|ぐらい", False),
-    ("そういう", "連体詞", "そう|いう", False),
-    ("こういう", "連体詞", "こう|いう", False),
-    ("どういう", "連体詞", "どう|いう", False),
-    ("ああいう", "連体詞", "ああ|いう", False),
-    ("もしかして", "副詞", "もし|か|し|て", False),
-    ("もしかしたら", "副詞", "もし|か|し|たら", False),
-    ("もしかすると", "副詞", "もし|か|する|と", False),
-    ("どうも", "副詞", "どう|も", False),
-    ("ために", "名詞", "ため|に", False),
-    ("やけに", "副詞", "やけ|に", False),
-    ("かどうか", "副詞", "か|どう|か", False),
-    ("いつも", "副詞", "いつ|も", False),
-    ("いつか", "副詞", "いつ|か", False),
-    ("いつでも", "副詞", "いつ|で|も", False),
-    ("いつまでも", "副詞", "いつ|まで|も", False),
-    ("これから", "副詞", "これ|から", False),
-    ("どうして", "副詞", "どう|し|て", False),
-    ("どうしても", "副詞", "どう|し|て|も", False),
-    ("どうやって", "副詞", "どう|やっ|て", False),
-    ("そんなに", "副詞", "そんな|に", False),
-    ("こんなに", "副詞", "こんな|に", False),
-    ("どんなに", "副詞", "どんな|に", False),
+JOINS: tuple[tuple[str, str, str, str], ...] = (
+    ("そのまま", "副詞", "その|まま", ""),
+    ("このまま", "副詞", "この|まま", ""),
+    ("そのうえ", "接続詞", "その|うえ", ""),
+    ("このあいだ", "名詞", "この|あいだ", ""),
+    ("どのくらい", "副詞", "どの|くらい", ""),
+    ("どのぐらい", "副詞", "どの|ぐらい", ""),
+    ("そういう", "連体詞", "そう|いう", ""),
+    ("こういう", "連体詞", "こう|いう", ""),
+    ("どういう", "連体詞", "どう|いう", ""),
+    ("ああいう", "連体詞", "ああ|いう", ""),
+    ("もしかして", "副詞", "もし|か|し|て", ""),
+    ("もしかしたら", "副詞", "もし|か|し|たら", ""),
+    ("もしかすると", "副詞", "もし|か|する|と", ""),
+    ("どうも", "副詞", "どう|も", ""),
+    ("ために", "名詞", "ため|に", ""),
+    ("やけに", "副詞", "やけ|に", ""),
+    ("かどうか", "副詞", "か|どう|か", ""),
+    ("いつも", "副詞", "いつ|も", ""),
+    ("いつか", "副詞", "いつ|か", ""),
+    ("いつでも", "副詞", "いつ|で|も", ""),
+    ("いつまでも", "副詞", "いつ|まで|も", ""),
+    ("これから", "副詞", "これ|から", ""),
+    ("どうして", "副詞", "どう|し|て", ""),
+    ("どうしても", "副詞", "どう|し|て|も", ""),
+    ("どうやって", "副詞", "どう|やっ|て", ""),
+    ("そんなに", "副詞", "そんな|に", ""),
+    ("こんなに", "副詞", "こんな|に", ""),
+    ("どんなに", "副詞", "どんな|に", ""),
     # A pronoun's plural is its own JMdict word; alone, おれ would be cut from おれたち.
-    ("わたしたち", "代名詞", "わたし|たち", False),
-    ("ぼくたち", "代名詞", "ぼく|たち", False),
-    ("おれたち", "代名詞", "おれ|たち", False),
-    ("おまえたち", "代名詞", "おまえ|たち", False),
-    ("きみたち", "代名詞", "きみ|たち", False),
-    ("あなたたち", "代名詞", "あなた|たち", False),
-    ("かれら", "代名詞", "かれ|ら", False),
-    ("おまえら", "代名詞", "おまえ|ら", False),
-    ("あいつら", "代名詞", "あいつ|ら", False),
-    ("こいつら", "代名詞", "こいつ|ら", False),
-    ("これら", "代名詞", "これ|ら", False),
-    ("それら", "代名詞", "それ|ら", False),
-    ("いいかげん", "形状詞", "いい|かげん", False),
-    ("なぜか", "副詞", "なぜ|か", False),
-    ("すぐに", "副詞", "すぐ|に", False),
+    ("わたしたち", "代名詞", "わたし|たち", ""),
+    ("ぼくたち", "代名詞", "ぼく|たち", ""),
+    ("おれたち", "代名詞", "おれ|たち", ""),
+    ("おまえたち", "代名詞", "おまえ|たち", ""),
+    ("きみたち", "代名詞", "きみ|たち", ""),
+    ("あなたたち", "代名詞", "あなた|たち", ""),
+    ("かれら", "代名詞", "かれ|ら", ""),
+    ("おまえら", "代名詞", "おまえ|ら", ""),
+    ("あいつら", "代名詞", "あいつ|ら", ""),
+    ("こいつら", "代名詞", "こいつ|ら", ""),
+    ("これら", "代名詞", "これ|ら", ""),
+    ("それら", "代名詞", "それ|ら", ""),
+    # Kinship words in kana: the tagger cuts お + ばあ + ちゃん, and JMdict has the
+    # whole word only as the reading of a kanji spelling (お祖母ちゃん). The bare
+    # root (ばあ, とう) is no row: alone it is as often another word (とうに).
+    *(
+        (prefix + root + suffix, "名詞", "|".join(filter(None, (prefix, root, suffix))), "")
+        for root in ("ばあ", "じい", "かあ", "とう", "にい", "ねえ")
+        for prefix in ("お", "")
+        for suffix in ("ちゃん", "さん")
+    ),
+    *((root + suffix, "名詞", f"{root}|{suffix}", "") for root in ("おじ", "おば") for suffix in ("ちゃん", "さん")),
+    # Apologies the tagger reads as the verb 済む and its negative.
+    ("すみません", "感動詞", "すみ|ませ|ん", ""),
+    ("すいません", "感動詞", "すい|ませ|ん", ""),
+    ("いいかげん", "形状詞", "いい|かげん", ""),
+    ("なぜか", "副詞", "なぜ|か", ""),
+    ("すぐに", "副詞", "すぐ|に", ""),
     # Cut at a particle, an auxiliary or the adjective ない; the stem alone is no
     # word (とっく, もったい) or another one (あんな, いまだ).
-    ("あんなに", "副詞", "あんな|に", False),
-    ("ちなみに", "接続詞", "ちなみ|に", False),
-    ("とっくに", "副詞", "とっく|に", False),
-    ("いまだに", "副詞", "いまだ|に", False),
-    ("くれぐれも", "副詞", "くれぐれ|も", False),
-    ("ひょっとして", "副詞", "ひょっと|し|て", False),
-    ("ひょっとしたら", "副詞", "ひょっと|し|たら", False),
-    ("ひょっとすると", "副詞", "ひょっと|する|と", False),
-    ("とんでもない", "形容詞", "とんでも|ない", False),
-    ("もったいない", "形容詞", "もったい|ない", False),
-    ("めんどくさい", "形容詞", "めんど|くさい", False),
-    ("しょうがない", "形容詞", "しょう|が|ない", False),
-    ("でも", "接続詞", "で|も", True),
-    ("だから", "接続詞", "だ|から", True),
-    ("だって", "接続詞", "だ|って", True),
-    ("だけど", "接続詞", "だ|けど", True),
-    ("それで", "接続詞", "それ|で", True),
-    ("それでも", "接続詞", "それ|で|も", True),
-    ("それから", "接続詞", "それ|から", True),
-    ("それとも", "接続詞", "それ|と|も", True),
-    ("すると", "接続詞", "する|と", True),
-    ("ところが", "接続詞", "ところ|が", True),
-    ("ところで", "接続詞", "ところ|で", True),
+    ("あんなに", "副詞", "あんな|に", ""),
+    ("ちなみに", "接続詞", "ちなみ|に", ""),
+    ("とっくに", "副詞", "とっく|に", ""),
+    ("いまだに", "副詞", "いまだ|に", ""),
+    ("くれぐれも", "副詞", "くれぐれ|も", ""),
+    ("ひょっとして", "副詞", "ひょっと|し|て", ""),
+    ("ひょっとしたら", "副詞", "ひょっと|し|たら", ""),
+    ("ひょっとすると", "副詞", "ひょっと|する|と", ""),
+    ("とんでもない", "形容詞", "とんでも|ない", ""),
+    ("もったいない", "形容詞", "もったい|ない", ""),
+    ("めんどくさい", "形容詞", "めんど|くさい", ""),
+    ("しょうがない", "形容詞", "しょう|が|ない", ""),
+    # Grammar expressions the tagger cuts at its particles. A token written =X
+    # matches any token whose dictionary form is X, so the expression joins in
+    # every inflection (こと|が|あっ|た is ことがある); a verb or adjective row
+    # cards its headword, the others their surface. A noun row joins only after
+    # a noun (猫という, 親として; not ダメだという 'says', 起こそうとして 'tries
+    # to'), a verb row only after a verb (会ったことがある; not あんなことがあって
+    # 'such a thing happened').
+    ("という", "連体詞", "と|いう", "noun"),
+    ("というのは", "接続詞", "と|いう|の|は", ""),
+    ("として", "副詞", "と|し|て", "noun"),
+    ("について", "副詞", "に|つい|て", ""),
+    ("によって", "副詞", "に|よっ|て", ""),
+    ("により", "副詞", "に|より", ""),
+    ("による", "連体詞", "に|よる", ""),
+    ("どのように", "副詞", "どの|よう|に", ""),
+    ("このように", "副詞", "この|よう|に", ""),
+    ("のように", "副詞", "の|よう|に", ""),
+    ("ように", "副詞", "よう|に", ""),
+    ("ような", "連体詞", "よう|な", ""),
+    ("ようになる", "動詞", "よう|に|=なる", ""),
+    ("ことがある", "動詞", "こと|が|=ある", "verb"),
+    ("ことができる", "動詞", "こと|が|=できる", ""),
+    ("ことになる", "動詞", "こと|に|=なる", ""),
+    ("ことにする", "動詞", "こと|に|=する", ""),
+    ("かもしれない", "形容詞", "か|も|=しれる", ""),
+    ("なければならない", "形容詞", "なけれ|ば|=なる", ""),
+    ("でも", "接続詞", "で|も", "start"),
+    ("だから", "接続詞", "だ|から", "start"),
+    ("だって", "接続詞", "だ|って", "start"),
+    ("だけど", "接続詞", "だ|けど", "start"),
+    ("それで", "接続詞", "それ|で", "start"),
+    ("それでも", "接続詞", "それ|で|も", "start"),
+    ("それから", "接続詞", "それ|から", "start"),
+    ("それとも", "接続詞", "それ|と|も", "start"),
+    ("すると", "接続詞", "する|と", "start"),
+    ("ところが", "接続詞", "ところ|が", "start"),
+    ("ところで", "接続詞", "ところ|で", "start"),
 )
 
 _HEADER = """\
 # Kana-written words Anki Miner mines by name (anki_miner/services/kana_words.py).
 # Generated by scripts/build_kana_words.py from JMdict_e (EDRDG, CC BY-SA 4.0); do not edit.
 # form<TAB>pos1[<TAB>kanji]              one token with this unidic pos1 (kanji: a kanji-written word's kana spelling)
-# form<TAB>pos1<TAB>tokens[<TAB>start]   tokens LexicalJoiner joins (start: only opening a line or clause)
+# form<TAB>pos1<TAB>tokens[<TAB>where]   tokens LexicalJoiner joins (where: start, only opening a line or
+#                                        clause; noun or verb, only after one; a last token =X: any
+#                                        token whose dictionary form is X)
 """
 
 
@@ -272,7 +324,7 @@ def build(jmdict: Path) -> list[str]:
             elif form in kanji_readings and _kanji_reading_fits(form, pos1, kanji_readings[form]):
                 rows[form, pos1] = True
     lines = [f"{form}\t{pos1}" + ("\tkanji" if kanji else "") for (form, pos1), kanji in sorted(rows.items())]
-    lines += ["\t".join((form, pos1, tokens, *(["start"] if start else []))) for form, pos1, tokens, start in JOINS]
+    lines += ["\t".join((form, pos1, tokens, *([where] if where else []))) for form, pos1, tokens, where in JOINS]
     return lines
 
 

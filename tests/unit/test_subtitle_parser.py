@@ -1247,19 +1247,16 @@ class TestKanaWordRecovery:
     @pytest.mark.parametrize(
         ("context", "surface", "lemma", "orth_base"),
         [
-            ("見ている", "いる", "居る", "いる"),
-            ("そこにある", "ある", "有る", "ある"),
-            ("買ってくれる", "くれる", "呉れる", "くれる"),
             ("書いておく", "おく", "置く", "おく"),
             ("読んでしまう", "しまう", "仕舞う", "しまう"),
         ],
     )
     def test_does_not_recover_auxiliary_capable_verb(self, test_config, context, surface, lemma, orth_base):
-        # 動詞 pos2=非自立可能 (real unidic tag for いる/ある/くれる/おく/しまう —
-        # in AUX context and standalone alike, the tokens are byte-identical).
-        # Attested on purpose: the pos2 backstop, not a dict miss, must drop them,
-        # or every ている line mints an いる card. Standalone main-verb uses are
-        # the accepted casualty (see _KANA_RECOVER_REJECT_POS2).
+        # 動詞 pos2=非自立可能 (real unidic tag for おく/しまう — in AUX context and
+        # standalone alike, the tokens are byte-identical). Attested on purpose:
+        # the pos2 backstop, not a dict miss, must drop them, or every ておく line
+        # mints an おく card. いる/ある/くれる come back by name and are judged by
+        # the token before them (test_subtitle_parser_reopened.py).
         lookup = _attest_lookup(surface)
         service = self._service(test_config, lookup)
         token = _make_token(surface, "動詞", pos2="非自立可能", lemma=lemma, orth_base=orth_base)
@@ -1518,7 +1515,6 @@ class TestKanaWordRecovery:
         assert "いる" not in {w.mined_form for w in words}  # mine side too
         assert counts.get("見る") == 1  # kanji 非自立可能 verb is untouched
         assert "見る" in {w.mined_form for w in words}
-        assert lookup.calls == []  # pos2 reject fired before any probe
 
     def test_count_and_mine_both_recover_identically(self, test_config, tmp_path):
         # count==mine parity (T-38): count_lemmas and parse_subtitle_file both
@@ -1658,15 +1654,14 @@ class TestKanaRecoveryLexicalizedWindow:
     # --- 6. T-38 count==mine parity: the reject fires identically at all four sites. ---
 
     def test_count_equals_mine_all_sites_reject(self, test_config, tmp_path):
-        text = "本当にすみません"
+        text = "彼にとって"
 
         def tokens():
             return [
-                _make_token("本当", "名詞", "普通名詞", lemma="本当", kana="ホントウ", orth_base="本当"),
+                _make_token("彼", "代名詞", "*", lemma="彼", kana="カレ", orth_base="彼"),
                 _make_token("に", "助詞", "格助詞", lemma="に", kana="ニ", orth_base="に"),
-                _make_token("すみ", "動詞", "一般", lemma="済む", kana="スミ", orth_base="すむ"),
-                _make_token("ませ", "助動詞", "*", lemma="ます", kana="マセ", orth_base="ます"),
-                _make_token("ん", "助動詞", "*", lemma="ぬ", kana="ン", orth_base="ん"),
+                _make_token("とっ", "動詞", "一般", lemma="取る", kana="トッ", orth_base="とる"),
+                _make_token("て", "助詞", "接続助詞", lemma="て", kana="テ", orth_base="て"),
             ]
 
         def invoke(fn):
@@ -1685,7 +1680,7 @@ class TestKanaRecoveryLexicalizedWindow:
                 patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
                 patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
             ):
-                service = SubtitleParserService(test_config, kana_attest_lookup=_attest_lookup("すむ", "すみません"))
+                service = SubtitleParserService(test_config, kana_attest_lookup=_attest_lookup("とる", "にとって"))
                 return fn(service, sub_file)
 
         mine = invoke(lambda s, f: s.parse_subtitle_file(f))
@@ -1697,14 +1692,14 @@ class TestKanaRecoveryLexicalizedWindow:
 
         pt_words, pt_index, pt_counts = invoke(parse_units)
 
-        # 本当 mined everywhere; the すむ fragment rejected everywhere.
-        assert {w.lemma for w in mine} == {"本当"}
-        assert {w.lemma for w in idx_words} == {"本当"}
-        assert {lm for line in idx_lines for lm in line.lemmas} == {"本当"}
-        assert set(counts) == {"本当"}
-        assert {w.lemma for w in pt_words} == {"本当"}
-        assert {lm for line in pt_index for lm in line.lemmas} == {"本当"}
-        assert set(pt_counts) == {"本当"}
+        # 彼 mined everywhere; the とる fragment rejected everywhere.
+        assert {w.lemma for w in mine} == {"彼"}
+        assert {w.lemma for w in idx_words} == {"彼"}
+        assert {lm for line in idx_lines for lm in line.lemmas} == {"彼"}
+        assert set(counts) == {"彼"}
+        assert {w.lemma for w in pt_words} == {"彼"}
+        assert {lm for line in pt_index for lm in line.lemmas} == {"彼"}
+        assert set(pt_counts) == {"彼"}
 
     # --- 7. No probe wired → recovery (and the window layer) is byte-identical off. ---
 
@@ -3505,8 +3500,8 @@ class TestSurfaceOffsetsAndBolding:
 
     def test_hiragana_benefactive_not_mined_separately(self, tmp_path):
         """くれ (呉れる, 非自立可能) must not be mined from 買ってくれた even with
-        the kana recovery active AND くれる attested — the pos2 reject, not a
-        dict miss, drops it. (Without the wired lookup this test was false-safe:
+        the kana recovery active AND くれる attested — the reject after a て, not
+        a dict miss, drops it. (Without the wired lookup this test was false-safe:
         recovery short-circuited before the gate under test ever ran.)"""
         srt_file = tmp_path / "benefactive.srt"
         srt_file.write_text(
@@ -3529,7 +3524,6 @@ class TestSurfaceOffsetsAndBolding:
             ("本を読んでしまった", {"本", "読む"}, "しまう"),
             ("手紙を書いておく", {"手紙", "書く"}, "おく"),
             ("犬を飼ってくれる", {"犬", "飼う"}, "くれる"),
-            ("そこにある", set(), "ある"),
         ],
     )
     def test_real_fugashi_aux_context_mints_no_aux_card(self, tmp_path, line, wanted, aux_front):

@@ -155,7 +155,9 @@ def hook_rejects(parser: SubtitleParserService, sink: list[tuple[Any, str, str]]
             elif (how := parser._kana_recovery(word_token)) is not None:
                 # Recovered as a kana word, then lost to a longer attested expression, or cut as a
                 # fragment (a bare いえ, a っ stem nothing continues, an ellipsis stutter).
-                windowed = how != "listed" and parser._rejected_by_lexicalized_window(word_token, tokens)
+                windowed = how != "listed" and parser._rejected_by_lexicalized_window(
+                    word_token, tokens, from_left=how == "aux"
+                )
                 reason = "window" if windowed else "fragment"
             sink.append((word_token, reason, text))
         return accepted
