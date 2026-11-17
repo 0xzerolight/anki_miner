@@ -473,7 +473,6 @@ _ANCHOR_HEADWORDS: tuple[str, ...] = (
     "ことがある",
     "かもしれない",
     "ような",
-    "なければならない",
     # kana-listed: a kinship word the tagger cuts apart
     "おばあちゃん",
     # kana-listed: interjections; ええ and えっと are DELIBERATELY attested, so
@@ -542,7 +541,7 @@ _ANCHOR_RULES: dict[str, str] = {
     "放っておく": "v5k",
     # lexical-join expressions
     "ことがある": "v5r",
-    **dict.fromkeys(("かもしれない", "なければならない"), "adj-i"),
+    "かもしれない": "adj-i",
     "やめる": "v1",
     # lexicalized-window
     "とる": "v5r",

@@ -10,7 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Changed
 - **Japanese mines more everyday words written in kana.** あの and その before a noun, やっぱ, ぜひ, おかげ, あんな, わけ, とこ, ほう, and words the tagger cut apart (ちなみに, とっくに, もったいない, とんでもない). The tagger read a pre-noun あの as a filler, and the kana word list did not name the rest.
-- **Japanese grammar expressions are mined as one word, in every inflection.** という, として, について, によって, ように, ような, ことがある, ことができる, ことになる, ことにする, かもしれない and なければならない (会ったことがあった mines ことがある). The tagger cuts them at their particles and every piece was dropped. という and として join only after a noun, ことがある only after a verb.
+- **Japanese grammar expressions are mined as one word, in every inflection.** という, として, について, によって, ように, ような, ことがある, ことができる, ことになる, ことにする and かもしれない (会ったことがあった mines ことがある). The tagger cuts them at their particles and every piece was dropped. という and として join only after a noun, ことがある only after a verb.
 - **Common Japanese interjections are mined:** はい, うん, いいえ, いや, ありがとう, おはよう, こんにちは, さようなら, もしもし, ほら, よし, and すみません or すいません as one word. Fillers and gasps (えっと, うーん, あっ) and ええ are still left out.
 - **ある, いる, なる, できる, くる, いく, やる, くれる, もらう, ない, いい, よい and ほしい are mined where they are the line's own word** (時間がある, お金がない, もういい). After a verb, an adjective or て they are grammar (見ている, 食べてもいい) and are still skipped. The tagger marks all of them as possible helper words, so every use was dropped.
 - **Family words written in kana are mined whole (おばあちゃん, おじさん, おかあさん, にいちゃん).** The tagger cuts them into お, ばあ and ちゃん, and every piece was dropped.

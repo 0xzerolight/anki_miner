@@ -73,6 +73,17 @@ class TestGrammarExpressions:
     def test_the_same_tokens_after_another_word_stay_apart(self, text, front):
         assert front not in _fronts(_service(_EXPRESSIONS), text)
 
+    @pytest.mark.parametrize("text", ["行かなければならない", "高くなければならない"])
+    def test_no_expression_starts_inside_a_verb_or_adjective_chain(self, text):
+        # なけれ is the chain's own negative (行かなければ), so a joined なければならない would overlap the card of 行く.
+        service = _service((*_EXPRESSIONS, "なければならない"))
+        words, _index, _counts = service.parse_text_units(
+            [ReadingUnit(text=text, index=0, location_label="t")], want_line_index=False
+        )
+        assert "なければならない" not in [word.mined_form for word in words]
+        spans = sorted((word.surface_start, word.bold_end) for word in words)
+        assert all(left[1] <= right[0] for left, right in zip(spans, spans[1:], strict=False))
+
     def test_a_longer_expression_keeps_its_question_word(self):
         fronts = _fronts(_service(_EXPRESSIONS), "どのように作る")
         assert "どのように" in fronts
