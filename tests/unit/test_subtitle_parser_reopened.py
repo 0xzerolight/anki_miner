@@ -38,3 +38,10 @@ class TestNamePieces:
     @pytest.mark.parametrize(("text", "word"), [("スケが来た", "スケ"), ("助手が来た", "助手")])
     def test_words_spelled_otherwise_stay(self, text, word):
         assert word in _fronts(text)
+
+
+class TestKanjiVerbGlues:
+    def test_a_crime_suffix_before_tte_is_not_the_vulgar_verb(self):
+        fronts = _fronts("殺人犯って何")
+        assert "犯る" not in fronts
+        assert "殺人" in fronts

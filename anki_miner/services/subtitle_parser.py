@@ -205,6 +205,11 @@ _KANA_FUSED_LEMMAS: frozenset[str] = frozenset({"逸る", "抗する", "痛む",
 # 'shell'. The katakana slang スケ shares the lemma and stays.
 _KANJI_NAME_PIECE_LEMMAS: frozenset[str] = frozenset({"助"})
 
+# Kanji verbs the tagger makes by gluing a suffix to what follows, by their
+# orthBase: 犯る (vulgar やる) is the crime suffix 犯 before a quoting って
+# (殺人犯って, 同一犯って); the verb itself never stands alone in a line.
+_KANJI_FUSED_ORTH_BASES: frozenset[str] = frozenset({"犯る"})
+
 # An interjection the tagger reads as a kana verb when it stands alone: いえ ('no')
 # as the potential いえる or the imperative of 言う. The verb inflects on (いえない,
 # いえば, いえます); a bare いえ with nothing after it is the interjection, so only
@@ -2953,7 +2958,7 @@ class SubtitleParserService:
         if rejection is None:
             if self._is_katakana_run_fragment(word_token, text, tok_start, tok_end):
                 return False
-            if self._is_name_piece(word_token):
+            if self._is_kanji_glue(word_token):
                 return False
             return not self._ellipsis_reject(word_token, text, tok_start, tok_end)
         how = self._kana_recovery(word_token)
@@ -2977,10 +2982,15 @@ class SubtitleParserService:
         return not self._ellipsis_reject(word_token, text, tok_start, tok_end)
 
     @staticmethod
-    def _is_name_piece(word_token) -> bool:
-        """Whether a kanji token is a piece the tagger cuts out of a name (``_KANJI_NAME_PIECE_LEMMAS``)."""
-        lemma = getattr(getattr(word_token, "feature", None), "lemma", None)
-        return lemma in _KANJI_NAME_PIECE_LEMMAS and not _is_all_katakana(word_token.surface)
+    def _is_kanji_glue(word_token) -> bool:
+        """Whether a kanji token is a piece the tagger cuts out of a name or glues into a verb.
+
+        ``_KANJI_NAME_PIECE_LEMMAS`` by lemma (katakana surfaces stay), ``_KANJI_FUSED_ORTH_BASES`` by orthBase.
+        """
+        feature = getattr(word_token, "feature", None)
+        if getattr(feature, "orthBase", None) in _KANJI_FUSED_ORTH_BASES:
+            return True
+        return getattr(feature, "lemma", None) in _KANJI_NAME_PIECE_LEMMAS and not _is_all_katakana(word_token.surface)
 
     @staticmethod
     def _is_cut_sokuon_stem(word_token, text: str, tok_end: int) -> bool:
