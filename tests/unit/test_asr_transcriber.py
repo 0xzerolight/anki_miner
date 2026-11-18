@@ -559,6 +559,9 @@ def _recording_model_cls(constructed: list[dict], *, cuda_raises: bool = False):
         def transcribe(self, audio, **kwargs):
             return iter([]), SimpleNamespace(language=kwargs.get("language"))
 
+        def detect_language(self, audio):
+            return "ja", 0.5, [("ja", 0.5)]
+
     return RecordingModel
 
 
@@ -1074,14 +1077,17 @@ def make_cpp_segment(t0: int, t1: int, text: str, probability: float) -> SimpleN
     return SimpleNamespace(t0=t0, t1=t1, text=text, probability=probability)
 
 
-def fake_cpp_model_cls_factory(segments, *, raises: bool = False, constructed: list | None = None):
+def fake_cpp_model_cls_factory(
+    segments, *, raises: bool = False, constructed: list | None = None, detections: list | None = None
+):
     """Return a fake pywhispercpp Model class.
 
     transcribe() fires *new_segment_callback* live per fake Segment (so progress
     is driven exactly like the real engine) and then returns the materialized
     list. Set *raises* to make transcribe() blow up after construction (exercises
     the whole-attempt try/except → CT2 CPU fallback). Each Model path is recorded
-    in *constructed* when given.
+    in *constructed* when given, each auto_detect_language call in *detections*.
+    auto_detect_language answers in np.float32, as pywhispercpp does.
     """
 
     class FakeCppModel:
@@ -1109,6 +1115,13 @@ def fake_cpp_model_cls_factory(segments, *, raises: bool = False, constructed: l
                 if new_segment_callback is not None:
                     new_segment_callback(seg)
             return list(segments)
+
+        def auto_detect_language(self, media):
+            import numpy as np
+
+            if detections is not None:
+                detections.append(self.model_path)
+            return ("ja", np.float32(0.75)), {"ja": np.float32(0.75), "en": np.float32(0.25)}
 
     return FakeCppModel
 
@@ -1920,3 +1933,218 @@ def test_ct2_long_segment_is_rebroken_when_sentence_rules_are_given(monkeypatch,
 
     assert whole == [(0.0, 8.0, "今日は晴れです。明日は雨でしょう。")]
     assert split == [(0.0, 3.0, "今日は晴れです。"), (3.5, 8.0, "明日は雨でしょう。")]
+
+
+# ---------------------------------------------------------------------------
+# One whisper.cpp model per session, and DecodeDetail (--api assess)
+# ---------------------------------------------------------------------------
+
+
+def _detecting_ct2_cls(segments, *, detections: list | None = None, cuda_fails: bool = False):
+    """A fake WhisperModel with detect_language; *cuda_fails* makes a CUDA model fail its first decode."""
+
+    class DetectingModel:
+        def __init__(self, model_name, **kwargs):
+            self.device = kwargs.get("device")
+
+        def transcribe(self, audio, **kwargs):
+            if cuda_fails and self.device == "cuda":
+
+                def _boom():
+                    raise RuntimeError("cuDNN kernel launch failed")
+                    yield  # pragma: no cover  (makes _boom a generator)
+
+                return _boom(), SimpleNamespace(language=kwargs["language"])
+            return iter(segments), SimpleNamespace(language=kwargs["language"], language_probability=1)
+
+        def detect_language(self, audio):
+            if detections is not None:
+                detections.append(self.device)
+            return "en", 0.91, [("en", 0.91), ("ja", 0.04)]
+
+    return DetectingModel
+
+
+def test_each_cpp_decode_builds_its_own_model(monkeypatch, tmp_path, caplog):
+    """A queue session never keeps a whisper.cpp Model: a reused one samples differently on fallback."""
+    cpp_constructed: list = []
+    ct2 = _wire_cpp(
+        monkeypatch,
+        vulkan=1,
+        cpp_segments=[make_cpp_segment(0, 100, "a", 0.9)],
+        cpp_constructed=cpp_constructed,
+    )
+    monkeypatch.setattr(transcriber, "_speech_mask", lambda _audio, _root: None)
+    session = transcriber.Ct2ModelSession()
+
+    first = _run_cpp_transcribe(monkeypatch, tmp_path, device="vulkan", ct2_model_session=session)
+    second = _run_cpp_transcribe(monkeypatch, tmp_path, device="vulkan", ct2_model_session=session)
+
+    assert first == second == [(0.0, 1.0, "a")]
+    assert len(cpp_constructed) == 2 and ct2 == []
+
+
+def test_detail_on_faster_whisper(monkeypatch, tmp_path):
+    """Every emitted segment with its numbers and whether transcribe keeps it, the mask, and detection."""
+    segs = [
+        make_segment(0.0, 1.0, " 今日 ", avg_logprob=-0.2, no_speech_prob=0.1, compression_ratio=1.1),
+        make_segment(1.0, 2.0, "junk", avg_logprob=-1.5),
+    ]
+    monkeypatch.setattr(_engine, "get_whisper_model_cls", lambda: _detecting_ct2_cls(segs))
+    monkeypatch.setattr(transcriber, "_speech_mask", lambda _audio, _root: [(0.1, 0.9)])
+    detail = transcriber.DecodeDetail()
+
+    result = _run_cpp_transcribe(monkeypatch, tmp_path, device="cpu", duration_s=2.0, detail=detail)
+
+    assert result == [(0.0, 1.0, "今日")]
+    assert (detail.engine, detail.device, detail.speech) == ("ctranslate2", "cpu", [(0.1, 0.9)])
+    assert detail.segments == [
+        transcriber.DecodedSegment(0.0, 1.0, "今日", True, avg_logprob=-0.2, no_speech_prob=0.1, compression_ratio=1.1),
+        transcriber.DecodedSegment(
+            1.0, 2.0, "junk", False, avg_logprob=-1.5, no_speech_prob=0.0, compression_ratio=0.0
+        ),
+    ]
+    assert (detail.detected_language, detail.detected_language_probability) == ("en", 0.91)
+    assert detail.language_probabilities == {"en": 0.91, "ja": 0.04}
+
+
+def test_detail_on_whisper_cpp_is_plain_finite_floats(monkeypatch, tmp_path):
+    """pywhispercpp's np.float32 and NaN never reach the detail: floats, or None."""
+    import dataclasses
+    import json
+
+    segs = [
+        make_cpp_segment(0, 100, "a", 0.9),
+        make_cpp_segment(100, 150, "b", float("nan")),
+        make_cpp_segment(150, 200, "garbage", 0.1),
+    ]
+    _wire_cpp(monkeypatch, vulkan=1, cpp_segments=segs)
+    monkeypatch.setattr(transcriber, "_speech_mask", lambda _audio, _root: None)
+    detail = transcriber.DecodeDetail()
+
+    result = _run_cpp_transcribe(monkeypatch, tmp_path, device="vulkan", duration_s=2.0, detail=detail)
+
+    assert result == [(0.0, 1.0, "a"), (1.0, 1.5, "b")]
+    assert (detail.engine, detail.device, detail.speech) == ("whisper.cpp", "vulkan", None)
+    assert [(s.text, s.kept, s.probability) for s in detail.segments] == [
+        ("a", True, 0.9),
+        ("b", True, None),
+        ("garbage", False, 0.1),
+    ]
+    assert all(s.avg_logprob is None and s.no_speech_prob is None for s in detail.segments)
+    assert (detail.detected_language, detail.detected_language_probability) == ("ja", 0.75)
+    assert type(detail.detected_language_probability) is float
+    assert detail.language_probabilities == {"ja": 0.75, "en": 0.25}
+    json.dumps(dataclasses.asdict(detail), allow_nan=False)
+
+
+def test_no_detection_pass_without_detail(monkeypatch, tmp_path):
+    """A plain transcription runs no extra encoder pass on either engine."""
+    ct2_detections: list = []
+    monkeypatch.setattr(
+        _engine,
+        "get_whisper_model_cls",
+        lambda: _detecting_ct2_cls([make_segment(0.0, 1.0, "a")], detections=ct2_detections),
+    )
+    monkeypatch.setattr(transcriber, "_speech_mask", lambda _audio, _root: None)
+    _run_cpp_transcribe(monkeypatch, tmp_path, device="cpu")
+
+    cpp_detections: list = []
+    _wire_cpp(monkeypatch, vulkan=1)
+    monkeypatch.setattr(
+        _engine,
+        "get_whisper_cpp_model_cls",
+        lambda: fake_cpp_model_cls_factory([make_cpp_segment(0, 100, "a", 0.9)], detections=cpp_detections),
+    )
+    _run_cpp_transcribe(monkeypatch, tmp_path, device="vulkan")
+
+    assert ct2_detections == [] and cpp_detections == []
+
+
+def test_detail_after_cpp_fails_holds_only_the_ct2_decode(monkeypatch, tmp_path):
+    """whisper.cpp decoded its segments, then failed in detection: the CT2 CPU re-decode alone fills the detail."""
+    base = fake_cpp_model_cls_factory([make_cpp_segment(0, 100, "cpp", 0.9)])
+
+    class FailsInDetection(base):  # type: ignore[valid-type,misc]
+        def auto_detect_language(self, media):
+            raise RuntimeError("vulkan device lost")
+
+    _wire_cpp(monkeypatch, vulkan=1)
+    monkeypatch.setattr(_engine, "get_whisper_cpp_model_cls", lambda: FailsInDetection)
+    monkeypatch.setattr(_engine, "get_whisper_model_cls", lambda: _detecting_ct2_cls([make_segment(0.0, 1.0, "ct2")]))
+    monkeypatch.setattr(transcriber, "_speech_mask", lambda _audio, _root: None)
+    session = transcriber.Ct2ModelSession()
+    detail = transcriber.DecodeDetail()
+
+    result = _run_cpp_transcribe(monkeypatch, tmp_path, device="vulkan", ct2_model_session=session, detail=detail)
+
+    assert result == [(0.0, 1.0, "ct2")]
+    assert (detail.engine, detail.device) == ("ctranslate2", "cpu")
+    assert [s.text for s in detail.segments] == ["ct2"]
+
+
+def test_detail_after_an_auto_cuda_failure_comes_from_whisper_cpp(monkeypatch, tmp_path):
+    """auto: CUDA fails its first decode, whisper.cpp takes over and fills the detail."""
+    monkeypatch.setattr(
+        _engine,
+        "get_whisper_model_cls",
+        lambda: _detecting_ct2_cls([make_segment(0.0, 1.0, "ct2")], cuda_fails=True),
+    )
+    monkeypatch.setattr(
+        _engine, "get_whisper_cpp_model_cls", lambda: fake_cpp_model_cls_factory([make_cpp_segment(0, 100, "cpp", 0.9)])
+    )
+    monkeypatch.setattr(transcriber, "_preload_cuda_libs", lambda root: None)
+    monkeypatch.setattr(transcriber, "_speech_mask", lambda _audio, _root: None)
+    _fake_ctranslate2(monkeypatch, device_count=1)
+    monkeypatch.setattr(_engine, "cuda_device_count", lambda: 1)
+    _make_cpp_route_ready(monkeypatch, True)
+    detail = transcriber.DecodeDetail()
+
+    result = _run_cpp_transcribe(monkeypatch, tmp_path, device="auto", detail=detail)
+
+    assert result == [(0.0, 1.0, "cpp")]
+    assert (detail.engine, detail.device) == ("whisper.cpp", "vulkan")
+    assert [s.text for s in detail.segments] == ["cpp"]
+
+
+def test_detail_after_an_explicit_cuda_failure_says_cpu(monkeypatch, tmp_path):
+    """cuda: the first decode fails, the CPU rebuild decodes and detects; the detail names the CPU."""
+    detections: list = []
+    monkeypatch.setattr(
+        _engine,
+        "get_whisper_model_cls",
+        lambda: _detecting_ct2_cls([make_segment(0.0, 1.0, "ok")], detections=detections, cuda_fails=True),
+    )
+    monkeypatch.setattr(transcriber, "_preload_cuda_libs", lambda root: None)
+    monkeypatch.setattr(transcriber, "_speech_mask", lambda _audio, _root: None)
+    _fake_ctranslate2(monkeypatch, device_count=1)
+    detail = transcriber.DecodeDetail()
+
+    result = _run_cpp_transcribe(monkeypatch, tmp_path, device="cuda", detail=detail)
+
+    assert result == [(0.0, 1.0, "ok")]
+    assert (detail.engine, detail.device) == ("ctranslate2", "cpu")
+    assert [s.text for s in detail.segments] == ["ok"]
+    assert detections == ["cpu"]
+
+
+def test_a_cancelled_decode_leaves_the_detail_empty(monkeypatch, tmp_path):
+    """No detection pass after a cancel, and nothing recorded."""
+    detections: list = []
+    monkeypatch.setattr(
+        _engine,
+        "get_whisper_model_cls",
+        lambda: _detecting_ct2_cls([make_segment(0.0, 1.0, "a")], detections=detections),
+    )
+    monkeypatch.setattr(transcriber, "_speech_mask", lambda _audio, _root: None)
+    cancel = threading.Event()
+    detail = transcriber.DecodeDetail()
+
+    def cancel_on_first(fraction: float) -> None:
+        cancel.set()
+
+    _run_cpp_transcribe(
+        monkeypatch, tmp_path, device="cpu", detail=detail, cancel_event=cancel, progress_cb=cancel_on_first
+    )
+
+    assert detections == [] and detail == transcriber.DecodeDetail()

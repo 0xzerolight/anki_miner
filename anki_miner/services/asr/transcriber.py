@@ -13,7 +13,7 @@ import logging
 import math
 import os
 import types
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable
 
@@ -62,6 +62,78 @@ class Ct2ModelSession:
         self.model = None
         self.device_used = None
         self.backend = None
+
+
+@dataclass(frozen=True)
+class DecodedSegment:
+    """One segment as the engine emitted it, with the engine's own numbers.
+
+    ``kept`` is whether :func:`transcribe` returns it (the junk and non-speech
+    rules below). faster-whisper gives ``avg_logprob``, ``no_speech_prob`` and
+    ``compression_ratio``; whisper.cpp gives only ``probability``.
+    """
+
+    start: float
+    end: float
+    text: str
+    kept: bool
+    avg_logprob: float | None = None
+    no_speech_prob: float | None = None
+    compression_ratio: float | None = None
+    probability: float | None = None
+
+
+@dataclass
+class DecodeDetail:
+    """What one :func:`transcribe` call saw, for a caller that asks for it (``--api assess``).
+
+    Filled once, by the engine path that finished; a path that failed and fell
+    back leaves nothing in it. Left empty when the decode was cancelled.
+    """
+
+    engine: str | None = None
+    device: str | None = None
+    #: The Silero speech regions in seconds; None when the VAD cannot run.
+    speech: list[tuple[float, float]] | None = None
+    segments: list[DecodedSegment] = field(default_factory=list)
+    #: Whisper's own language detection on the audio, apart from the language it was told.
+    detected_language: str | None = None
+    detected_language_probability: float | None = None
+    language_probabilities: dict[str, float] = field(default_factory=dict)
+
+
+def _finite(value: Any) -> float | None:
+    """*value* as a plain float, or None when absent or not finite.
+
+    pywhispercpp hands out ``np.float32`` (which ``json`` refuses) and NaN for
+    a segment with no tokens.
+    """
+    if value is None:
+        return None
+    number = float(value)
+    return number if math.isfinite(number) else None
+
+
+def _record_detail(
+    detail: DecodeDetail,
+    *,
+    engine: str,
+    device: str,
+    speech: list[tuple[float, float]] | None,
+    segments: list[DecodedSegment],
+    detected: tuple[Any, Any, Any],
+) -> None:
+    """Fill *detail* from a finished decode; *detected* is ``(language, probability, {language: probability})``."""
+    language, probability, probabilities = detected
+    detail.engine = engine
+    detail.device = device
+    detail.speech = speech
+    detail.segments = segments
+    detail.detected_language = str(language)
+    detail.detected_language_probability = _finite(probability)
+    detail.language_probabilities = {
+        str(code): number for code, value in probabilities.items() if (number := _finite(value)) is not None
+    }
 
 
 # --- Non-speech drop, CT2 path (vad_filter is OFF; see _transcribe_ct2) ---
@@ -583,6 +655,7 @@ def transcribe(
     ct2_model_session: Ct2ModelSession | None = None,
     language: str = "ja",
     sentence_rules: SentenceRules | None = None,
+    detail: DecodeDetail | None = None,
 ) -> list[tuple[float, float, str]]:
     """Transcribe *audio* using the specified faster-whisper model.
 
@@ -615,6 +688,9 @@ def transcribe(
             CT2 segment is re-broken at sentence ends using its word
             timestamps (MS-21, :mod:`~anki_miner.services.asr.resegment`);
             whisper.cpp segments have no word times and stay whole.
+        detail: Given, the engine that finished fills it with every segment
+            it emitted, the speech mask and Whisper's own language detection
+            (one extra encoder pass); see :class:`DecodeDetail`.
 
     Returns:
         A list of ``(start_s, end_s, text)`` tuples in chronological order.
@@ -658,6 +734,7 @@ def transcribe(
                 ct2_model_session=ct2_model_session,
                 language=language,
                 sentence_rules=sentence_rules,
+                detail=detail,
             )
         else:
             # CT2 only understands cpu/cuda/auto; a 'vulkan' request that did not
@@ -684,6 +761,7 @@ def transcribe(
                     ct2_model_session=ct2_model_session,
                     language=language,
                     sentence_rules=sentence_rules,
+                    detail=detail,
                     # Only 'auto' reconsiders: it committed to CT2 on CUDA-device
                     # PRESENCE alone, before knowing CUDA can initialise (another
                     # app may own the VRAM; cuDNN may be absent). Explicit
@@ -713,6 +791,7 @@ def transcribe(
                         ct2_model_session=ct2_model_session,
                         language=language,
                         sentence_rules=sentence_rules,
+                        detail=detail,
                     )
                 else:
                     logger.warning("ASR: CUDA unusable (%s) and no whisper.cpp route; using CPU.", exc)
@@ -729,6 +808,7 @@ def transcribe(
                         ct2_model_session=ct2_model_session,
                         language=language,
                         sentence_rules=sentence_rules,
+                        detail=detail,
                     )
 
     log_summary(
@@ -803,6 +883,7 @@ def _transcribe_cpp(
     ct2_model_session: Ct2ModelSession | None = None,
     language: str = "ja",
     sentence_rules: SentenceRules | None = None,
+    detail: DecodeDetail | None = None,
 ) -> list[tuple[float, float, str]]:
     """Transcribe via the whisper.cpp (pywhispercpp) engine, with a CT2 CPU fallback.
 
@@ -812,6 +893,12 @@ def _transcribe_cpp(
     not apply — on ANY exception we log and re-run on CT2 CPU (a full CPU
     re-decode), so a GPU/driver failure never crashes the run. Junk filtering,
     cancel checks and live progress mirror the CT2 loop.
+
+    Every call builds its own Model, even within a queue session: a Model's
+    whisper state seeds its first decoder's sampler once and never reseeds it,
+    so when whisper.cpp falls back to sampling (temperature > 0) a reused Model
+    transcribes differently from a fresh one (measured on real speech, tiny
+    model, pywhispercpp 1.5.0). A fresh Model keeps each file reproducible.
     """
     decode_params = _cpp_decode_params(models_root, language)
     try:
@@ -838,6 +925,7 @@ def _transcribe_cpp(
         speech = _speech_mask(audio, onnx_pack_root)
 
         results: list[tuple[float, float, str]] = []
+        rows: list[DecodedSegment] = []
         for seg in _cpp_segments(
             model,
             audio,
@@ -851,12 +939,26 @@ def _transcribe_cpp(
             # _is_junk_segment is a harmless no-op on cpp segments (no
             # compression_ratio/avg_logprob); the probability floor is the cpp
             # path's actual junk drop.
-            if _is_junk_segment(seg) or _is_low_probability_cpp_segment(seg):
-                continue
-            clipped = _clip_cpp_segment_to_speech(seg, speech)
+            junk = _is_junk_segment(seg) or _is_low_probability_cpp_segment(seg)
+            clipped = None if junk else _clip_cpp_segment_to_speech(seg, speech)
             if clipped is not None:
                 results.append(clipped)
+            rows.append(
+                DecodedSegment(
+                    seg.start, seg.end, seg.text.strip(), clipped is not None, probability=_finite(seg.probability)
+                )
+            )
 
+        if detail is not None and not (cancel_event is not None and cancel_event.is_set()):
+            (detected, probability), probabilities = model.auto_detect_language(audio)
+            _record_detail(
+                detail,
+                engine="whisper.cpp",
+                device="vulkan",
+                speech=speech,
+                segments=rows,
+                detected=(detected, probability, probabilities),
+            )
         if progress_cb is not None:
             progress_cb(1.0)
         log_summary(
@@ -884,6 +986,7 @@ def _transcribe_cpp(
             ct2_model_session=ct2_model_session,
             language=language,
             sentence_rules=sentence_rules,
+            detail=detail,
         )
 
 
@@ -902,6 +1005,7 @@ def _transcribe_ct2(
     raise_on_cuda_failure: bool = False,
     language: str = "ja",
     sentence_rules: SentenceRules | None = None,
+    detail: DecodeDetail | None = None,
 ) -> list[tuple[float, float, str]]:
     """The faster-whisper (ctranslate2) transcription path — unchanged behaviour.
 
@@ -1041,16 +1145,42 @@ def _transcribe_ct2(
         )
 
     results: list[tuple[float, float, str]] = []
+    rows: list[DecodedSegment] = []
     for seg in segments_iter:
         if cancel_event is not None and cancel_event.is_set():
             break
-        if not _is_nonspeech_ct2_segment(seg, speech):
+        kept = not _is_nonspeech_ct2_segment(seg, speech)
+        if kept:
             results.extend(
                 resegment.split_segment(seg.start, seg.end, seg.text, getattr(seg, "words", None), sentence_rules)
             )
+        rows.append(
+            DecodedSegment(
+                seg.start,
+                seg.end,
+                seg.text.strip(),
+                kept,
+                avg_logprob=_finite(getattr(seg, "avg_logprob", None)),
+                no_speech_prob=_finite(getattr(seg, "no_speech_prob", None)),
+                compression_ratio=_finite(getattr(seg, "compression_ratio", None)),
+            )
+        )
         if progress_cb is not None and duration_s > 0:
             progress_cb(min(seg.end / duration_s, 1.0))
 
+    # A detection pass of its own: the decode is told the language, so its
+    # TranscriptionInfo reports that language at probability 1. `model` and
+    # `device_used` are final here (a deferred CUDA failure rebuilt them on CPU).
+    if detail is not None and not (cancel_event is not None and cancel_event.is_set()):
+        detected, probability, probabilities = model.detect_language(audio)
+        _record_detail(
+            detail,
+            engine="ctranslate2",
+            device=device_used,
+            speech=speech,
+            segments=rows,
+            detected=(detected, probability, dict(probabilities)),
+        )
     if progress_cb is not None:
         progress_cb(1.0)
 

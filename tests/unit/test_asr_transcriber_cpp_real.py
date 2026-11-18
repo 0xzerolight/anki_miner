@@ -182,3 +182,51 @@ def test_cpp_segments_real_progress_driven_live():
 
     assert progress, "no live progress was emitted during the real decode"
     assert all(0.0 <= v <= 1.0 for v in progress)
+
+
+def test_transcribe_cpp_real_fills_detail(monkeypatch, tmp_path):
+    """A real decode fills the detail: whisper.cpp rows, and detection as plain finite floats.
+
+    pywhispercpp answers detection in np.float32, which json refuses. Each
+    decode builds its own Model, a queue session's included.
+    """
+    import dataclasses
+    import json
+
+    _load_tiny_model()  # skips when the tiny model cannot be obtained
+    real_cls = _engine.get_whisper_cpp_model_cls()
+    built: list[str] = []
+
+    def build(path: str):  # the path names a known model's file; the tiny model stands in for it
+        built.append(path)
+        return real_cls("tiny")
+
+    monkeypatch.setattr(_engine, "get_whisper_cpp_model_cls", lambda: build)
+    monkeypatch.setattr(transcriber, "_speech_mask", lambda _audio, _root: None)
+    session = transcriber.Ct2ModelSession()
+    details = []
+    for _ in range(2):
+        detail = transcriber.DecodeDetail()
+        transcriber._transcribe_cpp(
+            _synthesize_voiced_clip(),
+            model_name="small",
+            models_root=tmp_path,
+            duration_s=_CLIP_SECONDS,
+            cancel_event=None,
+            progress_cb=None,
+            cuda_libs_root=None,
+            onnx_pack_root=None,
+            ct2_model_session=session,
+            detail=detail,
+        )
+        details.append(detail)
+
+    assert len(built) == 2
+    first, second = details
+    assert first == second
+    assert first.engine == "whisper.cpp"
+    assert first.segments, "tiny model produced no segments for the synthesized clip"
+    assert type(first.detected_language_probability) is float
+    assert 0.0 <= first.detected_language_probability <= 1.0
+    assert "ja" in first.language_probabilities
+    json.dumps(dataclasses.asdict(first), allow_nan=False)
