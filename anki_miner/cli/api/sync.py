@@ -58,12 +58,7 @@ def _episode(raw: object, where: str) -> SyncEpisode:
     book = files.abs_path(files.text(obj["book"], f"{where}.book"))
     if book.suffix.lower() not in _BOOK_SUFFIXES:
         raise files.bad(f"{where}.book must be an .epub or .txt file.")
-    raw_audio = obj["audio"]
-    if isinstance(raw_audio, str):
-        raw_audio = [raw_audio]
-    if not isinstance(raw_audio, list) or not raw_audio:
-        raise files.bad(f"{where}.audio must be a path or a non-empty list of paths.")
-    audio = tuple(files.abs_path(files.text(path, f"{where}.audio[{j}]")) for j, path in enumerate(raw_audio))
+    audio = files.path_list(obj["audio"], f"{where}.audio")
     return SyncEpisode(files.valid_run_id(obj["run_id"], f"{where}.run_id"), book, audio)
 
 

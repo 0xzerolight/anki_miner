@@ -4,14 +4,14 @@ Another program can run Anki Miner without its window. One `mine` call takes an 
 
 `mine` writes to Anki only the words it is given. Anki Miner's known-words list and statistics are never touched: the calling program keeps its own record of what the user knows and mined.
 
-Requirements: Anki running with the AnkiConnect add-on, an offline dictionary, and ffmpeg (bundled with the installers). `fetch` also needs yt-dlp; `transcribe` and `sync` need the speech model, `ocr` needs mokuro and `video-ocr` its OCR engine, which `setup` installs.
+Requirements: Anki running with the AnkiConnect add-on, an offline dictionary, and ffmpeg (bundled with the installers). `fetch` also needs yt-dlp; `transcribe`, `assess` and `sync` need the speech model, `ocr` needs mokuro and `video-ocr` its OCR engine, which `setup` installs.
 
 Sources:
 - video episodes (a video file and a subtitle file), including YouTube videos that `fetch` downloads first;
 - audiobook episodes (an audio file and a subtitle file);
 - books, text, subtitle files and manga volumes, mined without media.
 
-Other commands get a source ready for `mine`: `inspect` says what a source is and what it still needs, `extract` copies a subtitle track out of a video, `transcribe` and `video-ocr` make a subtitle where there is none, `retime` fits a subtitle to its video, `sync` times a book to its audiobook, and `ocr` reads a manga volume.
+Other commands get a source ready for `mine`: `inspect` says what a source is and what it still needs, `extract` copies a subtitle track out of a video, `transcribe` and `video-ocr` make a subtitle where there is none, `retime` fits a subtitle to its video, `sync` times a book to its audiobook, and `ocr` reads a manga volume. `assess` reports what the speech model hears in short clips, such as a card's audio.
 
 ## Calling it
 
@@ -41,6 +41,7 @@ AnkiMiner --api video-ocr VIDEO_OCR_FILE
 AnkiMiner --api retime RETIME_FILE
 AnkiMiner --api sync SYNC_FILE
 AnkiMiner --api ocr OCR_FILE
+AnkiMiner --api assess ASSESS_FILE
 ```
 
 Each call writes one JSON line to stdout: its verdict. Exit code 0 means the verdict was written; any other exit code is a crash.
@@ -74,7 +75,7 @@ A run beside the window does not stop the window from mining. If both add the sa
 
 A dry run, `render` and `media` take no lock.
 
-`check`, `version`, `profiles`, `settings-export`, `inspect` and the commands that make files (`fetch`, `extract`, `transcribe`, `video-ocr`, `retime`, `sync`, `ocr`) run at any time, beside the window too. On Windows every call holds the app's mutex, so the installer waits for it.
+`check`, `version`, `profiles`, `settings-export`, `inspect` and the commands that make files (`fetch`, `extract`, `transcribe`, `video-ocr`, `retime`, `sync`, `ocr`, `assess`) run at any time, beside the window too. On Windows every call holds the app's mutex, so the installer waits for it.
 
 ## The run folder
 
@@ -88,7 +89,7 @@ A dry run, `render` and `media` take no lock.
 | `render-<n>/` | render | the media its fields name; the caller deletes them |
 | `media-<n>.json` | media | one per `media` of that `run_id` |
 | `media-<n>/` | media | the clips and pictures it cut; the caller deletes them |
-| `<command>-<n>.json` | fetch, extract, transcribe, video-ocr, retime, sync, ocr | one per run of that `run_id` that ended; names the files below |
+| `<command>-<n>.json` | fetch, extract, transcribe, video-ocr, retime, sync, ocr, assess | one per run of that `run_id` that ended; names the files below |
 | `<command>-<n>/` | fetch, extract, transcribe, video-ocr, retime, sync | the files the run made; kept until the caller deletes them |
 | `inspect-<n>.json` | inspect | a source's unit list |
 | `cancel` | the caller | stops a `mine`, `render` or file-making run (see Cancelling) |
@@ -327,9 +328,9 @@ Per episode it probes the video, downloads it with its subtitle into `fetch-<n>/
 
 ## Commands that make files
 
-`extract`, `transcribe`, `video-ocr`, `retime`, `sync` and `ocr` work as `fetch` does:
+`extract`, `transcribe`, `video-ocr`, `retime`, `sync`, `ocr` and `assess` work as `fetch` does:
 - Each file has `schema` (`1`), `run_dir`, `profile` and `language` as in the run file, and `episodes`, each with a `run_id` and the keys in its section.
-- Per episode, a run writes `<command>-<n>.json` when it ends, and puts the files it makes in `<command>-<n>/` beside it. `ocr` writes beside the volume instead.
+- Per episode, a run writes `<command>-<n>.json` when it ends, and puts the files it makes in `<command>-<n>/` beside it. `ocr` writes beside the volume instead, and `assess` writes only its json.
 - A run that fails or is cancelled writes no json, and its folder goes.
 - Running a `run_id` again writes the next number; a `<command>-<n>/` with no json beside it is removed first.
 - Paths in the json are absolute.
@@ -401,12 +402,42 @@ It needs no Anki and no lock, runs any time, and writes only the unit lists aske
 `transcribe TRANSCRIBE_FILE` makes a subtitle from speech, as Utilities → Generate does. An episode has `video_file` or `audio_file`.
 - It listens in the mining language and writes `transcribe-<n>/<file name>.srt`. `transcribe-<n>.json` has `subtitle_file` and `status`: `generated`, or `no_speech`, with `subtitle_file` `null` and no file.
 - Stages: extracting, then transcribing (`done`/`total` in percent). A file transcribed before with the same model and language reuses that transcript.
+- The episodes of one call share one load of the speech model, except on a Vulkan graphics card, where each file loads it.
 - The call gives `SETUP_ERROR` when any of these is missing or unusable:
   - the speech model, including one that cannot transcribe the language (Cantonese needs `large-v3`);
   - ffmpeg or ffprobe.
 - Per run:
   - `VIDEO_UNREADABLE` or `AUDIO_UNREADABLE`: the file does not open, or has no audio to extract;
   - `CANCELLED`.
+
+## assess
+
+`assess ASSESS_FILE` reports what the speech model hears in short clips, such as the audio `media` cuts for a card, to catch background music, two voices at once, a line in another language or a bad cut. An episode has `audio`: one audio or video file, or a list of them.
+- Each clip is transcribed in the mining language as `transcribe` would, without its cache, and Whisper also detects the clip's language on its own.
+- The episodes of one call share one load of the speech model, except on a Vulkan graphics card, where each clip loads it.
+- `assess-<n>.json` has `model`, `language` (the Whisper code it listened for, such as `ja`) and `clips`, one entry per file, in order. Every key is always present:
+
+| Key | Value |
+|---|---|
+| `audio_file` | the clip |
+| `error`, `message` | `AUDIO_UNREADABLE` and why, for a clip whose audio could not be extracted; every key below is then `null`. Otherwise `null` |
+| `engine`, `device` | `ctranslate2` on `cuda` or `cpu`, or `whisper.cpp` on `vulkan` |
+| `duration` | seconds |
+| `text` | the transcript: the segments `transcribe` keeps, joined by a space |
+| `detected_language`, `detected_language_probability` | the language Whisper hears on its own, from the clip's first 30 seconds, and its probability |
+| `language_probability` | Whisper's probability for `language` |
+| `speech_ratio` | the share of the clip inside `speech` |
+| `speech_level_db`, `background_level_db` | the RMS level inside and outside `speech`, in dBFS (0 is full scale, -100 silence); `null` when that side is empty |
+| `speech` | where the voice detector hears speech: `[start, end]` pairs in seconds |
+| `segments` | every segment Whisper produced, each with `start`, `end`, `text`, `kept`, `avg_logprob`, `no_speech_prob`, `compression_ratio` and `probability` |
+
+- `speech_ratio`, both levels and `speech` are `null` without the voice detector: Settings → Transcription & Alignment → Silence removal installs it (`setup --ocr` installs the same runtime).
+- `kept` is `false` for a segment `transcribe` drops as noise.
+- With `ctranslate2`, a segment has `avg_logprob`, `no_speech_prob` and `compression_ratio`, and `probability` is `null`. With `whisper.cpp` it has only `probability`, the geometric mean of its tokens' probabilities, whose logarithm compares with `avg_logprob`.
+- `no_speech_prob` is given once per 30 seconds of audio and is unreliable on `large-v3`: clear speech can score 0.98. Whisper produces no segment for audio it skips as silence, so empty `segments` with a low `speech_ratio` means no speech.
+- One stage; `done`/`total` count clips.
+- The call gives `SETUP_ERROR` without the speech model, ffmpeg or ffprobe.
+- Per run: `CANCELLED`. A clip that cannot be read gets its row, and the run goes on.
 
 ## video-ocr
 
@@ -507,7 +538,7 @@ A call starts by deleting the `progress.json` and `cancel` files an earlier call
 | `BAD_ARGUMENTS` | call | the command line does not parse, or names an unknown language or an `--out` or `--progress` folder that does not exist; for `settings-import`, a FILE it cannot apply, a name it refuses or the active profile; for `setup`, a language the profile has never used |
 | `BAD_RUN_FILE` | call | a command's file is not valid JSON or breaks the rules above |
 | `PROFILE_UNREADABLE` | call | the profile does not exist or cannot be read |
-| `SETUP_ERROR` | call, run | language pack, dictionary index, ffmpeg, deck, note type, fields or offline dictionary; for fetch, yt-dlp, ffmpeg or the speech model; for transcribe and sync, the speech model; for video-ocr and ocr, their OCR engine |
+| `SETUP_ERROR` | call, run | language pack, dictionary index, ffmpeg, deck, note type, fields or offline dictionary; for fetch, yt-dlp, ffmpeg or the speech model; for transcribe, assess and sync, the speech model; for video-ocr and ocr, their OCR engine |
 | `ANKI_UNREACHABLE` | call, run | AnkiConnect does not answer, or Anki is busy syncing |
 | `VIDEO_UNREADABLE` | run | the video does not open |
 | `AUDIO_UNREADABLE` | run | the audio file does not open |
@@ -527,7 +558,7 @@ A call starts by deleting the `progress.json` and `cancel` files an earlier call
 
 ## check, version, profiles, settings-export, settings-import
 
-`check --language CODE [--profile ID]` puts `{"ready": false, "items": [...]}` in `result`, one item per check. The items are `anki`, `deck`, `note_type`, `fields`, `dictionary`, `resources` (dictionary or frequency indexes that need re-importing), `language_pack`, `ffmpeg`, `ffprobe`, `yt_dlp`, `speech_model` (the model and an engine that runs it, for `fetch`, `transcribe` and `sync`), `ocr` (Manga OCR: mokuro, and the language's text recognizer where it uses one) and `video_ocr` (Video OCR's engine and the language's models). `yt_dlp`, `speech_model`, `ocr` and `video_ocr` do not count toward `ready`: `mine` needs none of them. Each item has `name`, `ok` and `message` (null when ok). When Anki does not answer, `deck`, `note_type` and `fields` are reported as not checked.
+`check --language CODE [--profile ID]` puts `{"ready": false, "items": [...]}` in `result`, one item per check. The items are `anki`, `deck`, `note_type`, `fields`, `dictionary`, `resources` (dictionary or frequency indexes that need re-importing), `language_pack`, `ffmpeg`, `ffprobe`, `yt_dlp`, `speech_model` (the model and an engine that runs it, for `fetch`, `transcribe`, `assess` and `sync`), `ocr` (Manga OCR: mokuro, and the language's text recognizer where it uses one) and `video_ocr` (Video OCR's engine and the language's models). `yt_dlp`, `speech_model`, `ocr` and `video_ocr` do not count toward `ready`: `mine` needs none of them. Each item has `name`, `ok` and `message` (null when ok). When Anki does not answer, `deck`, `note_type` and `fields` are reported as not checked.
 
 `version` puts `{"schema": 1, "app": "3.5.0", "commands": [...], "features": [...]}` in `result`. `features` names each addition this build has (table below).
 
@@ -556,6 +587,7 @@ A call starts by deleting the `progress.json` and `cancel` files an earlier call
 | `retime` | the `retime` command |
 | `sync` | the `sync` command |
 | `ocr` | the `ocr` command |
+| `assess` | the `assess` command and `assess-<n>.json` |
 | `setup-speech-ocr` | `setup`'s `--speech-model`, `--model` and `--ocr`, and its `cancel` file |
 | `check-speech-ocr` | `check` always reports `speech_model`, and reports `ocr` and `video_ocr` |
 
@@ -583,7 +615,7 @@ A call starts by deleting the `progress.json` and `cancel` files an earlier call
 - A resource already installed is not downloaded again; it is switched on if the profile does not use it yet.
 - While it works, FILE (its folder must exist) holds `{"schema": 1, "item": "jmdict-english", "stage": 2, "stages": 4, "done": 1048576, "total": 20971520}`. `item` is a resource `id` or `language_pack`; `done` and `total` are bytes while downloading. While a frequency or pitch list installs they count the files or terms it reads; for a dictionary, `done` counts the entries written and `total` stays 0.
 - `result`: `{"language": "ja", "profile": "default", "language_pack": {"status": "not_needed", "message": null}, "resources": [{"id": "jmdict-english", "kind": "dict", "name": "JMdict", "status": "installed", "message": null}, …]}`. `status` is `installed`, `already_installed`, `not_needed` (language pack only), `failed` (`message` says why) or `not_attempted`.
-- `--speech-model` also installs what transcription needs (`transcribe`, `sync`, and `fetch` without captions), as Settings → Transcription & Alignment would on this computer:
+- `--speech-model` also installs what transcription needs (`transcribe`, `assess`, `sync`, and `fetch` without captions), as Settings → Transcription & Alignment would on this computer:
   - the speech engine, when the app needs it;
   - the model: `--model large-v3` (about 3 GB) or `small` (about 0.5 GB), left out the profile's. Cantonese needs `large-v3`: with `small`, the item fails and nothing downloads;
   - the part for an NVIDIA or Vulkan graphics card.

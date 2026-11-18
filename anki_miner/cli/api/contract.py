@@ -24,6 +24,7 @@ COMMANDS = (
     "retime",
     "ocr",
     "inspect",
+    "assess",
 )
 #: Commands that turn files into files, one run per episode (``jobs.py``): ``<name> FILE``.
 JOB_COMMANDS = (
@@ -34,6 +35,7 @@ JOB_COMMANDS = (
     "video-ocr",
     "retime",
     "ocr",
+    "assess",
 )
 #: What this build adds beyond 3.5.0's API, by stable name (API.md, "version"). One name per
 #: addition, appended when it ships; a caller checks a name instead of comparing versions.
@@ -63,6 +65,7 @@ FEATURES = (
     "setup-speech-ocr",
     "ocr",
     "inspect",
+    "assess",
 )
 
 BUSY = "BUSY"

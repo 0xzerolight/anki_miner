@@ -196,6 +196,14 @@ def abs_path(value: str) -> Path:
     return path.resolve()
 
 
+def path_list(value: object, where: str) -> tuple[Path, ...]:
+    """One path, or a non-empty list of them, each made absolute (``sync``'s and ``assess``'s ``audio``)."""
+    items = [value] if isinstance(value, str) else value
+    if not isinstance(items, list) or not items:
+        raise bad(f"{where} must be a path or a non-empty list of paths.")
+    return tuple(abs_path(text(item, f"{where}[{j}]")) for j, item in enumerate(items))
+
+
 def opt_path(value: str | None) -> Path | None:
     return abs_path(value) if value is not None else None
 
