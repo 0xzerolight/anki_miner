@@ -7,9 +7,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [Unreleased]
 
 ### Added
+- **`--api assess` reports what the speech model hears in short clips, such as a card's audio.** Per clip: the transcript, the language Whisper detects on its own and its probability, each segment's numbers, where the voice detector hears speech, and the level inside and outside it. A line spoken in another language, music under a line or two voices at once show up in those numbers (API.md, "assess").
 - **A CC button on the Word Curator's video turns its subtitles off.** On videos with subtitles burned into the picture, the curator's own subtitles covered them. C does the same from the keyboard (Settings → Keyboard), and the curator remembers the choice for the next video.
 
 ### Changed
+- **`--api transcribe` loads the speech model once per call, not once per episode.** Three short clips took 4 seconds instead of 15 on an NVIDIA graphics card. On a Vulkan graphics card each file still loads it.
 - **Japanese mines more everyday words written in kana.** あの and その before a noun, やっぱ, ぜひ, おかげ, あんな, わけ, とこ, ほう, and words the tagger cut apart (ちなみに, とっくに, もったいない, とんでもない). The tagger read a pre-noun あの as a filler, and the kana word list did not name the rest.
 - **Japanese grammar expressions are mined as one word, in every inflection.** という, として, について, によって, ように, ような, ことがある, ことができる, ことになる, ことにする and かもしれない (会ったことがあった mines ことがある). The tagger cuts them at their particles and every piece was dropped. という and として join only after a noun, ことがある only after a verb.
 - **Common Japanese interjections are mined:** はい, うん, いいえ, いや, ありがとう, おはよう, こんにちは, さようなら, もしもし, ほら, よし, and すみません or すいません as one word. Fillers and gasps (えっと, うーん, あっ) and ええ are still left out.
