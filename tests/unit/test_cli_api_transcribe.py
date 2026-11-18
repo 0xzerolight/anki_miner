@@ -106,6 +106,31 @@ def test_a_video_is_transcribed_into_the_run_folder(monkeypatch, tmp_path, check
     assert _run(tmp_path, video_file=str(video))["file"] == "transcribe-2.json"
 
 
+def test_one_model_session_serves_every_episode_of_a_call(monkeypatch, tmp_path, checked) -> None:
+    """The model loads once per call, not per episode; the session is let go when the call ends."""
+    from anki_miner.services.asr.transcriber import Ct2ModelSession
+
+    released: list[Ct2ModelSession] = []
+
+    class _Session(Ct2ModelSession):
+        def release(self) -> None:
+            released.append(self)
+            super().release()
+
+    monkeypatch.setattr(transcribe, "Ct2ModelSession", _Session)
+    generate = _use(monkeypatch, _Generate())
+    data = _file(tmp_path, video_file=str(tmp_path / "a.mkv"))
+    data["episodes"].append({"run_id": "tr-2", "audio_file": str(tmp_path / "b.mp3")})
+    job = transcribe.files.parse_jobs_file(data, "transcribe", transcribe._episode)
+
+    verdicts = transcribe.transcribe_runs(job, threading.Event())
+
+    assert [v["ok"] for v in verdicts] == [True, True]
+    sessions = [call["ct2_model_session"] for call in generate.calls]
+    assert len(sessions) == 2 and sessions[0] is sessions[1]
+    assert released == [sessions[0]]
+
+
 def test_an_audio_file_is_probed_as_audio(monkeypatch, tmp_path, checked) -> None:
     _use(monkeypatch, _Generate())
     audio = tmp_path / "podcast.mp3"

@@ -4,7 +4,8 @@ Per episode, what Utilities -> Generate does for one file: the speech model
 transcribes it into ``<run_dir>/<run_id>/transcribe-<n>/<stem>.srt``. Nothing
 goes to Anki and no lock is held: a transcription writes only its run folder,
 the API log and the transcript cache it shares with the window (a second
-transcription of the same file reads it back).
+transcription of the same file reads it back). One model session serves the
+whole call, as Generate's queue does, so the model loads once.
 """
 
 from __future__ import annotations
@@ -33,6 +34,7 @@ from anki_miner.cli.api.sources import check_audio
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.languages.registry import config_language, get_profile
 from anki_miner.services.asr.subtitle_generation import SubtitleGenStatus, generate_subtitle_one
+from anki_miner.services.asr.transcriber import Ct2ModelSession
 from anki_miner.services.media_extractor import MediaExtractorService
 
 CANCELLED_MESSAGE = "The run was cancelled."
@@ -69,8 +71,12 @@ def call(transcribe_file: Path, cancel_all: threading.Event) -> list[dict[str, o
 
 
 def transcribe_runs(job: JobsFile[TranscribeEpisode], cancel_all: threading.Event) -> list[dict[str, object]]:
-    """Every episode of *job* transcribed in turn; a transcribe-<n>.json for each that ends."""
-    return job_runs(job, "transcribe", cancel_all, partial(prepare_speech, job), _transcribe_one)
+    """Every episode of *job* transcribed in turn, on one model session; a transcribe-<n>.json for each that ends."""
+    session = Ct2ModelSession()
+    try:
+        return job_runs(job, "transcribe", cancel_all, partial(prepare_speech, job), partial(_transcribe_one, session))
+    finally:
+        session.release()
 
 
 def prepare_speech(job: JobsFile[E]) -> AnkiMinerConfig:
@@ -91,7 +97,9 @@ def asr_language(config: AnkiMinerConfig) -> str:
     return get_profile(config_language(config)).asr_language
 
 
-def _transcribe_one(config: AnkiMinerConfig, episode: TranscribeEpisode, run: Run) -> dict[str, object]:
+def _transcribe_one(
+    session: Ct2ModelSession, config: AnkiMinerConfig, episode: TranscribeEpisode, run: Run
+) -> dict[str, object]:
     run_config = replace(config, media_temp_folder=run.media)
     media = episode.media_file
     if episode.is_video:
@@ -109,6 +117,7 @@ def _transcribe_one(config: AnkiMinerConfig, episode: TranscribeEpisode, run: Ru
         on_transcribe_start=lambda: transcribing(0.0),
         transcribe_progress_cb=transcribing,
         cancel_event=run.cancel,
+        ct2_model_session=session,
         language=asr_language(config),
     )
     if result.status is SubtitleGenStatus.CANCELLED:
