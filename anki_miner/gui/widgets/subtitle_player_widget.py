@@ -355,6 +355,10 @@ class SubtitlePlayerWidget(QWidget):
         # both consumer dialogs call set_source in __init__, before the widget
         # is shown and GL exists.
         self._pending_load: str | None = None
+        # Set by render_failed, which fires once per widget: no render context
+        # will ever come, so later sources load at once (audio-only) and the
+        # hidden video pane stays hidden.
+        self._render_failed: bool = False
         # End of an in-progress play_range, in seconds; None when playback is
         # not bounded. Cleared by cancel_range, which EVERY other transport
         # entry point calls — a manual Play or a seek elsewhere must not be
@@ -618,7 +622,7 @@ class SubtitlePlayerWidget(QWidget):
             # viewer and half the point of the curator's Space shortcut.
             self._backend_notice_label.setText(self._preview_suppressed_text())
             self._backend_notice_label.setVisible(True)
-        else:
+        elif not self._render_failed:
             self._backend_notice_label.setVisible(False)
             self.video_widget.setVisible(True)
 
@@ -682,9 +686,10 @@ class SubtitlePlayerWidget(QWidget):
         the normal first-load path is the deferred one; render_ready (or
         render_failed, where audio-only is the promised degradation) flushes it.
         """
-        # No video surface means no render context will ever exist, so deferring
-        # would park the load forever — load immediately for the audio-only path.
-        if self.video_widget is None or self.video_widget.has_render_context:
+        # No video surface (or a failed one) means no render context will ever
+        # exist, so deferring would park the load forever — load immediately
+        # for the audio-only path.
+        if self.video_widget is None or self._render_failed or self.video_widget.has_render_context:
             self.player.loadfile(path)
         else:
             self._pending_load = path
@@ -1067,6 +1072,7 @@ class SubtitlePlayerWidget(QWidget):
         silent black box.
         """
         logger.warning("Video render unavailable: %s", reason)
+        self._render_failed = True
         self._backend_notice_label.setText(
             self.tr("Video preview is unavailable on this display. Audio and subtitles still play.")
         )
