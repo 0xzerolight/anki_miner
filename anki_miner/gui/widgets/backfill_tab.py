@@ -190,6 +190,7 @@ class CardBackfillTab(RunOptionsMixin, _AnkiPlanTabBase):
         self.deck_combo = QComboBox()
         self.deck_combo.setAccessibleName(self.tr("Deck"))
         self.deck_combo.addItem(self.tr("All decks"))
+        self.deck_combo.currentIndexChanged.connect(self._drop_plan_for_changed_options)
         deck_layout.addWidget(self.deck_combo)
         layout.addWidget(self.deck_card)
 
@@ -246,6 +247,7 @@ class CardBackfillTab(RunOptionsMixin, _AnkiPlanTabBase):
         # silently. Pinned by
         # tests/unit/test_run_option_persistence.py::test_overwrite_is_never_persisted.
         self.overwrite_checkbox = QCheckBox(self.tr("Overwrite existing values"))
+        self.overwrite_checkbox.toggled.connect(self._drop_plan_for_changed_options)
         fields_layout.addWidget(self.overwrite_checkbox)
         layout.addWidget(self.fields_card)
 

@@ -376,3 +376,38 @@ class TestFailedApply:
 
         assert tab._plan is not None
         tab.worker_thread = None
+
+
+class TestOptionChangesDropThePlan:
+    """X5-001: source, target and the field pickers define the plan, so changing any of
+    them after a Scan must drop it; Copy must never write the scanned source and target
+    while the screen shows different ones."""
+
+    @pytest.mark.parametrize("change", ["source", "target", "expression", "reading"])
+    def test_a_changed_option_drops_the_plan_and_copy_writes_nothing(self, tab, change):
+        _select_source(tab, "Premade")
+        tab._on_inspected(
+            tab._inspect_generation,
+            DeckInspection(3, ("Core",), ("Expression", "Reading"), {"Core": "Expression"}),
+        )
+        tab._on_scan_finished(_plan())
+        assert tab.apply_button.isEnabled()
+
+        if change == "source":
+            _select_source(tab, "Other")
+        elif change == "target":
+            tab.target_edit.setText("My Sentences")
+        elif change == "expression":
+            tab.expression_combo.setCurrentIndex(1)
+        else:
+            tab.reading_combo.setCurrentIndex(2)
+
+        assert tab._plan is None
+        assert not tab.apply_button.isEnabled()
+        assert tab.scan_button.objectName() == "primary"
+        with (
+            patch(f"{_TAB_MOD}.QMessageBox.question", return_value=QMessageBox.StandardButton.Yes),
+            patch(f"{_TAB_MOD}.DeckFilterApplyWorker") as worker_cls,
+        ):
+            tab._start_apply()
+        worker_cls.assert_not_called()

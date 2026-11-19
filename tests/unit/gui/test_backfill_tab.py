@@ -786,3 +786,34 @@ class TestPluralCounts:
 
         assert ("%n field(s) across %1 will be filled.", 2) in seen
         assert ("%n note(s)", 2) in seen
+
+
+class TestOptionChangesDropThePlan:
+    """X5-001: Deck and Overwrite define the plan's scope and mode, so changing either
+    after a Scan must drop the plan; Apply must never write the scanned scope and mode
+    while the screen shows different ones."""
+
+    @pytest.mark.parametrize("change", ["overwrite", "deck"])
+    def test_a_changed_option_drops_the_plan_and_apply_writes_nothing(self, tab, change):
+        from PyQt6.QtWidgets import QMessageBox
+
+        tab._on_decks_fetched(["Mining::Show A"])
+        tab.overwrite_checkbox.setChecked(True)
+        options = BackfillOptions(field_keys=frozenset({"frequency"}), deck=None, overwrite=True)
+        tab._on_scan_finished(_plan([_note_plan(1)], options=options))
+        assert tab.apply_button.isEnabled()
+
+        if change == "overwrite":
+            tab.overwrite_checkbox.setChecked(False)
+        else:
+            tab.deck_combo.setCurrentIndex(1)
+
+        assert tab._plan is None
+        assert not tab.apply_button.isEnabled()
+        assert tab.scan_button.objectName() == "primary"
+        with (
+            patch(f"{_TAB_MOD}.QMessageBox.question", return_value=QMessageBox.StandardButton.Yes),
+            patch(f"{_TAB_MOD}.BackfillApplyWorker") as factory,
+        ):
+            tab._start_apply()
+        factory.assert_not_called()

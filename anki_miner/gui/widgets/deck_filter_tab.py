@@ -171,6 +171,8 @@ class DeckFilterTab(_AnkiPlanTabBase):
         fields_row.addWidget(QLabel(self.tr("Reading field:")))
         self.reading_combo = QComboBox()
         self.reading_combo.addItem(self.tr("(none — generate)"))
+        for combo in (self.expression_combo, self.reading_combo):
+            combo.currentIndexChanged.connect(self._drop_plan_for_changed_options)
         fields_row.addWidget(self.reading_combo, stretch=1)
         self.field_row.hide()
         deck_layout.addWidget(self.field_row)
@@ -180,6 +182,7 @@ class DeckFilterTab(_AnkiPlanTabBase):
         target_row.addWidget(QLabel(self.tr("New deck:")))
         self.target_edit = QLineEdit()
         self.target_edit.setPlaceholderText(self.tr("Name for the filtered deck"))
+        self.target_edit.textChanged.connect(self._drop_plan_for_changed_options)
         target_row.addWidget(self.target_edit, stretch=1)
         deck_layout.addLayout(target_row)
         layout.addWidget(self.deck_card)
@@ -339,6 +342,7 @@ class DeckFilterTab(_AnkiPlanTabBase):
         # about there being none). The deck-fetch banner cannot be up here: it
         # clears on the fetch that fills this combo.
         self.clear_screen_issue()
+        self._drop_plan_for_changed_options()
         deck = self._selected_source_deck()
         self._reset_field_combos()
         if deck is None:

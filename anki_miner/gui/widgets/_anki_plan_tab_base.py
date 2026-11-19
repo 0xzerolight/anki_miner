@@ -219,6 +219,17 @@ class _AnkiPlanTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
         self.preview_card.hide()
         self.page_filler.show()
 
+    def _drop_plan_for_changed_options(self, *_args: object) -> None:
+        """Drop the plan when a control that defines its scope or mode changes.
+
+        Apply writes the plan exactly as scanned, so a plan kept past a change
+        to the deck, the mode or a picked field would write options the screen
+        no longer shows. The preview goes with it and Scan is the next move.
+        Those controls are disabled while a run is active.
+        """
+        self._drop_plan()
+        self._sync_action_prominence()
+
     def _drop_stale_plan(self, plan_version: int) -> bool:
         """Drop a plan scanned under older settings and say why; report whether it did.
 
