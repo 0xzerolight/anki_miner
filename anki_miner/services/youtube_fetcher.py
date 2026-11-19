@@ -726,7 +726,10 @@ class YouTubeFetcherService:
         # metacharacter, so a folder like "100% Japanese" produced an invalid
         # template and the fetch failed with a misleading "outputs are missing".
         output_tpl = "%(id)s.%(ext)s"
-        fmt = f"bestvideo[height<={max_height}]+bestaudio/best[height<={max_height}]"
+        # "<=?" keeps a format whose height is unknown: a direct video link's
+        # one format has none, and a plain "<=" filter drops it, so the fetch
+        # failed with "Requested format is not available". Known heights stay capped.
+        fmt = f"bestvideo[height<=?{max_height}]+bestaudio/best[height<=?{max_height}]"
         if sub_mode == "auto_dub":
             # Auto-dub route: the ja captions are machine-translated, matching
             # the Japanese auto-dub audio track — so that exact track must be
@@ -739,7 +742,7 @@ class YouTubeFetcherService:
             # would silently mine MT subs against foreign audio. If the dub
             # vanished since the probe, the fetch fails and _raise_for_error
             # names the cause.
-            fmt = f"bestvideo[height<={max_height}]+bestaudio[language~='{captions.audio_pattern}']"
+            fmt = f"bestvideo[height<=?{max_height}]+bestaudio[language~='{captions.audio_pattern}']"
 
         cmd: list[str] = [self._ytdlp(), "--ignore-config"]
         # yt-dlp already implements manual-preferred-with-auto-fallback: in
