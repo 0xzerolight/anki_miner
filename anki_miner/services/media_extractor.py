@@ -65,6 +65,13 @@ _FILTER_PROBE_GRAPH = "aselect='between(t,1000,1001)',asetpts=N/SR/TB"
 #: negative-length ffmpeg ``-t`` if a bound ever arrives unclamped.
 MIN_CLIP_SECONDS = 0.2
 
+#: Filter that re-lays a frame in square pixels at its display width. A DVD
+#: remux (720x480, SAR 32:27) or a broadcast capture (1440x1080, SAR 4:3) stores
+#: non-square pixels, and the card's web view ignores a picture's pixel-ratio
+#: tag, so every card picture is stored in square pixels. ``iw*sar`` is ``iw``
+#: exactly for a square-pixel (or untagged) source, which passes through as is.
+SQUARE_PIXELS_FILTER = "scale=iw*sar:ih,setsar=1"
+
 #: Tallest static card picture when the caller names no height. Matches the
 #: animated picture's default; a shorter source is never enlarged.
 STILL_MAX_HEIGHT = 720
@@ -1149,7 +1156,9 @@ class MediaExtractorService:
         # reads them itself, so they belong in the argv element.
         scale = [
             "-vf",
-            (f"scale=-2:{self._still_height}" if self._still_height else f"scale=-2:'min({STILL_MAX_HEIGHT},ih)'"),
+            SQUARE_PIXELS_FILTER
+            + ","
+            + (f"scale=-2:{self._still_height}" if self._still_height else f"scale=-2:'min({STILL_MAX_HEIGHT},ih)'"),
         ]
         cmd = [
             resolve_ffmpeg(self.config),
@@ -1412,7 +1421,7 @@ class MediaExtractorService:
             "-an",
             "-sn",
             "-vf",
-            f"fps={fps},scale=-2:{height}",
+            f"fps={fps},{SQUARE_PIXELS_FILTER},scale=-2:{height}",
         ]
 
         if fmt == "avif":
