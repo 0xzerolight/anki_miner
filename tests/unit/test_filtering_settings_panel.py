@@ -150,6 +150,32 @@ def test_lowering_the_maximum_below_the_minimum_pulls_the_minimum_down(qtbot):
     assert panel.get_max_frequency_rank() == 1000
 
 
+@pytest.mark.parametrize(("typed", "expected_min"), [("10000", 1000), ("500", 500)])
+def test_typing_a_maximum_clamps_on_the_finished_number(qtbot, typed, expected_min):
+    """A typed maximum's prefixes ('1' of '10000') must not drag the minimum down."""
+    from PyQt6.QtCore import Qt
+    from PyQt6.QtTest import QTest
+
+    from anki_miner.config import AnkiMinerConfig
+
+    panel = FilteringSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.load_from_config(replace(AnkiMinerConfig(), min_frequency_rank=1000, max_frequency_rank=5000))
+    panel.show()
+    qtbot.waitExposed(panel)
+
+    box = panel.max_frequency_spinbox
+    box.setFocus()
+    box.selectAll()
+    QTest.keyClicks(box, typed)
+    QTest.keyClick(box, Qt.Key.Key_Return)
+
+    assert panel.get_min_frequency_rank() == expected_min
+    assert panel.get_max_frequency_rank() == int(typed)
+    result = panel.contribute(AnkiMinerConfig())
+    assert (result.min_frequency_rank, result.max_frequency_rank) == (expected_min, int(typed))
+
+
 def test_an_open_end_never_clamps_the_other(qtbot):
     """0 means 'open end', not 'rank zero' — it must not drag the other end to 0."""
     panel = FilteringSettingsPanel()
