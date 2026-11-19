@@ -808,6 +808,7 @@ def _create_subtitle_parser(config: AnkiMinerConfig, **lookups: Any) -> Subtitle
             config,
             has_target_script=profile.script.contains_target_script,
             skip_line=is_chinese_line,
+            name_piece_rejects=True,
             **lookups,
         )
     return cast(SubtitleParserService, profile.create_parser(config, **lookups))
@@ -1023,6 +1024,9 @@ def create_services(
         # question; a policy that does not answer it keeps the ja literal.
         expression_tracks_surface=getattr(profile.mined_form, "expression_tracks_surface", None),
         sentence_annotation=profile.sentence_annotator is not None,
+        # A regenerated sentence (line expansion, the --api word on its line)
+        # reads from the parser's own display stream, with its corrections.
+        sentence_tokens=subtitle_parser.sentence_display_tokens,
     )
     media_extractor = MediaExtractorService(config)
     if anki_service is None:

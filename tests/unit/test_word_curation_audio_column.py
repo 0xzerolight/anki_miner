@@ -122,3 +122,29 @@ def test_set_state_is_a_no_op_once_the_dialog_is_closing(qtbot):
     dlg.set_expression_audio_state(0, True)
 
     assert dlg.table.item(0, AUDIO_COLUMN).text() == "-"
+
+
+def test_a_run_without_expression_audio_does_not_save_its_gate(qtbot):
+    no_audio = WordCurationDialog([_word()])
+    qtbot.addWidget(no_audio)
+    no_audio.accept()  # done() saves the header arrangement
+
+    dlg = WordCurationDialog([_word()], expression_audio_fetch_fn=_fetch)
+    qtbot.addWidget(dlg)
+
+    assert not dlg.table.isColumnHidden(AUDIO_COLUMN)
+
+
+def test_a_users_own_hide_survives_a_run_without_expression_audio(qtbot):
+    first = WordCurationDialog([_word()], expression_audio_fetch_fn=_fetch)
+    qtbot.addWidget(first)
+    first._column_menu_actions()[AUDIO_COLUMN].setChecked(False)
+    first.accept()
+    no_audio = WordCurationDialog([_word()])
+    qtbot.addWidget(no_audio)
+    no_audio.accept()
+
+    dlg = WordCurationDialog([_word()], expression_audio_fetch_fn=_fetch)
+    qtbot.addWidget(dlg)
+
+    assert dlg.table.isColumnHidden(AUDIO_COLUMN)

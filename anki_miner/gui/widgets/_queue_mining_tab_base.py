@@ -291,6 +291,7 @@ class _QueueMiningTabBase(MiningTabBase):
         # resolve against a frozen list that survives mid-run removals.
         self._run_items = list(items)
 
+        self._clear_curation_cancel()
         curation_cb = self._curation_bridge if self.review_words_checkbox.isChecked() else None
         worker = self._make_worker(items, curation_cb, processor_factory)
         worker.item_started.connect(self._on_item_started)
@@ -845,10 +846,17 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
     def _start_run(self, items: list[Any] | None = None) -> None:
         """Launch the worker over *items*, or over every READY row.
 
+        The single run entry of Mine, Run selected and Retry selected, so a
+        fresh attempt clears the last run's banner here, after the reentrancy
+        guard.
+
         Args:
             items: The rows to mine, already filtered to runnable ones. ``None``
                 means the whole queue's READY rows (the Mine button).
         """
+        if self._queue_locked():
+            return
+        self.clear_screen_issue()
         runnable = (
             items if items is not None else [i for i in self._queue.all_items() if i.status == self._status_ready]
         )
@@ -1199,7 +1207,7 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
         """
         selected = self._selected_items()
         self.queue_controls.set_selection_count(len(selected))
-        run_active = self.worker_thread is not None
+        run_active = self._queue_locked()
         runnable = any(i.status == self._status_ready for i in selected)
         retryable = any(self._is_retryable(i) for i in selected)
         removable = any(i.status != self._status_processing for i in selected)
@@ -1257,6 +1265,8 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
 
     def _on_run_selected(self) -> None:
         """Mine the selected runnable rows, in list order."""
+        if self._queue_locked():
+            return
         runnable = [i for i in self._selected_items() if i.status == self._status_ready]
         if runnable:
             self._start_run(runnable)
@@ -1279,7 +1289,7 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
             self._refresh_row(item)
         self._apply_queue_view()
         self._recompute_buttons()
-        if reset and self.worker_thread is None:
+        if reset and not self._queue_locked():
             self._start_run(reset)
 
     def _on_remove_selected(self) -> None:

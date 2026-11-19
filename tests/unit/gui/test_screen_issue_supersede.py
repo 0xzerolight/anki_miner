@@ -414,3 +414,28 @@ class TestReentrancyGuardOrdersBeforeClear:
         creation_tab.worker_thread.isRunning.return_value = True
         creation_tab._on_generate()
         assert _surviving_summary(creation_tab) == STALE.summary
+
+
+# ---------------------------------------------------------------------------
+# The list queues' selection verbs are run entries too
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("verb", ["_on_run_selected", "_on_retry_selected"])
+def test_a_selection_run_clears_the_last_run_failure(audiobook_tab, tmp_path, verb):
+    from tests.unit.gui._screens import add_audiobook
+
+    tab = audiobook_tab
+    first = add_audiobook(tab, tmp_path, "one")
+    add_audiobook(tab, tmp_path, "two")
+    if verb == "_on_retry_selected":
+        first.status = tab._status_error
+        first.error_message = "boom"
+    tab._on_run_error("Cannot connect to AnkiConnect. Is Anki running?")
+    assert tab.issue_banner().current_issue() is not None
+    tab._list_items[first].setSelected(True)
+
+    getattr(tab, verb)()
+
+    assert tab.worker_thread is not None
+    assert tab.issue_banner().current_issue() is None

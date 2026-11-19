@@ -122,6 +122,7 @@ def test_create_parser_delegates_to_the_subtitle_parser_service(profile, monkeyp
             "term_lookup": None,
             "has_target_script": profile.script.contains_target_script,
             "skip_line": is_chinese_line,
+            "name_piece_rejects": True,
         },
     }
 

@@ -314,6 +314,8 @@ JA_PARSER_KEYWORDS = {
     # The Chinese-line skip ja's own factory adds too: a fansub credit line is
     # kanji, so it passes that gate.
     "skip_line",
+    # The UniDic name-piece rejects (助, 夜|神君), ja's own factory's too.
+    "name_piece_rejects",
 }
 
 

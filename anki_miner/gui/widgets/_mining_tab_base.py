@@ -1072,7 +1072,9 @@ class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidge
         """
         self._curation_event.clear()
         self._curation_result = None
-        self._curation_cancelled = False
+        # _curation_cancelled is NOT reset here: a Stop pressed after the
+        # orchestrator's last cancel checkpoint but before this call is only
+        # remembered by that flag. Run launch clears it (_clear_curation_cancel).
         # Checked AFTER clear(): _poison_curation_gate sets the flag before
         # the event, so either the flag is visible here, or the poison's
         # set() happens after our clear() and wait() returns immediately.
@@ -1124,14 +1126,21 @@ class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidge
         skip curation and produce zero cards with no dialog (F1). Permanent
         poisoning stays reserved for :meth:`shutdown`.
 
-        Only the poison flag is cleared here. ``_curation_cancelled`` is left as the
-        teardown set it: a ``_curation_requested`` emission already queued by the
-        torn-down worker would otherwise pop a dialog for the dead run when the GUI
-        slot finally fires. The next run's :meth:`_curation_bridge` resets
-        ``_curation_cancelled`` to ``False`` itself before it emits, so this does not
-        suppress the upcoming run's own dialog.
+        Only the poison flag is cleared here. ``_curation_cancelled`` is cleared by
+        :meth:`_clear_curation_cancel` when the next run launches; a
+        ``_curation_requested`` emission still queued by the torn-down worker is
+        then dropped by the token check in :meth:`_show_curation_dialog`.
         """
         self._curation_gate_poisoned = False
+
+    def _clear_curation_cancel(self) -> None:
+        """Forget the last run's cancel. Call on the GUI thread as a run launches.
+
+        Each run-start path calls this right before its worker starts (after
+        ``_teardown_previous_run``), so a cancel is scoped to its own run: never
+        erased by the worker reaching the bridge, never carried into the next run.
+        """
+        self._curation_cancelled = False
 
     def _build_curation_context(
         self,

@@ -387,7 +387,7 @@ def compile_subtitle_regex_filter(pattern: str, replacement: str) -> re.Pattern[
     try:
         compiled = re.compile(pattern)
         compiled.sub(replacement, "")
-    except (re.error, IndexError) as e:
+    except (re.error, IndexError, OverflowError) as e:
         raise ValueError(str(e)) from e
     if _NESTED_UNBOUNDED_REPEAT_RE.search(pattern):
         raise ValueError("nested unbounded repeats are not allowed")
@@ -602,6 +602,7 @@ class SubtitleParserService:
         normalize: Callable[[str], str] | None = None,
         has_target_script: Callable[[str], bool] | None = None,
         skip_line: Callable[[str], bool] | None = None,
+        name_piece_rejects: bool = False,
         ellipsis_fragment_guard: bool = True,
         sentence_annotation: bool = True,
         attested_reading_fallback: bool = False,
@@ -718,6 +719,11 @@ class SubtitleParserService:
                 file). Such a line is listed and previewed like any other and
                 never tokenized, so no word is mined from it. ``None`` — every
                 language but ja — tokenizes every line.
+            name_piece_rejects: Whether a token UniDic cut out of a Japanese
+                name is turned away (``_is_kanji_glue``,
+                ``_is_name_honorific_tail``): its tables read UniDic lemmas and
+                orthBases. ``True`` from the ja factory only; another
+                segmenter's 助 or 主殿 is an ordinary word.
             ellipsis_fragment_guard: Whether the U8 truncation-fragment reject
                 (``_is_ellipsis_truncation_fragment``) runs at all. Both of its
                 signals read Japanese: a severed conjugation is recognised by a
@@ -783,6 +789,8 @@ class SubtitleParserService:
         # U8 truncation-fragment reject; False ⇒ skipped outright, both of its
         # signals being unidic-shaped (see _mine_token).
         self._ellipsis_fragment_guard = ellipsis_fragment_guard
+        # UniDic name-piece rejects; False ⇒ skipped (see _mine_token).
+        self._name_piece_rejects = name_piece_rejects
         # Bilingual-cue line gate; None ⇒ every physical line of a cue is kept.
         # Injected once per instance, so the per-FILE line cache below can never
         # replay line state tokenized under a different gate.
@@ -1298,7 +1306,19 @@ class SubtitleParserService:
         """
         gate = None if translation else self._has_target_script
         cleaned = clean_subtitle_text(raw_text, normalize=self._normalize, has_target_script=gate)
+        if not translation and self._skips_as_written(cleaned):
+            return cleaned
         return self._apply_text_filter(cleaned)
+
+    def _skips_as_written(self, text: str) -> bool:
+        """Whether ``skip_line`` names a cue before the regex filter runs, so the cue is kept unfiltered.
+
+        The default filter's speaker-label piece deletes a leading ``role：``, and a
+        one-role fansub credit (翻译：小明) has its only Chinese in that label: judged
+        after the filter it was mined. Kept as written, the cue is listed as the
+        file has it and _build_line_state skips it as before.
+        """
+        return self._skip_line is not None and self._skip_line(self._tokenizer_text(text))
 
     def _load_subs(self, subtitle_file: Path, *, encodings: tuple[str, ...] | None = None):
         """Load a subtitle file via pysubs2 with normalized error wrapping.
@@ -2061,6 +2081,89 @@ class SubtitleParserService:
             morph=_token_morph(word_token),
         )
 
+    def _included_tokens(
+        self, text: str, raw_tokens: list, merged_tokens: list, rejects: dict[str, NotMinedReason] | None
+    ) -> tuple[list, list[tuple[int, int, int]]]:
+        """The line's mined tokens and their ``(start, end, highlight_end)`` spans.
+
+        Spans come from the shared locator — same offset and drop rule as
+        parse_subtitle_file (Issue #20 / T-38, see _iter_token_spans). The
+        highlight end is computed once per token here and reused by the
+        emission pass, so parse_subtitle_file and _with_index stay
+        output-identical.
+        """
+        included_tokens: list = []
+        included_spans: list[tuple[int, int, int]] = []
+        for word_token, tok_start, tok_end in self._iter_token_spans(text, merged_tokens):
+            if not self._mine_token(word_token, text, tok_start, tok_end, merged_tokens, raw_tokens, rejects=rejects):
+                continue
+            included_tokens.append(word_token)
+            highlight_end = self._emission_highlight_end(text, raw_tokens, tok_start, tok_end, word_token)
+            included_spans.append((tok_start, tok_end, highlight_end))
+        return included_tokens, included_spans
+
+    def _line_display(
+        self,
+        text: str,
+        raw_tokens: list,
+        merged_tokens: list,
+        included_tokens: list,
+        included_spans: list[tuple[int, int, int]],
+    ) -> tuple[list, list[str | None]]:
+        """The line's sentence display stream, and each included token's prefetched card front.
+
+        A synthetic compound's front is ``None``: it was attested in
+        _build_line_state.
+        """
+        # Probe real-token card fronts as one exact-headword batch per line.
+        mined_forms: list[str | None] = []
+        for word_token, (tok_start, _, highlight_end) in zip(
+            included_tokens,
+            included_spans,
+            strict=True,
+        ):
+            if isinstance(word_token, SyntheticToken):
+                mined_forms.append(None)
+                continue
+            _, _, mined, _ = self._resolve_word_identity(
+                word_token,
+                text,
+                tok_start,
+                highlight_end,
+            )
+            mined_forms.append(mined)
+        self._prefetch_attested_readings([mined for mined in mined_forms if mined is not None])
+
+        # The sentence-level furigana/reading come from the shared display
+        # stream (attested-compound override + honorific-kinship pass; see
+        # _build_display_tokens). Surfaces are unchanged, so span/offset math
+        # is unaffected.
+        display_tokens = self._build_display_tokens(text, raw_tokens, merged_tokens)
+        display_tokens = self._apply_single_token_sentence_attestation(
+            text,
+            display_tokens,
+            included_tokens,
+            included_spans,
+            mined_forms,
+        )
+        return display_tokens, mined_forms
+
+    def sentence_display_tokens(self, sentence: str) -> list:
+        """The token stream a stored line's sentence furigana and kana reading are built from.
+
+        ``sentence`` is one stored line (a ``parse_raw_entries`` cue text). The
+        stream is the one mining builds the line's card fields from, so a line
+        annotated again later (a line expansion, the ``--api`` word on its
+        line, a swapped sentence's bold) reads as its card does, with every
+        tagger correction and reading override.
+        """
+        self._require_engine()
+        _stored, raw_tokens, merged_tokens, *_ = self._build_line_state(sentence, 0.0, 0.0)
+        text = self._tokenizer_text(sentence)
+        included_tokens, included_spans = self._included_tokens(text, raw_tokens, merged_tokens, None)
+        display_tokens, _ = self._line_display(text, raw_tokens, merged_tokens, included_tokens, included_spans)
+        return display_tokens
+
     def _emit_line_words_and_index(
         self,
         line_state: tuple[str, list[Any], list[Any], float, float, float],
@@ -2093,22 +2196,12 @@ class SubtitleParserService:
         # When collecting the index we also record (surface, start, end) for the
         # FIRST occurrence of each content lemma — the i+1 filter uses this to
         # re-bold against the swapped-in line.
+        included_tokens, included_spans = self._included_tokens(text, raw_tokens, merged_tokens, rejects)
         line_lemmas: set[str] = set()
-        included_tokens: list = []
-        included_spans: list[tuple[int, int, int]] = []
         lemma_first_span: dict[str, tuple[str, int, int, int]] = {}
-        # Spans come from the shared locator — same offset and drop rule as
-        # parse_subtitle_file (Issue #20 / T-38, see _iter_token_spans).
-        for word_token, tok_start, tok_end in self._iter_token_spans(text, merged_tokens):
-            if not self._mine_token(word_token, text, tok_start, tok_end, merged_tokens, raw_tokens, rejects=rejects):
-                continue
+        for word_token, (tok_start, tok_end, highlight_end) in zip(included_tokens, included_spans, strict=True):
             lemma_here = self._extract_lemma(word_token)
             line_lemmas.add(lemma_here)
-            included_tokens.append(word_token)
-            # Computed once per token here and reused by the second pass, so
-            # parse_subtitle_file and _with_index stay output-identical.
-            highlight_end = self._emission_highlight_end(text, raw_tokens, tok_start, tok_end, word_token)
-            included_spans.append((tok_start, tok_end, highlight_end))
             if collect_index:
                 # Surfaces are slices of the stored line, as _emit_word's are.
                 lemma_first_span.setdefault(
@@ -2120,37 +2213,8 @@ class SubtitleParserService:
         if collect_index and not line_lemmas:
             return [], None
 
-        # Probe real-token card fronts as one exact-headword batch per line.
-        # Synthetic compounds were already attested in _build_line_state.
-        mined_forms: list[str | None] = []
-        for word_token, (tok_start, _, highlight_end) in zip(
-            included_tokens,
-            included_spans,
-            strict=True,
-        ):
-            if isinstance(word_token, SyntheticToken):
-                mined_forms.append(None)
-                continue
-            _, _, mined, _ = self._resolve_word_identity(
-                word_token,
-                text,
-                tok_start,
-                highlight_end,
-            )
-            mined_forms.append(mined)
-        self._prefetch_attested_readings([mined for mined in mined_forms if mined is not None])
-
-        # Compute sentence-level furigana/reading ONCE for this line, from the
-        # shared display stream (attested-compound override + honorific-kinship
-        # pass; see _build_display_tokens). Surfaces are unchanged, so
-        # span/offset math is unaffected.
-        display_tokens = self._build_display_tokens(text, raw_tokens, merged_tokens)
-        display_tokens = self._apply_single_token_sentence_attestation(
-            text,
-            display_tokens,
-            included_tokens,
-            included_spans,
-            mined_forms,
+        display_tokens, mined_forms = self._line_display(
+            text, raw_tokens, merged_tokens, included_tokens, included_spans
         )
         if self._sentence_annotation:
             sentence_furigana = generate_furigana_from_tokens(display_tokens, text=text)
@@ -2372,7 +2436,9 @@ class SubtitleParserService:
             # Reading→Subtitles per-cue cleanup remains here for synthetic
             # ReadingUnit callers and is idempotent when the loader already
             # stripped the cue.
-            text = self._apply_text_filter(strip_inline_annotations(text))
+            text = strip_inline_annotations(text)
+            if not self._skips_as_written(text):
+                text = self._apply_text_filter(text)
         return text
 
     def reading_entries(
@@ -2986,7 +3052,9 @@ class SubtitleParserService:
         if rejection is None:
             if self._is_katakana_run_fragment(word_token, text, tok_start, tok_end):
                 return False
-            if self._is_kanji_glue(word_token) or self._is_name_honorific_tail(word_token, text, tok_start):
+            if self._name_piece_rejects and (
+                self._is_kanji_glue(word_token) or self._is_name_honorific_tail(word_token, text, tok_start)
+            ):
                 return False
             return not self._ellipsis_reject(word_token, text, tok_start, tok_end)
         how = self._kana_recovery(word_token)

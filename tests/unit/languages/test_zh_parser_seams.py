@@ -134,3 +134,12 @@ class TestTheNormaliseSeam:
     def test_garbage_between_two_hanzi_does_not_split_their_word(self) -> None:
         """Deleting the codepoint outright is what keeps 电影 one word and 电/影 off the cards."""
         assert _mine(_parser("zh"), ZH_SPLIT_WORD_LINE) == {"我", "喜欢", "这部", "电影"}
+
+
+class TestTheNamePieceRejectSeam:
+    """UniDic's name pieces (助 = name-forming すけ, 夜|神君) are Japanese; jieba's 助 and 主殿 are words."""
+
+    def test_zh_mines_the_verb_zhu_and_the_noun_zhudian(self) -> None:
+        parser = _parser("zh")
+        assert "主殿" in _mine(parser, "我们去主殿看看")
+        assert "助" in _mine(parser, "他会助我成功")

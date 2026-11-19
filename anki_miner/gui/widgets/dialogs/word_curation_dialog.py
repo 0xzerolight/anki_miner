@@ -399,7 +399,6 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         self._media_ctx_cache: dict[Path, CurationMediaContext] = {}
         if ctx is not None and ctx.video_file is not None:
             self._media_ctx_cache[ctx.video_file] = ctx
-        self._media_swap_gen = 0
         self._show_dict = lookup_fn is not None
         # Expression-audio availability (FUTURE_IDEAS item 4). The parameter is
         # the run's own chained fetcher — the tab, not the window, drives it —
@@ -407,7 +406,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         # expression-audio field, which is the Audio column's gate.
         self._has_expression_audio = expression_audio_fetch_fn is not None
         self._empty_columns: frozenset[int] = frozenset()  # filled by _populate_table (A07)
-        # The user's own hidden/shown choice for each empty-gated column, which
+        # The user's own hidden/shown choice for each gated column (A07, Audio), which
         # done() puts back before saving the header, so a per-run gate hide is
         # never remembered as the user's arrangement.
         self._pre_gate_hidden: dict[int, bool] = {}
@@ -1052,7 +1051,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         # carries _populate_table's gate hide, so the intent is the D5 default.
         self._pre_gate_hidden = {
             column: self.table.isColumnHidden(column) if restored else column in _DEFAULT_HIDDEN_COLUMNS
-            for column in self._empty_columns
+            for column in self._gated_columns()
         }
         self._apply_translation_column_gate()
         self._apply_audio_column_gate()
@@ -1195,13 +1194,15 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
                 )
                 header_view = self.table.horizontalHeader()
                 if header_view:
-                    # Save the user's arrangement, not this run's A07 gate:
-                    # a column empty today may hold data next run.
+                    # Save the user's arrangement, not this run's A07 or Audio
+                    # gate: a column empty today may hold data next run, and the
+                    # next run may mine expression audio.
                     for column, hidden in self._pre_gate_hidden.items():
                         self.table.setColumnHidden(column, hidden)
                     try:
                         session_state.save_curator_columns(header_view.saveState(), self.table.columnCount())
                     finally:
+                        self._apply_audio_column_gate()
                         self._apply_empty_column_gate()
         super().done(a0)
 
@@ -1295,11 +1296,16 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
                 header_view.moveSection(header_view.visualIndex(column), column)
         # The intent _restore_layout_state records for a first run, so the save
         # in done() writes the D5 default rather than this run's gate.
-        self._pre_gate_hidden = {column: column in _DEFAULT_HIDDEN_COLUMNS for column in self._empty_columns}
+        self._pre_gate_hidden = {column: column in _DEFAULT_HIDDEN_COLUMNS for column in self._gated_columns()}
         self._apply_header_resize_modes()
         self._apply_translation_column_gate()
         self._apply_audio_column_gate()
         self._apply_empty_column_gate()
+
+    def _gated_columns(self) -> tuple[int, ...]:
+        """The columns a one-directional gate force-hides this run, whose saved state done() keeps."""
+        audio = () if self._has_expression_audio else (AUDIO_COLUMN,)
+        return (*self._empty_columns, *audio)
 
     def _apply_translation_column_gate(self) -> None:
         self.table.setColumnHidden(TRANSLATION_COLUMN, not self._has_translations)
@@ -1310,7 +1316,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         One-directional, unlike :meth:`_apply_translation_column_gate`: an
         active Audio column is the user's to hide from the header menu, and
         that choice has to survive the saved header state, so this only ever
-        hides.
+        hides. Its own hide is never saved: done() puts back ``_pre_gate_hidden``.
         """
         if not self._has_expression_audio:
             self.table.setColumnHidden(AUDIO_COLUMN, True)
@@ -2663,6 +2669,12 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
             # Nothing focused: leave the timer alone rather than debouncing a
             # seek/lookup for a row that isn't there.
             return
+        if original_index == self._pending_index:
+            # Another cell of the same word's row (its include box, its
+            # sentence): the panes already show it, or a pending tick will. A
+            # re-run would re-seek and pause, stopping playback and losing a
+            # hand-stepped frame.
+            return
 
         self._pending_word = word
         self._pending_index = original_index
@@ -3351,20 +3363,27 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
             self._apply_media_context(cached)
             return True
         resolver = ctx.context_resolver
-        self._media_swap_gen += 1
-        gen = self._media_swap_gen
 
         def on_done(result: object) -> None:
             new_ctx = result if isinstance(result, CurationMediaContext) else None
-            if self._closing or gen != self._media_swap_gen:
+            # A second resolve of the same episode (dispatched before the first
+            # landed) has nothing to add, and its re-seek would stop playback.
+            if self._closing or video_file in self._media_ctx_cache:
                 return
             if new_ctx is None:
                 # Table-only degradation for this word: keep the current
                 # episode showing rather than blocking curation on media.
                 logger.warning("Season curation: no media context for %s", video_file.name)
                 return
+            # Cached and booked even when the user has moved on: the restamp of
+            # a pick from this episode runs only here. The player swap and the
+            # preview follow the FOCUSED word, not the order resolves land in.
             self._media_ctx_cache[video_file] = new_ctx
-            self._apply_media_context(new_ctx)
+            word, idx = self._pending_word, self._pending_index
+            chosen = self._chosen.get(idx, word) if word is not None and idx is not None else None
+            focused_here = chosen is not None and chosen.video_file == video_file
+            if focused_here:
+                self._apply_media_context(new_ctx)
             # The column shows as soon as any episode of the season has a
             # translation track, not only the first. Owner ruling of 2026-11-13.
             if new_ctx.secondary_entries and not self._has_translations:
@@ -3376,18 +3395,14 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
             ]:
                 self._restamp_auto_expansion(self._chosen[pick], pick)
             self._repaint_expanded_rows(video_file)
-            # Re-fire the preview for the still-focused word (its chosen
-            # variant may have moved on; only seek if it still matches).
-            word, idx = self._pending_word, self._pending_index
-            if word is not None and idx is not None:
-                chosen = self._chosen.get(idx, word)
-                if chosen.video_file == video_file:
-                    window = self._expanded_window(chosen, idx)
-                    self._preview_scene(
-                        chosen.start_time if window is None else window.start,
-                        video_file,
-                        frame_time=self._screenshot_instant(chosen, idx, window),
-                    )
+            if focused_here and chosen is not None and idx is not None:
+                # Re-fire the preview for the still-focused word.
+                window = self._expanded_window(chosen, idx)
+                self._preview_scene(
+                    chosen.start_time if window is None else window.start,
+                    video_file,
+                    frame_time=self._screenshot_instant(chosen, idx, window),
+                )
 
         def on_error(message: str) -> None:
             logger.warning(

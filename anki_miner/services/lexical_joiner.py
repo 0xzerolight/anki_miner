@@ -169,19 +169,26 @@ def _opens_clause(tokens: list, spans: dict[int, tuple[int, int]], i: int) -> bo
     return left is None or right is None or left[1] != right[0]
 
 
-def _follows(tokens: list, i: int, after: str) -> bool:
+def _follows(tokens: list, i: int, after: str, joined_pos1: str | None = None) -> bool:
     """Whether ``tokens[i]`` comes right after the kind of word a kana row asks for ("" asks for none).
 
     A noun row also follows a closing quote (「本」という): what is quoted is named.
+    ``joined_pos1`` is the POS of a join accepted in the same pass that ends on
+    ``tokens[i - 1]``: the joined word is what precedes (こう|いう is the 連体詞
+    こういう, not the verb いう; よう|に|なる is a verb). A verb row refuses the
+    auxiliary だ: the adnominal な of a na-adjective (嫌なこと) ends no verb.
     """
     if not after:
         return True
     if i == 0:
         return False
     before = tokens[i - 1]
+    pos1 = joined_pos1 or _pos1(before)
     if after == "noun":
-        return _pos1(before) in _NOUN_POS1 or _pos2(before) == "括弧閉"
-    return _pos1(before) in _VERB_POS1
+        return pos1 in _NOUN_POS1 or (joined_pos1 is None and _pos2(before) == "括弧閉")
+    if joined_pos1 is None and pos1 == "助動詞" and extract_orth_base(before) == "だ":
+        return False
+    return pos1 in _VERB_POS1
 
 
 def _contiguous(spans: dict[int, tuple[int, int]], start: int, end: int) -> bool:
@@ -216,13 +223,16 @@ class LexicalJoiner:
         if not joins:
             return tokens
         spans = CompoundDictionaryMatcher._source_spans(text, tokens)
-        joins = [
-            join
-            for join in joins
-            if _contiguous(spans, join.start, join.end)
-            and not (join.line_start and not _opens_clause(tokens, spans, join.start))
-            and _follows(tokens, join.start, join.after)
-        ]
+        kept: list[_Join] = []
+        for candidate in joins:
+            if not _contiguous(spans, candidate.start, candidate.end):
+                continue
+            if candidate.line_start and not _opens_clause(tokens, spans, candidate.start):
+                continue
+            previous = kept[-1] if kept and kept[-1].end == candidate.start - 1 else None
+            if _follows(tokens, candidate.start, candidate.after, previous.pos1 if previous else None):
+                kept.append(candidate)
+        joins = kept
         unknown = sorted({join.headword for join in joins} - self._attested.keys())
         if unknown:
             hits = self._lookup(unknown)

@@ -25,6 +25,9 @@ The invariants, and why each is load-bearing:
   ``QApplication``, because platform-plugin, OpenGL and GL-context failures are
   emitted *during* its construction and are exactly what a "black window"
   report otherwise arrives without.
+* The queue/download Restore or Discard offer is answered before
+  ``commit_boot`` starts any optional job, so Discard can never delete the
+  partial of a transfer this session already started (D16-C).
 * First-run setup is offered before any optional startup job, because boot used
   to start the JMdict migration and cancel it two lines later (D26).
 * Session state saves once at the top of ``closeEvent``, before anything can
@@ -54,6 +57,10 @@ MAIN_BOOT_STEPS = (
     "install_translators(app",
     "_acquire_instance_lock(",
     "compose_main_window(",
+    # The Restore/Discard offer is answered before commit_boot releases any
+    # optional work: a dictionary update started meanwhile resumes the very
+    # partial Discard deletes (same resume key), and then fails.
+    "_offer_recovery_if_locked(window,",
     "window.commit_boot(",
     "window.show()",
     "exit_code = app.exec()",

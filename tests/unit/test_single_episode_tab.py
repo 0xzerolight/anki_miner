@@ -744,6 +744,29 @@ def test_recent_selection_legacy_entry_resets_offset_to_zero(tab):
     assert tab.offset_spinbox.value() == pytest.approx(0.0)
 
 
+def _choose_recent(tab, index):
+    """What the popup does: make the row current, then report the user's choice."""
+    tab.recent_combo.setCurrentIndex(index)
+    tab.recent_combo.activated.emit(index)
+
+
+def test_re_choosing_the_same_recent_pair_loads_it_again(tab):
+    entry = {"video": "/video/ep01.mkv", "subtitle": "/subs/ep01.ass", "subtitle_offset": 1.5}
+    tab.recent_combo.addItem("ep01", userData=entry)
+    index = tab.recent_combo.count() - 1
+    _choose_recent(tab, index)
+    tab.video_selector.set_path("/video/ep02.mkv")
+    tab.subtitle_selector.set_path("/subs/ep02.ass")
+    tab.offset_spinbox.setValue(0.0)
+
+    _choose_recent(tab, index)
+
+    assert tab.video_selector.get_path() == "/video/ep01.mkv"
+    assert tab.subtitle_selector.get_path() == "/subs/ep01.ass"
+    assert tab.offset_spinbox.value() == pytest.approx(1.5)
+    assert tab.recent_combo.currentIndex() == 0
+
+
 # ---------------------------------------------------------------------------
 # 16. update_config does not clobber the in-session offset spinbox
 # ---------------------------------------------------------------------------

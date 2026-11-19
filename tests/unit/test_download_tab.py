@@ -206,7 +206,7 @@ class TestWorkerConstruction:
         tab.preset_combo.setCurrentIndex(tab.preset_combo.findData("1440p"))
         worker_cls = _start_download(tab, _FakeWorker())
         options = worker_cls.call_args.kwargs["options"]
-        assert options.format_selector == "bestvideo[height<=1440]+bestaudio/best[height<=1440]"
+        assert options.format_selector == "bestvideo[height<=?1440]+bestaudio/best[height<=?1440]"
         assert options.extract_audio_format is None
 
     def test_extras_map_to_options(self, qtbot, tmp_path: Path) -> None:
@@ -871,7 +871,7 @@ class TestCustomFormatItem:
         tab = _make_tab(_make_config(tmp_path, downloader_format_preset="720p"), qtbot)
         tab.preset_combo.setCurrentIndex(tab.preset_combo.findData(CUSTOM_FORMAT_ITEM))
 
-        assert tab._build_options().format_selector == "bestvideo[height<=720]+bestaudio/best[height<=720]"
+        assert tab._build_options().format_selector == "bestvideo[height<=?720]+bestaudio/best[height<=?720]"
 
     def test_a_stored_subtitles_only_preset_wins_over_a_leftover_custom_format(self, qtbot, tmp_path: Path) -> None:
         # Older builds persisted the custom string under every preset.

@@ -3417,3 +3417,71 @@ def test_resources_page_activator_stands_down_after_an_in_wizard_language_change
 
     assert wiz.resources_page._activate_resources(summary) is None
     assert wiz.working_config() == switched
+
+
+@pytest.mark.parametrize("pack_ok", [True, False])
+def test_resources_download_waits_for_the_language_pack_still_downloading(qtbot, wiz_config, monkeypatch, pack_ok):
+    """A lemmatised frequency list needs the language's engine, which the pack delivers (G5-003)."""
+    from PyQt6.QtCore import QObject, pyqtSignal  # noqa: PLC0415
+    from PyQt6.QtWidgets import QWidget  # noqa: PLC0415
+
+    from anki_miner.gui.utils.language_choices import MiningLanguageChoice  # noqa: PLC0415
+    from anki_miner.gui.widgets.dialogs import resource_download_dialog as dialog_mod  # noqa: PLC0415
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+    from anki_miner.gui.widgets.dialogs.setup_wizard import pages as wizard_pages  # noqa: PLC0415
+
+    class _PackWorker(QObject):
+        status = pyqtSignal(str)
+        result_ready = pyqtSignal(bool, str)
+
+        def isRunning(self) -> bool:  # noqa: N802 - mirrors QThread
+            return True
+
+    class _Tasks:
+        def __init__(self) -> None:
+            self.language_pack_workers: dict[str, _PackWorker] = {}
+
+        def start_language_pack_download(self, code, root, on_status, on_finished) -> None:
+            worker = _PackWorker()
+            self.language_pack_workers[code] = worker
+            worker.status.connect(on_status)
+            worker.result_ready.connect(on_finished)
+
+    choices = (
+        MiningLanguageChoice("ja", "日本語", "Japanese"),
+        MiningLanguageChoice("de", "Deutsch", "German", True, 70),
+    )
+    monkeypatch.setattr(wizard_pages, "mining_language_choices", lambda: choices)
+    monkeypatch.setattr(wizard_pages, "ensure_language_packs_on_syspath", lambda: None)
+    monkeypatch.setattr(SetupWizard, "validation_service", lambda self: _FakeValidation(dictionary=False))
+    starts: list[object] = []
+    monkeypatch.setattr(dialog_mod, "start_resource_download", lambda *a, **kw: starts.append(a[1]) or MagicMock())
+    parent = QWidget()
+    qtbot.addWidget(parent)
+    tasks = _Tasks()
+    parent.background_tasks = tasks  # type: ignore[attr-defined]
+    wiz = SetupWizard(wiz_config, parent, offer_mining_language=True)
+    language_page = wiz.language_page
+    assert language_page is not None
+    language_page.language_combo.setCurrentIndex(language_page.language_combo.findData("de"))
+    assert language_page.validatePage() is True
+    page = wiz.resources_page
+    _run_page_check(qtbot, page, page.dictionary_label)
+    assert language_page.pack_ready() is False
+
+    page.download_button.click()
+
+    assert starts == []
+    assert page.isComplete() is True  # the request counts as started: Next opens
+    assert not page.download_button.isEnabled()
+
+    tasks.language_pack_workers["de"].result_ready.emit(pack_ok, "done" if pack_ok else "network down")
+
+    if pack_ok:
+        assert len(starts) == 1
+        assert page.download_running() is True
+    else:
+        assert starts == []
+        assert page.isComplete() is False
+        assert page.download_button.isEnabled()
+    _join_workers(qtbot, wiz)

@@ -675,6 +675,7 @@ class DeckBuilderTab(FolderSeriesScreenBase):
         # Tear down any prior run before building the worker (Windows
         # back-to-back-mining freeze: leaked sqlite/Session handles).
         self._teardown_previous_run("deckbuilder")
+        self._clear_curation_cancel()
 
         mode, value = self._current_selection()
         self._begin_receipt(

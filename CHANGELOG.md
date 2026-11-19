@@ -58,6 +58,28 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Word Curator: emoji sequences and variant kanji are no longer split in sentences.**
 - **Word Curator: copied rows keep the column order on screen.**
 - **Japanese text uses a Japanese font when one is installed,** not a Chinese or Korean desktop font.
+- **A subtitle regex with an oversized repeat count is rejected like any invalid pattern** instead of blocking every Settings save.
+- **Expanding a card's sentence to neighbouring lines keeps the corrected furigana (お父さん, 不味い)** instead of the tagger's raw readings.
+- **Batch: Mine Queue with a row selected also mines the series just added from the Add Series card.**
+- **Batch: a series whose folder is gone is skipped, as its notice says,** instead of failing with a pairing error.
+- **YouTube: Run selected and Retry selected no longer lock the queue when pressed while a Mine is still checking links.**
+- **YouTube: Retry selected mines a failed video with the Subtitles source chosen now,** not the one it failed with.
+- **YouTube: the "model not installed" check looks only at the videos the run will mine.**
+- **Audiobooks and YouTube: Run selected and Retry selected clear the last run's failure notice.**
+- **Single Episode: choosing the same Recent Files pair again loads it again.**
+- **Cancel pressed just before the word review no longer opens the Word Curator.**
+- **Word Curator, season curation: an episode that finishes loading late no longer switches the player away from the word in focus,** and a sentence picked from it keeps its automatic merge when a third episode is opened first.
+- **Word Curator: after a video render failure, switching episode plays the new episode's audio,** not the old one's.
+- **Word Curator: a clip preview started while the player is past the clip's end no longer stops at once.**
+- **Word Curator: clicking another cell of the focused row no longer stops playback.**
+- **Word Curator: a run without expression audio no longer saves its hidden Audio column as the column layout.**
+- **Setup wizard: the resource download waits for a language pack that is still downloading,** so the frequency list no longer fails.
+- **Setup wizard: after a switch to another language and back, the deck and note type picked for the other language are not saved for the first one.**
+- **Setup wizard: a pack download for a language no longer picked is not counted for the current one.**
+- **Manage Known Words shows the Added date in local time.**
+- **Utilities → Download: the 720p, 1080p and 1440p presets download a direct video link.**
+- **Linux install outside the AppImage: Restart now (interface language, zoom) starts the app with its bundled libraries again.**
+- **Discard in the startup Restore prompt no longer deletes a dictionary update started while the prompt was open.** The prompt now comes before that work begins.
 
 ### Removed
 

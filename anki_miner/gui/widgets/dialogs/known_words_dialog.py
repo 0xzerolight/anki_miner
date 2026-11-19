@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable
+from datetime import UTC, datetime
 from pathlib import Path
 
 from PyQt6.QtCore import QAbstractTableModel, QCoreApplication, QModelIndex, QObject, QSortFilterProxyModel, Qt
@@ -60,6 +61,14 @@ logger = logging.getLogger(__name__)
 #: An invalid index, the "no parent" of a flat table (a call in a default
 #: argument would be evaluated once at import anyway; named for B008).
 _NO_PARENT = QModelIndex()
+
+
+def _local_date(added_at: str) -> str:
+    """The local calendar date of a stored UTC ``YYYY-MM-DD HH:MM:SS`` ("" stays "")."""
+    if not added_at:
+        return ""
+    stored = datetime.strptime(added_at, "%Y-%m-%d %H:%M:%S").replace(tzinfo=UTC)
+    return stored.astimezone().date().isoformat()
 
 
 class KnownWordsTableModel(QAbstractTableModel):
@@ -145,8 +154,9 @@ class KnownWordsTableModel(QAbstractTableModel):
                 return entry.lemma
             if column == self.SOURCE:
                 return self._source_label(entry.source)
-            # The date reads as a date; hover and copy carry the stored UTC time.
-            return entry.added_at[:10] if role == Qt.ItemDataRole.DisplayRole else entry.added_at
+            # The date reads as the user's local calendar day; hover and copy
+            # carry the stored UTC time.
+            return _local_date(entry.added_at) if role == Qt.ItemDataRole.DisplayRole else entry.added_at
         if role == Qt.ItemDataRole.FontRole and column == self.WORD:
             return self._word_font
         return None
