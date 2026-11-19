@@ -399,7 +399,6 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         self._media_ctx_cache: dict[Path, CurationMediaContext] = {}
         if ctx is not None and ctx.video_file is not None:
             self._media_ctx_cache[ctx.video_file] = ctx
-        self._media_swap_gen = 0
         self._show_dict = lookup_fn is not None
         # Expression-audio availability (FUTURE_IDEAS item 4). The parameter is
         # the run's own chained fetcher — the tab, not the window, drives it —
@@ -3351,20 +3350,27 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
             self._apply_media_context(cached)
             return True
         resolver = ctx.context_resolver
-        self._media_swap_gen += 1
-        gen = self._media_swap_gen
 
         def on_done(result: object) -> None:
             new_ctx = result if isinstance(result, CurationMediaContext) else None
-            if self._closing or gen != self._media_swap_gen:
+            # A second resolve of the same episode (dispatched before the first
+            # landed) has nothing to add, and its re-seek would stop playback.
+            if self._closing or video_file in self._media_ctx_cache:
                 return
             if new_ctx is None:
                 # Table-only degradation for this word: keep the current
                 # episode showing rather than blocking curation on media.
                 logger.warning("Season curation: no media context for %s", video_file.name)
                 return
+            # Cached and booked even when the user has moved on: the restamp of
+            # a pick from this episode runs only here. The player swap and the
+            # preview follow the FOCUSED word, not the order resolves land in.
             self._media_ctx_cache[video_file] = new_ctx
-            self._apply_media_context(new_ctx)
+            word, idx = self._pending_word, self._pending_index
+            chosen = self._chosen.get(idx, word) if word is not None and idx is not None else None
+            focused_here = chosen is not None and chosen.video_file == video_file
+            if focused_here:
+                self._apply_media_context(new_ctx)
             # The column shows as soon as any episode of the season has a
             # translation track, not only the first. Owner ruling of 2026-11-13.
             if new_ctx.secondary_entries and not self._has_translations:
@@ -3376,18 +3382,14 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
             ]:
                 self._restamp_auto_expansion(self._chosen[pick], pick)
             self._repaint_expanded_rows(video_file)
-            # Re-fire the preview for the still-focused word (its chosen
-            # variant may have moved on; only seek if it still matches).
-            word, idx = self._pending_word, self._pending_index
-            if word is not None and idx is not None:
-                chosen = self._chosen.get(idx, word)
-                if chosen.video_file == video_file:
-                    window = self._expanded_window(chosen, idx)
-                    self._preview_scene(
-                        chosen.start_time if window is None else window.start,
-                        video_file,
-                        frame_time=self._screenshot_instant(chosen, idx, window),
-                    )
+            if focused_here and chosen is not None and idx is not None:
+                # Re-fire the preview for the still-focused word.
+                window = self._expanded_window(chosen, idx)
+                self._preview_scene(
+                    chosen.start_time if window is None else window.start,
+                    video_file,
+                    frame_time=self._screenshot_instant(chosen, idx, window),
+                )
 
         def on_error(message: str) -> None:
             logger.warning(
