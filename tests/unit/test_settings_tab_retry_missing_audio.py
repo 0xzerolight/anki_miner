@@ -6,7 +6,7 @@ import contextlib
 
 import pytest
 
-from anki_miner.config import AnkiMinerConfig
+from anki_miner.config import AnkiMinerConfig, AudioSourceEntry
 from anki_miner.gui.widgets import settings_tab as settings_tab_module
 from anki_miner.gui.widgets.panels.audio_pack_settings_panel import AudioPackSettingsPanel
 from anki_miner.gui.widgets.settings_tab import SettingsTab
@@ -109,3 +109,31 @@ def test_retry_slot_error_reenables_button(tab, tmp_path, monkeypatch):
     assert "disk on fire" not in issue.summary
     assert "disk on fire" in issue.details
     assert tab.audio_panel._retry_missing_btn.isEnabled()
+
+
+def test_retry_covers_wikimedia_miss_markers(tab, tmp_path, monkeypatch):
+    """Wikimedia writes .miss markers too: the button shows for it and sweeps its cache."""
+    tab.audio_panel.set_chain((AudioSourceEntry(kind="wikimedia"), AudioSourceEntry(kind="googletts")))
+    assert tab.audio_panel._retry_missing_btn.isVisible()
+
+    wiki_cache = tmp_path / "audio_cache" / "wikimedia"
+    jpod_cache = tmp_path / "audio_cache" / "jpod101"
+    wiki_cache.mkdir(parents=True)
+    jpod_cache.mkdir(parents=True)
+    (wiki_cache / "wikimedia_de_Weg.miss").touch()
+    (jpod_cache / "x.miss").touch()
+
+    monkeypatch.setattr(settings_tab_module, "ANKI_MINER_HOME", tmp_path)
+    monkeypatch.setattr(settings_tab_module, "run_off_thread", _sync_run_off_thread)
+    shown: dict[str, object] = {}
+    monkeypatch.setattr(
+        settings_tab_module.QMessageBox,
+        "information",
+        lambda parent, title, text, *a, **k: shown.update(text=text),
+    )
+
+    tab._on_retry_missing_audio()
+
+    assert not list(wiki_cache.glob("*.miss"))
+    assert not list(jpod_cache.glob("*.miss"))
+    assert "2" in str(shown["text"])

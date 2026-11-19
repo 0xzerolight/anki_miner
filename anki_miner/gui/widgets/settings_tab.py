@@ -88,7 +88,7 @@ from anki_miner.gui.widgets.settings_search import (
     flash_search_hit,
 )
 from anki_miner.services.audio_packs.registry import AudioPackRegistry
-from anki_miner.services.expression_audio_fetcher import purge_miss_markers
+from anki_miner.services.expression_audio_fetcher import MISS_MARKER_KINDS, purge_miss_markers
 from anki_miner.services.frequency.registry import FrequencySourceRegistry
 from anki_miner.services.known_word_db import KnownWordDB
 from anki_miner.services.pitch_accent.registry import PitchSourceRegistry
@@ -2435,17 +2435,17 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         self._commit_immediate_config(new_config, self._commit_config)
 
     def _on_retry_missing_audio(self) -> None:
-        """Clear JPod101 ``.miss`` markers so absent words are re-tried next run.
+        """Clear JPod101 and Wikimedia ``.miss`` markers so absent words are re-tried.
 
         Replaces the old folklore of deleting the ``audio_cache`` dir by hand.
         The unlink sweep runs off the GUI thread (run_off_thread convention);
         the removed count is confirmed in a dialog on completion.
         """
-        cache_dir = ANKI_MINER_HOME / "audio_cache" / "jpod101"
+        cache_dirs = [ANKI_MINER_HOME / "audio_cache" / kind for kind in MISS_MARKER_KINDS]
         self.audio_panel.set_retry_missing_enabled(False)
         run_off_thread(
             self,
-            lambda: purge_miss_markers(cache_dir),
+            lambda: sum(purge_miss_markers(cache_dir) for cache_dir in cache_dirs),
             self._on_retry_missing_audio_done,
             self._on_retry_missing_audio_error,
         )
