@@ -288,3 +288,32 @@ def test_showing_every_row_does_not_sort_through_the_python_model(qtbot, tmp_pat
     # The proxy sort made ~40 calls per row here; what is left is the header's
     # ResizeToContents sample, which Qt caps at 1000 rows whatever the size.
     assert calls < 10 * 3000
+
+
+def test_the_added_date_is_the_local_calendar_day(qtbot, tmp_path):
+    """added_at is stored in UTC; the cell shows the user's own date."""
+    import os
+    import time
+
+    from anki_miner.gui.utils.qt_helpers import COPY_ROLE
+    from anki_miner.services.known_word_db import KnownWordRow
+
+    dlg = _dialog(qtbot, tmp_path)
+    model = dlg._model
+    old_tz = os.environ.get("TZ")
+    os.environ["TZ"] = "Asia/Tokyo"
+    time.tzset()
+    try:
+        model.set_rows([KnownWordRow("カレー", "user", "2026-11-18 23:30:00"), KnownWordRow("ラーメン", "user", "")])
+        rows = {model.row_at(row).lemma: model.index(row, model.ADDED) for row in range(model.rowCount())}
+        added = rows["カレー"]
+        assert added.data(Qt.ItemDataRole.DisplayRole) == "2026-11-19"  # 08:30 JST on the 19th
+        assert added.data(Qt.ItemDataRole.ToolTipRole) == "2026-11-18 23:30:00"
+        assert added.data(COPY_ROLE) == "2026-11-18 23:30:00"
+        assert rows["ラーメン"].data(Qt.ItemDataRole.DisplayRole) == ""
+    finally:
+        if old_tz is None:
+            os.environ.pop("TZ", None)
+        else:
+            os.environ["TZ"] = old_tz
+        time.tzset()
