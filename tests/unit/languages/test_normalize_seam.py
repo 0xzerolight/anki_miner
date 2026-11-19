@@ -20,7 +20,7 @@ from anki_miner.languages.token import LanguageToken
 from anki_miner.models.reading import ReadingSourceRef, ReadingUnit
 from anki_miner.services.reading import detector, subtitle_source
 from anki_miner.services.subtitle_parser import SubtitleParserService
-from anki_miner.utils.ja_normalize import normalize_for_tokenization, standardize_kanji_variants
+from anki_miner.utils.ja_normalize import is_chinese_line, normalize_for_tokenization, standardize_kanji_variants
 from anki_miner.utils.text_utils import clean_subtitle_text, strip_inline_annotations, strip_subtitle_markup
 from tests.e2e.fixtures_subtitle import SUBTITLE_LINES
 from tests.unit.languages.eu_stub import eu_normalize
@@ -215,8 +215,9 @@ def test_display_parsers_follow_the_profile_factory(test_config, monkeypatch):
             calls.append((config, kwargs))
 
     create_profile_parser(test_config, _Recorder)
-    # ja: the caller's own class, with the script gate ja's factory adds
-    assert calls == [(test_config, {"has_target_script": get_profile("ja").script.contains_target_script})]
+    # ja: the caller's own class, with the script gate and Chinese-line skip ja's factory adds
+    gate = get_profile("ja").script.contains_target_script
+    assert calls == [(test_config, {"has_target_script": gate, "skip_line": is_chinese_line})]
 
     zh_parser = object()
     register_stub_profile(monkeypatch, "zh", create_parser=lambda config, **kwargs: zh_parser)

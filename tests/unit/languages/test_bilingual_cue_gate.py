@@ -57,3 +57,16 @@ def test_a_japanese_cue_keeps_its_romaji_line_out_of_the_sentence(builder, tmp_p
         "明日は休みだ",
         "See you tomorrow",
     ]
+
+
+@pytest.mark.parametrize("builder", ["profile", "run", "display"])
+def test_a_japanese_cue_keeps_its_chinese_line_out_of_the_sentence(builder, tmp_path):
+    """中日双语 fansubs put a Chinese line under the Japanese one (S1-001)."""
+    srt = tmp_path / "zh_ja.srt"
+    srt.write_text(
+        "1\n00:00:01,000 --> 00:00:02,000\nでも\n但是我觉得这样不好。\n\n"
+        "2\n00:00:02,100 --> 00:00:04,000\n明日は雨が降るらしい。\n听说明天会下雨。\n\n",
+        encoding="utf-8",
+    )
+    parser = _ja_parsers()[builder](AnkiMinerConfig())
+    assert [text for _, _, text in parser.parse_raw_entries(srt)] == ["でも", "明日は雨が降るらしい。"]

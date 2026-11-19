@@ -165,6 +165,12 @@ class TestJapaneseResolution:
         assert resolved_families().japanese == "Meiryo"
         assert called is False
 
+    def test_a_japanese_preference_beats_a_pan_cjk_chinese_desktop_face(self, monkeypatch):
+        # Qt lists pan-CJK SC/TC/KR families under WritingSystem.Japanese; a
+        # Chinese desktop font must not give kanji their Chinese glyph forms.
+        monkeypatch.setattr(fonts_module, "_japanese_families", lambda: ["Noto Sans CJK SC", "Noto Sans CJK JP"])
+        assert fonts_module._resolve_japanese("Noto Sans CJK SC") == "Noto Sans CJK JP"
+
     def test_remaining_families_are_taken_in_a_deterministic_order(self, monkeypatch):
         monkeypatch.setattr(fonts_module, "_japanese_families", lambda: ["Zzz Gothic", "Aaa Mincho"])
         reset_font_cache()

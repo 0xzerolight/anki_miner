@@ -332,20 +332,12 @@ _ENCODER_SETTINGS: dict[str, tuple[str, bool, bool]] = {
 _PROBE_REQUIRED: frozenset[str] = frozenset({"libmp3lame", "libopus"})
 
 # Sample rate and channel count every part of a MERGE run is pinned to. The
-# concat demuxer stream-copies, which needs byte-identical stream parameters,
-# and the encoder args alone do not give that: sample rate and channel layout
-# follow each source (44.1k vs 48k, 5.1 vs 2.0). Off outside merge mode, so a
-# normal run still keeps its source's own rate and layout.
+# concat demuxer feeds the parts to one decoder, which needs identical stream
+# parameters, and the encoder args alone do not give that: sample rate and
+# channel layout follow each source (44.1k vs 48k, 5.1 vs 2.0). Off outside
+# merge mode, so a normal run still keeps its source's own rate and layout.
 _MERGE_SAMPLE_RATE = "48000"
 _MERGE_CHANNELS = "2"
-
-# Suffixes a merge must re-encode instead of stream-copying. A native .flac
-# carries its own ``fLaC`` header and STREAMINFO per file, so concatenated
-# parts restart the timeline: the merged file holds every part's bytes but
-# reports the FIRST part's duration, and ffmpeg emits non-monotonic dts while
-# decoding it. Re-encoding costs nothing that matters here — flac is lossless,
-# so the merged audio is identical. mp3 and opus stitch correctly by copy.
-_MERGE_REENCODE_SUFFIXES: frozenset[str] = frozenset({".flac"})
 
 # A ``-progress pipe:1`` line is ``key=value`` where *key* is lowercase snake_case
 # (frame, out_time_us, progress, ...). Anything whose pre-``=`` token is not a
@@ -557,7 +549,9 @@ class AudioCondenserService:
         # media_temp_folder and may run at once on videos with the same stem;
         # a fixed name let one tool overwrite, read or delete the other's file.
         # ffmpeg -y overwrites the placeholder and infers the format from ext.
-        fd, tmp_name = tempfile.mkstemp(prefix=f"{video.stem}.s{stream.sub_index}.", suffix=ext, dir=out_dir)
+        # No video stem in the prefix: a legal long (CJK) stem plus the random
+        # part and suffix overflows NAME_MAX, and the name is internal anyway.
+        fd, tmp_name = tempfile.mkstemp(prefix=f"sub.s{stream.sub_index}.", suffix=ext, dir=out_dir)
         os.close(fd)
         out_path = Path(tmp_name)
 
@@ -619,8 +613,8 @@ class AudioCondenserService:
         in-flight process.
 
         *uniform_layout* pins the output to 48 kHz stereo. Only a merge run sets
-        it: :meth:`concat` stream-copies its parts, which requires identical
-        stream parameters, and those follow the source otherwise.
+        it: :meth:`concat` decodes its parts as one stream, which requires
+        identical stream parameters, and those follow the source otherwise.
 
         Returns ``(ok, failure)`` — see :meth:`_run_streaming`. ``failure`` is
         None on both success and cancel.
@@ -726,17 +720,22 @@ class AudioCondenserService:
         out_audio: Path,
         *,
         total_ms: int,
+        bitrate_kbps: int = 96,
         progress_cb: Callable[[int], None] | None = None,
         cancel_event: threading.Event | None = None,
     ) -> tuple[bool, FfmpegStepFailure | None]:
-        """Join already-condensed *parts* into *out_audio* without re-encoding.
+        """Join already-condensed lossless *parts* into *out_audio*, encoding once.
 
-        Every part came out of :meth:`condense` in the same run with
-        ``uniform_layout=True``, so codec, bitrate, sample rate and channel
-        layout already match and the concat demuxer can stream-copy them. This
-        does not weaken D2: D2 is about condensing ONE file in a single pass,
-        and that path is untouched — this joins finished outputs. FLAC is the
-        one exception and is re-encoded; see ``_MERGE_REENCODE_SUFFIXES``.
+        Every part came out of :meth:`condense` in the same run as FLAC with
+        ``uniform_layout=True``, so the concat demuxer decodes them as one
+        48 kHz stereo stream and the target encoder (from ``out_audio.suffix``,
+        at *bitrate_kbps*) runs once over it. The merged timeline is then
+        exactly the sum of the parts' lengths, which the merged sidecar relies
+        on: a stream copy of lossy parts kept every part's encoder delay and
+        padding (mp3) or pre-skip (opus) as audible samples, so later cues
+        drifted by tens of milliseconds per part. This does not weaken D2: D2
+        is about condensing ONE file in a single pass, and that path is
+        untouched — this joins finished outputs.
 
         Returns ``(ok, failure)`` on the same contract as :meth:`condense`: a
         step failure is returned, never raised, and ``failure`` is None on both
@@ -771,16 +770,14 @@ class AudioCondenserService:
                         "-i",
                         str(list_path),
                     ]
-                    if out_audio.suffix.lower() in _MERGE_REENCODE_SUFFIXES:
-                        cmd += ["-c:a", _encoder_settings(out_audio.suffix)[0]]
-                    else:
-                        cmd += ["-c", "copy"]
+                    encoder, uses_bitrate, _downmix = _encoder_settings(out_audio.suffix)
+                    cmd += ["-c:a", encoder]
+                    if uses_bitrate:
+                        cmd += ["-b:a", f"{bitrate_kbps}k"]
                     cmd.append(str(staged_audio))
                     ok, failure = self._run_streaming(
                         cmd,
-                        # A stream copy still reports out_time, so the same
-                        # percentage maths works; the floor keeps a zero-length
-                        # merge from dividing by zero.
+                        # The floor keeps a zero-length merge from dividing by zero.
                         total_period_ms=max(total_ms, 1),
                         timeout=max(600.0, total_ms / 1000 * 4),
                         progress_cb=progress_cb,
@@ -1230,10 +1227,11 @@ def _write_merged_subs(parts: Sequence[CondensedPart], out_audio: Path, config: 
 
     Each part's cues sit on its OWN condensed timeline, so they shift by the
     length of everything before them. That offset is the written part's probed
-    duration, not its interval arithmetic: the encoder pads each part out to a
-    whole frame (and mp3 adds its own delay), so summing computed durations
-    drifts tens of milliseconds per episode and a season ends about a second
-    out. The computed length is the fallback when the probe cannot answer.
+    duration, not its interval arithmetic: the parts are lossless and
+    :meth:`AudioCondenserService.concat` encodes them once, so the merged
+    timeline is exactly the sum of their sample counts, which the interval
+    arithmetic misses by up to a frame per part. The computed length is the
+    fallback when the probe cannot answer.
 
     Same non-fatal contract as :func:`_write_condensed_subs`: the merged audio
     is already on disk, so a failure here is returned as a string, never raised.
@@ -1263,6 +1261,7 @@ def merge_condensed(
     out_audio: Path,
     *,
     write_subs: bool = False,
+    bitrate_kbps: int = 96,
     metadata: TrackMetadata | None = None,
     progress_cb: Callable[[int], None] | None = None,
     cancel_event: threading.Event | None = None,
@@ -1282,6 +1281,7 @@ def merge_condensed(
         [part.audio for part in parts],
         out_audio,
         total_ms=total_ms,
+        bitrate_kbps=bitrate_kbps,
         progress_cb=progress_cb,
         cancel_event=cancel_event,
     )

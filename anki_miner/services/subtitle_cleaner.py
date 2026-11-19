@@ -126,7 +126,7 @@ def _load(
     input is an ffmpeg-extracted UTF-8 temp, and for a caller reading cue
     timings only. It is the wrong one for the user's own subtitle: GB18030 and
     Big5 bytes decode as EUC-JP into plausible-looking kanji without raising,
-    and ``map_deltas_back`` saves what it read.
+    and the file ``map_deltas_back`` returns is the one saved.
     """
     try:
         return pysubs2.load(str(path))
@@ -175,6 +175,17 @@ def clean_reference(src: Path, dest: Path) -> ReferenceCleanResult:
     return ReferenceCleanResult(cues=len(kept), span_ms=span_ms)
 
 
+def _time_ordered(events: Sequence[pysubs2.SSAEvent], indices: list[int]) -> list[int]:
+    """*indices* stably sorted by their events' (start, end).
+
+    The alignment copy is written in this order because ffsubsync writes SRT
+    through ``srt.compose``, which sorts cues by start: a copy in file order
+    comes back reordered whenever the file is not time-ordered, and
+    :func:`map_deltas_back` pairs cues by position.
+    """
+    return sorted(indices, key=lambda i: (events[i].start, events[i].end))
+
+
 @dataclass(frozen=True)
 class CleanedForAlignment:
     """A dialogue-only copy of the subtitle being retimed.
@@ -203,7 +214,8 @@ def clean_for_alignment(
     """Write a same-format copy of *src* to *dest* with non-dialogue cues dropped.
 
     Cues are only ever dropped, never rewritten, so the copy stays a strict
-    subset the aligner sees in original order. Returns None when the file
+    subset. It is written in time order (:func:`_time_ordered`), and
+    ``kept_indices`` follows that order. Returns None when the file
     cannot be parsed or too few cues survive — the caller then aligns the
     original file directly, which is exactly the pre-cleaning behaviour.
 
@@ -227,11 +239,11 @@ def clean_for_alignment(
         )
         return None
 
-    kept_set = set(kept_indices)
+    kept_indices = _time_ordered(subs.events, kept_indices)
     cleaned = pysubs2.SSAFile()
     cleaned.styles = subs.styles.copy()
     cleaned.info = subs.info.copy()
-    cleaned.events = [event.copy() for i, event in enumerate(subs.events) if i in kept_set]
+    cleaned.events = [subs.events[i].copy() for i in kept_indices]
     try:
         cleaned.save(str(dest), encoding="utf-8")
     except Exception:  # noqa: BLE001 — an unwritable copy falls back to as-is alignment
@@ -249,9 +261,11 @@ def transcode_for_alignment(
 ) -> CleanedForAlignment | None:
     """Write *src* to *dest* in *dest*'s format, dropping only what cannot survive it.
 
-    The escape hatch for a format the aligners cannot read at all: alass v2
-    accepts SubRip/SubStationAlpha/VobSub and errors out on WebVTT, so a .vtt
-    retime would otherwise lose two of its four engines. Reached only when
+    The alignment copy when cleaning declines, so the engine's output is still
+    mapped back onto the original, and the escape hatch for a format the
+    aligners cannot read at all: alass v2 accepts SubRip/SubStationAlpha/VobSub
+    and errors out on WebVTT, so a .vtt retime would otherwise lose two of its
+    four engines. Reached only when
     :func:`clean_for_alignment` declines (too few dialogue cues, or an
     unparsable file) — when it succeeds it has already transcoded, because
     ``pysubs2.save`` takes its format from the destination extension.
@@ -282,12 +296,12 @@ def transcode_for_alignment(
         for i, event in enumerate(subs.events)
         if getattr(event, "is_comment", None) is not True and event.end > event.start
     ]
-    kept_set = set(kept_indices)
+    kept_indices = _time_ordered(subs.events, kept_indices)
 
     transcoded = pysubs2.SSAFile()
     transcoded.styles = subs.styles.copy()
     transcoded.info = subs.info.copy()
-    transcoded.events = [event.copy() for i, event in enumerate(subs.events) if i in kept_set]
+    transcoded.events = [subs.events[i].copy() for i in kept_indices]
     try:
         transcoded.save(str(dest), encoding="utf-8")
     except Exception:  # noqa: BLE001 — an unwritable copy falls back to as-is alignment
@@ -300,34 +314,42 @@ def map_deltas_back(
     original: Path,
     synced_clean: Path,
     kept_indices: list[int],
-    out: Path,
     *,
+    scale: float = 1.0,
     encodings: tuple[str, ...] | None = None,
     script_check: Callable[[str], bool] | None = None,
-) -> bool:
+) -> pysubs2.SSAFile | None:
     """Apply the aligner's timing changes to the untouched *original* file.
 
     *synced_clean* is the aligner's output for the cleaned copy; its i-th cue
     corresponds to original event ``kept_indices[i]``. Kept cues take their
-    exact new timings. Dropped cues take the start/end delta of the nearest
-    kept cue by original start time — aligners shift in per-block constants,
+    new start, and end their own original duration (times the engine's
+    framerate *scale*) later: engines only shift and scale cues, and
+    ffsubsync's output carries its parser's 10 s cap on every cue's length,
+    so the synced end is not the line's end. Dropped cues take the start/end
+    delta of the nearest kept cue by original start time — aligners shift in
+    per-block constants,
     so the nearest anchor's shift is the block-correct one, where linear
     interpolation across a block boundary would land between blocks.
 
-    Writes the result to *out* in the original's format (styles and all lines
-    preserved). Returns False when the cue counts do not match — the aligner
-    dropped or merged cues and the mapping would be wrong.
+    Returns the original, loaded and retimed, with its events in the
+    original's order (styles and all lines preserved), unsaved: the caller
+    validates these events and saves only an accepted result. Re-reading a
+    saved copy would not do, because pysubs2's WebVTT writer sorts cues by
+    start and so hides a scrambled split result from the validator. Returns
+    None when the cue counts do not match — the aligner dropped or merged cues
+    and the mapping would be wrong.
 
     *encodings* and *script_check* are the mining language's decode ladder; see
     :func:`_load`. This is the load whose text reaches disk, so a ladder that
-    does not match the user's subtitle writes mojibake into *out*.
+    does not match the user's subtitle writes mojibake into the saved result.
     """
     try:
         subs = _load(original, encodings=encodings, script_check=script_check)
         synced = _load(synced_clean, encodings=encodings, script_check=script_check)
     except Exception:  # noqa: BLE001 — parse failure means the candidate is unusable
         logger.warning("subtitle cleaner: map-back parse failed", exc_info=True)
-        return False
+        return None
 
     if len(synced.events) != len(kept_indices):
         logger.warning(
@@ -335,28 +357,28 @@ def map_deltas_back(
             len(kept_indices),
             len(synced.events),
         )
-        return False
+        return None
     if any(i >= len(subs.events) for i in kept_indices):
         logger.warning("subtitle cleaner: kept indices no longer fit the original; discarding")
-        return False
+        return None
 
-    # Anchors sorted by original start time for nearest-neighbour lookup.
-    anchors = sorted(
-        (
-            subs.events[orig_i].start,
-            synced_event.start - subs.events[orig_i].start,
-            synced_event.end - subs.events[orig_i].end,
+    new_spans = {
+        orig_i: (
+            synced_event.start,
+            synced_event.start + round((subs.events[orig_i].end - subs.events[orig_i].start) * scale),
         )
         for orig_i, synced_event in zip(kept_indices, synced.events, strict=True)
+    }
+    # Anchors sorted by original start time for nearest-neighbour lookup.
+    anchors = sorted(
+        (subs.events[orig_i].start, start - subs.events[orig_i].start, end - subs.events[orig_i].end)
+        for orig_i, (start, end) in new_spans.items()
     )
     starts = [a[0] for a in anchors]
 
-    kept_set = set(kept_indices)
-    by_original_index = dict(zip(kept_indices, synced.events, strict=True))
     for i, event in enumerate(subs.events):
-        if i in kept_set:
-            event.start = by_original_index[i].start
-            event.end = by_original_index[i].end
+        if i in new_spans:
+            event.start, event.end = new_spans[i]
             continue
         pos = bisect_left(starts, event.start)
         if pos <= 0:
@@ -369,13 +391,7 @@ def map_deltas_back(
             _, delta_start, delta_end = nearest
         event.start = max(0, event.start + delta_start)
         event.end = max(0, event.end + delta_end)
-
-    try:
-        subs.save(str(out), encoding="utf-8")
-    except Exception:  # noqa: BLE001 — write failure means the candidate is unusable
-        logger.warning("subtitle cleaner: could not write %s", out, exc_info=True)
-        return False
-    return True
+    return subs
 
 
 # ---------------------------------------------------------------------------

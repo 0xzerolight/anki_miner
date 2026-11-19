@@ -97,6 +97,10 @@ STALE_PART_AGE_SECONDS = 60
 # is the manual override; this constant is the automatic one.
 MISS_MARKER_TTL_SECONDS = 180 * 24 * 60 * 60  # 180 days
 
+# Audio chain kinds whose fetcher writes .miss markers, each under
+# audio_cache/<kind>/ (JPod101 here, Wikimedia in wikimedia_audio_fetcher.py).
+MISS_MARKER_KINDS = ("jpod101", "wikimedia")
+
 
 def _miss_marker_expired(miss_path: Path) -> bool:
     """Return True if ``miss_path``'s mtime is older than ``MISS_MARKER_TTL_SECONDS``.

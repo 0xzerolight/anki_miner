@@ -35,6 +35,7 @@ from anki_miner.gui.widgets.panels.chain_settings_panel_base import (
 )
 from anki_miner.services._sqlite_index import prove_owned_slot, resolve_managed_slot
 from anki_miner.services.audio_packs.registry import AudioPackMeta, AudioPackRegistry
+from anki_miner.services.expression_audio_fetcher import MISS_MARKER_KINDS
 from anki_miner.utils import robust_fs
 from anki_miner.utils.i18n import tr_format
 from anki_miner.utils.robust_fs import RmtreeOutcome, robust_rmtree
@@ -172,7 +173,7 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
     reimport_pack_requested = pyqtSignal(str)
     reimport_all_requested = pyqtSignal()
     restore_requested = pyqtSignal()
-    # Emitted when the user asks to clear JPod101 .miss markers so absent words
+    # Emitted when the user asks to clear JPod101/Wikimedia .miss markers so absent words
     # are re-tried next run. The settings tab owns the actual unlink sweep (it
     # holds the audio_cache path); the panel only surfaces the affordance.
     retry_missing_audio_requested = pyqtSignal()
@@ -261,11 +262,11 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
     def _setup_fields(self) -> None:
         self.add_section(self.tr("Active Audio Sources"))
 
-        # Cache-hygiene: clear the record of words JPod101 had no audio for so
+        # Cache-hygiene: clear the record of words JPod101/Wikimedia had no audio for so
         # they are re-requested on the next run (replaces deleting the cache dir
         # by hand). The unlink sweep is dispatched by the settings tab.
         self._retry_missing_btn = QAction(self.tr("Retry missing audio"), self)
-        self._retry_missing_btn.setToolTip(self.tr("Re-try words JapanesePod101 had no audio for on the next run"))
+        self._retry_missing_btn.setToolTip(self.tr("Re-try words an online source had no audio for on the next run"))
         self._retry_missing_btn.triggered.connect(lambda _checked=False: self.retry_missing_audio_requested.emit())
         # _write_chain re-syncs the affordance for this panel's own writers, but
         # the base class writes _chain directly on a row toggle, a reorder and a
@@ -359,13 +360,12 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
     def _sync_retry_affordance(self) -> None:
         """Offer 'Retry missing audio' only when a chain entry caches misses.
 
-        jpod101 is the one source that writes zero-byte ``.miss`` markers;
-        googletts failures are transient and re-queried, and local packs are
-        re-read every run. With no jpod101 entry the sweep has nothing to
-        unlink, so the button would be a dead affordance naming a Japanese
-        service to a Chinese or Korean miner.
+        jpod101 and wikimedia are the sources that write zero-byte ``.miss``
+        markers; googletts failures are transient and re-queried, and local
+        packs are re-read every run. With neither entry the sweep has nothing
+        to unlink, so the button would be a dead affordance.
         """
-        self._retry_missing_btn.setVisible(any(e.kind == "jpod101" and e.enabled for e in self._chain))
+        self._retry_missing_btn.setVisible(any(e.kind in MISS_MARKER_KINDS and e.enabled for e in self._chain))
 
     def _set_mutation_controls_enabled(self, enabled: bool) -> None:
         self._add_btn.setEnabled(enabled)

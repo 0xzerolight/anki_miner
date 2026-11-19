@@ -560,6 +560,19 @@ class TestUnreliableReadingWildcard:
 
         assert fetcher.fetch("食べる", "たべる") is not None
 
+    def test_null_reading_row_does_not_hide_the_katakana_stored_reading(self, tmp_path: Path):
+        # l-a-y android.db: nhk16 rows store katakana, forvo rows no reading.
+        db, pack_dir = _build_pack(
+            tmp_path,
+            [("辛い", "ツライ", "tsurai.mp3"), ("辛い", "カライ", "karai.mp3"), ("辛い", None, "forvo.mp3")],
+        )
+        fetcher = _make_fetcher(db, pack_dir, tmp_path / "cache")
+
+        rows = fetcher._lookup_rows(fetcher._connection(), "辛い", "つらい")
+        assert [row.file for row in rows] == ["tsurai.mp3", "forvo.mp3"]
+        result = fetcher.fetch("辛い", "つらい")
+        assert result is not None and result.read_bytes() == b"AUDIO:tsurai.mp3"
+
     @pytest.mark.parametrize("mined_form", ["", "   "])
     def test_whitespace_mined_form_returns_none(self, tmp_path: Path, mined_form: str):
         db, pack_dir = _build_pack(tmp_path, [("食べる", "たべる", "taberu.mp3")])

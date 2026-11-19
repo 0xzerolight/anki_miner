@@ -88,7 +88,7 @@ from anki_miner.gui.widgets.settings_search import (
     flash_search_hit,
 )
 from anki_miner.services.audio_packs.registry import AudioPackRegistry
-from anki_miner.services.expression_audio_fetcher import purge_miss_markers
+from anki_miner.services.expression_audio_fetcher import MISS_MARKER_KINDS, purge_miss_markers
 from anki_miner.services.frequency.registry import FrequencySourceRegistry
 from anki_miner.services.known_word_db import KnownWordDB
 from anki_miner.services.pitch_accent.registry import PitchSourceRegistry
@@ -263,7 +263,8 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         Args:
             config: Current configuration
             parent: Optional parent widget
-            commit_config: Synchronous config commit used by import flows.
+            commit_config: Synchronous config commit used by auto-save and
+                import flows.
                 Defaults to ``config_changed.emit`` for standalone tabs.
             commit_language_import: Commits a settings import that changes the
                 mining language the way a language switch does (busy refusals,
@@ -383,7 +384,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         self._debounce_timer = QTimer(self)
         self._debounce_timer.setSingleShot(True)
         self._debounce_timer.setInterval(_AUTOSAVE_DEBOUNCE_MS)
-        self._debounce_timer.timeout.connect(self._commit_settings)
+        self._debounce_timer.timeout.connect(self._on_debounce_timeout)
         self._wire_edit_signals()
 
         # A search jump lands one turn late on purpose: the page it selects has
@@ -1616,10 +1617,10 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         self._commit_immediate_config(new_config, self.config_changed.emit)
 
     def commit_settings(self) -> None:
-        """Commit the save-path panels into the config and emit ``config_changed``.
+        """Commit the save-path panels through ``commit_config``.
 
-        Public entry point for tests and the close flush; the auto-save
-        debounce timer drives :meth:`_commit_settings` directly.
+        Public entry point for tests; the auto-save debounce timer and the
+        close flush go through :meth:`_commit_settings_and_log`.
         """
         self._commit_settings()
 
@@ -1635,7 +1636,29 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         """
         if self._settings_dirty:
             self._debounce_timer.stop()
-            self._commit_settings()
+            self._commit_settings_and_log(closing=True)
+
+    def _on_debounce_timeout(self) -> None:
+        self._commit_settings_and_log()
+
+    def _commit_settings_and_log(self, *, closing: bool = False) -> None:
+        """Run a commit from a timer or closeEvent, where a raise has no caller.
+
+        ``_commit_settings`` has already restored the dirty flag and re-armed
+        the retry when it raises; letting the error escape would only hand it
+        to the excepthook on every retry.
+        """
+        try:
+            self._commit_settings(closing=closing)
+        except Exception as error:  # noqa: BLE001 - restored and re-armed by _commit_settings
+            log_summary(
+                logger,
+                "Settings auto-save failed",
+                level=logging.WARNING,
+                dirty_fields=self._pending_field_names(),
+                retry=self._debounce_timer.isActive(),
+                error=f"{type(error).__name__}: {error}",
+            )
 
     def _pending_field_names(self) -> list[str]:
         """Config fields the panels currently propose changing, for a log line.
@@ -1698,7 +1721,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         if not self._settings_dirty:
             return True
         try:
-            committed = self._commit_settings(commit_config=self._commit_config)
+            committed = self._commit_settings()
         except ConfigCommitError as error:
             log_summary(
                 logger,
@@ -1725,11 +1748,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
             return False
         return committed and not self._settings_dirty
 
-    def _commit_settings(
-        self,
-        *,
-        commit_config: Callable[[AnkiMinerConfig], None] | None = None,
-    ) -> bool:
+    def _commit_settings(self, *, closing: bool = False) -> bool:
         """Debounced auto-save commit with per-field validation.
 
         Unlike the old Save-button flow (modal warning + whole-save abort),
@@ -1739,11 +1758,16 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         setting from persisting, with only a small label as evidence. Each
         failing field keeps its last-good value from ``self.config``, the
         rest commits, and a sticky inline warning names what was kept.
+
+        ``closing`` (the close flush) has no later retry, so while a panel owns
+        mutation authority it commits everything except the fields that
+        authority guards, instead of refusing.
         """
-        if self._committing or any(
+        resources_busy = any(
             panel.has_active_mutation()
             for panel in (self.dictionary_panel, self.audio_panel, self.frequency_panel, self.pitch_panel)
-        ):
+        )
+        if self._committing or (resources_busy and not closing):
             # The debounce fired while a commit is in flight, or while a panel
             # owns indexed-resource mutation authority — retry afterwards.
             if self._settings_dirty:
@@ -1756,7 +1780,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
             # still-pending expiry so it can't fire a redundant second commit.
             self._debounce_timer.stop()
             self._settings_dirty = False
-            self._commit_settings_locked(commit_config)
+            self._commit_settings_locked(hold_resources=resources_busy)
         except ConfigCommitError as error:
             if not error.result.persisted:
                 self._settings_dirty = dirty_before_commit or self._settings_dirty
@@ -1772,10 +1796,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
             self._committing = False
         return True
 
-    def _commit_settings_locked(
-        self,
-        commit_config: Callable[[AnkiMinerConfig], None] | None,
-    ) -> None:
+    def _commit_settings_locked(self, *, hold_resources: bool = False) -> None:
         # If the user just re-enabled startup checks (False -> True), clear any
         # previously skipped version so a fresh check runs next launch.
         was_enabled = self.config.check_for_updates
@@ -1792,7 +1813,9 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         # the user has changed the path — reuse-of-current always passes so a
         # transiently-unavailable mount (external SSD) doesn't block other
         # unrelated edits from saving.
-        new_dicts_root = self.dictionary_panel.get_dicts_root()
+        # hold_resources: a panel mutation owns the root and the chains, so
+        # they stay at their committed values.
+        new_dicts_root = self.config.dicts_root if hold_resources else self.dictionary_panel.get_dicts_root()
         if new_dicts_root != self.config.dicts_root and (
             not new_dicts_root.is_dir() or not os.access(new_dicts_root, os.W_OK)
         ):
@@ -1863,20 +1886,20 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         # Async import flows can complete between the start-of-Save snapshot
         # and this point. Re-read all immediate-persist chains only now so a
         # completion mid-Save cannot be overwritten by a stale snapshot.
-        new_config = replace(
-            new_config,
-            dictionary_chain=self.dictionary_panel.get_chain(),
-            frequency_chain=self.frequency_panel.get_chain(),
-            expression_audio_chain=self.audio_panel.get_chain(),
-            pitch_chain=self.pitch_panel.get_chain(),
-        )
+        if not hold_resources:
+            new_config = replace(
+                new_config,
+                dictionary_chain=self.dictionary_panel.get_chain(),
+                frequency_chain=self.frequency_panel.get_chain(),
+                expression_audio_chain=self.audio_panel.get_chain(),
+                pitch_chain=self.pitch_panel.get_chain(),
+            )
 
-        # Emit signal to notify listeners of config change
+        # Commit synchronously, never through a signal emit: Qt hands a slot's
+        # ConfigCommitError to the excepthook, so a failed save would read as
+        # saved below and _commit_settings could not restore dirty and retry.
         try:
-            if commit_config is None:
-                self.config_changed.emit(new_config)
-            else:
-                commit_config(new_config)
+            self._commit_config(new_config)
         except ConfigCommitError as error:
             if error.result.persisted:
                 self._sync_persisted_config(new_config)
@@ -2412,17 +2435,17 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         self._commit_immediate_config(new_config, self._commit_config)
 
     def _on_retry_missing_audio(self) -> None:
-        """Clear JPod101 ``.miss`` markers so absent words are re-tried next run.
+        """Clear JPod101 and Wikimedia ``.miss`` markers so absent words are re-tried.
 
         Replaces the old folklore of deleting the ``audio_cache`` dir by hand.
         The unlink sweep runs off the GUI thread (run_off_thread convention);
         the removed count is confirmed in a dialog on completion.
         """
-        cache_dir = ANKI_MINER_HOME / "audio_cache" / "jpod101"
+        cache_dirs = [ANKI_MINER_HOME / "audio_cache" / kind for kind in MISS_MARKER_KINDS]
         self.audio_panel.set_retry_missing_enabled(False)
         run_off_thread(
             self,
-            lambda: purge_miss_markers(cache_dir),
+            lambda: sum(purge_miss_markers(cache_dir) for cache_dir in cache_dirs),
             self._on_retry_missing_audio_done,
             self._on_retry_missing_audio_error,
         )

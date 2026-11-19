@@ -404,6 +404,7 @@ def _same_episode(video: EpisodeInfo, other: EpisodeInfo | None) -> bool:
     return (
         other is not None
         and video.episode_number == other.episode_number
+        and video.part == other.part
         and (video.season_number is None or other.season_number is None or video.season_number == other.season_number)
     )
 

@@ -11,6 +11,7 @@ from anki_miner.utils.episode_matcher import (
     ParsedMediaName,
     parse_media_filename,
 )
+from anki_miner.utils.file_pairing import FilePairMatcher
 
 
 class TestEpisodeNumberExtractor:
@@ -964,3 +965,116 @@ def test_a_tracks_designator_does_not_win_the_bare_number(tmp_path, filename):
     result = EpisodeNumberExtractor.extract_episode_info(path)
     assert result is not None
     assert result.episode_number == 5
+
+
+@pytest.mark.parametrize(
+    "filename",
+    [
+        "[VCB-Studio] Toradora! [03][Ma10p_1080p][x265_flac].mkv",
+        "[Snow-Raws] Show 第03話 (BD 1920x1080 HEVC-YUV420P10 FLAC).mkv",
+        "[VCB-Studio] Show [03][Hi10p_1080p][x264_2flac].mkv",
+        "[KTXP][Show][03][GB][1080p][AACx2].mp4",
+        "Show 03 [2160p UHD HDR10].mkv",
+        "Show 03 [1080p 60fps].mkv",
+        "Show 03 [BD 1080p 23.976fps].mkv",
+        "Show 03 [DVD 720x480 MPEG2 AC3].mkv",
+        "Show 03 [x264 AAC][v2].mkv",
+        "Show 03 [BD 1080p FLAC 5.1+2.0].mkv",
+    ],
+)
+def test_digit_bearing_encode_tags_do_not_win_the_bare_number(filename):
+    result = EpisodeNumberExtractor.extract_episode_info(Path(filename))
+    assert result is not None
+    assert result.episode_number == 3
+
+
+def _pair_names(tmp_path, videos, subs):
+    video_dir = tmp_path / "video"
+    sub_dir = tmp_path / "subs"
+    video_dir.mkdir()
+    sub_dir.mkdir()
+    for name in videos:
+        (video_dir / name).touch()
+    for name in subs:
+        (sub_dir / name).touch()
+    return [(p.video.name, p.subtitle.name) for p in FilePairMatcher.find_pairs_by_episode_number(video_dir, sub_dir)]
+
+
+def test_ma10p_season_pairs_each_episode_with_its_own_subtitle(tmp_path):
+    videos = [f"[VCB-Studio] Toradora! [{n:02d}][Ma10p_1080p][x265_flac].mkv" for n in range(1, 6)]
+    subs = [f"Show {n:02d}.ja.srt" for n in range(1, 6)]
+    assert _pair_names(tmp_path, videos, subs) == list(zip(videos, subs, strict=True))
+
+
+@pytest.mark.parametrize(
+    ("filename", "episode"),
+    [
+        ("[Leopard-Raws] Show - 09 RAW (BS11 1280x720 x264 AAC).mp4", 9),
+        ("[Ohys-Raws] Show - 12 END (BS11 1280x720 x264 AAC).mp4", 12),
+        ("Show 05 (BS11).mkv", 5),
+        ("[Leopard-Raws] Show - 09 RAW (BS-11 1280x720 x264 AAC).mp4", 9),
+    ],
+)
+def test_bs_broadcaster_tag_does_not_win_the_bare_number(filename, episode):
+    result = EpisodeNumberExtractor.extract_episode_info(Path(filename))
+    assert result is not None
+    assert result.episode_number == episode
+
+
+def test_bs11_raws_pair_with_their_own_subtitles(tmp_path):
+    videos = [f"[Leopard-Raws] Show - {n:02d} RAW (BS11 1280x720 x264 AAC).mp4" for n in range(9, 14)]
+    subs = [f"Show - {n:02d}.ja.srt" for n in range(9, 14)]
+    assert _pair_names(tmp_path, videos, subs) == list(zip(videos, subs, strict=True))
+
+
+@pytest.mark.parametrize(
+    ("filename", "episode", "part"),
+    [
+        ("[SubsPlease] Show - 12.5 (1080p).mkv", 12, 5),
+        ("Show - 12.5.ja.srt", 12, 5),
+        ("Show 12.5.mkv", 12, 5),
+        # A dot-separated name keeps today's reading: the last run.
+        ("Title.12.5.mkv", 5, None),
+        ("Mob.Psycho.100.05.mkv", 5, None),
+        ("Show 100.05.mkv", 5, None),
+    ],
+)
+def test_decimal_special_episode_is_one_token(filename, episode, part):
+    result = EpisodeNumberExtractor.extract_episode_info(Path(filename))
+    assert result is not None
+    assert (result.episode_number, result.part) == (episode, part)
+
+
+def test_decimal_special_does_not_swap_with_the_real_episode(tmp_path):
+    videos = ["[SubsPlease] Show - 05 (1080p).mkv", "[SubsPlease] Show - 12.5 (1080p).mkv"]
+    subs = ["Show.E05.ja.srt", "Show - 12.5.ja.srt"]
+    assert _pair_names(tmp_path, videos, subs) == [
+        ("[SubsPlease] Show - 05 (1080p).mkv", "Show.E05.ja.srt"),
+        ("[SubsPlease] Show - 12.5 (1080p).mkv", "Show - 12.5.ja.srt"),
+    ]
+
+
+def test_decimal_special_does_not_pair_with_its_whole_episode(tmp_path):
+    videos = ["[SubsPlease] Show - 12.5 (1080p).mkv"]
+    subs = ["Show - 12.ja.srt"]
+    assert _pair_names(tmp_path, videos, subs) == []
+
+
+@pytest.mark.parametrize(
+    ("filename", "episode"),
+    [
+        ("[Group] Show [04][1080p]_track3_[jpn].ass", 4),
+        ("Show 05_track3_[jpn].ass", 5),
+        ("Show 05_track12.ass", 5),
+    ],
+)
+def test_gmkvextractgui_track_suffix_does_not_win_the_bare_number(filename, episode):
+    result = EpisodeNumberExtractor.extract_episode_info(Path(filename))
+    assert result is not None
+    assert result.episode_number == episode
+
+
+def test_gmkvextractgui_subtitles_pair_with_their_own_videos(tmp_path):
+    videos = [f"[Group] Show [{n:02d}][1080p].mkv" for n in range(1, 6)]
+    subs = [f"[Group] Show [{n:02d}][1080p]_track3_[jpn].ass" for n in range(1, 6)]
+    assert _pair_names(tmp_path, videos, subs) == list(zip(videos, subs, strict=True))

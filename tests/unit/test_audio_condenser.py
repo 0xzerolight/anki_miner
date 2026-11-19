@@ -1173,7 +1173,7 @@ def test_extract_embedded_subtitle_map_and_srt_extension(tmp_path):
     assert cmd[cmd.index("-map") + 1] == "0:s:1"
     assert "-progress" not in cmd  # extraction runs the runner without progress
     assert out is not None and out.parent == tmp_path
-    assert out.name.startswith("ep01.s1.") and out.suffix == ".srt"
+    assert out.name.startswith("sub.s1.") and out.suffix == ".srt"
     assert cmd[-1] == str(out)
 
 
@@ -1186,7 +1186,7 @@ def test_extract_embedded_subtitle_ass_extension(tmp_path, codec):
         patch(_POPEN, side_effect=_factory({}, [], returncode=0)),
     ):
         out = svc.extract_embedded_subtitle(Path("/v/ep01.mkv"), stream, tmp_path)
-    assert out is not None and out.name.startswith("ep01.s0.") and out.suffix == ".ass"
+    assert out is not None and out.name.startswith("sub.s0.") and out.suffix == ".ass"
 
 
 @pytest.mark.parametrize("codec", ["subrip", "webvtt", "mov_text"])
@@ -1198,7 +1198,7 @@ def test_extract_embedded_subtitle_srt_extension_for_text_codecs(tmp_path, codec
         patch(_POPEN, side_effect=_factory({}, [], returncode=0)),
     ):
         out = svc.extract_embedded_subtitle(Path("/v/ep01.mkv"), stream, tmp_path)
-    assert out is not None and out.name.startswith("ep01.s2.") and out.suffix == ".srt"
+    assert out is not None and out.name.startswith("sub.s2.") and out.suffix == ".srt"
 
 
 def test_extract_embedded_subtitle_refuses_bitmap_without_running_ffmpeg(tmp_path):
@@ -1285,10 +1285,10 @@ def test_condense_without_uniform_layout_is_unchanged(tmp_path):
     assert "-ac" not in captured["cmd"]
 
 
-def test_concat_uses_the_demuxer_and_stream_copy(tmp_path):
+def test_concat_uses_the_demuxer_and_encodes_once(tmp_path):
     svc = _service(tmp_path, global_index=0)
     captured: dict = {}
-    parts = [tmp_path / "0000_condensed.mp3", tmp_path / "0001_condensed.mp3"]
+    parts = [tmp_path / "0000_condensed.flac", tmp_path / "0001_condensed.flac"]
     for part in parts:
         part.write_bytes(b"")
     out = tmp_path / "season.mp3"
@@ -1296,14 +1296,16 @@ def test_concat_uses_the_demuxer_and_stream_copy(tmp_path):
         patch(_RESOLVE, return_value="ffmpeg"),
         patch(_POPEN, side_effect=_factory(captured, _progress_block(0, end=True))),
     ):
-        ok, failure = svc.concat(parts, out, total_ms=4000)
+        ok, failure = svc.concat(parts, out, total_ms=4000, bitrate_kbps=128)
 
     assert (ok, failure) == (True, None)
     cmd = captured["cmd"]
     assert cmd[:6] == ["ffmpeg", "-y", "-hide_banner", "-nostdin", "-progress", "pipe:1"]
     assert cmd[cmd.index("-f") + 1] == "concat"
     assert cmd[cmd.index("-safe") + 1] == "0"
-    assert cmd[cmd.index("-c") + 1] == "copy"
+    assert cmd[cmd.index("-c:a") + 1] == "libmp3lame"
+    assert cmd[cmd.index("-b:a") + 1] == "128k"
+    assert "copy" not in cmd
     assert cmd[-1] != str(out), "output is staged, then os.replace'd"
     assert out.exists()
 
@@ -1356,8 +1358,7 @@ def test_concat_failure_leaves_no_partial_output(tmp_path):
     assert not out.exists()
 
 
-def test_concat_reencodes_flac_instead_of_copying(tmp_path):
-    """A native .flac restarts its timeline per file, so copy is not an option."""
+def test_concat_encodes_flac_without_a_bitrate(tmp_path):
     svc = _service(tmp_path, global_index=0)
     captured: dict = {}
     parts = [tmp_path / "0000_condensed.flac", tmp_path / "0001_condensed.flac"]
@@ -1371,13 +1372,13 @@ def test_concat_reencodes_flac_instead_of_copying(tmp_path):
 
     cmd = captured["cmd"]
     assert cmd[cmd.index("-c:a") + 1] == "flac"
-    assert "copy" not in cmd
+    assert "-b:a" not in cmd
 
 
-def test_concat_stream_copies_opus(tmp_path):
+def test_concat_encodes_opus(tmp_path):
     svc = _service(tmp_path, global_index=0)
     captured: dict = {}
-    parts = [tmp_path / "0000_condensed.opus"]
+    parts = [tmp_path / "0000_condensed.flac"]
     parts[0].write_bytes(b"")
     with (
         patch(_RESOLVE, return_value="ffmpeg"),
@@ -1386,8 +1387,8 @@ def test_concat_stream_copies_opus(tmp_path):
         svc.concat(parts, tmp_path / "season.opus", total_ms=2000)
 
     cmd = captured["cmd"]
-    assert cmd[cmd.index("-c") + 1] == "copy"
-    assert "-c:a" not in cmd
+    assert cmd[cmd.index("-c:a") + 1] == "libopus"
+    assert "copy" not in cmd
 
 
 def test_concat_list_quotes_a_path_containing_an_apostrophe(tmp_path):
@@ -1477,8 +1478,10 @@ class _StubCondenser:
             return True, None
         return False, self._condense_failure
 
-    def concat(self, parts, out_audio, *, total_ms, progress_cb=None, cancel_event=None):
-        self.concat_calls.append({"parts": list(parts), "out_audio": out_audio, "total_ms": total_ms})
+    def concat(self, parts, out_audio, *, total_ms, bitrate_kbps=96, progress_cb=None, cancel_event=None):
+        self.concat_calls.append(
+            {"parts": list(parts), "out_audio": out_audio, "total_ms": total_ms, "bitrate_kbps": bitrate_kbps}
+        )
         if progress_cb is not None:
             progress_cb(50)
         if self._concat_result:
@@ -1894,6 +1897,54 @@ def test_merge_condensed_tags_the_merged_file(tmp_path, monkeypatch):
     assert tagged == {"path": tmp_path / "season.mp3", "meta": meta}
 
 
+_VENDOR_FFMPEG = Path(__file__).resolve().parents[2] / "vendor" / "ffmpeg"
+
+
+@pytest.mark.skipif(not (_VENDOR_FFMPEG / "ffmpeg").is_file(), reason="needs the vendored ffmpeg")
+@pytest.mark.parametrize("suffix", [".mp3", ".opus"])
+def test_merged_cues_start_where_each_part_starts_in_the_merged_audio(tmp_path, suffix):
+    """B3-001: the merged sidecar must not drift from the merged audio. A lossy
+    part copied into the merge keeps its encoder delay/pre-skip as samples, so
+    its probed length is not its advance in the merged stream."""
+    from array import array
+
+    from anki_miner.config import AnkiMinerConfig
+    from anki_miner.gui.workers.condense_worker import plan_merge_part_paths
+
+    ffmpeg, ffprobe = str(_VENDOR_FFMPEG / "ffmpeg"), str(_VENDOR_FFMPEG / "ffprobe")
+    cfg = AnkiMinerConfig(media_temp_folder=tmp_path / "tmp", ffmpeg_location=ffmpeg, ffprobe_location=ffprobe)
+    cfg.media_temp_folder.mkdir()
+    src = tmp_path / "src.mkv"
+    tone = "sine=frequency=440:sample_rate=44100:duration=60,volume='if(between(t,1,6),1,0)':eval=frame"
+    subprocess.run([ffmpeg, "-v", "error", "-y", "-f", "lavfi", "-i", tone, "-c:a", "aac", str(src)], check=True)
+    svc = AudioCondenserService(cfg)
+    # Each part: the tone (1-6 s) under its one cue at 0 ms, then 18.7 s of silence.
+    periods = [(1000, 6000), (10000, 17500), (30000, 41234)]
+    parts = []
+    for path in plan_merge_part_paths(4, tmp_path / "staging"):
+        path.parent.mkdir(exist_ok=True)
+        assert svc.condense(src, periods, path, uniform_layout=True) == (True, None)
+        parts.append(CondensedPart(path, ((0, 5000, path.stem),), 23734))
+    merged = tmp_path / f"season{suffix}"
+
+    result = merge_condensed(svc, cfg, parts, merged, write_subs=True)
+
+    assert result.status is CondenseStatus.SUCCESS and result.sidecar_error is None
+    rate = 8000
+    pcm = subprocess.run(
+        [ffmpeg, "-v", "error", "-i", str(merged), "-f", "s16le", "-ac", "1", "-ar", str(rate), "-"],
+        capture_output=True,
+        check=True,
+    ).stdout
+    loud = [i for i, sample in enumerate(array("h", pcm)) if abs(sample) > 2000]
+    onsets = [loud[0]] + [b for a, b in zip(loud, loud[1:], strict=False) if b - a > rate]
+    cues = merged.with_suffix(".lrc").read_text(encoding="utf-8").splitlines()[0::2]
+    cue_s = [int(line[1:3]) * 60 + float(line[4:9]) for line in cues]
+    assert len(onsets) == len(cue_s) == 4
+    for onset, cue in zip(onsets, cue_s, strict=True):
+        assert abs(cue - onset / rate) <= 0.03, (cue, onset / rate)
+
+
 def test_extract_embedded_subtitle_gives_each_call_its_own_file(tmp_path):
     """Condense and Retime share media_temp_folder and can run at once on videos
     with the same stem (two seasons' "Episode 01.mkv"); each extraction needs its
@@ -1909,6 +1960,22 @@ def test_extract_embedded_subtitle_gives_each_call_its_own_file(tmp_path):
 
     assert season1 is not None and season2 is not None
     assert season1 != season2
+
+
+def test_extract_embedded_subtitle_handles_a_long_cjk_video_name(tmp_path):
+    """B3-002: a legal 243-byte stem must not push the temp name past NAME_MAX."""
+    svc = _service(tmp_path)
+    stream = _sub_stream(sub_index=0, codec="subrip")
+    video = tmp_path / ("【推しの子】第一話「母と子」" + "あ" * 66 + ".mkv")
+    with (
+        patch(_RESOLVE, return_value="ffmpeg"),
+        patch(_POPEN, side_effect=_factory({}, [], returncode=0)),
+    ):
+        out = svc.extract_embedded_subtitle(video, stream, tmp_path)
+
+    assert out is not None
+    assert len(out.name.encode("utf-8")) <= 255
+    assert out.suffix == ".srt"
 
 
 def test_a_signs_track_loses_to_the_full_dialogue_track():

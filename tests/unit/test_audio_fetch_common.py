@@ -5,12 +5,14 @@ from unittest.mock import MagicMock
 import pytest
 
 from anki_miner.models import TokenizedWord
+from anki_miner.services import audio_fetch_common
 from anki_miner.services.audio_fetch_common import (
     download_audio_to_cache,
     expression_audio_candidates,
     find_cached_by_stem,
     log_fetch_outcome,
     new_failure_counts,
+    record_cached_path,
     reset_fetch_outcome_rate_limit,
 )
 
@@ -51,6 +53,50 @@ def test_cached_audio_lookup_sublinear(tmp_path, monkeypatch):
 
     assert [find_cached_by_stem(cache_dir, f"word{i}") for i in range(32)] == expected
     assert scans == 1
+
+
+def _replace_cache_dir(cache_dir: Path) -> None:
+    # What purge_pack_cache does: rename the directory away, then delete it.
+    gone = cache_dir.with_name(f".{cache_dir.name}.purge")
+    cache_dir.rename(gone)
+    for path in gone.iterdir():
+        path.unlink()
+    gone.rmdir()
+
+
+def test_record_after_directory_replacement_drops_purged_entries(tmp_path):
+    cache_dir = tmp_path / "cache"
+    cache_dir.mkdir()
+    (cache_dir / "a.mp3").write_bytes(b"ID3")
+    (cache_dir / "b.mp3").write_bytes(b"ID3")
+    assert find_cached_by_stem(cache_dir, "a") == cache_dir / "a.mp3"
+
+    _replace_cache_dir(cache_dir)
+    cache_dir.mkdir()
+    new_path = cache_dir / "c.mp3"
+    new_path.write_bytes(b"ID3")
+    record_cached_path(cache_dir, new_path)
+
+    assert find_cached_by_stem(cache_dir, "a") is None
+    assert find_cached_by_stem(cache_dir, "c") == new_path
+
+
+def test_lookup_in_a_missing_directory_forgets_its_index(tmp_path):
+    cache_dir = tmp_path / "cache"
+    cache_dir.mkdir()
+    (cache_dir / "a.mp3").write_bytes(b"ID3")
+    assert find_cached_by_stem(cache_dir, "a") == cache_dir / "a.mp3"
+
+    _replace_cache_dir(cache_dir)
+    assert find_cached_by_stem(cache_dir, "a") is None
+    cache_dir.mkdir()
+    new_path = cache_dir / "c.mp3"
+    new_path.write_bytes(b"ID3")
+    # Even if the recreated directory reused the old inode, nothing is merged.
+    record_cached_path(cache_dir, new_path)
+
+    assert cache_dir not in audio_fetch_common._AUDIO_CACHE_INDEXES
+    assert find_cached_by_stem(cache_dir, "a") is None
 
 
 def test_mp3_mime_with_html_body_is_rejected(tmp_path):

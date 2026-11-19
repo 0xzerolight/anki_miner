@@ -497,6 +497,11 @@ def _row_payload(view: QAbstractItemView, row: int) -> str:
         return ""
     if isinstance(view, (QTableView, QTreeView)):
         columns = [column for column in range(model.columnCount()) if not view.isColumnHidden(column)]
+        # Follow the columns as the user arranged them on screen (a movable
+        # header), not the model's logical order.
+        header = view.horizontalHeader() if isinstance(view, QTableView) else view.header()
+        if header is not None:
+            columns.sort(key=header.visualIndex)
     else:
         # A list model has exactly one column, and PyQt keeps ``columnCount``
         # private on it, so asking would raise rather than answer 1.
