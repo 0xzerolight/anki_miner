@@ -83,6 +83,10 @@ def _strip_technical_tokens(name: str) -> str:
         name,
         flags=re.IGNORECASE,
     )
+    # A BS satellite channel tag in a raw's broadcast note ("(BS11 1280x720
+    # x264 AAC)") would win the same fallback: "Show - 09 RAW (BS11 ...)" has
+    # no fansub slot (the RAW word sits after the number) and read as 11.
+    name = re.sub(r"(?<![0-9A-Za-z])BS-?\d{1,2}(?![0-9A-Za-z])", "", name)
     # A re-upload's version marker ("24 V2", "24_v2", "S01E02v5") sits
     # directly against the episode digits, so an unstripped name lets the
     # bare-number fallback's LAST-run pick (BARE_NUMBER, below) grab the

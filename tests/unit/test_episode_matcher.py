@@ -1004,3 +1004,24 @@ def test_ma10p_season_pairs_each_episode_with_its_own_subtitle(tmp_path):
     videos = [f"[VCB-Studio] Toradora! [{n:02d}][Ma10p_1080p][x265_flac].mkv" for n in range(1, 6)]
     subs = [f"Show {n:02d}.ja.srt" for n in range(1, 6)]
     assert _pair_names(tmp_path, videos, subs) == list(zip(videos, subs, strict=True))
+
+
+@pytest.mark.parametrize(
+    ("filename", "episode"),
+    [
+        ("[Leopard-Raws] Show - 09 RAW (BS11 1280x720 x264 AAC).mp4", 9),
+        ("[Ohys-Raws] Show - 12 END (BS11 1280x720 x264 AAC).mp4", 12),
+        ("Show 05 (BS11).mkv", 5),
+        ("[Leopard-Raws] Show - 09 RAW (BS-11 1280x720 x264 AAC).mp4", 9),
+    ],
+)
+def test_bs_broadcaster_tag_does_not_win_the_bare_number(filename, episode):
+    result = EpisodeNumberExtractor.extract_episode_info(Path(filename))
+    assert result is not None
+    assert result.episode_number == episode
+
+
+def test_bs11_raws_pair_with_their_own_subtitles(tmp_path):
+    videos = [f"[Leopard-Raws] Show - {n:02d} RAW (BS11 1280x720 x264 AAC).mp4" for n in range(9, 14)]
+    subs = [f"Show - {n:02d}.ja.srt" for n in range(9, 14)]
+    assert _pair_names(tmp_path, videos, subs) == list(zip(videos, subs, strict=True))
