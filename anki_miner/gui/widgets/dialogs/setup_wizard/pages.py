@@ -405,42 +405,49 @@ class MiningLanguagePage(QWizardPage):
         start = getattr(tasks, "start_language_pack_download", None)
         if tasks is None or not callable(start):
             return False
+        # Bound to the code: a run for a language picked and then abandoned
+        # (Back, another pick) keeps going and must not speak for the new one.
+        on_status = partial(self._on_pack_status, code)
+        on_finished = partial(self._on_pack_finished, code)
         running = tasks.language_pack_workers.get(code)
         if still_running(running):
             # Settings is already fetching it: listen to that run instead.
-            running.status.connect(self._on_pack_status)
-            running.result_ready.connect(self._on_pack_finished)
+            running.status.connect(on_status)
+            running.result_ready.connect(on_finished)
         else:
-            start(code, language_pack_root(code), self._on_pack_status, self._on_pack_finished)
+            start(code, language_pack_root(code), on_status, on_finished)
         self._pack_code = code
         self._pack_state = "running"
         self._pack_status = ""
         self.pack_state_changed.emit()
         return True
 
-    def _on_pack_status(self, text: str) -> None:
+    def _on_pack_status(self, code: str, text: str) -> None:
+        if code != self._pack_code:
+            return
         self._pack_status = text
         self.pack_state_changed.emit()
 
-    def _on_pack_finished(self, ok: bool, message: str) -> None:
-        code = self._pack_code
+    def _on_pack_finished(self, code: str, ok: bool, message: str) -> None:
+        if ok:
+            # Order is load-bearing (see app._connect_language_pack_download):
+            # the pack must be importable before anything re-probes the language.
+            ensure_language_packs_on_syspath()
+        # Both outcomes, as app._connect_language_pack_download does: a
+        # Settings "Download and switch" that joined this run stays
+        # disabled until it hears the run ended.
+        window = self._wizard.parent()
+        index_of = getattr(window, "_settings_tab_index", None)
+        tabs = getattr(window, "tabs", None)
+        if callable(index_of) and tabs is not None and index_of() >= 0:
+            notify = getattr(tabs.widget(index_of()), "notify_language_pack_download_finished", None)
+            if callable(notify):
+                notify(code)
+        if code != self._pack_code:
+            # An abandoned pick's run: installed (or not) for Settings, not this page's to report.
+            return
         self._pack_state = "done" if ok else "failed"
         self._pack_status = message
-        if code is not None:
-            if ok:
-                # Order is load-bearing (see app._connect_language_pack_download):
-                # the pack must be importable before anything re-probes the language.
-                ensure_language_packs_on_syspath()
-            # Both outcomes, as app._connect_language_pack_download does: a
-            # Settings "Download and switch" that joined this run stays
-            # disabled until it hears the run ended.
-            window = self._wizard.parent()
-            index_of = getattr(window, "_settings_tab_index", None)
-            tabs = getattr(window, "tabs", None)
-            if callable(index_of) and tabs is not None and index_of() >= 0:
-                notify = getattr(tabs.widget(index_of()), "notify_language_pack_download_finished", None)
-                if callable(notify):
-                    notify(code)
         self.pack_state_changed.emit()
         self.pack_finished.emit()
 

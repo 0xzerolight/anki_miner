@@ -542,6 +542,60 @@ def test_next_joins_a_pack_download_settings_already_started(qtbot, monkeypatch,
     assert page.pack_ready() is True
 
 
+class _SignallingTasks:
+    """BackgroundTaskController's pack starter as the page sees it: one worker per code, slots connected."""
+
+    def __init__(self) -> None:
+        self.language_pack_workers: dict[str, _SignallingInstallWorker] = {}
+
+    def start_language_pack_download(self, code, root, on_status, on_finished) -> None:
+        worker = _SignallingInstallWorker()
+        self.language_pack_workers[code] = worker
+        worker.status.connect(on_status)
+        worker.result_ready.connect(on_finished)
+
+
+def test_an_abandoned_languages_pack_is_not_credited_to_the_picked_one(qtbot, monkeypatch, test_config):
+    """ko (download) -> Next, Back, zh (download) -> Next: ko's run ending says nothing about zh (G5-001)."""
+    from PyQt6.QtWidgets import QWidget
+
+    from anki_miner.gui.utils.language_choices import MiningLanguageChoice
+
+    choices = (
+        MiningLanguageChoice("ja", "日本語", "Japanese"),
+        MiningLanguageChoice("ko", "한국어", "Korean", True, 40),
+        MiningLanguageChoice("zh", "中文", "Chinese", True, 60),
+    )
+    monkeypatch.setattr(wizard_pages, "mining_language_choices", lambda: choices)
+    synced: list[bool] = []
+    monkeypatch.setattr(wizard_pages, "ensure_language_packs_on_syspath", lambda: synced.append(True))
+    parent = QWidget()
+    qtbot.addWidget(parent)
+    tasks = _SignallingTasks()
+    parent.background_tasks = tasks  # type: ignore[attr-defined]
+    monkeypatch.setattr(SetupWizard, "validation_service", lambda self: _FakeValidation())
+    wiz = SetupWizard(test_config, parent, offer_mining_language=True)
+    notified = _with_settings_tab(wiz)
+    page = wiz.language_page
+    _pick(page, "ko")
+    assert page.validatePage() is True
+    _pick(page, "zh")
+    assert page.validatePage() is True
+    ko, zh = tasks.language_pack_workers["ko"], tasks.language_pack_workers["zh"]
+
+    ko.status.emit("한국어 pack (2/2): installing")
+    ko.result_ready.emit(True, "한국어 pack installed.")
+
+    assert page.pack_ready() is False
+    assert "한국어 pack" not in page.ready_page_pack_line()
+    assert synced == [True] and notified == ["ko"]  # the pack still lands for Settings
+
+    zh.result_ready.emit(True, "中文 pack installed.")
+    ko.result_ready.emit(False, "Cannot reach the download server.")
+
+    assert page.pack_ready() is True
+
+
 def _with_settings_tab(wiz):
     """Give the wizard's parent the MainWindow seams _on_pack_finished looks for."""
     from types import SimpleNamespace
