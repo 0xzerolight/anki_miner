@@ -846,10 +846,17 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
     def _start_run(self, items: list[Any] | None = None) -> None:
         """Launch the worker over *items*, or over every READY row.
 
+        The single run entry of Mine, Run selected and Retry selected, so a
+        fresh attempt clears the last run's banner here, after the reentrancy
+        guard.
+
         Args:
             items: The rows to mine, already filtered to runnable ones. ``None``
                 means the whole queue's READY rows (the Mine button).
         """
+        if self._queue_locked():
+            return
+        self.clear_screen_issue()
         runnable = (
             items if items is not None else [i for i in self._queue.all_items() if i.status == self._status_ready]
         )
