@@ -35,6 +35,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Chinese lines in a Japanese subtitle file are not mined.** A fansub's credit line and the Chinese half of a bilingual file passed as Japanese because every kanji counts as Japanese script. A line is dropped when it holds a simplified character, or has no kana and a Chinese-only pronoun or particle; other Chinese lines still pass.
 - **Half-width caption punctuation (｡､｢｣) is read as punctuation, and →, ☎ and invisible left-to-right marks are removed from sentences.** After a half-width ｡ the tagger glued a particle to the next word (オレはやる｡ mined はやる).
 - **A batch no longer lets one file decide how a kana verb is treated in the next.** The verdict for つかめ (つかむ or つかめる) was remembered by spelling alone, so the same episode could mine differently depending on what was mined before it.
+- **Folder pairing (Batch, Condense, Retime) no longer reads encode and broadcast tags as the episode number.** Ma10p, YUV420P10, 2flac, AACx2, HDR10, 60fps, MPEG2, `[v2]` and the BS11 channel tag left videos unpaired or paired with another episode's subtitle.
+- **Folder pairing keeps a .5 special (`Show - 12.5`) apart from episode 5.**
+- **Folder pairing reads subtitles extracted by gMKVExtractGUI (`…_track3_[jpn].ass`) as their own episode,** not all as episode 3.
+- **Video → YouTube mines a direct video link** instead of failing with "update yt-dlp".
+- **Condense: a merged season's `.srt` or `.lrc` no longer drifts from the merged mp3 or opus audio.** The merge now encodes the audio once from lossless parts.
+- **Condense and automatic translation no longer fail on a video with a very long file name and an embedded subtitle track.**
+- **Transcribing audio longer than 2 hours covers the whole recording when the file reports a shorter length than it plays** (MP3 parts joined into one file).
+- **Audiobook Sync times short replies such as うん and はい** instead of leaving them out as unheard.
+- **Retime: a subtitle whose lines are not stored in time order no longer gets other lines' timings.**
+- **Retime rejects a split alignment that scrambles the cue order of a `.vtt`,** as it did for `.srt` and `.ass`.
+- **Retime no longer cuts lines longer than 10 seconds down to 10 seconds** when ffsubsync gives the result.
+- **After an audio pack is re-imported or repaired, mining in the same session no longer leaves some cards without word audio.**
+- **Audio packs with katakana readings (NHK, Shinmeikai) serve their exact-reading recording** even when the pack also has clips without a reading.
+- **Portuguese: after a switch to European Portuguese, words and sentences already fetched in the Brazilian Google voice are fetched again in the European one.**
+- **Retry missing audio also covers Wikimedia Commons word audio.**
+- **A card Anki refuses for a reason other than a duplicate is no longer counted as a duplicate.**
+- **The Word Curator leaves the Chinese lines of a Chinese/Japanese subtitle out of its line preview,** and a picked sentence gets the same cue merge as in mining.
+- **Settings saved by a newer version for a mining language this version lacks no longer overwrite the Japanese settings.**
+- **Settings no longer show "✓ Saved" when the settings file could not be written.** The edit stays pending and is retried.
+- **Settings changed while a dictionary download runs are kept when the app is closed before it ends.**
+- **Word Curator: emoji sequences and variant kanji are no longer split in sentences.**
+- **Word Curator: copied rows keep the column order on screen.**
+- **Japanese text uses a Japanese font when one is installed,** not a Chinese or Korean desktop font.
 
 ### Removed
 
