@@ -807,6 +807,32 @@ def test_notify_asr_download_finished_reprobes_model(qtbot, tmp_path, monkeypatc
     assert panel.model_status_label.text().lower() == "installed"
 
 
+def test_asr_finish_after_model_switch_describes_the_selected_model(qtbot, tmp_path, monkeypatch):
+    """Switching models mid-download: the finish re-probes the current pick, not the downloaded one."""
+    monkeypatch.setattr(f"{_PANEL_MOD}._engine.available", lambda: True)
+    monkeypatch.setattr(f"{_PANEL_MOD}._engine.cuda_device_count", lambda: 0)
+    on_disk = {"large-v3": False, "small": False}
+    monkeypatch.setattr(f"{_PANEL_MOD}.model_manager.is_downloaded", lambda name, root: on_disk[name])
+
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.load_from_config(AnkiMinerConfig(asr_model="large-v3", asr_models_root=tmp_path))
+    _wait_state_settled(qtbot, panel)
+
+    panel.download_model_button.click()
+    assert panel._asr_download_active
+    panel.set_model("small")
+    _wait_state_settled(qtbot, panel)
+
+    on_disk["large-v3"] = True
+    panel.notify_asr_download_finished("large-v3", tmp_path, ok=True)
+    _wait_state_settled(qtbot, panel)
+
+    assert panel.get_model() == "small"
+    assert panel.model_status_label.text() == "Not installed"
+    assert panel.download_model_button.isVisibleTo(panel)
+
+
 def test_notify_asr_download_failure_keeps_error_status(qtbot, tmp_path, monkeypatch):
     """A FAILED download must leave its error message on the status label.
 
@@ -1140,10 +1166,13 @@ def test_vulkan_not_installed_when_ggml_missing(qtbot, tmp_path, monkeypatch):
 
 
 def test_notify_vulkan_download_finished_updates_status_and_cache(qtbot, tmp_path, monkeypatch):
-    """notify_vulkan_download_finished sets the status label + installed cache and
-    hides the button: the model is installed now."""
+    """A successful finish re-probes: the status, installed cache and hidden
+    button reflect the model now on disk."""
     monkeypatch.setattr(f"{_PANEL_MOD}.sys", _FakePlatform("linux"))
     _patch_vulkan(monkeypatch, ggml=False, vad=False)
+    on_disk = {"ggml": False}
+    monkeypatch.setattr(f"{_PANEL_MOD}.ggml_model_installer.is_ggml_downloaded", lambda name, root: on_disk["ggml"])
+    monkeypatch.setattr(f"{_PANEL_MOD}.ggml_model_installer.is_vad_downloaded", lambda root: on_disk["ggml"])
     panel = SubtitlesSettingsPanel()
     qtbot.addWidget(panel)
     panel.load_from_config(AnkiMinerConfig(asr_models_root=tmp_path))
@@ -1153,13 +1182,39 @@ def test_notify_vulkan_download_finished_updates_status_and_cache(qtbot, tmp_pat
     assert panel._vulkan_active
     assert not panel.download_vulkan_button.isEnabled()
 
+    on_disk["ggml"] = True
     panel.notify_vulkan_download_finished(True, "Vulkan model installed.")
     _wait_state_settled(qtbot, panel)
 
     assert not panel._vulkan_active
-    assert panel.vulkan_status_label.text() == "Vulkan model installed."
+    assert panel.vulkan_status_label.text().lower() == "installed"
     assert panel._vulkan_installed_cache is True
     assert not panel.download_vulkan_button.isVisibleTo(panel)
+
+
+def test_vulkan_finish_after_model_switch_describes_the_selected_model(qtbot, tmp_path, monkeypatch):
+    """Switching models mid-download: the finish must not mark the new pick installed."""
+    monkeypatch.setattr(f"{_PANEL_MOD}.sys", _FakePlatform("linux"))
+    _patch_vulkan(monkeypatch, ggml=False, vad=True)
+    on_disk = {"large-v3": False, "small": False}
+    monkeypatch.setattr(f"{_PANEL_MOD}.ggml_model_installer.is_ggml_downloaded", lambda name, root: on_disk[name])
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.load_from_config(AnkiMinerConfig(asr_model="large-v3", asr_models_root=tmp_path))
+    _wait_state_settled(qtbot, panel)
+
+    panel.download_vulkan_button.click()
+    panel.set_model("small")
+    _wait_state_settled(qtbot, panel)
+
+    on_disk["large-v3"] = True
+    panel.notify_vulkan_download_finished(True, "Vulkan model installed.")
+    _wait_state_settled(qtbot, panel)
+
+    assert panel.get_model() == "small"
+    assert panel._vulkan_installed_cache is False
+    assert panel.download_vulkan_button.isVisibleTo(panel)
+    assert panel.download_vulkan_button.isEnabled()
 
 
 def test_notify_vulkan_download_finished_failure_clears_guard(qtbot, tmp_path, monkeypatch):

@@ -727,7 +727,10 @@ class SubtitlesSettingsPanel(FormPanel):
         if not ok:
             self.download_model_button.setEnabled(self._engine_available_now())
             return
-        self._refresh_state_async(name, models_root, self._cuda_libs_root)
+        # Probe the model selected NOW, not ``name``: the combo stays live during a
+        # download, and the probe a mid-download switch queued was swallowed by the
+        # in-flight guard, so the row must describe the current pick.
+        self._refresh_state_async(self.get_model(), models_root, self._cuda_libs_root)
 
     # ------------------------------------------------------------------
     # alass download flow
@@ -891,22 +894,24 @@ class SubtitlesSettingsPanel(FormPanel):
             self.set_status_text(self.vulkan_status_label, text, status=self._install_status_kind(text))
 
     def notify_vulkan_download_finished(self, ok: bool, msg: str) -> None:
-        """Clear the in-flight guard, set the status label + installed cache,
-        and re-enable the button after a Vulkan model download.
+        """Clear the in-flight guard and refresh the Vulkan row after a download.
 
-        Wired to the download worker's finish callback (success or failure). The
-        worker's result *message* is shown verbatim (unlike the re-probe paths,
-        the worker already carries it), the installed cache is set to ``ok`` so a
-        later refresh reflects the new on-disk state, and the button is
-        re-enabled, shown only after a failure (a success installed the model).
-        A no-op on macOS where the button is omitted.
+        Wired to the download worker's finish callback (success or failure). A
+        failure shows the worker's message verbatim and re-enables the button: a
+        re-probe would overwrite the error, and on-disk state cannot have
+        changed. A success re-probes the model selected NOW (the ggml weights are
+        per model and the combo stays live during a download), so the row never
+        claims the download's model for a different pick. A no-op on macOS where
+        the button is omitted.
         """
         self._vulkan_active = False
-        self._vulkan_installed_cache = ok
         self.set_vulkan_status(msg)
-        if self.download_vulkan_button is not None:
-            self.download_vulkan_button.setEnabled(True)
-            self.download_vulkan_button.setVisible(not ok)
+        if not ok:
+            if self.download_vulkan_button is not None:
+                self.download_vulkan_button.setEnabled(True)
+                self.download_vulkan_button.setVisible(True)
+            return
+        self._refresh_state_async(self.get_model(), self._models_root, self._cuda_libs_root)
 
     def _apply_vulkan_state(self, installed: bool) -> None:
         """Reflect whether the Vulkan model (ggml + VAD) is present; button only while missing.
