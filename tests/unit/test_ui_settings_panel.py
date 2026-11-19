@@ -254,6 +254,24 @@ class TestLanguage:
         assert emitted == ["ja"]
         assert panel.language_restart_note.isHidden() is False
 
+    def test_picking_the_running_language_back_clears_the_note(self, qapp, qtbot, themes_dir: Path) -> None:
+        panel = UISettingsPanel(themes_dir, ui_zoom=1.0, ui_language="en")
+        qtbot.addWidget(panel)
+        panel._on_language_selected(panel.language_combo.findData("ja"))
+        assert panel.language_restart_note.isHidden() is False
+        panel._on_language_selected(panel.language_combo.findData("en"))
+        assert panel.language_restart_note.isHidden() is True
+
+    def test_picking_the_running_zoom_shows_no_restart_note(self, qapp, qtbot, themes_dir: Path) -> None:
+        panel = UISettingsPanel(themes_dir, ui_zoom=1.0, ui_language="en")
+        qtbot.addWidget(panel)
+        panel._on_zoom_selected(panel.zoom_combo.findData(100))
+        assert panel.zoom_restart_note.isHidden() is True
+        assert panel.restart_now_btn.isHidden() is True
+        panel._on_zoom_selected(panel.zoom_combo.findData(125))
+        assert panel.zoom_restart_note.isHidden() is False
+        assert panel.restart_now_btn.isHidden() is False
+
     def test_activated_signal_drives_emit(self, panel: UISettingsPanel) -> None:
         emitted: list[str] = []
         panel.language_changed.connect(emitted.append)

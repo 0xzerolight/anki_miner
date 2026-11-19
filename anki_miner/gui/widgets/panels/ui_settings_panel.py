@@ -451,16 +451,17 @@ class UISettingsPanel(ScreenIssueHost, FormPanel):
             self.zoom_combo.blockSignals(False)
 
     def _on_zoom_selected(self, index: int) -> None:
-        """Persist the zoom preset the user picked and reveal the restart note.
+        """Persist the zoom preset the user picked; the restart note shows while it differs from boot.
 
         No live restyle: zoom is injected as QT_SCALE_FACTOR before QApplication
-        is built, so it only takes effect on the next launch.
+        is built, so it only takes effect on the next launch. The same rule as
+        ``load_from_config``: this commit's config echo never reloads the panel.
         """
         percent = self.zoom_combo.itemData(index)
         if percent is None:
             return
         self._ui_zoom = int(percent) / 100.0
-        self._show_zoom_restart_note(True)
+        self._show_zoom_restart_note(self._ui_zoom != self._boot_zoom)
         self.zoom_changed.emit(self._ui_zoom)
 
     def _show_zoom_restart_note(self, visible: bool) -> None:
@@ -578,15 +579,16 @@ class UISettingsPanel(ScreenIssueHost, FormPanel):
             self.language_combo.blockSignals(False)
 
     def _on_language_selected(self, index: int) -> None:
-        """Persist the picked UI language and reveal the restart note.
+        """Persist the picked UI language; the restart note shows while it differs from boot.
 
         Restart-to-apply: Qt widgets capture their tr() strings at construction,
-        so the change only takes effect on the next launch.
+        so the change only takes effect on the next launch. The same rule as
+        ``load_from_config``: this commit's config echo never reloads the panel.
         """
         code = self.language_combo.itemData(index)
         if not isinstance(code, str):
             return
-        self.language_restart_note.setVisible(True)
+        self.language_restart_note.setVisible(code != self._boot_language)
         self.language_changed.emit(code)
 
     # ---- External config reload -----------------------------------------
