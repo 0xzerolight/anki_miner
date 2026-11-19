@@ -131,6 +131,23 @@ class TestDeckDropdown:
         assert factory.call_count == 1
         fake_worker.start.assert_called_once()
 
+    def test_the_list_is_refetched_and_refilled_in_place(self, tab):
+        """X5-004: a deck made in Anki since the last show appears without a restart."""
+        tab._on_decks_fetched(["Mining"])
+        tab.deck_combo.setCurrentIndex(1)
+        tab._on_scan_finished(_plan([_note_plan(1)]))
+
+        with patch.object(tab, "_load_decks") as load:
+            tab.ensure_decks()
+        load.assert_called_once_with()
+
+        tab._on_decks_fetched(["Mining", "Mining (Filtered)"])
+
+        items = [tab.deck_combo.itemText(i) for i in range(tab.deck_combo.count())]
+        assert items == ["All decks", "Mining", "Mining (Filtered)"]
+        assert tab.deck_combo.currentText() == "Mining"
+        assert tab._plan is not None
+
     def test_deck_fetch_error_reaches_the_log(self, tab, caplog):
         from anki_miner.gui.workers.base_worker import SingleCallWorker
 
@@ -503,7 +520,7 @@ class TestLayoutSizing:
         assert scroll.widgetResizable()
 
     def test_table_keeps_floor_at_short_window_height(self, qtbot, tab):
-        tab._decks_loaded = True  # suppress showEvent deck fetch (network tripwire)
+        tab._load_decks = lambda: None  # suppress showEvent deck fetch (network tripwire)
         tab.resize(900, 620)
         tab.show()
         qtbot.waitExposed(tab)

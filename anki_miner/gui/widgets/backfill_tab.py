@@ -144,8 +144,6 @@ class CardBackfillTab(RunOptionsMixin, _AnkiPlanTabBase):
         self.worker_thread: BackfillScanWorker | BackfillApplyWorker | None = None
         self._plan: BackfillPlan | None = None
         self._scan_warnings: tuple[str, ...] = ()
-        # "Did a deck list arrive?", NOT "did we ask?" — see ensure_decks.
-        self._decks_loaded = False
         #: True while the banner may carry the deck-fetch failure, so a later
         #: success clears that banner and nothing else shown since.
         self._deck_fetch_failed = False
@@ -464,7 +462,7 @@ class CardBackfillTab(RunOptionsMixin, _AnkiPlanTabBase):
         self._refresh_checkbox_gates()
 
     # ------------------------------------------------------------------
-    # Deck dropdown (lazy fetch on first show)
+    # Deck dropdown (fetched on every show)
     # ------------------------------------------------------------------
 
     def _deck_combo(self) -> QComboBox:

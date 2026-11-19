@@ -435,3 +435,53 @@ class TestOptionChangesDropThePlan:
         ):
             tab._start_apply()
         worker_cls.assert_not_called()
+
+
+class TestDeckListRefresh:
+    """X5-004: the deck list is re-read on every show, so a deck made since (this
+    screen's own Copy target included) appears without a restart."""
+
+    def test_the_list_is_refetched_and_refilled_in_place(self, tab):
+        tab._on_decks_fetched(["Premade"])
+        with patch(f"{_TAB_MOD}.run_off_thread", MagicMock(return_value=None)):
+            tab.source_combo.setCurrentIndex(1)
+        tab._on_scan_finished(_plan())
+
+        with patch.object(tab, "_load_decks") as load:
+            tab.ensure_decks()
+        load.assert_called_once_with()
+
+        with patch(f"{_TAB_MOD}.run_off_thread") as inspect:
+            tab._on_decks_fetched(["Premade", "Premade (Filtered)"])
+
+        items = [tab.source_combo.itemText(i) for i in range(tab.source_combo.count())]
+        assert items == ["Select a deck…", "Premade", "Premade (Filtered)"]
+        assert tab.source_combo.currentText() == "Premade"
+        inspect.assert_not_called()  # an unchanged pick is not re-read ...
+        assert tab._plan is not None  # ... and keeps its plan
+
+    def test_a_deck_gone_from_anki_drops_the_pick(self, tab):
+        tab._on_decks_fetched(["Premade", "Old"])
+        with patch(f"{_TAB_MOD}.run_off_thread", MagicMock(return_value=None)):
+            tab.source_combo.setCurrentIndex(2)
+        tab._on_scan_finished(_plan())
+
+        tab._on_decks_fetched(["Premade"])
+
+        assert tab.source_combo.currentIndex() == 0
+        assert tab._plan is None
+
+    def test_an_empty_answer_after_a_list_keeps_the_list(self, tab):
+        tab._on_decks_fetched(["Premade"])
+
+        tab._on_decks_fetched([])
+
+        assert tab.source_combo.count() == 2
+        assert tab.issue_banner().current_issue() is None
+
+    def test_no_refetch_while_a_run_is_active(self, tab):
+        tab.worker_thread = MagicMock()
+        with patch.object(tab, "_load_decks") as load:
+            tab.ensure_decks()
+        load.assert_not_called()
+        tab.worker_thread = None

@@ -104,8 +104,6 @@ class DeckFilterTab(_AnkiPlanTabBase):
         self.worker_thread: DeckFilterScanWorker | DeckFilterApplyWorker | None = None
         self._plan: DeckFilterPlan | None = None
         self._scan_warnings: tuple[str, ...] = ()
-        # "Did a deck list arrive?", NOT "did we ask?" — see ensure_decks.
-        self._decks_loaded = False
         #: True while the banner may carry the deck-fetch failure, so a later
         #: success clears that banner and nothing else shown since.
         self._deck_fetch_failed = False
@@ -312,7 +310,7 @@ class DeckFilterTab(_AnkiPlanTabBase):
         return (self._inspect_worker,)
 
     # ------------------------------------------------------------------
-    # Deck dropdown (lazy fetch on first show) + source inspection
+    # Deck dropdown (fetched on every show) + source inspection
     # ------------------------------------------------------------------
 
     def _deck_combo(self) -> QComboBox:

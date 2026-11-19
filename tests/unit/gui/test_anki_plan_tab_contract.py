@@ -382,7 +382,8 @@ class TestDeckList:
             tab.ensure_decks()
             assert load.call_count == 2
 
-    def test_a_real_deck_list_stops_the_asking_and_clears_the_line(self, tab, screen):
+    def test_a_real_deck_list_clears_the_line_and_the_asking_goes_on(self, tab, screen):
+        """X5-004: the list is re-read on every show, so a deck made since appears."""
         tab._on_decks_fetched([])
         assert _issue(tab) is not None
 
@@ -392,7 +393,9 @@ class TestDeckList:
         assert _combo(tab, screen).count() == 3  # the fixed first item + two decks
         with patch.object(tab, "_load_decks") as load:
             tab.ensure_decks()
-            load.assert_not_called()
+            load.assert_called_once_with()
+        tab._on_decks_fetched(["Default", "Premade"])
+        assert _combo(tab, screen).count() == 3  # a refill never stacks a second copy
 
     def test_a_scan_message_survives_a_deck_fetch(self, tab):
         """Only the fetch failure is cleared, never whatever else wrote there."""
