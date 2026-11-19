@@ -39,6 +39,9 @@ def _strip_technical_tokens(name: str) -> str:
     # A lone ticked subtitle is "<stem>.<lang>"; a numeric region ("es-419")
     # would win the same fallback and pair episode 5's file as episode 419.
     name = re.sub(r"\.[a-z]{2,3}-\d{3}$", "", name)
+    # gMKVExtractGUI names an extracted track "<stem>_track3_[jpn]"; the
+    # track number is the same in every episode and would win that fallback.
+    name = re.sub(r"_track\d{1,3}(?:_\[[^\]]*\])*$", "", name)
     # Use explicit non-alphanumeric boundaries rather than \b: \b does not
     # fire between an underscore and a digit (both are word chars), so
     # "Show_03_720p" kept "720p" — which the old consuming BARE_NUMBER regex

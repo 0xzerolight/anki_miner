@@ -1058,3 +1058,23 @@ def test_decimal_special_does_not_pair_with_its_whole_episode(tmp_path):
     videos = ["[SubsPlease] Show - 12.5 (1080p).mkv"]
     subs = ["Show - 12.ja.srt"]
     assert _pair_names(tmp_path, videos, subs) == []
+
+
+@pytest.mark.parametrize(
+    ("filename", "episode"),
+    [
+        ("[Group] Show [04][1080p]_track3_[jpn].ass", 4),
+        ("Show 05_track3_[jpn].ass", 5),
+        ("Show 05_track12.ass", 5),
+    ],
+)
+def test_gmkvextractgui_track_suffix_does_not_win_the_bare_number(filename, episode):
+    result = EpisodeNumberExtractor.extract_episode_info(Path(filename))
+    assert result is not None
+    assert result.episode_number == episode
+
+
+def test_gmkvextractgui_subtitles_pair_with_their_own_videos(tmp_path):
+    videos = [f"[Group] Show [{n:02d}][1080p].mkv" for n in range(1, 6)]
+    subs = [f"[Group] Show [{n:02d}][1080p]_track3_[jpn].ass" for n in range(1, 6)]
+    assert _pair_names(tmp_path, videos, subs) == list(zip(videos, subs, strict=True))
