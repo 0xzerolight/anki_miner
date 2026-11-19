@@ -1921,6 +1921,21 @@ class TestSubtitleSourceSweep:
         item = _add_ready_item(tab, "https://youtu.be/later")
         assert item.resolved_sub_mode == "transcribe"
 
+    def test_retry_mines_a_failed_row_under_the_current_source(self, tab):
+        """A picker change reaches a mining failure the moment it is retried."""
+        item = _add_ready_item(tab, "https://youtu.be/failed", has_manual_ja_subs=False, has_auto_ja_subs=True)
+        assert item.resolved_sub_mode == "auto_only"
+        item.status = YouTubeItemStatus.ERROR
+        item.error_message = "caption alignment failed"
+        tab.subtitle_source_combo.setCurrentIndex(tab.subtitle_source_combo.findData("transcribe"))
+        tab._list_items[item].setSelected(True)
+
+        with patch("anki_miner.gui.widgets.youtube_tab.usable_model_installed", return_value=True):
+            tab._on_retry_selected()
+
+        assert tab._queue_worker_cls.call_count == 1
+        assert [i.resolved_sub_mode for i in tab._queue_worker_cls.call_args.kwargs["items"]] == ["transcribe"]
+
 
 class TestPerRunSubtitleControls:
     """The subtitle picker: session-only, read on the GUI thread."""
