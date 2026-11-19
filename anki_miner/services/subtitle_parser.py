@@ -1298,7 +1298,19 @@ class SubtitleParserService:
         """
         gate = None if translation else self._has_target_script
         cleaned = clean_subtitle_text(raw_text, normalize=self._normalize, has_target_script=gate)
+        if not translation and self._skips_as_written(cleaned):
+            return cleaned
         return self._apply_text_filter(cleaned)
+
+    def _skips_as_written(self, text: str) -> bool:
+        """Whether ``skip_line`` names a cue before the regex filter runs, so the cue is kept unfiltered.
+
+        The default filter's speaker-label piece deletes a leading ``role：``, and a
+        one-role fansub credit (翻译：小明) has its only Chinese in that label: judged
+        after the filter it was mined. Kept as written, the cue is listed as the
+        file has it and _build_line_state skips it as before.
+        """
+        return self._skip_line is not None and self._skip_line(self._tokenizer_text(text))
 
     def _load_subs(self, subtitle_file: Path, *, encodings: tuple[str, ...] | None = None):
         """Load a subtitle file via pysubs2 with normalized error wrapping.
@@ -2416,7 +2428,9 @@ class SubtitleParserService:
             # Reading→Subtitles per-cue cleanup remains here for synthetic
             # ReadingUnit callers and is idempotent when the loader already
             # stripped the cue.
-            text = self._apply_text_filter(strip_inline_annotations(text))
+            text = strip_inline_annotations(text)
+            if not self._skips_as_written(text):
+                text = self._apply_text_filter(text)
         return text
 
     def reading_entries(
