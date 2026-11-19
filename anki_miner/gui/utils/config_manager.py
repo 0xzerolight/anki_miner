@@ -893,12 +893,15 @@ class GUIConfigManager:
         # `language` is portable but the chains and language_stash are not, so a
         # file for another mining language must land the way a language switch
         # does: park the outgoing language, restore the incoming one's local
-        # chains, then overlay the file. The target is folded through the
-        # config's own normalisation first, so an unknown code (which the config
-        # turns into "ja") never reaches switch_language.
+        # chains, then overlay the file. A code the config's normalisation folds
+        # to "ja" (a newer build's language) is refused: its deck, note type and
+        # POS tags would otherwise land on Japanese.
         base = current_config
         if "language" in incoming:
             target = dataclasses.replace(current_config, language=incoming["language"]).language
+            code = incoming["language"].strip().lower()
+            if code and code != target:
+                raise ValueError(f"Settings for mining language {code!r}, which this version cannot mine")
             if target != current_config.language:
                 base = switch_language(current_config, target)
         cls._overlay_mapping_fields(incoming, base)

@@ -587,3 +587,20 @@ class TestImportAcrossMiningLanguages:
 
         assert result.language == "de"
         assert result.anki_deck_name == "Mine"
+
+    @pytest.mark.parametrize("onto", ["ja", "de"])
+    def test_file_for_an_unknown_mining_language_is_refused(self, tmp_path, onto):
+        """A newer build's language this build lacks must not land its deck,
+        note type and POS tags on Japanese."""
+        from anki_miner.languages.switching import switch_language
+
+        out = tmp_path / "newer.json"
+        GUIConfigManager.export_config(replace(switch_language(AnkiMinerConfig(), "de"), anki_deck_name="NewLang"), out)
+        payload = json.loads(out.read_text(encoding="utf-8"))
+        payload["settings"]["language"] = "xx"
+        path = _write_import_file(tmp_path, payload)
+        ja_config = replace(AnkiMinerConfig(), anki_deck_name="Japanese::Mining")
+        current = ja_config if onto == "ja" else switch_language(ja_config, "de")
+
+        with pytest.raises(ValueError, match="xx"):
+            GUIConfigManager.import_config(path, current)
