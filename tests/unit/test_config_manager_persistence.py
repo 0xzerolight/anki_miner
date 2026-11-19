@@ -177,6 +177,28 @@ class TestLoadResilience:
         assert loaded.theme == create_default_config().theme
         assert any("config" in r.message.lower() for r in caplog.records)
 
+    def test_unknown_mining_language_parks_its_settings_and_restores_ja(self, tmp_config: Path):
+        """A newer build's language falls back to ja WITH ja's parked settings (S1-002)."""
+        from anki_miner.languages.registry import get_profile
+        from anki_miner.languages.switching import switch_language
+
+        japanese = replace(create_default_config(), anki_deck_name="Japanese::Mining")
+        newer = replace(switch_language(japanese, "de"), anki_deck_name="NewLang")
+        GUIConfigManager.save_config(newer)
+        data = json.loads(tmp_config.read_text(encoding="utf-8"))
+        data["language"] = "xx"
+        data["language_stash"] = {"ja": data["language_stash"]["ja"]}
+        assert data["language_stash"]["ja"]["anki_deck_name"] == "Japanese::Mining"
+        tmp_config.write_text(json.dumps(data), encoding="utf-8")
+
+        loaded = GUIConfigManager.load_config()
+
+        assert loaded.language == "ja"
+        assert loaded.anki_deck_name == "Japanese::Mining"
+        assert loaded.allowed_pos == get_profile("ja").scoped_defaults["allowed_pos"]
+        assert "ja" not in loaded.language_stash
+        assert loaded.language_stash["xx"]["anki_deck_name"] == "NewLang"
+
 
 class TestBackupRecoveryRepair:
     def test_missing_primary_recovers_from_bak_and_repairs_primary(self, tmp_config: Path):
