@@ -86,8 +86,8 @@ def _alignment_suffix(in_sub: Path) -> str:
     """Suffix the alignment temps carry: the input's own, or .srt when no engine reads it.
 
     Internal to the pipeline. The committed output keeps the user's format --
-    :func:`map_deltas_back` writes the untouched original, whose extension
-    decides what pysubs2 emits.
+    the retimed original :func:`map_deltas_back` returns is saved under
+    *out_sub*'s extension, which decides what pysubs2 emits.
     """
     suffix = in_sub.suffix.lower()
     return suffix if suffix in _ALIGNER_FORMATS else ".srt"
@@ -189,8 +189,9 @@ def retime_subtitle(
         sub_reference = reference is not None and reference.kind == "subtitle"
 
         # The user's subtitle is decoded with the mining language's ladder, not
-        # the built-in Japanese one: map_deltas_back saves what it read, so a
-        # Chinese file that lost its gb18030/big5 legs is mojibake on disk.
+        # the built-in Japanese one: the original map_deltas_back reads is what
+        # gets saved, so a Chinese file that lost its gb18030/big5 legs is
+        # mojibake on disk.
         profile = get_profile(config_language(config))
         align_suffix = _alignment_suffix(in_sub)
         cleaned = clean_for_alignment(
@@ -268,25 +269,39 @@ def retime_subtitle(
                 )
                 continue
 
-            final_candidate = candidate
+            mapped_subs = None
             if result.ok and cleaned is not None:
-                mapped = tmp_dir / f"{out_sub.stem}.retime-map-{len(attempts)}{out_sub.suffix}"
-                temps.append(mapped)
-                if map_deltas_back(
+                mapped_subs = map_deltas_back(
                     in_sub,
                     candidate,
                     cleaned.kept_indices,
-                    mapped,
                     encodings=profile.import_encodings,
                     **script_check_kwarg(profile.import_encodings, profile.script),
-                ):
-                    final_candidate = mapped
-                else:
+                )
+                if mapped_subs is None:
                     attempts.append(f"{label}: aligner changed the cue count; discarded")
                     continue
 
-            verdict = validate_candidate(in_sub, final_candidate, result, video_duration_seconds=duration_s)
+            # The mapped cues are judged as mapped, in the original's order, and
+            # saved only once accepted: pysubs2's WebVTT writer sorts by start.
+            verdict = validate_candidate(
+                in_sub,
+                candidate,
+                result,
+                candidate_events=mapped_subs.events if mapped_subs is not None else None,
+                video_duration_seconds=duration_s,
+            )
             if verdict.ok:
+                final_candidate = candidate
+                if mapped_subs is not None:
+                    final_candidate = tmp_dir / f"{out_sub.stem}.retime-map-{len(attempts)}{out_sub.suffix}"
+                    temps.append(final_candidate)
+                    try:
+                        mapped_subs.save(str(final_candidate), encoding="utf-8")
+                    except Exception:  # noqa: BLE001 — an unwritable result is an unusable candidate
+                        logger.warning("retime: could not write %s", final_candidate, exc_info=True)
+                        attempts.append(f"{label}: could not write the result")
+                        continue
                 attempts.append(f"{label}: accepted")
                 _commit(final_candidate, out_sub)
                 summary = _success_summary(result)

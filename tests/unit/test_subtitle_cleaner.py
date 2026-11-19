@@ -246,9 +246,9 @@ class TestCleanForAlignment:
         synced.events.sort(key=lambda event: event.start)
         synced.save(str(tmp_path / "synced.srt"))
 
-        out = tmp_path / "out.srt"
-        assert map_deltas_back(src, tmp_path / "synced.srt", cleaned.kept_indices, out)
-        assert [e.start for e in pysubs2.load(str(out)).events] == [e.start + 3000 for e in events]
+        mapped = map_deltas_back(src, tmp_path / "synced.srt", cleaned.kept_indices)
+        assert mapped is not None
+        assert [e.start for e in mapped.events] == [e.start + 3000 for e in events]
 
 
 class TestMapDeltasBack:
@@ -262,9 +262,9 @@ class TestMapDeltasBack:
             e.end += delta
             synced_events.append(e)
         synced = _save(tmp_path / "synced.srt", synced_events)
-        out = tmp_path / "out.ass"
-        assert map_deltas_back(original, synced, kept_indices, out)
-        return pysubs2.load(str(out))
+        mapped = map_deltas_back(original, synced, kept_indices)
+        assert mapped is not None
+        return mapped
 
     def test_kept_cues_take_exact_new_timings(self, tmp_path):
         events = _make_dialogue(12)
@@ -298,7 +298,7 @@ class TestMapDeltasBack:
         events = _make_dialogue(12)
         original = _save(tmp_path / "orig.srt", events)
         synced = _save(tmp_path / "synced.srt", _make_dialogue(11))
-        assert not map_deltas_back(original, synced, list(range(12)), tmp_path / "out.srt")
+        assert map_deltas_back(original, synced, list(range(12))) is None
 
     def test_preserves_all_lines_and_styles(self, tmp_path):
         events = _make_dialogue(12)
@@ -310,9 +310,8 @@ class TestMapDeltasBack:
             e.start += 300
             e.end += 300
         synced = _save(tmp_path / "synced.srt", synced_events)
-        out_path = tmp_path / "out.ass"
-        assert map_deltas_back(original, synced, kept, out_path)
-        out = pysubs2.load(str(out_path))
+        out = map_deltas_back(original, synced, kept)
+        assert out is not None
         assert len(out.events) == 13
         assert out.events[5].style == "Signs"
         assert out.events[5].start == 9300 + 300
@@ -408,7 +407,9 @@ class TestTranscodeForAlignment:
         synced.save(str(tmp_path / "synced.srt"), format_="srt")
 
         out = tmp_path / "out.vtt"
-        assert map_deltas_back(src, tmp_path / "synced.srt", transcoded.kept_indices, out)
+        retimed = map_deltas_back(src, tmp_path / "synced.srt", transcoded.kept_indices)
+        assert retimed is not None
+        retimed.save(str(out))
 
         mapped = pysubs2.load(str(out))
         assert mapped.format == "vtt"
@@ -434,7 +435,9 @@ class TestEncodingLadder:
             event.end += 1500
         synced.save(str(tmp_path / "synced.srt"), encoding="utf-8")
         out = tmp_path / "out.srt"
-        assert map_deltas_back(src, tmp_path / "synced.srt", cleaned.kept_indices, out, **kwargs)
+        mapped = map_deltas_back(src, tmp_path / "synced.srt", cleaned.kept_indices, **kwargs)
+        assert mapped is not None
+        mapped.save(str(out), encoding="utf-8")
         return out
 
     def test_gb18030_survives_the_retime_round_trip(self, tmp_path):

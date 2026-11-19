@@ -67,6 +67,26 @@ class TestValidateCandidate:
         assert not verdict.ok
         assert any("scrambled" in r for r in verdict.reasons)
 
+    def test_scrambled_order_rejected_on_a_file_not_in_time_order(self, tmp_path):
+        """Lines appended at the end but timed inside the file: judged in time order."""
+        starts = [*_starts(20), 4500, 31_500]
+        orig = _save(tmp_path / "o.srt", starts)
+        shifted = [s + 1000 for s in starts]
+        assert validate_candidate(orig, _save(tmp_path / "ok.srt", shifted), _OK).ok
+        shifted[10] += 5000  # now after cue 11
+        verdict = validate_candidate(orig, _save(tmp_path / "c.srt", shifted), _OK)
+        assert any("scrambled" in r for r in verdict.reasons)
+
+    def test_candidate_events_are_judged_instead_of_the_file(self, tmp_path):
+        starts = _starts(20)
+        orig = _save(tmp_path / "o.srt", starts)
+        sorted_file = _save(tmp_path / "c.srt", sorted([*starts[:10], *(s - 8000 for s in starts[10:])]))
+        events = pysubs2.load(str(orig)).events
+        for event in events[10:]:
+            event.start -= 8000
+        verdict = validate_candidate(orig, sorted_file, _OK, candidate_events=events)
+        assert any("scrambled" in r for r in verdict.reasons)
+
     def test_zero_pileup_rejected(self, tmp_path):
         starts = _starts(20, base=5000)
         orig = _save(tmp_path / "o.srt", starts)

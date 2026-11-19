@@ -30,8 +30,8 @@ SUBTITLE_FILE_FILTER = (
     f"Subtitle Files ({' '.join(f'*{ext}' for ext in sorted(DEFAULT_SUBTITLE_PRIORITY))});;All Files (*)"
 )
 #: What Utilities -> Retime takes: every mining format but SAMI and LRC. The
-#: retimed file keeps the input's format (``map_deltas_back`` saves what it
-#: read), and pysubs2 reads SAMI and (once registered) LRC but raises
+#: retimed file keeps the input's format (the retimer saves the original
+#: ``map_deltas_back`` read), and pysubs2 reads SAMI and (once registered) LRC but raises
 #: NotImplementedError writing either.
 RETIME_SUBTITLE_EXTENSIONS: frozenset[str] = frozenset(DEFAULT_SUBTITLE_PRIORITY) - {".smi", ".lrc"}
 RETIME_SUBTITLE_FILE_FILTER = (

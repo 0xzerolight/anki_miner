@@ -126,7 +126,7 @@ def _load(
     input is an ffmpeg-extracted UTF-8 temp, and for a caller reading cue
     timings only. It is the wrong one for the user's own subtitle: GB18030 and
     Big5 bytes decode as EUC-JP into plausible-looking kanji without raising,
-    and ``map_deltas_back`` saves what it read.
+    and the file ``map_deltas_back`` returns is the one saved.
     """
     try:
         return pysubs2.load(str(path))
@@ -312,11 +312,10 @@ def map_deltas_back(
     original: Path,
     synced_clean: Path,
     kept_indices: list[int],
-    out: Path,
     *,
     encodings: tuple[str, ...] | None = None,
     script_check: Callable[[str], bool] | None = None,
-) -> bool:
+) -> pysubs2.SSAFile | None:
     """Apply the aligner's timing changes to the untouched *original* file.
 
     *synced_clean* is the aligner's output for the cleaned copy; its i-th cue
@@ -326,20 +325,24 @@ def map_deltas_back(
     so the nearest anchor's shift is the block-correct one, where linear
     interpolation across a block boundary would land between blocks.
 
-    Writes the result to *out* in the original's format (styles and all lines
-    preserved). Returns False when the cue counts do not match — the aligner
-    dropped or merged cues and the mapping would be wrong.
+    Returns the original, loaded and retimed, with its events in the
+    original's order (styles and all lines preserved), unsaved: the caller
+    validates these events and saves only an accepted result. Re-reading a
+    saved copy would not do, because pysubs2's WebVTT writer sorts cues by
+    start and so hides a scrambled split result from the validator. Returns
+    None when the cue counts do not match — the aligner dropped or merged cues
+    and the mapping would be wrong.
 
     *encodings* and *script_check* are the mining language's decode ladder; see
     :func:`_load`. This is the load whose text reaches disk, so a ladder that
-    does not match the user's subtitle writes mojibake into *out*.
+    does not match the user's subtitle writes mojibake into the saved result.
     """
     try:
         subs = _load(original, encodings=encodings, script_check=script_check)
         synced = _load(synced_clean, encodings=encodings, script_check=script_check)
     except Exception:  # noqa: BLE001 — parse failure means the candidate is unusable
         logger.warning("subtitle cleaner: map-back parse failed", exc_info=True)
-        return False
+        return None
 
     if len(synced.events) != len(kept_indices):
         logger.warning(
@@ -347,10 +350,10 @@ def map_deltas_back(
             len(kept_indices),
             len(synced.events),
         )
-        return False
+        return None
     if any(i >= len(subs.events) for i in kept_indices):
         logger.warning("subtitle cleaner: kept indices no longer fit the original; discarding")
-        return False
+        return None
 
     # Anchors sorted by original start time for nearest-neighbour lookup.
     anchors = sorted(
@@ -381,13 +384,7 @@ def map_deltas_back(
             _, delta_start, delta_end = nearest
         event.start = max(0, event.start + delta_start)
         event.end = max(0, event.end + delta_end)
-
-    try:
-        subs.save(str(out), encoding="utf-8")
-    except Exception:  # noqa: BLE001 — write failure means the candidate is unusable
-        logger.warning("subtitle cleaner: could not write %s", out, exc_info=True)
-        return False
-    return True
+    return subs
 
 
 # ---------------------------------------------------------------------------
