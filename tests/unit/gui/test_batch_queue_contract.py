@@ -96,6 +96,23 @@ def test_reorder_moves_the_model_not_just_the_view(panel, tmp_path):
     ]
 
 
+@pytest.mark.parametrize(("row", "delta"), [(2, -1), (0, 1)], ids=["alt-up", "alt-down"])
+def test_reorder_passes_the_visible_neighbour_not_a_hidden_one(panel, tmp_path, row, delta):
+    """Under a search, one press moves the selection past the row shown next to it."""
+    _add(panel, "keep-a", tmp_path)
+    _add(panel, "other", tmp_path)
+    _add(panel, "keep-c", tmp_path)
+    panel._on_search_changed("keep")
+    panel.list_widget.item(row).setSelected(True)
+
+    panel._move_selection(delta)
+
+    visible = [panel.list_widget.item(i) for i in range(panel.list_widget.count())]
+    shown = [panel._widget_at(li).display_name for li in visible if not li.isHidden()]
+    assert shown == ["keep-c", "keep-a"]
+    assert [i.display_name for i in panel.queue.get_all_items() if i.display_name != "other"] == ["keep-c", "keep-a"]
+
+
 def test_counter_reports_the_queue_not_the_view(panel, tmp_path):
     _add(panel, "a", tmp_path)
     second = _add(panel, "b", tmp_path)

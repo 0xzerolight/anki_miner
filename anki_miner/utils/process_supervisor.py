@@ -157,6 +157,10 @@ def _windows_descendant_pids(ancestor_pids: set[int]) -> set[int]:
     kernel32.Process32NextW.argtypes = (ctypes.c_void_p, ctypes.POINTER(ProcessEntry))
     kernel32.CloseHandle.restype = ctypes.c_int
     kernel32.CloseHandle.argtypes = (ctypes.c_void_p,)
+    kernel32.OpenProcess.restype = ctypes.c_void_p
+    kernel32.OpenProcess.argtypes = (ctypes.c_ulong, ctypes.c_int, ctypes.c_ulong)
+    kernel32.GetProcessTimes.restype = ctypes.c_int
+    kernel32.GetProcessTimes.argtypes = (ctypes.c_void_p,) + (ctypes.POINTER(ctypes.c_ulonglong),) * 4
     snapshot = kernel32.CreateToolhelp32Snapshot(0x00000002, 0)
     if not snapshot or snapshot == ctypes.c_void_p(-1).value:
         raise OSError(getattr(ctypes, "get_last_error", lambda: 0)(), "process snapshot failed")
@@ -171,13 +175,40 @@ def _windows_descendant_pids(ancestor_pids: set[int]) -> set[int]:
     finally:
         kernel32.CloseHandle(snapshot)
 
+    created: dict[int, int | None] = {}
+
+    def creation_time(pid: int) -> int | None:
+        if pid not in created:
+            created[pid] = None
+            handle = kernel32.OpenProcess(0x1000, False, pid)  # PROCESS_QUERY_LIMITED_INFORMATION
+            if handle:
+                try:
+                    times = [ctypes.c_ulonglong() for _ in range(4)]
+                    if kernel32.GetProcessTimes(handle, *(ctypes.byref(t) for t in times)):
+                        created[pid] = int(times[0].value)
+                finally:
+                    kernel32.CloseHandle(handle)
+        return created[pid]
+
+    # th32ParentProcessID is never cleared when a parent exits and PIDs are
+    # reused, so an entry is a child only when it was created after the
+    # process now holding its recorded parent PID; otherwise an unrelated
+    # program whose long-gone creator had that PID would be terminated.
     descendants: set[int] = set()
     pending = list(ancestor_pids)
     while pending:
-        for pid in children.get(pending.pop(), set()):
-            if pid not in ancestor_pids and pid not in descendants:
-                descendants.add(pid)
-                pending.append(pid)
+        parent = pending.pop()
+        parent_created = creation_time(parent)
+        if parent_created is None:
+            continue
+        for pid in children.get(parent, set()):
+            if pid in ancestor_pids or pid in descendants:
+                continue
+            pid_created = creation_time(pid)
+            if pid_created is None or pid_created < parent_created:
+                continue
+            descendants.add(pid)
+            pending.append(pid)
     return descendants
 
 

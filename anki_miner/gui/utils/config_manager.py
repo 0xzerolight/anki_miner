@@ -12,6 +12,8 @@ from dataclasses import fields
 from pathlib import Path
 from typing import Any, ClassVar
 
+from packaging.version import InvalidVersion, Version
+
 import anki_miner.config.config as _config_module
 from anki_miner.config import ZOOM_PRESETS, AnkiMinerConfig, create_default_config
 from anki_miner.config.config import DEFAULT_SUBTITLE_CLEANUP_PATTERN, PREVIOUS_SUBTITLE_CLEANUP_DEFAULTS
@@ -378,11 +380,42 @@ class GUIConfigManager:
             keep_legacy_utilities=True,
             keep_legacy_feature_switches=True,
         )
-        config = AnkiMinerConfig(**cls._decode_field_types(migrated))
+        decoded = cls._decode_field_types(migrated)
+        cls._reset_unknown_script_variants(decoded)
+        config = AnkiMinerConfig(**decoded)
         stored = migrated.get("language")
         if isinstance(stored, str) and stored.strip() and stored.strip().lower() != config.language:
             config = cls._park_unknown_language(config, stored.strip().lower())
         return config
+
+    @staticmethod
+    def _reset_unknown_script_variants(decoded: dict[str, Any]) -> None:
+        """Reset a ``script_variant`` id this build lacks, in place.
+
+        The id set is append-only like the language codes, so a newer build's
+        id must cost that field, not the whole config (which ``__post_init__``
+        rejects): the live value falls back to the stored language's profile
+        default, and a parked one is dropped so ``switch_language`` restores
+        that profile's default.
+        """
+        from anki_miner.languages import AVAILABLE_LANGUAGES, SCRIPT_VARIANT_IDS
+        from anki_miner.languages.registry import get_profile
+
+        if decoded.get("script_variant", "") not in SCRIPT_VARIANT_IDS:
+            logger.warning("Unknown script_variant %r in config; using the default", decoded["script_variant"])
+            code = str(decoded.get("language", "ja")).strip().lower()
+            profile = get_profile(code if code in AVAILABLE_LANGUAGES else "ja")
+            decoded["script_variant"] = profile.scoped_defaults["script_variant"]
+        stash = decoded.get("language_stash")
+        if isinstance(stash, Mapping):
+            decoded["language_stash"] = {
+                c: (
+                    {k: v for k, v in entry.items() if k != "script_variant"}
+                    if isinstance(entry, Mapping) and entry.get("script_variant", "") not in SCRIPT_VARIANT_IDS
+                    else entry
+                )
+                for c, entry in stash.items()
+            }
 
     @staticmethod
     def _park_unknown_language(config: AnkiMinerConfig, code: str) -> AnkiMinerConfig:
@@ -861,6 +894,12 @@ class GUIConfigManager:
             raise ValueError("Not a settings file: expected a JSON object of config fields")
 
         migration_input = dict(data)
+        if "language" not in migration_input and cls._predates_language_field(raw):
+            # An export from before the `language` field holds Japanese settings
+            # (an absent language means "ja"), so it lands as a switch to ja,
+            # not as an overlay onto the active language. Files without that
+            # provenance keep "absent keeps the current language".
+            migration_input["language"] = "ja"
         if source_schema is not None:
             migration_input["config_schema_version"] = source_schema
         incoming = cls._migrate_dict(
@@ -885,12 +924,15 @@ class GUIConfigManager:
         # `language` is portable but the chains and language_stash are not, so a
         # file for another mining language must land the way a language switch
         # does: park the outgoing language, restore the incoming one's local
-        # chains, then overlay the file. The target is folded through the
-        # config's own normalisation first, so an unknown code (which the config
-        # turns into "ja") never reaches switch_language.
+        # chains, then overlay the file. A code the config's normalisation folds
+        # to "ja" (a newer build's language) is refused: its deck, note type and
+        # POS tags would otherwise land on Japanese.
         base = current_config
         if "language" in incoming:
             target = dataclasses.replace(current_config, language=incoming["language"]).language
+            code = incoming["language"].strip().lower()
+            if code and code != target:
+                raise ValueError(f"Settings for mining language {code!r}, which this version cannot mine")
             if target != current_config.language:
                 base = switch_language(current_config, target)
         cls._overlay_mapping_fields(incoming, base)
@@ -946,6 +988,16 @@ class GUIConfigManager:
         marker = raw.get("config_schema_version")
         source_schema = marker if isinstance(marker, int) and not isinstance(marker, bool) else None
         return (raw.get("settings") if is_envelope else raw), source_schema, False
+
+    @classmethod
+    def _predates_language_field(cls, raw: Any) -> bool:
+        """True for an export envelope written before v3.0.0 added ``language``."""
+        if not isinstance(raw, dict) or cls._EXPORT_MARKER not in raw:
+            return False
+        try:
+            return Version(str(raw.get("app_version"))) < Version("3.0.0")
+        except InvalidVersion:
+            return False
 
     @classmethod
     def _validate_incoming(cls, incoming: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:

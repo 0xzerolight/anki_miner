@@ -580,7 +580,7 @@ echo
 # The graph is generated here in awk rather than imported from
 # build_aselect_graph: this script runs against a BUILT bundle with only the
 # shell's own tooling, and reaching for an interpreter made the smoke depend on
-# whichever python happened to be on PATH. awk mirrors the same pairwise fold —
+# whichever python happened to be on PATH. awk mirrors the same balanced search —
 # the emitted SHAPE is pinned on the Python side by
 # test_build_aselect_graph_nesting_stays_logarithmic; what this proves is that
 # the VENDORED ffmpeg accepts a graph of that shape at a real episode's size.
@@ -595,18 +595,17 @@ if [ -z "$FF" ]; then
 else
   GRAPH_FILE="$SMOKE_HOME/condense_graph_smoke.txt"
   awk -v n="$GRAPH_TERMS" '
+    function node(lo, hi,    mid) {           # balanced search, same as the Python
+      if (hi - lo == 1)
+        return sprintf("gte(t,%.3f)*lt(t,%.3f)", lo * 2, lo * 2 + 1)
+      mid = lo + int((hi - lo) / 2)
+      # Concatenate, never sprintf the subtrees: mawk caps sprintf at 8 KB.
+      return sprintf("if(lt(t,%.3f),", mid * 2) node(lo, mid) "," node(mid, hi) ")"
+    }
     BEGIN {
-      for (i = 0; i < n; i++)
-        term[i] = sprintf("between(t,%.3f,%.3f)", i * 2, i * 2 + 1)
-      count = n
-      while (count > 1) {                     # pairwise fold, same as the Python
-        m = 0
-        for (i = 0; i < count; i += 2)
-          folded[m++] = (i + 1 < count) ? "(" term[i] "+" term[i + 1] ")" : term[i]
-        for (i = 0; i < m; i++) term[i] = folded[i]
-        count = m
-      }
-      printf "aselect=%c%s%c,asetpts=N/SR/TB", 39, term[0], 39
+      printf "asetnsamples=n=64:p=0,aselect=%c", 39
+      printf "%s", node(0, n)
+      printf "%c,asetpts=N/SR/TB", 39
     }
   ' > "$GRAPH_FILE"
   if "$FF" -hide_banner -nostdin -v error \
