@@ -380,11 +380,42 @@ class GUIConfigManager:
             keep_legacy_utilities=True,
             keep_legacy_feature_switches=True,
         )
-        config = AnkiMinerConfig(**cls._decode_field_types(migrated))
+        decoded = cls._decode_field_types(migrated)
+        cls._reset_unknown_script_variants(decoded)
+        config = AnkiMinerConfig(**decoded)
         stored = migrated.get("language")
         if isinstance(stored, str) and stored.strip() and stored.strip().lower() != config.language:
             config = cls._park_unknown_language(config, stored.strip().lower())
         return config
+
+    @staticmethod
+    def _reset_unknown_script_variants(decoded: dict[str, Any]) -> None:
+        """Reset a ``script_variant`` id this build lacks, in place.
+
+        The id set is append-only like the language codes, so a newer build's
+        id must cost that field, not the whole config (which ``__post_init__``
+        rejects): the live value falls back to the stored language's profile
+        default, and a parked one is dropped so ``switch_language`` restores
+        that profile's default.
+        """
+        from anki_miner.languages import AVAILABLE_LANGUAGES, SCRIPT_VARIANT_IDS
+        from anki_miner.languages.registry import get_profile
+
+        if decoded.get("script_variant", "") not in SCRIPT_VARIANT_IDS:
+            logger.warning("Unknown script_variant %r in config; using the default", decoded["script_variant"])
+            code = str(decoded.get("language", "ja")).strip().lower()
+            profile = get_profile(code if code in AVAILABLE_LANGUAGES else "ja")
+            decoded["script_variant"] = profile.scoped_defaults["script_variant"]
+        stash = decoded.get("language_stash")
+        if isinstance(stash, Mapping):
+            decoded["language_stash"] = {
+                c: (
+                    {k: v for k, v in entry.items() if k != "script_variant"}
+                    if isinstance(entry, Mapping) and entry.get("script_variant", "") not in SCRIPT_VARIANT_IDS
+                    else entry
+                )
+                for c, entry in stash.items()
+            }
 
     @staticmethod
     def _park_unknown_language(config: AnkiMinerConfig, code: str) -> AnkiMinerConfig:

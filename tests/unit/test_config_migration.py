@@ -942,3 +942,46 @@ class TestPreviousCleanupDefaultMigration:
         GUIConfigManager.save_config(first)
         second = GUIConfigManager.load_config()
         assert second == first
+
+
+class TestUnknownScriptVariant:
+    """A script_variant id this build lacks costs that field, not the config."""
+
+    def test_live_unknown_variant_resets_to_the_profile_default(self, tmp_config: Path):
+        from anki_miner.languages.registry import get_profile
+        from anki_miner.languages.switching import switch_language
+
+        config = replace(
+            switch_language(AnkiMinerConfig(), "zh"), anki_deck_name="Chinese::Mining", script_variant="traditional"
+        )
+        GUIConfigManager.save_config(config)
+        GUIConfigManager.save_config(config)
+        backup = tmp_config.with_name(tmp_config.name + ".bak")
+        for path in (tmp_config, backup):
+            body = json.loads(path.read_text(encoding="utf-8"))
+            body["script_variant"] = "taiwan"
+            path.write_text(json.dumps(body), encoding="utf-8")
+
+        loaded = GUIConfigManager.load_config()
+
+        assert loaded.language == "zh"
+        assert loaded.anki_deck_name == "Chinese::Mining"
+        assert loaded.script_variant == get_profile("zh").scoped_defaults["script_variant"]
+
+    def test_parked_unknown_variant_lets_the_language_switch(self, tmp_config: Path):
+        from anki_miner.languages.registry import get_profile
+        from anki_miner.languages.switching import switch_language
+
+        _write_config(
+            tmp_config,
+            {
+                "config_schema_version": 4,
+                "language": "ja",
+                "language_stash": {"zh": {"anki_deck_name": "Chinese::Mining", "script_variant": "taiwan"}},
+            },
+        )
+
+        switched = switch_language(GUIConfigManager.load_config(), "zh")
+
+        assert switched.anki_deck_name == "Chinese::Mining"
+        assert switched.script_variant == get_profile("zh").scoped_defaults["script_variant"]
