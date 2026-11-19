@@ -3535,3 +3535,27 @@ class TestNonSquarePixelPictures:
         still = _real_service(test_config, tmp_path).extract_media(video, word, tmp_path, include_audio=False)
         s = _probe_stream(still.screenshot_path, "stream=width,height")
         assert (s["width"], s["height"]) == expected
+
+
+@_needs_real_ffmpeg
+class TestClipTimesNeverReachFfmpegInExponentForm:
+    """offset -1.0, padding 0.3, cue at 1.30 s: the padded start is 5.55e-17, not 0."""
+
+    def test_audio_and_matched_animated_clip_are_cut(self, test_config, tmp_path, make_tokenized_word):
+        video = _make_real_clip(tmp_path / "ep.mkv")
+        start = max(0.0, 1.3 - 1.0)
+        word = make_tokenized_word(start_time=start, end_time=start + 1.7, duration=1.7)
+        assert resolve_audio_window(word, 0.3)[0] != 0.0  # the float hair this test is about
+
+        svc = _real_service(
+            test_config,
+            tmp_path,
+            audio_padding=0.3,
+            screenshot_animated=True,
+            screenshot_animated_format="webp",
+            screenshot_animated_match_audio=True,
+        )
+        media = svc.extract_media(video, word, tmp_path)
+
+        assert media.audio_path is not None and media.audio_path.exists()
+        assert media.screenshot_path is not None and media.screenshot_path.suffix == ".webp"

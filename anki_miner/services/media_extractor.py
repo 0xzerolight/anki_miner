@@ -11,6 +11,7 @@ import time
 import wave
 from collections.abc import Callable
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
+from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
@@ -117,6 +118,17 @@ def clip_audio_filter(duration: float) -> str:
         f"{LOUDNORM_FILTER},afade=t=in:d={CLIP_FADE_SECONDS},"
         f"afade=t=out:st={fade_out_start:.3f}:d={CLIP_FADE_SECONDS}"
     )
+
+
+def ffmpeg_seconds(seconds: float) -> str:
+    """``str(seconds)`` without exponent notation, for an ffmpeg ``-ss``/``-t``.
+
+    ffmpeg's time parser takes digits and one dot only, so a float-rounding
+    hair above zero (``5.551115123125783e-17``) fails the whole cut. The digits
+    are exactly ``str()``'s, never rounded, because a rounded seek can land on
+    a different frame on a high-frame-rate source.
+    """
+    return format(Decimal(repr(seconds)), "f")
 
 
 def resolve_audio_window(word: TokenizedWord, padding: float) -> tuple[float, float]:
@@ -1164,7 +1176,7 @@ class MediaExtractorService:
             resolve_ffmpeg(self.config),
             "-y",  # Overwrite output
             "-ss",
-            str(screenshot_time),
+            ffmpeg_seconds(screenshot_time),
             "-i",
             str(video_file),
             "-frames:v",
@@ -1413,9 +1425,9 @@ class MediaExtractorService:
             resolve_ffmpeg(self.config),
             "-y",
             "-ss",
-            str(clip_start),
+            ffmpeg_seconds(clip_start),
             "-t",
-            str(clip_duration),
+            ffmpeg_seconds(clip_duration),
             "-i",
             str(video_file),
             "-an",
@@ -1601,9 +1613,9 @@ class MediaExtractorService:
             resolve_ffmpeg(self.config),
             "-y",
             "-ss",
-            str(audio_start),
+            ffmpeg_seconds(audio_start),
             "-t",
-            str(audio_duration),
+            ffmpeg_seconds(audio_duration),
             "-i",
             str(video_file),
         ]
