@@ -12,6 +12,8 @@ from dataclasses import fields
 from pathlib import Path
 from typing import Any, ClassVar
 
+from packaging.version import InvalidVersion, Version
+
 import anki_miner.config.config as _config_module
 from anki_miner.config import ZOOM_PRESETS, AnkiMinerConfig, create_default_config
 from anki_miner.config.config import DEFAULT_SUBTITLE_CLEANUP_PATTERN, PREVIOUS_SUBTITLE_CLEANUP_DEFAULTS
@@ -861,6 +863,12 @@ class GUIConfigManager:
             raise ValueError("Not a settings file: expected a JSON object of config fields")
 
         migration_input = dict(data)
+        if "language" not in migration_input and cls._predates_language_field(raw):
+            # An export from before the `language` field holds Japanese settings
+            # (an absent language means "ja"), so it lands as a switch to ja,
+            # not as an overlay onto the active language. Files without that
+            # provenance keep "absent keeps the current language".
+            migration_input["language"] = "ja"
         if source_schema is not None:
             migration_input["config_schema_version"] = source_schema
         incoming = cls._migrate_dict(
@@ -946,6 +954,16 @@ class GUIConfigManager:
         marker = raw.get("config_schema_version")
         source_schema = marker if isinstance(marker, int) and not isinstance(marker, bool) else None
         return (raw.get("settings") if is_envelope else raw), source_schema, False
+
+    @classmethod
+    def _predates_language_field(cls, raw: Any) -> bool:
+        """True for an export envelope written before v3.0.0 added ``language``."""
+        if not isinstance(raw, dict) or cls._EXPORT_MARKER not in raw:
+            return False
+        try:
+            return Version(str(raw.get("app_version"))) < Version("3.0.0")
+        except InvalidVersion:
+            return False
 
     @classmethod
     def _validate_incoming(cls, incoming: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:

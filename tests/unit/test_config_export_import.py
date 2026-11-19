@@ -552,3 +552,38 @@ class TestImportAcrossMiningLanguages:
         assert back.language_stash["de"]["dictionary_chain"] == de_chain
         assert back.language_stash["de"]["anki_deck_name"] == "DE Mining"
         assert "ja" not in back.language_stash
+
+    @pytest.mark.parametrize("app_version", ["2.14.0", "2.8.3"])
+    def test_pre_language_export_lands_as_japanese(self, tmp_path, app_version):
+        """A v2.x export predates the `language` field, so it holds Japanese
+        settings: it switches to ja instead of overlaying ja's deck, note type
+        and POS tags onto the active language."""
+        from anki_miner.languages.switching import switch_language
+
+        out = tmp_path / "old.json"
+        GUIConfigManager.export_config(replace(AnkiMinerConfig(), anki_deck_name="Japanese::Mining"), out)
+        payload = json.loads(out.read_text(encoding="utf-8"))
+        del payload["settings"]["language"]
+        payload["app_version"] = app_version
+        if app_version == "2.8.3":
+            payload.pop("config_schema_version", None)
+            payload["settings"].pop("config_schema_version", None)
+        path = _write_import_file(tmp_path, payload)
+        current = replace(switch_language(AnkiMinerConfig(), "de"), anki_deck_name="Deutsch")
+
+        result = GUIConfigManager.import_config(path, current).config
+
+        assert result.language == "ja"
+        assert result.anki_deck_name == "Japanese::Mining"
+        assert result.language_stash["de"]["anki_deck_name"] == "Deutsch"
+
+    def test_flat_file_without_language_keeps_the_active_language(self, tmp_path):
+        from anki_miner.languages.switching import switch_language
+
+        path = _write_import_file(tmp_path, {"anki_deck_name": "Mine"})
+        current = switch_language(AnkiMinerConfig(), "de")
+
+        result = GUIConfigManager.import_config(path, current).config
+
+        assert result.language == "de"
+        assert result.anki_deck_name == "Mine"
