@@ -549,7 +549,9 @@ class AudioCondenserService:
         # media_temp_folder and may run at once on videos with the same stem;
         # a fixed name let one tool overwrite, read or delete the other's file.
         # ffmpeg -y overwrites the placeholder and infers the format from ext.
-        fd, tmp_name = tempfile.mkstemp(prefix=f"{video.stem}.s{stream.sub_index}.", suffix=ext, dir=out_dir)
+        # No video stem in the prefix: a legal long (CJK) stem plus the random
+        # part and suffix overflows NAME_MAX, and the name is internal anyway.
+        fd, tmp_name = tempfile.mkstemp(prefix=f"sub.s{stream.sub_index}.", suffix=ext, dir=out_dir)
         os.close(fd)
         out_path = Path(tmp_name)
 

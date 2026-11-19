@@ -1173,7 +1173,7 @@ def test_extract_embedded_subtitle_map_and_srt_extension(tmp_path):
     assert cmd[cmd.index("-map") + 1] == "0:s:1"
     assert "-progress" not in cmd  # extraction runs the runner without progress
     assert out is not None and out.parent == tmp_path
-    assert out.name.startswith("ep01.s1.") and out.suffix == ".srt"
+    assert out.name.startswith("sub.s1.") and out.suffix == ".srt"
     assert cmd[-1] == str(out)
 
 
@@ -1186,7 +1186,7 @@ def test_extract_embedded_subtitle_ass_extension(tmp_path, codec):
         patch(_POPEN, side_effect=_factory({}, [], returncode=0)),
     ):
         out = svc.extract_embedded_subtitle(Path("/v/ep01.mkv"), stream, tmp_path)
-    assert out is not None and out.name.startswith("ep01.s0.") and out.suffix == ".ass"
+    assert out is not None and out.name.startswith("sub.s0.") and out.suffix == ".ass"
 
 
 @pytest.mark.parametrize("codec", ["subrip", "webvtt", "mov_text"])
@@ -1198,7 +1198,7 @@ def test_extract_embedded_subtitle_srt_extension_for_text_codecs(tmp_path, codec
         patch(_POPEN, side_effect=_factory({}, [], returncode=0)),
     ):
         out = svc.extract_embedded_subtitle(Path("/v/ep01.mkv"), stream, tmp_path)
-    assert out is not None and out.name.startswith("ep01.s2.") and out.suffix == ".srt"
+    assert out is not None and out.name.startswith("sub.s2.") and out.suffix == ".srt"
 
 
 def test_extract_embedded_subtitle_refuses_bitmap_without_running_ffmpeg(tmp_path):
@@ -1960,6 +1960,22 @@ def test_extract_embedded_subtitle_gives_each_call_its_own_file(tmp_path):
 
     assert season1 is not None and season2 is not None
     assert season1 != season2
+
+
+def test_extract_embedded_subtitle_handles_a_long_cjk_video_name(tmp_path):
+    """B3-002: a legal 243-byte stem must not push the temp name past NAME_MAX."""
+    svc = _service(tmp_path)
+    stream = _sub_stream(sub_index=0, codec="subrip")
+    video = tmp_path / ("【推しの子】第一話「母と子」" + "あ" * 66 + ".mkv")
+    with (
+        patch(_RESOLVE, return_value="ffmpeg"),
+        patch(_POPEN, side_effect=_factory({}, [], returncode=0)),
+    ):
+        out = svc.extract_embedded_subtitle(video, stream, tmp_path)
+
+    assert out is not None
+    assert len(out.name.encode("utf-8")) <= 255
+    assert out.suffix == ".srt"
 
 
 def test_a_signs_track_loses_to_the_full_dialogue_track():
