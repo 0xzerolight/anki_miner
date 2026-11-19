@@ -3559,3 +3559,24 @@ class TestClipTimesNeverReachFfmpegInExponentForm:
 
         assert media.audio_path is not None and media.audio_path.exists()
         assert media.screenshot_path is not None and media.screenshot_path.suffix == ".webp"
+
+
+@_needs_real_ffmpeg
+class TestZeroLengthWindowIsBounded:
+    """Padding 0 and a line clamped to 0.0-0.0 must not cut to the end of the file."""
+
+    def test_window_has_a_floor(self, make_tokenized_word):
+        word = make_tokenized_word(start_time=0.0, end_time=0.0, duration=0.0)
+
+        assert resolve_audio_window(word, 0.0)[1] >= MIN_CLIP_SECONDS
+
+    def test_real_clip_is_short(self, test_config, tmp_path, make_tokenized_word):
+        video = _make_real_clip(tmp_path / "ep.mkv", seconds=6)
+        word = make_tokenized_word(start_time=0.0, end_time=0.0, duration=0.0)
+
+        media = _real_service(test_config, tmp_path, audio_padding=0.0).extract_media(
+            video, word, tmp_path, include_screenshot=False
+        )
+
+        assert media.audio_path is not None
+        assert float(_probe_stream(media.audio_path, "format=duration")["duration"]) < 1.0

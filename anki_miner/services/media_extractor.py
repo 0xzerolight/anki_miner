@@ -62,8 +62,8 @@ _FILTER_PROBE_SOURCE = "anullsrc=r=44100:cl=stereo:d=0.1"
 #: probe input legitimately and read as a broken filter.
 _FILTER_PROBE_GRAPH = "aselect='between(t,1000,1001)',asetpts=N/SR/TB"
 
-#: Shortest clip a user-edited window may produce. Guards against a zero- or
-#: negative-length ffmpeg ``-t`` if a bound ever arrives unclamped.
+#: Shortest audio clip window. Guards against a zero- or negative-length
+#: ffmpeg ``-t``, which ffmpeg reads as no limit.
 MIN_CLIP_SECONDS = 0.2
 
 #: Filter that re-lays a frame in square pixels at its display width. A DVD
@@ -152,7 +152,9 @@ def resolve_audio_window(word: TokenizedWord, padding: float) -> tuple[float, fl
     padded_start = word.start_time - padding
     start = max(0.0, padded_start)
     duration = word.duration + (padding * 2) - (start - padded_start)
-    return start, duration
+    # Padding 0 and a zero-length line (one a negative offset pushed wholly
+    # before 0:00) give 0 s, which ffmpeg's -t reads as no limit.
+    return start, max(duration, MIN_CLIP_SECONDS)
 
 
 def resolve_screenshot_time(
