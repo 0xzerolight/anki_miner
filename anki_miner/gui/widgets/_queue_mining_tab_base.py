@@ -1199,7 +1199,7 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
         """
         selected = self._selected_items()
         self.queue_controls.set_selection_count(len(selected))
-        run_active = self.worker_thread is not None
+        run_active = self._queue_locked()
         runnable = any(i.status == self._status_ready for i in selected)
         retryable = any(self._is_retryable(i) for i in selected)
         removable = any(i.status != self._status_processing for i in selected)
@@ -1257,6 +1257,8 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
 
     def _on_run_selected(self) -> None:
         """Mine the selected runnable rows, in list order."""
+        if self._queue_locked():
+            return
         runnable = [i for i in self._selected_items() if i.status == self._status_ready]
         if runnable:
             self._start_run(runnable)
@@ -1279,7 +1281,7 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
             self._refresh_row(item)
         self._apply_queue_view()
         self._recompute_buttons()
-        if reset and self.worker_thread is None:
+        if reset and not self._queue_locked():
             self._start_run(reset)
 
     def _on_remove_selected(self) -> None:

@@ -2538,3 +2538,22 @@ class TestWaitingMineHoldsResources:
 
         assert tab.release_dictionary_resources() is False
         assert tab._processor is processor
+
+    def test_waiting_mine_locks_the_selection_verbs(self, tab):
+        """A Mine checking its links holds the queue as a run does (D29-A)."""
+        ready = _add_ready_item(tab, "https://youtu.be/aaaaaaaaaaa", video_id="aaaaaaaaaaa")
+        failed = _add_ready_item(tab, "https://youtu.be/ccccccccccc", video_id="ccccccccccc")
+        failed.status = YouTubeItemStatus.ERROR
+        tab.url_edit.setPlainText("https://youtu.be/bbbbbbbbbbb")
+        tab._on_mine_clicked()
+        assert tab._mine_pending
+        tab._list_items[ready].setSelected(True)
+        tab._list_items[failed].setSelected(True)
+
+        assert not tab.queue_controls.run_button.isEnabled()
+        assert not tab.queue_controls.retry_button.isEnabled()
+
+        tab._on_run_selected()
+        tab._on_retry_selected()
+
+        assert tab._queue_worker_cls.call_count == 0
