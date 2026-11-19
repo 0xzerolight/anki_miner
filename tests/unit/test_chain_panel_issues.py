@@ -249,3 +249,34 @@ class TestChainOnlyRemove:
                 ],
             }[source_id]
         )
+
+
+@pytest.mark.parametrize(
+    "commit",
+    [ConfigCommitResult.committed(), ConfigCommitResult.post_save_failure(RuntimeError("refresh failed"))],
+    ids=["saved", "refresh-failed"],
+)
+def test_the_rescan_after_a_remove_keeps_the_remove_notice(qtbot, tmp_path, monkeypatch, commit):
+    """A successful scan clears only its own failure, not a notice posted after it started."""
+    mine = tmp_path / "mine"
+    mine.mkdir()
+    (mine / "keep.txt").write_text("user file", encoding="utf-8")
+    monkeypatch.setattr(QMessageBox, "question", lambda *a, **kw: QMessageBox.StandardButton.Yes)
+    widget = DictionarySettingsPanel(tmp_path)
+    qtbot.addWidget(widget)
+    widget.set_chain(
+        (ChainEntry(kind="indexed", dict_id="mine", enabled=True), ChainEntry(kind="indexed", dict_id="other"))
+    )
+    widget.show()
+    qtbot.waitUntil(lambda: widget._scanned and not widget._scan_in_flight, timeout=3000)
+    widget.set_remove_chain_commit(lambda _chain: commit)
+
+    widget.remove(0)
+    qtbot.waitUntil(lambda: not widget.has_active_mutation() and not widget._scan_in_flight, timeout=3000)
+    for worker in tuple(getattr(widget, "_off_thread_workers", ())):
+        worker.wait(3000)
+
+    issue = widget.issue_banner().current_issue()
+    assert issue is not None, "the remove notice was wiped by the rescan"
+    assert issue.summary == widget._strings.files_left_summary
+    assert (mine / "keep.txt").exists()

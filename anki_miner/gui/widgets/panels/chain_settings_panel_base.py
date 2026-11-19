@@ -67,6 +67,10 @@ from anki_miner.utils.robust_fs import RmtreeOutcome
 
 logger = logging.getLogger(__name__)
 
+# The action id of the issue a failed registry scan posts; a later successful
+# scan clears that issue and nothing else.
+_SCAN_FAILED_ACTION = "chain.rescan"
+
 
 @dataclass(frozen=True)
 class _ChainPanelStrings:
@@ -462,8 +466,12 @@ class ChainSettingsPanelBase(ScreenIssueHost, FormPanel):
         self._scan_in_flight = False
         self._view = view
         # The list is now trustworthy again — that is the only thing that
-        # clears a scan issue.
-        self.clear_screen_issue()
+        # clears a scan issue. Only a scan issue: a remove, cleanup or import
+        # notice posted after this scan was dispatched must stay up.
+        banner = self.issue_banner()
+        current = banner.current_issue() if banner is not None else None
+        if current is not None and current.action_id == _SCAN_FAILED_ACTION:
+            self.clear_screen_issue()
         self._rebuild_list()
         self._finish_scan_mutation()
         if not self._redispatch_pending_scan():
@@ -478,7 +486,7 @@ class ChainSettingsPanelBase(ScreenIssueHost, FormPanel):
             ScreenIssue(
                 summary=self._strings.scan_failed_summary,
                 details=msg,
-                action_id="chain.rescan",
+                action_id=_SCAN_FAILED_ACTION,
                 action_text=self._strings.retry_label,
             ),
             action=self.refresh_registry,
