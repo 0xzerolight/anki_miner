@@ -60,6 +60,7 @@ from PyQt6.QtWidgets import QBoxLayout, QListWidget, QListWidgetItem
 
 from anki_miner.gui.utils.keyboard_shortcuts import scoped_shortcut
 from anki_miner.gui.utils.qt_helpers import configure_data_view, install_copy_rows
+from anki_miner.gui.utils.queue_reorder import move_past_visible
 from anki_miner.gui.utils.run_off_thread import join_or_retain, still_running
 from anki_miner.gui.widgets._mining_tab_base import MiningTabBase
 from anki_miner.gui.widgets.base import page_filler
@@ -1336,24 +1337,15 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
         return order
 
     def _move_selection(self, delta: int) -> None:
-        """Move every selected row one place up (-1) or down (+1)."""
+        """Move every selected row past the visible row above (-1) or below (+1) it."""
         if self._reorder_locked():
             return
         order = self._view_order()
-        rows = sorted(order.index(item) for item in self._selected_items())
-        if not rows:
+        visible = [item for item in order if not self._list_items[item].isHidden()]
+        moved = move_past_visible(order, visible, self._selected_items(), delta)
+        if moved is None:
             return
-        if delta < 0:
-            if rows[0] == 0:
-                return
-            for row in rows:
-                order[row - 1], order[row] = order[row], order[row - 1]
-        else:
-            if rows[-1] == len(order) - 1:
-                return
-            for row in reversed(rows):
-                order[row + 1], order[row] = order[row], order[row + 1]
-        self._reorder_to(order)
+        self._reorder_to(moved)
 
     def _reorder_to(self, order: list[Any]) -> None:
         """Adopt *order* in both the list widget and the queue model.
