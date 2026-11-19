@@ -124,6 +124,10 @@ class LogWidget(QWidget):
         self._level_filter = "all"
         self._search = ""
         self._follow_paused = False
+        # Whether the reader is following the tail. Only a scroll changes it: a
+        # resize or reflow grows the scrollbar's range but keeps its value, so
+        # sampling the position would read "scrolled up" with no scroll at all.
+        self._at_tail = True
         self._pending_new = 0
         self._setup_ui()
         self._update_match_label()
@@ -164,6 +168,7 @@ class LogWidget(QWidget):
         scrollbar = self.text_edit.verticalScrollBar()
         if scrollbar is not None:
             scrollbar.valueChanged.connect(self._on_scrolled)
+            scrollbar.rangeChanged.connect(self._on_range_changed)
 
         layout.addWidget(self.text_edit)
 
@@ -348,10 +353,10 @@ class LogWidget(QWidget):
         entry = LogEntry(datetime.now().strftime("%H:%M:%S"), level, text)
         self._entries.append(entry)
 
-        # "At the bottom" has to be sampled before the insert: appending text
+        # "At the bottom" has to be read before the insert: appending text
         # grows the scrollbar's range, so a reader who was at the bottom would
         # otherwise look scrolled up the instant the line lands.
-        was_at_bottom = self._is_at_bottom()
+        was_at_bottom = self._at_tail
         rendered = self._matches(entry)
 
         if len(self._entries) > self.MAX_LINES:
@@ -442,9 +447,17 @@ class LogWidget(QWidget):
 
     def _on_scrolled(self, _value: int) -> None:
         """Reaching the bottom by hand retires the catch-up affordance."""
-        if self._pending_new and self._is_at_bottom():
+        self._at_tail = self._is_at_bottom()
+        if self._pending_new and self._at_tail:
             self._pending_new = 0
             self._update_jump_button()
+
+    def _on_range_changed(self, _minimum: int, maximum: int) -> None:
+        """Stay pinned to the tail across a resize, reflow or text-scale change."""
+        if self._at_tail and not self._follow_paused:
+            scrollbar = self.text_edit.verticalScrollBar()
+            if scrollbar is not None:
+                scrollbar.setValue(maximum)
 
     def _on_jump_clicked(self) -> None:
         self._scroll_to_bottom()

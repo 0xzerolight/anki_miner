@@ -249,6 +249,21 @@ class TestFollow:
         scrollable.append_error("visible failure")
         assert "1" in scrollable.jump_button.text()
 
+    def test_a_resize_the_reader_did_not_scroll_for_keeps_following(self, scrollable, qtbot):
+        bar = scrollable.text_edit.verticalScrollBar()
+        assert scrollable._is_at_bottom()
+        before = bar.maximum()
+        # Narrower and shorter: the text reflows and the range grows, but the
+        # reader never touched the scrollbar.
+        scrollable.resize(200, 200)
+        qtbot.waitUntil(lambda: bar.maximum() > before)
+        QApplication.processEvents()
+        scrollable.append_info("newest")
+        QApplication.processEvents()
+        assert scrollable._pending_new == 0
+        assert scrollable.jump_button.isHidden()
+        assert bar.value() == bar.maximum()
+
 
 class TestCopy:
     def test_copy_visible_respects_the_filters(self, log):
