@@ -2668,6 +2668,17 @@ def main():
     stats_service = composed.stats_service
     analytics_tab = composed.analytics_tab
 
+    # Offer what the last session left behind (D16-C). After translators and
+    # every addTab, so the question is translated and Restore has somewhere to
+    # put the rows; skipped in the installer smoke, where no modal may open.
+    # Before commit_boot: its optional work runs inside this modal's event
+    # loop, and a dictionary update resumes the very partial Discard deletes.
+    if not installer_smoke:
+        try:
+            _offer_recovery_if_locked(window, getattr(app, "_instance_lock", None))
+        except Exception:  # noqa: BLE001 — bucket A: recovery offer is skipped for this session.
+            logger.exception("Could not offer the previous session's downloads and queues")
+
     # Full widget composition and required version save now form one commit
     # boundary. No startup worker is started before this returns successfully.
     window.commit_boot(suppress_optional=installer_smoke)
@@ -2681,15 +2692,6 @@ def main():
         _warn_if_active_language_unavailable(window)
     except Exception:  # noqa: BLE001 — bucket A: boot continues without the banner.
         logger.exception("Could not check the active mining language's availability")
-
-    # Offer what the last session left behind (D16-C). After translators and
-    # every addTab, so the question is translated and Restore has somewhere to
-    # put the rows; skipped in the installer smoke, where no modal may open.
-    if not installer_smoke:
-        try:
-            _offer_recovery_if_locked(window, getattr(app, "_instance_lock", None))
-        except Exception:  # noqa: BLE001 — bucket A: recovery offer is skipped for this session.
-            logger.exception("Could not offer the previous session's downloads and queues")
 
     # Show window first so the user sees the UI immediately. The stats DB open
     # runs off-thread below. The YouTube tab's episode processor is built even
