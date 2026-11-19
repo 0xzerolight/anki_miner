@@ -147,8 +147,10 @@ class _FakeService:
             return True, None
         return False, self._condense_failure
 
-    def concat(self, parts, out_audio, *, total_ms, progress_cb=None, cancel_event=None):
-        self.concat_calls.append({"parts": list(parts), "out_audio": out_audio, "total_ms": total_ms})
+    def concat(self, parts, out_audio, *, total_ms, bitrate_kbps=96, progress_cb=None, cancel_event=None):
+        self.concat_calls.append(
+            {"parts": list(parts), "out_audio": out_audio, "total_ms": total_ms, "bitrate_kbps": bitrate_kbps}
+        )
         if progress_cb is not None:
             progress_cb(50)
         if self._concat_result:
@@ -1181,10 +1183,10 @@ def _merge_items(tmp_path: Path, count: int = 2) -> list[CondenseItem]:
     return items
 
 
-def test_plan_merge_part_paths_are_index_keyed(tmp_path):
-    assert plan_merge_part_paths(2, tmp_path, "mp3") == [
-        tmp_path / "0000_condensed.mp3",
-        tmp_path / "0001_condensed.mp3",
+def test_plan_merge_part_paths_are_index_keyed_lossless(tmp_path):
+    assert plan_merge_part_paths(2, tmp_path) == [
+        tmp_path / "0000_condensed.flac",
+        tmp_path / "0001_condensed.flac",
     ]
 
 
@@ -1196,7 +1198,7 @@ def test_merge_mode_stages_parts_and_merges_them(qapp, tmp_path):
     final = out_dir / "season.mp3"
 
     service = _FakeService()
-    worker = _make_worker(items, config, service=service, merge_into=final)
+    worker = _make_worker(items, config, service=service, merge_into=final, bitrate_kbps=128)
     cap = _capture(worker)
     worker.run()
     worker.wait(2000)
@@ -1210,6 +1212,7 @@ def test_merge_mode_stages_parts_and_merges_them(qapp, tmp_path):
     assert len(service.concat_calls) == 1
     assert service.concat_calls[0]["parts"] == staged
     assert service.concat_calls[0]["out_audio"] == final
+    assert service.concat_calls[0]["bitrate_kbps"] == 128
     # The merge is emitted as one more queue item.
     assert cap["started"] == [0, 1, 2]
     assert cap["finished"][-1] == (2, final, None)
