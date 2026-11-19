@@ -261,9 +261,11 @@ def transcode_for_alignment(
 ) -> CleanedForAlignment | None:
     """Write *src* to *dest* in *dest*'s format, dropping only what cannot survive it.
 
-    The escape hatch for a format the aligners cannot read at all: alass v2
-    accepts SubRip/SubStationAlpha/VobSub and errors out on WebVTT, so a .vtt
-    retime would otherwise lose two of its four engines. Reached only when
+    The alignment copy when cleaning declines, so the engine's output is still
+    mapped back onto the original, and the escape hatch for a format the
+    aligners cannot read at all: alass v2 accepts SubRip/SubStationAlpha/VobSub
+    and errors out on WebVTT, so a .vtt retime would otherwise lose two of its
+    four engines. Reached only when
     :func:`clean_for_alignment` declines (too few dialogue cues, or an
     unparsable file) — when it succeeds it has already transcoded, because
     ``pysubs2.save`` takes its format from the destination extension.
@@ -313,6 +315,7 @@ def map_deltas_back(
     synced_clean: Path,
     kept_indices: list[int],
     *,
+    scale: float = 1.0,
     encodings: tuple[str, ...] | None = None,
     script_check: Callable[[str], bool] | None = None,
 ) -> pysubs2.SSAFile | None:
@@ -320,8 +323,12 @@ def map_deltas_back(
 
     *synced_clean* is the aligner's output for the cleaned copy; its i-th cue
     corresponds to original event ``kept_indices[i]``. Kept cues take their
-    exact new timings. Dropped cues take the start/end delta of the nearest
-    kept cue by original start time — aligners shift in per-block constants,
+    new start, and end their own original duration (times the engine's
+    framerate *scale*) later: engines only shift and scale cues, and
+    ffsubsync's output carries its parser's 10 s cap on every cue's length,
+    so the synced end is not the line's end. Dropped cues take the start/end
+    delta of the nearest kept cue by original start time — aligners shift in
+    per-block constants,
     so the nearest anchor's shift is the block-correct one, where linear
     interpolation across a block boundary would land between blocks.
 
@@ -355,23 +362,23 @@ def map_deltas_back(
         logger.warning("subtitle cleaner: kept indices no longer fit the original; discarding")
         return None
 
-    # Anchors sorted by original start time for nearest-neighbour lookup.
-    anchors = sorted(
-        (
-            subs.events[orig_i].start,
-            synced_event.start - subs.events[orig_i].start,
-            synced_event.end - subs.events[orig_i].end,
+    new_spans = {
+        orig_i: (
+            synced_event.start,
+            synced_event.start + round((subs.events[orig_i].end - subs.events[orig_i].start) * scale),
         )
         for orig_i, synced_event in zip(kept_indices, synced.events, strict=True)
+    }
+    # Anchors sorted by original start time for nearest-neighbour lookup.
+    anchors = sorted(
+        (subs.events[orig_i].start, start - subs.events[orig_i].start, end - subs.events[orig_i].end)
+        for orig_i, (start, end) in new_spans.items()
     )
     starts = [a[0] for a in anchors]
 
-    kept_set = set(kept_indices)
-    by_original_index = dict(zip(kept_indices, synced.events, strict=True))
     for i, event in enumerate(subs.events):
-        if i in kept_set:
-            event.start = by_original_index[i].start
-            event.end = by_original_index[i].end
+        if i in new_spans:
+            event.start, event.end = new_spans[i]
             continue
         pos = bisect_left(starts, event.start)
         if pos <= 0:

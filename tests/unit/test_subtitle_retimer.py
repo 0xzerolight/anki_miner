@@ -319,6 +319,31 @@ class TestCleaningRoundTrip:
         assert outcome.engine == "alass"
         assert _cue_starts(out_sub) == [s + 1000 for s in starts]
 
+    def test_a_short_file_keeps_a_line_ffsubsync_clipped_to_ten_seconds(self, cfg, video, tmp_path):
+        """Too few cues to clean: the engine's output is still mapped back, not committed."""
+        in_sub = tmp_path / "jp01.srt"
+        subs = pysubs2.SSAFile()
+        subs.events = [pysubs2.SSAEvent(start=s, end=s + 1000, text=f"せりふ {i}") for i, s in enumerate(_starts(5))]
+        subs.events[2].end = subs.events[2].start + 14_000
+        subs.save(str(in_sub), encoding="utf-8")
+        out_sub = tmp_path / "jp01_retimed.srt"
+
+        def _ffs(config, reference, sub, out, **kwargs):
+            synced = pysubs2.load(str(sub))
+            for event in synced.events:
+                event.start += 3000
+                event.end = min(event.end + 3000, event.start + 10_000)
+            synced.save(str(out), encoding="utf-8")
+            return SyncResult(ok=True, engine="ffsubsync", offset_seconds=3.0, framerate_scale=1.0)
+
+        with patch(_FFS, side_effect=_ffs), patch(_ALASS):
+            outcome = retime_subtitle(cfg, video, in_sub, out_sub)
+
+        assert outcome
+        long_cue = pysubs2.load(str(out_sub)).events[2]
+        assert long_cue.start == _starts(5)[2] + 3000
+        assert long_cue.end - long_cue.start == 14_000
+
 
 class TestCommit:
     def test_existing_output_replaced_without_a_backup(self, cfg, video, in_sub, out_sub):

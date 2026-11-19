@@ -294,6 +294,40 @@ class TestMapDeltasBack:
         out = self._round_trip(tmp_path, events, kept, lambda i: -2500)
         assert out.events[0].start == 0
 
+    def test_kept_cue_keeps_its_own_duration_when_the_engine_clipped_it(self, tmp_path):
+        """ffsubsync clips every cue to start + 10 s on the objects it shifts and writes."""
+        events = _make_dialogue(20)
+        events[7] = _dialogue(events[7].start, events[7].start + 14_000)
+        src = _save(tmp_path / "in.srt", events)
+        cleaned = clean_for_alignment(src, tmp_path / "clean.srt")
+        assert cleaned is not None
+        synced = pysubs2.load(str(cleaned.path))
+        for event in synced:
+            event.start += 3000
+            event.end = min(event.end + 3000, event.start + 10_000)
+        synced.save(str(tmp_path / "synced.srt"))
+
+        mapped = map_deltas_back(src, tmp_path / "synced.srt", cleaned.kept_indices)
+
+        assert mapped is not None
+        long_cue = mapped.events[7]
+        assert long_cue.start == events[7].start + 3000
+        assert long_cue.end - long_cue.start == 14_000
+
+    def test_kept_cue_duration_follows_the_framerate_scale(self, tmp_path):
+        events = _make_dialogue(12)
+        src = _save(tmp_path / "in.srt", events)
+        synced = pysubs2.load(str(src))
+        for event in synced:
+            event.start = round(event.start * 1.25)
+            event.end = event.start + 500
+        synced.save(str(tmp_path / "synced.srt"))
+
+        mapped = map_deltas_back(src, tmp_path / "synced.srt", list(range(12)), scale=1.25)
+
+        assert mapped is not None
+        assert all(e.end - e.start == 1250 for e in mapped.events)
+
     def test_cue_count_mismatch_returns_false(self, tmp_path):
         events = _make_dialogue(12)
         original = _save(tmp_path / "orig.srt", events)

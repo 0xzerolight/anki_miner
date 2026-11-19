@@ -200,10 +200,13 @@ def retime_subtitle(
             encodings=profile.import_encodings,
             **script_check_kwarg(profile.import_encodings, profile.script),
         )
-        if cleaned is None and align_suffix != in_sub.suffix.lower():
-            # Cleaning declined, but no engine can read this format as-is. Keep
-            # every representable cue rather than dropping non-dialogue: the
-            # cue floor is already unmet, so there is nothing to spare.
+        if cleaned is None:
+            # Cleaning declined. Keep every representable cue rather than
+            # dropping non-dialogue (the cue floor is already unmet, so there
+            # is nothing to spare), but still align a copy: no engine reads
+            # some formats (WebVTT) as-is, and an engine's output is never
+            # committed directly -- ffsubsync's writer sorts cues and caps
+            # their length at 10 s, which only the map-back undoes.
             cleaned = transcode_for_alignment(
                 in_sub,
                 tmp_dir / (out_sub.stem + ".retime-clean" + align_suffix),
@@ -275,6 +278,7 @@ def retime_subtitle(
                     in_sub,
                     candidate,
                     cleaned.kept_indices,
+                    scale=result.framerate_scale or 1.0,
                     encodings=profile.import_encodings,
                     **script_check_kwarg(profile.import_encodings, profile.script),
                 )
