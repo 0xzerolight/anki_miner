@@ -5,8 +5,8 @@ from __future__ import annotations
 import pytest
 
 from anki_miner.config.config import AnkiMinerConfig
+from anki_miner.languages.registry import get_profile
 from anki_miner.models.reading import ReadingUnit
-from anki_miner.services.subtitle_parser import SubtitleParserService
 
 
 def _fugashi_available() -> bool:
@@ -23,7 +23,8 @@ pytestmark = pytest.mark.skipif(not _fugashi_available(), reason="fugashi/unidic
 
 
 def _fronts(text: str, attested: frozenset[str] = frozenset()) -> list[str]:
-    service = SubtitleParserService(AnkiMinerConfig(), term_lookup=lambda terms: set(terms) & attested)
+    # The ja factory's parser: the name-piece rejects are Japanese-only.
+    service = get_profile("ja").create_parser(AnkiMinerConfig(), term_lookup=lambda terms: set(terms) & attested)
     words, _index, _counts = service.parse_text_units(
         [ReadingUnit(text=text, index=0, location_label="t")], want_line_index=False
     )

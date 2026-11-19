@@ -602,6 +602,7 @@ class SubtitleParserService:
         normalize: Callable[[str], str] | None = None,
         has_target_script: Callable[[str], bool] | None = None,
         skip_line: Callable[[str], bool] | None = None,
+        name_piece_rejects: bool = False,
         ellipsis_fragment_guard: bool = True,
         sentence_annotation: bool = True,
         attested_reading_fallback: bool = False,
@@ -718,6 +719,11 @@ class SubtitleParserService:
                 file). Such a line is listed and previewed like any other and
                 never tokenized, so no word is mined from it. ``None`` — every
                 language but ja — tokenizes every line.
+            name_piece_rejects: Whether a token UniDic cut out of a Japanese
+                name is turned away (``_is_kanji_glue``,
+                ``_is_name_honorific_tail``): its tables read UniDic lemmas and
+                orthBases. ``True`` from the ja factory only; another
+                segmenter's 助 or 主殿 is an ordinary word.
             ellipsis_fragment_guard: Whether the U8 truncation-fragment reject
                 (``_is_ellipsis_truncation_fragment``) runs at all. Both of its
                 signals read Japanese: a severed conjugation is recognised by a
@@ -783,6 +789,8 @@ class SubtitleParserService:
         # U8 truncation-fragment reject; False ⇒ skipped outright, both of its
         # signals being unidic-shaped (see _mine_token).
         self._ellipsis_fragment_guard = ellipsis_fragment_guard
+        # UniDic name-piece rejects; False ⇒ skipped (see _mine_token).
+        self._name_piece_rejects = name_piece_rejects
         # Bilingual-cue line gate; None ⇒ every physical line of a cue is kept.
         # Injected once per instance, so the per-FILE line cache below can never
         # replay line state tokenized under a different gate.
@@ -3044,7 +3052,9 @@ class SubtitleParserService:
         if rejection is None:
             if self._is_katakana_run_fragment(word_token, text, tok_start, tok_end):
                 return False
-            if self._is_kanji_glue(word_token) or self._is_name_honorific_tail(word_token, text, tok_start):
+            if self._name_piece_rejects and (
+                self._is_kanji_glue(word_token) or self._is_name_honorific_tail(word_token, text, tok_start)
+            ):
                 return False
             return not self._ellipsis_reject(word_token, text, tok_start, tok_end)
         how = self._kana_recovery(word_token)

@@ -808,6 +808,7 @@ def _create_subtitle_parser(config: AnkiMinerConfig, **lookups: Any) -> Subtitle
             config,
             has_target_script=profile.script.contains_target_script,
             skip_line=is_chinese_line,
+            name_piece_rejects=True,
             **lookups,
         )
     return cast(SubtitleParserService, profile.create_parser(config, **lookups))
