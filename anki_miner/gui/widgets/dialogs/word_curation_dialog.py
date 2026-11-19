@@ -2662,6 +2662,12 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
             # Nothing focused: leave the timer alone rather than debouncing a
             # seek/lookup for a row that isn't there.
             return
+        if original_index == self._pending_index:
+            # Another cell of the same word's row (its include box, its
+            # sentence): the panes already show it, or a pending tick will. A
+            # re-run would re-seek and pause, stopping playback and losing a
+            # hand-stepped frame.
+            return
 
         self._pending_word = word
         self._pending_index = original_index
