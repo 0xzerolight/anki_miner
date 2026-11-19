@@ -27,6 +27,7 @@ import pytest
 
 pytest.importorskip("PyQt6.QtWidgets")
 
+from anki_miner.gui.utils.run_off_thread import still_running
 from anki_miner.gui.widgets.booksync_tab import BookSyncTab
 from anki_miner.gui.widgets.condense_tab import CondenseTab
 from anki_miner.gui.widgets.download_tab import DownloadTab
@@ -598,3 +599,32 @@ def test_probe_landing_mid_pair_scan_keeps_condense_disabled(qtbot, tmp_path):
     _, _scan, _apply, _on_error = held[0]
     _on_error("boom")
     assert tab._folder_scan_pending is False
+
+
+# ---------------------------------------------------------------------------
+# X4-002: a run in flight owns the disabled primary
+# ---------------------------------------------------------------------------
+
+
+class _RunningWorker:
+    """Stands in for a live run's QThread."""
+
+    def isRunning(self) -> bool:  # noqa: N802 - Qt name
+        return True
+
+
+@pytest.mark.parametrize("spec", _RUN_TABS, ids=_spec_id)
+def test_config_refresh_mid_run_keeps_the_primary_disabled(spec, qtbot, tmp_path):
+    """X4-002: a config refresh mid-run must not re-arm the run button beside Cancel."""
+    tab = _make_tab(spec, qtbot, tmp_path)
+    primary = getattr(tab, spec.primary)
+    primary.setEnabled(False)
+    tab.worker_thread = _RunningWorker()
+    try:
+        with _patched(spec.construct_patches):
+            tab.update_config(tab.config)
+            qtbot.waitUntil(lambda: not still_running(tab._availability_worker), timeout=3000)
+            qtbot.wait(100)  # the probe verdict is queued to the GUI thread
+        assert not primary.isEnabled()
+    finally:
+        tab.worker_thread = None

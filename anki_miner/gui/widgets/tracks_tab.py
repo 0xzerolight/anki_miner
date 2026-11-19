@@ -324,9 +324,6 @@ class TracksTab(_ToolTabBase):
 
     def _apply_probe_result(self, result: object) -> None:
         super()._apply_probe_result(result)
-        # A config refresh mid-run re-probes; the run owns Extract until it ends.
-        if still_running(self.worker_thread):
-            self._primary_button.setEnabled(False)
         # A path set while ffmpeg was unknown is listed once it turns out present.
         if self._engine_is_available and self._probe is None and self.input_selector.path_or_none() is not None:
             self._probe_timer.start()

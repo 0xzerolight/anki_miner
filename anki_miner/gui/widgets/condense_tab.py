@@ -65,9 +65,11 @@ from anki_miner.gui.widgets.enhanced import (
     make_menu_button,
 )
 from anki_miner.gui.workers.condense_worker import (
+    CONDENSE_OUTPUT_EXTENSIONS,
     CondenseItem,
     CondenseOutputCollisionError,
     CondenseWorker,
+    is_condensed_output,
     plan_condense_outputs,
 )
 from anki_miner.languages.registry import audio_title_language, config_language, get_profile, subtitle_language
@@ -747,6 +749,9 @@ class CondenseTab(RunOptionsMixin, _ToolTabBase):
                 self.subtitle_track_action.setEnabled(not self.subtitle_file_selector.path_or_none())
             except RuntimeError:
                 return
+            # The pick belongs to the file that was probed, as in the audio handler.
+            if self.media_file_selector.path_or_none() != media_path:
+                return
             streams = cast("list[SubtitleStream]", result)
             if not streams:
                 QMessageBox.information(
@@ -770,6 +775,8 @@ class CondenseTab(RunOptionsMixin, _ToolTabBase):
                 parent=self,
             )
             if dialog.exec() == SubtitleTracksDialog.DialogCode.Accepted:
+                if self.media_file_selector.path_or_none() != media_path:
+                    return
                 self._subtitle_track_override = dialog.selected_override()
                 self._refresh_track_summary()
 
@@ -815,7 +822,7 @@ class CondenseTab(RunOptionsMixin, _ToolTabBase):
             items = self._collect_single_item()
             if not items:
                 return
-            self._continue_condense(items)
+            self._continue_condense(items, single=True)
             return
 
         # Folder mode: episode-number pairing scans two directories, which can
@@ -829,7 +836,8 @@ class CondenseTab(RunOptionsMixin, _ToolTabBase):
             if not items:
                 self.condense_button.setEnabled(True)
                 return
-            self._continue_condense(items)
+            # A folder run, whatever mode the toggle shows when the listing lands.
+            self._continue_condense(items, single=False)
 
         self._collect_folder_items_async(_on_items)
 
@@ -846,7 +854,12 @@ class CondenseTab(RunOptionsMixin, _ToolTabBase):
         default_stem = Path(folder_str).name if folder_str else items[0].media.parent.name
         # safe_filename turns "" into "unnamed", so only sanitize a real entry.
         typed = self.merge_name_edit.text().strip()
-        stem = Path(safe_filename(typed) if typed else safe_filename(default_stem)).stem
+        # The name is used whole: Path.stem would cut "Show.S01" to "Show", so two
+        # seasons would share one file. Only a typed output extension is dropped.
+        stem = safe_filename(typed) if typed else safe_filename(default_stem)
+        base, dot, ext = stem.rpartition(".")
+        if typed and dot and base and f".{ext.lower()}" in CONDENSE_OUTPUT_EXTENSIONS:
+            stem = base
         merge_into = resolve_output_path(merge_dir, bounded_output_name(stem, f".{output_format}", merge_dir))
         if merge_into.exists() and not self.overwrite_checkbox.isChecked():
             self.show_screen_issue(
@@ -858,16 +871,18 @@ class CondenseTab(RunOptionsMixin, _ToolTabBase):
             return None
         return merge_into
 
-    def _continue_condense(self, items: list[CondenseItem]) -> None:
-        """Plan outputs, validate, optionally collect metadata, then start the worker."""
+    def _continue_condense(self, items: list[CondenseItem], *, single: bool) -> None:
+        """Plan outputs, validate, optionally collect metadata, then start the worker.
+
+        *single* is the mode the run was requested in: a folder listing runs off
+        the GUI thread, and the toggle may have moved by the time it lands.
+        """
         out_dir = self._custom_output_dir
         output_format = str(self.format_combo.currentData())
-        # Single-file mode honors the per-file track picks; folder mode auto-detects.
-        single_mode = not self.media_file_selector.isHidden()
 
         merge_into: Path | None = None
         output_paths: list[Path] = []
-        if not single_mode and self.merge_checkbox.isChecked():
+        if not single and self.merge_checkbox.isChecked():
             merge_into = self._plan_merged_output(items, out_dir, output_format)
             if merge_into is None:
                 self.condense_button.setEnabled(True)
@@ -931,8 +946,9 @@ class CondenseTab(RunOptionsMixin, _ToolTabBase):
         self._begin_tool_run(total_steps)
         self._total_files = total_steps
 
-        audio_override = self._audio_track_override if single_mode else None
-        subtitle_override = self._subtitle_track_override if single_mode else None
+        # Single-file mode honors the per-file track picks; folder mode auto-detects.
+        audio_override = self._audio_track_override if single else None
+        subtitle_override = self._subtitle_track_override if single else None
 
         worker = CondenseWorker(
             self.config,
@@ -1020,7 +1036,7 @@ class CondenseTab(RunOptionsMixin, _ToolTabBase):
         # No subtitle folder → per-file auto-detection over the media folder.
         self._scan_folder_async(
             media_folder,
-            lambda f: f.suffix.lower() in CONDENSE_MEDIA_EXTENSIONS,
+            lambda f: f.suffix.lower() in CONDENSE_MEDIA_EXTENSIONS and not is_condensed_output(f),
             lambda media_files: on_items([CondenseItem(m, None) for m in media_files]),
             empty_summary=self.tr("No media files were found in that folder."),
             failed_summary=self.tr("That media folder could not be scanned."),
@@ -1035,7 +1051,10 @@ class CondenseTab(RunOptionsMixin, _ToolTabBase):
             all_media = sorted(
                 f
                 for f in media_folder.iterdir()
-                if f.is_file() and f.suffix.lower() in CONDENSE_MEDIA_EXTENSIONS and not is_junk_path(f.name)
+                if f.is_file()
+                and f.suffix.lower() in CONDENSE_MEDIA_EXTENSIONS
+                and not is_condensed_output(f)
+                and not is_junk_path(f.name)
             )
             file_pairs = FilePairMatcher.find_pairs_by_episode_number(
                 media_folder,
@@ -1044,6 +1063,10 @@ class CondenseTab(RunOptionsMixin, _ToolTabBase):
                 subtitle_extensions=CONDENSE_SUBTITLE_EXTENSIONS,
                 language=language,
             )
+            # An earlier run's output shares its source's episode number and
+            # sorts after it ("Ep 01." < "Ep 01_condensed"), so the source keeps
+            # the match; the output's own pair is dropped here.
+            file_pairs = [fp for fp in file_pairs if not is_condensed_output(fp.video)]
             return all_media, file_pairs
 
         def _apply(result: object) -> None:
