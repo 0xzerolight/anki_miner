@@ -57,7 +57,7 @@ CREATE TABLE IF NOT EXISTS meta (
 # No LIMIT: fetchers want all candidate rows; dictionary storage's LIMIT 5 does not apply.
 _LOOKUP_SQL = (
     "SELECT file, source, speaker, reading FROM entries "
-    "WHERE expression = ? AND (? = '' OR reading IS NULL OR reading = ?) "
+    "WHERE expression = ? AND (? = '' OR reading IS NULL OR reading IN (?, ?)) "
     "ORDER BY id"
 )
 
@@ -180,14 +180,18 @@ def read_meta_cached(db_path: Path) -> dict[str, str]:
     return _sqlite_index.read_meta_cached(db_path, read_meta)
 
 
-def lookup(conn: sqlite3.Connection, expression: str, reading: str | None = "") -> list[AudioEntry]:
+def lookup(
+    conn: sqlite3.Connection, expression: str, reading: str | None = "", alt_reading: str = ""
+) -> list[AudioEntry]:
     """Return AudioEntry list matching expression (and optionally reading).
 
     reading='' or reading=None both act as wildcards: NULL-reading rows and
     all-reading rows are returned.  Pass a non-empty reading to restrict to
-    rows whose reading is NULL or matches exactly.
+    rows whose reading is NULL or matches exactly; ``alt_reading`` also
+    matches (the reading in the other kana script), still in id order.
     """
     expression = unicodedata.normalize("NFC", expression)
     r = unicodedata.normalize("NFC", reading) if reading is not None else ""
-    rows = conn.execute(_LOOKUP_SQL, (expression, r, r)).fetchall()
+    alt = unicodedata.normalize("NFC", alt_reading) if alt_reading else r
+    rows = conn.execute(_LOOKUP_SQL, (expression, r, r, alt)).fetchall()
     return [AudioEntry(file=row[0], source=row[1], speaker=row[2], reading=row[3]) for row in rows]

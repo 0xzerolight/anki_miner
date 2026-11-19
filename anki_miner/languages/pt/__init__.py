@@ -8,6 +8,7 @@ One language with a variety switch (B.3): ``config.script_variant`` is ``br``
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import TYPE_CHECKING
 
 from anki_miner.config.config import AudioSourceEntry
@@ -66,11 +67,24 @@ def pt_gtts_lang(config: AnkiMinerConfig) -> str:
     return "pt-PT" if config.script_variant == "pt" else "pt"
 
 
+def _voice_stem_prefix(prefix: str) -> Callable[[AnkiMinerConfig], str]:
+    """*prefix* for the Brazilian voice, ``<prefix>-PT`` for the European one.
+
+    The stem doubles as the Anki media filename, so each voice keeps its own
+    cache and card file; Brazilian keeps the bare prefix its caches already use.
+    """
+
+    def resolve(config: AnkiMinerConfig) -> str:
+        return f"{prefix}-PT" if pt_gtts_lang(config) == "pt-PT" else prefix
+
+    return resolve
+
+
 PT_AUDIO = AudioDefaults(
     gtts_lang=pt_gtts_lang,
     # Namespaced stems: the stem doubles as the Anki media filename.
-    cache_stem_prefix="googletts_pt",
-    sentence_cache_stem_prefix="sentencetts_pt",
+    cache_stem_prefix=_voice_stem_prefix("googletts_pt"),
+    sentence_cache_stem_prefix=_voice_stem_prefix("sentencetts_pt"),
     custom_fetcher_language="pt",
     papago_speaker=None,
     wikimedia_prefixes=("LL-Q5146 (por)-", "Pt-br-", "Pt-pt-"),

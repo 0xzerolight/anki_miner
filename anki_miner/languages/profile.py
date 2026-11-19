@@ -222,14 +222,17 @@ class AudioDefaults:
     called at :132 and :180). Both fetchers take their prefix at construction
     from ``service_factory``; no language-code branch lives outside
     ``languages/`` (there is no ``service_factory.sentence_cache_stem_prefix``).
+    Like ``gtts_lang``, either prefix may be a callable of the running config:
+    a language whose Google voice follows a setting (pt) names that voice in
+    its prefixes, so two voices never share a stem or an Anki media filename.
     """
 
     #: gTTS language code, or a callable resolving it from the running config
     #: (pt picks ``pt``/``pt-PT`` by variety). "" means the language has no
     #: Google voice: service_factory builds neither Google leg.
     gtts_lang: str | Callable[[AnkiMinerConfig], str]
-    cache_stem_prefix: str
-    sentence_cache_stem_prefix: str
+    cache_stem_prefix: str | Callable[[AnkiMinerConfig], str]
+    sentence_cache_stem_prefix: str | Callable[[AnkiMinerConfig], str]
     custom_fetcher_language: str
     papago_speaker: str | None = None
     default_chain: tuple[AudioSourceEntry, ...] = ()
@@ -257,6 +260,16 @@ class AudioDefaults:
     def resolved_gtts_lang(self, config: AnkiMinerConfig) -> str:
         """The gTTS code for *config*; "" when the language has no Google voice."""
         return self.gtts_lang(config) if callable(self.gtts_lang) else self.gtts_lang
+
+    def resolved_cache_stem_prefix(self, config: AnkiMinerConfig) -> str:
+        """The word-audio stem prefix for *config*."""
+        prefix = self.cache_stem_prefix
+        return prefix(config) if callable(prefix) else prefix
+
+    def resolved_sentence_cache_stem_prefix(self, config: AnkiMinerConfig) -> str:
+        """The sentence-audio stem prefix for *config*."""
+        prefix = self.sentence_cache_stem_prefix
+        return prefix(config) if callable(prefix) else prefix
 
     def sentence_web_voice(self, config: AnkiMinerConfig) -> str:
         """The web voice the sentence-TTS "google" leg speaks with: "google" when Google

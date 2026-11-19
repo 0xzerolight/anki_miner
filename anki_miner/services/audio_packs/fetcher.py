@@ -316,13 +316,11 @@ class LocalAudioPackFetcher:
         kana helpers raise; both callers own the never-raises guard.
         """
         if is_kana_only(reading):
-            rows = storage.lookup(conn, mined_form, reading)
-            katakana_variant = hiragana_to_katakana(reading)
-            if not rows and katakana_variant != reading:
-                # Packs store kana verbatim (often katakana for NHK/SMK) while
-                # miner readings are hiragana-folded; retry in the other script.
-                return storage.lookup(conn, mined_form, katakana_variant)
-            return rows
+            # Packs store kana verbatim (often katakana for NHK/SMK) while
+            # miner readings are hiragana-folded: match both scripts in one
+            # query, so a NULL-reading (Forvo) row cannot hide an exact
+            # katakana-stored row and the pack's id order decides.
+            return storage.lookup(conn, mined_form, reading, hiragana_to_katakana(reading))
         # A non-kana reading the pack itself stores (zh pinyin, yue jyutping) is an exact
         # key: serve those rows plus NULL wildcards, as the kana path does. A reading no
         # row stores (ja's OOV kanji fallback) falls through to the guarded wildcard.

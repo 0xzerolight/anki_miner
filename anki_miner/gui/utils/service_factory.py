@@ -603,7 +603,7 @@ def _build_expression_audio_fetcher(
                     cache_dir=googletts_cache,
                     delay=config.expression_audio_delay,
                     gtts_lang=gtts_lang,
-                    cache_stem_prefix=audio.cache_stem_prefix,
+                    cache_stem_prefix=audio.resolved_cache_stem_prefix(config),
                     speakable=audio.speakable,
                 )
             )
@@ -734,7 +734,7 @@ def _build_sentence_audio_fetcher(config: AnkiMinerConfig) -> SentenceAudioFetch
                     cache_dir=cache_dir,
                     delay=config.expression_audio_delay,
                     gtts_lang=audio.resolved_gtts_lang(config),
-                    cache_stem_prefix=audio.sentence_cache_stem_prefix,
+                    cache_stem_prefix=audio.resolved_sentence_cache_stem_prefix(config),
                 )
             )
         elif web_voice == "edge":
@@ -743,7 +743,7 @@ def _build_sentence_audio_fetcher(config: AnkiMinerConfig) -> SentenceAudioFetch
                     cache_dir=cache_dir,
                     delay=config.expression_audio_delay,
                     voice=audio.edge_voice,
-                    cache_stem_prefix=audio.sentence_cache_stem_prefix,
+                    cache_stem_prefix=audio.resolved_sentence_cache_stem_prefix(config),
                 )
             )
     # Papago speaks Japanese and Korean only, so membership follows the
@@ -755,7 +755,7 @@ def _build_sentence_audio_fetcher(config: AnkiMinerConfig) -> SentenceAudioFetch
             PapagoSentenceTtsFetcher(
                 cache_dir=cache_dir,
                 delay=config.expression_audio_delay,
-                cache_stem_prefix=audio.sentence_cache_stem_prefix,
+                cache_stem_prefix=audio.resolved_sentence_cache_stem_prefix(config),
                 speaker=audio.papago_speaker,
             )
         )
@@ -830,13 +830,13 @@ def create_profile_parser(
 
     Cue text shown in the curator and matched by a line expansion must be cleaned
     exactly as mining cleans it, so a non-ja language gets its profile factory's
-    seams. ja keeps the caller's own class, with the script gate its factory
-    adds: the display sites import ``SubtitleParserService`` themselves and their
-    tests patch that name.
+    seams. ja keeps the caller's own class, with the script gate and the
+    Chinese-line skip its factory adds: the display sites import
+    ``SubtitleParserService`` themselves and their tests patch that name.
     """
     profile = get_profile(config_language(config))
     if profile.create_parser is get_profile("ja").create_parser:
-        return ja_parser_cls(config, has_target_script=profile.script.contains_target_script)
+        return ja_parser_cls(config, has_target_script=profile.script.contains_target_script, skip_line=is_chinese_line)
     return cast(SubtitleParserService, profile.create_parser(config))
 
 

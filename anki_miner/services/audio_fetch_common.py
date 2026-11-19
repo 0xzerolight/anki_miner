@@ -119,6 +119,12 @@ def record_cached_path(cache_dir: Path, path: Path) -> None:
         cached = _AUDIO_CACHE_INDEXES.get(cache_dir)
         if cached is None:
             return
+        if cached[0][:2] != signature[:2]:
+            # The directory was replaced (a pack purge renames it away): the
+            # old index lists deleted files, so drop it and let the next lookup
+            # rescan instead of re-validating it under the new signature.
+            del _AUDIO_CACHE_INDEXES[cache_dir]
+            return
         _index_audio_path(cached[1], path)
         _AUDIO_CACHE_INDEXES[cache_dir] = (signature, cached[1])
         _AUDIO_CACHE_INDEXES.move_to_end(cache_dir)
@@ -223,6 +229,10 @@ def find_cached_by_stem(cache_dir: Path, stem: str) -> Path | None:
                 _AUDIO_CACHE_INDEXES.popitem(last=False)
             return index.get(stem)
     except OSError:
+        # A missing directory leaves no index behind: a recreated directory can
+        # reuse the old inode, which record_cached_path's replacement check misses.
+        with _AUDIO_CACHE_INDEX_LOCK:
+            _AUDIO_CACHE_INDEXES.pop(cache_dir, None)
         return None
 
 
