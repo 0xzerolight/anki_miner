@@ -30,14 +30,13 @@ from anki_miner.cli.api.sources import resolve_track
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import FfmpegNotFoundError
 from anki_miner.services.track_extractor import (
-    _LANGUAGE_TAG,
     SUBTITLE_FORMATS,
     ExtractStatus,
     PlannedTrack,
     TrackExtractorService,
     TrackRef,
+    output_name,
 )
-from anki_miner.utils.file_utils import bounded_output_name
 
 _KEYS = frozenset({"run_id", "video_file", "track"})
 #: A text codec with no plain-file muxer of its own becomes SubRip, as MP4 timed text does.
@@ -95,11 +94,11 @@ def _extract_one(config: AnkiMinerConfig, episode: ExtractEpisode, run: Run) -> 
     # ffprobe gives the tag lowercased; "und" says no more than a missing one.
     language = stream.language_tag if stream.language_tag not in (None, "und") else None
     fmt = SUBTITLE_FORMATS.get(stream.codec_name or "", _AS_SUBRIP)
-    # The tag is file metadata: it reaches the name only when it looks like one (Tracks' rule).
-    tag = f".{language}" if language is not None and _LANGUAGE_TAG.fullmatch(language) else ""
+    ref = TrackRef("subtitle", stream.sub_index)
     run.out.mkdir()
-    dest = run.out / bounded_output_name(video.stem, tag + fmt.suffix, run.out)
-    plan = PlannedTrack(TrackRef("subtitle", stream.sub_index), stream, fmt, dest)
+    # Tracks' name for a lone ticked subtitle: <video stem>.<language><ext>.
+    dest = run.out / output_name(video.stem, ref, language, fmt, sole_of_kind=True, directory=run.out)
+    plan = PlannedTrack(ref, stream, fmt, dest)
     try:
         result = TrackExtractorService(config).extract(video, plan, cancel_event=run.cancel)
     except FfmpegNotFoundError as exc:

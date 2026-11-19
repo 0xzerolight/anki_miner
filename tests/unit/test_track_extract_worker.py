@@ -74,10 +74,10 @@ def _run(videos, ticked, service, **kw) -> _Recorder:
 def test_two_tracks_saved_beside_the_video(tmp_path):
     (video,) = _videos(tmp_path, "EP01.mkv")
     rec = _run([video], [SUB0, AUD0], _saving_service())
-    assert (tmp_path / "EP01.ass").read_bytes() == b"track"
+    assert (tmp_path / "EP01.jpn.ass").read_bytes() == b"track"
     assert (tmp_path / "EP01.m4a").exists()
     assert rec.of("file_finished") == [(0, video, None)]
-    assert any("EP01.ass" in n for n in rec.notes) and any("EP01.m4a" in n for n in rec.notes)
+    assert any("EP01.jpn.ass" in n for n in rec.notes) and any("EP01.m4a" in n for n in rec.notes)
     assert rec.outcome is TerminalOutcome.SUCCESS
 
 
@@ -86,7 +86,7 @@ def test_custom_output_dir_is_used(tmp_path):
     out = tmp_path / "out"
     out.mkdir()
     _run([video], [SUB0], _saving_service(), output_dir=out)
-    assert (out / "EP01.ass").exists() and not (tmp_path / "EP01.ass").exists()
+    assert (out / "EP01.jpn.ass").exists() and not (tmp_path / "EP01.jpn.ass").exists()
 
 
 def test_missing_position_is_noted_and_the_rest_saved(tmp_path):
@@ -105,12 +105,12 @@ def test_unreadable_video_is_skipped_and_the_queue_continues(tmp_path):
     rec = _run([broken, good], [SUB0], service)
     assert [a[0] for a in rec.of("file_skipped")] == [0]
     assert rec.of("file_finished") == [(1, good, None)]
-    assert (tmp_path / "EP02.ass").exists()
+    assert (tmp_path / "EP02.jpn.ass").exists()
 
 
 def test_existing_output_is_skipped_without_overwrite(tmp_path):
     (video,) = _videos(tmp_path, "EP01.mkv")
-    mine = tmp_path / "EP01.ass"
+    mine = tmp_path / "EP01.jpn.ass"
     mine.write_bytes(b"mine")
     service = _saving_service()
     rec = _run([video], [SUB0], service)
@@ -122,9 +122,9 @@ def test_existing_output_is_skipped_without_overwrite(tmp_path):
 
 def test_overwrite_replaces_existing_output(tmp_path):
     (video,) = _videos(tmp_path, "EP01.mkv")
-    (tmp_path / "EP01.ass").write_bytes(b"mine")
+    (tmp_path / "EP01.jpn.ass").write_bytes(b"mine")
     _run([video], [SUB0], _saving_service(), overwrite=True)
-    assert (tmp_path / "EP01.ass").read_bytes() == b"track"
+    assert (tmp_path / "EP01.jpn.ass").read_bytes() == b"track"
 
 
 def test_output_equal_to_the_source_is_never_written(tmp_path):
@@ -157,7 +157,7 @@ def test_one_failed_track_fails_the_video_after_saving_the_other(tmp_path):
 
     service.extract.side_effect = extract
     rec = _run([video], [SUB0, AUD0], service)
-    assert (tmp_path / "EP01.ass").exists()
+    assert (tmp_path / "EP01.jpn.ass").exists()
     ((idx, out, error),) = rec.of("file_finished")
     assert idx == 0 and out is None and "Invalid data found" in error
     assert rec.outcome is TerminalOutcome.FAILED
@@ -227,7 +227,7 @@ def test_a_save_with_an_ffmpeg_warning_says_so(tmp_path):
 
     service.extract.side_effect = extract
     rec = _run([video], [SUB0], service)
-    assert any("EP12.ass" in n and "File ended prematurely" in n for n in rec.notes)
+    assert any("EP12.jpn.ass" in n and "File ended prematurely" in n for n in rec.notes)
 
 
 def test_a_track_whose_language_differs_from_the_listed_one_is_noted(tmp_path):
@@ -235,7 +235,7 @@ def test_a_track_whose_language_differs_from_the_listed_one_is_noted(tmp_path):
     (video,) = _videos(tmp_path, "EP07.mkv")
     eng_first = MediaTracks(subtitles=(SubtitleStream(2, 0, "subrip", "eng", None, True),))
     rec = _run([video], [SUB0], _saving_service(eng_first), expected_languages={SUB0: "jpn"})
-    assert (tmp_path / "EP07.srt").exists()
+    assert (tmp_path / "EP07.eng.srt").exists()
     assert any("eng" in n and "jpn" in n for n in rec.notes)
 
 
@@ -243,4 +243,4 @@ def test_an_alias_of_the_listed_language_is_not_noted(tmp_path):
     (video,) = _videos(tmp_path, "EP07.mkv")
     ja = MediaTracks(subtitles=(SubtitleStream(2, 0, "ass", "ja", None, True),))
     rec = _run([video], [SUB0], _saving_service(ja), expected_languages={SUB0: "jpn"})
-    assert rec.notes == ["Saved EP07.ass"]
+    assert rec.notes == ["Saved EP07.ja.ass"]

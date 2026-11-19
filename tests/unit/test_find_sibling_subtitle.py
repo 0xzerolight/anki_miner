@@ -170,6 +170,11 @@ class TestNamedForTheVideo:
         _folder(tmp_path, "EP01.mkv", "EP01.en.srt")
         assert find_sibling_subtitle(tmp_path / "EP01.mkv", language=JA) is None
 
+    def test_tracks_lone_subtitle_pairs_beside_its_lone_audio(self, tmp_path):
+        """Utilities -> Tracks, one subtitle and one audio ticked: the audio name carries no tag."""
+        _folder(tmp_path, "EP01.mkv", "EP01.jpn.ass", "EP01.m4a")
+        assert find_sibling_subtitle(tmp_path / "EP01.mkv", language=JA) == tmp_path / "EP01.jpn.ass"
+
     def test_full_track_beats_forced(self, tmp_path):
         _folder(tmp_path, "Movie.mkv", "Movie.ja.forced.srt", "Movie.ja.srt")
         assert find_sibling_subtitle(tmp_path / "Movie.mkv", language=JA) == tmp_path / "Movie.ja.srt"

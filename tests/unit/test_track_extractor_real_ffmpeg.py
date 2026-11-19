@@ -150,7 +150,7 @@ def test_subtitle_row_round_trips(tmp_path, encoders, cue, sub_encoder, containe
         str(src),
     )
     dest = _extract_one(src, TrackRef("subtitle", 0))
-    assert dest.name == f"EP01{suffix}"
+    assert dest.name == f"EP01.jpn{suffix}"
     assert _codec(dest) == codec
     text = dest.read_text(encoding="utf-8")
     assert CUE in text
@@ -214,7 +214,7 @@ def test_unicode_and_colon_stem_round_trips_and_pairs(tmp_path, encoders):
     _need(encoders, "aac", "flac")
     src = _multi_track(tmp_path, "Re:Zero 日本語 01")
     dest = _extract_one(src, TrackRef("subtitle", 0))
-    assert dest.name == "Re:Zero 日本語 01.ass"
+    assert dest.name == "Re:Zero 日本語 01.jpn.ass"
     assert find_sibling_subtitle(src) == dest
 
 

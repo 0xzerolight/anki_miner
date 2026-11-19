@@ -953,10 +953,12 @@ def test_tag_strips_leave_real_episode_numbers_alone(tmp_path, filename, episode
         "Show_05.s3.ass",
         "Show 05.a2.jpn.m4a",
         "Show 05.s1.pt-br.srt",
+        "Show 05.es-419.srt",
+        "Show - 05.es-419.srt",
     ],
 )
 def test_a_tracks_designator_does_not_win_the_bare_number(tmp_path, filename):
-    """Utilities -> Tracks names several ticked tracks <stem>.s<N>[.<lang>]; N is not the episode."""
+    """Utilities -> Tracks names tracks <stem>[.s<N>][.<lang>]; neither N nor a numeric region is the episode."""
     path = tmp_path / filename
     path.touch()
     result = EpisodeNumberExtractor.extract_episode_info(path)

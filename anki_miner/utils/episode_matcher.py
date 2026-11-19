@@ -33,6 +33,9 @@ def _strip_technical_tokens(name: str) -> str:
     # "<stem>.s2.jpn" / "<stem>.a1"; that track number would otherwise win
     # the trailing-number fallback and pair episode 1's file with episode 2.
     name = re.sub(r"\.[sa]\d{1,2}(?:\.[a-z]{2,3}(?:-[a-z0-9]{1,8})*)?$", "", name)
+    # A lone ticked subtitle is "<stem>.<lang>"; a numeric region ("es-419")
+    # would win the same fallback and pair episode 5's file as episode 419.
+    name = re.sub(r"\.[a-z]{2,3}-\d{3}$", "", name)
     # Use explicit non-alphanumeric boundaries rather than \b: \b does not
     # fire between an underscore and a digit (both are word chars), so
     # "Show_03_720p" kept "720p" — which the old consuming BARE_NUMBER regex

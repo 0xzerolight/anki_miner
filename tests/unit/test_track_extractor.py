@@ -108,9 +108,19 @@ def test_suffix_sets_are_disjoint():
 # --- naming ------------------------------------------------------------------
 
 
-def test_output_name_sole_track_is_the_stem(tmp_path):
+@pytest.mark.parametrize(
+    ("tag", "expected"),
+    [("jpn", "EP01.jpn.ass"), ("JA", "EP01.ja.ass"), ("und", "EP01.ass"), (None, "EP01.ass"), ("../x", "EP01.ass")],
+)
+def test_output_name_sole_subtitle_is_the_stem_and_language(tmp_path, tag, expected):
     fmt = track_format(SUB, "ass")
-    assert output_name("EP01", TrackRef(SUB, 1), "jpn", fmt, sole_of_kind=True, directory=tmp_path) == "EP01.ass"
+    assert output_name("EP01", TrackRef(SUB, 1), tag, fmt, sole_of_kind=True, directory=tmp_path) == expected
+
+
+def test_output_name_sole_audio_is_the_stem(tmp_path):
+    """A tag here would make EP01.jpn.m4a the owner of EP01.jpn.ass, not the video."""
+    fmt = track_format(AUD, "aac")
+    assert output_name("EP01", TrackRef(AUD, 0), "jpn", fmt, sole_of_kind=True, directory=tmp_path) == "EP01.m4a"
 
 
 def test_output_name_several_carry_number_and_language(tmp_path):
@@ -167,7 +177,7 @@ def test_plan_writes_into_the_chosen_folder(tmp_path):
     out = tmp_path / "out"
     out.mkdir()
     planned, _ = plan_outputs(tmp_path / "EP01.mkv", MediaTracks(subtitles=(_sub(0),)), [TrackRef(SUB, 0)], out)
-    assert planned[0].dest == out / "EP01.ass"
+    assert planned[0].dest == out / "EP01.jpn.ass"
 
 
 # --- pre-tick ----------------------------------------------------------------

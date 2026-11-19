@@ -240,17 +240,21 @@ def output_name(
     sole_of_kind: bool,
     directory: Path,
 ) -> str:
-    """``EP01.ass`` for the only ticked track of its kind, else ``EP01.s2.jpn.ass``.
+    """``EP01.jpn.ass`` or ``EP01.m4a`` for the only ticked track of its kind, else ``EP01.s2.jpn.ass``.
 
-    The lone name is the one mining pairs. The number is 1-based, as the table
-    shows it. The language tag is file metadata, so it reaches the name only
-    when it looks like one (``../x`` never does) and says something (not ``und``).
+    The lone names are the ones mining pairs: a mining-language tag ranks
+    above none, and another language's never pairs. A lone audio track stays
+    bare: ``EP01.jpn.m4a`` beside ``EP01.mkv`` would claim ``EP01.jpn.ass`` as
+    its own, leaving the video without one. The number is 1-based, as the
+    table shows it. The language tag is file metadata, so it reaches the name
+    only when it looks like one (``../x`` never does) and says something (not
+    ``und``).
     """
+    lang = (language_tag or "").lower()
+    lang_part = f".{lang}" if lang != "und" and _LANGUAGE_TAG.fullmatch(lang) else ""
     if sole_of_kind:
-        fixed = fmt.suffix
+        fixed = (lang_part if ref.kind == "subtitle" else "") + fmt.suffix
     else:
-        lang = (language_tag or "").lower()
-        lang_part = f".{lang}" if lang != "und" and _LANGUAGE_TAG.fullmatch(lang) else ""
         letter = "s" if ref.kind == "subtitle" else "a"
         fixed = f".{letter}{ref.position + 1}{lang_part}{fmt.suffix}"
     return bounded_output_name(stem, fixed, directory)
