@@ -406,7 +406,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         # expression-audio field, which is the Audio column's gate.
         self._has_expression_audio = expression_audio_fetch_fn is not None
         self._empty_columns: frozenset[int] = frozenset()  # filled by _populate_table (A07)
-        # The user's own hidden/shown choice for each empty-gated column, which
+        # The user's own hidden/shown choice for each gated column (A07, Audio), which
         # done() puts back before saving the header, so a per-run gate hide is
         # never remembered as the user's arrangement.
         self._pre_gate_hidden: dict[int, bool] = {}
@@ -1051,7 +1051,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         # carries _populate_table's gate hide, so the intent is the D5 default.
         self._pre_gate_hidden = {
             column: self.table.isColumnHidden(column) if restored else column in _DEFAULT_HIDDEN_COLUMNS
-            for column in self._empty_columns
+            for column in self._gated_columns()
         }
         self._apply_translation_column_gate()
         self._apply_audio_column_gate()
@@ -1194,13 +1194,15 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
                 )
                 header_view = self.table.horizontalHeader()
                 if header_view:
-                    # Save the user's arrangement, not this run's A07 gate:
-                    # a column empty today may hold data next run.
+                    # Save the user's arrangement, not this run's A07 or Audio
+                    # gate: a column empty today may hold data next run, and the
+                    # next run may mine expression audio.
                     for column, hidden in self._pre_gate_hidden.items():
                         self.table.setColumnHidden(column, hidden)
                     try:
                         session_state.save_curator_columns(header_view.saveState(), self.table.columnCount())
                     finally:
+                        self._apply_audio_column_gate()
                         self._apply_empty_column_gate()
         super().done(a0)
 
@@ -1294,11 +1296,16 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
                 header_view.moveSection(header_view.visualIndex(column), column)
         # The intent _restore_layout_state records for a first run, so the save
         # in done() writes the D5 default rather than this run's gate.
-        self._pre_gate_hidden = {column: column in _DEFAULT_HIDDEN_COLUMNS for column in self._empty_columns}
+        self._pre_gate_hidden = {column: column in _DEFAULT_HIDDEN_COLUMNS for column in self._gated_columns()}
         self._apply_header_resize_modes()
         self._apply_translation_column_gate()
         self._apply_audio_column_gate()
         self._apply_empty_column_gate()
+
+    def _gated_columns(self) -> tuple[int, ...]:
+        """The columns a one-directional gate force-hides this run, whose saved state done() keeps."""
+        audio = () if self._has_expression_audio else (AUDIO_COLUMN,)
+        return (*self._empty_columns, *audio)
 
     def _apply_translation_column_gate(self) -> None:
         self.table.setColumnHidden(TRANSLATION_COLUMN, not self._has_translations)
@@ -1309,7 +1316,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         One-directional, unlike :meth:`_apply_translation_column_gate`: an
         active Audio column is the user's to hide from the header menu, and
         that choice has to survive the saved header state, so this only ever
-        hides.
+        hides. Its own hide is never saved: done() puts back ``_pre_gate_hidden``.
         """
         if not self._has_expression_audio:
             self.table.setColumnHidden(AUDIO_COLUMN, True)
