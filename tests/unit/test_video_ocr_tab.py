@@ -18,6 +18,7 @@ from anki_miner.services.ocr import model_installer
 from anki_miner.services.ocr.recognizers import RECOGNIZERS
 from anki_miner.services.video_ocr.errors import EngineLoadError
 from anki_miner.services.video_ocr.region import Region
+from anki_miner.utils.audio_track_detector import SubtitleStream
 from tests.unit._ocr_profiles import with_recognizer
 from tests.unit._tool_tab_harness import OS_ACCESS, FakeToolWorker
 
@@ -275,3 +276,40 @@ def test_set_region_is_held_for_the_listing_and_released_on_every_outcome(qtbot,
             apply(scan())
 
     assert tab.set_region_button.isEnabled()
+
+
+def test_mode_flip_during_the_folder_listing_keeps_the_folder_region(qtbot, test_config, tmp_path):
+    """X4-006: an image track picked for a single video must not make a folder run read FULL_FRAME."""
+    tab = _make(qtbot, test_config)
+    single = tmp_path / "other.mkv"
+    single.write_bytes(b"x")
+    tab.file_selector.set_path(str(single))
+    tab._image_track_timer.stop()
+    tab._show_image_tracks(
+        [
+            SubtitleStream(
+                index=3, sub_index=1, codec_name="hdmv_pgs_subtitle", language_tag="jpn", title=None, is_text=False
+            )
+        ]
+    )
+    tab.source_combo.setCurrentIndex(1)
+    folder = tmp_path / "videos"
+    folder.mkdir()
+    video = folder / "part1.mp4"
+    video.write_bytes(b"x")
+    region = Region(0.1, 0.8, 0.8, 0.15)
+    tab._set_region(region)
+    tab.folder_mode_button.click()
+    tab.folder_selector.set_path(str(folder))
+    held: list[tuple] = []
+    with patch(_BASE_RUN_OFF_THREAD, side_effect=lambda *args, **kwargs: held.append(args)):
+        tab.ocr_button.click()
+    _, scan, apply, _on_error = held[0]
+
+    tab._set_mode(True)  # flipped while the folder listing is in flight
+    with patch.object(mod, "VideoOcrWorker", FakeToolWorker), patch(OS_ACCESS, return_value=True):
+        apply(scan())
+
+    worker = tab.worker_thread
+    assert worker.args[1] == [video] and worker.args[2] == region
+    assert worker.kwargs["bitmap_track"] is None

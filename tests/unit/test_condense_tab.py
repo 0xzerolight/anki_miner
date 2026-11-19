@@ -1290,6 +1290,37 @@ def test_merge_run_keeps_a_dotted_typed_name_whole(qtbot, tmp_path):
     assert worker_cls.call_args.kwargs["merge_into"] == folder / "Re.Zero.mp3"
 
 
+def test_mode_flip_during_the_folder_listing_keeps_the_folder_run(qtbot, tmp_path):
+    """X4-006: the mode is the one the run was started in, not the one when the listing lands."""
+    folder = _merge_folder(tmp_path, episodes=2)
+    single = tmp_path / "other.mkv"
+    single.write_bytes(b"fake")
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    tab.media_file_selector.set_path(str(single))
+    tab._audio_track_override = 2
+    tab._subtitle_track_override = 1
+    tab.folder_mode_button.click()
+    tab.media_folder_selector.set_path(str(folder))
+    tab.merge_checkbox.setChecked(True)
+
+    held: list[tuple] = []
+    with (
+        patch(_AVAILABLE, return_value=True),
+        patch(_OS_ACCESS, return_value=True),
+        patch(_WORKER_CLS, return_value=_FakeWorker()) as worker_cls,
+        patch("anki_miner.gui.widgets._tool_tab_base.run_off_thread", side_effect=lambda *a, **k: held.append(a)),
+    ):
+        tab.condense_button.click()
+        tab._set_mode(True)  # flipped while the folder listing is in flight
+        _owner, scan, on_done, _on_error = held[0]
+        on_done(scan())
+
+    kwargs = worker_cls.call_args.kwargs
+    assert kwargs["merge_into"] == folder / "Season 1.mp3"
+    assert kwargs["audio_track_override"] is None
+    assert kwargs["subtitle_track_override"] is None
+
+
 def test_merge_off_leaves_the_run_unmerged(qtbot, tmp_path):
     folder = _merge_folder(tmp_path)
     tab = _make_tab(_make_config(tmp_path), qtbot)

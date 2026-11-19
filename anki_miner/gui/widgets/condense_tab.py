@@ -822,7 +822,7 @@ class CondenseTab(RunOptionsMixin, _ToolTabBase):
             items = self._collect_single_item()
             if not items:
                 return
-            self._continue_condense(items)
+            self._continue_condense(items, single=True)
             return
 
         # Folder mode: episode-number pairing scans two directories, which can
@@ -836,7 +836,8 @@ class CondenseTab(RunOptionsMixin, _ToolTabBase):
             if not items:
                 self.condense_button.setEnabled(True)
                 return
-            self._continue_condense(items)
+            # A folder run, whatever mode the toggle shows when the listing lands.
+            self._continue_condense(items, single=False)
 
         self._collect_folder_items_async(_on_items)
 
@@ -870,16 +871,18 @@ class CondenseTab(RunOptionsMixin, _ToolTabBase):
             return None
         return merge_into
 
-    def _continue_condense(self, items: list[CondenseItem]) -> None:
-        """Plan outputs, validate, optionally collect metadata, then start the worker."""
+    def _continue_condense(self, items: list[CondenseItem], *, single: bool) -> None:
+        """Plan outputs, validate, optionally collect metadata, then start the worker.
+
+        *single* is the mode the run was requested in: a folder listing runs off
+        the GUI thread, and the toggle may have moved by the time it lands.
+        """
         out_dir = self._custom_output_dir
         output_format = str(self.format_combo.currentData())
-        # Single-file mode honors the per-file track picks; folder mode auto-detects.
-        single_mode = not self.media_file_selector.isHidden()
 
         merge_into: Path | None = None
         output_paths: list[Path] = []
-        if not single_mode and self.merge_checkbox.isChecked():
+        if not single and self.merge_checkbox.isChecked():
             merge_into = self._plan_merged_output(items, out_dir, output_format)
             if merge_into is None:
                 self.condense_button.setEnabled(True)
@@ -943,8 +946,9 @@ class CondenseTab(RunOptionsMixin, _ToolTabBase):
         self._begin_tool_run(total_steps)
         self._total_files = total_steps
 
-        audio_override = self._audio_track_override if single_mode else None
-        subtitle_override = self._subtitle_track_override if single_mode else None
+        # Single-file mode honors the per-file track picks; folder mode auto-detects.
+        audio_override = self._audio_track_override if single else None
+        subtitle_override = self._subtitle_track_override if single else None
 
         worker = CondenseWorker(
             self.config,

@@ -659,7 +659,7 @@ class SubtitleRetimeTab(_ToolTabBase):
             pairs = self._collect_single_pair()
             if not pairs:
                 return
-            self._start_retime_worker(pairs)
+            self._start_retime_worker(pairs, single=True)
             return
 
         # Folder mode: episode-number pairing scans two directories, which can
@@ -673,12 +673,17 @@ class SubtitleRetimeTab(_ToolTabBase):
             if not pairs:
                 self.retime_button.setEnabled(True)
                 return
-            self._start_retime_worker(pairs)
+            # A folder run, whatever mode the toggle shows when the listing lands.
+            self._start_retime_worker(pairs, single=False)
 
         self._collect_folder_pairs_async(_on_pairs)
 
-    def _start_retime_worker(self, pairs: list[tuple[Path, Path]]) -> None:
-        """Resolve the output dir, check it's writable, then build+start the worker."""
+    def _start_retime_worker(self, pairs: list[tuple[Path, Path]], *, single: bool) -> None:
+        """Resolve the output dir, check it's writable, then build+start the worker.
+
+        *single* is the mode the run was requested in, not the toggle's state
+        when a folder listing lands.
+        """
         # Resolve output directory
         if self._custom_output_dir is not None:
             out_dir: Path | None = self._custom_output_dir
@@ -698,7 +703,7 @@ class SubtitleRetimeTab(_ToolTabBase):
 
         # Single-file mode honors the per-file reference pick; a folder's videos
         # each get their own auto-resolution, so one override cannot apply.
-        reference_override = self._reference_override if not self.video_file_selector.isHidden() else None
+        reference_override = self._reference_override if single else None
 
         worker = SubtitleRetimeWorker(
             self.config,
