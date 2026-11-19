@@ -415,6 +415,57 @@ class TestFlushAndShutdown:
         assert not tab._debounce_timer.isActive()
 
 
+def _build_tab(config: AnkiMinerConfig, qtbot, commit) -> SettingsTab:
+    """A SettingsTab committing through ``commit``, wired as app.main wires it."""
+    widget = SettingsTab(config, commit_config=commit)
+    qtbot.addWidget(widget)
+    widget.config_changed.connect(commit)
+    return widget
+
+
+def _teardown_tab(widget: SettingsTab, qtbot) -> None:
+    widget.shutdown()
+    for w in widget.iter_close_workers():
+        if w is not None:
+            w.wait(3000)
+    qtbot.wait(10)
+    with contextlib.suppress(RuntimeError):
+        widget.deleteLater()
+
+
+def test_debounced_save_failure_stays_dirty_and_retries(test_config, qtbot, tmp_path):
+    """S2-001: a failed debounced save is not shown as saved and is re-tried."""
+    attempts: list[AnkiMinerConfig] = []
+    widget: SettingsTab | None = None
+
+    def failing_commit(config: AnkiMinerConfig) -> None:
+        attempts.append(config)
+        assert widget is not None
+        # The retry re-arms with this interval, so the test sees one attempt.
+        widget._debounce_timer.setInterval(60_000)
+        raise ConfigCommitError(ConfigCommitResult.pre_save_failure(OSError(28, "No space left on device")))
+
+    widget = _build_tab(test_config, qtbot, failing_commit)
+    try:
+        widget._debounce_timer.setInterval(60_000)
+        widget.anki_panel.set_deck_name("Unsaved")
+        new_root = tmp_path / "new_dicts"
+        new_root.mkdir()
+        widget.dictionary_panel.dicts_root_selector.set_path(str(new_root))
+        widget._debounce_timer.setInterval(0)
+        widget._debounce_timer.start()
+
+        qtbot.waitUntil(lambda: bool(attempts), timeout=3000)
+
+        assert attempts[-1].anki_deck_name == "Unsaved"
+        assert widget.save_status_label.text() != "✓ Saved"
+        assert widget._settings_dirty is True
+        assert widget._debounce_timer.isActive()
+        assert widget.dictionary_panel._dicts_root == test_config.dicts_root
+    finally:
+        _teardown_tab(widget, qtbot)
+
+
 class TestCommitRetainsSaveSemantics:
     def test_reenabling_update_checks_clears_skipped_version(self, tab, test_config, no_modals):
         tab.update_config(replace(test_config, check_for_updates=False, skipped_update_version="9.9.9"))
