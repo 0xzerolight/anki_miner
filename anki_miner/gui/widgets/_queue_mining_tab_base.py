@@ -291,6 +291,7 @@ class _QueueMiningTabBase(MiningTabBase):
         # resolve against a frozen list that survives mid-run removals.
         self._run_items = list(items)
 
+        self._clear_curation_cancel()
         curation_cb = self._curation_bridge if self.review_words_checkbox.isChecked() else None
         worker = self._make_worker(items, curation_cb, processor_factory)
         worker.item_started.connect(self._on_item_started)

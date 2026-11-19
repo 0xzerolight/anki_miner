@@ -523,6 +523,7 @@ class BatchProcessingTab(FolderSeriesScreenBase):
         # Tear down any prior run before building the queue worker (Windows
         # back-to-back-mining freeze: leaked sqlite/Session handles).
         self._teardown_previous_run("batch")
+        self._clear_curation_cancel()
 
         # The panel's snapshot from Mine Queue; the pending rows are a fallback for a caller that set none.
         items = self._run_selection or [

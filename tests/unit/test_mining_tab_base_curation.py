@@ -208,6 +208,48 @@ def test_cancel_during_active_dialog_releases_worker(qapp, qtbot):
     assert worker.result is None  # cancelled → None (distinct from empty selection)
 
 
+def test_cancel_before_the_bridge_is_reached_opens_no_curator(qapp, qtbot):
+    """A Stop pressed before the worker reaches the bridge is not erased by it.
+
+    The orchestrator's last cancel checkpoint is well before the curation
+    callback, so a cancel landing in between is only remembered by the flag.
+    """
+    tab = _Bare()
+    qtbot.addWidget(tab)
+    tab._init_curation_bridge()
+    tab._cancel_active_curation_dialog()  # what every Stop handler does first
+
+    cls, created = _fake_dialog_cls(decision="wait")
+    worker = CurationWorker(tab, ["w1"])
+    with patch(f"{MODULE}.WordCurationDialog", cls):
+        worker.start()
+        assert drain_until(worker.isFinished), "worker did not finish — bridge hung"
+    worker.wait()
+
+    assert created == []
+    assert worker.result is None
+
+
+def test_a_new_run_after_a_cancelled_one_still_opens_the_curator(qapp, qtbot):
+    """The cancel is cleared at run launch, so it never reaches the next run."""
+    tab = _Bare()
+    qtbot.addWidget(tab)
+    tab._init_curation_bridge()
+    tab._cancel_active_curation_dialog()
+
+    tab._clear_curation_cancel()  # run launch
+
+    cls, created = _fake_dialog_cls()
+    worker = CurationWorker(tab, ["w1"])
+    with patch(f"{MODULE}.WordCurationDialog", cls):
+        worker.start()
+        assert drain_until(worker.isFinished), "worker did not finish — bridge hung"
+    worker.wait()
+
+    assert len(created) == 1
+    assert worker.result == ["picked"]
+
+
 def test_poison_curation_gate_releases_parked_worker(qapp, qtbot):
     """A worker parked in _curation_event.wait() resumes with None after poisoning.
 

@@ -788,6 +788,7 @@ class SingleEpisodeTab(MiningTabBase):
         # the app on back-to-back single-episode mines. Join the old worker,
         # then close its processor so no stale handle survives into the new run.
         self._teardown_previous_run("single-episode")
+        self._clear_curation_cancel()
 
         # Pass a factory so the processor is built on the worker thread.
         # This keeps the GUI thread free during the slow registry scan,
