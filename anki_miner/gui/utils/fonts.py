@@ -104,13 +104,18 @@ def _resolve_japanese(interface_family: str) -> str:
 
     Installed faces are queried *before* ``addApplicationFont`` is called, so a
     machine that already has a Japanese face never pays for the bundled one.
+
+    The preferences come before the interface family: Qt lists pan-CJK Chinese
+    and Korean families (``Noto Sans CJK SC``) under the Japanese writing
+    system too, so a Chinese desktop font would otherwise give kanji Chinese
+    glyph forms. A Japanese desktop face is itself a preference.
     """
     installed = _japanese_families()
-    if interface_family in installed:
-        return interface_family
     for candidate in _JAPANESE_PREFERENCES:
         if candidate in installed:
             return candidate
+    if interface_family in installed:
+        return interface_family
     if installed:
         # Deterministic, so two machines with the same fonts agree. Never the
         # first unordered database result.
