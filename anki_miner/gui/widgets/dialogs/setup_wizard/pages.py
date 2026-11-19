@@ -449,6 +449,10 @@ class MiningLanguagePage(QWizardPage):
         language = self._wizard.working_config().language
         return not (self._pack_code == language and self._pack_state in ("running", "failed"))
 
+    def pack_downloading(self) -> bool:
+        """True while the working config's language's pack is still downloading from here."""
+        return self._pack_code == self._wizard.working_config().language and self._pack_state == "running"
+
     def ready_page_pack_line(self) -> str:
         """The Ready page's rich-text line for a pack that is not in yet."""
         choice = self._choices.get(self._pack_code or "")
@@ -1487,6 +1491,10 @@ class ResourcesPage(_LiveCheckPage):
         self._dictionary_ready = False
         # _sync_download_button reads these, so they exist before any widget.
         self._download_running = False
+        #: Download was pressed while the language's pack was still downloading;
+        #: the run starts when the pack lands (G5-003: a lemmatised frequency
+        #: list needs the engine the pack delivers).
+        self._download_waiting = False
         #: The mining language the current/last run was started for; its slots
         #: belong to that language's chains only. None before any run.
         self._download_language: str | None = None
@@ -1566,6 +1574,9 @@ class ResourcesPage(_LiveCheckPage):
         layout.addStretch(1)
 
         self._rebuild_catalog_rows()
+        if wizard.language_page is not None:
+            # Connected before the Ready page's slot, so its re-check sees the run.
+            wizard.language_page.pack_finished.connect(self._on_pack_finished)
 
     def selected_specs(self) -> list[ResourceSpec]:
         """What Download fetches: the catalogue, minus the other regional variety (D9).
@@ -1597,6 +1608,8 @@ class ResourcesPage(_LiveCheckPage):
             return
         self._specs_language = language
         self._specs = list(get_profile(language).catalog)
+        # A request waiting on the outgoing language's pack is not one for this language.
+        self._download_waiting = False
         if not self._download_running:
             # A finished run for the outgoing language describes nothing on screen now.
             self._session = None
@@ -1646,7 +1659,9 @@ class ResourcesPage(_LiveCheckPage):
 
     def _sync_download_button(self) -> None:
         """Nothing to fetch, or a run already going, is not a run."""
-        self.download_button.setEnabled(bool(self.selected_specs()) and not self._download_running)
+        self.download_button.setEnabled(
+            bool(self.selected_specs()) and not self._download_running and not self._download_waiting
+        )
 
     def _apply_language_gate(self) -> None:
         """Re-derive the paired rows' visibility from the active language.
@@ -1686,7 +1701,7 @@ class ResourcesPage(_LiveCheckPage):
         # it. Nothing to download is nothing to block on: a language with an
         # empty catalogue has no button, so the gate would leave Skip Setup as
         # the only exit.
-        return self._dictionary_ready or self._session is not None or not self._specs
+        return self._dictionary_ready or self._session is not None or self._download_waiting or not self._specs
 
     # --- live dictionary readiness ---
 
@@ -1790,11 +1805,21 @@ class ResourcesPage(_LiveCheckPage):
         from anki_miner.gui.controllers.task_registry import TaskRegistry  # noqa: PLC0415
         from anki_miner.gui.widgets.dialogs.resource_download_dialog import start_resource_download  # noqa: PLC0415
 
-        if self._download_running:
+        if self._download_running or self._download_waiting:
             return
         self._set_status("")
         specs = self.selected_specs()
         if not specs:
+            return
+        language_page = self._wizard.language_page
+        if language_page is not None and language_page.pack_downloading():
+            # The catalogue's lemmatised frequency list needs the engine the
+            # pack delivers; _on_pack_finished starts the run once it is in.
+            self._download_waiting = True
+            self._sync_download_button()
+            self._set_status(_html_text(self._waiting_text()))
+            self.completeChanged.emit()
+            self.download_state_changed.emit()
             return
         registry = getattr(self._wizard.parent(), "task_registry", None)
         session = start_resource_download(
@@ -1820,6 +1845,23 @@ class ResourcesPage(_LiveCheckPage):
             self._registry = registry
             registry.snapshot_changed.connect(self._on_registry_snapshot)
         self._render_progress()
+        self.completeChanged.emit()
+        self.download_state_changed.emit()
+
+    def _waiting_text(self) -> str:
+        return self.tr("Waiting for the language pack to finish downloading…")
+
+    def _on_pack_finished(self) -> None:
+        """Start the run Download asked for, now the language's pack is in; drop it if the pack failed."""
+        if not self._download_waiting:
+            return
+        self._download_waiting = False
+        language_page = self._wizard.language_page
+        if language_page is not None and language_page.pack_ready():
+            self._on_download_clicked()
+            return
+        self._sync_download_button()
+        self._set_status(self.tr("The language pack download failed, so nothing was downloaded."))
         self.completeChanged.emit()
         self.download_state_changed.emit()
 
@@ -1962,6 +2004,8 @@ class ResourcesPage(_LiveCheckPage):
             if self._progress_text:
                 return _html_text(tr_format(self.tr("Downloads: still running — %1"), self._progress_text))
             return _html_text(self.tr("Downloads: still running…"))
+        if self._download_waiting:
+            return _html_text(self._waiting_text())
         if self._download_ending == "failed":
             failed = self.tr("Dictionary: download failed.")
             retry = self.tr("Retry")
