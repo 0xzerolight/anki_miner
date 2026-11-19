@@ -18,7 +18,10 @@ from tests.unit.test_audio_condenser import (
     _progress_block,
 )
 
-_GRAPH = "aselect='(between(t,0.000,2.000)+between(t,3.000,5.000))',asetpts=N/SR/TB"
+_GRAPH = (
+    "asetnsamples=n=64:p=0,"
+    "aselect='if(lt(t,3.000),gte(t,0.000)*lt(t,2.000),gte(t,3.000)*lt(t,5.000))',asetpts=N/SR/TB"
+)
 
 
 def _service(tmp_path: Path, *, normalize: bool) -> AudioCondenserService:

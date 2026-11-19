@@ -444,39 +444,56 @@ def _failure_reason(lines: Iterable[str], fallback: str = "") -> str:
 
 
 def build_aselect_graph(periods: list[Period]) -> str:
-    """Build the ``aselect``/``asetpts`` filter graph selecting *periods*.
+    """Build the ``asetnsamples``/``aselect``/``asetpts`` filter graph selecting *periods*.
 
-    Emits ``aselect='((between(t,a1,b1)+between(t,a2,b2))+(...))',asetpts=N/SR/TB``
-    with every bound converted from **integer milliseconds to float seconds** (the
-    unit ``between(t,...)`` expects). ``asetpts=N/SR/TB`` restamps the surviving
-    samples into one gapless timeline. Periods beyond EOF simply select nothing
-    (harmless).
+    Emits ``asetnsamples=n=64:p=0,aselect='if(lt(t,m),<left>,<right>)',asetpts=N/SR/TB``,
+    a balanced binary search over the sorted, non-overlapping *periods* whose
+    leaves are half-open ``gte(t,a)*lt(t,b)`` tests, with every bound converted
+    from **integer milliseconds to float seconds** (the unit ``t`` is in).
+    ``asetpts=N/SR/TB`` restamps the surviving samples into one gapless
+    timeline. Periods beyond EOF simply select nothing (harmless).
 
-    The ``+`` terms are folded into a BALANCED parenthesised tree, and that shape
-    is load-bearing — ffmpeg's ``av_expr_parse`` has a fixed parser budget
-    (``p.stack_index = 100``, libavutil/eval.c) that a real episode's period
-    count blows in two different ways. Measured against ffmpeg 8 (libavutil 60):
+    ``aselect`` keeps or drops whole frames, and a decoder frame is up to 4096
+    samples (FLAC; 1024 for AAC), so each period's kept length missed
+    ``end - start`` by up to a frame and the cue timeline of
+    :func:`map_events_to_condensed`, which assumes exact cuts, drifted from the
+    audio as a random walk over the file (0.8 s on a FLAC episode).
+    ``asetnsamples`` re-frames to 64 samples first, and the half-open leaves
+    keep each period ``[a, b)`` so no per-period bias accumulates.
 
-    * flat ``a+b+c`` — parses at 100 terms, ``AVERROR(ENOMEM)`` at 101 and up.
+    The search tree is what keeps 64-sample frames affordable: ``if`` evaluates
+    only the branch it takes, so each frame costs ~log2 n comparisons. A sum of
+    every period's term costs n per frame, which made a 24-minute episode with
+    291 periods take 9.6 s instead of 1.5 s.
+
+    The tree must also stay BALANCED -- ffmpeg's ``av_expr_parse`` has a fixed
+    parser budget (``p.stack_index = 100``, libavutil/eval.c) that a real
+    episode's period count blows in two different ways. Measured against
+    ffmpeg 8 (libavutil 60):
+
+    * flat ``a+b+c`` -- parses at 100 terms, ``AVERROR(ENOMEM)`` at 101 and up.
     * every ``+`` parenthesised but LEFT- or RIGHT-leaning (i.e. the tempting
-      ``functools.reduce(lambda a, b: f"({a}+{b})", terms)`` one-liner) — parses
+      ``functools.reduce(lambda a, b: f"({a}+{b})", terms)`` one-liner) -- parses
       at 99, ``AVERROR(EINVAL)`` at 100 and up.
-    * balanced — parses at 5000 terms, depth growing as log2 n.
+    * balanced -- parses at 5000 terms, depth growing as log2 n.
 
-    Only balanced clears both limits. A 25-minute episode yields ~125 periods
-    after padding-merge, so the flat form failed on ordinary input for every
-    bundle shipping ffmpeg 8 (ffmpeg 7 parses a 600-term flat chain happily,
-    which is why this survived local runs and CI). Partial grouping is not a
-    safe middle ground: flat runs of 50 joined by a balanced tree still failed
-    at 101 terms. Do not "simplify" this back into a join or a reduce.
+    A 25-minute episode yields ~125 periods after padding-merge, so the flat
+    form failed on ordinary input for every bundle shipping ffmpeg 8 (ffmpeg 7
+    parses a 600-term flat chain happily, which is why this survived local runs
+    and CI). Do not "simplify" this into a join, a reduce or a leaning chain.
+    ``scripts/bundle_smoke.sh`` rebuilds this graph in awk; keep the two equal.
     """
     if not periods:
         raise ValueError("build_aselect_graph requires at least one period (an empty graph selects everything)")
 
-    terms = [f"between(t,{start / 1000:.3f},{end / 1000:.3f})" for start, end in periods]
-    while len(terms) > 1:
-        terms = [f"({terms[i]}+{terms[i + 1]})" if i + 1 < len(terms) else terms[i] for i in range(0, len(terms), 2)]
-    return f"aselect='{terms[0]}',asetpts=N/SR/TB"
+    def node(lo: int, hi: int) -> str:
+        if hi - lo == 1:
+            start, end = periods[lo]
+            return f"gte(t,{start / 1000:.3f})*lt(t,{end / 1000:.3f})"
+        mid = lo + (hi - lo) // 2
+        return f"if(lt(t,{periods[mid][0] / 1000:.3f}),{node(lo, mid)},{node(mid, hi)})"
+
+    return f"asetnsamples=n=64:p=0,aselect='{node(0, len(periods))}',asetpts=N/SR/TB"
 
 
 def _encoder_settings(suffix: str) -> tuple[str, bool, bool]:

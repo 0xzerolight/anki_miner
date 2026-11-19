@@ -339,14 +339,16 @@ def repair_managed_slot(
 
         write_ownership_marker(final, slot_id, family)
         quarantine = _unique_repair_path(final, "corrupt")
+        # ``final`` is resolved, so compare against the resolved source: a
+        # caller spelling the root through a symlink still names a kept source
+        # inside the slot, which must follow the slot into quarantine.
+        try:
+            relative_source: Path | None = source.resolve().relative_to(final)
+        except ValueError:
+            relative_source = None
         os.replace(final, quarantine)
         try:
-            try:
-                relative_source = source.relative_to(final)
-            except ValueError:
-                repair_source = source
-            else:
-                repair_source = quarantine / relative_source
+            repair_source = source if relative_source is None else quarantine / relative_source
             result = import_slot(repair_source, False)
         except BaseException as import_error:
             try:

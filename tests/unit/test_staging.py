@@ -662,3 +662,36 @@ class TestClaimManagedSlot:
             claim_managed_slot(tmp_path, "../evil", "dictionary", overwrite=False, noun="Dictionary")
 
         assert list(tmp_path.iterdir()) == []
+
+
+def test_repair_rebases_kept_source_when_root_is_reached_through_a_symlink(tmp_path: Path) -> None:
+    import sqlite3
+
+    from anki_miner.services._sqlite_index import validate_index_schema
+    from anki_miner.services.frequency.source_importer import (
+        import_frequency_source,
+        repair_frequency_source,
+    )
+
+    real_dir = tmp_path / "real_dir"
+    real_dir.mkdir()
+    link_dir = tmp_path / "link_dir"
+    try:
+        os.symlink(real_dir, link_dir, target_is_directory=True)
+    except (OSError, NotImplementedError):
+        pytest.skip("symlinks unsupported")
+    csv = tmp_path / "mylist.csv"
+    csv.write_text("".join(f"word{i},{i + 1}\n" for i in range(50)), encoding="utf-8")
+    root = link_dir / "freqs"
+    import_frequency_source(csv, root, source_id="mylist", source_name="x")
+    slot = root / "mylist"
+    con = sqlite3.connect(slot / "index.sqlite")
+    with con:
+        con.execute("update meta set value='999' where key='schema_version'")
+    con.close()
+    assert not validate_index_schema(slot / "index.sqlite", "frequency")
+
+    result = repair_frequency_source(slot / "source.csv", root, source_id="mylist", source_name="x")
+
+    assert result.entry_count == 50
+    assert validate_index_schema(slot / "index.sqlite", "frequency")

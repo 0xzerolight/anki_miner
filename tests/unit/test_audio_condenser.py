@@ -553,12 +553,17 @@ def _service(
 
 
 def test_build_aselect_graph_single_period_float_seconds():
-    assert build_aselect_graph([(0, 2000)]) == "aselect='between(t,0.000,2.000)',asetpts=N/SR/TB"
+    assert build_aselect_graph([(0, 2000)]) == (
+        "asetnsamples=n=64:p=0,aselect='gte(t,0.000)*lt(t,2.000)',asetpts=N/SR/TB"
+    )
 
 
 def test_build_aselect_graph_multi_period_ms_to_seconds():
     graph = build_aselect_graph([(500, 1500), (3000, 4200)])
-    assert graph == "aselect='(between(t,0.500,1.500)+between(t,3.000,4.200))',asetpts=N/SR/TB"
+    assert graph == (
+        "asetnsamples=n=64:p=0,"
+        "aselect='if(lt(t,3.000),gte(t,0.500)*lt(t,1.500),gte(t,3.000)*lt(t,4.200))',asetpts=N/SR/TB"
+    )
 
 
 def test_build_aselect_graph_rejects_empty_periods():
@@ -578,7 +583,7 @@ def _max_paren_depth(expr: str) -> int:
 
 
 def test_build_aselect_graph_nesting_stays_logarithmic():
-    """The `+` tree must be BALANCED, not merely parenthesised.
+    """The search tree must be BALANCED, not merely nested.
 
     ffmpeg's expression parser has a fixed budget that a 125-term expression
     blows in two different ways: a flat ``a+b+c`` chain dies past 100 terms with
@@ -593,8 +598,8 @@ def test_build_aselect_graph_nesting_stays_logarithmic():
     depth = _max_paren_depth(graph)
     balanced = math.ceil(math.log2(125))  # == 7
 
-    assert graph.count("between(t,") == 125
-    # Both bounds are load-bearing. Lower excludes a flat chain (depth 0);
+    assert graph.count("gte(t,") == 125
+    # Both bounds are load-bearing. Lower excludes a flat chain (depth 1);
     # upper excludes a leaning chain (depth 125).
     assert balanced <= depth <= balanced + 1
 
@@ -761,7 +766,10 @@ def test_condense_graph_file_content_between_seconds_and_asetpts(tmp_path):
     ):
         svc.condense(Path("/v/in.mkv"), [(0, 2000), (3000, 5000)], tmp_path / "out.mp3")
 
-    assert captured["graph"] == ("aselect='(between(t,0.000,2.000)+between(t,3.000,5.000))',asetpts=N/SR/TB")
+    assert captured["graph"] == (
+        "asetnsamples=n=64:p=0,"
+        "aselect='if(lt(t,3.000),gte(t,0.000)*lt(t,2.000),gte(t,3.000)*lt(t,5.000))',asetpts=N/SR/TB"
+    )
 
 
 # --- condense: encoder / bitrate / channel mapping -------------------------
@@ -1943,6 +1951,65 @@ def test_merged_cues_start_where_each_part_starts_in_the_merged_audio(tmp_path, 
     assert len(onsets) == len(cue_s) == 4
     for onset, cue in zip(onsets, cue_s, strict=True):
         assert abs(cue - onset / rate) <= 0.03, (cue, onset / rate)
+
+
+@pytest.mark.skipif(not (_VENDOR_FFMPEG / "ffmpeg").is_file(), reason="needs the vendored ffmpeg")
+def test_condensed_cues_stay_on_their_lines_across_a_whole_file(tmp_path):
+    """B3b-004: aselect keeps whole decoder frames (4096 samples for FLAC), so
+    each period's kept length used to miss its interval by up to a frame and
+    the cue timeline drifted from the audio as a random walk over the file."""
+    import math
+    import random
+    import wave
+    from array import array
+
+    from anki_miner.config import AnkiMinerConfig
+
+    ffmpeg, ffprobe = str(_VENDOR_FFMPEG / "ffmpeg"), str(_VENDOR_FFMPEG / "ffprobe")
+    cfg = AnkiMinerConfig(media_temp_folder=tmp_path / "tmp", ffmpeg_location=ffmpeg, ffprobe_location=ffprobe)
+    cfg.media_temp_folder.mkdir()
+    rng = random.Random(1119)
+    events = []
+    t = 1000
+    for i in range(80):
+        duration = rng.randint(800, 2000)
+        events.append((t, t + duration, f"line {i}"))
+        t += duration + rng.randint(1200, 3000)
+    rate = 48000
+    pcm = array("h", bytes(2 * (t + 2000) * rate // 1000))
+    burst = [int(16000 * math.sin(2 * math.pi * 1000 * n / rate)) for n in range(rate // 100)]
+    for start, _end, _text in events:
+        offset = start * rate // 1000
+        pcm[offset : offset + len(burst)] = array("h", burst)
+    wav = tmp_path / "src.wav"
+    with wave.open(str(wav), "wb") as fh:
+        fh.setnchannels(1)
+        fh.setsampwidth(2)
+        fh.setframerate(rate)
+        fh.writeframes(pcm.tobytes())
+    src = tmp_path / "src.mkv"
+    subprocess.run([ffmpeg, "-v", "error", "-y", "-i", str(wav), "-c:a", "flac", str(src)], check=True)
+    periods = build_periods(events, 500)
+    out = tmp_path / "condensed.flac"
+
+    assert AudioCondenserService(cfg).condense(src, periods, out) == (True, None)
+
+    decoded = array(
+        "h",
+        subprocess.run(
+            [ffmpeg, "-v", "error", "-i", str(out), "-f", "s16le", "-ac", "1", "-ar", str(rate), "-"],
+            capture_output=True,
+            check=True,
+        ).stdout,
+    )
+    loud = [i for i, sample in enumerate(decoded) if abs(sample) > 2000]
+    onsets = [loud[0]] + [b for a, b in zip(loud, loud[1:], strict=False) if b - a > rate // 10]
+    cues = map_events_to_condensed(events, periods)
+    assert len(onsets) == len(cues) == len(events)
+    drift_ms = [onset * 1000 / rate - cue_start for onset, (cue_start, _e, _t) in zip(onsets, cues, strict=True)]
+    assert max(abs(d) for d in drift_ms) <= 20, drift_ms
+    expected_ms = sum(end - start for start, end in periods)
+    assert abs(len(decoded) * 1000 / rate - expected_ms) <= 20
 
 
 def test_extract_embedded_subtitle_gives_each_call_its_own_file(tmp_path):

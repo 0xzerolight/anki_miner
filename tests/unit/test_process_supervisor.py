@@ -410,3 +410,75 @@ def test_supervised_cr_stays_inside_a_line_by_default() -> None:
         line_callback=lines.append,
     )
     assert lines == ["a\rb"]
+
+
+class _FakeWinFn:
+    def __init__(self, impl: Any) -> None:
+        self.impl = impl
+
+    def __call__(self, *args: Any) -> Any:
+        return self.impl(*args)
+
+
+class _FakeKernel32:
+    """Toolhelp snapshot + process times for the Windows tree walk (pid, parent pid, created)."""
+
+    def __init__(self, snapshot: list[tuple[int, int, int]], terminated: list[int]) -> None:
+        self._snapshot = snapshot
+        self._created = {pid: created for pid, _ppid, created in snapshot}
+        self._cursor = 0
+        self.CreateToolhelp32Snapshot = _FakeWinFn(lambda _flags, _pid: 0x10)
+        self.Process32FirstW = _FakeWinFn(self._first)
+        self.Process32NextW = _FakeWinFn(self._fill)
+        self.CloseHandle = _FakeWinFn(lambda _handle: 1)
+        self.OpenProcess = _FakeWinFn(lambda _access, _inherit, pid: 0x100000 + pid)
+        self.GetProcessTimes = _FakeWinFn(self._times)
+        self.TerminateProcess = _FakeWinFn(lambda handle, _code: terminated.append(handle - 0x100000) or 1)
+        self.WaitForSingleObject = _FakeWinFn(lambda _handle, _ms: 0)
+
+    def _first(self, snapshot: int, ref: Any) -> int:
+        self._cursor = 0
+        return self._fill(snapshot, ref)
+
+    def _fill(self, _snapshot: int, ref: Any) -> int:
+        if self._cursor >= len(self._snapshot):
+            return 0
+        pid, ppid, _created = self._snapshot[self._cursor]
+        self._cursor += 1
+        ref._obj.th32ProcessID, ref._obj.th32ParentProcessID = pid, ppid
+        return 1
+
+    def _times(self, handle: int, creation: Any, *_rest: Any) -> int:
+        creation._obj.value = self._created[handle - 0x100000]
+        return 1
+
+
+def test_windows_tree_walk_skips_processes_older_than_their_recorded_parent() -> None:
+    from anki_miner.utils import process_supervisor as supervisor
+
+    snapshot = [
+        (4321, 900, 100),  # the supervised child
+        (7000, 4321, 50),  # unrelated: its long-gone creator once had PID 4321
+        (7004, 7000, 60),  # the unrelated program's own child
+        (4400, 4321, 150),  # a real child of the supervised child
+    ]
+    terminated: list[int] = []
+    proc = MagicMock(pid=4321)
+    proc.poll.return_value = 0
+
+    with (
+        patch.object(supervisor.sys, "platform", "win32"),
+        patch.object(
+            supervisor.ctypes,
+            "WinDLL",
+            lambda *_a, **_k: _FakeKernel32(snapshot, terminated),
+            create=True,
+        ),
+        patch.object(supervisor, "_TERMINATE_GRACE_S", 0.01),
+    ):
+        assert supervisor._windows_descendant_pids({4321}) == {4400}
+        supervisor._terminate_windows_tree(proc, None)
+
+    assert 4400 in terminated
+    assert 7000 not in terminated
+    assert 7004 not in terminated
