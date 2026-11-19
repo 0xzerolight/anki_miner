@@ -132,6 +132,20 @@ def test_set_mining_language_repoints_without_re_requesting(qtbot, test_config):
     assert requested == []
 
 
+def test_an_unlisted_language_in_force_shows_no_false_choice(qtbot, test_config):
+    """ko is in force but not offered here (its engine is pinned missing above)."""
+    panel = _panel(qtbot, dataclasses.replace(test_config, language="ko"))
+    requested: list[str] = []
+    panel.mining_language_requested.connect(requested.append)
+    combo = panel.mining_language_combo
+
+    assert combo.currentIndex() == -1
+
+    combo.setCurrentIndex(0)
+
+    assert requested == [combo.itemData(0)]
+
+
 def test_the_panel_never_writes_the_language_field(qtbot, test_config):
     """The switch owns ``language``: it has to stash the outgoing language's
     scoped values first, and a second writer would race it. Since T10 the
