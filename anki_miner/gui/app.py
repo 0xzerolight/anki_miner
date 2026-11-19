@@ -1108,6 +1108,13 @@ def _relaunch_if_requested(app: QApplication) -> None:
         # override never reaches this branch (the flag is only set when
         # _apply_ui_zoom itself wrote the var) and is inherited untouched.
         os.environ.pop("QT_SCALE_FACTOR", None)
+    if getattr(sys, "frozen", False):
+        # Our environment still carries the bootloader's _PYI_* markers, while
+        # _scrub_pyinstaller_env has removed the bundle library path. Without
+        # this flag the child takes itself for a worker of this process, skips
+        # its library-path setup, and bundled libs such as libxcb-cursor stop
+        # resolving (the same failure launch._reexec_via_launcher guards).
+        os.environ["PYINSTALLER_RESET_ENVIRONMENT"] = "1"
     if not QProcess.startDetached(str(program), list(arguments)):
         logger.warning("Restart was requested but launching %s failed", program)
 
