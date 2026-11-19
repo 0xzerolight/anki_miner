@@ -3139,6 +3139,11 @@ class TestSubtitleRegexFilter:
     def test_safe_quantified_alternation_compiles(self, pattern):
         assert compile_subtitle_regex_filter(pattern, "").pattern == pattern
 
+    def test_oversized_repeat_count_is_a_value_error(self):
+        # re raises OverflowError past MAXREPEAT; the settings keep-back catches only ValueError.
+        with pytest.raises(ValueError, match="repetition number"):
+            compile_subtitle_regex_filter("x{99999999999}", "")
+
     def test_overlapping_quantified_alternation_disables_parser_filter(self, tmp_path):
         config = AnkiMinerConfig(
             media_temp_folder=tmp_path / "media",

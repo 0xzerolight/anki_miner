@@ -387,7 +387,7 @@ def compile_subtitle_regex_filter(pattern: str, replacement: str) -> re.Pattern[
     try:
         compiled = re.compile(pattern)
         compiled.sub(replacement, "")
-    except (re.error, IndexError) as e:
+    except (re.error, IndexError, OverflowError) as e:
         raise ValueError(str(e)) from e
     if _NESTED_UNBOUNDED_REPEAT_RE.search(pattern):
         raise ValueError("nested unbounded repeats are not allowed")
