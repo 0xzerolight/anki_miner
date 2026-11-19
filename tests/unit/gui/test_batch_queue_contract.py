@@ -376,3 +376,21 @@ def test_mine_queue_with_a_selection_still_mines_the_folded_series(qtbot, test_c
     b = next(i for i in tab.batch_queue.get_all_items() if i is not a)
     assert len(runs) == 1
     assert b in runs[0]
+
+
+def test_a_series_whose_folder_is_gone_is_skipped_not_mined(qtbot, test_config, tmp_path, monkeypatch):
+    """The run matches the skip banner: a vanished folder is left out of it."""
+    import shutil
+
+    tab = _batch_tab(qtbot, test_config)
+    _queue_series(tab, tmp_path, "A")
+    b = _queue_series(tab, tmp_path, "B")
+    shutil.rmtree(tmp_path / "A-video")
+    runs = _capture_run(tab, monkeypatch)
+
+    tab._process_queue()
+
+    assert runs == [[b]]
+    issue = tab.issue_banner().current_issue()
+    assert issue is not None
+    assert "A-video" in issue.summary and "skipped" in issue.summary

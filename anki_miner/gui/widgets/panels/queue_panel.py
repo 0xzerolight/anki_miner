@@ -907,6 +907,10 @@ class QueuePanel(QFrame):
             item = self._items.get(id(widget))
             if item is None or widget.get_status() == "processing":
                 continue
+            video, subtitle = widget.get_folders()
+            if not (video and subtitle and video.exists() and subtitle.exists()):
+                # Reported as skipped by get_incomplete_items; the run must agree.
+                continue
             if item.status in (QueueItemStatus.PENDING, QueueItemStatus.ERROR):
                 item.status = QueueItemStatus.PENDING
                 items.append(item)
