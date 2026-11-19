@@ -373,3 +373,24 @@ def test_sync_one_forwards_the_out_of_order_event_to_the_aligner(tmp_path, monke
     )
 
     assert found == [2]
+
+
+def test_a_sentence_with_nothing_to_hear_is_neither_unheard_nor_unmatched(tmp_path, monkeypatch, caplog):
+    """「……」 folds to an empty key: no read can time it, so it is no gap."""
+    from anki_miner.services.book_sync.normalize import normalize_for_alignment
+
+    _patch_transcribe(monkeypatch)
+    import anki_miner.services.book_sync.pipeline as pl
+
+    sentences = ("吾輩は猫である。", "……", "名前はまだ無い。")
+    book = BookText(title="猫", sentences=sentences, keys=tuple(normalize_for_alignment(s) for s in sentences))
+    assert book.keys[1] == ""
+    monkeypatch.setattr(
+        pl, "align_to_book", lambda segs, book, cursor, **kw: [SentenceTiming(0, 0.0, 2.0), SentenceTiming(2, 4.0, 7.0)]
+    )
+
+    with caplog.at_level(logging.INFO):
+        result = sync_one(_make_config(tmp_path), object(), tmp_path / "a.mp3", book, BookCursor(), tmp_path / "a.srt")
+
+    assert result.unmatched_sentences == 0 and result.unheard == ()
+    assert "Book sync unheard" not in caplog.text
