@@ -175,6 +175,17 @@ def clean_reference(src: Path, dest: Path) -> ReferenceCleanResult:
     return ReferenceCleanResult(cues=len(kept), span_ms=span_ms)
 
 
+def _time_ordered(events: Sequence[pysubs2.SSAEvent], indices: list[int]) -> list[int]:
+    """*indices* stably sorted by their events' (start, end).
+
+    The alignment copy is written in this order because ffsubsync writes SRT
+    through ``srt.compose``, which sorts cues by start: a copy in file order
+    comes back reordered whenever the file is not time-ordered, and
+    :func:`map_deltas_back` pairs cues by position.
+    """
+    return sorted(indices, key=lambda i: (events[i].start, events[i].end))
+
+
 @dataclass(frozen=True)
 class CleanedForAlignment:
     """A dialogue-only copy of the subtitle being retimed.
@@ -203,7 +214,8 @@ def clean_for_alignment(
     """Write a same-format copy of *src* to *dest* with non-dialogue cues dropped.
 
     Cues are only ever dropped, never rewritten, so the copy stays a strict
-    subset the aligner sees in original order. Returns None when the file
+    subset. It is written in time order (:func:`_time_ordered`), and
+    ``kept_indices`` follows that order. Returns None when the file
     cannot be parsed or too few cues survive — the caller then aligns the
     original file directly, which is exactly the pre-cleaning behaviour.
 
@@ -227,11 +239,11 @@ def clean_for_alignment(
         )
         return None
 
-    kept_set = set(kept_indices)
+    kept_indices = _time_ordered(subs.events, kept_indices)
     cleaned = pysubs2.SSAFile()
     cleaned.styles = subs.styles.copy()
     cleaned.info = subs.info.copy()
-    cleaned.events = [event.copy() for i, event in enumerate(subs.events) if i in kept_set]
+    cleaned.events = [subs.events[i].copy() for i in kept_indices]
     try:
         cleaned.save(str(dest), encoding="utf-8")
     except Exception:  # noqa: BLE001 — an unwritable copy falls back to as-is alignment
@@ -282,12 +294,12 @@ def transcode_for_alignment(
         for i, event in enumerate(subs.events)
         if getattr(event, "is_comment", None) is not True and event.end > event.start
     ]
-    kept_set = set(kept_indices)
+    kept_indices = _time_ordered(subs.events, kept_indices)
 
     transcoded = pysubs2.SSAFile()
     transcoded.styles = subs.styles.copy()
     transcoded.info = subs.info.copy()
-    transcoded.events = [event.copy() for i, event in enumerate(subs.events) if i in kept_set]
+    transcoded.events = [subs.events[i].copy() for i in kept_indices]
     try:
         transcoded.save(str(dest), encoding="utf-8")
     except Exception:  # noqa: BLE001 — an unwritable copy falls back to as-is alignment

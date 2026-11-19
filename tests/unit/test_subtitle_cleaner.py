@@ -230,6 +230,26 @@ class TestCleanForAlignment:
         src.write_bytes(b"\x00\x01 not a subtitle")
         assert clean_for_alignment(src, tmp_path / "out.srt") is None
 
+    def test_cues_out_of_time_order_survive_an_engine_that_sorts(self, tmp_path):
+        """ffsubsync writes SRT through srt.compose, which sorts cues by start;
+        the copy must already be in that order or map-back pins lines on neighbours."""
+        events = [_dialogue(i * 2000, i * 2000 + 1000, f"line {i}") for i in range(20)]
+        events += [_dialogue(start, start + 500, f"late {start}") for start in (5000, 17000, 31000)]
+        src = _save(tmp_path / "in.srt", events)
+
+        cleaned = clean_for_alignment(src, tmp_path / "clean.srt")
+        assert cleaned is not None
+        synced = pysubs2.load(str(cleaned.path))
+        for event in synced:
+            event.start += 3000
+            event.end += 3000
+        synced.events.sort(key=lambda event: event.start)
+        synced.save(str(tmp_path / "synced.srt"))
+
+        out = tmp_path / "out.srt"
+        assert map_deltas_back(src, tmp_path / "synced.srt", cleaned.kept_indices, out)
+        assert [e.start for e in pysubs2.load(str(out)).events] == [e.start + 3000 for e in events]
+
 
 class TestMapDeltasBack:
     def _round_trip(self, tmp_path, events, kept_indices, shift_fn):
