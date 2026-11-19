@@ -451,7 +451,7 @@ class BatchProcessingTab(FolderSeriesScreenBase):
             )
         self.show_screen_issue(ScreenIssue(summary=summary, details=details))
 
-    def _fold_pickers_into_queue(self) -> bool:
+    def _fold_pickers_into_queue(self) -> tuple[bool, QueueItem | None]:
         """Add the Add Series card's folders to the queue before a run.
 
         Filling either picker is always intent: pressing Process must never
@@ -460,30 +460,34 @@ class BatchProcessingTab(FolderSeriesScreenBase):
         queued" case, and this is then a no-op.
 
         Returns:
-            ``False`` when the run must stop here (a screen issue was already
-            raised, or the fold itself failed); ``True`` to proceed to the run.
+            ``(proceed, folded)``: ``proceed`` is ``False`` when the run must
+            stop here (a screen issue was already raised, or the fold itself
+            failed). ``folded`` is the row the card was added as or matched,
+            which the run must include even when other rows are selected.
         """
         if self.video_folder_selector.path_or_none() is None and self.subtitle_folder_selector.path_or_none() is None:
-            return True
+            return True, None
 
         folders = self._get_validated_folders()
         if folders is None:
             self.show_screen_issue(ScreenIssue(summary=self.tr("Choose existing video and subtitle folders.")))
-            return False
+            return False, None
 
         video_folder, subtitle_folder = folders
         ok, secondary_folder = self._validated_secondary_folder(subtitle_folder)
         if not ok:
-            return False
+            return False, None
 
         duplicates = self._runnable_duplicates(video_folder, subtitle_folder)
         if not duplicates:
-            return self._add_series_from_pickers() is not None
-        if any(self._card_matches_row(item, secondary_folder) for item in duplicates):
+            added = self._add_series_from_pickers()
+            return added is not None, added
+        match = next((item for item in duplicates if self._card_matches_row(item, secondary_folder)), None)
+        if match is not None:
             self._clear_add_series_pickers(secondary_folder)
-            return True
+            return True, match
         self._show_queued_settings_conflict(duplicates[0])
-        return False
+        return False, None
 
     def _warn_incomplete_items(self) -> None:
         """Report every series this run skipped, in ONE banner.
@@ -604,14 +608,15 @@ class BatchProcessingTab(FolderSeriesScreenBase):
         # Filled pickers are folded into the queue before it is read, so a
         # picker issue is the one thing on screen -- never overwritten by the
         # empty-queue refusal below.
-        if not self._fold_pickers_into_queue():
+        proceed, folded = self._fold_pickers_into_queue()
+        if not proceed:
             return
 
         # The rows themselves are the model now: each one bound to a persistent
         # QueueItem when its folders validated. The queue is NOT rebuilt here --
         # doing so would mint new identities and lose the episode receipts that
         # stop a retry re-mining pairs already in Anki (D28, D30).
-        self._run_selection = self.queue_panel.runnable_items()
+        self._run_selection = self.queue_panel.runnable_items(include=folded)
 
         if not self._run_selection:
             self.show_screen_issue(ScreenIssue(summary=self._empty_run_summary()))
