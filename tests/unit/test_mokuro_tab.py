@@ -345,6 +345,33 @@ class TestLanguageStates:
         assert "about 3 GB, up to 7 GB" in tab.install_mokuro_button.toolTip()
         assert self._emitted(tab) == [True]
 
+    def test_run_ocr_is_off_while_a_reinstall_is_in_flight(self, qtbot, tmp_path, monkeypatch):
+        """X3-002: uv venv --clear wipes the env a run would use; Run waits for the install."""
+        tab = self._tab(qtbot, tmp_path, monkeypatch, MangaOcrState(True, True))
+        tab.folder_selector.set_path(str(_series(tmp_path)))
+        tab.change_setup_button.click()
+        assert self._emitted(tab) == [True]
+
+        assert not tab.run_button.isEnabled()
+        with patch(_RUN_OFF_THREAD) as run_off_thread, patch(_WORKER_CLS) as worker_cls:
+            tab._on_run()
+        run_off_thread.assert_not_called()
+        worker_cls.assert_not_called()
+        # A probe landing mid-install (an unrelated config change) must not re-enable it.
+        tab._apply_probe_result(MangaOcrState(True, True))
+        assert not tab.run_button.isEnabled()
+
+        tab.notify_install_finished(False)
+        assert tab.run_button.isEnabled()
+
+        tab.change_setup_button.click()
+        tab.install_mokuro_button.click()
+        assert not tab.run_button.isEnabled()
+        with patch(_STATE, return_value=MangaOcrState(True, True)):
+            tab.notify_install_finished(True)
+            assert tab._availability_worker.wait(3000)
+            qtbot.waitUntil(tab.run_button.isEnabled, timeout=3000)
+
     def test_a_refresh_reapplies_the_stored_state_not_a_bare_bool(self, qtbot, tmp_path, monkeypatch):
         """Run start/end refreshes must keep "Download OCR model", not fall back to "Install mokuro"."""
         tab = self._tab(qtbot, tmp_path, monkeypatch, MangaOcrState(False, True))

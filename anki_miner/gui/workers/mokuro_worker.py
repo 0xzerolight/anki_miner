@@ -79,6 +79,10 @@ class MokuroWorker(FileQueueWorker):
             self.file_progress.emit(idx, 100, self.tr("Done"))
             self.file_finished.emit(idx, result.output_path, None)
         elif result.status is MokuroStatus.CANCELLED:
-            self.file_finished.emit(idx, None, self.tr("Cancelled"))
+            # Nothing: a cancel is a run-level outcome, and the tab's status
+            # line already says "Cancelled". A per-item error string logged an
+            # ERROR line, which raises "This volume could not be processed.",
+            # and counted the volume as failed.
+            pass
         else:  # pragma: no cover - exhaustiveness guard
             raise ValueError(f"Unsupported mokuro status: {result.status!r}")

@@ -271,6 +271,29 @@ class TestOptionPersistence:
         tab.update_config(replace(tab.config, downloader_format_preset="720p"))
         assert tab.preset_combo.currentData() == "audio_m4a"
 
+    def test_language_switch_mid_run_reseeds_the_scoped_options(self, qtbot, tmp_path: Path) -> None:
+        """X4-001: the old language's subtitle/audio languages must not outlive a switch."""
+        from anki_miner.languages.switching import switch_language
+
+        tab = _make_tab(_make_config(tmp_path, language="ja"), qtbot)
+        running = MagicMock()
+        running.isRunning.return_value = True
+        tab.worker_thread = running
+        ko = switch_language(tab.config, "ko")
+        assert ko.downloader_subtitle_langs != tab.config.downloader_subtitle_langs
+        with patch(_COMPUTE_AVAILABLE, return_value=True):
+            tab.update_config(ko)
+            assert tab._availability_worker.wait(3000)
+        tab.worker_thread = None
+
+        assert tab._build_options().subtitle_langs == ko.downloader_subtitle_langs
+        assert tab._selected_audio_lang() == ko.downloader_audio_lang
+        received: list[AnkiMinerConfig] = []
+        tab.run_options_changed.connect(received.append)
+        tab.embed_metadata_checkbox.setChecked(not tab.embed_metadata_checkbox.isChecked())
+        assert received[-1].downloader_subtitle_langs == ko.downloader_subtitle_langs
+        assert received[-1].downloader_audio_lang == ko.downloader_audio_lang
+
     def test_sub_langs_enabled_with_checkbox(self, qtbot, tmp_path: Path) -> None:
         tab = _make_tab(_make_config(tmp_path), qtbot)
         assert not tab.sub_langs_button.isEnabled()
