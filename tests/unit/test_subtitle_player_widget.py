@@ -479,6 +479,7 @@ class TestPlayRange:
     def test_pauses_at_the_end_once(self, qtbot, fake_mpv):
         widget = self._loaded(qtbot, fake_mpv)
         widget.play_range(4.0, 9.5)
+        widget._on_time_pos(4.0)
         with qtbot.waitSignal(widget.range_finished, timeout=100):
             widget._on_time_pos(9.5)
         assert fake_mpv["player"].pause is True
@@ -495,6 +496,25 @@ class TestPlayRange:
         widget._on_time_pos(8.0)
         assert fake_mpv["player"].pause is False
         assert widget._range_end == 9.5
+
+    def test_stale_tick_past_the_end_does_not_stop_the_clip(self, qtbot, fake_mpv):
+        """mpv's seek is asynchronous: a tick from the pre-seek position, past
+        the clip's end, can still arrive after play_range and must not stop it."""
+        widget = self._loaded(qtbot, fake_mpv)
+        finished = []
+        widget.range_finished.connect(lambda: finished.append(True))
+        fake_mpv["player"].pause = False  # playing past the clip's end
+        widget.play_range(2.0, 4.0)
+
+        widget._on_time_pos(10.5)
+        assert fake_mpv["player"].pause is False
+        assert finished == []
+        assert widget._range_end == 4.0
+
+        widget._on_time_pos(2.1)
+        widget._on_time_pos(4.01)
+        assert fake_mpv["player"].pause is True
+        assert finished == [True]
 
     def test_eof_finishes_range_once(self, qtbot, fake_mpv):
         widget = self._loaded(qtbot, fake_mpv)
@@ -996,6 +1016,19 @@ class TestDeferredLoad:
         widget.set_source(VIDEO, ENTRIES)
         widget.video_widget.render_failed.emit("no GL")
         fake_mpv_no_ctx["player"].loadfile.assert_called_once_with(str(VIDEO))
+        assert widget._backend_notice_label.isVisibleTo(widget)
+
+    def test_resource_after_render_failed_loads_now_and_keeps_video_hidden(self, qtbot, fake_mpv_no_ctx):
+        """render_failed fires once: a later source (the curator's season
+        episode swap) must load immediately, or it is parked forever."""
+        widget = _widget(qtbot)
+        widget.set_source(VIDEO, ENTRIES)
+        widget.video_widget.render_failed.emit("no GL")
+        other = Path("/tmp/other.mkv")
+        widget.set_source(other, [])
+        assert fake_mpv_no_ctx["player"].loadfile.call_args.args == (str(other),)
+        assert widget._pending_load is None
+        assert widget.video_widget.isHidden()
         assert widget._backend_notice_label.isVisibleTo(widget)
 
     def test_teardown_clears_pending_load(self, qtbot, fake_mpv_no_ctx):
