@@ -364,6 +364,11 @@ class SubtitlePlayerWidget(QWidget):
         # entry point calls — a manual Play or a seek elsewhere must not be
         # yanked to a stop at a boundary the user has already left behind.
         self._range_end: float | None = None
+        # Start of that play_range until a tick lands inside [start, end); None
+        # once it has. mpv's seek is asynchronous, so ticks from the pre-seek
+        # position (possibly past the end) still arrive after play_range and
+        # must not trigger the stop.
+        self._range_start: float | None = None
 
         self._mpv_time_pos.connect(self._on_time_pos)
         self._mpv_duration.connect(self._on_duration)
@@ -897,19 +902,24 @@ class SubtitlePlayerWidget(QWidget):
         Any subsequent transport action — Play, Pause, Stop, a seek, the Space
         shortcut — cancels the pending stop, so a user who takes over playback
         is never yanked to a halt at a boundary they have moved past. That is
-        also why ``_range_end`` is assigned LAST: the seek and play below both
+        also why the range is assigned LAST: the seek and play below both
         route through :meth:`cancel_range`.
+
+        The stop arms only once a tick lands inside the window: the seek is
+        asynchronous, so a tick from the old position can still arrive.
         """
         if self.player is None:
             return
         self.seek_seconds(start)
         self.play()
+        self._range_start = start
         self._range_end = end
 
     def cancel_range(self) -> None:
         """Drop any pending :meth:`play_range` stop (idempotent)."""
         if self._range_end is None:
             return
+        self._range_start = None
         self._range_end = None
         self.range_finished.emit()
 
@@ -1026,9 +1036,14 @@ class SubtitlePlayerWidget(QWidget):
             return
         # End of a bounded clip preview. pause() clears the range and emits
         # range_finished, so the stop happens exactly once; the rest of this
-        # slot still runs so the strip paints the final position.
-        if self._range_end is not None and float(value) >= self._range_end:  # type: ignore[arg-type]
-            self.pause()
+        # slot still runs so the strip paints the final position. Ticks before
+        # the first one inside the window are pre-seek leftovers and ignored.
+        if self._range_end is not None:
+            seconds = float(value)  # type: ignore[arg-type]
+            if self._range_start is not None and self._range_start <= seconds < self._range_end:
+                self._range_start = None
+            if self._range_start is None and seconds >= self._range_end:
+                self.pause()
         position_ms = int(float(value) * 1000)  # type: ignore[arg-type]
         # Don't fight the user mid-drag: while the handle is held down, a
         # playback-driven setValue yanks it back and the scrub tugs-of-war.
