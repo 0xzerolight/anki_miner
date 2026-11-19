@@ -67,6 +67,10 @@ from anki_miner.utils.robust_fs import RmtreeOutcome
 
 logger = logging.getLogger(__name__)
 
+# The action id of the issue a failed registry scan posts; a later successful
+# scan clears that issue and nothing else.
+_SCAN_FAILED_ACTION = "chain.rescan"
+
 
 @dataclass(frozen=True)
 class _ChainPanelStrings:
@@ -462,8 +466,12 @@ class ChainSettingsPanelBase(ScreenIssueHost, FormPanel):
         self._scan_in_flight = False
         self._view = view
         # The list is now trustworthy again — that is the only thing that
-        # clears a scan issue.
-        self.clear_screen_issue()
+        # clears a scan issue. Only a scan issue: a remove, cleanup or import
+        # notice posted after this scan was dispatched must stay up.
+        banner = self.issue_banner()
+        current = banner.current_issue() if banner is not None else None
+        if current is not None and current.action_id == _SCAN_FAILED_ACTION:
+            self.clear_screen_issue()
         self._rebuild_list()
         self._finish_scan_mutation()
         if not self._redispatch_pending_scan():
@@ -478,7 +486,7 @@ class ChainSettingsPanelBase(ScreenIssueHost, FormPanel):
             ScreenIssue(
                 summary=self._strings.scan_failed_summary,
                 details=msg,
-                action_id="chain.rescan",
+                action_id=_SCAN_FAILED_ACTION,
                 action_text=self._strings.retry_label,
             ),
             action=self.refresh_registry,
@@ -1080,7 +1088,7 @@ class ChainSettingsPanelBase(ScreenIssueHost, FormPanel):
     def _commit_removed_entry(self, removed_entry: Any) -> ConfigCommitResult:
         new_chain = self._chain_after_remove(removed_entry)
         if self._remove_chain_commit is None:
-            self._chain = list(new_chain)
+            self._adopt_removed_chain(new_chain)
             self.chain_changed.emit()
             return ConfigCommitResult.committed()
         try:
@@ -1088,8 +1096,19 @@ class ChainSettingsPanelBase(ScreenIssueHost, FormPanel):
         except Exception as error:
             result = ConfigCommitResult.pre_save_failure(error)
         if result.persisted:
-            self._chain = list(new_chain)
+            self._adopt_removed_chain(new_chain)
         return result
+
+    def _adopt_removed_chain(self, new_chain: tuple[Any, ...]) -> None:
+        """Take the shortened chain and re-render the rows to match it.
+
+        ``get_chain`` pairs ``self._chain[i]`` with row ``i``. Leaving the
+        removed entry's row on screen would hand every later entry the enabled
+        flag of the row above it, and the next read of ``get_chain`` (cleanup,
+        a toggle, any Settings save) would persist those shifted flags.
+        """
+        self._chain = list(new_chain)
+        self._rebuild_list()
 
     def _refresh_after_chain_only_remove(self) -> None:
         self._view = None

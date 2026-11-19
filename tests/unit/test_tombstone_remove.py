@@ -316,3 +316,29 @@ def test_cleanup_dispatch_failure_keeps_durable_remove_and_reports_residue(
     assert len(list(tmp_path.glob("slot.tomb-*"))) == 1
     assert [entry.dict_id for entry in panel.get_chain()] == ["spare"]
     assert "cleanup will be retried" in _issue(panel).summary.lower()
+
+
+@pytest.mark.parametrize("cleanup_fails", [False, True], ids=["cleanup-ok", "cleanup-fails"])
+def test_owned_remove_keeps_later_rows_enabled_flags(
+    panel_factory, qtbot, monkeypatch, tmp_path, cleanup_fails
+) -> None:
+    """Removing a row must not hand each later entry the flag of the row above it."""
+    _owned_slot(tmp_path)
+    committed: list[tuple[ChainEntry, ...]] = []
+    panel = panel_factory(tmp_path, lambda chain: committed.append(chain) or ConfigCommitResult.committed())
+    panel.set_chain(
+        (
+            ChainEntry(kind="indexed", dict_id="slot", enabled=True),
+            ChainEntry(kind="indexed", dict_id="b", enabled=False),
+            ChainEntry(kind="indexed", dict_id="c", enabled=True),
+        )
+    )
+    if cleanup_fails:
+        monkeypatch.setattr(panel, "_rmtree_dir", lambda target: (False, "locked"))
+
+    panel.remove(0)
+    _wait_remove(panel, qtbot)
+
+    persisted = [(entry.dict_id, entry.enabled) for entry in committed[0]]
+    assert persisted == [("b", False), ("c", True)]
+    assert [(entry.dict_id, entry.enabled) for entry in panel.get_chain()] == persisted
