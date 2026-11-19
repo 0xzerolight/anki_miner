@@ -105,14 +105,18 @@ def validate_condense_outputs(items: list[CondenseItem], output_paths: list[Path
     return paths
 
 
-def plan_merge_part_paths(count: int, staging_dir: Path, output_format: str) -> list[Path]:
+def plan_merge_part_paths(count: int, staging_dir: Path) -> list[Path]:
     """Name the staged parts of a merge run.
 
     Index-keyed, so two inputs sharing a stem cannot collide and no directory
     scan or collision check is needed: the staging folder is fresh and private
     to this run, and the names carry the queue order the concat list needs.
+
+    Always FLAC, whatever the run's output format: the merge encodes once from
+    lossless parts, so the merged timeline is exactly the parts' summed
+    lengths (lossy parts carry encoder delay and padding into a join).
     """
-    return [staging_dir / f"{index:04d}{_CONDENSED_SUFFIX}.{output_format}" for index in range(count)]
+    return [staging_dir / f"{index:04d}{_CONDENSED_SUFFIX}.flac" for index in range(count)]
 
 
 class CondenseWorker(FileQueueWorker):
@@ -209,7 +213,6 @@ class CondenseWorker(FileQueueWorker):
         self._output_dir = output_dir
         self._merge_into = merge_into
         self._merge_metadata = merge_metadata
-        self._output_format = output_format
         self._staging_dir: Path | None = None
         self._parts: list[CondensedPart] = []
         if merge_into is None:
@@ -253,7 +256,7 @@ class CondenseWorker(FileQueueWorker):
         self._config.media_temp_folder.mkdir(parents=True, exist_ok=True)
         self._staging_dir = Path(tempfile.mkdtemp(prefix="condense_merge_", dir=str(self._config.media_temp_folder)))
         try:
-            self._output_paths = plan_merge_part_paths(len(self._items), self._staging_dir, self._output_format)
+            self._output_paths = plan_merge_part_paths(len(self._items), self._staging_dir)
             super()._process_queue()
             self._merge_parts()
         finally:
@@ -284,6 +287,7 @@ class CondenseWorker(FileQueueWorker):
             self._parts,
             self._merge_into,
             write_subs=self._write_subs,
+            bitrate_kbps=self._bitrate_kbps,
             metadata=self._merge_metadata,
             progress_cb=lambda pct: self.file_progress.emit(idx, pct, tr_format(self.tr("Merging: %1%"), pct)),
             cancel_event=self._cancel_event,
