@@ -301,6 +301,25 @@ class TestPlayerSeek:
             resolve_screenshot_time(words[original_index], expected_time, words[original_index].duration, 1.0)
         )
 
+    def test_another_cell_of_the_focused_row_leaves_the_player_alone(self, qtbot, words, existing_video):
+        """Ticking the include box or clicking the sentence keeps playback and a stepped frame."""
+        ctx = _make_media_context(video_file=existing_video)
+        dlg, mock_player = _build_dialog_with_mock_player(qtbot, words, ctx)
+        dlg.show()
+        qtbot.wait(300)  # the opening focus settles
+        mock_player.reset_mock()
+
+        dlg.table.setCurrentCell(0, 2)
+        qtbot.wait(300)
+
+        mock_player.seek_seconds.assert_not_called()
+        mock_player.pause.assert_not_called()
+
+        dlg.table.setCurrentCell(1, 2)
+        qtbot.wait(300)
+
+        mock_player.seek_seconds.assert_called_once()
+
 
 def _find_table_shortcut(dialog: WordCurationDialog, key_str: str):
     """Find a QShortcut registered on the table by its key sequence (Issue #55)."""

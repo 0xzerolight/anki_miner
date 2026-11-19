@@ -173,6 +173,24 @@ class TestLazyEpisodeSwitch:
         assert player.set_source.call_count == 1
         assert dlg._displayed_media_video == ep3
 
+    def test_late_landing_after_moving_back_keeps_the_displayed_episode(self, qtbot, ep1, ep2, deferred_off_thread):
+        resolver = MagicMock(side_effect=lambda v: _ctx_for(v))
+        words = [
+            _word("猫", video=ep1),
+            _word("犬", start_time=7.0, video=ep2),
+            _word("鳥", start_time=20.0, video=ep1),
+        ]
+        dlg, player = _build_dialog(qtbot, words, _ctx_for(ep1, resolver))
+        _focus_row(dlg, 1)  # ep2 resolve dispatched
+        _focus_row(dlg, 2)  # back to an ep1 word, the episode still showing
+        work, on_done, _err = deferred_off_thread[-1]
+        on_done(work())
+        # Cached for the next ep2 visit, but the player follows the focused word.
+        assert ep2 in dlg._media_ctx_cache
+        assert dlg._displayed_media_video == ep1
+        assert ep2 not in [c.args[0] for c in player.set_source.call_args_list]
+        assert dlg._chosen_episode_displayed()
+
     def test_closing_blocks_swap_callback(self, qtbot, ep1, ep2, deferred_off_thread):
         resolver = MagicMock(side_effect=lambda v: _ctx_for(v))
         words = [_word("猫", video=ep1), _word("犬", start_time=7.0, video=ep2)]
@@ -413,3 +431,45 @@ class TestPerEpisodeTracks:
         QApplication.processEvents()
         assert ep2 in dlg._media_ctx_cache
         assert dlg.get_selected_words()[0].line_expansion == (0, 1)
+
+    def test_a_pick_gets_its_merge_when_a_third_episode_supersedes_its_landing(
+        self, qtbot, ep1, ep2, tmp_path, deferred_off_thread
+    ):
+        from PyQt6.QtWidgets import QApplication
+
+        ep3 = tmp_path / "ep3.mkv"
+        ep3.write_bytes(b"")
+        rules = get_profile("ja").sentence_rules
+
+        def resolver(video):
+            return CurationMediaContext(
+                video_file=video,
+                subtitle_entries=[(20.0, 22.0, "もう一度食べる"), (22.5, 24.0, "続きです。")],
+                auto_merge_rules=rules,
+            )
+
+        ctx = CurationMediaContext(
+            video_file=ep1,
+            subtitle_entries=[(5.0, 7.0, "食べるのテスト。")],
+            auto_merge_rules=rules,
+            context_resolver=resolver,
+        )
+        primary = _word("食べる", start_time=5.0, video=ep1, sentence="食べるのテスト。")
+        primary.sentence_candidates = [
+            _word("食べる", start_time=5.0, video=ep1, sentence="食べるのテスト。"),
+            _word("食べる", start_time=20.0, video=ep2, sentence="もう一度食べる"),
+        ]
+        other = _word("猫", start_time=40.0, video=ep3, sentence="猫です。")
+        dlg, _player = _build_dialog(qtbot, [primary, other], ctx)
+        _focus_row(dlg, 0)
+        dlg._on_candidate_chosen(1)  # ep2's cues are not loaded yet
+        qtbot.wait(20)  # the deferred preview dispatches ep2's resolve
+        QApplication.processEvents()
+        _focus_row(dlg, dlg._visual_row_for_index(1))  # on to ep3 before ep2 lands
+        assert len(deferred_off_thread) == 2
+        for work, on_done, _err in list(deferred_off_thread):  # ep2 (superseded), then ep3
+            on_done(work())
+        assert ep2 in dlg._media_ctx_cache
+        assert not dlg._unstamped_picks
+        selected = {w.lemma: w for w in dlg.get_selected_words()}
+        assert selected["食べる"].line_expansion == (0, 1)
