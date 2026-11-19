@@ -16,7 +16,7 @@ import anki_miner.config.config as _config_module
 from anki_miner.config import ZOOM_PRESETS, AnkiMinerConfig, create_default_config
 from anki_miner.config.config import DEFAULT_SUBTITLE_CLEANUP_PATTERN, PREVIOUS_SUBTITLE_CLEANUP_DEFAULTS
 from anki_miner.config.paths import ANKI_MINER_HOME
-from anki_miner.languages.switching import switch_language
+from anki_miner.languages.switching import LANGUAGE_SCOPED_FIELDS, switch_language
 from anki_miner.services._ankiconnect import redact_ankiconnect_url
 from anki_miner.services.startup_store_recovery import backup_config_repair_is_safe
 from anki_miner.utils.atomic_io import atomic_write_path
@@ -378,7 +378,32 @@ class GUIConfigManager:
             keep_legacy_utilities=True,
             keep_legacy_feature_switches=True,
         )
-        return AnkiMinerConfig(**cls._decode_field_types(migrated))
+        config = AnkiMinerConfig(**cls._decode_field_types(migrated))
+        stored = migrated.get("language")
+        if isinstance(stored, str) and stored.strip() and stored.strip().lower() != config.language:
+            config = cls._park_unknown_language(config, stored.strip().lower())
+        return config
+
+    @staticmethod
+    def _park_unknown_language(config: AnkiMinerConfig, code: str) -> AnkiMinerConfig:
+        """Swap in ja's parked settings for a mining language this build lacks.
+
+        ``__post_init__`` folds an unknown ``language`` (a newer build's) to
+        "ja" but leaves that language's values in the live scoped fields, where
+        ja would mine with them and the next switch would park them over the
+        real ja snapshot. Park them under their own code instead and restore
+        ja's snapshot over ja's profile defaults, as ``switch_language`` does.
+        """
+        from anki_miner.languages.registry import get_profile
+
+        stash: dict[str, dict[str, Any]] = {c: dict(v) for c, v in config.language_stash.items()}
+        stash[code] = {name: getattr(config, name) for name in LANGUAGE_SCOPED_FIELDS}
+        incoming = stash.pop(config.language, {})
+        values: dict[str, Any] = {
+            **dict(get_profile(config.language).scoped_defaults),
+            **{k: v for k, v in incoming.items() if k in LANGUAGE_SCOPED_FIELDS},
+        }
+        return dataclasses.replace(config, language_stash=stash, **values)
 
     @classmethod
     def _archive_future_schema_config(cls, path: Path, schema_version: int) -> None:

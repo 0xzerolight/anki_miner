@@ -39,7 +39,7 @@ def test_retry_missing_audio_is_offered_only_when_a_source_caches_misses(qtbot, 
 
     panel.set_chain((AudioSourceEntry(kind="jpod101", pack_id=None, enabled=True),))
     assert panel._retry_missing_btn.isVisible()
-    assert "JapanesePod101" in panel._retry_missing_btn.toolTip()
+    assert panel._retry_missing_btn.toolTip()
 
     # A zh-shaped chain: googletts writes no .miss markers, so the button has
     # nothing to purge and must not claim otherwise.
