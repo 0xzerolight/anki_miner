@@ -80,3 +80,20 @@ def test_a_bilingual_cue_keeps_its_japanese_line(tmp_path, chinese):
 
     assert {word.sentence for word in words} == {"本当に大丈夫ですか？"}
     assert "大丈夫" in {word.mined_form for word in words}
+
+
+@pytest.mark.parametrize("build", [_create_subtitle_parser, get_profile("ja").create_parser])
+def test_a_one_role_credit_cue_is_judged_before_its_label_is_stripped(tmp_path, build):
+    # The simplified role label is the line's only Chinese; the speaker-tag strip took it.
+    parser = build(AnkiMinerConfig())
+    path = _srt(tmp_path, "翻译：小明", "校对：路人甲", "时间轴：天空", "猫が好きです", "翻译：小明\n明日行きます")
+
+    words = parser.parse_subtitle_file(path)
+
+    assert {word.sentence for word in words} == {"猫が好きです", "明日行きます"}
+    assert "猫" in {word.mined_form for word in words}
+    assert [text for _start, _end, text in parser.parse_raw_entries(path)][:3] == [
+        "翻译：小明",
+        "校对：路人甲",
+        "时间轴：天空",
+    ]

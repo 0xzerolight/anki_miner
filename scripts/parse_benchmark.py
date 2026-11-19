@@ -221,7 +221,8 @@ def _get_service() -> SubtitleParserService:
     """
     global _service
     if _service is None:
-        _service = SubtitleParserService(AnkiMinerConfig())
+        # name_piece_rejects: the ja factory's own keyword, so this is the ja parser.
+        _service = SubtitleParserService(AnkiMinerConfig(), name_piece_rejects=True)
     return _service
 
 
@@ -647,6 +648,7 @@ def _get_anchor_service() -> SubtitleParserService:
             term_rules_lookup=definition_service.offline_deinflection_terms_exist,
             reading_lookup=definition_service.offline_term_readings,
             kana_attest_lookup=definition_service.has_offline_definitions,
+            name_piece_rejects=True,
         )
     return _anchor_service
 

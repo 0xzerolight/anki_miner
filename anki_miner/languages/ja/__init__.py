@@ -68,10 +68,12 @@ def _create_parser(*args: Any, **kwargs: Any) -> SubtitleParserService:
     flattened cue becomes the card's Sentence: the script gate drops that line,
     as it drops a bilingual cue's English line in the other non-Latin languages.
     A Chinese line passes that gate (its kanji are Japanese script), so it is
-    named by ``is_chinese_line`` and not mined.
+    named by ``is_chinese_line`` and not mined. The name-piece rejects read
+    UniDic's lemmas, so only this parser runs them.
     """
     kwargs.setdefault("has_target_script", _JA_SCRIPT.contains_target_script)
     kwargs.setdefault("skip_line", is_chinese_line)
+    kwargs.setdefault("name_piece_rejects", True)
     return SubtitleParserService(*args, **kwargs)
 
 

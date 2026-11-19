@@ -256,3 +256,28 @@ def test_a_verb_row_joins_only_after_a_verb():
         _tok("あっ", "動詞", orth_base="ある"),
     ]
     assert _joiner({"ことがある"}).join_line("あんなことがあっ", tokens) is tokens
+
+
+def test_a_verb_row_does_not_join_after_a_na_adjectives_na():
+    # 嫌なことがあっ: the adnominal な is an auxiliary (lemma だ), not a verb ending.
+    tokens = [
+        _tok("嫌", "形状詞"),
+        _tok("な", "助動詞", orth_base="だ"),
+        _tok("こと", "名詞"),
+        _tok("が", "助詞"),
+        _tok("あっ", "動詞", orth_base="ある"),
+    ]
+    assert _joiner({"ことがある"}).join_line("嫌なことがあっ", tokens) is tokens
+
+
+def test_a_verb_row_after_a_join_is_judged_by_the_joined_word():
+    # こう|いう joins into the 連体詞 こういう in the same pass: its いう is no verb before ことがある.
+    tokens = [
+        _tok("こう", "副詞"),
+        _tok("いう", "動詞", orth_base="言う"),
+        _tok("こと", "名詞"),
+        _tok("が", "助詞"),
+        _tok("あっ", "動詞", orth_base="ある"),
+    ]
+    out = _joiner({"ことがある", "こういう"}).join_line("こういうことがあっ", tokens)
+    assert [t.surface for t in out] == ["こういう", "こと", "が", "あっ"]
