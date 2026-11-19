@@ -271,6 +271,49 @@ def test_a_committed_pick_does_not_survive_a_walk_away(wizard_factory, test_conf
     assert wiz.working_config() == test_config
 
 
+class _ReachableValidation(_FakeValidation):
+    def check_ankiconnect(self):
+        return True, "ok"
+
+
+@pytest.mark.parametrize("trigger", ["recheck", "skip"])
+def test_a_deck_picked_for_an_abandoned_language_stays_with_it(qtbot, monkeypatch, test_config, trigger):
+    """ja -> zh, pick zh's deck on the Anki page, back to ja: ja keeps its own deck (G5-004)."""
+    from PyQt6.QtCore import QThread  # noqa: PLC0415
+    from PyQt6.QtWidgets import QWizard  # noqa: PLC0415
+
+    config = replace(test_config, anki_deck_name="Japanese")
+    monkeypatch.setattr(SetupWizard, "validation_service", lambda self: _ReachableValidation())
+    wiz = SetupWizard(config, offer_mining_language=True)
+    qtbot.addWidget(wiz)
+    _stub_anki_service(monkeypatch, wiz, decks=["Chinese", "Japanese"])
+    page = wiz.language_page
+    page.initializePage()
+    _pick(page, "zh")
+    assert page.validatePage() is True
+
+    wiz.anki_page.initializePage()
+    deck = wiz.deck_page
+    qtbot.waitUntil(lambda: deck.deck_combo.findData("Chinese") >= 0, timeout=5000)
+    deck.select_deck("Chinese")
+
+    page.initializePage()  # Back, Back
+    _pick(page, "ja")
+    assert page.validatePage() is True
+    assert config_language(wiz.working_config()) == "ja"
+
+    if trigger == "recheck":
+        wiz._recheck_current_page()
+    else:
+        wiz.customButtonClicked.emit(QWizard.WizardButton.CustomButton1.value)
+
+    assert wiz.working_config().anki_deck_name == "Japanese"
+    for worker in [*wiz._workers, deck._worker, wiz.notetype_page._notetypes_worker]:
+        if isinstance(worker, QThread):
+            assert worker.wait(3000)
+    qtbot.wait(20)
+
+
 def test_finishing_is_what_keeps_the_pick(wizard_factory, test_config):
     wiz = wizard_factory(test_config)
     page = wiz.language_page

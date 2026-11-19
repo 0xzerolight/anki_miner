@@ -1383,6 +1383,10 @@ class AnkiPage(QWizardPage):
         layout.addWidget(self.pickers)
         layout.addStretch(1)
         self.pickers.setVisible(False)
+        #: The mining language the deck and note-type pickers were loaded for.
+        #: Back never re-initialises a page, so after a language round trip
+        #: they still hold the abandoned language's picks (G5-004).
+        self._pickers_language = config_language(wizard.working_config())
 
         for section in self.sections():
             section.completeChanged.connect(self.completeChanged)
@@ -1398,6 +1402,7 @@ class AnkiPage(QWizardPage):
 
     def initializePage(self) -> None:
         """Show the config's deck and note type, then ask AnkiConnect; an answer fetches both lists."""
+        self._pickers_language = config_language(self._wizard.working_config())
         self.deck_section.load_from_config()
         self.notetype_section.load_from_config()
         self.connect_section.initializePage()
@@ -1409,8 +1414,15 @@ class AnkiPage(QWizardPage):
         return all(section.validatePage() for section in self.sections())
 
     def stage_current_edits(self) -> None:
-        for section in self.sections():
-            section.stage_current_edits()
+        """Stage every section, but the pickers only into the language they were loaded for.
+
+        The connection belongs to no language, so it is always staged.
+        """
+        self.connect_section.stage_current_edits()
+        if config_language(self._wizard.working_config()) != self._pickers_language:
+            return
+        self.deck_section.stage_current_edits()
+        self.notetype_section.stage_current_edits()
 
     def _on_reachability_changed(self, reachable: bool) -> None:
         self.pickers.setVisible(reachable)
