@@ -68,6 +68,7 @@ from anki_miner.gui.workers.condense_worker import (
     CondenseItem,
     CondenseOutputCollisionError,
     CondenseWorker,
+    is_condensed_output,
     plan_condense_outputs,
 )
 from anki_miner.languages.registry import audio_title_language, config_language, get_profile, subtitle_language
@@ -1020,7 +1021,7 @@ class CondenseTab(RunOptionsMixin, _ToolTabBase):
         # No subtitle folder → per-file auto-detection over the media folder.
         self._scan_folder_async(
             media_folder,
-            lambda f: f.suffix.lower() in CONDENSE_MEDIA_EXTENSIONS,
+            lambda f: f.suffix.lower() in CONDENSE_MEDIA_EXTENSIONS and not is_condensed_output(f),
             lambda media_files: on_items([CondenseItem(m, None) for m in media_files]),
             empty_summary=self.tr("No media files were found in that folder."),
             failed_summary=self.tr("That media folder could not be scanned."),
@@ -1035,7 +1036,10 @@ class CondenseTab(RunOptionsMixin, _ToolTabBase):
             all_media = sorted(
                 f
                 for f in media_folder.iterdir()
-                if f.is_file() and f.suffix.lower() in CONDENSE_MEDIA_EXTENSIONS and not is_junk_path(f.name)
+                if f.is_file()
+                and f.suffix.lower() in CONDENSE_MEDIA_EXTENSIONS
+                and not is_condensed_output(f)
+                and not is_junk_path(f.name)
             )
             file_pairs = FilePairMatcher.find_pairs_by_episode_number(
                 media_folder,
@@ -1044,6 +1048,10 @@ class CondenseTab(RunOptionsMixin, _ToolTabBase):
                 subtitle_extensions=CONDENSE_SUBTITLE_EXTENSIONS,
                 language=language,
             )
+            # An earlier run's output shares its source's episode number and
+            # sorts after it ("Ep 01." < "Ep 01_condensed"), so the source keeps
+            # the match; the output's own pair is dropped here.
+            file_pairs = [fp for fp in file_pairs if not is_condensed_output(fp.video)]
             return all_media, file_pairs
 
         def _apply(result: object) -> None:

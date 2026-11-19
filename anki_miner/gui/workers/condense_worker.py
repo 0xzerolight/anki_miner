@@ -39,6 +39,18 @@ from anki_miner.utils.robust_fs import robust_rmtree
 logger = logging.getLogger(__name__)
 
 _CONDENSED_SUFFIX = "_condensed"
+#: The audio formats Condense writes (the tab's Format choices).
+CONDENSE_OUTPUT_EXTENSIONS: frozenset[str] = frozenset({".mp3", ".opus", ".flac"})
+
+
+def is_condensed_output(path: Path) -> bool:
+    """Whether *path* is a per-file output of an earlier Condense run (``<stem>_condensed.<fmt>``).
+
+    Every output format is also an accepted input, so a folder scan over a
+    folder an earlier run wrote into "Next to source" must skip these, or the
+    next run condenses its own outputs again.
+    """
+    return path.stem.endswith(_CONDENSED_SUFFIX) and path.suffix.lower() in CONDENSE_OUTPUT_EXTENSIONS
 
 
 @dataclass
