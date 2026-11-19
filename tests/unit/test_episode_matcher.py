@@ -1025,3 +1025,36 @@ def test_bs11_raws_pair_with_their_own_subtitles(tmp_path):
     videos = [f"[Leopard-Raws] Show - {n:02d} RAW (BS11 1280x720 x264 AAC).mp4" for n in range(9, 14)]
     subs = [f"Show - {n:02d}.ja.srt" for n in range(9, 14)]
     assert _pair_names(tmp_path, videos, subs) == list(zip(videos, subs, strict=True))
+
+
+@pytest.mark.parametrize(
+    ("filename", "episode", "part"),
+    [
+        ("[SubsPlease] Show - 12.5 (1080p).mkv", 12, 5),
+        ("Show - 12.5.ja.srt", 12, 5),
+        ("Show 12.5.mkv", 12, 5),
+        # A dot-separated name keeps today's reading: the last run.
+        ("Title.12.5.mkv", 5, None),
+        ("Mob.Psycho.100.05.mkv", 5, None),
+        ("Show 100.05.mkv", 5, None),
+    ],
+)
+def test_decimal_special_episode_is_one_token(filename, episode, part):
+    result = EpisodeNumberExtractor.extract_episode_info(Path(filename))
+    assert result is not None
+    assert (result.episode_number, result.part) == (episode, part)
+
+
+def test_decimal_special_does_not_swap_with_the_real_episode(tmp_path):
+    videos = ["[SubsPlease] Show - 05 (1080p).mkv", "[SubsPlease] Show - 12.5 (1080p).mkv"]
+    subs = ["Show.E05.ja.srt", "Show - 12.5.ja.srt"]
+    assert _pair_names(tmp_path, videos, subs) == [
+        ("[SubsPlease] Show - 05 (1080p).mkv", "Show.E05.ja.srt"),
+        ("[SubsPlease] Show - 12.5 (1080p).mkv", "Show - 12.5.ja.srt"),
+    ]
+
+
+def test_decimal_special_does_not_pair_with_its_whole_episode(tmp_path):
+    videos = ["[SubsPlease] Show - 12.5 (1080p).mkv"]
+    subs = ["Show - 12.ja.srt"]
+    assert _pair_names(tmp_path, videos, subs) == []
