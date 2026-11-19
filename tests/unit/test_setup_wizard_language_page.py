@@ -271,6 +271,49 @@ def test_a_committed_pick_does_not_survive_a_walk_away(wizard_factory, test_conf
     assert wiz.working_config() == test_config
 
 
+class _ReachableValidation(_FakeValidation):
+    def check_ankiconnect(self):
+        return True, "ok"
+
+
+@pytest.mark.parametrize("trigger", ["recheck", "skip"])
+def test_a_deck_picked_for_an_abandoned_language_stays_with_it(qtbot, monkeypatch, test_config, trigger):
+    """ja -> zh, pick zh's deck on the Anki page, back to ja: ja keeps its own deck (G5-004)."""
+    from PyQt6.QtCore import QThread  # noqa: PLC0415
+    from PyQt6.QtWidgets import QWizard  # noqa: PLC0415
+
+    config = replace(test_config, anki_deck_name="Japanese")
+    monkeypatch.setattr(SetupWizard, "validation_service", lambda self: _ReachableValidation())
+    wiz = SetupWizard(config, offer_mining_language=True)
+    qtbot.addWidget(wiz)
+    _stub_anki_service(monkeypatch, wiz, decks=["Chinese", "Japanese"])
+    page = wiz.language_page
+    page.initializePage()
+    _pick(page, "zh")
+    assert page.validatePage() is True
+
+    wiz.anki_page.initializePage()
+    deck = wiz.deck_page
+    qtbot.waitUntil(lambda: deck.deck_combo.findData("Chinese") >= 0, timeout=5000)
+    deck.select_deck("Chinese")
+
+    page.initializePage()  # Back, Back
+    _pick(page, "ja")
+    assert page.validatePage() is True
+    assert config_language(wiz.working_config()) == "ja"
+
+    if trigger == "recheck":
+        wiz._recheck_current_page()
+    else:
+        wiz.customButtonClicked.emit(QWizard.WizardButton.CustomButton1.value)
+
+    assert wiz.working_config().anki_deck_name == "Japanese"
+    for worker in [*wiz._workers, deck._worker, wiz.notetype_page._notetypes_worker]:
+        if isinstance(worker, QThread):
+            assert worker.wait(3000)
+    qtbot.wait(20)
+
+
 def test_finishing_is_what_keeps_the_pick(wizard_factory, test_config):
     wiz = wizard_factory(test_config)
     page = wiz.language_page
@@ -495,6 +538,60 @@ def test_next_joins_a_pack_download_settings_already_started(qtbot, monkeypatch,
     assert page.pack_ready() is False
 
     running.result_ready.emit(True, "Deutsch pack installed.")
+
+    assert page.pack_ready() is True
+
+
+class _SignallingTasks:
+    """BackgroundTaskController's pack starter as the page sees it: one worker per code, slots connected."""
+
+    def __init__(self) -> None:
+        self.language_pack_workers: dict[str, _SignallingInstallWorker] = {}
+
+    def start_language_pack_download(self, code, root, on_status, on_finished) -> None:
+        worker = _SignallingInstallWorker()
+        self.language_pack_workers[code] = worker
+        worker.status.connect(on_status)
+        worker.result_ready.connect(on_finished)
+
+
+def test_an_abandoned_languages_pack_is_not_credited_to_the_picked_one(qtbot, monkeypatch, test_config):
+    """ko (download) -> Next, Back, zh (download) -> Next: ko's run ending says nothing about zh (G5-001)."""
+    from PyQt6.QtWidgets import QWidget
+
+    from anki_miner.gui.utils.language_choices import MiningLanguageChoice
+
+    choices = (
+        MiningLanguageChoice("ja", "日本語", "Japanese"),
+        MiningLanguageChoice("ko", "한국어", "Korean", True, 40),
+        MiningLanguageChoice("zh", "中文", "Chinese", True, 60),
+    )
+    monkeypatch.setattr(wizard_pages, "mining_language_choices", lambda: choices)
+    synced: list[bool] = []
+    monkeypatch.setattr(wizard_pages, "ensure_language_packs_on_syspath", lambda: synced.append(True))
+    parent = QWidget()
+    qtbot.addWidget(parent)
+    tasks = _SignallingTasks()
+    parent.background_tasks = tasks  # type: ignore[attr-defined]
+    monkeypatch.setattr(SetupWizard, "validation_service", lambda self: _FakeValidation())
+    wiz = SetupWizard(test_config, parent, offer_mining_language=True)
+    notified = _with_settings_tab(wiz)
+    page = wiz.language_page
+    _pick(page, "ko")
+    assert page.validatePage() is True
+    _pick(page, "zh")
+    assert page.validatePage() is True
+    ko, zh = tasks.language_pack_workers["ko"], tasks.language_pack_workers["zh"]
+
+    ko.status.emit("한국어 pack (2/2): installing")
+    ko.result_ready.emit(True, "한국어 pack installed.")
+
+    assert page.pack_ready() is False
+    assert "한국어 pack" not in page.ready_page_pack_line()
+    assert synced == [True] and notified == ["ko"]  # the pack still lands for Settings
+
+    zh.result_ready.emit(True, "中文 pack installed.")
+    ko.result_ready.emit(False, "Cannot reach the download server.")
 
     assert page.pack_ready() is True
 
