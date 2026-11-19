@@ -65,6 +65,7 @@ from anki_miner.gui.widgets.enhanced import (
     make_menu_button,
 )
 from anki_miner.gui.workers.condense_worker import (
+    CONDENSE_OUTPUT_EXTENSIONS,
     CondenseItem,
     CondenseOutputCollisionError,
     CondenseWorker,
@@ -847,7 +848,12 @@ class CondenseTab(RunOptionsMixin, _ToolTabBase):
         default_stem = Path(folder_str).name if folder_str else items[0].media.parent.name
         # safe_filename turns "" into "unnamed", so only sanitize a real entry.
         typed = self.merge_name_edit.text().strip()
-        stem = Path(safe_filename(typed) if typed else safe_filename(default_stem)).stem
+        # The name is used whole: Path.stem would cut "Show.S01" to "Show", so two
+        # seasons would share one file. Only a typed output extension is dropped.
+        stem = safe_filename(typed) if typed else safe_filename(default_stem)
+        base, dot, ext = stem.rpartition(".")
+        if typed and dot and base and f".{ext.lower()}" in CONDENSE_OUTPUT_EXTENSIONS:
+            stem = base
         merge_into = resolve_output_path(merge_dir, bounded_output_name(stem, f".{output_format}", merge_dir))
         if merge_into.exists() and not self.overwrite_checkbox.isChecked():
             self.show_screen_issue(

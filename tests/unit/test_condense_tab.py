@@ -1231,6 +1231,33 @@ def test_merge_run_uses_a_typed_name(qtbot, tmp_path):
     assert worker_cls.call_args.kwargs["merge_into"] == folder / "My_Season_ two.mp3"
 
 
+def test_merge_run_keeps_a_dotted_folder_name_whole(qtbot, tmp_path):
+    """X4-005: 'Show.S01' and 'Show.S02' must not both merge to Show.mp3."""
+    folder = _merge_folder(tmp_path, name="Show.S01")
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    tab.folder_mode_button.click()
+    tab.media_folder_selector.set_path(str(folder))
+    tab.merge_checkbox.setChecked(True)
+
+    worker_cls = _start_condense(tab, qtbot, _FakeWorker(), folder_mode=True)
+
+    assert worker_cls.call_args.kwargs["merge_into"] == folder / "Show.S01.mp3"
+
+
+def test_merge_run_keeps_a_dotted_typed_name_whole(qtbot, tmp_path):
+    """X4-005: a typed 'Re.Zero' is the name; only a typed output extension is dropped."""
+    folder = _merge_folder(tmp_path)
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    tab.folder_mode_button.click()
+    tab.media_folder_selector.set_path(str(folder))
+    tab.merge_checkbox.setChecked(True)
+    tab.merge_name_edit.setText("Re.Zero")
+
+    worker_cls = _start_condense(tab, qtbot, _FakeWorker(), folder_mode=True)
+
+    assert worker_cls.call_args.kwargs["merge_into"] == folder / "Re.Zero.mp3"
+
+
 def test_merge_off_leaves_the_run_unmerged(qtbot, tmp_path):
     folder = _merge_folder(tmp_path)
     tab = _make_tab(_make_config(tmp_path), qtbot)
