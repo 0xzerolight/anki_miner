@@ -1636,12 +1636,12 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         """
         if self._settings_dirty:
             self._debounce_timer.stop()
-            self._commit_settings_and_log()
+            self._commit_settings_and_log(closing=True)
 
     def _on_debounce_timeout(self) -> None:
         self._commit_settings_and_log()
 
-    def _commit_settings_and_log(self) -> None:
+    def _commit_settings_and_log(self, *, closing: bool = False) -> None:
         """Run a commit from a timer or closeEvent, where a raise has no caller.
 
         ``_commit_settings`` has already restored the dirty flag and re-armed
@@ -1649,7 +1649,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         to the excepthook on every retry.
         """
         try:
-            self._commit_settings()
+            self._commit_settings(closing=closing)
         except Exception as error:  # noqa: BLE001 - restored and re-armed by _commit_settings
             log_summary(
                 logger,
@@ -1748,7 +1748,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
             return False
         return committed and not self._settings_dirty
 
-    def _commit_settings(self) -> bool:
+    def _commit_settings(self, *, closing: bool = False) -> bool:
         """Debounced auto-save commit with per-field validation.
 
         Unlike the old Save-button flow (modal warning + whole-save abort),
@@ -1758,11 +1758,16 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         setting from persisting, with only a small label as evidence. Each
         failing field keeps its last-good value from ``self.config``, the
         rest commits, and a sticky inline warning names what was kept.
+
+        ``closing`` (the close flush) has no later retry, so while a panel owns
+        mutation authority it commits everything except the fields that
+        authority guards, instead of refusing.
         """
-        if self._committing or any(
+        resources_busy = any(
             panel.has_active_mutation()
             for panel in (self.dictionary_panel, self.audio_panel, self.frequency_panel, self.pitch_panel)
-        ):
+        )
+        if self._committing or (resources_busy and not closing):
             # The debounce fired while a commit is in flight, or while a panel
             # owns indexed-resource mutation authority — retry afterwards.
             if self._settings_dirty:
@@ -1775,7 +1780,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
             # still-pending expiry so it can't fire a redundant second commit.
             self._debounce_timer.stop()
             self._settings_dirty = False
-            self._commit_settings_locked()
+            self._commit_settings_locked(hold_resources=resources_busy)
         except ConfigCommitError as error:
             if not error.result.persisted:
                 self._settings_dirty = dirty_before_commit or self._settings_dirty
@@ -1791,7 +1796,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
             self._committing = False
         return True
 
-    def _commit_settings_locked(self) -> None:
+    def _commit_settings_locked(self, *, hold_resources: bool = False) -> None:
         # If the user just re-enabled startup checks (False -> True), clear any
         # previously skipped version so a fresh check runs next launch.
         was_enabled = self.config.check_for_updates
@@ -1808,7 +1813,9 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         # the user has changed the path — reuse-of-current always passes so a
         # transiently-unavailable mount (external SSD) doesn't block other
         # unrelated edits from saving.
-        new_dicts_root = self.dictionary_panel.get_dicts_root()
+        # hold_resources: a panel mutation owns the root and the chains, so
+        # they stay at their committed values.
+        new_dicts_root = self.config.dicts_root if hold_resources else self.dictionary_panel.get_dicts_root()
         if new_dicts_root != self.config.dicts_root and (
             not new_dicts_root.is_dir() or not os.access(new_dicts_root, os.W_OK)
         ):
@@ -1879,13 +1886,14 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         # Async import flows can complete between the start-of-Save snapshot
         # and this point. Re-read all immediate-persist chains only now so a
         # completion mid-Save cannot be overwritten by a stale snapshot.
-        new_config = replace(
-            new_config,
-            dictionary_chain=self.dictionary_panel.get_chain(),
-            frequency_chain=self.frequency_panel.get_chain(),
-            expression_audio_chain=self.audio_panel.get_chain(),
-            pitch_chain=self.pitch_panel.get_chain(),
-        )
+        if not hold_resources:
+            new_config = replace(
+                new_config,
+                dictionary_chain=self.dictionary_panel.get_chain(),
+                frequency_chain=self.frequency_panel.get_chain(),
+                expression_audio_chain=self.audio_panel.get_chain(),
+                pitch_chain=self.pitch_panel.get_chain(),
+            )
 
         # Commit synchronously, never through a signal emit: Qt hands a slot's
         # ConfigCommitError to the excepthook, so a failed save would read as

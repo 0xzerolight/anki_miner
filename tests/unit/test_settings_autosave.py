@@ -466,6 +466,34 @@ def test_debounced_save_failure_stays_dirty_and_retries(test_config, qtbot, tmp_
         _teardown_tab(widget, qtbot)
 
 
+def test_close_flush_during_chain_mutation_saves_other_edits(test_config, qtbot, tmp_path):
+    """S2-002: the close flush persists edits made while a panel mutation runs."""
+    committed: list[AnkiMinerConfig] = []
+    widget = _build_tab(test_config, qtbot, committed.append)
+    try:
+        widget._debounce_timer.setInterval(60_000)
+        token = widget.dictionary_panel.hold_mutation("resource-download")
+        widget.anki_panel.set_deck_name("EditedDuringDownload")
+        new_root = tmp_path / "new_dicts"
+        new_root.mkdir()
+        widget.dictionary_panel.dicts_root_selector.set_path(str(new_root))
+
+        widget.flush_pending_settings()
+        widget.shutdown()
+
+        assert committed, "close flush committed nothing"
+        saved = committed[-1]
+        assert saved.anki_deck_name == "EditedDuringDownload"
+        assert saved.dicts_root == test_config.dicts_root
+        assert saved.dictionary_chain == test_config.dictionary_chain
+        assert saved.frequency_chain == test_config.frequency_chain
+        assert saved.expression_audio_chain == test_config.expression_audio_chain
+        assert saved.pitch_chain == test_config.pitch_chain
+        widget.dictionary_panel.release(token)
+    finally:
+        _teardown_tab(widget, qtbot)
+
+
 class TestCommitRetainsSaveSemantics:
     def test_reenabling_update_checks_clears_skipped_version(self, tab, test_config, no_modals):
         tab.update_config(replace(test_config, check_for_updates=False, skipped_update_version="9.9.9"))
