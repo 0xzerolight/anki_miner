@@ -350,6 +350,22 @@ def test_moving_past_the_end_is_a_no_op(queue) -> None:
     assert tab._queue.all_items() == [first, second]
 
 
+@pytest.mark.parametrize(("pick", "delta"), [("c", -1), ("a", 1)], ids=["alt-up", "alt-down"])
+def test_alt_move_passes_the_visible_neighbour_not_a_hidden_one(queue, pick, delta) -> None:
+    """Under a filter, one press moves the selection past the row shown next to it."""
+    tab, add = queue
+    a, b, c = add("a"), add("b"), add("c")
+    b.status = tab._status_completed
+    tab._refresh_row(b)
+    tab._on_queue_filter_changed("ready")
+    _select(tab, [{"a": a, "c": c}[pick]])
+
+    tab._move_selection(delta)
+
+    assert [item for item in _rows(tab) if not tab._list_items[item].isHidden()] == [c, a]
+    assert [item for item in tab._queue.all_items() if item is not b] == [c, a]
+
+
 def test_reordering_keeps_the_selection(queue) -> None:
     tab, add = queue
     first, _second = add("a"), add("b")

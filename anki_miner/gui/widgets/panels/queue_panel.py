@@ -46,6 +46,7 @@ from anki_miner.gui.utils.keyboard_shortcuts import (
     primary_action_shortcut,
     scoped_shortcut,
 )
+from anki_miner.gui.utils.queue_reorder import move_past_visible
 from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.gui.widgets.base import configure_card_layout, field_label_width
 from anki_miner.gui.widgets.base.sizing import metric_row_height
@@ -685,23 +686,14 @@ class QueuePanel(QFrame):
     # ------------------------------------------------------------------
 
     def _move_selection(self, delta: int) -> None:
-        """Move every selected row one place up (-1) or down (+1)."""
+        """Move every selected row past the visible row above (-1) or below (+1) it."""
         if self._locked:
             return
-        order = self.view_order()
-        rows = sorted(order.index(w) for w in self.selected_widgets())
-        if not rows:
+        items = [self.list_widget.item(row) for row in range(self.list_widget.count())]
+        visible = [w for li in items if li is not None and not li.isHidden() and (w := self._widget_at(li)) is not None]
+        order = move_past_visible(self.view_order(), visible, self.selected_widgets(), delta)
+        if order is None:
             return
-        if delta < 0:
-            if rows[0] == 0:
-                return
-            for row in rows:
-                order[row - 1], order[row] = order[row], order[row - 1]
-        else:
-            if rows[-1] == len(order) - 1:
-                return
-            for row in reversed(rows):
-                order[row + 1], order[row] = order[row], order[row + 1]
         self._reorder_to(order)
 
     def _reorder_to(self, order: list[QueueItemWidget]) -> None:
