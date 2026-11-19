@@ -687,7 +687,11 @@ class YouTubeTab(YtdlpAvailabilityMixin, _ListQueueMiningTabBase):
             # letting every item fail with YtdlpNotFoundError in turn.
             self._render_ytdlp_issue()
             return
-        candidates = items if items is not None else self._queue.all_items()
+        # Only the rows this run mines: the same READY set the base mines when
+        # items is None, so a finished or failed transcribed row gates nothing.
+        candidates = (
+            items if items is not None else [i for i in self._queue.all_items() if i.status == self._status_ready]
+        )
         if any(i.resolved_sub_mode == "transcribe" for i in candidates) and not usable_model_installed(self.config):
             self.show_screen_issue(
                 ScreenIssue(

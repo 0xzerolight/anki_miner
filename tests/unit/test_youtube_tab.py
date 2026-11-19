@@ -2022,6 +2022,24 @@ class TestTranscriptionPreflight:
 
         assert tab._queue_worker_cls.call_count == 1
 
+    def test_only_the_rows_this_run_mines_are_gated(self, tab):
+        """A finished or failed transcribed row does not gate a caption run."""
+        done = self._transcribe_row(tab)
+        done.status = YouTubeItemStatus.COMPLETED
+        failed = _add_ready_item(tab, "https://youtu.be/v2")
+        failed.status = YouTubeItemStatus.ERROR
+        tab._add_flow.set_subtitle_source("auto")
+        ready = _add_ready_item(tab, "https://youtu.be/v3")
+        failed.resolved_sub_mode = "transcribe"
+        assert ready.resolved_sub_mode == "manual_only"
+
+        with patch(self._GATE, return_value=False):
+            tab._start_run()
+
+        assert tab._queue_worker_cls.call_count == 1
+        assert tab._queue_worker_cls.call_args.kwargs["items"] == [ready]
+        assert tab.issue_banner().current_issue() is None
+
     def test_a_stale_refusal_is_cleared_on_the_next_run(self, tab):
         self._transcribe_row(tab)
         with patch(self._GATE, return_value=False):
