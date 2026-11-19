@@ -12,6 +12,7 @@ from PyQt6.QtWidgets import QApplication, QMessageBox
 
 from anki_miner.gui.widgets.deck_filter_tab import DeckFilterTab
 from anki_miner.gui.workers.base_worker import SingleCallWorker
+from anki_miner.gui.workers.deck_filter_worker import DeckFilterApplyWorker
 from anki_miner.services.deck_filter import (
     DeckFilterOptions,
     DeckFilterPlan,
@@ -112,6 +113,30 @@ class TestScanGating:
         worker_cls.assert_not_called()
         assert "different name" in tab.issue_banner().current_issue().summary
 
+    @pytest.mark.parametrize(
+        ("source", "target"),
+        [("Core 2k", "Core 2k::Filtered"), ("Mining::Ärger", "mining::ÄRGER::Sub")],
+    )
+    def test_target_inside_the_source_is_refused(self, tab, source, target):
+        """X5-003: deck:"Source" matches its subdecks too, so copies nested under the
+        source are read back by every rescan and negated out of the known gate: each
+        rescan would copy the same notes again, into the deck the screen says is untouched."""
+        _select_source(tab, source)
+        tab.target_edit.setText(target)
+        with patch(f"{_TAB_MOD}.DeckFilterScanWorker") as worker_cls:
+            tab._start_scan()
+
+        worker_cls.assert_not_called()
+        assert "inside" in tab.issue_banner().current_issue().summary
+
+    def test_a_sibling_sharing_the_source_prefix_is_accepted(self, tab):
+        _select_source(tab, "Core 2k")
+        tab.target_edit.setText("Core 2k Filtered::Sub")
+        with patch(f"{_TAB_MOD}.DeckFilterScanWorker", MagicMock(return_value=MagicMock())) as worker_cls:
+            tab._start_scan()
+
+        worker_cls.assert_called_once()
+
     def test_valid_inputs_start_the_scan_worker(self, tab):
         _select_source(tab)
         worker = MagicMock()
@@ -171,6 +196,24 @@ class TestInspection:
         assert tab.expression_combo.count() == 1
         assert not tab.expression_combo.isEnabled()
         assert tab.field_row.isHidden()
+
+    def test_going_back_to_no_deck_supersedes_the_read(self, tab):
+        """X5-005: an inspection still running for the deck the user left must not
+        show that deck's fields and note count under "Select a deck…"."""
+        with (
+            patch(f"{_TAB_MOD}.AnkiService"),
+            patch(f"{_TAB_MOD}.run_off_thread") as run,
+        ):
+            tab.source_combo.addItem("Big deck")
+            tab.source_combo.setCurrentIndex(1)
+            tab.source_combo.setCurrentIndex(0)
+        on_done = run.call_args.args[2]
+
+        on_done(DeckInspection(2000, ("Core",), ("Front", "Back"), {"Core": "Front"}))
+
+        assert tab.field_row.isHidden()
+        assert tab.deck_info_label.isHidden()
+        assert tab.expression_combo.count() == 1
 
     def test_the_field_pickers_wait_for_the_deck(self, tab):
         """E07: Word and Reading field appear once a deck is read."""
@@ -293,17 +336,44 @@ class TestPlanLifecycle:
         worker.start.assert_called_once_with()
 
 
+def _copying(tab, plan):
+    """Stand in for the Apply worker whose result the receipt reports."""
+    worker = MagicMock(spec=DeckFilterApplyWorker)
+    worker.plan = plan
+    tab.worker_thread = worker
+
+
 class TestReceipts:
     def test_apply_receipt_names_the_deck_and_count(self, tab):
         tab._on_scan_finished(_plan())
+        _copying(tab, tab._plan)
 
         tab._on_apply_finished(DeckFilterResult(created=1, not_created=0))
 
         assert tab.status_label.text() == 'Copied 1 note(s) into "Premade (Filtered)".'
         assert tab._plan is None
 
+    def test_a_config_refresh_mid_copy_keeps_the_deck_in_the_receipt(self, tab, test_config):
+        """X5-002: a settings save while Copy runs drops the held plan; the receipt
+        names the deck the run copied into, not the dropped plan's."""
+        plan = _plan()
+        tab._on_scan_finished(plan)
+        with (
+            patch(f"{_TAB_MOD}.QMessageBox.question", return_value=QMessageBox.StandardButton.Yes),
+            patch(f"{_TAB_MOD}.DeckFilterApplyWorker") as worker_cls,
+        ):
+            tab._start_apply()
+        _copying(tab, worker_cls.call_args.args[1])
+
+        tab.update_config(replace(test_config, config_version=test_config.config_version + 1))
+        tab._on_apply_finished(DeckFilterResult(created=1, not_created=0))
+
+        assert tab.status_label.text() == 'Copied 1 note(s) into "Premade (Filtered)".'
+        tab.worker_thread = None
+
     def test_rejected_notes_are_reported(self, tab):
         tab._on_scan_finished(_plan())
+        _copying(tab, tab._plan)
 
         tab._on_apply_finished(DeckFilterResult(created=0, not_created=1))
 
@@ -375,4 +445,89 @@ class TestFailedApply:
         tab._on_worker_error("AnkiConnect timed out")
 
         assert tab._plan is not None
+        tab.worker_thread = None
+
+
+class TestOptionChangesDropThePlan:
+    """X5-001: source, target and the field pickers define the plan, so changing any of
+    them after a Scan must drop it; Copy must never write the scanned source and target
+    while the screen shows different ones."""
+
+    @pytest.mark.parametrize("change", ["source", "target", "expression", "reading"])
+    def test_a_changed_option_drops_the_plan_and_copy_writes_nothing(self, tab, change):
+        _select_source(tab, "Premade")
+        tab._on_inspected(
+            tab._inspect_generation,
+            DeckInspection(3, ("Core",), ("Expression", "Reading"), {"Core": "Expression"}),
+        )
+        tab._on_scan_finished(_plan())
+        assert tab.apply_button.isEnabled()
+
+        if change == "source":
+            _select_source(tab, "Other")
+        elif change == "target":
+            tab.target_edit.setText("My Sentences")
+        elif change == "expression":
+            tab.expression_combo.setCurrentIndex(1)
+        else:
+            tab.reading_combo.setCurrentIndex(2)
+
+        assert tab._plan is None
+        assert not tab.apply_button.isEnabled()
+        assert tab.scan_button.objectName() == "primary"
+        with (
+            patch(f"{_TAB_MOD}.QMessageBox.question", return_value=QMessageBox.StandardButton.Yes),
+            patch(f"{_TAB_MOD}.DeckFilterApplyWorker") as worker_cls,
+        ):
+            tab._start_apply()
+        worker_cls.assert_not_called()
+
+
+class TestDeckListRefresh:
+    """X5-004: the deck list is re-read on every show, so a deck made since (this
+    screen's own Copy target included) appears without a restart."""
+
+    def test_the_list_is_refetched_and_refilled_in_place(self, tab):
+        tab._on_decks_fetched(["Premade"])
+        with patch(f"{_TAB_MOD}.run_off_thread", MagicMock(return_value=None)):
+            tab.source_combo.setCurrentIndex(1)
+        tab._on_scan_finished(_plan())
+
+        with patch.object(tab, "_load_decks") as load:
+            tab.ensure_decks()
+        load.assert_called_once_with()
+
+        with patch(f"{_TAB_MOD}.run_off_thread") as inspect:
+            tab._on_decks_fetched(["Premade", "Premade (Filtered)"])
+
+        items = [tab.source_combo.itemText(i) for i in range(tab.source_combo.count())]
+        assert items == ["Select a deck…", "Premade", "Premade (Filtered)"]
+        assert tab.source_combo.currentText() == "Premade"
+        inspect.assert_not_called()  # an unchanged pick is not re-read ...
+        assert tab._plan is not None  # ... and keeps its plan
+
+    def test_a_deck_gone_from_anki_drops_the_pick(self, tab):
+        tab._on_decks_fetched(["Premade", "Old"])
+        with patch(f"{_TAB_MOD}.run_off_thread", MagicMock(return_value=None)):
+            tab.source_combo.setCurrentIndex(2)
+        tab._on_scan_finished(_plan())
+
+        tab._on_decks_fetched(["Premade"])
+
+        assert tab.source_combo.currentIndex() == 0
+        assert tab._plan is None
+
+    def test_an_empty_answer_after_a_list_keeps_the_list(self, tab):
+        tab._on_decks_fetched(["Premade"])
+
+        tab._on_decks_fetched([])
+
+        assert tab.source_combo.count() == 2
+        assert tab.issue_banner().current_issue() is None
+
+    def test_no_refetch_while_a_run_is_active(self, tab):
+        tab.worker_thread = MagicMock()
+        with patch.object(tab, "_load_decks") as load:
+            tab.ensure_decks()
+        load.assert_not_called()
         tab.worker_thread = None

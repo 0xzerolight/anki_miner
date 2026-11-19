@@ -86,11 +86,12 @@ class TestComboPopulation:
 
 class TestApplyPath:
     @pytest.mark.parametrize(
-        ("percent", "expected_zoom"),
-        [(75, 0.75), (100, 1.0), (125, 1.25), (200, 2.0)],
+        ("percent", "expected_zoom", "needs_restart"),
+        # The panel boots at 100%: picking it again changes nothing to restart for.
+        [(75, 0.75, True), (100, 1.0, False), (125, 1.25, True), (200, 2.0, True)],
     )
-    def test_selecting_preset_emits_and_reveals_note(
-        self, panel: UISettingsPanel, percent: int, expected_zoom: float
+    def test_selecting_preset_emits_and_notes_a_restart_when_it_differs(
+        self, panel: UISettingsPanel, percent: int, expected_zoom: float, needs_restart: bool
     ) -> None:
         captured: list[float] = []
         panel.zoom_changed.connect(captured.append)
@@ -99,9 +100,9 @@ class TestApplyPath:
         panel._on_zoom_selected(idx)
 
         assert captured == [pytest.approx(expected_zoom)]
-        assert panel.zoom_restart_note.isHidden() is False
-        assert panel.restart_now_btn.isHidden() is False
-        assert panel.restart_later_btn.isHidden() is False
+        assert panel.zoom_restart_note.isHidden() is not needs_restart
+        assert panel.restart_now_btn.isHidden() is not needs_restart
+        assert panel.restart_later_btn.isHidden() is not needs_restart
         assert panel._ui_zoom == pytest.approx(expected_zoom)
 
     def test_activated_signal_drives_apply(self, panel: UISettingsPanel) -> None:

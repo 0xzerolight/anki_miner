@@ -144,8 +144,6 @@ class CardBackfillTab(RunOptionsMixin, _AnkiPlanTabBase):
         self.worker_thread: BackfillScanWorker | BackfillApplyWorker | None = None
         self._plan: BackfillPlan | None = None
         self._scan_warnings: tuple[str, ...] = ()
-        # "Did a deck list arrive?", NOT "did we ask?" — see ensure_decks.
-        self._decks_loaded = False
         #: True while the banner may carry the deck-fetch failure, so a later
         #: success clears that banner and nothing else shown since.
         self._deck_fetch_failed = False
@@ -190,6 +188,7 @@ class CardBackfillTab(RunOptionsMixin, _AnkiPlanTabBase):
         self.deck_combo = QComboBox()
         self.deck_combo.setAccessibleName(self.tr("Deck"))
         self.deck_combo.addItem(self.tr("All decks"))
+        self.deck_combo.currentIndexChanged.connect(self._drop_plan_for_changed_options)
         deck_layout.addWidget(self.deck_combo)
         layout.addWidget(self.deck_card)
 
@@ -246,6 +245,7 @@ class CardBackfillTab(RunOptionsMixin, _AnkiPlanTabBase):
         # silently. Pinned by
         # tests/unit/test_run_option_persistence.py::test_overwrite_is_never_persisted.
         self.overwrite_checkbox = QCheckBox(self.tr("Overwrite existing values"))
+        self.overwrite_checkbox.toggled.connect(self._drop_plan_for_changed_options)
         fields_layout.addWidget(self.overwrite_checkbox)
         layout.addWidget(self.fields_card)
 
@@ -462,7 +462,7 @@ class CardBackfillTab(RunOptionsMixin, _AnkiPlanTabBase):
         self._refresh_checkbox_gates()
 
     # ------------------------------------------------------------------
-    # Deck dropdown (lazy fetch on first show)
+    # Deck dropdown (fetched on every show)
     # ------------------------------------------------------------------
 
     def _deck_combo(self) -> QComboBox:

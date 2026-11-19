@@ -417,6 +417,48 @@ def test_folder_mode_with_subfolder_pairs_and_logs(qtbot, tmp_path):
     assert "Matched 2 of 2" in log_text
 
 
+def _folder_with_previous_outputs(tmp_path: Path) -> tuple[Path, Path]:
+    """A folder a previous Condense run wrote into "Next to source"."""
+    folder = tmp_path / "Anime"
+    folder.mkdir()
+    media = folder / "Anime - 01.mkv"
+    media.write_bytes(b"fake")
+    (folder / "Anime - 01.ja.ass").write_text("[Script Info]\n")
+    (folder / "Anime - 01_condensed.mp3").write_bytes(b"old")
+    (folder / "Anime - 01_condensed.srt").write_text("1\n")
+    return folder, media
+
+
+def test_folder_scan_skips_previous_condensed_outputs(qtbot, tmp_path):
+    """X4-003: a second run over the same folder must not queue its own outputs."""
+    folder, media = _folder_with_previous_outputs(tmp_path)
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    tab.folder_mode_button.click()
+    tab.media_folder_selector.set_path(str(folder))
+
+    result: list[list[CondenseItem]] = []
+    tab._collect_folder_items_async(result.append)
+    qtbot.waitUntil(lambda: bool(result), timeout=3000)
+
+    assert result[0] == [CondenseItem(media, None)]
+
+
+def test_folder_pairing_skips_previous_condensed_outputs(qtbot, tmp_path):
+    """X4-003: the subtitle-folder pairing scan also drops the previous outputs."""
+    folder, media = _folder_with_previous_outputs(tmp_path)
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    tab.folder_mode_button.click()
+    tab.media_folder_selector.set_path(str(folder))
+    tab.subtitle_folder_selector.set_path(str(folder))
+
+    result: list[list[CondenseItem]] = []
+    tab._collect_folder_items_async(result.append)
+    qtbot.waitUntil(lambda: bool(result), timeout=3000)
+
+    assert [item.media for item in result[0]] == [media]
+    assert "Matched 1 of 1" in tab.log_widget.text_edit.toPlainText()
+
+
 def test_folder_mode_subfolder_unmatched_logs_warning(qtbot, tmp_path):
     """Fewer matches than media files logs a WARNING, not an ERROR.
 
@@ -1043,6 +1085,38 @@ def test_subtitle_tracks_probe_applies_override(qtbot, tmp_path):
     assert tab.subtitle_track_action.isEnabled()
 
 
+def test_late_subtitle_track_probe_does_not_override_after_source_change(qtbot, tmp_path):
+    """X4-004: A's subtitle-track list must not set an override on a newly chosen B."""
+    from PyQt6.QtWidgets import QDialog
+
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    source_a = tmp_path / "a.mkv"
+    source_b = tmp_path / "b.mkv"
+    source_a.touch()
+    source_b.touch()
+    tab.media_file_selector.set_path(str(source_a))
+
+    held: list[tuple] = []
+    dialog = MagicMock()
+    dialog.exec.return_value = QDialog.DialogCode.Accepted
+    dialog.selected_override.return_value = 2
+    dialog_cls = MagicMock(return_value=dialog)
+    dialog_cls.DialogCode = QDialog.DialogCode
+
+    with (
+        patch("anki_miner.gui.widgets.condense_tab.run_off_thread", side_effect=lambda *a, **k: held.append(a)),
+        patch(_SUB_DIALOG, dialog_cls),
+    ):
+        tab._on_subtitle_tracks_clicked()
+        tab.media_file_selector.set_path(str(source_b))
+        _owner, _probe, on_done, _on_error = held[0]
+        on_done([_sub_stream()])
+
+    dialog_cls.assert_not_called()
+    assert tab._subtitle_track_override is None
+    assert tab.subtitle_track_action.isEnabled()
+
+
 # ---------------------------------------------------------------------------
 # Metadata tagging opt-in (Issue #113)
 # ---------------------------------------------------------------------------
@@ -1187,6 +1261,64 @@ def test_merge_run_uses_a_typed_name(qtbot, tmp_path):
     worker_cls = _start_condense(tab, qtbot, _FakeWorker(), folder_mode=True)
 
     assert worker_cls.call_args.kwargs["merge_into"] == folder / "My_Season_ two.mp3"
+
+
+def test_merge_run_keeps_a_dotted_folder_name_whole(qtbot, tmp_path):
+    """X4-005: 'Show.S01' and 'Show.S02' must not both merge to Show.mp3."""
+    folder = _merge_folder(tmp_path, name="Show.S01")
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    tab.folder_mode_button.click()
+    tab.media_folder_selector.set_path(str(folder))
+    tab.merge_checkbox.setChecked(True)
+
+    worker_cls = _start_condense(tab, qtbot, _FakeWorker(), folder_mode=True)
+
+    assert worker_cls.call_args.kwargs["merge_into"] == folder / "Show.S01.mp3"
+
+
+def test_merge_run_keeps_a_dotted_typed_name_whole(qtbot, tmp_path):
+    """X4-005: a typed 'Re.Zero' is the name; only a typed output extension is dropped."""
+    folder = _merge_folder(tmp_path)
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    tab.folder_mode_button.click()
+    tab.media_folder_selector.set_path(str(folder))
+    tab.merge_checkbox.setChecked(True)
+    tab.merge_name_edit.setText("Re.Zero")
+
+    worker_cls = _start_condense(tab, qtbot, _FakeWorker(), folder_mode=True)
+
+    assert worker_cls.call_args.kwargs["merge_into"] == folder / "Re.Zero.mp3"
+
+
+def test_mode_flip_during_the_folder_listing_keeps_the_folder_run(qtbot, tmp_path):
+    """X4-006: the mode is the one the run was started in, not the one when the listing lands."""
+    folder = _merge_folder(tmp_path, episodes=2)
+    single = tmp_path / "other.mkv"
+    single.write_bytes(b"fake")
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    tab.media_file_selector.set_path(str(single))
+    tab._audio_track_override = 2
+    tab._subtitle_track_override = 1
+    tab.folder_mode_button.click()
+    tab.media_folder_selector.set_path(str(folder))
+    tab.merge_checkbox.setChecked(True)
+
+    held: list[tuple] = []
+    with (
+        patch(_AVAILABLE, return_value=True),
+        patch(_OS_ACCESS, return_value=True),
+        patch(_WORKER_CLS, return_value=_FakeWorker()) as worker_cls,
+        patch("anki_miner.gui.widgets._tool_tab_base.run_off_thread", side_effect=lambda *a, **k: held.append(a)),
+    ):
+        tab.condense_button.click()
+        tab._set_mode(True)  # flipped while the folder listing is in flight
+        _owner, scan, on_done, _on_error = held[0]
+        on_done(scan())
+
+    kwargs = worker_cls.call_args.kwargs
+    assert kwargs["merge_into"] == folder / "Season 1.mp3"
+    assert kwargs["audio_track_override"] is None
+    assert kwargs["subtitle_track_override"] is None
 
 
 def test_merge_off_leaves_the_run_unmerged(qtbot, tmp_path):

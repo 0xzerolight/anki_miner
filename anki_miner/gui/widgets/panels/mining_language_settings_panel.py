@@ -168,13 +168,13 @@ class MiningLanguageSettingsPanel(FormPanel):
         Signals blocked: this runs from ``load_from_config`` and from the
         window's re-point after a refused switch, and an emit there would ask
         for the switch that was just refused. Any pending download offer is
-        dropped: the language in force changed under it.
+        dropped: the language in force changed under it. A language in force
+        that cannot be offered here selects nothing (index -1), so the combo
+        never names another language as current and any pick proposes a switch.
         """
         self._live_code = code
         self._hide_pending()
         index = self.mining_language_combo.findData(code)
-        if index < 0:
-            return
         self.mining_language_combo.blockSignals(True)
         try:
             self.mining_language_combo.setCurrentIndex(index)

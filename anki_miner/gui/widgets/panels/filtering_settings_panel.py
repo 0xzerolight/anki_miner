@@ -175,6 +175,12 @@ class FilteringSettingsPanel(FormPanel):
         self.min_frequency_spinbox.setMinimumWidth(band_width)
         self.max_frequency_spinbox.setMinimumWidth(band_width)
 
+        # Emit on the finished number (Enter / focus-out), not per keystroke: a
+        # typed maximum's prefixes ("1" of "10000") would otherwise trip the
+        # order-keeping clamp and drag the minimum down for good. Arrow and wheel
+        # steps still emit at once.
+        self.min_frequency_spinbox.setKeyboardTracking(False)
+        self.max_frequency_spinbox.setKeyboardTracking(False)
         self.min_frequency_spinbox.valueChanged.connect(self._on_min_frequency_changed)
         self.max_frequency_spinbox.valueChanged.connect(self._on_max_frequency_changed)
 

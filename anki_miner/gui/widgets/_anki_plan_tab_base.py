@@ -79,7 +79,6 @@ class _AnkiPlanTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
     worker_thread: CancellableWorker | None
     _plan: object | None
     _scan_warnings: tuple[str, ...]
-    _decks_loaded: bool
     _deck_fetch_failed: bool
     _deck_worker: SingleCallWorker | None
     _run_failed: bool
@@ -219,6 +218,17 @@ class _AnkiPlanTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
         self.preview_card.hide()
         self.page_filler.show()
 
+    def _drop_plan_for_changed_options(self, *_args: object) -> None:
+        """Drop the plan when a control that defines its scope or mode changes.
+
+        Apply writes the plan exactly as scanned, so a plan kept past a change
+        to the deck, the mode or a picked field would write options the screen
+        no longer shows. The preview goes with it and Scan is the next move.
+        Those controls are disabled while a run is active.
+        """
+        self._drop_plan()
+        self._sync_action_prominence()
+
     def _drop_stale_plan(self, plan_version: int) -> bool:
         """Drop a plan scanned under older settings and say why; report whether it did.
 
@@ -276,7 +286,7 @@ class _AnkiPlanTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
         event.ignore()
 
     # ------------------------------------------------------------------
-    # Deck dropdown (lazy fetch on first show)
+    # Deck dropdown (fetched on every show, refilled in place)
     # ------------------------------------------------------------------
 
     def showEvent(self, event) -> None:  # noqa: N802 - Qt override
@@ -284,39 +294,60 @@ class _AnkiPlanTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
         self.ensure_decks()
 
     def ensure_decks(self) -> None:
-        """Fetch the deck list unless one has already arrived.
+        """Fetch the deck list unless a fetch or a run is in flight.
 
-        Guarded on the list ARRIVING, not on having asked. ``get_deck_names``
-        answers an unreachable Anki with an empty list, so latching on the
-        attempt left "Couldn't fetch deck names from Anki" on screen for the
-        life of the process once Anki was started after Anki Miner — this tab
-        has no Refresh button to escape with.
+        Not latched on the first answer: a deck made in Anki while Anki Miner
+        is open (Deck Filter's own Copy target included) must show up the next
+        time this screen is looked at, and a changed AnkiConnect URL must not
+        keep the old Anki's decks. One ``deckNames`` call is cheap. Not during
+        a run: a refill that loses the picked deck re-picks "none", and a scan
+        landing after that would hold a plan for a deck the screen no longer
+        shows.
 
         Also the slot for ``MainWindow.anki_reachable``: a validation sweep that
         has just found Anki is the only thing that can retry while this tab is
         the visible one and its ``showEvent`` will not fire again.
         """
-        if self._decks_loaded or still_running(self._deck_worker):
+        if self.worker_thread is not None or still_running(self._deck_worker):
             return
         self._load_decks()
 
     def _on_decks_fetched(self, decks: list) -> None:
-        if decks:
-            # Runs at most once: ensure_decks() stops asking from here on, so
-            # the combo can never accumulate a second copy of the deck list.
-            self._decks_loaded = True
-            self._deck_combo().addItems([str(d) for d in decks])
-            if self._deck_fetch_failed:
-                self._deck_fetch_failed = False
-                # Only the fetch's own banner: anything shown since stays.
-                banner = self.issue_banner()
-                current = banner.current_issue() if banner is not None else None
-                if current is not None and current.summary == self._strings.couldnt_fetch_decks:
-                    self.clear_screen_issue()
-        else:
-            self._deck_fetch_failed = True
-            # A banner, not the run line: the run line is for runs (D1).
-            self.show_screen_issue(ScreenIssue(summary=self._strings.couldnt_fetch_decks))
+        combo = self._deck_combo()
+        names = [str(d) for d in decks]
+        listed = [combo.itemText(i) for i in range(1, combo.count())]
+        if not names:
+            # Anki closed after a list arrived: keep the list the user is
+            # looking at; the run itself reports an unreachable Anki.
+            if not listed:
+                self._deck_fetch_failed = True
+                # A banner, not the run line: the run line is for runs (D1).
+                self.show_screen_issue(ScreenIssue(summary=self._strings.couldnt_fetch_decks))
+            return
+        if self._deck_fetch_failed:
+            self._deck_fetch_failed = False
+            # Only the fetch's own banner: anything shown since stays.
+            banner = self.issue_banner()
+            current = banner.current_issue() if banner is not None else None
+            if current is not None and current.summary == self._strings.couldnt_fetch_decks:
+                self.clear_screen_issue()
+        if names == listed:
+            return
+        picked = combo.currentText() if combo.currentIndex() > 0 else None
+        # Refill in place without firing the selection slot, so a deck that is
+        # still there keeps its plan and its inspected field picks.
+        combo.blockSignals(True)
+        try:
+            while combo.count() > 1:
+                combo.removeItem(combo.count() - 1)
+            combo.addItems(names)
+            index = combo.findText(picked, Qt.MatchFlag.MatchExactly) if picked else -1
+            combo.setCurrentIndex(max(index, 0))
+        finally:
+            combo.blockSignals(False)
+        if picked and index < 0:
+            # The picked deck is gone (renamed or deleted in Anki).
+            combo.currentIndexChanged.emit(0)
 
     # ------------------------------------------------------------------
     # Close contract

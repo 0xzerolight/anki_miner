@@ -104,8 +104,6 @@ class DeckFilterTab(_AnkiPlanTabBase):
         self.worker_thread: DeckFilterScanWorker | DeckFilterApplyWorker | None = None
         self._plan: DeckFilterPlan | None = None
         self._scan_warnings: tuple[str, ...] = ()
-        # "Did a deck list arrive?", NOT "did we ask?" — see ensure_decks.
-        self._decks_loaded = False
         #: True while the banner may carry the deck-fetch failure, so a later
         #: success clears that banner and nothing else shown since.
         self._deck_fetch_failed = False
@@ -171,6 +169,8 @@ class DeckFilterTab(_AnkiPlanTabBase):
         fields_row.addWidget(QLabel(self.tr("Reading field:")))
         self.reading_combo = QComboBox()
         self.reading_combo.addItem(self.tr("(none — generate)"))
+        for combo in (self.expression_combo, self.reading_combo):
+            combo.currentIndexChanged.connect(self._drop_plan_for_changed_options)
         fields_row.addWidget(self.reading_combo, stretch=1)
         self.field_row.hide()
         deck_layout.addWidget(self.field_row)
@@ -180,6 +180,7 @@ class DeckFilterTab(_AnkiPlanTabBase):
         target_row.addWidget(QLabel(self.tr("New deck:")))
         self.target_edit = QLineEdit()
         self.target_edit.setPlaceholderText(self.tr("Name for the filtered deck"))
+        self.target_edit.textChanged.connect(self._drop_plan_for_changed_options)
         target_row.addWidget(self.target_edit, stretch=1)
         deck_layout.addLayout(target_row)
         layout.addWidget(self.deck_card)
@@ -309,7 +310,7 @@ class DeckFilterTab(_AnkiPlanTabBase):
         return (self._inspect_worker,)
 
     # ------------------------------------------------------------------
-    # Deck dropdown (lazy fetch on first show) + source inspection
+    # Deck dropdown (fetched on every show) + source inspection
     # ------------------------------------------------------------------
 
     def _deck_combo(self) -> QComboBox:
@@ -339,6 +340,10 @@ class DeckFilterTab(_AnkiPlanTabBase):
         # about there being none). The deck-fetch banner cannot be up here: it
         # clears on the fetch that fills this combo.
         self.clear_screen_issue()
+        self._drop_plan_for_changed_options()
+        # Every change supersedes an inspection still in flight, the move back
+        # to "Select a deck…" included, or its answer lands under no deck.
+        self._inspect_generation += 1
         deck = self._selected_source_deck()
         self._reset_field_combos()
         if deck is None:
@@ -369,7 +374,6 @@ class DeckFilterTab(_AnkiPlanTabBase):
         except ValueError as exc:
             logger.warning("Deck Filter inspect skipped: missing=field_mapping error=%s", exc)
             return
-        self._inspect_generation += 1
         generation = self._inspect_generation
         self._inspect_worker = run_off_thread(
             self,
@@ -420,6 +424,12 @@ class DeckFilterTab(_AnkiPlanTabBase):
             self.show_screen_issue(
                 ScreenIssue(summary=self.tr("The new deck needs a different name than the source deck."))
             )
+            return None
+        if target.casefold().startswith(source.casefold() + "::"):
+            # deck:"Source" also matches its subdecks, so copies nested under it
+            # would be read back by every rescan and negated out of the known
+            # gate: each rescan would copy the same notes again (X5-003).
+            self.show_screen_issue(ScreenIssue(summary=self.tr("The new deck can't be inside the source deck.")))
             return None
         return DeckFilterOptions(
             source_deck=source,
@@ -570,7 +580,11 @@ class DeckFilterTab(_AnkiPlanTabBase):
         worker.start()
 
     def _on_apply_finished(self, result: DeckFilterResult) -> None:
-        target = self._plan.options.target_deck if self._plan is not None else ""
+        # The run's own plan, not ``self._plan``: a config refresh while the
+        # copy ran has already dropped that one.
+        worker = self.worker_thread
+        assert isinstance(worker, DeckFilterApplyWorker)  # only Apply emits this
+        target = worker.plan.options.target_deck
         self._drop_plan()
         parts = [tr_format(self.tr('Copied %n note(s) into "%1".', "", result.created), target)]
         if result.not_created:

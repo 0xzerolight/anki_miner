@@ -80,6 +80,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Utilities → Download: the 720p, 1080p and 1440p presets download a direct video link.**
 - **Linux install outside the AppImage: Restart now (interface language, zoom) starts the app with its bundled libraries again.**
 - **Discard in the startup Restore prompt no longer deletes a dictionary update started while the prompt was open.** The prompt now comes before that work begins.
+- **Removing an installed dictionary, frequency list, pitch source or audio source no longer shifts the Enabled state of the sources below it.**
+- **A notice shown after removing or importing a source stays up when the list refreshes.**
+- **Card Backfill and Deck Filter: changing the deck, Overwrite, source, target or fields after a scan drops the scanned plan,** so Update and Copy no longer act on the old choices.
+- **Deck Filter refuses a target deck nested under the source deck,** which made every rescan copy the same notes again.
+- **Card Backfill and Deck Filter refresh their deck lists each time they are shown.**
+- **Deck Filter: the receipt names the target deck when settings refresh during a copy.**
+- **Deck Filter: going back to "Select a deck…" while a deck is being read no longer shows that deck's note count and fields.**
+- **Condense: a second run over the same folder skips its own `_condensed` outputs.**
+- **Condense: "Merge into one file" keeps a dotted folder or file name whole** (`Show.S01` no longer becomes `Show.mp3`).
+- **Condense: a subtitle track picked for the previous file is not applied to a newly chosen file.**
+- **Condense, Retime and Video OCR: switching to Single File while a folder run is starting no longer changes that run's settings.**
+- **Condense, Retime, Generate, Video OCR and Audiobook Sync keep their run button disabled during a run.**
+- **Download: after a mining-language switch during a download, the tab shows the new language's subtitle and audio languages.**
+- **Manga OCR: Run OCR is disabled while mokuro is being reinstalled, and cancelling a volume no longer reports it as failed.**
+- **Settings → Subtitles: switching the transcription model while another one downloads no longer marks the selected model as installed.**
+- **Settings → Filtering: typing a new maximum frequency rank no longer pulls the minimum down to the first digit typed.**
+- **The Mining Language selector no longer shows another language as current when the language in use cannot be offered.**
+- **"Restart to apply." goes away when the interface language or zoom is set back to the running value.**
+- **A failed "Save run log…" no longer shows the run-failure notice.**
+- **The activity log keeps following new lines after the window is resized.**
 
 ### Removed
 

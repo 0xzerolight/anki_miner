@@ -186,6 +186,8 @@ class MokuroTab(RunOptionsMixin, _ToolTabBase):
         self.install_mokuro_button.setEnabled(
             self._mokuro_supported and not still_running(self.worker_thread) and not self._scan_pending_run
         )
+        # The failure path does not re-probe, so Run's gate is re-applied here.
+        self._apply_run_gate()
         if ok:
             self._setup_expanded = False
             self._refresh_engine_state()
@@ -373,13 +375,22 @@ class MokuroTab(RunOptionsMixin, _ToolTabBase):
         self._mokuro_is_available = state.available
         self.engine_notice_label.setText(self._engine_notice_text(state))
         self.engine_notice_label.setVisible(not self._mokuro_is_available)
+        self._apply_run_gate()
+        self._apply_mokuro_setup_state(state)
+
+    def _apply_run_gate(self) -> None:
         # A probe scheduled before a run started can land after it did. The run
         # owns the button for its whole duration — including the folder scan
-        # that precedes the worker, when worker_thread is still None.
+        # that precedes the worker, when worker_thread is still None. An
+        # in-flight install owns it too: Reinstall's ``uv venv --clear`` wipes
+        # the environment the run's mokuro would use (the mirror of Install
+        # staying off during a run).
         self.run_button.setEnabled(
-            self._mokuro_is_available and not still_running(self.worker_thread) and not self._scan_pending_run
+            self._mokuro_is_available
+            and not still_running(self.worker_thread)
+            and not self._scan_pending_run
+            and not self._mokuro_install_active
         )
-        self._apply_mokuro_setup_state(state)
 
     def _mokuro_ready(self) -> bool:
         return self._mokuro_is_available
@@ -480,6 +491,7 @@ class MokuroTab(RunOptionsMixin, _ToolTabBase):
         """
         self._mokuro_install_active = True
         self.install_mokuro_button.setEnabled(False)
+        self.run_button.setEnabled(False)
         self.set_mokuro_status(self.tr("Installing…"))
         self.mokuro_install_requested.emit(bool(self._mokuro_state))
 
@@ -535,7 +547,7 @@ class MokuroTab(RunOptionsMixin, _ToolTabBase):
     # ------------------------------------------------------------------
 
     def _on_run(self) -> None:
-        if not self._mokuro_ready():
+        if not self._mokuro_ready() or self._mokuro_install_active:
             return
         if self.worker_thread is not None and self.worker_thread.isRunning():
             return

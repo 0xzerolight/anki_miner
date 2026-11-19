@@ -1413,3 +1413,34 @@ def test_the_four_input_labels_share_one_column(qtbot, qapp, tmp_path):
         assert widths.pop() >= max(label.sizeHint().width() for label in labels)
     finally:
         qapp.setStyleSheet(previous)
+
+
+def test_mode_flip_during_the_folder_listing_drops_the_reference_override(qtbot, tmp_path):
+    """X4-006: a folder run never takes the single file's reference pick, even if the toggle moved."""
+    folder = tmp_path / "videos"
+    folder.mkdir()
+    (folder / "ep01.mp4").write_bytes(b"fake")
+    (folder / "ep01.srt").write_text("1\n")
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    tab._reference_override = ReferenceOverride(kind="subtitle", index=1)
+    tab.folder_mode_button.click()
+    tab.video_folder_selector.set_path(str(folder))
+    tab.subtitle_folder_selector.set_path(str(folder))
+
+    held: list[tuple] = []
+    with (
+        patch(_AVAILABLE, return_value=True),
+        patch(_OS_ACCESS, return_value=True),
+        patch(_WORKER_CLS, return_value=_FakeWorker()) as worker_cls,
+        patch(
+            "anki_miner.gui.widgets.subtitle_retime_tab.run_off_thread",
+            side_effect=lambda *args, **kwargs: held.append(args),
+        ),
+    ):
+        tab.retime_button.click()
+        tab._set_mode(True)  # flipped while the folder listing is in flight
+        _owner, scan, on_done, _on_error = held[0]
+        on_done(scan())
+
+    assert worker_cls.call_count == 1
+    assert worker_cls.call_args.kwargs["reference_override"] is None

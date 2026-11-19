@@ -222,10 +222,15 @@ class _ToolTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
         raise NotImplementedError
 
     def _apply_probe_result(self, result: object) -> None:
-        """Adopt a verdict: the notice shows when missing, the primary runs only when present."""
+        """Adopt a verdict: the notice shows when missing, the primary runs only when present.
+
+        A config refresh mid-run re-probes; the run owns its primary until it ends.
+        """
         self._engine_is_available = bool(result)
         self.engine_notice_label.setVisible(not self._engine_is_available)
-        self._primary_button.setEnabled(self._engine_is_available and not self._folder_scan_pending)
+        self._primary_button.setEnabled(
+            self._engine_is_available and not self._folder_scan_pending and not still_running(self.worker_thread)
+        )
 
     # ------------------------------------------------------------------
     # Progress-section chrome

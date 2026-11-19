@@ -122,6 +122,8 @@ def test_cancel_mid_item(tmp_path):
     worker.run()
     assert service.process_volume.call_count == 1
     assert rec.outcome is TerminalOutcome.CANCELLED
+    # X3-001: a cancel is run-level; a per-volume error raised the failure banner.
+    assert [args for args in rec.of("file_finished") if args[2] is not None] == []
 
 
 def test_progress_mapping_and_cancel_event(tmp_path):

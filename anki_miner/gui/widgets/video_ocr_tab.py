@@ -621,7 +621,7 @@ class VideoOcrTab(RunOptionsMixin, _ToolTabBase):
             if self._region is None and not self._reads_image_subtitles(files[0]):
                 self._ask_for_region()
                 return
-            self._continue(files)
+            self._continue(files, single=True)
             return
         if self._region is None:
             self._ask_for_region()
@@ -633,7 +633,8 @@ class VideoOcrTab(RunOptionsMixin, _ToolTabBase):
             if not files:
                 self.ocr_button.setEnabled(True)
                 return
-            self._continue(files)
+            # A folder run, whatever mode the toggle shows when the listing lands.
+            self._continue(files, single=False)
 
         self._collect_folder_video_files_async(_on_files)
 
@@ -647,9 +648,11 @@ class VideoOcrTab(RunOptionsMixin, _ToolTabBase):
             action=self._on_set_region,
         )
 
-    def _continue(self, files: list[Path]) -> None:
-        image_track = self._image_track()
-        reads_images = not self.file_selector.isHidden() and self._reads_image_subtitles(files[0])
+    def _continue(self, files: list[Path], *, single: bool) -> None:
+        # *single* is the mode the run was requested in, not the toggle's state
+        # when a folder listing lands: a folder run reads every video's picture.
+        image_track = self._image_track() if single else None
+        reads_images = single and self._reads_image_subtitles(files[0])
         region = FULL_FRAME if reads_images else self._region
         if region is None:  # a profile switch during the folder listing cleared it
             self._ask_for_region()

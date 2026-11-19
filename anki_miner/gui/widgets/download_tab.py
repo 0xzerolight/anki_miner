@@ -222,10 +222,14 @@ class DownloadTab(RunOptionsMixin, YtdlpAvailabilityMixin, _ToolTabBase):
         incoming config differs solely in those fields. Option-widget defaults
         are re-seeded only when idle AND actually differing — a run in flight
         captured its own values, and a refresh must not stomp uncommitted edits.
+        A mining-language switch re-seeds even mid-run: the subtitle and audio
+        languages are language-scoped, nothing re-seeds when the run ends, and
+        the run already holds its own DownloadOptions.
         """
         old_config, self.config = self.config, config
         idle = self.worker_thread is None or not self.worker_thread.isRunning()
-        if idle and self._options_differ_from_widgets():
+        language_switched = config_language(old_config) != config_language(config)
+        if language_switched or (idle and self._options_differ_from_widgets()):
             self._apply_config_defaults()
         downloader_fields = {f.name for f in dataclasses.fields(config) if f.name.startswith("downloader_")}
         masked = dataclasses.replace(old_config, **{name: getattr(config, name) for name in downloader_fields})
