@@ -1080,7 +1080,7 @@ class ChainSettingsPanelBase(ScreenIssueHost, FormPanel):
     def _commit_removed_entry(self, removed_entry: Any) -> ConfigCommitResult:
         new_chain = self._chain_after_remove(removed_entry)
         if self._remove_chain_commit is None:
-            self._chain = list(new_chain)
+            self._adopt_removed_chain(new_chain)
             self.chain_changed.emit()
             return ConfigCommitResult.committed()
         try:
@@ -1088,8 +1088,19 @@ class ChainSettingsPanelBase(ScreenIssueHost, FormPanel):
         except Exception as error:
             result = ConfigCommitResult.pre_save_failure(error)
         if result.persisted:
-            self._chain = list(new_chain)
+            self._adopt_removed_chain(new_chain)
         return result
+
+    def _adopt_removed_chain(self, new_chain: tuple[Any, ...]) -> None:
+        """Take the shortened chain and re-render the rows to match it.
+
+        ``get_chain`` pairs ``self._chain[i]`` with row ``i``. Leaving the
+        removed entry's row on screen would hand every later entry the enabled
+        flag of the row above it, and the next read of ``get_chain`` (cleanup,
+        a toggle, any Settings save) would persist those shifted flags.
+        """
+        self._chain = list(new_chain)
+        self._rebuild_list()
 
     def _refresh_after_chain_only_remove(self) -> None:
         self._view = None
