@@ -578,7 +578,11 @@ class DeckFilterTab(_AnkiPlanTabBase):
         worker.start()
 
     def _on_apply_finished(self, result: DeckFilterResult) -> None:
-        target = self._plan.options.target_deck if self._plan is not None else ""
+        # The run's own plan, not ``self._plan``: a config refresh while the
+        # copy ran has already dropped that one.
+        worker = self.worker_thread
+        assert isinstance(worker, DeckFilterApplyWorker)  # only Apply emits this
+        target = worker.plan.options.target_deck
         self._drop_plan()
         parts = [tr_format(self.tr('Copied %n note(s) into "%1".', "", result.created), target)]
         if result.not_created:

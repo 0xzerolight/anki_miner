@@ -12,6 +12,7 @@ from PyQt6.QtWidgets import QApplication, QMessageBox
 
 from anki_miner.gui.widgets.deck_filter_tab import DeckFilterTab
 from anki_miner.gui.workers.base_worker import SingleCallWorker
+from anki_miner.gui.workers.deck_filter_worker import DeckFilterApplyWorker
 from anki_miner.services.deck_filter import (
     DeckFilterOptions,
     DeckFilterPlan,
@@ -317,17 +318,44 @@ class TestPlanLifecycle:
         worker.start.assert_called_once_with()
 
 
+def _copying(tab, plan):
+    """Stand in for the Apply worker whose result the receipt reports."""
+    worker = MagicMock(spec=DeckFilterApplyWorker)
+    worker.plan = plan
+    tab.worker_thread = worker
+
+
 class TestReceipts:
     def test_apply_receipt_names_the_deck_and_count(self, tab):
         tab._on_scan_finished(_plan())
+        _copying(tab, tab._plan)
 
         tab._on_apply_finished(DeckFilterResult(created=1, not_created=0))
 
         assert tab.status_label.text() == 'Copied 1 note(s) into "Premade (Filtered)".'
         assert tab._plan is None
 
+    def test_a_config_refresh_mid_copy_keeps_the_deck_in_the_receipt(self, tab, test_config):
+        """X5-002: a settings save while Copy runs drops the held plan; the receipt
+        names the deck the run copied into, not the dropped plan's."""
+        plan = _plan()
+        tab._on_scan_finished(plan)
+        with (
+            patch(f"{_TAB_MOD}.QMessageBox.question", return_value=QMessageBox.StandardButton.Yes),
+            patch(f"{_TAB_MOD}.DeckFilterApplyWorker") as worker_cls,
+        ):
+            tab._start_apply()
+        _copying(tab, worker_cls.call_args.args[1])
+
+        tab.update_config(replace(test_config, config_version=test_config.config_version + 1))
+        tab._on_apply_finished(DeckFilterResult(created=1, not_created=0))
+
+        assert tab.status_label.text() == 'Copied 1 note(s) into "Premade (Filtered)".'
+        tab.worker_thread = None
+
     def test_rejected_notes_are_reported(self, tab):
         tab._on_scan_finished(_plan())
+        _copying(tab, tab._plan)
 
         tab._on_apply_finished(DeckFilterResult(created=0, not_created=1))
 
