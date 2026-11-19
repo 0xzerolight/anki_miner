@@ -1139,7 +1139,8 @@ class TestCreateCardsBatch:
         assert "word_7" not in service.last_created_mined_forms
         assert service.last_not_created == {"word_7": "refused"}
         assert service.last_refusal_reasons == {"word_7": "cannot create note for unknown reason"}
-        assert service.last_skipped_duplicates == 1
+        # Refused, not a duplicate: the window must not call it one.
+        assert service.last_skipped_duplicates == 0
         assert service.anki_write_state is AnkiWriteState.NOTE_WRITE_CONFIRMED
 
     def test_a_note_refused_as_a_duplicate_on_its_own_is_a_duplicate(self, test_config, make_tokenized_word):
@@ -1153,6 +1154,7 @@ class TestCreateCardsBatch:
 
         assert service.last_not_created == {"word_1": "duplicate"}
         assert service.last_refusal_reasons == {}
+        assert service.last_skipped_duplicates == 1
 
     def test_a_drop_while_adding_one_at_a_time_keeps_the_cards_made(self, test_config, make_tokenized_word):
         """Only the note in flight is uncertain; the ones before it stay recorded (Undo), the rest never went."""
