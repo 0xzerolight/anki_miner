@@ -100,6 +100,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **"Restart to apply." goes away when the interface language or zoom is set back to the running value.**
 - **A failed "Save run log…" no longer shows the run-failure notice.**
 - **The activity log keeps following new lines after the window is resized.**
+- **Card pictures from videos with non-square pixels (DVD remuxes, 1440x1080 broadcasts) are no longer squished.**
+- **With audio padding 0, a zero-length subtitle line no longer puts the rest of the episode on the card as its audio.**
+- **A line whose clip starts a rounding hair above zero no longer loses its audio.**
+- **Condense: the condensed `.srt` or `.lrc` no longer drifts from the condensed audio within one episode.**
+- **Windows: stopping a finished download, track save or subtitle sync can no longer close an unrelated program.**
+- **Re-importing a stale or damaged frequency or pitch list works when the data folder is reached through a symlink.**
+- **Importing a settings backup from a version before 3.0 while mining another language restores it as Japanese settings** instead of overwriting that language's deck, note type and filters.
+- **Importing settings exported for a mining language this version lacks is refused** instead of overwriting the Japanese settings.
+- **A settings file with a script variant this version does not know no longer resets all settings to defaults.**
+- **Queues: Alt+Up and Alt+Down move the selected row past the next visible row when a filter or search hides rows.**
 
 ### Removed
 
