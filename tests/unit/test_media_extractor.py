@@ -323,7 +323,7 @@ class TestExtractScreenshot:
             "-frames:v",
             "1",
             "-vf",
-            "scale=-2:'min(720,ih)'",
+            "scale=iw*sar:ih,setsar=1,scale=-2:'min(720,ih)'",
             "-q:v",
             "2",
             str(output_path),
@@ -665,7 +665,7 @@ class TestAnimatedScreenshot:
         # default fps 20, height 720
         vf = cmd[cmd.index("-vf") + 1]
         assert "fps=20" in vf
-        assert "scale=-2:720" in vf
+        assert vf.endswith(",scale=iw*sar:ih,setsar=1,scale=-2:720")
         assert cmd[-1] == str(output_path)
 
     def test_webp_command_shape(self, animated_webp_service, video_file, tmp_path):
@@ -3418,7 +3418,7 @@ def test_a_still_height_scales_the_still(test_config, tmp_path, monkeypatch) -> 
     seen = {}
     monkeypatch.setattr(service, "_run_ffmpeg", lambda cmd, *a, **k: seen.setdefault("cmd", cmd) and False)
     service._extract_static_screenshot(tmp_path / "v.mkv", 1.0, 2.0, tmp_path / "out.jpg")
-    assert seen["cmd"][seen["cmd"].index("-vf") + 1] == "scale=-2:480"
+    assert seen["cmd"][seen["cmd"].index("-vf") + 1] == "scale=iw*sar:ih,setsar=1,scale=-2:480"
 
 
 def test_default_still_is_capped_at_720_without_enlarging(test_config, tmp_path, monkeypatch) -> None:
@@ -3426,7 +3426,7 @@ def test_default_still_is_capped_at_720_without_enlarging(test_config, tmp_path,
     seen = {}
     monkeypatch.setattr(service, "_run_ffmpeg", lambda cmd, *a, **k: seen.setdefault("cmd", cmd) and False)
     service._extract_static_screenshot(tmp_path / "v.mkv", 1.0, 2.0, tmp_path / "out.jpg")
-    assert seen["cmd"][seen["cmd"].index("-vf") + 1] == "scale=-2:'min(720,ih)'"
+    assert seen["cmd"][seen["cmd"].index("-vf") + 1] == "scale=iw*sar:ih,setsar=1,scale=-2:'min(720,ih)'"
 
 
 @pytest.mark.skipif(shutil.which("ffmpeg") is None or shutil.which("ffprobe") is None, reason="needs ffmpeg")
@@ -3436,7 +3436,7 @@ def test_default_still_filter_shrinks_tall_frames_and_keeps_short_ones(tmp_path,
     out = tmp_path / "out.jpg"
     subprocess.run(
         ["ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i", f"testsrc=size={size}:duration=1"]
-        + ["-frames:v", "1", "-vf", "scale=-2:'min(720,ih)'", str(out)],
+        + ["-frames:v", "1", "-vf", "scale=iw*sar:ih,setsar=1,scale=-2:'min(720,ih)'", str(out)],
         check=True,
     )
     probe = subprocess.run(
@@ -3457,3 +3457,126 @@ def test_default_still_filter_shrinks_tall_frames_and_keeps_short_ones(tmp_path,
         text=True,
     )
     assert int(probe.stdout.strip()) == height
+
+
+_needs_real_ffmpeg = pytest.mark.skipif(
+    shutil.which("ffmpeg") is None or shutil.which("ffprobe") is None, reason="needs real ffmpeg + ffprobe"
+)
+
+
+def _make_real_clip(path: Path, *, size: str = "320x240", sar: str | None = None, seconds: int = 4) -> Path:
+    """A tiny real video with a 440 Hz tone, built by the real ffmpeg."""
+    vf = ["-vf", f"setsar={sar}"] if sar else []
+    subprocess.run(
+        ["ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i", f"testsrc=size={size}:rate=15:duration={seconds}"]
+        + ["-f", "lavfi", "-i", f"sine=frequency=440:duration={seconds}", *vf]
+        + ["-c:v", "mpeg4", "-q:v", "5", "-c:a", "aac", "-shortest", str(path)],
+        check=True,
+    )
+    return path
+
+
+def _probe_stream(path: Path, entries: str) -> dict:
+    out = subprocess.run(
+        ["ffprobe", "-v", "error", "-select_streams", "0", "-show_entries", entries, "-of", "json", str(path)],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
+    data = json.loads(out)
+    return data["streams"][0] if "stream=" in entries else data["format"]
+
+
+def _webp_canvas_size(path: Path) -> tuple[int, int]:
+    """Canvas width/height from an animated WebP's VP8X header (ffprobe cannot decode those)."""
+    head = path.read_bytes()[:30]
+    assert head[12:16] == b"VP8X", head
+    return int.from_bytes(head[24:27], "little") + 1, int.from_bytes(head[27:30], "little") + 1
+
+
+def _real_service(test_config, tmp_path, **changes) -> MediaExtractorService:
+    cfg = dataclasses.replace(
+        test_config, media_temp_folder=tmp_path / "media", normalize_audio_loudness=False, **changes
+    )
+    return MediaExtractorService(cfg)
+
+
+@_needs_real_ffmpeg
+class TestNonSquarePixelPictures:
+    """A DVD remux keeps 720x480 storage pixels with SAR 32:27 (16:9 on screen).
+
+    A web view ignores a JPEG's pixel-ratio tag, so the card picture has to be
+    stored in square pixels or it shows 16:9 as 3:2.
+    """
+
+    def test_still_and_animated_have_the_display_shape(self, test_config, tmp_path, make_tokenized_word):
+        video = _make_real_clip(tmp_path / "dvd.mkv", size="720x480", sar="32/27", seconds=2)
+        word = make_tokenized_word(start_time=0.5, end_time=1.5, duration=1.0)
+
+        still = _real_service(test_config, tmp_path).extract_media(video, word, tmp_path, include_audio=False)
+        s = _probe_stream(still.screenshot_path, "stream=width,height")
+        assert s["height"] == 480 and s["width"] in (852, 854), s
+
+        animated = _real_service(
+            test_config,
+            tmp_path,
+            screenshot_animated=True,
+            screenshot_animated_format="webp",
+            screenshot_animated_height=240,
+        ).extract_media(video, word, tmp_path, include_audio=False)
+        width, height = _webp_canvas_size(animated.screenshot_path)
+        assert height == 240 and width in (426, 428), (width, height)
+
+    @pytest.mark.parametrize(("size", "expected"), [("1280x720", (1280, 720)), ("640x480", (640, 480))])
+    def test_square_pixel_still_is_unchanged(self, test_config, tmp_path, make_tokenized_word, size, expected):
+        video = _make_real_clip(tmp_path / "sq.mkv", size=size, seconds=2)
+        word = make_tokenized_word(start_time=0.5, end_time=1.5, duration=1.0)
+
+        still = _real_service(test_config, tmp_path).extract_media(video, word, tmp_path, include_audio=False)
+        s = _probe_stream(still.screenshot_path, "stream=width,height")
+        assert (s["width"], s["height"]) == expected
+
+
+@_needs_real_ffmpeg
+class TestClipTimesNeverReachFfmpegInExponentForm:
+    """offset -1.0, padding 0.3, cue at 1.30 s: the padded start is 5.55e-17, not 0."""
+
+    def test_audio_and_matched_animated_clip_are_cut(self, test_config, tmp_path, make_tokenized_word):
+        video = _make_real_clip(tmp_path / "ep.mkv")
+        start = max(0.0, 1.3 - 1.0)
+        word = make_tokenized_word(start_time=start, end_time=start + 1.7, duration=1.7)
+        assert resolve_audio_window(word, 0.3)[0] != 0.0  # the float hair this test is about
+
+        svc = _real_service(
+            test_config,
+            tmp_path,
+            audio_padding=0.3,
+            screenshot_animated=True,
+            screenshot_animated_format="webp",
+            screenshot_animated_match_audio=True,
+        )
+        media = svc.extract_media(video, word, tmp_path)
+
+        assert media.audio_path is not None and media.audio_path.exists()
+        assert media.screenshot_path is not None and media.screenshot_path.suffix == ".webp"
+
+
+@_needs_real_ffmpeg
+class TestZeroLengthWindowIsBounded:
+    """Padding 0 and a line clamped to 0.0-0.0 must not cut to the end of the file."""
+
+    def test_window_has_a_floor(self, make_tokenized_word):
+        word = make_tokenized_word(start_time=0.0, end_time=0.0, duration=0.0)
+
+        assert resolve_audio_window(word, 0.0)[1] >= MIN_CLIP_SECONDS
+
+    def test_real_clip_is_short(self, test_config, tmp_path, make_tokenized_word):
+        video = _make_real_clip(tmp_path / "ep.mkv", seconds=6)
+        word = make_tokenized_word(start_time=0.0, end_time=0.0, duration=0.0)
+
+        media = _real_service(test_config, tmp_path, audio_padding=0.0).extract_media(
+            video, word, tmp_path, include_screenshot=False
+        )
+
+        assert media.audio_path is not None
+        assert float(_probe_stream(media.audio_path, "format=duration")["duration"]) < 1.0

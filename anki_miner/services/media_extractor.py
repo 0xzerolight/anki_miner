@@ -11,6 +11,7 @@ import time
 import wave
 from collections.abc import Callable
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
+from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
@@ -61,9 +62,16 @@ _FILTER_PROBE_SOURCE = "anullsrc=r=44100:cl=stereo:d=0.1"
 #: probe input legitimately and read as a broken filter.
 _FILTER_PROBE_GRAPH = "aselect='between(t,1000,1001)',asetpts=N/SR/TB"
 
-#: Shortest clip a user-edited window may produce. Guards against a zero- or
-#: negative-length ffmpeg ``-t`` if a bound ever arrives unclamped.
+#: Shortest audio clip window. Guards against a zero- or negative-length
+#: ffmpeg ``-t``, which ffmpeg reads as no limit.
 MIN_CLIP_SECONDS = 0.2
+
+#: Filter that re-lays a frame in square pixels at its display width. A DVD
+#: remux (720x480, SAR 32:27) or a broadcast capture (1440x1080, SAR 4:3) stores
+#: non-square pixels, and the card's web view ignores a picture's pixel-ratio
+#: tag, so every card picture is stored in square pixels. ``iw*sar`` is ``iw``
+#: exactly for a square-pixel (or untagged) source, which passes through as is.
+SQUARE_PIXELS_FILTER = "scale=iw*sar:ih,setsar=1"
 
 #: Tallest static card picture when the caller names no height. Matches the
 #: animated picture's default; a shorter source is never enlarged.
@@ -112,6 +120,17 @@ def clip_audio_filter(duration: float) -> str:
     )
 
 
+def ffmpeg_seconds(seconds: float) -> str:
+    """``str(seconds)`` without exponent notation, for an ffmpeg ``-ss``/``-t``.
+
+    ffmpeg's time parser takes digits and one dot only, so a float-rounding
+    hair above zero (``5.551115123125783e-17``) fails the whole cut. The digits
+    are exactly ``str()``'s, never rounded, because a rounded seek can land on
+    a different frame on a high-frame-rate source.
+    """
+    return format(Decimal(repr(seconds)), "f")
+
+
 def resolve_audio_window(word: TokenizedWord, padding: float) -> tuple[float, float]:
     """Return ``(start, duration)`` in seconds for ``word``'s audio clip.
 
@@ -133,7 +152,9 @@ def resolve_audio_window(word: TokenizedWord, padding: float) -> tuple[float, fl
     padded_start = word.start_time - padding
     start = max(0.0, padded_start)
     duration = word.duration + (padding * 2) - (start - padded_start)
-    return start, duration
+    # Padding 0 and a zero-length line (one a negative offset pushed wholly
+    # before 0:00) give 0 s, which ffmpeg's -t reads as no limit.
+    return start, max(duration, MIN_CLIP_SECONDS)
 
 
 def resolve_screenshot_time(
@@ -1149,13 +1170,15 @@ class MediaExtractorService:
         # reads them itself, so they belong in the argv element.
         scale = [
             "-vf",
-            (f"scale=-2:{self._still_height}" if self._still_height else f"scale=-2:'min({STILL_MAX_HEIGHT},ih)'"),
+            SQUARE_PIXELS_FILTER
+            + ","
+            + (f"scale=-2:{self._still_height}" if self._still_height else f"scale=-2:'min({STILL_MAX_HEIGHT},ih)'"),
         ]
         cmd = [
             resolve_ffmpeg(self.config),
             "-y",  # Overwrite output
             "-ss",
-            str(screenshot_time),
+            ffmpeg_seconds(screenshot_time),
             "-i",
             str(video_file),
             "-frames:v",
@@ -1404,15 +1427,15 @@ class MediaExtractorService:
             resolve_ffmpeg(self.config),
             "-y",
             "-ss",
-            str(clip_start),
+            ffmpeg_seconds(clip_start),
             "-t",
-            str(clip_duration),
+            ffmpeg_seconds(clip_duration),
             "-i",
             str(video_file),
             "-an",
             "-sn",
             "-vf",
-            f"fps={fps},scale=-2:{height}",
+            f"fps={fps},{SQUARE_PIXELS_FILTER},scale=-2:{height}",
         ]
 
         if fmt == "avif":
@@ -1592,9 +1615,9 @@ class MediaExtractorService:
             resolve_ffmpeg(self.config),
             "-y",
             "-ss",
-            str(audio_start),
+            ffmpeg_seconds(audio_start),
             "-t",
-            str(audio_duration),
+            ffmpeg_seconds(audio_duration),
             "-i",
             str(video_file),
         ]
