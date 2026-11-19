@@ -48,7 +48,7 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.capabilities import CapabilityTarget
 from anki_miner.gui.constants import RETIME_SUBTITLE_EXTENSIONS, RETIME_SUBTITLE_FILE_FILTER, VIDEO_FILE_FILTER
 from anki_miner.gui.resources.styles import SPACING
-from anki_miner.gui.utils.run_off_thread import run_off_thread
+from anki_miner.gui.utils.run_off_thread import run_off_thread, still_running
 from anki_miner.gui.widgets._tool_tab_base import _ToolTabBase, _ToolTabStrings
 from anki_miner.gui.widgets.base import PageWidth, ScreenIssue, configure_card_layout, field_label_width
 from anki_miner.gui.widgets.dialogs import RetimeReferenceDialog, build_reference_choices
@@ -447,8 +447,9 @@ class SubtitleRetimeTab(_ToolTabBase):
         front (E08).
         """
         config = self.config
-        # A folder scan in flight keeps Retime disabled until it starts or refuses.
-        self.retime_button.setEnabled(not self._folder_scan_pending)
+        # A folder scan in flight keeps Retime disabled until it starts or refuses,
+        # and a run owns it until it ends.
+        self.retime_button.setEnabled(not self._folder_scan_pending and not still_running(self.worker_thread))
         if self._suppress_optional_startup:
             return
 
