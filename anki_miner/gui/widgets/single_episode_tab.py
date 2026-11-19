@@ -329,7 +329,10 @@ class SingleEpisodeTab(MiningTabBase):
         self.recent_combo.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
         self.recent_combo.setMinimumContentsLength(20)
         self.recent_combo.addItem(self.tr("Select recent file pair..."))
-        self.recent_combo.currentIndexChanged.connect(self._on_recent_selected)
+        # activated, not currentIndexChanged: re-choosing the row already current
+        # must load it again, and _on_recent_selected returns the combo to the
+        # placeholder so it never names a pair the pickers no longer hold.
+        self.recent_combo.activated.connect(self._on_recent_selected)
         recent_layout.addWidget(self.recent_combo, 1)
         # Hand-built row, so it needs the row cap the FileSelectors below get
         # from their own constructor; without it this one control would stretch
@@ -1023,6 +1026,9 @@ class SingleEpisodeTab(MiningTabBase):
             else:
                 self.secondary_selector.clear()
             self.secondary_offset_spinbox.setValue(entry.get("secondary_offset", 0.0))
+        self.recent_combo.blockSignals(True)
+        self.recent_combo.setCurrentIndex(0)
+        self.recent_combo.blockSignals(False)
 
     def dragEnterEvent(self, event: QDragEnterEvent | None) -> None:
         """Accept drag if files have video or subtitle extensions."""

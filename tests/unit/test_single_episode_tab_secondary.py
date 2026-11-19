@@ -116,7 +116,7 @@ def test_recent_pair_restores_the_second_track(qtbot, test_config, tmp_path):
     )
     tab._refresh_recent_combo()
 
-    tab.recent_combo.setCurrentIndex(1)
+    tab.recent_combo.activated.emit(1)  # the user's choice in the popup
 
     assert tab.secondary_selector.get_path() == str(tmp_path / "s.en.srt")
     assert tab.secondary_offset_spinbox.value() == -2.0
