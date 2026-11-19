@@ -15,6 +15,9 @@ class EpisodeInfo:
     file_path: Path
     episode_number: int
     season_number: int | None = None
+    #: The digit after the point of a decimal special ("12.5" -> 5); None for
+    #: an ordinary episode. 12.5 is its own episode, never 12 or 5.
+    part: int | None = None
 
     @property
     def filename(self) -> str:
@@ -36,6 +39,9 @@ def _strip_technical_tokens(name: str) -> str:
     # A lone ticked subtitle is "<stem>.<lang>"; a numeric region ("es-419")
     # would win the same fallback and pair episode 5's file as episode 419.
     name = re.sub(r"\.[a-z]{2,3}-\d{3}$", "", name)
+    # gMKVExtractGUI names an extracted track "<stem>_track3_[jpn]"; the
+    # track number is the same in every episode and would win that fallback.
+    name = re.sub(r"_track\d{1,3}(?:_\[[^\]]*\])*$", "", name)
     # Use explicit non-alphanumeric boundaries rather than \b: \b does not
     # fire between an underscore and a digit (both are word chars), so
     # "Show_03_720p" kept "720p" — which the old consuming BARE_NUMBER regex
@@ -57,14 +63,14 @@ def _strip_technical_tokens(name: str) -> str:
     name = re.sub(r"[\[(][0-9A-Fa-f]{8}[\])]", "", name)
     # Digit-bearing audio and profile tags win the same trailing-number
     # fallback: a channel layout after an audio codec ("AAC2.0", "DDP5.1",
-    # "TrueHD.7.1" -> 0 or 1), a channel count ("2ch"), the Hi10P profile,
+    # "TrueHD.7.1" -> 0 or 1; a dual "FLAC 5.1+2.0"), a channel count ("2ch"), the Hi10P profile,
     # and the AC-3 / E-AC-3 / MP3 codec names. The layout is stripped only
     # together with its codec, so a bare "5.1" or an episode title word such
     # as "Opus" is left alone. The codec+layout strip must run first so
     # "E-AC-3 5.1" goes as one token.
     name = re.sub(
         r"(?<![0-9A-Za-z])(?:e-?ac-?3|ac-?3|aac|dd\+?|ddp|flac|opus|truehd|dts(?:-?hd)?(?:[\s._-]?ma)?|l?pcm)"
-        r"[\s._-]?[1-7][\s._][01](?![0-9A-Za-z])",
+        r"[\s._-]?[1-7][\s._][01](?:\+[1-7][\s._][01])*(?![0-9A-Za-z])",
         "",
         name,
         flags=re.IGNORECASE,
@@ -72,6 +78,21 @@ def _strip_technical_tokens(name: str) -> str:
     name = re.sub(
         r"(?<![0-9A-Za-z])(?:\d(?:\.\d)?ch|hi10p?|e-?ac-?3|ac-?3|mp3)(?![0-9A-Za-z])", "", name, flags=re.IGNORECASE
     )
+    # More digit-bearing encode tags for the same fallback: the Main 10 /
+    # Main 4:4:4 10 profiles ("Ma10p", "Ma444-10p"), a pixel format
+    # ("YUV420P10"), "HDR10", a frame rate ("60fps", "23.976fps"), "MPEG2",
+    # and an audio track count glued to its codec ("2flac", "AACx2").
+    name = re.sub(
+        r"(?<![0-9A-Za-z])(?:ma(?:444-?)?10p|yuv4\d\dp\d{1,2}|hdr10\+?|\d{2,3}(?:\.\d{1,3})?fps|mpeg-?[124]"
+        r"|\d(?:flac|aac|ac3|dts)|(?:flac|aac)x\d)(?![0-9A-Za-z])",
+        "",
+        name,
+        flags=re.IGNORECASE,
+    )
+    # A BS satellite channel tag in a raw's broadcast note ("(BS11 1280x720
+    # x264 AAC)") would win the same fallback: "Show - 09 RAW (BS11 ...)" has
+    # no fansub slot (the RAW word sits after the number) and read as 11.
+    name = re.sub(r"(?<![0-9A-Za-z])BS-?\d{1,2}(?![0-9A-Za-z])", "", name)
     # A re-upload's version marker ("24 V2", "24_v2", "S01E02v5") sits
     # directly against the episode digits, so an unstripped name lets the
     # bare-number fallback's LAST-run pick (BARE_NUMBER, below) grab the
@@ -92,6 +113,9 @@ def _strip_technical_tokens(name: str) -> str:
     # test_version_marker_resolves_real_episode, both in
     # test_episode_matcher.py.
     name = re.sub(r"(?<=\d)[\s._-]*[vV]\d{1,2}(?![0-9A-Za-z])", "", name)
+    # A version marker in its own bracket ("[x264 AAC][v2]") has no digit
+    # before it, but a bracket holding only "v2" is never a title word.
+    name = re.sub(r"[\[(][vV]\d{1,2}[\])]", "", name)
     return name
 
 
@@ -114,7 +138,13 @@ class EpisodeNumberExtractor:
     # fallback, so a 3-digit cap extracted nothing at all and the file was
     # dropped from pairing. Five digits and up stay invisible: both boundaries
     # require a non-digit, so a date stamp or an id matches nothing.
-    BARE_NUMBER = r"(?:^|[^\d])(\d{1,4})(?=[^\d]|$)"
+    #
+    # A decimal special ("Show 12.5", SubsPlease/Erai recap episodes) is one
+    # token, tried first so the fraction digit never starts a run of its own
+    # (it read as episode 5 and swapped subtitles with the real episode 5).
+    # Not after a dot: in a dot-separated name ("Title.12.5") the dots are
+    # word separators, so that name keeps the last-run reading.
+    BARE_NUMBER = r"(?<![\d.])(\d{1,4})\.(\d)(?!\d)|(?<!\d)(\d{1,4})(?!\d)"
 
     # The one 4-digit run that is never an episode number. A release year sits
     # after the episode as often as before it ("Show_05_(2019)"), so the
@@ -131,17 +161,21 @@ class EpisodeNumberExtractor:
         # S01E01, s1e1, S01 E01, S01.E01, S01-E01 (season + episode). The
         # separator class lets "Show.S02 E05" be read as season 2 / episode 5
         # instead of falling through to BARE_NUMBER and mining the season.
-        (r"[Ss](\d+)[\s._-]*[Ee](\d+)", lambda m: (int(m.group(1)), int(m.group(2)))),
+        (r"[Ss](\d+)[\s._-]*[Ee](\d+)", lambda m: (int(m.group(1)), int(m.group(2)), None)),
         # Fansub release slot: "Title - 01v2 [1080p]" or "Title - 01 - Name".
         # The following delimiter is required so an internal title fragment such
-        # as "- 5 Centimeters" cannot steal the episode slot.
-        (r"\s+-\s+(\d{1,4})(?:[vV]\d+)?(?=\s*(?:-|[\[(]|$))", lambda m: (None, int(m.group(1)))),
+        # as "- 5 Centimeters" cannot steal the episode slot. A decimal special
+        # ("Title - 12.5 (1080p)") fills the slot as one token.
+        (
+            r"\s+-\s+(\d{1,4})(?:\.(\d))?(?:[vV]\d+)?(?=\s*(?:-|[\[(]|$))",
+            lambda m: (None, int(m.group(1)), int(m.group(2)) if m.group(2) else None),
+        ),
         # 1x01, 1X01 (season x episode)
-        (r"(\d+)[xX](\d+)", lambda m: (int(m.group(1)), int(m.group(2)))),
+        (r"(\d+)[xX](\d+)", lambda m: (int(m.group(1)), int(m.group(2)), None)),
         # Episode 01, Ep01, ep.01, episode_01 (no season)
         (
             r"(?<![0-9A-Za-z])[Ee][Pp](?:isode)?[\s._-]*(\d+)(?![0-9A-Za-z])",
-            lambda m: (None, int(m.group(1))),
+            lambda m: (None, int(m.group(1)), None),
         ),
     ]
 
@@ -160,8 +194,8 @@ class EpisodeNumberExtractor:
         for pattern, extractor in cls.PATTERNS:
             match = re.search(pattern, filename)
             if match:
-                season, episode = extractor(match)
-                return EpisodeInfo(file_path, episode, season)
+                season, episode, part = extractor(match)
+                return EpisodeInfo(file_path, episode, season, part)
 
         # A number attached to an embedded "ep" token belongs to the ordinary
         # word, not the episode marker (for example, "Step 3"). Prefer the
@@ -180,20 +214,27 @@ class EpisodeNumberExtractor:
         # file in the folder onto the title number (T-04).
         bare = cls._bare_candidates(suppressed) or cls._bare_candidates(filename)
         if bare:
-            return EpisodeInfo(file_path, bare[-1], None)
+            episode, part = bare[-1]
+            return EpisodeInfo(file_path, episode, None, part)
 
         return None
 
     @classmethod
-    def _bare_candidates(cls, name: str) -> list[int]:
-        """Bare numbers in *name* that could be an episode number, in order.
+    def _bare_candidates(cls, name: str) -> list[tuple[int, int | None]]:
+        """Bare (episode, part) numbers in *name* that could be the episode, in order.
 
         Year-shaped runs are dropped here rather than in the suppressed/
         unsuppressed pair above, so a name whose only suppressed candidate is a
         year still falls back to the unsuppressed reading instead of resolving
         to nothing.
         """
-        return [int(run) for run in re.findall(cls.BARE_NUMBER, name) if not re.fullmatch(cls.YEAR_LIKE, run)]
+        candidates: list[tuple[int, int | None]] = []
+        for decimal, fraction, run in re.findall(cls.BARE_NUMBER, name):
+            if decimal:
+                candidates.append((int(decimal), int(fraction)))
+            elif not re.fullmatch(cls.YEAR_LIKE, run):
+                candidates.append((int(run), None))
+        return candidates
 
 
 def _describe_collisions(kind: str, infos: list[EpisodeInfo]) -> list[str]:
@@ -203,13 +244,14 @@ def _describe_collisions(kind: str, infos: list[EpisodeInfo]) -> list[str]:
     or subtitle collision drops the rest with no error, so this is what
     lets the drop show up in anki_miner.log instead of vanishing.
     """
-    groups: dict[tuple[int | None, int], list[str]] = {}
+    groups: dict[tuple[int | None, int, int | None], list[str]] = {}
     for info in infos:
-        groups.setdefault((info.season_number, info.episode_number), []).append(info.filename)
+        groups.setdefault((info.season_number, info.episode_number, info.part), []).append(info.filename)
     return [
         f"{kind} {', '.join(names)} all resolve to episode {episode}"
+        + (f".{part}" if part is not None else "")
         + (f" of season {season}" if season is not None else "")
-        for (season, episode), names in groups.items()
+        for (season, episode, part), names in groups.items()
         if len(names) >= 2
     ]
 
@@ -276,8 +318,8 @@ class EpisodeMatcher:
             for subtitle_info in subtitle_candidates:
                 if subtitle_info.file_path in used_subtitles:
                     continue
-                # Match if episode numbers are the same
-                if video_info.episode_number == subtitle_info.episode_number:
+                # Match if episode numbers are the same (12.5 matches only 12.5)
+                if video_info.episode_number == subtitle_info.episode_number and video_info.part == subtitle_info.part:
                     # If both have season numbers, they must match
                     if (
                         video_info.season_number is not None
@@ -286,7 +328,13 @@ class EpisodeMatcher:
                     ):
                         continue  # Seasons don't match, skip
 
-                    pairs.append((video_info.file_path, subtitle_info.file_path, video_info.episode_number))
+                    pairs.append(
+                        (
+                            video_info.file_path,
+                            subtitle_info.file_path,
+                            (video_info.episode_number, -1 if video_info.part is None else video_info.part),
+                        )
+                    )
                     used_subtitles.add(subtitle_info.file_path)
                     break  # Found match, move to next video
 
@@ -334,7 +382,7 @@ def parse_media_filename(path: Path) -> ParsedMediaName:
     for pattern, extractor in EpisodeNumberExtractor.PATTERNS:
         match = re.search(pattern, cleaned)
         if match:
-            season, episode = extractor(match)
+            season, episode, _part = extractor(match)
             series = cleaned[: match.start()].strip(_EDGE_SEPARATORS)
             title = _clean_episode_title(cleaned[match.end() :])
             return ParsedMediaName(series or None, season, episode, title or None)

@@ -1345,7 +1345,7 @@ class TestBuildFetchCmdAutoDub:
         assert "--write-auto-sub" in cmd
         assert "--write-sub" not in cmd
         fmt = cmd[cmd.index("--format") + 1]
-        assert fmt == "bestvideo[height<=720]+bestaudio[language~='^ja(-|$)']"
+        assert fmt == "bestvideo[height<=?720]+bestaudio[language~='^ja(-|$)']"
         assert "/" not in fmt  # no fallback alternative may reintroduce non-JA audio
 
     def test_auto_dub_selector_excludes_javanese(self, service: YouTubeFetcherService, tmp_path: Path) -> None:
@@ -1361,7 +1361,7 @@ class TestBuildFetchCmdAutoDub:
         for mode in ("manual_only", "auto_only"):
             cmd = service._build_fetch_cmd("https://youtu.be/abc123", tmp_path, mode)
             fmt = cmd[cmd.index("--format") + 1]
-            assert fmt == "bestvideo[height<=720]+bestaudio/best[height<=720]"
+            assert fmt == "bestvideo[height<=?720]+bestaudio/best[height<=?720]"
 
     def test_raise_for_error_names_missing_dub_track(self, service: YouTubeFetcherService) -> None:
         """'Requested format is not available' on the dub route means either
@@ -1389,7 +1389,42 @@ class TestTranscribeMode:
     def test_build_fetch_cmd_still_downloads_the_video(self, service: YouTubeFetcherService, tmp_path: Path) -> None:
         cmd = service._build_fetch_cmd("https://youtu.be/abc123", tmp_path, "transcribe")
         assert "--format" in cmd
-        assert cmd[cmd.index("--format") + 1] == "bestvideo[height<=720]+bestaudio/best[height<=720]"
+        assert cmd[cmd.index("--format") + 1] == "bestvideo[height<=?720]+bestaudio/best[height<=?720]"
+
+    def test_format_selector_keeps_a_direct_link_with_no_height(
+        self, service: YouTubeFetcherService, tmp_path: Path
+    ) -> None:
+        """yt-dlp's generic extractor gives a direct .mp4 link one format with no
+        height; a plain [height<=720] filter drops it and the fetch dies with
+        'Requested format is not available'. A known taller format stays capped."""
+        yt_dlp = pytest.importorskip("yt_dlp")
+        cmd = service._build_fetch_cmd("https://example.invalid/clip.mp4", tmp_path, "transcribe")
+        fmt = cmd[cmd.index("--format") + 1]
+
+        def select(formats: list[dict[str, Any]]) -> str:
+            info = {
+                "id": "clip",
+                "title": "clip",
+                "extractor": "generic",
+                "extractor_key": "Generic",
+                "webpage_url": "https://example.invalid/clip.mp4",
+                "formats": formats,
+            }
+            ydl = yt_dlp.YoutubeDL({"format": fmt, "simulate": True, "quiet": True, "no_warnings": True})
+            return str(ydl.process_ie_result(info, download=False)["format_id"])
+
+        direct = {"format_id": "mp4", "url": "https://example.invalid/clip.mp4", "ext": "mp4", "vcodec": None}
+        assert select([dict(direct, direct=True)]) == "mp4"
+        tall = {"ext": "mp4", "vcodec": "avc1", "acodec": "mp4a"}
+        assert (
+            select(
+                [
+                    dict(tall, format_id="480", url="https://example.invalid/480.mp4", height=480),
+                    dict(tall, format_id="1080", url="https://example.invalid/1080.mp4", height=1080),
+                ]
+            )
+            == "480"
+        )
 
     def test_resolve_outputs_accepts_a_missing_subtitle(self, service: YouTubeFetcherService, tmp_path: Path) -> None:
         _touch(tmp_path / "abc123.mp4", b"video-bytes")
