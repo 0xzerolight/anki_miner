@@ -112,6 +112,30 @@ class TestScanGating:
         worker_cls.assert_not_called()
         assert "different name" in tab.issue_banner().current_issue().summary
 
+    @pytest.mark.parametrize(
+        ("source", "target"),
+        [("Core 2k", "Core 2k::Filtered"), ("Mining::Ärger", "mining::ÄRGER::Sub")],
+    )
+    def test_target_inside_the_source_is_refused(self, tab, source, target):
+        """X5-003: deck:"Source" matches its subdecks too, so copies nested under the
+        source are read back by every rescan and negated out of the known gate: each
+        rescan would copy the same notes again, into the deck the screen says is untouched."""
+        _select_source(tab, source)
+        tab.target_edit.setText(target)
+        with patch(f"{_TAB_MOD}.DeckFilterScanWorker") as worker_cls:
+            tab._start_scan()
+
+        worker_cls.assert_not_called()
+        assert "inside" in tab.issue_banner().current_issue().summary
+
+    def test_a_sibling_sharing_the_source_prefix_is_accepted(self, tab):
+        _select_source(tab, "Core 2k")
+        tab.target_edit.setText("Core 2k Filtered::Sub")
+        with patch(f"{_TAB_MOD}.DeckFilterScanWorker", MagicMock(return_value=MagicMock())) as worker_cls:
+            tab._start_scan()
+
+        worker_cls.assert_called_once()
+
     def test_valid_inputs_start_the_scan_worker(self, tab):
         _select_source(tab)
         worker = MagicMock()

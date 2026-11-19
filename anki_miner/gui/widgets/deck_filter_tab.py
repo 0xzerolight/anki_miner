@@ -425,6 +425,12 @@ class DeckFilterTab(_AnkiPlanTabBase):
                 ScreenIssue(summary=self.tr("The new deck needs a different name than the source deck."))
             )
             return None
+        if target.casefold().startswith(source.casefold() + "::"):
+            # deck:"Source" also matches its subdecks, so copies nested under it
+            # would be read back by every rescan and negated out of the known
+            # gate: each rescan would copy the same notes again (X5-003).
+            self.show_screen_issue(ScreenIssue(summary=self.tr("The new deck can't be inside the source deck.")))
+            return None
         return DeckFilterOptions(
             source_deck=source,
             target_deck=target,
