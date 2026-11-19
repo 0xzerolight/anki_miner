@@ -341,6 +341,9 @@ class DeckFilterTab(_AnkiPlanTabBase):
         # clears on the fetch that fills this combo.
         self.clear_screen_issue()
         self._drop_plan_for_changed_options()
+        # Every change supersedes an inspection still in flight, the move back
+        # to "Select a deck…" included, or its answer lands under no deck.
+        self._inspect_generation += 1
         deck = self._selected_source_deck()
         self._reset_field_combos()
         if deck is None:
@@ -371,7 +374,6 @@ class DeckFilterTab(_AnkiPlanTabBase):
         except ValueError as exc:
             logger.warning("Deck Filter inspect skipped: missing=field_mapping error=%s", exc)
             return
-        self._inspect_generation += 1
         generation = self._inspect_generation
         self._inspect_worker = run_off_thread(
             self,

@@ -197,6 +197,24 @@ class TestInspection:
         assert not tab.expression_combo.isEnabled()
         assert tab.field_row.isHidden()
 
+    def test_going_back_to_no_deck_supersedes_the_read(self, tab):
+        """X5-005: an inspection still running for the deck the user left must not
+        show that deck's fields and note count under "Select a deck…"."""
+        with (
+            patch(f"{_TAB_MOD}.AnkiService"),
+            patch(f"{_TAB_MOD}.run_off_thread") as run,
+        ):
+            tab.source_combo.addItem("Big deck")
+            tab.source_combo.setCurrentIndex(1)
+            tab.source_combo.setCurrentIndex(0)
+        on_done = run.call_args.args[2]
+
+        on_done(DeckInspection(2000, ("Core",), ("Front", "Back"), {"Core": "Front"}))
+
+        assert tab.field_row.isHidden()
+        assert tab.deck_info_label.isHidden()
+        assert tab.expression_combo.count() == 1
+
     def test_the_field_pickers_wait_for_the_deck(self, tab):
         """E07: Word and Reading field appear once a deck is read."""
         assert tab.field_row.isHidden()
