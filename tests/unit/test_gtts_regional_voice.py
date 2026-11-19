@@ -8,12 +8,16 @@ changes nothing else: the codes are profile constants, not user input.
 
 from __future__ import annotations
 
+import dataclasses
 import warnings
 from unittest.mock import patch
 
 import gtts
 import pytest
 
+from anki_miner.config import AnkiMinerConfig, AudioSourceEntry
+from anki_miner.gui.utils import service_factory
+from anki_miner.languages.switching import switch_language
 from anki_miner.services.google_translate_audio_fetcher import GoogleTranslateAudioFetcher
 from anki_miner.services.sentence_tts_fetcher import GoogleSentenceTtsFetcher
 
@@ -48,6 +52,43 @@ def test_the_sentence_fetcher_shares_the_leaf(tmp_path):
     with patch(f"{MODULE}.gtts.gTTS", fake):
         assert fetcher.fetch("O autocarro chegou atrasado.") is not None
     assert [(call["lang"], call["lang_check"]) for call in calls] == [("pt-PT", False)]
+
+
+def _pt_google_legs(variant):
+    config = dataclasses.replace(
+        switch_language(AnkiMinerConfig(), "pt"),
+        script_variant=variant,
+        expression_audio_chain=(AudioSourceEntry(kind="googletts"),),
+        reading_tts_enabled=True,
+        reading_tts_google_enabled=True,
+    )
+    (word,) = [
+        f
+        for f in service_factory.create_expression_audio_fetcher(config)._fetchers
+        if isinstance(f, GoogleTranslateAudioFetcher)
+    ]
+    (sentence,) = [
+        f
+        for f in service_factory._build_sentence_audio_fetcher(config)._fetchers
+        if isinstance(f, GoogleSentenceTtsFetcher)
+    ]
+    return word, sentence
+
+
+def test_a_variety_switch_never_serves_the_other_voices_cache():
+    """B6-001 / S1-003: the cache stem (and Anki media name) names the European voice."""
+    fake, calls = _recorder()
+    br_word, br_sentence = _pt_google_legs("br")
+    pt_word, pt_sentence = _pt_google_legs("pt")
+    with patch(f"{MODULE}.gtts.gTTS", fake):
+        br_paths = (br_word.fetch("ônibus", ""), br_sentence.fetch("O ônibus chegou."))
+        assert pt_word.has_cached("ônibus", "") is not True
+        pt_paths = (pt_word.fetch("ônibus", ""), pt_sentence.fetch("O ônibus chegou."))
+    assert [call["lang"] for call in calls] == ["pt", "pt", "pt-PT", "pt-PT"]
+    assert None not in br_paths + pt_paths
+    assert br_paths[0] != pt_paths[0] and br_paths[1] != pt_paths[1]
+    assert br_paths[0].name.startswith("googletts_pt_")
+    assert br_paths[1].name.startswith("sentencetts_pt_google_")
 
 
 def test_gtts_rewrites_pt_pt_unless_the_check_is_skipped():
