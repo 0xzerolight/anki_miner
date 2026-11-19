@@ -36,6 +36,20 @@ class TestPhraseWrapJa:
         chunks = budoux.load_default_japanese_parser().parse(text)
         assert phrase_wrap_ja(text).count(WORD_JOINER) == len(text) - len(chunks)
 
+    @pytest.mark.parametrize(
+        "text",
+        ["家族👨\u200d👩\u200d👧です", "大好き❤️だよ", "葛\U000e0100飾区に行く", "がんばろう👍🏽", "日本🇯🇵に行く"],
+    )
+    def test_no_joiner_lands_inside_a_grapheme_cluster(self, text):
+        wrapped = phrase_wrap_ja(text)
+        assert wrapped.replace(WORD_JOINER, "") == text
+        for index, char in enumerate(wrapped):
+            if char != WORD_JOINER:
+                continue
+            following = wrapped[index + 1 : index + 2]
+            assert following not in ("\u200d", "\ufe0f", "\U000e0100", "\U0001f3fd", "\U0001f1f5")
+            assert wrapped[index - 1 : index] != "\u200d"
+
     def test_breaks_land_only_between_phrases(self):
         text = "今日はとてもいい天気ですね。"
         chunks = budoux.load_default_japanese_parser().parse(text)

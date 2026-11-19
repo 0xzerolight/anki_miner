@@ -580,6 +580,21 @@ class TestInstallCopyRows:
 
         assert qapp.clipboard().text() == "2026-05-16\tShirobako\t12"
 
+    def test_copies_cells_in_the_on_screen_column_order(self, qtbot, qapp):
+        table = QTableWidget(1, 3)
+        qtbot.addWidget(table)
+        table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        table.horizontalHeader().setSectionsMovable(True)
+        for col, text in enumerate(("食べる", "たべる", "512")):
+            table.setItem(0, col, make_table_item(text))
+        shortcut = install_copy_rows(table)
+        table.horizontalHeader().moveSection(2, 0)
+        table.selectRow(0)
+
+        shortcut.activated.emit()
+
+        assert qapp.clipboard().text() == "512\t食べる\tたべる"
+
     def test_copies_the_untruncated_value_not_the_display_text(self, qtbot, qapp):
         table = QTableWidget(1, 1)
         qtbot.addWidget(table)

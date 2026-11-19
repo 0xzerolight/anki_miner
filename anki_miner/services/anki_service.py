@@ -1112,13 +1112,13 @@ class AnkiService:
 
             A None is a note the probe had cleared that Anki still didn't create
             (a duplicate that landed between probe and add, or a refusal), with
-            Anki's *reason* when a note added on its own was refused. Each is
-            folded into the not-created count so the gap is never silent.
+            Anki's *reason* when a note added on its own was refused. A
+            duplicate or a reason-less null slot (usually a race duplicate) is
+            folded into the skipped-duplicates count; a refusal with any other
+            reason is not a duplicate and reaches the user as refused.
             """
             nonlocal skipped_duplicates, total_created
-            created = sum(1 for nid in note_ids if nid is not None)
-            skipped_duplicates += len(note_ids) - created
-            total_created += created
+            total_created += sum(1 for nid in note_ids if nid is not None)
             for item, note, nid in zip(payloads, built, note_ids, strict=True):
                 form = item.word.mined_form
                 if nid is not None:
@@ -1128,16 +1128,19 @@ class AnkiService:
                     if front := (item.extra_fields or {}).get(CARD_FRONT_KEY):
                         created_fronts.append(front)
                 elif reason is not None and _DUPLICATE_ERROR_SUBSTRING in reason:
+                    skipped_duplicates += 1
                     not_created[form] = "duplicate"
                 else:
                     failed_words.append(form)
                     not_created[form] = "refused"
                     if reason is not None:
                         refusal_reasons[form] = reason
-                    elif len(null_notes) < _NULL_SLOT_PROBE_NOTES:
-                        # A sample for the after-the-run explanation probe; the
-                        # probe itself must not run inside the loop (see below).
-                        null_notes.append(note)
+                    else:
+                        skipped_duplicates += 1
+                        if len(null_notes) < _NULL_SLOT_PROBE_NOTES:
+                            # A sample for the after-the-run explanation probe; the
+                            # probe itself must not run inside the loop (see below).
+                            null_notes.append(note)
 
         # Persist progress even if a later batch raises. Earlier batches'
         # cards already exist in Anki; on a mid-run failure we must still
