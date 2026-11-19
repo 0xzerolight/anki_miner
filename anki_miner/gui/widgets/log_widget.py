@@ -330,12 +330,15 @@ class LogWidget(QWidget):
 
     # ------------------------------------------------------------ Internals
 
-    def _append_message(self, text: str, level: str) -> None:
+    def _append_message(self, text: str, level: str, *, report: bool = True) -> None:
         """Store a message and render it if it passes the active filters.
 
         Args:
             text: Message text
             level: One of ``INFO``, ``SUCCESS``, ``WARNING``, ``ERROR``
+            report: Emit ``problem_logged`` for a WARNING or ERROR. False for
+                the widget's own housekeeping (a failed log export), which is
+                not a run item and must not raise the screen's run banner.
         """
         # Mirror first, and exactly once per appended line: rotation below
         # re-renders retained entries, which must not re-emit them.
@@ -370,7 +373,7 @@ class LogWidget(QWidget):
                 self._pending_new += 1
                 self._update_jump_button()
 
-        if level in (LEVEL_WARNING, LEVEL_ERROR):
+        if report and level in (LEVEL_WARNING, LEVEL_ERROR):
             self.problem_logged.emit(level, text)
 
     def _matches(self, entry: LogEntry) -> bool:
@@ -510,7 +513,8 @@ class LogWidget(QWidget):
         self.append_info(tr_format(self.tr("Saved run log to %1"), result))
 
     def _on_save_error(self, message: str) -> None:
-        self.append_error(tr_format(self.tr("Could not save the run log: %1"), message))
+        # Shown next to the Save button the user just pressed; not a run problem.
+        self._append_message(tr_format(self.tr("Could not save the run log: %1"), message), LEVEL_ERROR, report=False)
 
     def _on_save_finished(self) -> None:
         self.save_button.setEnabled(True)

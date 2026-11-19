@@ -309,6 +309,22 @@ class TestSave:
         qtbot.waitUntil(lambda: "[ERROR]" in log.text_edit.toPlainText())
         qtbot.waitUntil(lambda: log.save_button.isEnabled())
 
+    def test_save_failure_is_not_reported_as_a_run_problem(self, log, qtbot, tmp_path, monkeypatch):
+        """A log export that fails is no failed run item: no tool banner may rise for it."""
+        unwritable = tmp_path / "missing-dir" / "run.txt"
+        monkeypatch.setattr(
+            log_widget_module.file_dialogs,
+            "pick_save_file",
+            lambda *a, on_done, **k: on_done(str(unwritable)),
+        )
+        problems: list[tuple[str, str]] = []
+        log.problem_logged.connect(lambda level, text: problems.append((level, text)))
+        log.append_info("parsed subtitles")
+        log.save_button.click()
+        qtbot.waitUntil(lambda: "[ERROR] Could not save the run log" in log.text_edit.toPlainText())
+        qtbot.waitUntil(lambda: log.save_button.isEnabled())
+        assert problems == []
+
     def test_failed_save_preserves_existing_file(self, log, qtbot, tmp_path, monkeypatch):
         target = tmp_path / "run.txt"
         target.write_bytes(b"ORIGINAL")
