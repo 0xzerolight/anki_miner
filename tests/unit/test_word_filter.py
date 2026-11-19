@@ -2248,6 +2248,31 @@ class TestMergeCueWindow:
 class TestExpandWordLines:
     """Tests for WordFilterService.expand_word_lines (Issue #120)."""
 
+    def test_expansion_keeps_the_parsers_readings_of_each_line(self, test_config, tmp_path):
+        # 不味い reads まずい by curated reading (2026-11-12 ruling); the bare tagger says まじい.
+        from anki_miner.services.subtitle_parser import SubtitleParserService
+
+        srt = tmp_path / "a.srt"
+        srt.write_text(
+            "1\n00:00:01,000 --> 00:00:02,000\nちょっと待って\n\n"
+            "2\n00:00:03,000 --> 00:00:04,000\nこの料理は不味い\n\n",
+            encoding="utf-8",
+        )
+        config = dataclasses.replace(test_config, bold_target_in_sentence=True)
+        parser = SubtitleParserService(config)
+        service = WordFilterService(
+            config, tagger_source=parser._tagger, sentence_tokens=parser.sentence_display_tokens
+        )
+        word = next(w for w in parser.parse_subtitle_file(srt) if w.mined_form == "料理")
+        expanded = service.expand_word_lines(
+            dataclasses.replace(word, line_expansion=(1, 0)), parser.parse_raw_entries(srt)
+        )
+        assert word.sentence_furigana.endswith("不味[まず]い")
+        assert expanded.sentence_furigana.endswith(word.sentence_furigana)
+        assert expanded.sentence_reading.endswith(word.sentence_reading)
+        assert "まず" in expanded.sentence_furigana_bolded
+        assert expanded.sentence_furigana_bolded.endswith(word.sentence_furigana_bolded)
+
     def test_zero_expansion_returns_same_object(self, test_config):
         service = WordFilterService(test_config)
         word = _expansion_word(line_expansion=(0, 0))
@@ -2313,24 +2338,26 @@ class TestExpandWordLines:
     def test_furigana_reading_regenerated_over_merged_text(self, test_config, monkeypatch):
         calls = []
         monkeypatch.setattr(
-            "anki_miner.services.word_filter.generate_furigana",
-            lambda text, tagger: calls.append(("furigana", text)) or "merged[furi]",
+            "anki_miner.services.word_filter.generate_furigana_from_tokens",
+            lambda tokens, text=None: calls.append(("furigana", text, tokens)) or "merged[furi]",
         )
         monkeypatch.setattr(
-            "anki_miner.services.word_filter.generate_reading",
-            lambda text, tagger: calls.append(("reading", text)) or "merged-reading",
+            "anki_miner.services.word_filter.generate_reading_from_tokens",
+            lambda tokens: calls.append(("reading", tokens)) or "merged-reading",
         )
-        service = WordFilterService(test_config, tagger=object())
+        service = WordFilterService(test_config, tagger=lambda text: [f"tok:{text}"])
         result = service.expand_word_lines(_expansion_word(), EXPANSION_ENTRIES)
         merged = "前の行です" + CUE_JOINER + "彼はりんごを食べた"
-        assert ("furigana", merged) in calls
-        assert ("reading", merged) in calls
+        assert ("furigana", merged, [f"tok:{merged}"]) in calls
+        assert ("reading", [f"tok:{merged}"]) in calls
         assert result.sentence_furigana == "merged[furi]"
         assert result.sentence_reading == "merged-reading"
 
     def test_bolded_variants_rebuilt_when_config_bolds(self, test_config, monkeypatch):
-        monkeypatch.setattr("anki_miner.services.word_filter.generate_furigana", lambda text, tagger: "")
-        monkeypatch.setattr("anki_miner.services.word_filter.generate_reading", lambda text, tagger: "")
+        monkeypatch.setattr(
+            "anki_miner.services.word_filter.generate_furigana_from_tokens", lambda tokens, text=None: ""
+        )
+        monkeypatch.setattr("anki_miner.services.word_filter.generate_reading_from_tokens", lambda tokens: "")
         plain_calls = []
         furi_calls = []
         monkeypatch.setattr(
@@ -2338,11 +2365,11 @@ class TestExpandWordLines:
             lambda text, start, end: plain_calls.append((text, start, end)) or "<b>plain</b>",
         )
         monkeypatch.setattr(
-            "anki_miner.services.word_filter.wrap_target_furigana",
-            lambda text, tagger, start, end: furi_calls.append((text, start, end)) or "<b>furi</b>",
+            "anki_miner.services.word_filter.wrap_target_furigana_from_tokens",
+            lambda text, tokens, start, end: furi_calls.append((text, start, end)) or "<b>furi</b>",
         )
         config = dataclasses.replace(test_config, bold_target_in_sentence=True)
-        service = WordFilterService(config, tagger=object())
+        service = WordFilterService(config, tagger=lambda text: [])
         result = service.expand_word_lines(_expansion_word(), EXPANSION_ENTRIES)
         merged = "前の行です" + CUE_JOINER + "彼はりんごを食べた"
         assert plain_calls == [(merged, 12, 15)]

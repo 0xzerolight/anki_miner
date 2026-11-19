@@ -2061,6 +2061,89 @@ class SubtitleParserService:
             morph=_token_morph(word_token),
         )
 
+    def _included_tokens(
+        self, text: str, raw_tokens: list, merged_tokens: list, rejects: dict[str, NotMinedReason] | None
+    ) -> tuple[list, list[tuple[int, int, int]]]:
+        """The line's mined tokens and their ``(start, end, highlight_end)`` spans.
+
+        Spans come from the shared locator — same offset and drop rule as
+        parse_subtitle_file (Issue #20 / T-38, see _iter_token_spans). The
+        highlight end is computed once per token here and reused by the
+        emission pass, so parse_subtitle_file and _with_index stay
+        output-identical.
+        """
+        included_tokens: list = []
+        included_spans: list[tuple[int, int, int]] = []
+        for word_token, tok_start, tok_end in self._iter_token_spans(text, merged_tokens):
+            if not self._mine_token(word_token, text, tok_start, tok_end, merged_tokens, raw_tokens, rejects=rejects):
+                continue
+            included_tokens.append(word_token)
+            highlight_end = self._emission_highlight_end(text, raw_tokens, tok_start, tok_end, word_token)
+            included_spans.append((tok_start, tok_end, highlight_end))
+        return included_tokens, included_spans
+
+    def _line_display(
+        self,
+        text: str,
+        raw_tokens: list,
+        merged_tokens: list,
+        included_tokens: list,
+        included_spans: list[tuple[int, int, int]],
+    ) -> tuple[list, list[str | None]]:
+        """The line's sentence display stream, and each included token's prefetched card front.
+
+        A synthetic compound's front is ``None``: it was attested in
+        _build_line_state.
+        """
+        # Probe real-token card fronts as one exact-headword batch per line.
+        mined_forms: list[str | None] = []
+        for word_token, (tok_start, _, highlight_end) in zip(
+            included_tokens,
+            included_spans,
+            strict=True,
+        ):
+            if isinstance(word_token, SyntheticToken):
+                mined_forms.append(None)
+                continue
+            _, _, mined, _ = self._resolve_word_identity(
+                word_token,
+                text,
+                tok_start,
+                highlight_end,
+            )
+            mined_forms.append(mined)
+        self._prefetch_attested_readings([mined for mined in mined_forms if mined is not None])
+
+        # The sentence-level furigana/reading come from the shared display
+        # stream (attested-compound override + honorific-kinship pass; see
+        # _build_display_tokens). Surfaces are unchanged, so span/offset math
+        # is unaffected.
+        display_tokens = self._build_display_tokens(text, raw_tokens, merged_tokens)
+        display_tokens = self._apply_single_token_sentence_attestation(
+            text,
+            display_tokens,
+            included_tokens,
+            included_spans,
+            mined_forms,
+        )
+        return display_tokens, mined_forms
+
+    def sentence_display_tokens(self, sentence: str) -> list:
+        """The token stream a stored line's sentence furigana and kana reading are built from.
+
+        ``sentence`` is one stored line (a ``parse_raw_entries`` cue text). The
+        stream is the one mining builds the line's card fields from, so a line
+        annotated again later (a line expansion, the ``--api`` word on its
+        line, a swapped sentence's bold) reads as its card does, with every
+        tagger correction and reading override.
+        """
+        self._require_engine()
+        _stored, raw_tokens, merged_tokens, *_ = self._build_line_state(sentence, 0.0, 0.0)
+        text = self._tokenizer_text(sentence)
+        included_tokens, included_spans = self._included_tokens(text, raw_tokens, merged_tokens, None)
+        display_tokens, _ = self._line_display(text, raw_tokens, merged_tokens, included_tokens, included_spans)
+        return display_tokens
+
     def _emit_line_words_and_index(
         self,
         line_state: tuple[str, list[Any], list[Any], float, float, float],
@@ -2093,22 +2176,12 @@ class SubtitleParserService:
         # When collecting the index we also record (surface, start, end) for the
         # FIRST occurrence of each content lemma — the i+1 filter uses this to
         # re-bold against the swapped-in line.
+        included_tokens, included_spans = self._included_tokens(text, raw_tokens, merged_tokens, rejects)
         line_lemmas: set[str] = set()
-        included_tokens: list = []
-        included_spans: list[tuple[int, int, int]] = []
         lemma_first_span: dict[str, tuple[str, int, int, int]] = {}
-        # Spans come from the shared locator — same offset and drop rule as
-        # parse_subtitle_file (Issue #20 / T-38, see _iter_token_spans).
-        for word_token, tok_start, tok_end in self._iter_token_spans(text, merged_tokens):
-            if not self._mine_token(word_token, text, tok_start, tok_end, merged_tokens, raw_tokens, rejects=rejects):
-                continue
+        for word_token, (tok_start, tok_end, highlight_end) in zip(included_tokens, included_spans, strict=True):
             lemma_here = self._extract_lemma(word_token)
             line_lemmas.add(lemma_here)
-            included_tokens.append(word_token)
-            # Computed once per token here and reused by the second pass, so
-            # parse_subtitle_file and _with_index stay output-identical.
-            highlight_end = self._emission_highlight_end(text, raw_tokens, tok_start, tok_end, word_token)
-            included_spans.append((tok_start, tok_end, highlight_end))
             if collect_index:
                 # Surfaces are slices of the stored line, as _emit_word's are.
                 lemma_first_span.setdefault(
@@ -2120,37 +2193,8 @@ class SubtitleParserService:
         if collect_index and not line_lemmas:
             return [], None
 
-        # Probe real-token card fronts as one exact-headword batch per line.
-        # Synthetic compounds were already attested in _build_line_state.
-        mined_forms: list[str | None] = []
-        for word_token, (tok_start, _, highlight_end) in zip(
-            included_tokens,
-            included_spans,
-            strict=True,
-        ):
-            if isinstance(word_token, SyntheticToken):
-                mined_forms.append(None)
-                continue
-            _, _, mined, _ = self._resolve_word_identity(
-                word_token,
-                text,
-                tok_start,
-                highlight_end,
-            )
-            mined_forms.append(mined)
-        self._prefetch_attested_readings([mined for mined in mined_forms if mined is not None])
-
-        # Compute sentence-level furigana/reading ONCE for this line, from the
-        # shared display stream (attested-compound override + honorific-kinship
-        # pass; see _build_display_tokens). Surfaces are unchanged, so
-        # span/offset math is unaffected.
-        display_tokens = self._build_display_tokens(text, raw_tokens, merged_tokens)
-        display_tokens = self._apply_single_token_sentence_attestation(
-            text,
-            display_tokens,
-            included_tokens,
-            included_spans,
-            mined_forms,
+        display_tokens, mined_forms = self._line_display(
+            text, raw_tokens, merged_tokens, included_tokens, included_spans
         )
         if self._sentence_annotation:
             sentence_furigana = generate_furigana_from_tokens(display_tokens, text=text)

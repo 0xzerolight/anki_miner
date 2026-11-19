@@ -19,11 +19,15 @@ from anki_miner.utils import (
     is_kana_only,
     is_katakana_only,
     is_mixed_kana_only,
-    wrap_target_furigana,
     wrap_target_plain,
 )
 from anki_miner.utils.ja_normalize import is_cjk_ideograph
-from anki_miner.utils.text_utils import _format_furigana
+from anki_miner.utils.text_utils import (
+    _format_furigana,
+    generate_furigana_from_tokens,
+    generate_reading_from_tokens,
+    wrap_target_furigana_from_tokens,
+)
 
 if TYPE_CHECKING:
     from anki_miner.languages.profile import MinedFormPolicy, ScriptSupport
@@ -135,6 +139,20 @@ def find_cue_index(
     return best
 
 
+def _window_cues(
+    entries: Sequence[tuple[float, float, str]],
+    index: int,
+    prev_count: int,
+    next_count: int,
+    skip: Collection[int],
+) -> tuple[Sequence[tuple[float, float, str]], list[tuple[int, tuple[float, float, str]]]]:
+    """The merged cues, and the ``(entry index, cue)`` pairs whose text the window keeps."""
+    lo = max(0, index - prev_count)
+    hi = min(len(entries) - 1, index + next_count)
+    cues = entries[lo : hi + 1]
+    return cues, [(i, cue) for i, cue in enumerate(cues, start=lo) if i - index not in skip]
+
+
 def merge_cue_window(
     entries: Sequence[tuple[float, float, str]],
     index: int,
@@ -150,10 +168,7 @@ def merge_cue_window(
     while their time still counts: a line streaming subtitles repeat within
     the window (Z-26). An offset outside the merged range skips nothing.
     """
-    lo = max(0, index - prev_count)
-    hi = min(len(entries) - 1, index + next_count)
-    cues = entries[lo : hi + 1]
-    kept = [(i, cue) for i, cue in enumerate(cues, start=lo) if i - index not in skip]
+    cues, kept = _window_cues(entries, index, prev_count, next_count, skip)
     return MergedLineWindow(
         start=min(cue[0] for cue in cues),
         end=max(cue[1] for cue in cues),
@@ -324,6 +339,7 @@ class WordFilterService:
         dedup_fold: Callable[[str], str] | None = None,
         expression_tracks_surface: Callable[[TokenizedWord], bool] | None = None,
         sentence_annotation: bool = True,
+        sentence_tokens: Callable[[str], list] | None = None,
     ):
         """Initialize the word filter service.
 
@@ -365,6 +381,12 @@ class WordFilterService:
                 language with no ``LanguageProfile.sentence_annotator``,
                 matching its parser: those generators assume contiguous kana
                 tokens.
+            sentence_tokens: The parser's display stream for one stored line
+                (``SubtitleParserService.sentence_display_tokens``), the tokens
+                its card fields were built from. Regenerated annotations are
+                built from it, line by line, so they keep the parser's tagger
+                corrections and reading overrides. ``None`` tags the text with
+                the bare tagger.
         """
         self.config = config
         self._tagger = tagger
@@ -374,6 +396,15 @@ class WordFilterService:
         self._dedup_fold = dedup_fold
         self._tracks_surface = expression_tracks_surface or _ja_expression_tracks_surface
         self._sentence_annotation = sentence_annotation
+        self._sentence_tokens = sentence_tokens
+
+    def _annotation_tokens(self, lines: Sequence[str]) -> list:
+        """The tokens annotating ``CUE_JOINER.join(lines)``: each line's parser stream, else the bare tagger's."""
+        if self._sentence_tokens is None:
+            tagger = self.tagger
+            assert tagger is not None  # every caller gates on a tagger
+            return list(tagger(CUE_JOINER.join(lines)))
+        return [token for line in lines for token in self._sentence_tokens(line)]
 
     @property
     def tagger(self) -> Any | None:
@@ -1031,7 +1062,10 @@ class WordFilterService:
             # Bold the full inflected form on the swapped-in line (same
             # highlight_end semantics as parse-time bolding; -1 sentinel in
             # hand-built indexes falls back to the surface span).
-            new_bolded, new_furi_bolded = self._bolded_pair(match.line_text, new_start, new_highlight_end, new_end)
+            tokens = self._annotation_tokens([match.line_text]) if self._sentence_annotation else None
+            new_bolded, new_furi_bolded = self._bolded_pair(
+                match.line_text, tokens, new_start, new_highlight_end, new_end
+            )
         else:
             new_bolded = ""
             new_furi_bolded = ""
@@ -1087,15 +1121,17 @@ class WordFilterService:
             line_expansion=(0, 0),
         )
 
-    def _bolded_pair(self, text: str, start: int, highlight_end: int, end: int) -> tuple[str, str]:
+    def _bolded_pair(self, text: str, tokens: list | None, start: int, highlight_end: int, end: int) -> tuple[str, str]:
         """``(sentence_bolded, sentence_furigana_bolded)`` for a target span.
 
         Same highlight_end semantics as parse-time bolding: the -1 sentinel
-        falls back to the surface span end. Caller guarantees
-        ``config.bold_target_in_sentence``, tracked spans, and a tagger.
+        falls back to the surface span end. ``tokens`` annotate ``text``
+        (:meth:`_annotation_tokens`); ``None`` where the language does not
+        annotate. Caller guarantees ``config.bold_target_in_sentence``,
+        tracked spans, and a tagger.
         """
         bold_end = highlight_end if highlight_end >= 0 else end
-        furigana_bolded = wrap_target_furigana(text, self.tagger, start, bold_end) if self._sentence_annotation else ""
+        furigana_bolded = wrap_target_furigana_from_tokens(text, tokens, start, bold_end) if tokens is not None else ""
         return (wrap_target_plain(text, start, bold_end), furigana_bolded)
 
     def word_on_line(
@@ -1118,15 +1154,15 @@ class WordFilterService:
         """
         start_time, end_time, text = line
         start, end = span
-        annotate = self.tagger is not None and self._sentence_annotation
+        tokens = self._annotation_tokens([text]) if self.tagger is not None and self._sentence_annotation else None
         match = LineLemmas(
             line_text=text,
             lemmas=frozenset({word.lemma}),
             start_time=start_time,
             end_time=end_time,
             duration=end_time - start_time,
-            sentence_furigana=generate_furigana(text, self.tagger) if annotate else "",
-            sentence_reading=generate_reading(text, self.tagger) if annotate else "",
+            sentence_furigana=generate_furigana_from_tokens(tokens, text=text) if tokens is not None else "",
+            sentence_reading=generate_reading_from_tokens(tokens) if tokens is not None else "",
             front_spans=((word.mined_form, text[start:end], start, end, -1),),
             fronts=frozenset({word.mined_form}),
         )
@@ -1197,13 +1233,16 @@ class WordFilterService:
         new_start = word.surface_start + shift if word.surface_start >= 0 else -1
         new_end = word.surface_end + shift if word.surface_end >= 0 else -1
         new_highlight = word.highlight_end + shift if word.highlight_end >= 0 else -1
+        tokens = None
         if self.tagger is not None and self._sentence_annotation:
-            new_furigana = generate_furigana(window.text, self.tagger)
-            new_reading = generate_reading(window.text, self.tagger)
+            _, kept = _window_cues(entries, index, prev_count, next_count, word.line_skip)
+            tokens = self._annotation_tokens([cue[2] for _, cue in kept])
+            new_furigana = generate_furigana_from_tokens(tokens, text=window.text)
+            new_reading = generate_reading_from_tokens(tokens)
         else:
             new_furigana = new_reading = ""
         if self.config.bold_target_in_sentence and new_start >= 0 and self.tagger is not None:
-            new_bolded, new_furi_bolded = self._bolded_pair(window.text, new_start, new_highlight, new_end)
+            new_bolded, new_furi_bolded = self._bolded_pair(window.text, tokens, new_start, new_highlight, new_end)
         else:
             new_bolded = new_furi_bolded = ""
         return dataclasses.replace(
