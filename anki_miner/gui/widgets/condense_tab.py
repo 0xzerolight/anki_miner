@@ -749,6 +749,9 @@ class CondenseTab(RunOptionsMixin, _ToolTabBase):
                 self.subtitle_track_action.setEnabled(not self.subtitle_file_selector.path_or_none())
             except RuntimeError:
                 return
+            # The pick belongs to the file that was probed, as in the audio handler.
+            if self.media_file_selector.path_or_none() != media_path:
+                return
             streams = cast("list[SubtitleStream]", result)
             if not streams:
                 QMessageBox.information(
@@ -772,6 +775,8 @@ class CondenseTab(RunOptionsMixin, _ToolTabBase):
                 parent=self,
             )
             if dialog.exec() == SubtitleTracksDialog.DialogCode.Accepted:
+                if self.media_file_selector.path_or_none() != media_path:
+                    return
                 self._subtitle_track_override = dialog.selected_override()
                 self._refresh_track_summary()
 

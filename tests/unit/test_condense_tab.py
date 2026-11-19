@@ -1085,6 +1085,38 @@ def test_subtitle_tracks_probe_applies_override(qtbot, tmp_path):
     assert tab.subtitle_track_action.isEnabled()
 
 
+def test_late_subtitle_track_probe_does_not_override_after_source_change(qtbot, tmp_path):
+    """X4-004: A's subtitle-track list must not set an override on a newly chosen B."""
+    from PyQt6.QtWidgets import QDialog
+
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    source_a = tmp_path / "a.mkv"
+    source_b = tmp_path / "b.mkv"
+    source_a.touch()
+    source_b.touch()
+    tab.media_file_selector.set_path(str(source_a))
+
+    held: list[tuple] = []
+    dialog = MagicMock()
+    dialog.exec.return_value = QDialog.DialogCode.Accepted
+    dialog.selected_override.return_value = 2
+    dialog_cls = MagicMock(return_value=dialog)
+    dialog_cls.DialogCode = QDialog.DialogCode
+
+    with (
+        patch("anki_miner.gui.widgets.condense_tab.run_off_thread", side_effect=lambda *a, **k: held.append(a)),
+        patch(_SUB_DIALOG, dialog_cls),
+    ):
+        tab._on_subtitle_tracks_clicked()
+        tab.media_file_selector.set_path(str(source_b))
+        _owner, _probe, on_done, _on_error = held[0]
+        on_done([_sub_stream()])
+
+    dialog_cls.assert_not_called()
+    assert tab._subtitle_track_override is None
+    assert tab.subtitle_track_action.isEnabled()
+
+
 # ---------------------------------------------------------------------------
 # Metadata tagging opt-in (Issue #113)
 # ---------------------------------------------------------------------------
