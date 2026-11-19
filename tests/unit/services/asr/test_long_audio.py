@@ -258,14 +258,30 @@ def test_overstated_container_duration_ends_on_the_short_window(tmp_path, monkey
     assert result.segments[-1][1] == pytest.approx(real, abs=0.5)
 
 
-def test_remaining_sliver_under_a_second_is_not_extracted(tmp_path, monkeypatch):
+def test_understated_container_duration_is_transcribed_to_the_real_end(tmp_path, monkeypatch):
+    """B4-001: ffprobe can also UNDERstate the audio (cat-joined VBR mp3 parts
+    keep the first part's Xing header). The probe only picks the windowed path;
+    the audio itself says where it ends, as on the whole-file path."""
     record: list = []
     _patch_transcribe(monkeypatch, record=record)
-    total = W + S + 0.4  # just past the windowing threshold, 0.4 s left after the first window
+    real = 50.0
+    extractor = _FakeExtractor(total_s=real)
+    result = transcribe_media(_make_config(tmp_path), extractor, tmp_path / "book.mp3", probe_duration=lambda p: 33.0)
+
+    assert result.status is LongAudioStatus.OK
+    assert result.segments[-1][1] == pytest.approx(real, abs=0.01)
+    assert sum(seconds for _n, seconds, _session in record) == pytest.approx(real, abs=0.01)
+
+
+def test_audio_just_past_one_window_is_transcribed_to_its_end(tmp_path, monkeypatch):
+    record: list = []
+    _patch_transcribe(monkeypatch, record=record)
+    total = W + S + 0.4  # just past the windowing threshold, 0.4 s past the first full window
     extractor = _FakeExtractor(total_s=total, quiet_at_in_window=W)
     result = transcribe_media(_make_config(tmp_path), extractor, tmp_path / "book.m4b", probe_duration=lambda p: total)
     assert result.status is LongAudioStatus.OK
-    assert len(extractor.window_calls) == 1
+    assert extractor.window_calls == [(0.0, W + S), (pytest.approx(W, abs=0.01), W + S)]
+    assert result.segments[-1][1] == pytest.approx(total, abs=0.01)
 
 
 def test_window_extraction_failure_is_reported(tmp_path, monkeypatch):

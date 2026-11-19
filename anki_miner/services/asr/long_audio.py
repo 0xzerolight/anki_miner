@@ -49,8 +49,6 @@ CUT_SEARCH_SECONDS = 20
 _CUT_FRAME_MS = 100
 #: A window this much shorter than requested means the audio ended (see the loop).
 _SHORT_WINDOW_TOLERANCE_S = 1.0
-#: Less audio than this left after a window is not worth a window of its own.
-_MIN_REMAINDER_S = 1.0
 
 
 class LongAudioStatus(Enum):
@@ -202,8 +200,7 @@ def transcribe_media(
         tmp_wav = Path(tmp_str)
         try:
             if windowed:
-                assert duration is not None
-                want = min(float(WINDOW_SECONDS + CUT_SEARCH_SECONDS), duration - pos)
+                want = float(WINDOW_SECONDS + CUT_SEARCH_SECONDS)
                 ok = extractor.extract_audio_window(
                     media_path, tmp_wav, start_s=pos, duration_s=want, cancel_event=cancel_event
                 )
@@ -221,11 +218,14 @@ def transcribe_media(
 
             if windowed:
                 assert duration is not None
-                # A window shorter than requested is the audio's real end — the
-                # container duration overstated it (MKV with longer video, padded
-                # m4b). Treat it as final rather than asking ffmpeg for a window
-                # past EOF, which the zero-frame guard would report as a failure.
-                final = got_s < want - _SHORT_WINDOW_TOLERANCE_S or pos + got_s >= duration - _MIN_REMAINDER_S
+                # Only a window shorter than requested ends the loop: the decoded
+                # audio is the truth, the probed duration only chose this path and
+                # scales progress. It can overstate the audio (MKV with longer
+                # video, padded m4b) or understate it (cat-joined VBR mp3 parts
+                # keep the first part's Xing header); ending at it would drop
+                # the tail. A full window always continues: the cut keeps at
+                # least one frame of it, so the next window is never past EOF.
+                final = got_s < want - _SHORT_WINDOW_TOLERANCE_S
                 if final:
                     chunk, chunk_s = samples, got_s
                 else:
