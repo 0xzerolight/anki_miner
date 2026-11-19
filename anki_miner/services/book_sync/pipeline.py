@@ -183,9 +183,12 @@ def sync_one(
     first = min(t.index for t in timings)
     last = max(t.index for t in timings)
     timed_here = {t.index for t in timings}
-    unmatched = sum(1 for i in range(first, last + 1) if i not in timed_here and i not in already)
+    # A sentence whose key folds to nothing (「……」) has nothing to hear, so no
+    # read can time it: it is neither unmatched nor unheard.
     # ``already`` (B4): what earlier files of this book timed is not unheard here.
-    gaps = unheard_gaps(timings, known=already)
+    known = already | {i for i in range(first, last + 1) if not book.keys[i]}
+    unmatched = sum(1 for i in range(first, last + 1) if i not in timed_here and i not in known)
+    gaps = unheard_gaps(timings, known=known)
     if gaps:
         # Never a cue (a guessed time would put the wrong audio on a card);
         # the guess goes to the app log so the user can find the passage.

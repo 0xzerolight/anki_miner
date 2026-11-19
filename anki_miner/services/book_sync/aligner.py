@@ -239,8 +239,13 @@ class _Tally:
 
 
 def _need(book: BookText, s: int) -> int:
-    """Equal-matched characters sentence ``s`` needs before it gets a cue."""
-    return max(MIN_SENTENCE_MATCH, math.ceil(MIN_SENTENCE_MATCH_SHARE * len(book.keys[s])))
+    """Equal-matched characters sentence ``s`` needs before it gets a cue.
+
+    Never more than the key has: a reply like うん folds to two characters and
+    needs both, where the MIN_SENTENCE_MATCH floor would leave it untimeable.
+    """
+    size = len(book.keys[s])
+    return min(size, max(MIN_SENTENCE_MATCH, math.ceil(MIN_SENTENCE_MATCH_SHARE * size)))
 
 
 def _open_end_distance(text: str, chars: str, start: int) -> int:

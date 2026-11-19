@@ -21,8 +21,11 @@ worse than no sync.
 from __future__ import annotations
 
 import logging
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
+
+import pysubs2
 
 from anki_miner.services.subtitle_cleaner import _load
 from anki_miner.services.sync_engines import SyncResult
@@ -68,9 +71,15 @@ def validate_candidate(
     candidate: Path,
     result: SyncResult,
     *,
+    candidate_events: Sequence[pysubs2.SSAEvent] | None = None,
     video_duration_seconds: float | None = None,
 ) -> ValidationVerdict:
     """Judge whether *candidate* is a trustworthy retime of *original*.
+
+    *candidate_events*, when given, are the candidate's cues in the original's
+    order and are judged instead of re-reading *candidate* (then named only in
+    the log): a writer that reorders cues, such as pysubs2's WebVTT one, would
+    pair each original cue with another and hide a scrambled order.
 
     Never raises: an unreadable candidate is simply rejected, and an
     unreadable *original* rejects too (with nothing to compare against, a
@@ -85,7 +94,7 @@ def validate_candidate(
 
     try:
         orig_events = _load(original).events
-        cand_events = _load(candidate).events
+        cand_events = list(candidate_events) if candidate_events is not None else _load(candidate).events
     except Exception:  # noqa: BLE001 — unreadable file means unverifiable candidate
         logger.warning("sync validator: could not parse candidate or original", exc_info=True)
         return _verdict(original, candidate, result, [*reasons, "candidate or original unparsable"])
@@ -104,11 +113,12 @@ def validate_candidate(
     if any(abs(shift) * 1000 > _MAX_SHIFT_MS for shift in result.block_shifts_seconds):
         reasons.append("a shifted block moved beyond the plausible-offset bound")
 
-    orig_starts = [e.start for e in orig_events]
-    if orig_starts == sorted(orig_starts):
-        cand_starts = [e.start for e in cand_events]
-        if cand_starts != sorted(cand_starts):
-            reasons.append("cue order scrambled by divergent block shifts")
+    # In the original's time order, so a file whose cues are not stored in
+    # time order is checked too: cue i of the candidate is cue i of the original.
+    time_order = sorted(range(len(orig_events)), key=lambda i: orig_events[i].start)
+    cand_starts = [cand_events[i].start for i in time_order]
+    if any(a > b for a, b in zip(cand_starts, cand_starts[1:], strict=False)):
+        reasons.append("cue order scrambled by divergent block shifts")
 
     pileup = sum(1 for c, o in zip(cand_events, orig_events, strict=True) if c.start == 0 and o.start > 0)
     if pileup > _MAX_ZERO_PILEUP:

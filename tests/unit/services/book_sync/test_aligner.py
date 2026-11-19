@@ -300,3 +300,23 @@ def test_a_files_last_words_do_not_time_a_later_sentence_that_ends_the_same():
     t2 = align_to_book(_read(book, s_index + 1, s_index + 40, rng=random.Random(7)), book, cursor)
 
     assert set(range(s_index + 1, t_index + 1)) <= {t.index for t in t2}
+
+
+def test_a_sentence_shorter_than_the_match_floor_is_timed_on_a_word_perfect_read():
+    """うん and はい fold to two-character keys: they need both characters, not three."""
+    rng = random.Random(11)
+    sentences = (
+        _sentence(0, rng),
+        "「うん」",
+        _sentence(2, rng),
+        "「はい」",
+        _sentence(4, rng),
+        "……",
+        _sentence(6, rng),
+    )
+    book = BookText(title="t", sentences=sentences, keys=tuple(normalize_for_alignment(s) for s in sentences))
+    segs = [TimedText(start=float(k), end=float(k + 1), text=s) for k, s in enumerate(sentences)]
+
+    timed = {t.index for t in align_to_book(segs, book, BookCursor())}
+
+    assert {0, 1, 2, 3, 4, 6} <= timed
