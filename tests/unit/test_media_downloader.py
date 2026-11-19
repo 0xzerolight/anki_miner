@@ -145,12 +145,41 @@ def _cmd(recorder: MagicMock) -> list[str]:
 def test_preset_table_exact() -> None:
     assert FORMAT_PRESETS == {
         "best": ("bestvideo*+bestaudio/best", None),
-        "1440p": ("bestvideo[height<=1440]+bestaudio/best[height<=1440]", None),
-        "1080p": ("bestvideo[height<=1080]+bestaudio/best[height<=1080]", None),
-        "720p": ("bestvideo[height<=720]+bestaudio/best[height<=720]", None),
+        "1440p": ("bestvideo[height<=?1440]+bestaudio/best[height<=?1440]", None),
+        "1080p": ("bestvideo[height<=?1080]+bestaudio/best[height<=?1080]", None),
+        "720p": ("bestvideo[height<=?720]+bestaudio/best[height<=?720]", None),
         "audio_mp3": ("bestaudio/best", "mp3"),
         "audio_m4a": ("bestaudio/best", "m4a"),
     }
+
+
+@pytest.mark.parametrize("preset", ["1440p", "1080p", "720p"])
+def test_capped_presets_keep_a_direct_link_with_no_height(preset: str) -> None:
+    """yt-dlp's generic extractor gives a direct .mp4 link one format with no
+    height; a plain [height<=N] filter drops it and the download dies with
+    'Requested format is not available'. A known taller format stays capped."""
+    yt_dlp = pytest.importorskip("yt_dlp")
+    selector, _ = FORMAT_PRESETS[preset]
+
+    def select(formats: list[dict[str, Any]]) -> str:
+        info = {
+            "id": "clip",
+            "title": "clip",
+            "extractor": "generic",
+            "extractor_key": "Generic",
+            "webpage_url": "https://example.invalid/clip.mp4",
+            "formats": formats,
+        }
+        ydl = yt_dlp.YoutubeDL({"format": selector, "simulate": True, "quiet": True, "no_warnings": True})
+        return str(ydl.process_ie_result(info, download=False)["format_id"])
+
+    direct = {"format_id": "mp4", "url": "https://example.invalid/clip.mp4", "ext": "mp4", "vcodec": None}
+    assert select([dict(direct, direct=True)]) == "mp4"
+    muxed = {"ext": "mp4", "vcodec": "avc1", "acodec": "mp4a"}
+    heights = (480, 720, 1080, 1440, 2160)
+    cap = int(preset.removesuffix("p"))
+    formats = [dict(muxed, format_id=str(h), url=f"https://example.invalid/{h}.mp4", height=h) for h in heights]
+    assert select(formats) == str(cap)
 
 
 # ---------------------------------------------------------------------------
@@ -1322,9 +1351,9 @@ class TestAudioLanguage:
                 "bestvideo*+bestaudio[language~='^ja(-|$)']/bestvideo*+bestaudio/best",
             ),
             (
-                "bestvideo[height<=1080]+bestaudio/best[height<=1080]",
-                "bestvideo[height<=1080]+bestaudio[language~='^ja(-|$)']"
-                "/bestvideo[height<=1080]+bestaudio/best[height<=1080]",
+                "bestvideo[height<=?1080]+bestaudio/best[height<=?1080]",
+                "bestvideo[height<=?1080]+bestaudio[language~='^ja(-|$)']"
+                "/bestvideo[height<=?1080]+bestaudio/best[height<=?1080]",
             ),
             ("bestaudio/best", "bestaudio[language~='^ja(-|$)']/bestaudio/best"),
         ],

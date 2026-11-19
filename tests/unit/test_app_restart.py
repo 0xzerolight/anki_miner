@@ -223,6 +223,34 @@ class TestQtScaleFactorAcrossRestart:
         assert os.environ["QT_SCALE_FACTOR"] == "2.0"
 
 
+class TestFrozenRelaunchEnvironment:
+    """A frozen relaunch must start as a new PyInstaller instance.
+
+    The parent's environment still carries the bootloader's ``_PYI_*`` markers
+    while ``_scrub_pyinstaller_env`` has removed the bundle library path. Without
+    ``PYINSTALLER_RESET_ENVIRONMENT`` the child takes itself for a worker of this
+    process, skips its library-path setup, and bundled libs no longer resolve.
+    """
+
+    def test_the_child_starts_as_a_new_pyinstaller_instance(self, tmp_path, monkeypatch) -> None:
+        recorded: list[dict[str, str]] = []
+
+        def _fake_start(program, arguments):
+            recorded.append(dict(os.environ))
+            return True
+
+        monkeypatch.setattr(app_module.QProcess, "startDetached", staticmethod(_fake_start))
+        monkeypatch.setattr(app_module.sys, "frozen", True, raising=False)
+        monkeypatch.delenv("PYINSTALLER_RESET_ENVIRONMENT", raising=False)
+        monkeypatch.setattr(restart, "relaunch_command", lambda: (tmp_path / "AnkiMiner", ()))
+        restart.request_restart()
+
+        app_module._relaunch_if_requested(_FakeApp(_FakeLock()))
+
+        assert recorded
+        assert recorded[0].get("PYINSTALLER_RESET_ENVIRONMENT") == "1"
+
+
 class TestResolver:
     def test_it_reuses_the_shortcut_service_resolver(self, monkeypatch, tmp_path):
         from anki_miner.services.shortcut_service import ShortcutService

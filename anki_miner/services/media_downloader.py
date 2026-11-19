@@ -61,12 +61,14 @@ _OUTPUT_TEMPLATE = "%(title)s [%(id)s].%(ext)s"
 #: preset key -> (yt-dlp --format selector, -x --audio-format value or None).
 #: Keys are persisted in ``config.downloader_format_preset``; the height-capped
 #: selectors mirror the mining fetcher's shape, with a ``/best`` fallback for
-#: muxed-only sites.
+#: muxed-only sites. "<=?" keeps a format of unknown height: a direct video
+#: link's one format has none, and a plain "<=" dropped it, so the download
+#: failed with "Requested format is not available". Known heights stay capped.
 FORMAT_PRESETS: dict[str, tuple[str, str | None]] = {
     "best": ("bestvideo*+bestaudio/best", None),
-    "1440p": ("bestvideo[height<=1440]+bestaudio/best[height<=1440]", None),
-    "1080p": ("bestvideo[height<=1080]+bestaudio/best[height<=1080]", None),
-    "720p": ("bestvideo[height<=720]+bestaudio/best[height<=720]", None),
+    "1440p": ("bestvideo[height<=?1440]+bestaudio/best[height<=?1440]", None),
+    "1080p": ("bestvideo[height<=?1080]+bestaudio/best[height<=?1080]", None),
+    "720p": ("bestvideo[height<=?720]+bestaudio/best[height<=?720]", None),
     "audio_mp3": ("bestaudio/best", "mp3"),
     "audio_m4a": ("bestaudio/best", "m4a"),
 }
