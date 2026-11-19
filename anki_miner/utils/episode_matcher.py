@@ -57,20 +57,31 @@ def _strip_technical_tokens(name: str) -> str:
     name = re.sub(r"[\[(][0-9A-Fa-f]{8}[\])]", "", name)
     # Digit-bearing audio and profile tags win the same trailing-number
     # fallback: a channel layout after an audio codec ("AAC2.0", "DDP5.1",
-    # "TrueHD.7.1" -> 0 or 1), a channel count ("2ch"), the Hi10P profile,
+    # "TrueHD.7.1" -> 0 or 1; a dual "FLAC 5.1+2.0"), a channel count ("2ch"), the Hi10P profile,
     # and the AC-3 / E-AC-3 / MP3 codec names. The layout is stripped only
     # together with its codec, so a bare "5.1" or an episode title word such
     # as "Opus" is left alone. The codec+layout strip must run first so
     # "E-AC-3 5.1" goes as one token.
     name = re.sub(
         r"(?<![0-9A-Za-z])(?:e-?ac-?3|ac-?3|aac|dd\+?|ddp|flac|opus|truehd|dts(?:-?hd)?(?:[\s._-]?ma)?|l?pcm)"
-        r"[\s._-]?[1-7][\s._][01](?![0-9A-Za-z])",
+        r"[\s._-]?[1-7][\s._][01](?:\+[1-7][\s._][01])*(?![0-9A-Za-z])",
         "",
         name,
         flags=re.IGNORECASE,
     )
     name = re.sub(
         r"(?<![0-9A-Za-z])(?:\d(?:\.\d)?ch|hi10p?|e-?ac-?3|ac-?3|mp3)(?![0-9A-Za-z])", "", name, flags=re.IGNORECASE
+    )
+    # More digit-bearing encode tags for the same fallback: the Main 10 /
+    # Main 4:4:4 10 profiles ("Ma10p", "Ma444-10p"), a pixel format
+    # ("YUV420P10"), "HDR10", a frame rate ("60fps", "23.976fps"), "MPEG2",
+    # and an audio track count glued to its codec ("2flac", "AACx2").
+    name = re.sub(
+        r"(?<![0-9A-Za-z])(?:ma(?:444-?)?10p|yuv4\d\dp\d{1,2}|hdr10\+?|\d{2,3}(?:\.\d{1,3})?fps|mpeg-?[124]"
+        r"|\d(?:flac|aac|ac3|dts)|(?:flac|aac)x\d)(?![0-9A-Za-z])",
+        "",
+        name,
+        flags=re.IGNORECASE,
     )
     # A re-upload's version marker ("24 V2", "24_v2", "S01E02v5") sits
     # directly against the episode digits, so an unstripped name lets the
@@ -92,6 +103,9 @@ def _strip_technical_tokens(name: str) -> str:
     # test_version_marker_resolves_real_episode, both in
     # test_episode_matcher.py.
     name = re.sub(r"(?<=\d)[\s._-]*[vV]\d{1,2}(?![0-9A-Za-z])", "", name)
+    # A version marker in its own bracket ("[x264 AAC][v2]") has no digit
+    # before it, but a bracket holding only "v2" is never a title word.
+    name = re.sub(r"[\[(][vV]\d{1,2}[\])]", "", name)
     return name
 
 

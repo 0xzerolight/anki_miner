@@ -11,6 +11,7 @@ from anki_miner.utils.episode_matcher import (
     ParsedMediaName,
     parse_media_filename,
 )
+from anki_miner.utils.file_pairing import FilePairMatcher
 
 
 class TestEpisodeNumberExtractor:
@@ -964,3 +965,42 @@ def test_a_tracks_designator_does_not_win_the_bare_number(tmp_path, filename):
     result = EpisodeNumberExtractor.extract_episode_info(path)
     assert result is not None
     assert result.episode_number == 5
+
+
+@pytest.mark.parametrize(
+    "filename",
+    [
+        "[VCB-Studio] Toradora! [03][Ma10p_1080p][x265_flac].mkv",
+        "[Snow-Raws] Show 第03話 (BD 1920x1080 HEVC-YUV420P10 FLAC).mkv",
+        "[VCB-Studio] Show [03][Hi10p_1080p][x264_2flac].mkv",
+        "[KTXP][Show][03][GB][1080p][AACx2].mp4",
+        "Show 03 [2160p UHD HDR10].mkv",
+        "Show 03 [1080p 60fps].mkv",
+        "Show 03 [BD 1080p 23.976fps].mkv",
+        "Show 03 [DVD 720x480 MPEG2 AC3].mkv",
+        "Show 03 [x264 AAC][v2].mkv",
+        "Show 03 [BD 1080p FLAC 5.1+2.0].mkv",
+    ],
+)
+def test_digit_bearing_encode_tags_do_not_win_the_bare_number(filename):
+    result = EpisodeNumberExtractor.extract_episode_info(Path(filename))
+    assert result is not None
+    assert result.episode_number == 3
+
+
+def _pair_names(tmp_path, videos, subs):
+    video_dir = tmp_path / "video"
+    sub_dir = tmp_path / "subs"
+    video_dir.mkdir()
+    sub_dir.mkdir()
+    for name in videos:
+        (video_dir / name).touch()
+    for name in subs:
+        (sub_dir / name).touch()
+    return [(p.video.name, p.subtitle.name) for p in FilePairMatcher.find_pairs_by_episode_number(video_dir, sub_dir)]
+
+
+def test_ma10p_season_pairs_each_episode_with_its_own_subtitle(tmp_path):
+    videos = [f"[VCB-Studio] Toradora! [{n:02d}][Ma10p_1080p][x265_flac].mkv" for n in range(1, 6)]
+    subs = [f"Show {n:02d}.ja.srt" for n in range(1, 6)]
+    assert _pair_names(tmp_path, videos, subs) == list(zip(videos, subs, strict=True))
