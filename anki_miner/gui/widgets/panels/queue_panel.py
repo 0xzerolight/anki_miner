@@ -877,12 +877,14 @@ class QueuePanel(QFrame):
         bound = [w for w in self.queue_item_widgets if id(w) in self._items]
         return bool(bound) and all(w.get_status() == "complete" for w in bound)
 
-    def runnable_items(self) -> list[QueueItem]:
+    def runnable_items(self, include: QueueItem | None = None) -> list[QueueItem]:
         """The bound, runnable rows a Mine Queue click should mine.
 
         The selection when there is one, in the order the list shows it;
         otherwise every runnable row. A run therefore mines exactly what the user
-        can see it is about to mine (D28, D29-A).
+        can see it is about to mine (D28, D29-A). ``include`` is the row the Add
+        Series card was just folded into: the card is intent too, so it joins
+        the selection in view order rather than being left pending beside it.
 
         Selecting a row is the user saying "mine this one", so a selected row
         that already finished is reset and mined again -- that is the only way
@@ -896,12 +898,18 @@ class QueuePanel(QFrame):
         Mine Queue never silently re-mines the whole cohort.
         """
         selection = self.selected_widgets()
+        if selection and include is not None:
+            selection = [w for w in self.view_order() if w in selection or self._items.get(id(w)) is include]
         chosen = selection or self.view_order()
         items: list[QueueItem] = []
         rerun = False
         for widget in chosen:
             item = self._items.get(id(widget))
             if item is None or widget.get_status() == "processing":
+                continue
+            video, subtitle = widget.get_folders()
+            if not (video and subtitle and video.exists() and subtitle.exists()):
+                # Reported as skipped by get_incomplete_items; the run must agree.
                 continue
             if item.status in (QueueItemStatus.PENDING, QueueItemStatus.ERROR):
                 item.status = QueueItemStatus.PENDING

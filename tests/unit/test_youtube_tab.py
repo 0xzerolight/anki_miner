@@ -1921,6 +1921,21 @@ class TestSubtitleSourceSweep:
         item = _add_ready_item(tab, "https://youtu.be/later")
         assert item.resolved_sub_mode == "transcribe"
 
+    def test_retry_mines_a_failed_row_under_the_current_source(self, tab):
+        """A picker change reaches a mining failure the moment it is retried."""
+        item = _add_ready_item(tab, "https://youtu.be/failed", has_manual_ja_subs=False, has_auto_ja_subs=True)
+        assert item.resolved_sub_mode == "auto_only"
+        item.status = YouTubeItemStatus.ERROR
+        item.error_message = "caption alignment failed"
+        tab.subtitle_source_combo.setCurrentIndex(tab.subtitle_source_combo.findData("transcribe"))
+        tab._list_items[item].setSelected(True)
+
+        with patch("anki_miner.gui.widgets.youtube_tab.usable_model_installed", return_value=True):
+            tab._on_retry_selected()
+
+        assert tab._queue_worker_cls.call_count == 1
+        assert [i.resolved_sub_mode for i in tab._queue_worker_cls.call_args.kwargs["items"]] == ["transcribe"]
+
 
 class TestPerRunSubtitleControls:
     """The subtitle picker: session-only, read on the GUI thread."""
@@ -2006,6 +2021,24 @@ class TestTranscriptionPreflight:
             tab._on_mine_clicked()
 
         assert tab._queue_worker_cls.call_count == 1
+
+    def test_only_the_rows_this_run_mines_are_gated(self, tab):
+        """A finished or failed transcribed row does not gate a caption run."""
+        done = self._transcribe_row(tab)
+        done.status = YouTubeItemStatus.COMPLETED
+        failed = _add_ready_item(tab, "https://youtu.be/v2")
+        failed.status = YouTubeItemStatus.ERROR
+        tab._add_flow.set_subtitle_source("auto")
+        ready = _add_ready_item(tab, "https://youtu.be/v3")
+        failed.resolved_sub_mode = "transcribe"
+        assert ready.resolved_sub_mode == "manual_only"
+
+        with patch(self._GATE, return_value=False):
+            tab._start_run()
+
+        assert tab._queue_worker_cls.call_count == 1
+        assert tab._queue_worker_cls.call_args.kwargs["items"] == [ready]
+        assert tab.issue_banner().current_issue() is None
 
     def test_a_stale_refusal_is_cleared_on_the_next_run(self, tab):
         self._transcribe_row(tab)
@@ -2538,3 +2571,22 @@ class TestWaitingMineHoldsResources:
 
         assert tab.release_dictionary_resources() is False
         assert tab._processor is processor
+
+    def test_waiting_mine_locks_the_selection_verbs(self, tab):
+        """A Mine checking its links holds the queue as a run does (D29-A)."""
+        ready = _add_ready_item(tab, "https://youtu.be/aaaaaaaaaaa", video_id="aaaaaaaaaaa")
+        failed = _add_ready_item(tab, "https://youtu.be/ccccccccccc", video_id="ccccccccccc")
+        failed.status = YouTubeItemStatus.ERROR
+        tab.url_edit.setPlainText("https://youtu.be/bbbbbbbbbbb")
+        tab._on_mine_clicked()
+        assert tab._mine_pending
+        tab._list_items[ready].setSelected(True)
+        tab._list_items[failed].setSelected(True)
+
+        assert not tab.queue_controls.run_button.isEnabled()
+        assert not tab.queue_controls.retry_button.isEnabled()
+
+        tab._on_run_selected()
+        tab._on_retry_selected()
+
+        assert tab._queue_worker_cls.call_count == 0

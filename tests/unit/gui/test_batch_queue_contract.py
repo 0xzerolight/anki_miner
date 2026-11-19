@@ -323,3 +323,74 @@ def test_has_only_completed_rows_is_false_for_an_empty_queue(panel, tmp_path):
     assert panel.has_only_completed_rows() is False
     _add(panel, "unbound", tmp_path, bound=False)
     assert panel.has_only_completed_rows() is False
+
+
+# ---------------------------------------------------------------------------
+# Mine Queue reads the Add Series card and the selection together
+# ---------------------------------------------------------------------------
+
+
+def _batch_tab(qtbot, config):
+    from unittest.mock import MagicMock
+
+    from anki_miner.gui.widgets.batch_processing_tab import BatchProcessingTab
+
+    tab = BatchProcessingTab(config, MagicMock(), MagicMock())
+    qtbot.addWidget(tab)
+    return tab
+
+
+def _queue_series(tab, tmp_path, name):
+    video = tmp_path / f"{name}-video"
+    subs = tmp_path / f"{name}-subs"
+    video.mkdir()
+    subs.mkdir()
+    tab.video_folder_selector.set_path(str(video))
+    tab.subtitle_folder_selector.set_path(str(subs))
+    item = tab._add_series_from_pickers()
+    assert item is not None
+    return item
+
+
+def _capture_run(tab, monkeypatch):
+    runs: list = []
+    monkeypatch.setattr(tab, "_start_queue_worker", lambda: runs.append(list(tab._run_selection)))
+    return runs
+
+
+def test_mine_queue_with_a_selection_still_mines_the_folded_series(qtbot, test_config, tmp_path, monkeypatch):
+    """A filled Add Series card is intent even while a row is still selected."""
+    tab = _batch_tab(qtbot, test_config)
+    a = _queue_series(tab, tmp_path, "A")
+    tab.queue_panel.set_processing_item_complete(a.id, 3)
+    a.status = QueueItemStatus.COMPLETED
+    tab.queue_panel.list_widget.item(0).setSelected(True)
+    (tmp_path / "B-video").mkdir()
+    (tmp_path / "B-subs").mkdir()
+    tab.video_folder_selector.set_path(str(tmp_path / "B-video"))
+    tab.subtitle_folder_selector.set_path(str(tmp_path / "B-subs"))
+    runs = _capture_run(tab, monkeypatch)
+
+    tab._process_queue()
+
+    b = next(i for i in tab.batch_queue.get_all_items() if i is not a)
+    assert len(runs) == 1
+    assert b in runs[0]
+
+
+def test_a_series_whose_folder_is_gone_is_skipped_not_mined(qtbot, test_config, tmp_path, monkeypatch):
+    """The run matches the skip banner: a vanished folder is left out of it."""
+    import shutil
+
+    tab = _batch_tab(qtbot, test_config)
+    _queue_series(tab, tmp_path, "A")
+    b = _queue_series(tab, tmp_path, "B")
+    shutil.rmtree(tmp_path / "A-video")
+    runs = _capture_run(tab, monkeypatch)
+
+    tab._process_queue()
+
+    assert runs == [[b]]
+    issue = tab.issue_banner().current_issue()
+    assert issue is not None
+    assert "A-video" in issue.summary and "skipped" in issue.summary

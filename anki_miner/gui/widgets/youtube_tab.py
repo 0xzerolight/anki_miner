@@ -687,7 +687,11 @@ class YouTubeTab(YtdlpAvailabilityMixin, _ListQueueMiningTabBase):
             # letting every item fail with YtdlpNotFoundError in turn.
             self._render_ytdlp_issue()
             return
-        candidates = items if items is not None else self._queue.all_items()
+        # Only the rows this run mines: the same READY set the base mines when
+        # items is None, so a finished or failed transcribed row gates nothing.
+        candidates = (
+            items if items is not None else [i for i in self._queue.all_items() if i.status == self._status_ready]
+        )
         if any(i.resolved_sub_mode == "transcribe" for i in candidates) and not usable_model_installed(self.config):
             self.show_screen_issue(
                 ScreenIssue(
@@ -775,12 +779,20 @@ class YouTubeTab(YtdlpAvailabilityMixin, _ListQueueMiningTabBase):
         again for the same reason. A restored mining failure also has no probe
         metadata because snapshots store only durable URL facts. Both are
         re-probed and stay out of the retry run until that succeeds.
+
+        A probed mining failure is re-decided against the current Subtitles
+        picker, which skips non-READY rows when it changes: retrying under the
+        source the user just switched away from would repeat the failure.
         """
-        probe_incomplete = item.video_id is None or item.resolved_sub_mode is None or item.video_info is None
-        if item.status == YouTubeItemStatus.PROBE_ERROR or probe_incomplete:
+        info = item.video_info
+        probe_incomplete = item.video_id is None or item.resolved_sub_mode is None
+        if item.status == YouTubeItemStatus.PROBE_ERROR or probe_incomplete or info is None:
             self._add_flow.retry_probe(item)
             return False
-        return super()._retry_item(item)
+        if not super()._retry_item(item):
+            return False
+        self._add_flow._apply_classification(item, info)
+        return item.status is YouTubeItemStatus.READY
 
     def _on_clear_extra(self) -> None:
         """Invalidate pending playlist work (late-resolve generation bump +
