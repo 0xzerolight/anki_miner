@@ -11360,6 +11360,10 @@ Een bron die na een app-upgrade niet meer werkt, herstel je met Alles opnieuw im
         <translation>yt-dlp kan niet worden bijgewerkt. Controleer je verbinding en probeer het opnieuw.</translation>
     </message>
     <message>
+        <source>Settings could not be saved. Anki Miner keeps retrying; closing it now loses your latest changes.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>dictionary folder (Dictionaries)</source>
         <translation>woordenboekmap (Woordenboeken)</translation>
     </message>

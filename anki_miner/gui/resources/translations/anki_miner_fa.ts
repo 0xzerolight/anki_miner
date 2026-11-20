@@ -11314,6 +11314,10 @@ A source that stopped working after an app upgrade is repaired by Reimport All, 
         <translation>‏yt-dlp به‌روز نشد. اتصال خود را بررسی کنید و دوباره تلاش کنید.</translation>
     </message>
     <message>
+        <source>Settings could not be saved. Anki Miner keeps retrying; closing it now loses your latest changes.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>dictionary folder (Dictionaries)</source>
         <translation>پوشه واژه‌نامه (واژه‌نامه‌ها)</translation>
     </message>

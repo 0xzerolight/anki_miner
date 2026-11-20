@@ -11314,6 +11314,10 @@ Nguồn không còn hoạt động sau khi ứng dụng nâng cấp được s�
         <translation>Không thể cập nhật yt-dlp. Kiểm tra kết nối và thử lại.</translation>
     </message>
     <message>
+        <source>Settings could not be saved. Anki Miner keeps retrying; closing it now loses your latest changes.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>dictionary folder (Dictionaries)</source>
         <translation>thư mục từ điển (Từ điển)</translation>
     </message>

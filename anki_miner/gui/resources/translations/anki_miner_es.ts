@@ -11360,6 +11360,10 @@ Una fuente que dejó de funcionar tras una actualización de la aplicación se r
         <translation>No se pudo actualizar yt-dlp. Compruebe su conexión e inténtelo de nuevo.</translation>
     </message>
     <message>
+        <source>Settings could not be saved. Anki Miner keeps retrying; closing it now loses your latest changes.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>dictionary folder (Dictionaries)</source>
         <translation>carpeta de diccionarios (Diccionarios)</translation>
     </message>

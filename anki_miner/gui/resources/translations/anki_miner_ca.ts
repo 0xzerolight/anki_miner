@@ -11360,6 +11360,10 @@ Una font que ha deixat de funcionar després d'actualitzar l'aplicació es repar
         <translation>No s'ha pogut actualitzar el yt-dlp. Comproveu la connexió i torneu-ho a provar.</translation>
     </message>
     <message>
+        <source>Settings could not be saved. Anki Miner keeps retrying; closing it now loses your latest changes.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>dictionary folder (Dictionaries)</source>
         <translation>carpeta de diccionaris (Diccionaris)</translation>
     </message>

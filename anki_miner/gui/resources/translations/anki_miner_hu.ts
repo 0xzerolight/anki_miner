@@ -11314,6 +11314,10 @@ Az alkalmazásfrissítés után nem működő forrást az Összes újraimportál
         <translation>A yt-dlp-t nem sikerült frissíteni. Ellenőrizze a kapcsolatot, és próbálja újra.</translation>
     </message>
     <message>
+        <source>Settings could not be saved. Anki Miner keeps retrying; closing it now loses your latest changes.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>dictionary folder (Dictionaries)</source>
         <translation>szótármappa (Szótárak)</translation>
     </message>

@@ -11360,6 +11360,10 @@ Uma fonte que deixou de funcionar após uma atualização da aplicação é repa
         <translation>Não foi possível atualizar o yt-dlp. Verifique a ligação e tente novamente.</translation>
     </message>
     <message>
+        <source>Settings could not be saved. Anki Miner keeps retrying; closing it now loses your latest changes.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>dictionary folder (Dictionaries)</source>
         <translation>pasta de dicionários (Dicionários)</translation>
     </message>

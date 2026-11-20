@@ -11406,6 +11406,10 @@ Po programos atnaujinimo nebeveikiantis šaltinis taisomas mygtuku „Importuoti
         <translation>Nepavyko atnaujinti yt-dlp. Patikrinkite ryšį ir bandykite dar kartą.</translation>
     </message>
     <message>
+        <source>Settings could not be saved. Anki Miner keeps retrying; closing it now loses your latest changes.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>dictionary folder (Dictionaries)</source>
         <translation>žodynų aplankas (Žodynai)</translation>
     </message>
