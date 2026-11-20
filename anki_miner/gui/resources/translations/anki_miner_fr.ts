@@ -1442,8 +1442,8 @@ Formats pris en charge : AJT (index.json + media/), NHK16 (entries.json + audio/
         <translation>Réessayer les audios manquants</translation>
     </message>
     <message>
-        <source>Re-try words JapanesePod101 had no audio for on the next run</source>
-        <translation>Réessayer au prochain lancement les mots pour lesquels JapanesePod101 n'avait pas d'audio</translation>
+        <source>Re-try words an online source had no audio for on the next run</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Restore from Disk</source>
@@ -4449,6 +4449,10 @@ Cela modifiera %n notes (%1) et leur ajoutera l'étiquette %2. Continuer ?</nume
     <message>
         <source>The new deck needs a different name than the source deck.</source>
         <translation>Le nouveau paquet doit avoir un nom différent du paquet source.</translation>
+    </message>
+    <message>
+        <source>The new deck can't be inside the source deck.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Deck filter scan</source>
@@ -8136,10 +8140,6 @@ Mots à ajouter : %3. Continuer ?</translation>
         <source>Done</source>
         <translation>Terminé</translation>
     </message>
-    <message>
-        <source>Cancelled</source>
-        <translation>Annulé</translation>
-    </message>
 </context><context>
     <name>NoteTypePage</name>
     <message>
@@ -10500,6 +10500,14 @@ Aucun fichier d'index n'est supprimé.</translation>
     <message>
         <source>%1: not set up (optional)</source>
         <translation>%1 : non configuré (facultatif)</translation>
+    </message>
+    <message>
+        <source>Waiting for the language pack to finish downloading…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The language pack download failed, so nothing was downloaded.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Starting…</source>

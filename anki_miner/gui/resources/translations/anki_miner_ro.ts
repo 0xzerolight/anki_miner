@@ -1444,8 +1444,8 @@ Formate acceptate: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <translation>Reîncearcă audio lipsă</translation>
     </message>
     <message>
-        <source>Re-try words JapanesePod101 had no audio for on the next run</source>
-        <translation>Reîncearcă la următoarea rulare cuvintele pentru care JapanesePod101 nu a avut audio</translation>
+        <source>Re-try words an online source had no audio for on the next run</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Restore from Disk</source>
@@ -4468,6 +4468,10 @@ Se vor modifica %n de note (%1), care vor primi eticheta %2. Continuați?</numer
     <message>
         <source>The new deck needs a different name than the source deck.</source>
         <translation>Pachetul nou trebuie să aibă alt nume decât pachetul sursă.</translation>
+    </message>
+    <message>
+        <source>The new deck can't be inside the source deck.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Deck filter scan</source>
@@ -8174,10 +8178,6 @@ Cuvinte de adăugat: %3. Continuați?</translation>
         <source>Done</source>
         <translation>Finalizat</translation>
     </message>
-    <message>
-        <source>Cancelled</source>
-        <translation>Anulat</translation>
-    </message>
 </context><context>
     <name>NoteTypePage</name>
     <message>
@@ -10544,6 +10544,14 @@ Nu se șterge niciun fișier index.</translation>
     <message>
         <source>%1: not set up (optional)</source>
         <translation>%1: neconfigurat (opțional)</translation>
+    </message>
+    <message>
+        <source>Waiting for the language pack to finish downloading…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The language pack download failed, so nothing was downloaded.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Starting…</source>

@@ -1442,8 +1442,8 @@ Støttede formater: AJT (index.json + media/), NHK16 (entries.json + audio/), Fo
         <translation>Prøv manglende lyd på nytt</translation>
     </message>
     <message>
-        <source>Re-try words JapanesePod101 had no audio for on the next run</source>
-        <translation>Prøv ord som JapanesePod101 ikke hadde lyd for, på nytt ved neste kjøring</translation>
+        <source>Re-try words an online source had no audio for on the next run</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Restore from Disk</source>
@@ -4449,6 +4449,10 @@ Dette endrer %n notater (%1) og merker dem med %2. Vil du fortsette?</numerusfor
     <message>
         <source>The new deck needs a different name than the source deck.</source>
         <translation>Den nye kortstokken må ha et annet navn enn kildekortstokken.</translation>
+    </message>
+    <message>
+        <source>The new deck can't be inside the source deck.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Deck filter scan</source>
@@ -8136,10 +8140,6 @@ Ord som legges til: %3. Vil du fortsette?</translation>
         <source>Done</source>
         <translation>Ferdig</translation>
     </message>
-    <message>
-        <source>Cancelled</source>
-        <translation>Avbrutt</translation>
-    </message>
 </context><context>
     <name>NoteTypePage</name>
     <message>
@@ -10500,6 +10500,14 @@ Ingen indeksfiler slettes.</translation>
     <message>
         <source>%1: not set up (optional)</source>
         <translation>%1: ikke konfigurert (valgfritt)</translation>
+    </message>
+    <message>
+        <source>Waiting for the language pack to finish downloading…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The language pack download failed, so nothing was downloaded.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Starting…</source>

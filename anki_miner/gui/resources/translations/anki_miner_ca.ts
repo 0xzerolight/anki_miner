@@ -1442,8 +1442,8 @@ Formats compatibles: AJT (index.json + media/), NHK16 (entries.json + audio/), F
         <translation>Torna a provar l'àudio que falta</translation>
     </message>
     <message>
-        <source>Re-try words JapanesePod101 had no audio for on the next run</source>
-        <translation>Torna a provar a la propera execució les paraules per a les quals JapanesePod101 no tenia àudio</translation>
+        <source>Re-try words an online source had no audio for on the next run</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Restore from Disk</source>
@@ -4449,6 +4449,10 @@ Això modificarà %n notes (%1) i les etiquetarà amb %2. Voleu continuar?</nume
     <message>
         <source>The new deck needs a different name than the source deck.</source>
         <translation>La baralla nova necessita un nom diferent del de la baralla d'origen.</translation>
+    </message>
+    <message>
+        <source>The new deck can't be inside the source deck.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Deck filter scan</source>
@@ -8136,10 +8140,6 @@ Paraules que s'afegiran: %3. Voleu continuar?</translation>
         <source>Done</source>
         <translation>Fet</translation>
     </message>
-    <message>
-        <source>Cancelled</source>
-        <translation>Cancel·lat</translation>
-    </message>
 </context><context>
     <name>NoteTypePage</name>
     <message>
@@ -10500,6 +10500,14 @@ No se suprimeix cap fitxer d'índex.</translation>
     <message>
         <source>%1: not set up (optional)</source>
         <translation>%1: no configurat (opcional)</translation>
+    </message>
+    <message>
+        <source>Waiting for the language pack to finish downloading…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The language pack download failed, so nothing was downloaded.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Starting…</source>

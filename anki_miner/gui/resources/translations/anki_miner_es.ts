@@ -1442,8 +1442,8 @@ Formatos admitidos: AJT (index.json + media/), NHK16 (entries.json + audio/), Fo
         <translation>Reintentar audio faltante</translation>
     </message>
     <message>
-        <source>Re-try words JapanesePod101 had no audio for on the next run</source>
-        <translation>Reintentar en la próxima ejecución las palabras para las que JapanesePod101 no tenía audio</translation>
+        <source>Re-try words an online source had no audio for on the next run</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Restore from Disk</source>
@@ -4449,6 +4449,10 @@ Esto modificará %n notas (%1) y las etiquetará con %2. ¿Desea continuar?</num
     <message>
         <source>The new deck needs a different name than the source deck.</source>
         <translation>El mazo nuevo necesita un nombre distinto del mazo de origen.</translation>
+    </message>
+    <message>
+        <source>The new deck can't be inside the source deck.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Deck filter scan</source>
@@ -8136,10 +8140,6 @@ Palabras a añadir: %3. ¿Continuar?</translation>
         <source>Done</source>
         <translation>Listo</translation>
     </message>
-    <message>
-        <source>Cancelled</source>
-        <translation>Cancelado</translation>
-    </message>
 </context><context>
     <name>NoteTypePage</name>
     <message>
@@ -10500,6 +10500,14 @@ No se elimina ningún archivo de índice.</translation>
     <message>
         <source>%1: not set up (optional)</source>
         <translation>%1: sin configurar (opcional)</translation>
+    </message>
+    <message>
+        <source>Waiting for the language pack to finish downloading…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The language pack download failed, so nothing was downloaded.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Starting…</source>

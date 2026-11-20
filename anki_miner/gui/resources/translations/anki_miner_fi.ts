@@ -1442,8 +1442,8 @@ Tuetut muodot: AJT (index.json + media/), NHK16 (entries.json + audio/), Forvo (
         <translation>Hae puuttuva ääni uudelleen</translation>
     </message>
     <message>
-        <source>Re-try words JapanesePod101 had no audio for on the next run</source>
-        <translation>Yritä seuraavalla ajolla uudelleen sanoja, joille JapanesePod101:ssä ei ollut ääntä</translation>
+        <source>Re-try words an online source had no audio for on the next run</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Restore from Disk</source>
@@ -4449,6 +4449,10 @@ Tämä muuttaa %n muistiinpanoa (%1) ja lisää niihin tunnisteen %2. Jatketaank
     <message>
         <source>The new deck needs a different name than the source deck.</source>
         <translation>Uudella pakalla on oltava eri nimi kuin lähdepakalla.</translation>
+    </message>
+    <message>
+        <source>The new deck can't be inside the source deck.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Deck filter scan</source>
@@ -8136,10 +8140,6 @@ Lisättäviä sanoja: %3. Jatketaanko?</translation>
         <source>Done</source>
         <translation>Valmis</translation>
     </message>
-    <message>
-        <source>Cancelled</source>
-        <translation>Peruttu</translation>
-    </message>
 </context><context>
     <name>NoteTypePage</name>
     <message>
@@ -10500,6 +10500,14 @@ Indeksitiedostoja ei poisteta.</translation>
     <message>
         <source>%1: not set up (optional)</source>
         <translation>%1: ei määritetty (valinnainen)</translation>
+    </message>
+    <message>
+        <source>Waiting for the language pack to finish downloading…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The language pack download failed, so nothing was downloaded.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Starting…</source>

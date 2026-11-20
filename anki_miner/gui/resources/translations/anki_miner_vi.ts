@@ -1440,8 +1440,8 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <translation>Thử lại âm thanh bị thiếu</translation>
     </message>
     <message>
-        <source>Re-try words JapanesePod101 had no audio for on the next run</source>
-        <translation>Thử lại các từ mà JapanesePod101 không có âm thanh trong lần chạy tiếp theo</translation>
+        <source>Re-try words an online source had no audio for on the next run</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Restore from Disk</source>
@@ -4430,6 +4430,10 @@ Thao tác này sẽ sửa %n ghi chú (%1) và gắn thẻ %2 cho chúng. Tiếp
     <message>
         <source>The new deck needs a different name than the source deck.</source>
         <translation>Bộ thẻ mới cần có tên khác với bộ thẻ nguồn.</translation>
+    </message>
+    <message>
+        <source>The new deck can't be inside the source deck.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Deck filter scan</source>
@@ -8098,10 +8102,6 @@ Số từ sẽ thêm: %3. Tiếp tục?</translation>
         <source>Done</source>
         <translation>Xong</translation>
     </message>
-    <message>
-        <source>Cancelled</source>
-        <translation>Đã hủy</translation>
-    </message>
 </context><context>
     <name>NoteTypePage</name>
     <message>
@@ -10456,6 +10456,14 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     <message>
         <source>%1: not set up (optional)</source>
         <translation>%1: chưa thiết lập (tùy chọn)</translation>
+    </message>
+    <message>
+        <source>Waiting for the language pack to finish downloading…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The language pack download failed, so nothing was downloaded.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Starting…</source>

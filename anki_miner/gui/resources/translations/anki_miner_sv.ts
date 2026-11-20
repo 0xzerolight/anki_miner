@@ -1442,8 +1442,8 @@ Format som stöds: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <translation>Försök igen med saknat ljud</translation>
     </message>
     <message>
-        <source>Re-try words JapanesePod101 had no audio for on the next run</source>
-        <translation>Försök igen vid nästa körning med ord som JapanesePod101 saknade ljud för</translation>
+        <source>Re-try words an online source had no audio for on the next run</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Restore from Disk</source>
@@ -4449,6 +4449,10 @@ Detta ändrar %n anteckningar (%1) och taggar dem %2. Vill du fortsätta?</numer
     <message>
         <source>The new deck needs a different name than the source deck.</source>
         <translation>Den nya kortleken måste ha ett annat namn än källkortleken.</translation>
+    </message>
+    <message>
+        <source>The new deck can't be inside the source deck.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Deck filter scan</source>
@@ -8136,10 +8140,6 @@ Ord att lägga till: %3. Vill du fortsätta?</translation>
         <source>Done</source>
         <translation>Klart</translation>
     </message>
-    <message>
-        <source>Cancelled</source>
-        <translation>Avbruten</translation>
-    </message>
 </context><context>
     <name>NoteTypePage</name>
     <message>
@@ -10500,6 +10500,14 @@ Inga indexfiler raderas.</translation>
     <message>
         <source>%1: not set up (optional)</source>
         <translation>%1: inte konfigurerad (valfritt)</translation>
+    </message>
+    <message>
+        <source>Waiting for the language pack to finish downloading…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The language pack download failed, so nothing was downloaded.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Starting…</source>

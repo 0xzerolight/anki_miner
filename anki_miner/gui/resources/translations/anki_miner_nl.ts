@@ -1442,8 +1442,8 @@ Ondersteunde formaten: AJT (index.json + media/), NHK16 (entries.json + audio/),
         <translation>Ontbrekende audio opnieuw proberen</translation>
     </message>
     <message>
-        <source>Re-try words JapanesePod101 had no audio for on the next run</source>
-        <translation>Woorden waarvoor JapanesePod101 geen audio had, bij de volgende run opnieuw proberen</translation>
+        <source>Re-try words an online source had no audio for on the next run</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Restore from Disk</source>
@@ -4449,6 +4449,10 @@ Hiermee worden %n notities gewijzigd (%1) en getagd met %2. Doorgaan?</numerusfo
     <message>
         <source>The new deck needs a different name than the source deck.</source>
         <translation>De nieuwe stapel moet een andere naam hebben dan de bronstapel.</translation>
+    </message>
+    <message>
+        <source>The new deck can't be inside the source deck.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Deck filter scan</source>
@@ -8136,10 +8140,6 @@ Woorden om toe te voegen: %3. Doorgaan?</translation>
         <source>Done</source>
         <translation>Klaar</translation>
     </message>
-    <message>
-        <source>Cancelled</source>
-        <translation>Geannuleerd</translation>
-    </message>
 </context><context>
     <name>NoteTypePage</name>
     <message>
@@ -10500,6 +10500,14 @@ Er worden geen indexbestanden verwijderd.</translation>
     <message>
         <source>%1: not set up (optional)</source>
         <translation>%1: niet ingesteld (optioneel)</translation>
+    </message>
+    <message>
+        <source>Waiting for the language pack to finish downloading…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The language pack download failed, so nothing was downloaded.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Starting…</source>

@@ -1440,8 +1440,8 @@ Format yang didukung: AJT (index.json + media/), NHK16 (entries.json + audio/), 
         <translation>Coba lagi audio yang hilang</translation>
     </message>
     <message>
-        <source>Re-try words JapanesePod101 had no audio for on the next run</source>
-        <translation>Coba lagi kata yang tidak ada audionya dari JapanesePod101 pada proses berikutnya</translation>
+        <source>Re-try words an online source had no audio for on the next run</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Restore from Disk</source>
@@ -4430,6 +4430,10 @@ Ini akan mengubah %n catatan (%1) dan memberinya tag %2. Lanjutkan?</numerusform
     <message>
         <source>The new deck needs a different name than the source deck.</source>
         <translation>Dek baru memerlukan nama yang berbeda dari dek sumber.</translation>
+    </message>
+    <message>
+        <source>The new deck can't be inside the source deck.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Deck filter scan</source>
@@ -8098,10 +8102,6 @@ Kata yang akan ditambahkan: %3. Lanjutkan?</translation>
         <source>Done</source>
         <translation>Selesai</translation>
     </message>
-    <message>
-        <source>Cancelled</source>
-        <translation>Dibatalkan</translation>
-    </message>
 </context><context>
     <name>NoteTypePage</name>
     <message>
@@ -10456,6 +10456,14 @@ Tidak ada berkas indeks yang dihapus.</translation>
     <message>
         <source>%1: not set up (optional)</source>
         <translation>%1: belum disiapkan (opsional)</translation>
+    </message>
+    <message>
+        <source>Waiting for the language pack to finish downloading…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The language pack download failed, so nothing was downloaded.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Starting…</source>

@@ -1442,8 +1442,8 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <translation>לנסות שוב שמע חסר</translation>
     </message>
     <message>
-        <source>Re-try words JapanesePod101 had no audio for on the next run</source>
-        <translation>ניסיון חוזר בהרצה הבאה למילים שלא היה להן שמע ב-JapanesePod101</translation>
+        <source>Re-try words an online source had no audio for on the next run</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Restore from Disk</source>
@@ -4449,6 +4449,10 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
     <message>
         <source>The new deck needs a different name than the source deck.</source>
         <translation>לחפיסה החדשה נדרש שם שונה משם חפיסת המקור.</translation>
+    </message>
+    <message>
+        <source>The new deck can't be inside the source deck.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Deck filter scan</source>
@@ -8136,10 +8140,6 @@ Words to add: %3. Continue?</source>
         <source>Done</source>
         <translation>הושלם</translation>
     </message>
-    <message>
-        <source>Cancelled</source>
-        <translation>בוטל</translation>
-    </message>
 </context><context>
     <name>NoteTypePage</name>
     <message>
@@ -10500,6 +10500,14 @@ No index files are deleted.</source>
     <message>
         <source>%1: not set up (optional)</source>
         <translation>‏%1: לא הוגדר (אופציונלי)</translation>
+    </message>
+    <message>
+        <source>Waiting for the language pack to finish downloading…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The language pack download failed, so nothing was downloaded.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Starting…</source>
