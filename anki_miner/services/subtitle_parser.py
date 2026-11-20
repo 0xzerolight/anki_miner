@@ -1158,6 +1158,21 @@ class SubtitleParserService:
         self._prefetch_attested_readings([headword])
         return self._attested_readings_cache.get(headword, [])
 
+    def _token_attested_readings(self, word_token: Any, headword: str) -> list[str]:
+        """The dictionary readings a real token's card and sentence readings are checked against.
+
+        JMdict writes a capital-letter word's reading with ・ between the letter
+        names (ＣＤ シー・ディー). The dot marks a boundary, is not read, and the
+        tagger leaves it out (シーディー), so for those words it is dropped: the
+        tagger's reading then matches, and a reading taken from the dictionary
+        carries no dot onto the card or the sentence. Every other word's
+        readings come back as the dictionary writes them.
+        """
+        readings = self._attested_readings(headword)
+        if not self._is_attested_acronym(word_token):
+            return readings
+        return [reading.replace("・", "") for reading in readings]
+
     def _entry_tags(self, terms: list[str]) -> dict[str, set[str]]:
         """Each term's dictionary entry tags (adv, exp, n, …), for the compound matcher."""
         if self._form_lookup is None:
@@ -1790,7 +1805,7 @@ class SubtitleParserService:
                 if override != derived:
                     corrections[(tok_start, tok_end)] = override
                 continue
-            resolution = resolve_attested_reading(derived, self._attested_readings(mined))
+            resolution = resolve_attested_reading(derived, self._token_attested_readings(token, mined))
             if resolution.ambiguous:
                 self._ambiguous_readings.add(mined)
             elif resolution.reading is not None and resolution.reading != derived:
@@ -2025,7 +2040,7 @@ class SubtitleParserService:
             if not reading_overridden and not isinstance(word_token, SyntheticToken):
                 resolution = resolve_attested_reading(
                     expression_reading,
-                    self._attested_readings(mined),
+                    self._token_attested_readings(word_token, mined),
                 )
                 if resolution.ambiguous:
                     self._ambiguous_readings.add(mined)
@@ -3056,7 +3071,7 @@ class SubtitleParserService:
         """
         if self._inclusion_rule.should_include(word_token):
             return True
-        if self._is_attested_mimetic(word_token):
+        if self._is_attested_mimetic(word_token) or self._is_attested_acronym(word_token):
             return True
         return self._recover_kana_content_word(word_token)
 
@@ -3119,6 +3134,8 @@ class SubtitleParserService:
         rejection = self._inclusion_rule.rejection(word_token)
         if rejection is not None and self._is_attested_mimetic(word_token):
             rejection = None
+        if rejection == REJECT_SCRIPT and self._is_attested_acronym(word_token):
+            rejection = None
         if rejection is None:
             if self._is_katakana_run_fragment(word_token, text, tok_start, tok_end):
                 return False
@@ -3179,6 +3196,27 @@ class SubtitleParserService:
         ):
             return False
         if self._inclusion_rule.rejection(word_token) != REJECT_SOUND_EFFECT:
+            return False
+        return surface in self._memoized_attest([surface])
+
+    def _is_attested_acronym(self, word_token) -> bool:
+        """Whether a noun written in capital Latin letters is a word the dictionary has (ＣＤ, ＯＫ, ＮＧ, ＤＶＤ).
+
+        The script gate turns away every token without kanji or kana, and with
+        it the letter words Japanese uses as nouns. Two or more capital letters,
+        full-width or not, that are a dictionary headword as written come back;
+        a single letter, lower-case English in a line (ｙｏｕ, ｔｈｅ) and letters
+        the dictionary does not list stay out. Without a dictionary nothing changes.
+        """
+        surface = word_token.surface
+        if (
+            self._term_lookup is None
+            or len(surface) < 2
+            or not all("Ａ" <= ch <= "Ｚ" or "A" <= ch <= "Z" for ch in surface)
+            or getattr(getattr(word_token, "feature", None), "pos1", None) != "名詞"
+        ):
+            return False
+        if self._inclusion_rule.rejection(word_token) != REJECT_SCRIPT:
             return False
         return surface in self._memoized_attest([surface])
 
