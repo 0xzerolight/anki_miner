@@ -2990,6 +2990,8 @@ class SubtitleParserService:
         """
         if self._inclusion_rule.should_include(word_token):
             return True
+        if self._is_attested_mimetic(word_token):
+            return True
         return self._recover_kana_content_word(word_token)
 
     def _mine_token(
@@ -3049,6 +3051,8 @@ class SubtitleParserService:
         if getattr(getattr(word_token, "feature", None), "number_counter", False) is True:
             return not self._ellipsis_reject(word_token, text, tok_start, tok_end)
         rejection = self._inclusion_rule.rejection(word_token)
+        if rejection is not None and self._is_attested_mimetic(word_token):
+            rejection = None
         if rejection is None:
             if self._is_katakana_run_fragment(word_token, text, tok_start, tok_end):
                 return False
@@ -3080,6 +3084,37 @@ class SubtitleParserService:
         if self._is_katakana_run_fragment(word_token, text, tok_start, tok_end):
             return False
         return not self._ellipsis_reject(word_token, text, tok_start, tok_end)
+
+    #: Kana that never make up a mimetic word's doubled half: the long mark, the small kana.
+    _MIMETIC_EXCLUDED_KANA: frozenset[str] = frozenset("ーッァィゥェォャュョヮ")
+    _MIMETIC_VOWELS: frozenset[str] = frozenset("アイウエオ")
+
+    def _is_attested_mimetic(self, word_token) -> bool:
+        """Whether a katakana adverb turned away as a sound effect is a mimetic word the dictionary has.
+
+        The inclusion rule drops every short katakana adverb of one or two
+        distinct kana as a sound effect, and with them the doubled mimetic words
+        a learner meets all the time (ドキドキ, ギリギリ, ワクワク), which are mined
+        when written in hiragana. Only the doubled two-kana shape (ABAB, no long
+        mark or small kana: ハァハァ and ゴーゴー stay out) that is a dictionary
+        headword as written comes back; フッ, ドン and パッ stay sound effects, and
+        a doubled call made of vowels alone (オイオイ) is no mimetic word.
+        Without a dictionary nothing changes.
+        """
+        surface = word_token.surface
+        if (
+            self._term_lookup is None
+            or len(surface) != 4
+            or surface[:2] != surface[2:]
+            or surface[0] == surface[1]
+            or not _is_all_katakana(surface)
+            or not self._MIMETIC_EXCLUDED_KANA.isdisjoint(surface)
+            or self._MIMETIC_VOWELS.issuperset(surface)
+        ):
+            return False
+        if self._inclusion_rule.rejection(word_token) != REJECT_SOUND_EFFECT:
+            return False
+        return surface in self._memoized_attest([surface])
 
     @staticmethod
     def _is_kanji_glue(word_token) -> bool:
