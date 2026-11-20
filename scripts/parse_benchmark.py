@@ -507,7 +507,7 @@ _ANCHOR_HEADWORDS: tuple[str, ...] = (
     "腹が減る",
     "貴方達",
     # sentence-grammar: expressions the kana word list joins or names
-    "んです",
+    "のだ",
     "のです",
     "でしょう",
 )
