@@ -172,6 +172,7 @@ _EXPECTED_CATEGORIES = {
     "spoken-idiom",
     "sentence-grammar",
     "kana-part-front",
+    "noun-tte",
 }
 
 

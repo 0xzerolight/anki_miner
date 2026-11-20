@@ -622,6 +622,10 @@ _ANCHOR_HEADWORDS: tuple[str, ...] = (
     "でかい",
     "でっかい",
     "かっこいい",
+    # m1119 MR: doubled katakana mimetic words the dictionary spells in katakana (not
+    # ドキドキ: katakana.jsonl ka02 pins it as dropped when the dictionary lacks it)
+    "ニコニコ",
+    "ワクワク",
 )
 
 # Yomitan `ruleIdentifiers` per fixture headword. A real term bank ships these,
