@@ -218,7 +218,13 @@ def find_cached_by_stem(cache_dir: Path, stem: str) -> Path | None:
             cached = _AUDIO_CACHE_INDEXES.get(cache_dir)
             if cached is not None and cached[0] == signature:
                 _AUDIO_CACHE_INDEXES.move_to_end(cache_dir)
-                return cached[1].get(stem)
+                hit = cached[1].get(stem)
+                if hit is None or hit.is_file():
+                    return hit
+                # A listed file is gone: the directory was replaced and
+                # record_cached_path re-stamped the old index (a recreated
+                # directory can reuse the old inode, so its check cannot tell).
+                # Rescan below instead of returning a deleted file as a hit.
 
             index: dict[str, Path] = {}
             for path in cache_dir.iterdir():

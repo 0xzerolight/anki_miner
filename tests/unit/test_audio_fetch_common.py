@@ -81,6 +81,23 @@ def test_record_after_directory_replacement_drops_purged_entries(tmp_path):
     assert find_cached_by_stem(cache_dir, "c") == new_path
 
 
+def test_a_restamped_index_never_returns_a_deleted_file(tmp_path):
+    """Same directory identity throughout, as when a recreated directory reuses the inode."""
+    cache_dir = tmp_path / "cache"
+    cache_dir.mkdir()
+    (cache_dir / "a.mp3").write_bytes(b"ID3")
+    assert find_cached_by_stem(cache_dir, "a") == cache_dir / "a.mp3"
+
+    (cache_dir / "a.mp3").unlink()
+    new_path = cache_dir / "c.mp3"
+    new_path.write_bytes(b"ID3")
+    # Re-stamps the index, which still lists a.mp3, under the current signature.
+    record_cached_path(cache_dir, new_path)
+
+    assert find_cached_by_stem(cache_dir, "a") is None
+    assert find_cached_by_stem(cache_dir, "c") == new_path
+
+
 def test_lookup_in_a_missing_directory_forgets_its_index(tmp_path):
     cache_dir = tmp_path / "cache"
     cache_dir.mkdir()
