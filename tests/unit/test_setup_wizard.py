@@ -1933,14 +1933,15 @@ def test_resources_page_activator_reads_the_live_working_config(qtbot, wiz_confi
     assert wiz.working_config().anki_deck_name == "Applied"
 
 
-def test_resources_page_activator_stands_down_once_the_wizard_walks_away(qtbot, wiz_config):
-    """A download landing after Escape must not fold zh's slots into ja's chains.
+def test_resources_page_activator_stands_down_when_a_walk_away_reverts_the_language(qtbot, wiz_config, monkeypatch):
+    """A zh download landing after Escape must not fold zh's slots into ja's chains.
 
     ``done`` reverts the language before it cancels the workers, so the config
     the summary would be applied to is the one the user never left.
     """
     from PyQt6.QtWidgets import QDialog  # noqa: PLC0415
 
+    from anki_miner.gui.widgets.dialogs import resource_download_dialog as dialog_mod  # noqa: PLC0415
     from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
     from anki_miner.gui.workers.resource_download_worker import (  # noqa: PLC0415
         ResourceDownloadResult,
@@ -1949,16 +1950,63 @@ def test_resources_page_activator_stands_down_once_the_wizard_walks_away(qtbot, 
 
     wiz = SetupWizard(wiz_config, offer_mining_language=True)
     qtbot.addWidget(wiz)
-    assert wiz.language_page is not None
-    wiz.language_page.language_combo.setCurrentIndex(wiz.language_page.language_combo.findData("zh"))
+    monkeypatch.setattr(dialog_mod, "start_resource_download", lambda *a, **kw: MagicMock())
+    page = wiz.language_page
+    assert page is not None
+    page.language_combo.setCurrentIndex(page.language_combo.findData("zh"))
+    assert page.validatePage()
+    wiz.resources_page._on_download_clicked()  # started while zh is the working language
+    assert wiz.resources_page._download_running
     wiz.done(QDialog.DialogCode.Rejected.value)
     reverted = wiz.working_config()
+    assert reverted.language == "ja"
     summary = ResourceDownloadSummary(
         results=[ResourceDownloadResult("dict", "dict", "Dictionary", "u", True, "10 entries", dict_id="dict")]
     )
 
     assert wiz.resources_page._activate_resources(summary) is None
     assert wiz.working_config() == reverted
+    _join_workers(qtbot, wiz)
+
+
+@pytest.mark.parametrize("offer_mining_language", [False, True], ids=["tools-rerun", "first-run"])
+def test_resources_page_activator_keeps_finished_imports_after_a_skip_mid_download(
+    qtbot, wiz_config, monkeypatch, offer_mining_language
+):
+    """Skip Setup mid-download switches on what finished, like the page's Cancel (G5-002).
+
+    The language never changed, so the imports belong to the config the wizard returns.
+    """
+    from PyQt6.QtWidgets import QDialog  # noqa: PLC0415
+
+    from anki_miner.gui.widgets.dialogs import resource_download_dialog as dialog_mod  # noqa: PLC0415
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+    from anki_miner.gui.workers.resource_download_worker import (  # noqa: PLC0415
+        ResourceDownloadResult,
+        ResourceDownloadSummary,
+    )
+
+    wiz = SetupWizard(wiz_config, offer_mining_language=offer_mining_language)
+    qtbot.addWidget(wiz)
+    monkeypatch.setattr(dialog_mod, "start_resource_download", lambda *a, **kw: MagicMock())
+    wiz.resources_page._on_download_clicked()
+    assert wiz.resources_page._download_running
+    wiz.done(QDialog.DialogCode.Rejected.value)
+    summary = ResourceDownloadSummary(
+        results=[
+            ResourceDownloadResult("jpdb", "freq", "JPDB", "u", True, "10 entries", source_id="jpdb"),
+            ResourceDownloadResult("kanjium", "pitch", "Kanjium", "u", True, "10 entries", source_id="kanjium"),
+        ],
+        cancelled=True,
+    )
+
+    returned = wiz.resources_page._activate_resources(summary)
+
+    assert returned is not None
+    assert returned == wiz.working_config()
+    assert [e.source_id for e in returned.frequency_chain if e.enabled][:1] == ["jpdb"]
+    assert [e.source_id for e in returned.pitch_chain if e.enabled][:1] == ["kanjium"]
+    _join_workers(qtbot, wiz)
 
 
 def test_resources_page_activator_still_applies_on_an_accepted_close(qtbot, wiz_config):

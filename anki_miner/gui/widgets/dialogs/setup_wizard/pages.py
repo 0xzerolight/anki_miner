@@ -1933,17 +1933,20 @@ class ResourcesPage(_LiveCheckPage):
         captured when the download started: the user picks the deck and note
         type on the Anki page while the transfer runs.
 
-        A walk-away is the one case where that config is the wrong one: the
-        slots were picked for a language the close path has already reverted,
-        and the chains would silently drop them for not matching. A language
-        changed inside the wizard (Back, another language, Next) while the run
-        was going is the same case.
+        A download for a language the wizard no longer stages is the one case
+        where that config is the wrong one: the slots were picked for that
+        language, and the chains would silently drop them for not matching.
+        That is a language changed inside the wizard (Back, another language,
+        Next) while the run was going, or one the close path reverted.
+
+        A walk-away (Skip Setup, Escape, the window close) that kept the
+        language switches the finished imports on, as the page's Cancel link
+        does: the wizard returns every page's edits on every close path (owner
+        decision, 2026-11-20).
         """
         from anki_miner.gui.utils.resource_setup import apply_download_summary  # noqa: PLC0415
         from anki_miner.gui.workers.resource_download_worker import ResourceDownloadSummary  # noqa: PLC0415
 
-        if self._wizard.is_walking_away():
-            return None
         if (
             self._download_language is not None
             and config_language(self._wizard.working_config()) != self._download_language
