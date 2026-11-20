@@ -915,6 +915,18 @@ CAPABILITIES: tuple[Capability, ...] = (
         requires="kana_filters",
     ),
     Capability(
+        id="grammar-points",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Mine grammar points"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Card sentence grammar such as んだ, でしょう and ください. Turn it off to mine words only.",
+        ),
+        category=_CAT_FILTERING,
+        target=CapabilityTarget("settings", "filtering"),
+        keywords=("grammar", "grammar point", "expression", "文法", "んだ", "です", "ください"),
+        requires="kana_filters",
+    ),
+    Capability(
         id="word-lists",
         title=QT_TRANSLATE_NOOP("Capabilities", "Blacklist / whitelist words"),
         description=QT_TRANSLATE_NOOP(

@@ -135,6 +135,8 @@ PARSE_RELEVANT_CONFIG_FIELDS = (
     "skip_opening_ending",
     # A number and its counter merge into one cached token (3人).
     "mine_number_counters",
+    # A grammar point joins into one cached token (行く|んだ).
+    "mine_grammar_points",
 )
 
 # Dictionary-attested compound matching (Yomitan longest-match principle):
@@ -911,9 +913,12 @@ class SubtitleParserService:
         # Grammar-cut words (思わず, 実は, くだらない; see services/lexical_joiner.py).
         # Attested through the term-OR-reading probe because the kana adjectives
         # are JMdict readings; None without one keeps the no-dict output unchanged.
+        # Settings → Word Filters → Mine grammar points decides the list's grammar rows (んだ, ください).
         self._lexical_joiner: LexicalJoiner | None = None
         if kana_attest_lookup is not None:
-            self._lexical_joiner = LexicalJoiner(kana_attest_lookup, self._inclusion_rule.allowed_pos)
+            self._lexical_joiner = LexicalJoiner(
+                kana_attest_lookup, self._inclusion_rule.allowed_pos, grammar_points=config.mine_grammar_points
+            )
         # Name resources define raw-source boundaries independently of the
         # ordinary dictionary. This pass runs before dictionary matching so an
         # exact name remains available to the late exact name-wordset filter;

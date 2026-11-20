@@ -29,7 +29,7 @@ def _joiner(attested, calls=None, allowed_pos=_ALL_POS):
             calls.append(list(terms))
         return {term: term in attested for term in terms}
 
-    return LexicalJoiner(lookup, allowed_pos)
+    return LexicalJoiner(lookup, allowed_pos, grammar_points=True)
 
 
 def _omowazu():

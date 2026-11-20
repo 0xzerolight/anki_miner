@@ -145,18 +145,20 @@ def _negative_adjective(tokens: list, i: int) -> _Join | None:
     return _Join(i, i + 1, headword, "形容詞")
 
 
-def _kana_join(tokens: list, i: int) -> _Join | None:
+def _kana_join(tokens: list, i: int, grammar_points: bool) -> _Join | None:
     """The longest kana word list join starting at ``tokens[i]``: by surfaces, or ending on a dictionary form.
 
     A row of one token (だろう, ください) is no join but the same kind of word: a
     grammar expression the tagger files as an auxiliary, named by the list.
+    Without ``grammar_points`` a grammar row is passed over as if unlisted, so a
+    shorter row under it still joins (っていう in っていうか).
     """
     listed = kana_words()
     for size in range(min(_MAX_KANA_TOKENS, len(tokens) - i), 0, -1):
         span = tokens[i : i + size]
         surfaces = tuple(token.surface for token in span)
         row = listed.joins.get(surfaces) or listed.base_joins.get((*surfaces[:-1], extract_orth_base(span[-1])))
-        if row is not None:
+        if row is not None and (grammar_points or not row.grammar):
             return _Join(
                 i, i + size - 1, row.headword, row.pos1, listed=True, line_start=row.line_start, after=row.after
             )
@@ -237,11 +239,14 @@ class LexicalJoiner:
 
     ``allowed_pos`` is the run's inclusion rule's: a join whose POS the user
     turned off is skipped, so the split words keep their cards.
+    ``grammar_points`` is the user's Mine grammar points: off, the list's
+    grammar rows (んだ, ください) are not joined.
     """
 
-    def __init__(self, attest_lookup: AttestLookup, allowed_pos: frozenset[str]) -> None:
+    def __init__(self, attest_lookup: AttestLookup, allowed_pos: frozenset[str], *, grammar_points: bool) -> None:
         self._lookup = attest_lookup
         self._allowed_pos = allowed_pos
+        self._grammar_points = grammar_points
         self._attested: dict[str, bool] = {}
 
     def join_line(self, text: str, tokens: list) -> list:
@@ -301,8 +306,7 @@ class LexicalJoiner:
             i = join.end + 1
         return out
 
-    @staticmethod
-    def _find(tokens: list, fits: Callable[[_Join], bool] = lambda join: True) -> list[_Join]:
+    def _find(self, tokens: list, fits: Callable[[_Join], bool] = lambda join: True) -> list[_Join]:
         """Greedy left-to-right table matches, the longest fixed entry first.
 
         A match that does not fit where it stands (``fits``) takes no tokens:
@@ -312,7 +316,9 @@ class LexicalJoiner:
         i = 0
         last = len(tokens) - 1
         while i <= last:
-            join = (i < last and (_fixed_join(tokens, i) or _negative_adjective(tokens, i))) or _kana_join(tokens, i)
+            join = (i < last and (_fixed_join(tokens, i) or _negative_adjective(tokens, i))) or _kana_join(
+                tokens, i, self._grammar_points
+            )
             if not join or not fits(join):
                 i += 1
             else:

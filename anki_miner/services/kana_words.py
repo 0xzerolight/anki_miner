@@ -19,7 +19,9 @@ A ``start`` row joins only where it opens a line or clause, as there it is a
 conjunction (でも, だから) and elsewhere the particles (学校でも); a ``noun`` or
 ``verb`` row only right after one (猫という, 会ったことがある). A last token
 written ``=X`` matches any token whose dictionary form is X, so a grammar
-expression joins in every inflection (こと|が|あっ|た is ことがある).
+expression joins in every inflection (こと|が|あっ|た is ことがある). A
+``grammar`` row is a grammar point (んだ, ください), joined only while
+Settings → Word Filters → Mine grammar points is on.
 """
 
 from __future__ import annotations
@@ -37,6 +39,8 @@ class KanaJoin(NamedTuple):
     line_start: bool
     #: "noun" or "verb": joined only right after one; "" anywhere.
     after: str = ""
+    #: A grammar point (んだ, ください): joined only with ``mine_grammar_points`` on.
+    grammar: bool = False
 
 
 class KanaWords(NamedTuple):
@@ -65,7 +69,7 @@ def kana_words() -> KanaWords:
         if rest and rest[0] != "kanji":
             *head, last = rest[0].split("|")
             where = rest[1] if len(rest) > 1 else ""
-            join = KanaJoin(form, pos1, where == "start", "" if where == "start" else where)
+            join = KanaJoin(form, pos1, where == "start", "" if where == "start" else where, rest[2:] == ["grammar"])
             if last.startswith("="):
                 base_joins[(*head, last[1:])] = join
             else:

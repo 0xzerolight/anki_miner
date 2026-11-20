@@ -174,6 +174,7 @@ def test_pre_change_config_loads_every_field_unchanged(isolated_config_file):
         "pick_best_sentence",
         "skip_opening_ending",
         "mine_number_counters",
+        "mine_grammar_points",
     }
     assert loaded.script_variant == "" and loaded.reading_tone_color is False
 

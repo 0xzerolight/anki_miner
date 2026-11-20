@@ -473,6 +473,17 @@ class FilteringSettingsPanel(FormPanel):
             ),
         )
 
+        # Grammar point cards (the kana word list's grammar rows, services/kana_words.py).
+        # Japanese only, like the counters above: the rows are Japanese.
+        self.add_section(self.tr("Grammar"))
+        self._grammar_section_label = self._active_section_label
+        self.grammar_points_checkbox = QCheckBox(self.tr("Mine grammar points"))
+        self.add_field(
+            "",
+            self.grammar_points_checkbox,
+            helper=self.tr("Sentence grammar such as んだ, でしょう and ください becomes cards."),
+        )
+
         # Option-driven script filters. The Korean pair binds to the SAME two
         # language-scoped booleans the Script Type combo above uses, and the
         # mapping is counter-intuitive (hangul-only -> exclude_hiragana_only_words), so the
@@ -519,10 +530,19 @@ class FilteringSettingsPanel(FormPanel):
         # field never leaves a dangling caption behind.
         self._language_gate_pairs.extend(
             (w, "kana_filters")
-            for cb in (self.script_type_combo, self.match_kana_variants_checkbox, self.number_counters_checkbox)
+            for cb in (
+                self.script_type_combo,
+                self.match_kana_variants_checkbox,
+                self.number_counters_checkbox,
+                self.grammar_points_checkbox,
+            )
             for w in field_row_widgets(self, cb)
         )
-        for section_label in (self._script_type_section_label, self._numbers_section_label):
+        for section_label in (
+            self._script_type_section_label,
+            self._numbers_section_label,
+            self._grammar_section_label,
+        ):
             if section_label is not None:
                 self._language_gate_pairs.append((section_label, "kana_filters"))
         # The option-driven rows join the same list. This is a cross product,
@@ -862,6 +882,7 @@ class FilteringSettingsPanel(FormPanel):
         self.set_whitelist_path(config.whitelist_path if config.use_whitelist else None)
         self.set_script_type(bool(config.exclude_hiragana_only_words), bool(config.exclude_katakana_only_words))
         self.number_counters_checkbox.setChecked(config.mine_number_counters)
+        self.grammar_points_checkbox.setChecked(config.mine_grammar_points)
         # Same two booleans, read through whichever language's option named them.
         for option_id, checkbox in self.script_filter_checkboxes.items():
             checkbox.setChecked(bool(getattr(config, self._script_filter_fields[option_id])))
@@ -892,6 +913,7 @@ class FilteringSettingsPanel(FormPanel):
             exclude_hiragana_only_words=self.get_exclude_hiragana_only_words(),
             exclude_katakana_only_words=self.get_exclude_katakana_only_words(),
             mine_number_counters=self.number_counters_checkbox.isChecked(),
+            mine_grammar_points=self.grammar_points_checkbox.isChecked(),
             reading_min_occurrence=self.get_reading_min_occurrence(),
         )
         # Language-scoped rows contribute only while their capability is present.

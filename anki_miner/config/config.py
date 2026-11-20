@@ -594,6 +594,13 @@ class AnkiMinerConfig:
     # reads it, so it is in PARSE_RELEVANT_CONFIG_FIELDS.
     mine_number_counters: bool = False
 
+    # Grammar point cards (んだ, でしょう, ください): the kana word list rows marked
+    # "grammar" (services/kana_words.py), which LexicalJoiner skips when off. On
+    # by default; some learners want words only. Japanese only (Word Filters
+    # shows it under the kana filters); the parser reads it, so it is in
+    # PARSE_RELEVANT_CONFIG_FIELDS.
+    mine_grammar_points: bool = True
+
     # Language-scoped display/content preferences (multi-language transition).
     # Deliberately generic rather than zh-prefixed: they are carried per
     # language by LANGUAGE_SCOPED_FIELDS, so ja/ko keep "" / False and zh gets
