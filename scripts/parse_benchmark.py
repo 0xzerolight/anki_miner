@@ -622,6 +622,8 @@ _ANCHOR_HEADWORDS: tuple[str, ...] = (
     "でかい",
     "でっかい",
     "かっこいい",
+    "誇り高い",
+    "名高い",
     # m1119 MR: doubled katakana mimetic words the dictionary spells in katakana (not
     # ドキドキ: katakana.jsonl ka02 pins it as dropped when the dictionary lacks it)
     "ニコニコ",

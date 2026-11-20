@@ -34,6 +34,7 @@ from anki_miner.services.morphology import (
     extract_orth_base,
     extract_reading,
     iter_token_spans,
+    mining_base,
 )
 from anki_miner.utils.text_utils import katakana_to_hiragana
 
@@ -621,6 +622,11 @@ class CompoundDictionaryMatcher:
         folded = _potential_base(tail)
         if folded:
             alternatives += ((prefix + folded, "A"),)
+        # A classical 連体形 (名|高き, orthBase 高し) is looked up by its modern base
+        # too: the dictionary lists 名高い.
+        modern = mining_base(tail)
+        if _pos1(tail) == "形容詞" and modern != extract_orth_base(tail):
+            alternatives += ((prefix + modern, "A"),)
         if _pos1(head) == "接頭辞" and _c_form(tail).startswith("連用形"):
             alternatives += ((joined, "B"),)
         return alternatives

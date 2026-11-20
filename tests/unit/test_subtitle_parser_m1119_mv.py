@@ -219,3 +219,22 @@ class TestContractedAdjectives:
 
     def test_plain_tokens_are_left_alone(self) -> None:
         assert not any(front == "うざい" for _highlight, front in _highlights("早く行こうぜー"))
+
+
+def _classical_compound_records() -> list[dict]:
+    from scripts.parse_benchmark import DEFAULT_CORPUS_DIR, load_corpus
+
+    return [r for r in load_corpus(DEFAULT_CORPUS_DIR) if r["id"] in ("mv05", "mv06")]
+
+
+@pytest.mark.skipif(not _fugashi_available(), reason="fugashi/unidic-lite not installed")
+@pytest.mark.parametrize("record", _classical_compound_records(), ids=lambda r: r["id"])
+def test_classical_adjective_compound_fixture(record: dict) -> None:
+    from scripts.parse_benchmark import mine_lite_anchor
+
+    assert mine_lite_anchor(record["sentence"]) == set(record["expected"])
+
+
+@pytest.mark.skipif(not _fugashi_available(), reason="fugashi/unidic-lite not installed")
+def test_classical_adjective_compound_highlights_the_whole_word() -> None:
+    assert ("誇り高き", "誇り高い") in _highlights("誇り高き戦士")

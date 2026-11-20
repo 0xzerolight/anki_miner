@@ -2,3 +2,5 @@
 {"id":"mv02","sentence":"席からとび上がった","expected":["席","飛び上がる"],"category":"kana-part-front"}
 {"id":"mv03","sentence":"箱をもち上げる","expected":["箱","持ち上げる"],"category":"kana-part-front"}
 {"id":"mv04","sentence":"計画をやり直す","expected":["計画","やり直す"],"category":"kana-part-front","note":"やり直す is a dictionary spelling and stays"}
+{"id":"mv05","sentence":"誇り高き戦士","expected":["誇り高い","戦士"],"category":"classical-adjective","note":"誇り|高き: the tail's orthBase is 高し, the dictionary lists 誇り高い"}
+{"id":"mv06","sentence":"名高き剣士だ","expected":["名高い","剣士"],"category":"classical-adjective"}
