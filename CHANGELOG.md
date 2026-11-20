@@ -25,6 +25,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Words a dictionary lists only in an inflected form are mined in that form (折り入って, 計り知れない),** not as a base verb no dictionary has.
 - **放っておけない and 放っとく are mined as 放っておく,** not 放つ. A dictionary phrase now also joins through a potential ending (生きていけない → 生きていく).
 
+- **Japanese: sentence grammar is mined as expressions: んだ, んです, のだ, のです, ですか, だろう, でしょう, ください, じゃない, ではない, っていうか, and なんだ / なんです after な.** These are among the most frequent words in any subtitle, so each shows up once in the next mining run.
+- **Japanese: kana connectives are mined: だったら, だが, ですが, ですから, それより, そしたら, そうやって, こうやって, くせに, っていう.**
+- **Japanese: more everyday kana words are mined.** Greetings (おやすみ, おかえり, おめでとう, ごちそうさま, ごめんなさい, いただきます), interjections (おう, こら, よっしゃ, へえ, はいはい), spoken words (まぁ, そりゃ, なんで, どっか, うちら, もん, まんま, and なんか at the start of a clause), clipped demonstratives (こっから, どんだけ, このへん) and words cut at お or ご (ごちそう, おしまい, おわび).
+- **Japanese: ない adjectives are mined in every inflection (どうしようもない, しかたがない, しょうがねぇ).**
+- **Japanese: spoken idioms join to their dictionary entry.** A katakana or drawn-out noun joins by its lemma (ワレを忘れる → 我を忘れる, 手ぇを出す → 手を出す), and a noun + adjective idiom gets its が back (頭痛い → 頭が痛い).
+- **Japanese: doubled katakana sound words the dictionary lists are mined (ドキドキ, ギリギリ, ワクワク).**
+- **Japanese: contracted adjectives card as their adjective (やべー, でけー, かっけー, うっせぇ),** and a compound with a classical adjective tail joins (名高き → 名高い).
+- **Japanese: a verb written partly in kana cards as its dictionary spelling (盗みだす → 盗み出す),** てらんない / てらんねえ stays part of its verb, and a katakana verb stem highlights its whole chain (ヤラれた, フラれた).
+- **Japanese: a noun followed by って is no longer read as a rare verb (恋って → 恋う).**
+- **Japanese: a drawn-out ending stays inside the highlight (先輩ー, 嘘っ).**
 ### Fixed
 - **Japanese verb cards show the verb the line uses.** An imperative (持て) mined 持てる, a passive (刺された) mined 刺さる, a potential (帰れない) mined 帰れる, a short causative (行かされた) mined 行かす and katakana フラれた mined the loanword フル; they now mine 持つ, 刺す, 帰る, 行く and ふる. The last three fronts had no dictionary entry, so the card was dropped.
 - **Kana fillers no longer become verb cards.** いえ ('no') mined いえる, a sound cut at っ (まっ, たっ) mined まつ and たつ, and the tagger's glues いたんだ, 違かった and ういっす mined 痛む, 買う and 逸する.
