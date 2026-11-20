@@ -8,12 +8,12 @@ from anki_miner.services.compound_matcher import CompoundSyntheticToken
 from anki_miner.services.lexical_joiner import LexicalJoiner
 
 
-def _tok(surface, pos1, *, orth_base=None, c_form="*", kana=None):
+def _tok(surface, pos1, *, orth_base=None, c_form="*", kana=None, lemma=None):
     token = MagicMock()
     token.surface = surface
     token.feature.pos1 = pos1
     token.feature.pos2 = "*"
-    token.feature.lemma = orth_base or surface
+    token.feature.lemma = lemma or orth_base or surface
     token.feature.orthBase = orth_base or surface
     token.feature.cForm = c_form
     token.feature.kana = kana or surface
@@ -268,6 +268,19 @@ def test_a_verb_row_does_not_join_after_a_na_adjectives_na():
         _tok("あっ", "動詞", orth_base="ある"),
     ]
     assert _joiner({"ことがある"}).join_line("嫌なことがあっ", tokens) is tokens
+
+
+def test_a_verb_row_joins_after_the_voiced_past_da():
+    # 読んだことがある: the past だ shares the adnominal な's orthBase だ but its lemma is た.
+    tokens = [
+        _tok("読ん", "動詞", orth_base="読む"),
+        _tok("だ", "助動詞", orth_base="だ", lemma="た"),
+        _tok("こと", "名詞"),
+        _tok("が", "助詞"),
+        _tok("ある", "動詞"),
+    ]
+    out = _joiner({"ことがある"}).join_line("読んだことがある", tokens)
+    assert [t.surface for t in out] == ["読ん", "だ", "ことがある"]
 
 
 def test_a_verb_row_after_a_join_is_judged_by_the_joined_word():

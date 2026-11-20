@@ -1444,8 +1444,8 @@ Podržani formati: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <translation>Ponovno pokušaj nedostajući zvuk</translation>
     </message>
     <message>
-        <source>Re-try words JapanesePod101 had no audio for on the next run</source>
-        <translation>Pri sljedećem pokretanju ponovno provjeri riječi bez zvuka na JapanesePod101</translation>
+        <source>Re-try words an online source had no audio for on the next run</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Restore from Disk</source>
@@ -4468,6 +4468,10 @@ Ovo će izmijeniti %n bilježaka (%1) i dodati im oznaku %2. Nastaviti?</numerus
     <message>
         <source>The new deck needs a different name than the source deck.</source>
         <translation>Novi špil mora imati drugačiji naziv od izvornog špila.</translation>
+    </message>
+    <message>
+        <source>The new deck can't be inside the source deck.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Deck filter scan</source>
@@ -8174,10 +8178,6 @@ Riječi za dodavanje: %3. Nastaviti?</translation>
         <source>Done</source>
         <translation>Gotovo</translation>
     </message>
-    <message>
-        <source>Cancelled</source>
-        <translation>Otkazano</translation>
-    </message>
 </context><context>
     <name>NoteTypePage</name>
     <message>
@@ -10546,6 +10546,14 @@ Ne briše se nijedna datoteka indeksa.</translation>
         <translation>%1: nije postavljeno (neobavezno)</translation>
     </message>
     <message>
+        <source>Waiting for the language pack to finish downloading…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The language pack download failed, so nothing was downloaded.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Starting…</source>
         <translation>Pokretanje…</translation>
     </message>
@@ -11396,6 +11404,10 @@ Izvor koji je prestao raditi nakon nadogradnje aplikacije popravlja se gumbom Po
     <message>
         <source>yt-dlp could not be updated. Check your connection and try again.</source>
         <translation>yt-dlp nije moguće ažurirati. Provjerite vezu i pokušajte ponovno.</translation>
+    </message>
+    <message>
+        <source>Settings could not be saved. Anki Miner keeps retrying; closing it now loses your latest changes.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>dictionary folder (Dictionaries)</source>

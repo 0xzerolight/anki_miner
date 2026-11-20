@@ -1442,8 +1442,8 @@ Understøttede formater: AJT (index.json + media/), NHK16 (entries.json + audio/
         <translation>Prøv manglende lyd igen</translation>
     </message>
     <message>
-        <source>Re-try words JapanesePod101 had no audio for on the next run</source>
-        <translation>Prøv ord, som JapanesePod101 ikke havde lyd til, igen ved næste kørsel</translation>
+        <source>Re-try words an online source had no audio for on the next run</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Restore from Disk</source>
@@ -4449,6 +4449,10 @@ Dette ændrer %n noter (%1) og giver dem mærket %2. Vil du fortsætte?</numerus
     <message>
         <source>The new deck needs a different name than the source deck.</source>
         <translation>Det nye kortsæt skal have et andet navn end kildekortsættet.</translation>
+    </message>
+    <message>
+        <source>The new deck can't be inside the source deck.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Deck filter scan</source>
@@ -8136,10 +8140,6 @@ Ord, der tilføjes: %3. Vil du fortsætte?</translation>
         <source>Done</source>
         <translation>Færdig</translation>
     </message>
-    <message>
-        <source>Cancelled</source>
-        <translation>Annulleret</translation>
-    </message>
 </context><context>
     <name>NoteTypePage</name>
     <message>
@@ -10502,6 +10502,14 @@ Ingen indeksfiler slettes.</translation>
         <translation>%1: ikke konfigureret (valgfrit)</translation>
     </message>
     <message>
+        <source>Waiting for the language pack to finish downloading…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The language pack download failed, so nothing was downloaded.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Starting…</source>
         <translation>Starter…</translation>
     </message>
@@ -11350,6 +11358,10 @@ En kilde, der holdt op med at virke efter en appopgradering, repareres med Genim
     <message>
         <source>yt-dlp could not be updated. Check your connection and try again.</source>
         <translation>yt-dlp kunne ikke opdateres. Kontrollér din forbindelse, og prøv igen.</translation>
+    </message>
+    <message>
+        <source>Settings could not be saved. Anki Miner keeps retrying; closing it now loses your latest changes.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>dictionary folder (Dictionaries)</source>

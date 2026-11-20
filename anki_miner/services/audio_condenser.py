@@ -338,6 +338,10 @@ _PROBE_REQUIRED: frozenset[str] = frozenset({"libmp3lame", "libopus"})
 # merge mode, so a normal run still keeps its source's own rate and layout.
 _MERGE_SAMPLE_RATE = "48000"
 _MERGE_CHANNELS = "2"
+# And 16-bit: the parts are FLAC staged in the temp folder (often a RAM-backed
+# tmpfs), where ffmpeg's 24-bit default for a lossy source costs about twice the
+# space, and 16 bits is lossless enough ahead of the merge's one lossy encode.
+_MERGE_SAMPLE_FORMAT = "s16"
 
 # A ``-progress pipe:1`` line is ``key=value`` where *key* is lowercase snake_case
 # (frame, out_time_us, progress, ...). Anything whose pre-``=`` token is not a
@@ -601,6 +605,18 @@ class AudioCondenserService:
             out_path.unlink()
         return None
 
+    def require_encoder(self, out_audio: Path) -> None:
+        """Raise :class:`EncoderUnavailableError` if ffmpeg lacks the encoder *out_audio* needs.
+
+        libmp3lame/libopus are probed (once, cached); flac is built in.
+        """
+        encoder = _encoder_settings(out_audio.suffix)[0]
+        if encoder in _PROBE_REQUIRED and not self.extractor._check_encoder_available(encoder):
+            raise EncoderUnavailableError(
+                f"ffmpeg encoder {encoder!r} is unavailable in this build; "
+                "install an ffmpeg with it or pick a different output format."
+            )
+
     # -- Single-pass condense (D2) ----------------------------------------
 
     def condense(
@@ -629,7 +645,7 @@ class AudioCondenserService:
         *progress_cb* off the ``-progress`` stream; *cancel_event* kills the
         in-flight process.
 
-        *uniform_layout* pins the output to 48 kHz stereo. Only a merge run sets
+        *uniform_layout* pins the output to 48 kHz 16-bit stereo. Only a merge run sets
         it: :meth:`concat` decodes its parts as one stream, which requires
         identical stream parameters, and those follow the source otherwise.
 
@@ -640,12 +656,8 @@ class AudioCondenserService:
             logger.warning("Condense called with no keep-periods for %s — nothing to do.", media)
             return False, FfmpegStepFailure(None, False, "no dialogue periods to keep")
 
+        self.require_encoder(out_audio)
         encoder, uses_bitrate, downmix = _encoder_settings(out_audio.suffix)
-        if encoder in _PROBE_REQUIRED and not self.extractor._check_encoder_available(encoder):
-            raise EncoderUnavailableError(
-                f"ffmpeg encoder {encoder!r} is unavailable in this build; "
-                "install an ffmpeg with it or pick a different output format."
-            )
 
         graph_text = build_aselect_graph(periods)
         if self.config.normalize_audio_loudness:
@@ -695,7 +707,7 @@ class AudioCondenserService:
                     if downmix:
                         cmd += ["-ac", "2"]
                     if uniform_layout:
-                        cmd += ["-ar", _MERGE_SAMPLE_RATE]
+                        cmd += ["-ar", _MERGE_SAMPLE_RATE, "-sample_fmt", _MERGE_SAMPLE_FORMAT]
                         if not downmix:
                             cmd += ["-ac", _MERGE_CHANNELS]
                     elif self.config.normalize_audio_loudness:

@@ -1435,7 +1435,7 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Re-try words JapanesePod101 had no audio for on the next run</source>
+        <source>Re-try words an online source had no audio for on the next run</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -4438,6 +4438,10 @@ This will modify %n notes (%1) and tag them %2. Continue?</numerusform>
     </message>
     <message>
         <source>The new deck needs a different name than the source deck.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The new deck can't be inside the source deck.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -8109,10 +8113,6 @@ Words to add: %3. Continue?</source>
         <source>Done</source>
         <translation type="unfinished" />
     </message>
-    <message>
-        <source>Cancelled</source>
-        <translation type="unfinished" />
-    </message>
 </context><context>
     <name>NoteTypePage</name>
     <message>
@@ -10468,6 +10468,14 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Waiting for the language pack to finish downloading…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The language pack download failed, so nothing was downloaded.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Starting…</source>
         <translation type="unfinished" />
     </message>
@@ -11309,6 +11317,10 @@ A source that stopped working after an app upgrade is repaired by Reimport All, 
     </message>
     <message>
         <source>yt-dlp could not be updated. Check your connection and try again.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Settings could not be saved. Anki Miner keeps retrying; closing it now loses your latest changes.</source>
         <translation type="unfinished" />
     </message>
     <message>

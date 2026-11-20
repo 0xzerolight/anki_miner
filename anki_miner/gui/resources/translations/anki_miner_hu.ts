@@ -1440,8 +1440,8 @@ Támogatott formátumok: AJT (index.json + media/), NHK16 (entries.json + audio/
         <translation>Hiányzó hang újrapróbálása</translation>
     </message>
     <message>
-        <source>Re-try words JapanesePod101 had no audio for on the next run</source>
-        <translation>Azon szavak újrapróbálása a következő futtatáskor, amelyekhez a JapanesePod101-nek nem volt hangja</translation>
+        <source>Re-try words an online source had no audio for on the next run</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Restore from Disk</source>
@@ -4430,6 +4430,10 @@ Ez %n jegyzetet módosít (%1), és ezzel a címkével látja el őket: %2. Foly
     <message>
         <source>The new deck needs a different name than the source deck.</source>
         <translation>Az új paklinak a forráspaklitól eltérő nevet kell adni.</translation>
+    </message>
+    <message>
+        <source>The new deck can't be inside the source deck.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Deck filter scan</source>
@@ -8098,10 +8102,6 @@ Hozzáadandó szavak: %3. Folytatja?</translation>
         <source>Done</source>
         <translation>Kész</translation>
     </message>
-    <message>
-        <source>Cancelled</source>
-        <translation>Megszakítva</translation>
-    </message>
 </context><context>
     <name>NoteTypePage</name>
     <message>
@@ -10458,6 +10458,14 @@ Indexfájl nem törlődik.</translation>
         <translation>%1: nincs beállítva (nem kötelező)</translation>
     </message>
     <message>
+        <source>Waiting for the language pack to finish downloading…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The language pack download failed, so nothing was downloaded.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Starting…</source>
         <translation>Indítás…</translation>
     </message>
@@ -11304,6 +11312,10 @@ Az alkalmazásfrissítés után nem működő forrást az Összes újraimportál
     <message>
         <source>yt-dlp could not be updated. Check your connection and try again.</source>
         <translation>A yt-dlp-t nem sikerült frissíteni. Ellenőrizze a kapcsolatot, és próbálja újra.</translation>
+    </message>
+    <message>
+        <source>Settings could not be saved. Anki Miner keeps retrying; closing it now loses your latest changes.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>dictionary folder (Dictionaries)</source>

@@ -1442,8 +1442,8 @@ Formati supportati: AJT (index.json + media/), NHK16 (entries.json + audio/), Fo
         <translation>Riprova l'audio mancante</translation>
     </message>
     <message>
-        <source>Re-try words JapanesePod101 had no audio for on the next run</source>
-        <translation>Ritentare le parole per cui JapanesePod101 non aveva audio alla prossima esecuzione</translation>
+        <source>Re-try words an online source had no audio for on the next run</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Restore from Disk</source>
@@ -4449,6 +4449,10 @@ Verranno modificate %n note (%1) e verrà loro assegnato il tag %2. Continuare?<
     <message>
         <source>The new deck needs a different name than the source deck.</source>
         <translation>Il nuovo mazzo deve avere un nome diverso da quello del mazzo di origine.</translation>
+    </message>
+    <message>
+        <source>The new deck can't be inside the source deck.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Deck filter scan</source>
@@ -8136,10 +8140,6 @@ Parole da aggiungere: %3. Continuare?</translation>
         <source>Done</source>
         <translation>Completato</translation>
     </message>
-    <message>
-        <source>Cancelled</source>
-        <translation>Annullato</translation>
-    </message>
 </context><context>
     <name>NoteTypePage</name>
     <message>
@@ -10502,6 +10502,14 @@ Nessun file indice viene eliminato.</translation>
         <translation>%1: non configurato (facoltativo)</translation>
     </message>
     <message>
+        <source>Waiting for the language pack to finish downloading…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The language pack download failed, so nothing was downloaded.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Starting…</source>
         <translation>Avvio…</translation>
     </message>
@@ -11350,6 +11358,10 @@ Una fonte che ha smesso di funzionare dopo un aggiornamento dell'app viene ripar
     <message>
         <source>yt-dlp could not be updated. Check your connection and try again.</source>
         <translation>Impossibile aggiornare yt-dlp. Controllare la connessione e riprovare.</translation>
+    </message>
+    <message>
+        <source>Settings could not be saved. Anki Miner keeps retrying; closing it now loses your latest changes.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>dictionary folder (Dictionaries)</source>

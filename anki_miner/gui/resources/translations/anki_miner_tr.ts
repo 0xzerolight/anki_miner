@@ -1440,8 +1440,8 @@ Desteklenen biçimler: AJT (index.json + media/), NHK16 (entries.json + audio/),
         <translation>Eksik sesleri yeniden dene</translation>
     </message>
     <message>
-        <source>Re-try words JapanesePod101 had no audio for on the next run</source>
-        <translation>JapanesePod101'de sesi olmayan kelimeleri bir sonraki çalıştırmada yeniden dene</translation>
+        <source>Re-try words an online source had no audio for on the next run</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Restore from Disk</source>
@@ -4430,6 +4430,10 @@ Bu işlem %n notu (%1) değiştirecek ve onları %2 ile etiketleyecek. Devam edi
     <message>
         <source>The new deck needs a different name than the source deck.</source>
         <translation>Yeni destenin adı kaynak desteden farklı olmalıdır.</translation>
+    </message>
+    <message>
+        <source>The new deck can't be inside the source deck.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Deck filter scan</source>
@@ -8098,10 +8102,6 @@ Eklenecek kelimeler: %3. Devam edilsin mi?</translation>
         <source>Done</source>
         <translation>Tamamlandı</translation>
     </message>
-    <message>
-        <source>Cancelled</source>
-        <translation>İptal edildi</translation>
-    </message>
 </context><context>
     <name>NoteTypePage</name>
     <message>
@@ -10458,6 +10458,14 @@ Hiçbir dizin dosyası silinmez.</translation>
         <translation>%1: ayarlanmadı (isteğe bağlı)</translation>
     </message>
     <message>
+        <source>Waiting for the language pack to finish downloading…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The language pack download failed, so nothing was downloaded.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Starting…</source>
         <translation>Başlatılıyor…</translation>
     </message>
@@ -11304,6 +11312,10 @@ Bir uygulama yükseltmesinden sonra çalışmayı bırakan kaynak, geri yüklene
     <message>
         <source>yt-dlp could not be updated. Check your connection and try again.</source>
         <translation>yt-dlp güncellenemedi. Bağlantınızı denetleyip yeniden deneyin.</translation>
+    </message>
+    <message>
+        <source>Settings could not be saved. Anki Miner keeps retrying; closing it now loses your latest changes.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>dictionary folder (Dictionaries)</source>

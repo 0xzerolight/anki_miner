@@ -82,7 +82,17 @@ class TestGrammarExpressions:
         assert "ことがある" not in fronts
         assert {"こと", "ある"} <= set(fronts)
 
-    @pytest.mark.parametrize("text", ["行ったことがある", "行かないことがある", "話せるようになることがある"])
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "行ったことがある",
+            "読んだことがある",
+            "泳いだことがある",
+            "遊んだことがあります",
+            "行かないことがある",
+            "話せるようになることがある",
+        ],
+    )
     def test_kotogaaru_after_a_verb_or_a_joined_verb_still_joins(self, text):
         assert "ことがある" in _fronts(_service((*_EXPRESSIONS, "ようになる")), text)
 

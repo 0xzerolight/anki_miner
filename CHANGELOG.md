@@ -53,7 +53,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **A card Anki refuses for a reason other than a duplicate is no longer counted as a duplicate.**
 - **The Word Curator leaves the Chinese lines of a Chinese/Japanese subtitle out of its line preview,** and a picked sentence gets the same cue merge as in mining.
 - **Settings saved by a newer version for a mining language this version lacks no longer overwrite the Japanese settings.**
-- **Settings no longer show "✓ Saved" when the settings file could not be written.** The edit stays pending and is retried.
+- **Settings no longer show "✓ Saved" when the settings file could not be written.** The tab says the save failed, keeps the edit pending and retries.
 - **Settings changed while a dictionary download runs are kept when the app is closed before it ends.**
 - **Word Curator: emoji sequences and variant kanji are no longer split in sentences.**
 - **Word Curator: copied rows keep the column order on screen.**

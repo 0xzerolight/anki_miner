@@ -25,7 +25,7 @@ from typing import Callable, NamedTuple
 
 from anki_miner.services.compound_matcher import CompoundDictionaryMatcher, CompoundSyntheticToken, _pos1, _pos2
 from anki_miner.services.kana_words import kana_words
-from anki_miner.services.morphology import extract_orth_base, extract_reading
+from anki_miner.services.morphology import extract_lemma, extract_orth_base, extract_reading
 
 # Batch term-OR-reading probe (DefinitionService.has_offline_definitions).
 AttestLookup = Callable[[list[str]], dict[str, bool]]
@@ -176,7 +176,8 @@ def _follows(tokens: list, i: int, after: str, joined_pos1: str | None = None) -
     ``joined_pos1`` is the POS of a join accepted in the same pass that ends on
     ``tokens[i - 1]``: the joined word is what precedes (こう|いう is the 連体詞
     こういう, not the verb いう; よう|に|なる is a verb). A verb row refuses the
-    auxiliary だ: the adnominal な of a na-adjective (嫌なこと) ends no verb.
+    auxiliary だ: the adnominal な of a na-adjective (嫌なこと) ends no verb. It is
+    told by lemma: the voiced past だ (読んだ) shares orthBase だ but its lemma is た.
     """
     if not after:
         return True
@@ -186,7 +187,7 @@ def _follows(tokens: list, i: int, after: str, joined_pos1: str | None = None) -
     pos1 = joined_pos1 or _pos1(before)
     if after == "noun":
         return pos1 in _NOUN_POS1 or (joined_pos1 is None and _pos2(before) == "括弧閉")
-    if joined_pos1 is None and pos1 == "助動詞" and extract_orth_base(before) == "だ":
+    if joined_pos1 is None and pos1 == "助動詞" and extract_lemma(before) == "だ":
         return False
     return pos1 in _VERB_POS1
 

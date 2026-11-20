@@ -1440,8 +1440,8 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <translation>누락된 오디오 다시 시도</translation>
     </message>
     <message>
-        <source>Re-try words JapanesePod101 had no audio for on the next run</source>
-        <translation>JapanesePod101에 오디오가 없던 단어를 다음 실행 때 다시 시도</translation>
+        <source>Re-try words an online source had no audio for on the next run</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Restore from Disk</source>
@@ -4430,6 +4430,10 @@ This will modify %n note(s) (%1) and tag them %2. Continue?</source>
     <message>
         <source>The new deck needs a different name than the source deck.</source>
         <translation>새 덱의 이름은 원본 덱과 달라야 합니다.</translation>
+    </message>
+    <message>
+        <source>The new deck can't be inside the source deck.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Deck filter scan</source>
@@ -8098,10 +8102,6 @@ Words to add: %3. Continue?</source>
         <source>Done</source>
         <translation>완료</translation>
     </message>
-    <message>
-        <source>Cancelled</source>
-        <translation>취소됨</translation>
-    </message>
 </context><context>
     <name>NoteTypePage</name>
     <message>
@@ -10458,6 +10458,14 @@ No index files are deleted.</source>
         <translation>%1: 설정되지 않음(선택 사항)</translation>
     </message>
     <message>
+        <source>Waiting for the language pack to finish downloading…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The language pack download failed, so nothing was downloaded.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Starting…</source>
         <translation>시작하는 중…</translation>
     </message>
@@ -11304,6 +11312,10 @@ A source that stopped working after an app upgrade is repaired by Reimport All, 
     <message>
         <source>yt-dlp could not be updated. Check your connection and try again.</source>
         <translation>yt-dlp를 업데이트할 수 없습니다. 연결을 확인하고 다시 시도하세요.</translation>
+    </message>
+    <message>
+        <source>Settings could not be saved. Anki Miner keeps retrying; closing it now loses your latest changes.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>dictionary folder (Dictionaries)</source>

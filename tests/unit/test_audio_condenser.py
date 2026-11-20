@@ -1267,6 +1267,28 @@ def test_condense_uniform_layout_pins_rate_and_channels(tmp_path):
     assert cmd[cmd.index("-ac") + 1] == "2"
 
 
+def test_condense_uniform_layout_stages_16_bit_parts(tmp_path):
+    """A merge part is lossless for one lossy encode: 16-bit, not ffmpeg's 24-bit FLAC default."""
+    svc = _service(tmp_path, global_index=0)
+    captured: dict = {}
+    with (
+        patch(_RESOLVE, return_value="ffmpeg"),
+        patch(_POPEN, side_effect=_factory(captured, _progress_block(0, end=True))),
+    ):
+        svc.condense(Path("/v/in.mkv"), [(0, 2000)], tmp_path / "part.flac", uniform_layout=True)
+
+    cmd = captured["cmd"]
+    assert cmd[cmd.index("-sample_fmt") + 1] == "s16"
+
+
+@pytest.mark.parametrize(("suffix", "encoder"), [(".mp3", "libmp3lame"), (".opus", "libopus")])
+def test_require_encoder_raises_for_a_missing_lossy_encoder(tmp_path, suffix, encoder):
+    svc = _service(tmp_path, encoder_ok=False)
+    with pytest.raises(EncoderUnavailableError, match=encoder):
+        svc.require_encoder(tmp_path / f"season{suffix}")
+    svc.extractor._check_encoder_available.assert_called_once_with(encoder)
+
+
 def test_condense_uniform_layout_does_not_double_the_opus_downmix(tmp_path):
     svc = _service(tmp_path, global_index=0)
     captured: dict = {}
