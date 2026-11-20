@@ -46,6 +46,7 @@ SHORT_NOUNS: frozenset[str] = frozenset(
     | {"ひと", "いぬ", "ねこ", "ごみ", "くそ"}
     | {"うそ", "ばか", "ただ", "ふう", "うえ", "いま", "けが", "むちゃ"}
     | {"くせ", "ほう", "まね", "ふり", "たび", "あと", "わけ", "とこ", "ころ"}
+    | {"もん"}
 )
 
 #: The only two-kana spellings of kanji-written words listed outside the nouns.
@@ -57,6 +58,7 @@ SHORT_READINGS: frozenset[str] = frozenset({"きみ", "ぼく", "おれ", "か�
 SHORT_SPELLED_NOUNS: frozenset[str] = frozenset(
     {"とおり", "おなか", "ゆうべ", "かぎり", "におい", "しょうゆ", "けんか", "うわさ", "まぬけ", "あげく"}
     | {"おかげ", "ほんと", "ほんま", "ごはん", "あした", "しかた", "ふだん", "ことし"}
+    | {"ようす", "しっぽ", "きげん", "ぜんぶ"}
 )
 
 #: Spoken kana spellings JMdict gives no priority tag (やっぱ for 矢っ張り, the
@@ -65,6 +67,7 @@ SHORT_SPELLED_NOUNS: frozenset[str] = frozenset(
 UNTAGGED_COMMON: frozenset[str] = frozenset(
     {"やっぱ", "とっても", "あくまで", "とっとと", "めっちゃ", "ちょい", "そこそこ", "またまた", "まんまと", "ばっちり"}
     | {"おかげ", "こないだ", "ほんと", "ほんま", "とことん", "ごっこ", "こだわり", "てめえ", "おめえ", "わたくし"}
+    | {"ったく", "うむ", "おおきに", "てめぇ", "とやかく", "まんま"}
 )
 
 #: Tags a line gives a word that no carrier sentence does: あんな is 形状詞 in every

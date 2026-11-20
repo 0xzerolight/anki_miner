@@ -1,0 +1,11 @@
+{"id":"mk01","sentence":"ったく、遅いな","expected":["ったく","遅い"],"category":"m1119-kana-rows","note":"the clipped まったく is its own JMdict word; the tagger gives it 副詞"}
+{"id":"mk02","sentence":"うむ、分かった","expected":["うむ","分かる"],"category":"m1119-kana-rows","note":"an interjection JMdict gives no priority tag"}
+{"id":"mk03","sentence":"おおきに","expected":["おおきに"],"category":"m1119-kana-rows","note":"Kansai thanks"}
+{"id":"mk04","sentence":"てめぇの番だ","expected":["てめぇ","番"],"category":"m1119-kana-rows","note":"the small-ぇ spelling of the listed てめえ"}
+{"id":"mk05","sentence":"とやかく言うな","expected":["とやかく","言う"],"category":"m1119-kana-rows"}
+{"id":"mk06","sentence":"昔のまんまだ","expected":["昔","まんま"],"category":"m1119-kana-rows","note":"spoken まま"}
+{"id":"mk08","sentence":"立派なもんだ","expected":["立派","もん"],"category":"m1119-kana-rows","note":"spoken もの"}
+{"id":"mk09","sentence":"ようすが変だ","expected":["ようす","変"],"category":"m1119-kana-rows","note":"a three-mora kana spelling of a kanji-written noun, named"}
+{"id":"mk10","sentence":"犬のしっぽ","expected":["犬","しっぽ"],"category":"m1119-kana-rows"}
+{"id":"mk11","sentence":"きげんが悪い","expected":["きげん","悪い"],"category":"m1119-kana-rows"}
+{"id":"mk12","sentence":"ぜんぶ食べた","expected":["ぜんぶ","食べる"],"category":"m1119-kana-rows"}

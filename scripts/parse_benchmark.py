@@ -498,6 +498,18 @@ _ANCHOR_HEADWORDS: tuple[str, ...] = (
     "ガイル",
     "二位",
     "しかない",
+    # m1119-kana-rows: kana list rows added by name
+    "ったく",
+    "うむ",
+    "おおきに",
+    "てめぇ",
+    "とやかく",
+    "まんま",
+    "もん",
+    "ようす",
+    "しっぽ",
+    "きげん",
+    "ぜんぶ",
 )
 
 # Yomitan `ruleIdentifiers` per fixture headword. A real term bank ships these,
