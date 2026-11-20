@@ -1049,6 +1049,10 @@ _MISSPLITS: dict[tuple[tuple[str, str | None], ...], tuple[tuple[str, dict[str, 
         ),
         ("ち", {**dict.fromkeys(("lemma", "orth", "orthBase"), "ち"), **dict.fromkeys(("lForm", "kana"), "チ")}),
     ),
+    # てらんない (ていられない): unidic-lite reads the らん as an adverb, which ends
+    # the verb's chain at て and leaves the ない after it standing as a word.
+    (("て", "て"), ("らん", "らん")): (("て", {}), ("らん", {"pos1": "助動詞"})),
+    (("で", "て"), ("らん", "らん")): (("で", {}), ("らん", {"pos1": "助動詞"})),
 }
 
 

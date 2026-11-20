@@ -178,3 +178,22 @@ class TestKatakanaStemSpans:
 
     def test_mixed_spelling_still_extends(self) -> None:
         assert ("ハマった", "ハマる") in _highlights("罠にハマった")
+
+
+@pytest.mark.skipif(not _fugashi_available(), reason="fugashi/unidic-lite not installed")
+class TestTeRannaiChain:
+    """てらんない (ていられない) is part of the verb's chain, and its ない is no word."""
+
+    @pytest.mark.parametrize(
+        ("sentence", "highlight", "front"),
+        [
+            ("もう見てらんないよ", "見てらんない", "見る"),
+            ("こんなの食ってらんねえ", "食ってらんねえ", "食う"),
+            ("黙ってらんなかった", "黙ってらんなかった", "黙る"),
+            ("酒なんか飲んでらんない", "飲んでらんない", "飲む"),
+        ],
+    )
+    def test_chain_runs_through_ran(self, sentence: str, highlight: str, front: str) -> None:
+        mined = _highlights(sentence)
+        assert (highlight, front) in mined
+        assert "ない" not in {front for _highlight, front in mined}
