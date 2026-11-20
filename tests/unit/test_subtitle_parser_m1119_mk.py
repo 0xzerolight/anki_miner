@@ -23,8 +23,38 @@ def _fugashi_available() -> bool:
 pytestmark = pytest.mark.skipif(not _fugashi_available(), reason="fugashi/unidic-lite not installed")
 
 
+_JOINED = (
+    ("なんか変だ", "なんか"),
+    ("なんで来たの", "なんで"),
+    ("なんでも食べる", "なんでも"),
+    ("なんとか間に合った", "なんとか"),
+    ("なんだか眠い", "なんだか"),
+    ("なんにも見えない", "なんにも"),
+    ("そっか、分かった", "そっか"),
+    ("どっかで見た", "どっか"),
+    ("うちらの番だ", "うちら"),
+    ("耳がぴんと立った", "ぴんと"),
+    ("まともに見られない", "まともに"),
+    ("めったに来ない", "めったに"),
+    ("はるかに高い", "はるかに"),
+    ("むやみに触るな", "むやみに"),
+    ("わずかに動いた", "わずかに"),
+    ("たしかに見た", "たしかに"),
+    ("にわかに曇った", "にわかに"),
+    ("あまりに遠い", "あまりに"),
+    ("ほんとに行くの", "ほんとに"),
+    ("いっぺんに食べた", "いっぺんに"),
+    ("いっしょに帰ろう", "いっしょに"),
+    ("べつに構わない", "べつに"),
+    ("かってに決めるな", "かってに"),
+    ("なんでもなかった", "なんでもない"),
+    ("あまりにも遠い", "あまりにも"),
+)
+
 _ATTESTED = frozenset(
-    {"ったく", "うむ", "おおきに", "てめぇ", "とやかく", "まんま"} | {"もん", "ようす", "しっぽ", "きげん", "ぜんぶ"}
+    {"ったく", "うむ", "おおきに", "てめぇ", "とやかく", "まんま"}
+    | {"もん", "ようす", "しっぽ", "きげん", "ぜんぶ"}
+    | {front for _text, front in _JOINED}
 )
 
 
@@ -73,3 +103,31 @@ class TestWordRows:
     def test_a_short_spelling_row_still_takes_the_window_check(self, front):
         assert is_listed(front, "名詞", merged=False)
         assert is_kanji_spelled(front, "名詞")
+
+
+class TestJoinRows:
+    @pytest.mark.parametrize(("text", "front"), _JOINED)
+    def test_joins_a_kana_word_the_tagger_cuts_apart(self, text, front):
+        assert front in _fronts(text)
+
+    @pytest.mark.parametrize(
+        ("text", "piece"),
+        [
+            ("なんで来たの", "なん"),
+            ("どっかで見た", "どっ"),
+            ("まともに見られない", "まとも"),
+            ("ほんとに行くの", "ほんと"),
+        ],
+    )
+    def test_the_piece_before_the_join_is_no_card(self, text, piece):
+        assert piece not in _fronts(text)
+
+    def test_the_longer_row_wins(self):
+        fronts = _fronts("なんでも食べる")
+        assert "なんでも" in fronts
+        assert "なんで" not in fronts
+        assert _fronts("なんでもないよ") == ["なんでもない"]
+
+    @pytest.mark.parametrize("text", ["照れてなんかない", "犬なんか嫌いだ"])
+    def test_the_particle_nanka_is_not_joined(self, text):
+        assert "なんか" not in _fronts(text)

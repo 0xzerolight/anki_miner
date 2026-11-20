@@ -9,3 +9,23 @@
 {"id":"mk10","sentence":"犬のしっぽ","expected":["犬","しっぽ"],"category":"m1119-kana-rows"}
 {"id":"mk11","sentence":"きげんが悪い","expected":["きげん","悪い"],"category":"m1119-kana-rows"}
 {"id":"mk12","sentence":"ぜんぶ食べた","expected":["ぜんぶ","食べる"],"category":"m1119-kana-rows"}
+{"id":"mj01","sentence":"なんか変だ","expected":["なんか","変"],"category":"m1119-kana-joins","note":"なん|か is 'somehow', a word of its own"}
+{"id":"mj02","sentence":"なんで来たの","expected":["なんで","来る"],"category":"m1119-kana-joins"}
+{"id":"mj03","sentence":"なんとか間に合った","expected":["なんとか","間に合う"],"category":"m1119-kana-joins"}
+{"id":"mj04","sentence":"なんだか眠い","expected":["なんだか","眠い"],"category":"m1119-kana-joins"}
+{"id":"mj05","sentence":"なんでも食べる","expected":["なんでも","食べる"],"category":"m1119-kana-joins","note":"the longer row wins over なんで"}
+{"id":"mj06","sentence":"なんにも見えない","expected":["なんにも","見える"],"category":"m1119-kana-joins"}
+{"id":"mj07","sentence":"そっか、分かった","expected":["そっか","分かる"],"category":"m1119-kana-joins","note":"the clipped そうか"}
+{"id":"mj08","sentence":"どっかで見た","expected":["どっか","見る"],"category":"m1119-kana-joins","note":"the clipped どこか"}
+{"id":"mj09","sentence":"うちらの番だ","expected":["うちら","番"],"category":"m1119-kana-joins"}
+{"id":"mj11","sentence":"耳がぴんと立った","expected":["耳","ぴんと","立つ"],"category":"m1119-kana-joins"}
+{"id":"mj12","sentence":"まともに見られない","expected":["まともに","見る"],"category":"m1119-kana-joins","note":"an adverb cut at に; the bare stem is turned away"}
+{"id":"mj13","sentence":"めったに来ない","expected":["めったに","来る"],"category":"m1119-kana-joins"}
+{"id":"mj14","sentence":"はるかに高い","expected":["はるかに","高い"],"category":"m1119-kana-joins"}
+{"id":"mj15","sentence":"ほんとに行くの","expected":["ほんとに","行く"],"category":"m1119-kana-joins"}
+{"id":"mj16","sentence":"いっしょに帰ろう","expected":["いっしょに","帰る"],"category":"m1119-kana-joins"}
+{"id":"mj17","sentence":"べつに構わない","expected":["べつに","構う"],"category":"m1119-kana-joins"}
+{"id":"mj18","sentence":"かってに決めるな","expected":["かってに","決める"],"category":"m1119-kana-joins"}
+{"id":"mj19","sentence":"なんでもないよ","expected":["なんでもない"],"category":"m1119-kana-joins","note":"the whole adjective, in every inflection; not なんでも + ない"}
+{"id":"mj20","sentence":"あまりにも遠い","expected":["あまりにも","遠い"],"category":"m1119-kana-joins","note":"the longer row wins over あまりに"}
+{"id":"mj21","sentence":"照れてなんか…","expected":["照れる"],"category":"m1119-kana-joins","note":"guard: after て the tagger's なん|か is the particle, so no join"}

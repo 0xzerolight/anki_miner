@@ -168,6 +168,7 @@ _EXPECTED_CATEGORIES = {
     "kana-listed",
     "kanji-glue",
     "m1119-kana-rows",
+    "m1119-kana-joins",
 }
 
 
