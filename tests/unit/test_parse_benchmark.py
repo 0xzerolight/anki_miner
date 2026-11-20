@@ -171,6 +171,7 @@ _EXPECTED_CATEGORIES = {
     "m1119-kana-joins",
     "spoken-idiom",
     "sentence-grammar",
+    "kana-part-front",
 }
 
 

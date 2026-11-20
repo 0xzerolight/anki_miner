@@ -48,6 +48,8 @@ from dataclasses import dataclass
 from functools import lru_cache
 from typing import Any, Callable, Iterable, Mapping, Sequence
 
+from anki_miner.utils.text_utils import katakana_to_hiragana
+
 # Rules-aware offline attestation probe. Each tuple preserves the terminal
 # deinflection condition mask beside its candidate text; the returned set keeps
 # only terms with at least one dictionary entry whose POS rules accept that mask.
@@ -353,6 +355,11 @@ def find_highlight_end_with_trace(
         additional_mask = deinflector.condition_flags("v1")
 
     candidate_ends = _extension_candidate_ends(text, raw_tokens, tok_end)
+    # A stem written in katakana (ヤラ|れ|た, orthBase ヤル) inflects as its
+    # hiragana spelling does, and the table's rules are hiragana.
+    stem = text[tok_start:tok_end]
+    kana_stem = katakana_to_hiragana(stem)
+    kana_targets = {katakana_to_hiragana(target) for target in targets} if kana_stem != stem else set()
     for candidate_end in reversed(candidate_ends):  # longest-first
         candidate = text[tok_start:candidate_end]
         for result in deinflector.transform(candidate):
@@ -365,7 +372,43 @@ def find_highlight_end_with_trace(
             if base_matches or additional_matches:
                 chain = tuple(frame[0] for frame in reversed(result.trace))
                 return candidate_end, chain
+        if kana_targets:
+            for result in deinflector.transform(kana_stem + text[tok_end:candidate_end]):
+                if result.text in kana_targets and conditions_match_mask(result.conditions, mask):
+                    return candidate_end, tuple(frame[0] for frame in reversed(result.trace))
     return tok_end, ()
+
+
+# Marks that lengthen the word written before them: a long mark, a small vowel
+# (撃てぇ, 歩いたぁ), a wave dash after kana, and an emphatic っ that ends the word
+# (写るーっ). They are part of that word's span, never a word of their own.
+_STRETCH_MARKS = frozenset("ーぁぃぅぇぉァィゥェォ")
+_WAVE_DASHES = frozenset("〜～")
+_EMPHATIC_SOKUON = frozenset("っッ")
+
+
+def _is_kana(ch: str) -> bool:
+    return "ぁ" <= ch <= "ゟ" or "ァ" <= ch <= "ヿ"
+
+
+def stretched_highlight_end(text: str, end: int) -> int:
+    """``end`` moved past the stretch marks written right after a mined word.
+
+    潜るー, 逃げ切ったぁーー and 撃てぇっ! are one word each to a reader, so the
+    highlight covers the marks. A wave dash counts only after kana (10時〜12時 is
+    a range), and a っ only when no kana follows it: 潜るって keeps the quoting
+    って, and 潜るっす its copula.
+    """
+    if not 0 < end <= len(text):
+        return end
+    while end < len(text) and (text[end] in _STRETCH_MARKS or (text[end] in _WAVE_DASHES and _is_kana(text[end - 1]))):
+        end += 1
+    sokuon_end = end
+    while sokuon_end < len(text) and text[sokuon_end] in _EMPHATIC_SOKUON:
+        sokuon_end += 1
+    if sokuon_end == len(text) or not _is_kana(text[sokuon_end]):
+        return sokuon_end
+    return end
 
 
 def conditions_match_mask(result_conditions: int, target_mask: int) -> bool:

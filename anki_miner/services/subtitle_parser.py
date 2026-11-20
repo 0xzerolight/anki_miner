@@ -30,6 +30,7 @@ from anki_miner.services.deinflection import (
     find_highlight_end_with_trace,
     get_highlight_deinflector,
     resolve_dictionary_form,
+    stretched_highlight_end,
 )
 from anki_miner.services.kana_words import is_kanji_spelled, is_listed
 from anki_miner.services.lexical_joiner import LexicalJoiner
@@ -56,6 +57,7 @@ from anki_miner.services.morphology import (
     iter_token_spans,
     merge_compound_suffixes,
     mining_base,
+    rejoin_contracted_adjectives,
     replace_overridden_spans,
     resolve_attested_reading,
     resolve_reading_override,
@@ -1582,6 +1584,7 @@ class SubtitleParserService:
         # from it, and a correction that re-cuts two tokens (自|分ち) would
         # otherwise leave the raw and merged streams out of step for the line.
         raw_tokens = retag_mistagged_tokens(raw_tokens, self._form_lookup)
+        raw_tokens = rejoin_contracted_adjectives(raw_tokens)
         merged_tokens = self._merge_compound_suffixes(raw_tokens)
         # Language-specific merge (ko: 공부 + 하 → 공부하다). Placed with the other
         # merge passes and gated on the same probe; no probe ⇒ no merge.
@@ -1676,7 +1679,11 @@ class SubtitleParserService:
                 additional_target=resolved_front,
             )
             highlight_end = max(highlight_end, resolved_end)
-        return highlight_end
+        # A verb's or adjective's stretch marks stay outside its highlight for now:
+        # covering them cost form accuracy on the gold benchmark.
+        if word_token.feature.pos1 in ("動詞", "形容詞"):
+            return highlight_end
+        return stretched_highlight_end(text, highlight_end)
 
     def _card_front(self, word_token: Any, text: str, tok_start: int, tok_end: int, raw_tokens: list) -> str:
         """The ``mined_form`` emission gives an included token: its card front.
@@ -2903,7 +2910,7 @@ class SubtitleParserService:
             return orth_base
         if katakana_to_hiragana(l_form) == katakana_to_hiragana(kana_base):
             # Equal-reading okurigana variant: preserve the source orthography.
-            return orth_base
+            return self._kana_part_front(orth_base, lemma)
         if getattr(feature, "pos1", None) == "動詞" and not _is_pure_hiragana(orth_base):
             # A potential whose lemma is spelled otherwise (帰れる → 返る, やり直せる
             # → 遣り直す) folds on its own stem (帰る, やり直す), never the lemma's
@@ -2924,6 +2931,40 @@ class SubtitleParserService:
             return orth_base  # a real headword — attestation decides, keep it
         if lemma not in attested:
             return orth_base  # no attested target to remap onto
+        return lemma
+
+    def _kana_part_front(self, orth_base: str, lemma: str) -> str:
+        """The lemma for a front that writes part of the word in kana and no dictionary lists.
+
+        つみ上げる is 積み上げる with its first kanji in kana. The two read the same,
+        so ``_attest_or_remap_front`` keeps the source spelling, but no dictionary
+        has that spelling as a headword: the card misses the exact-term lookups
+        and is filed apart from the 積み上げる card. The lemma is taken only when
+
+        * it holds every kanji of ``orth_base`` in order and at least one more.
+          An okurigana variant (変る for 変わる) adds no kanji and keeps the
+          source spelling whatever the dictionary lists (Issue #19/#5), and a
+          lemma written with other kanji (とり換える, lemma 取り替える) is never taken;
+        * the rest of ``orth_base`` is hiragana. A katakana part is a spelling
+          choice of its own, and its lemma is often a rare kanji form
+          (ブッ飛ばす, lemma 打っ飛ばす);
+        * the dictionary does not attest ``orth_base`` (やり直す, ぶち壊す stay);
+        * the dictionary attests the lemma.
+        """
+        own = [ch for ch in orth_base if "一" <= ch <= "鿿"]
+        theirs = [ch for ch in lemma if "一" <= ch <= "鿿"]
+        if (
+            not own
+            or len(theirs) <= len(own)
+            or not _is_pure_hiragana("".join(ch for ch in orth_base if ch not in own))
+        ):
+            return orth_base
+        rest = iter(theirs)
+        if not all(ch in rest for ch in own):
+            return orth_base
+        attested = self._memoized_attest([orth_base, lemma])
+        if orth_base in attested or lemma not in attested:
+            return orth_base
         return lemma
 
     def _fold_katakana_verb_front(self, orth_base: str, lemma: str | None = None) -> str:
