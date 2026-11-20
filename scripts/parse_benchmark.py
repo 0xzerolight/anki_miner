@@ -611,10 +611,6 @@ _ANCHOR_HEADWORDS: tuple[str, ...] = (
     "機嫌が悪い",
     "腹が減る",
     "貴方達",
-    # sentence-grammar: expressions the kana word list joins or names
-    "のだ",
-    "のです",
-    "でしょう",
     "積み上げる",
     "飛び上がる",
     "持ち上げる",
