@@ -55,6 +55,8 @@ _ATTESTED = frozenset(
     {"ったく", "うむ", "おおきに", "てめぇ", "とやかく", "まんま"}
     | {"もん", "ようす", "しっぽ", "きげん", "ぜんぶ"}
     | {front for _text, front in _JOINED}
+    | {"おやすみ", "おやすみなさい", "おかえり", "おかえりなさい", "おめでとう", "ごちそうさま", "おつかれさま"}
+    | {"ごめんなさい", "ごめん", "いただきます", "かしこまりました", "すまない", "すまん"}
 )
 
 
@@ -131,3 +133,29 @@ class TestJoinRows:
     @pytest.mark.parametrize("text", ["照れてなんかない", "犬なんか嫌いだ"])
     def test_the_particle_nanka_is_not_joined(self, text):
         assert "なんか" not in _fronts(text)
+
+
+class TestGreetings:
+    @pytest.mark.parametrize(
+        ("text", "fronts"),
+        [
+            ("おやすみ", ["おやすみ"]),
+            ("おやすみなさい", ["おやすみなさい"]),
+            ("おかえり", ["おかえり"]),
+            ("おかえりなさい", ["おかえりなさい"]),
+            ("おめでとう", ["おめでとう"]),
+            ("ごちそうさまでした", ["ごちそうさま"]),
+            ("おつかれさま", ["おつかれさま"]),
+            ("ごめんなさい", ["ごめんなさい"]),
+            ("いただきます", ["いただきます"]),
+            ("かしこまりました", ["かしこまりました"]),
+            ("すまない", ["すまない"]),
+            ("すまなかった", ["すまない"]),
+            ("すまん、遅れた", ["すまん", "遅れる"]),
+        ],
+    )
+    def test_joins_a_greeting_the_tagger_cuts_apart(self, text, fronts):
+        assert _fronts(text) == fronts
+
+    def test_the_humble_auxiliary_is_no_greeting(self):
+        assert "いただきます" not in _fronts("見ていただきます")

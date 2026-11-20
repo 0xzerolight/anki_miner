@@ -29,3 +29,14 @@
 {"id":"mj19","sentence":"なんでもないよ","expected":["なんでもない"],"category":"m1119-kana-joins","note":"the whole adjective, in every inflection; not なんでも + ない"}
 {"id":"mj20","sentence":"あまりにも遠い","expected":["あまりにも","遠い"],"category":"m1119-kana-joins","note":"the longer row wins over あまりに"}
 {"id":"mj21","sentence":"照れてなんか…","expected":["照れる"],"category":"m1119-kana-joins","note":"guard: after て the tagger's なん|か is the particle, so no join"}
+{"id":"mj22","sentence":"おやすみ","expected":["おやすみ"],"category":"m1119-kana-joins","note":"a greeting cut at the polite prefix"}
+{"id":"mj23","sentence":"おやすみなさい","expected":["おやすみなさい"],"category":"m1119-kana-joins","note":"the longer greeting wins"}
+{"id":"mj24","sentence":"おかえり","expected":["おかえり"],"category":"m1119-kana-joins"}
+{"id":"mj25","sentence":"おめでとう","expected":["おめでとう"],"category":"m1119-kana-joins"}
+{"id":"mj26","sentence":"ごちそうさまでした","expected":["ごちそうさま"],"category":"m1119-kana-joins"}
+{"id":"mj27","sentence":"ごめんなさい","expected":["ごめんなさい"],"category":"m1119-kana-joins","note":"not ごめん + なさい"}
+{"id":"mj28","sentence":"いただきます","expected":["いただきます"],"category":"m1119-kana-joins","note":"the greeting opens the line"}
+{"id":"mj29","sentence":"見ていただきます","expected":["見る"],"category":"m1119-kana-joins","note":"guard: after て it is the humble auxiliary"}
+{"id":"mj30","sentence":"かしこまりました","expected":["かしこまりました"],"category":"m1119-kana-joins"}
+{"id":"mj31","sentence":"すまなかった","expected":["すまない"],"category":"m1119-kana-joins","note":"the apology in every inflection"}
+{"id":"mj32","sentence":"すまん、遅れた","expected":["すまん","遅れる"],"category":"m1119-kana-joins"}

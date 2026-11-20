@@ -536,6 +536,18 @@ _ANCHOR_HEADWORDS: tuple[str, ...] = (
     "かってに",
     "なんでもない",
     "あまりにも",
+    "おやすみ",
+    "おやすみなさい",
+    "おかえり",
+    "おかえりなさい",
+    "おめでとう",
+    "ごちそうさま",
+    "おつかれさま",
+    "ごめんなさい",
+    "いただきます",
+    "かしこまりました",
+    "すまない",
+    "すまん",
 )
 
 # Yomitan `ruleIdentifiers` per fixture headword. A real term bank ships these,
