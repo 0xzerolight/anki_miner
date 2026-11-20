@@ -167,3 +167,14 @@ class TestKanaPartFront:
         token = _verb_token("ブッ飛ばし", "ブッ飛ばす", "打っ飛ばす", "ブットバス")
         token.feature.cType = "五段-サ行"
         assert self._front(service, token) == "ブッ飛ばす"
+
+
+@pytest.mark.skipif(not _fugashi_available(), reason="fugashi/unidic-lite not installed")
+class TestKatakanaStemSpans:
+    """A verb stem written in katakana takes its whole inflected form as the highlight."""
+
+    def test_passive_after_a_katakana_stem(self) -> None:
+        assert ("ヤラれた", "やる") in _highlights("あいつにヤラれた")
+
+    def test_mixed_spelling_still_extends(self) -> None:
+        assert ("ハマった", "ハマる") in _highlights("罠にハマった")
