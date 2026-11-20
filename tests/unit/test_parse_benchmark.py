@@ -168,6 +168,7 @@ _EXPECTED_CATEGORIES = {
     "kana-listed",
     "kanji-glue",
     "spoken-idiom",
+    "sentence-grammar",
 }
 
 

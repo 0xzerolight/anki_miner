@@ -146,9 +146,13 @@ def _negative_adjective(tokens: list, i: int) -> _Join | None:
 
 
 def _kana_join(tokens: list, i: int) -> _Join | None:
-    """The longest kana word list join starting at ``tokens[i]``: by surfaces, or ending on a dictionary form."""
+    """The longest kana word list join starting at ``tokens[i]``: by surfaces, or ending on a dictionary form.
+
+    A row of one token (だろう, ください) is no join but the same kind of word: a
+    grammar expression the tagger files as an auxiliary, named by the list.
+    """
     listed = kana_words()
-    for size in range(min(_MAX_KANA_TOKENS, len(tokens) - i), 1, -1):
+    for size in range(min(_MAX_KANA_TOKENS, len(tokens) - i), 0, -1):
         span = tokens[i : i + size]
         surfaces = tuple(token.surface for token in span)
         row = listed.joins.get(surfaces) or listed.base_joins.get((*surfaces[:-1], extract_orth_base(span[-1])))
@@ -177,9 +181,12 @@ def _follows(tokens: list, i: int, after: str, joined_pos1: str | None = None) -
     ``tokens[i - 1]``: the joined word is what precedes (こう|いう is the 連体詞
     こういう, not the verb いう; よう|に|なる is a verb). A verb row refuses the
     auxiliary だ: the adnominal な of a na-adjective (嫌なこと) ends no verb.
+    A "clause" row (んだ, んです) follows whatever can end a clause (``_ends_clause``).
     """
     if not after:
         return True
+    if after == "clause":
+        return i == 0 or joined_pos1 is not None or _ends_clause(tokens[i - 1])
     if i == 0:
         return False
     before = tokens[i - 1]
@@ -189,6 +196,26 @@ def _follows(tokens: list, i: int, after: str, joined_pos1: str | None = None) -
     if joined_pos1 is None and pos1 == "助動詞" and extract_orth_base(before) == "だ":
         return False
     return pos1 in _VERB_POS1
+
+
+def _ends_clause(before) -> bool:
+    """Whether the explanatory ん of a "clause" row (んだ, んです) can follow ``before``.
+
+    Not the adnominal な (好きなんだ: the benchmark cards no んだ there), and not
+    a word the ん itself inflects: after て or a 連用形 the ん is the verb's own
+    contraction (やってんだ is やっている + のだ: the tagger marks that て
+    連体形-省略; くれんだ is くれる + のだ), which the verb's highlight already
+    covers, so a card there would overlap it.
+    """
+    pos1 = _pos1(before)
+    if pos1 == "助詞":
+        return not (_pos2(before) == "接続助詞" and before.surface in ("て", "で"))
+    if pos1 not in ("動詞", "助動詞", "形容詞"):
+        return True
+    c_form = getattr(getattr(before, "feature", None), "cForm", None)
+    if before.surface == "な" or not isinstance(c_form, str) or c_form.endswith("省略"):
+        return False
+    return c_form.startswith(("終止形", "連体形"))
 
 
 def _contiguous(spans: dict[int, tuple[int, int]], start: int, end: int) -> bool:
@@ -219,20 +246,27 @@ class LexicalJoiner:
         cache shares them) and returns the input object when nothing joins.
         One batched lookup per line covers every headword not seen before.
         """
-        joins = [join for join in self._find(tokens) if join.listed or join.pos1 in self._allowed_pos]
+        spans: dict[int, tuple[int, int]] = {}
+        kept: list[_Join] = []
+
+        def fits(candidate: _Join) -> bool:
+            if not (candidate.listed or candidate.pos1 in self._allowed_pos):
+                return False
+            if not spans:
+                spans.update(CompoundDictionaryMatcher._source_spans(text, tokens))
+            if not _contiguous(spans, candidate.start, candidate.end):
+                return False
+            if candidate.line_start and not _opens_clause(tokens, spans, candidate.start):
+                return False
+            previous = kept[-1] if kept and kept[-1].end == candidate.start - 1 else None
+            if not _follows(tokens, candidate.start, candidate.after, previous.pos1 if previous else None):
+                return False
+            kept.append(candidate)
+            return True
+
+        joins = self._find(tokens, fits)
         if not joins:
             return tokens
-        spans = CompoundDictionaryMatcher._source_spans(text, tokens)
-        kept: list[_Join] = []
-        for candidate in joins:
-            if not _contiguous(spans, candidate.start, candidate.end):
-                continue
-            if candidate.line_start and not _opens_clause(tokens, spans, candidate.start):
-                continue
-            previous = kept[-1] if kept and kept[-1].end == candidate.start - 1 else None
-            if _follows(tokens, candidate.start, candidate.after, previous.pos1 if previous else None):
-                kept.append(candidate)
-        joins = kept
         unknown = sorted({join.headword for join in joins} - self._attested.keys())
         if unknown:
             hits = self._lookup(unknown)
@@ -263,13 +297,18 @@ class LexicalJoiner:
         return out
 
     @staticmethod
-    def _find(tokens: list) -> list[_Join]:
-        """Greedy left-to-right table matches, the longest fixed entry first."""
+    def _find(tokens: list, fits: Callable[[_Join], bool] = lambda join: True) -> list[_Join]:
+        """Greedy left-to-right table matches, the longest fixed entry first.
+
+        A match that does not fit where it stands (``fits``) takes no tokens:
+        の|だ after a space is no のだ, and the だ|から behind it still joins.
+        """
         found: list[_Join] = []
         i = 0
-        while i < len(tokens) - 1:
-            join = _fixed_join(tokens, i) or _negative_adjective(tokens, i) or _kana_join(tokens, i)
-            if join is None:
+        last = len(tokens) - 1
+        while i <= last:
+            join = (i < last and (_fixed_join(tokens, i) or _negative_adjective(tokens, i))) or _kana_join(tokens, i)
+            if not join or not fits(join):
                 i += 1
             else:
                 found.append(join)

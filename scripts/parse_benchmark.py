@@ -506,6 +506,10 @@ _ANCHOR_HEADWORDS: tuple[str, ...] = (
     "機嫌が悪い",
     "腹が減る",
     "貴方達",
+    # sentence-grammar: expressions the kana word list joins or names
+    "んです",
+    "のです",
+    "でしょう",
 )
 
 # Yomitan `ruleIdentifiers` per fixture headword. A real term bank ships these,
