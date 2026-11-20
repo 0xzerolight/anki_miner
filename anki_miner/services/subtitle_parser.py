@@ -3056,7 +3056,7 @@ class SubtitleParserService:
         """
         if self._inclusion_rule.should_include(word_token):
             return True
-        if self._is_attested_mimetic(word_token):
+        if self._is_attested_mimetic(word_token) or self._is_attested_acronym(word_token):
             return True
         return self._recover_kana_content_word(word_token)
 
@@ -3119,6 +3119,8 @@ class SubtitleParserService:
         rejection = self._inclusion_rule.rejection(word_token)
         if rejection is not None and self._is_attested_mimetic(word_token):
             rejection = None
+        if rejection == REJECT_SCRIPT and self._is_attested_acronym(word_token):
+            rejection = None
         if rejection is None:
             if self._is_katakana_run_fragment(word_token, text, tok_start, tok_end):
                 return False
@@ -3179,6 +3181,27 @@ class SubtitleParserService:
         ):
             return False
         if self._inclusion_rule.rejection(word_token) != REJECT_SOUND_EFFECT:
+            return False
+        return surface in self._memoized_attest([surface])
+
+    def _is_attested_acronym(self, word_token) -> bool:
+        """Whether a noun written in capital Latin letters is a word the dictionary has (ＣＤ, ＯＫ, ＮＧ, ＤＶＤ).
+
+        The script gate turns away every token without kanji or kana, and with
+        it the letter words Japanese uses as nouns. Two or more capital letters,
+        full-width or not, that are a dictionary headword as written come back;
+        a single letter, lower-case English in a line (ｙｏｕ, ｔｈｅ) and letters
+        the dictionary does not list stay out. Without a dictionary nothing changes.
+        """
+        surface = word_token.surface
+        if (
+            self._term_lookup is None
+            or len(surface) < 2
+            or not all("Ａ" <= ch <= "Ｚ" or "A" <= ch <= "Z" for ch in surface)
+            or getattr(getattr(word_token, "feature", None), "pos1", None) != "名詞"
+        ):
+            return False
+        if self._inclusion_rule.rejection(word_token) != REJECT_SCRIPT:
             return False
         return surface in self._memoized_attest([surface])
 

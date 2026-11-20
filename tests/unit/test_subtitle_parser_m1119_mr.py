@@ -1,4 +1,5 @@
-"""Lane MR: doubled katakana mimetic words (ドキドキ), and a noun + って the tagger reads as a rare verb (恋って)."""
+"""Lane MR: doubled katakana mimetic words (ドキドキ), a noun + って the tagger reads as a rare verb (恋って),
+and capital-letter words the dictionary has (ＣＤ)."""
 
 from __future__ import annotations
 
@@ -127,3 +128,37 @@ class TestNounBeforeQuotingTte:
     )
     def test_the_verbs_other_forms_are_untouched(self, text: str, verb: str) -> None:
         assert verb in _fronts(SubtitleParserService(AnkiMinerConfig()), text)
+
+
+class TestAttestedLetterWords:
+    _LETTER_WORDS = ("ＣＤ", "ＤＶＤ", "ＮＧ", "ＯＫ")
+
+    @pytest.mark.parametrize(
+        ("text", "front"),
+        [
+            ("新しいＣＤを買った", "ＣＤ"),
+            ("ＤＶＤで映画を見る", "ＤＶＤ"),
+            ("その言葉はＮＧだ", "ＮＧ"),
+            ("これでＯＫです", "ＯＫ"),
+        ],
+    )
+    def test_a_capital_letter_word_the_dictionary_has_is_mined(self, text: str, front: str) -> None:
+        assert front in _fronts(_service(self._LETTER_WORDS), text)
+
+    @pytest.mark.parametrize("text", ["新しいＣＤを買った", "これでＯＫです"])
+    def test_one_the_dictionary_lacks_stays_out(self, text: str) -> None:
+        assert not set(_fronts(_service(), text)) & set(self._LETTER_WORDS)
+
+    def test_nothing_changes_without_a_dictionary(self) -> None:
+        assert "ＣＤ" not in _fronts(SubtitleParserService(AnkiMinerConfig()), "新しいＣＤを買った")
+
+    @pytest.mark.parametrize(
+        ("text", "letters"),
+        [
+            ("ｙｏｕは誰だ", "ｙｏｕ"),
+            ("答えはＡだ", "Ａ"),
+            ("Ｎｏと言った", "Ｎｏ"),
+        ],
+    )
+    def test_lower_case_and_single_letters_stay_out_even_when_listed(self, text: str, letters: str) -> None:
+        assert letters not in _fronts(_service([letters]), text)
