@@ -1,0 +1,75 @@
+{"id":"mk01","sentence":"ったく、遅いな","expected":["ったく","遅い"],"category":"m1119-kana-rows","note":"the clipped まったく is its own JMdict word; the tagger gives it 副詞"}
+{"id":"mk02","sentence":"うむ、分かった","expected":["うむ","分かる"],"category":"m1119-kana-rows","note":"an interjection JMdict gives no priority tag"}
+{"id":"mk03","sentence":"おおきに","expected":["おおきに"],"category":"m1119-kana-rows","note":"Kansai thanks"}
+{"id":"mk04","sentence":"てめぇの番だ","expected":["てめぇ","番"],"category":"m1119-kana-rows","note":"the small-ぇ spelling of the listed てめえ"}
+{"id":"mk05","sentence":"とやかく言うな","expected":["とやかく","言う"],"category":"m1119-kana-rows"}
+{"id":"mk06","sentence":"昔のまんまだ","expected":["昔","まんま"],"category":"m1119-kana-rows","note":"spoken まま"}
+{"id":"mk08","sentence":"立派なもんだ","expected":["立派","もん"],"category":"m1119-kana-rows","note":"spoken もの"}
+{"id":"mk09","sentence":"ようすが変だ","expected":["ようす","変"],"category":"m1119-kana-rows","note":"a three-mora kana spelling of a kanji-written noun, named"}
+{"id":"mk10","sentence":"犬のしっぽ","expected":["犬","しっぽ"],"category":"m1119-kana-rows"}
+{"id":"mk11","sentence":"きげんが悪い","expected":["きげん","悪い"],"category":"m1119-kana-rows"}
+{"id":"mk12","sentence":"ぜんぶ食べた","expected":["ぜんぶ","食べる"],"category":"m1119-kana-rows"}
+{"id":"mj01","sentence":"なんか変だ","expected":["なんか","変"],"category":"m1119-kana-joins","note":"なん|か is 'somehow', a word of its own"}
+{"id":"mj02","sentence":"なんで来たの","expected":["なんで","来る"],"category":"m1119-kana-joins"}
+{"id":"mj03","sentence":"なんとか間に合った","expected":["なんとか","間に合う"],"category":"m1119-kana-joins"}
+{"id":"mj04","sentence":"なんだか眠い","expected":["なんだか","眠い"],"category":"m1119-kana-joins"}
+{"id":"mj05","sentence":"なんでも食べる","expected":["なんでも","食べる"],"category":"m1119-kana-joins","note":"the longer row wins over なんで"}
+{"id":"mj06","sentence":"なんにも見えない","expected":["なんにも","見える"],"category":"m1119-kana-joins"}
+{"id":"mj07","sentence":"そっか、分かった","expected":["そっか","分かる"],"category":"m1119-kana-joins","note":"the clipped そうか"}
+{"id":"mj08","sentence":"どっかで見た","expected":["どっか","見る"],"category":"m1119-kana-joins","note":"the clipped どこか"}
+{"id":"mj09","sentence":"うちらの番だ","expected":["うちら","番"],"category":"m1119-kana-joins"}
+{"id":"mj11","sentence":"耳がぴんと立った","expected":["耳","ぴんと","立つ"],"category":"m1119-kana-joins"}
+{"id":"mj12","sentence":"まともに見られない","expected":["まともに","見る"],"category":"m1119-kana-joins","note":"an adverb cut at に; the bare stem is turned away"}
+{"id":"mj13","sentence":"めったに来ない","expected":["めったに","来る"],"category":"m1119-kana-joins"}
+{"id":"mj14","sentence":"はるかに高い","expected":["はるかに","高い"],"category":"m1119-kana-joins"}
+{"id":"mj15","sentence":"ほんとに行くの","expected":["ほんとに","行く"],"category":"m1119-kana-joins"}
+{"id":"mj16","sentence":"いっしょに帰ろう","expected":["いっしょに","帰る"],"category":"m1119-kana-joins"}
+{"id":"mj17","sentence":"べつに構わない","expected":["べつに","構う"],"category":"m1119-kana-joins"}
+{"id":"mj18","sentence":"かってに決めるな","expected":["かってに","決める"],"category":"m1119-kana-joins"}
+{"id":"mj19","sentence":"なんでもないよ","expected":["なんでもない"],"category":"m1119-kana-joins","note":"the whole adjective, in every inflection; not なんでも + ない"}
+{"id":"mj20","sentence":"あまりにも遠い","expected":["あまりにも","遠い"],"category":"m1119-kana-joins","note":"the longer row wins over あまりに"}
+{"id":"mj21","sentence":"照れてなんか…","expected":["照れる"],"category":"m1119-kana-joins","note":"guard: after て the tagger's なん|か is the particle, so no join"}
+{"id":"mj22","sentence":"おやすみ","expected":["おやすみ"],"category":"m1119-kana-joins","note":"a greeting cut at the polite prefix"}
+{"id":"mj23","sentence":"おやすみなさい","expected":["おやすみなさい"],"category":"m1119-kana-joins","note":"the longer greeting wins"}
+{"id":"mj24","sentence":"おかえり","expected":["おかえり"],"category":"m1119-kana-joins"}
+{"id":"mj25","sentence":"おめでとう","expected":["おめでとう"],"category":"m1119-kana-joins"}
+{"id":"mj26","sentence":"ごちそうさまでした","expected":["ごちそうさま"],"category":"m1119-kana-joins"}
+{"id":"mj27","sentence":"ごめんなさい","expected":["ごめんなさい"],"category":"m1119-kana-joins","note":"not ごめん + なさい"}
+{"id":"mj28","sentence":"いただきます","expected":["いただきます"],"category":"m1119-kana-joins","note":"the greeting opens the line"}
+{"id":"mj29","sentence":"見ていただきます","expected":["見る"],"category":"m1119-kana-joins","note":"guard: after て it is the humble auxiliary"}
+{"id":"mj30","sentence":"かしこまりました","expected":["かしこまりました"],"category":"m1119-kana-joins"}
+{"id":"mj31","sentence":"すまなかった","expected":["すまない"],"category":"m1119-kana-joins","note":"the apology in every inflection"}
+{"id":"mj32","sentence":"すまん、遅れた","expected":["すまん","遅れる"],"category":"m1119-kana-joins"}
+{"id":"mk13","sentence":"まぁ無理だ","expected":["まぁ","無理"],"category":"m1119-kana-rows","note":"the small-ぁ spelling of the listed まあ"}
+{"id":"mk14","sentence":"そりゃ無理だ","expected":["そりゃ","無理"],"category":"m1119-kana-rows","note":"spoken それは, a JMdict word of its own"}
+{"id":"mk15","sentence":"こりゃ大変だ","expected":["こりゃ","大変"],"category":"m1119-kana-rows"}
+{"id":"mk16","sentence":"なんぼ言っても聞かない","expected":["なんぼ","言う","聞く"],"category":"m1119-kana-rows"}
+{"id":"mk17","sentence":"ちょいと待ちな","expected":["ちょいと","待つ"],"category":"m1119-kana-rows"}
+{"id":"mk18","sentence":"どいつが犯人だ","expected":["どいつ","犯人"],"category":"m1119-kana-rows"}
+{"id":"mk19","sentence":"父のもとで働く","expected":["父","もと","働く"],"category":"m1119-kana-rows","note":"a two-kana noun named on the short list"}
+{"id":"mj33","sentence":"とっさに隠れた","expected":["とっさに","隠れる"],"category":"m1119-kana-joins"}
+{"id":"mj34","sentence":"じきに治る","expected":["じきに","治る"],"category":"m1119-kana-joins"}
+{"id":"mj35","sentence":"もうじき春だ","expected":["もうじき","春"],"category":"m1119-kana-joins","note":"not もう + じき"}
+{"id":"mj36","sentence":"そのかわり手伝って","expected":["そのかわり","手伝う"],"category":"m1119-kana-joins","note":"not その + かわり"}
+{"id":"mk20","sentence":"ねぇ、聞いて","expected":["ねぇ","聞く"],"category":"m1119-kana-rows","note":"an interjection JMdict gives no priority tag"}
+{"id":"mk21","sentence":"こら、待て","expected":["こら","待つ"],"category":"m1119-kana-rows"}
+{"id":"mk22","sentence":"よっしゃ、勝った","expected":["よっしゃ","勝つ"],"category":"m1119-kana-rows"}
+{"id":"mk23","sentence":"やあ、元気か","expected":["やあ","元気"],"category":"m1119-kana-rows"}
+{"id":"mk24","sentence":"ほな、帰る","expected":["ほな","帰る"],"category":"m1119-kana-rows"}
+{"id":"mk25","sentence":"へえ、知らなかった","expected":["へえ","知る"],"category":"m1119-kana-rows"}
+{"id":"mk26","sentence":"ありがと","expected":["ありがと"],"category":"m1119-kana-rows","note":"the clipped ありがとう"}
+{"id":"mj37","sentence":"はいはい、分かった","expected":["はいはい","分かる"],"category":"m1119-kana-joins","note":"not はい twice"}
+{"id":"mj38","sentence":"ごちそうになった","expected":["ごちそう","なる"],"category":"m1119-kana-joins","note":"the word is cut at the polite prefix"}
+{"id":"mj39","sentence":"もうおしまいだ","expected":["もう","おしまい"],"category":"m1119-kana-joins"}
+{"id":"mj40","sentence":"おしゃべりな人","expected":["おしゃべり","人"],"category":"m1119-kana-joins"}
+{"id":"mj41","sentence":"おせっかいだな","expected":["おせっかい"],"category":"m1119-kana-joins"}
+{"id":"mj42","sentence":"でかした","expected":["でかした"],"category":"m1119-kana-joins"}
+{"id":"mj43","sentence":"どうしようもなかった","expected":["どうしようもない"],"category":"m1119-kana-joins","note":"the whole adjective; not どう + ない"}
+{"id":"mj44","sentence":"しかたがないな","expected":["しかたがない"],"category":"m1119-kana-joins","note":"not しかた + ない"}
+{"id":"mj45","sentence":"しょうがなかった","expected":["しょうがない"],"category":"m1119-kana-joins","note":"the listed join now holds in every inflection"}
+{"id":"mj46","sentence":"もったいなかった","expected":["もったいない"],"category":"m1119-kana-joins"}
+{"id":"mj47","sentence":"このへんに住む","expected":["このへん","住む"],"category":"m1119-kana-joins","note":"not この + へん (read as 変)"}
+{"id":"mj48","sentence":"こっから行く","expected":["こっから","行く"],"category":"m1119-kana-joins","note":"the clipped ここから"}
+{"id":"mj49","sentence":"どっから来た","expected":["どっから","来る"],"category":"m1119-kana-joins"}
+{"id":"mj50","sentence":"どんだけ待つの","expected":["どんだけ","待つ"],"category":"m1119-kana-joins"}
+{"id":"mj51","sentence":"そんで帰った","expected":["そんで","帰る"],"category":"m1119-kana-joins","note":"a conjunction where it opens the line"}
