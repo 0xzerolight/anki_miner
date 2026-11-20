@@ -385,6 +385,10 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         self._debounce_timer.setSingleShot(True)
         self._debounce_timer.setInterval(_AUTOSAVE_DEBOUNCE_MS)
         self._debounce_timer.timeout.connect(self._on_debounce_timeout)
+        # The issue shown for the current streak of failed auto-saves, None
+        # while saves succeed: the retry runs every second, so the banner and
+        # the log line come once per streak, not once per retry.
+        self._autosave_failure: ScreenIssue | None = None
         self._wire_edit_signals()
 
         # A search jump lands one turn late on purpose: the page it selects has
@@ -1646,11 +1650,16 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
 
         ``_commit_settings`` has already restored the dirty flag and re-armed
         the retry when it raises; letting the error escape would only hand it
-        to the excepthook on every retry.
+        to the excepthook on every retry. A failure that left the edit unsaved
+        starts a streak: shown on the banner and logged once, and again only by
+        the close flush, whose edits are lost.
         """
         try:
             self._commit_settings(closing=closing)
         except Exception as error:  # noqa: BLE001 - restored and re-armed by _commit_settings
+            unsaved = not (isinstance(error, ConfigCommitError) and error.result.persisted)
+            if unsaved and self._autosave_failure is not None and not closing:
+                return
             log_summary(
                 logger,
                 "Settings auto-save failed",
@@ -1659,6 +1668,21 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
                 retry=self._debounce_timer.isActive(),
                 error=f"{type(error).__name__}: {error}",
             )
+            if unsaved and self._autosave_failure is None:
+                self._autosave_failure = ScreenIssue(
+                    summary=self.tr(
+                        "Settings could not be saved. Anki Miner keeps retrying; closing it now loses your latest changes."
+                    ),
+                    details=f"{type(error).__name__}: {error}",
+                )
+                self.show_screen_issue(self._autosave_failure)
+
+    def _end_autosave_failure_streak(self) -> None:
+        """Clear the failed-save issue once a save reaches disk, unless another issue replaced it."""
+        failure, self._autosave_failure = self._autosave_failure, None
+        banner = self.issue_banner()
+        if failure is not None and banner is not None and banner.current_issue() is failure:
+            self.clear_screen_issue()
 
     def _pending_field_names(self) -> list[str]:
         """Config fields the panels currently propose changing, for a log line.
@@ -1902,6 +1926,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
             self._commit_config(new_config)
         except ConfigCommitError as error:
             if error.result.persisted:
+                self._end_autosave_failure_streak()
                 self._sync_persisted_config(new_config)
                 if dicts_root_changed:
                     self._loading = True
@@ -1910,6 +1935,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
                     finally:
                         self._loading = False
             raise
+        self._end_autosave_failure_streak()
 
         # Sync the dictionary panel only after configuration persistence
         # succeeds, so a failed save cannot transfer mutation authority to an

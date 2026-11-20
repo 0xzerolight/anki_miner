@@ -9,6 +9,7 @@ close-time flush that must never spin the modal zip import.
 from __future__ import annotations
 
 import contextlib
+import logging
 from dataclasses import replace
 from pathlib import Path
 
@@ -462,6 +463,42 @@ def test_debounced_save_failure_stays_dirty_and_retries(test_config, qtbot, tmp_
         assert widget._settings_dirty is True
         assert widget._debounce_timer.isActive()
         assert widget.dictionary_panel._dicts_root == test_config.dicts_root
+    finally:
+        _teardown_tab(widget, qtbot)
+
+
+def test_a_failing_autosave_streak_is_shown_and_logged_once_until_a_save_succeeds(test_config, qtbot, caplog):
+    """A save that keeps failing shows one issue and one log line, both gone after a good save."""
+    failing = [True]
+    widget: SettingsTab | None = None
+
+    def commit(config: AnkiMinerConfig) -> None:
+        assert widget is not None
+        widget._debounce_timer.setInterval(60_000)
+        if failing[0]:
+            raise ConfigCommitError(ConfigCommitResult.pre_save_failure(PermissionError(13, "Permission denied")))
+
+    widget = _build_tab(test_config, qtbot, commit)
+    try:
+        widget._debounce_timer.setInterval(60_000)
+        widget.anki_panel.set_deck_name("Unsaved")
+        with caplog.at_level(logging.WARNING, logger="anki_miner.gui.widgets.settings_tab"):
+            for _ in range(3):
+                widget._on_debounce_timeout()
+        failures = [r for r in caplog.records if r.getMessage().startswith("Settings auto-save failed")]
+        assert len(failures) == 1
+        issue = widget.issue_banner().current_issue()
+        assert issue is not None and "Permission denied" in issue.details
+        assert widget.save_status_label.text() != "✓ Saved"
+        assert widget._settings_dirty is True
+        assert widget._debounce_timer.isActive()
+
+        failing[0] = False
+        widget._on_debounce_timeout()
+
+        assert widget.issue_banner().current_issue() is None
+        assert widget.save_status_label.text() == "✓ Saved"
+        assert widget._settings_dirty is False
     finally:
         _teardown_tab(widget, qtbot)
 
