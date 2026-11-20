@@ -498,6 +498,14 @@ _ANCHOR_HEADWORDS: tuple[str, ...] = (
     "ガイル",
     "二位",
     "しかない",
+    # spoken-idiom: an idiom the line spells for the ear (ヤマ, 手ぇ) or says
+    # without its が (頭痛い); 腹が減る and 貴方達 are the guards' headwords
+    "山を張る",
+    "手を貸す",
+    "頭が痛い",
+    "機嫌が悪い",
+    "腹が減る",
+    "貴方達",
 )
 
 # Yomitan `ruleIdentifiers` per fixture headword. A real term bank ships these,

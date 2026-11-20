@@ -113,6 +113,57 @@ def _potential_base(token) -> str:
     return ""
 
 
+# A noun the line spells for the ear: a native word in katakana (ワレ, フリ, カネ)
+# or a one-word noun with its vowel drawn out (手ぇ, 気い, 目ぇ). The dictionary
+# lists the idiom under the plain spelling (我を忘れる, 手を出す), so a span
+# also offers the join with such a token's lemma. Hiragana is left alone: the
+# tagger's kanji for a kana word is a guess (かい is 甲斐, 貝 or 会). A katakana
+# word must read as its lemma does, voicing aside (酒グセ is 酒癖): アンタ has the
+# lemma 貴方, which is あなた, another word.
+_KATAKANA_WORD_RE = re.compile(r"[ァ-ヺー]+")
+_KANJI_RE = re.compile(r"[々一-鿿]")
+_DRAWN_VOWELS = frozenset("ぁぃぅぇぉあいうえおー")
+
+
+def _plain_spelling(token) -> str:
+    """``token``'s surface, or its lemma when the surface is that noun written for the ear."""
+    surface = getattr(token, "surface", None) or ""
+    lemma = getattr(getattr(token, "feature", None), "lemma", None)
+    if _pos1(token) not in ("名詞", "代名詞") or not isinstance(lemma, str) or not _KANJI_RE.search(lemma):
+        return surface
+    if surface[:-1] == lemma and surface[-1] in _DRAWN_VOWELS:
+        return lemma
+    lemma_reading = getattr(token.feature, "lForm", None)
+    if (
+        _KATAKANA_WORD_RE.fullmatch(surface)
+        and isinstance(lemma_reading, str)
+        and _unvoiced(surface) == _unvoiced(lemma_reading)
+    ):
+        return lemma
+    return surface
+
+
+# Speech drops the が of a noun + adjective idiom (耳早い, 頭痛い, 金ない). A noun
+# right before an adjective also offers the dictionary's own spelling with the
+# particle, after the plain join (仲いい is a headword of its own). Verbs stay
+# out on measured evidence: 腹減った is 腹が減る, but as many bare noun + verb
+# pairs are the two words the learner wants (the benchmark lost six cards and
+# gained three junk ones for one card gained). So does the formal noun 事: 事ない
+# is as often そんな事ない or 心配する事ない as the 事がない of 見た事がない.
+_DROPPED_PARTICLE = "が"
+_DROPPED_PARTICLE_REJECT_HEADS = frozenset({"事"})
+
+
+def _dropped_particle_candidates(head, tail, prefix: str) -> Alternatives:
+    """The kind-A candidate for a bare noun + adjective with が put back."""
+    if _pos1(head) != "名詞" or _pos2(head) != "普通名詞" or _pos1(tail) != "形容詞":
+        return ()
+    if head.surface in _DROPPED_PARTICLE_REJECT_HEADS:
+        return ()
+    base = extract_orth_base(tail)
+    return ((prefix + _DROPPED_PARTICLE + base, "A"),) if base else ()
+
+
 # A span must END on a content token. Without this rule, JMdict's thousands of
 # inflected-form headwords (気にするな, 気をつけて, ああ言った …) would match a
 # raw surface join and ship an inflected card front.
@@ -260,6 +311,9 @@ class CompoundDictionaryMatcher:
 
     _default_max_span_chars = _MAX_SPAN_CHARS
     _fixed_forms = True
+    # Whether a span also offers its spoken-idiom spellings (_plain_spelling,
+    # _dropped_particle_candidates); a name span never does.
+    _spoken_idioms = True
 
     def __init__(
         self,
@@ -330,6 +384,8 @@ class CompoundDictionaryMatcher:
                         ):
                             continue
                         synthetic = self._build_synthetic(tokens[i : j + 1], candidate, kind)
+                        if self._spoken_idioms and kind == "A":
+                            self._keep_written_base(synthetic, tokens[i : j + 1], candidate)
                         # Never consume tokens for a word the gate would then drop.
                         if self._rule.should_include(synthetic) or self._whitelisted(synthetic, candidate):
                             replacement = synthetic
@@ -344,6 +400,21 @@ class CompoundDictionaryMatcher:
                 merged.append(token)
                 i += 1
         return merged
+
+    def _keep_written_base(self, synthetic, span: list, headword: str) -> None:
+        """Note on a spoken-idiom join the base the line spells (腹減る for 腹が減る).
+
+        The highlight follows a word's inflection by deinflecting the line's text
+        to the token's base; 腹減って never reaches 腹が減る, so the bold would
+        stop at the stem. The parser offers ``written_base`` as one more target
+        (``_find_highlight_end``); the card front stays the headword.
+        """
+        prefix = "".join(token.surface for token in span[:-1])
+        tail = span[-1]
+        if all(
+            headword != own for own, _kind in self._candidate_for_tail(prefix, tail, prefix + tail.surface, span[0])
+        ):
+            synthetic.feature.written_base = prefix + extract_orth_base(tail)
 
     def _adverbial_fits(self, tokens: list, start: int, end: int, headword: str) -> bool:
         """Whether a span ending on a particle is a word of its own here (本当に, not その時に)."""
@@ -463,6 +534,7 @@ class CompoundDictionaryMatcher:
             if start_span is None or not self._can_start_at(tokens, i):
                 continue
             prefix = tokens[i].surface
+            plain = _plain_spelling(tokens[i]) if self._spoken_idioms else prefix
             source_end = start_span[1]
             for j in range(i + 1, min(i + self._max_span, n)):
                 tail = tokens[j]
@@ -480,13 +552,32 @@ class CompoundDictionaryMatcher:
                 # (0..2) span ending on する is reachable through the な).
                 if self._can_end_span(tail):
                     out[(i, j)] = self._candidate_for_tail(prefix, tail, joined, tokens[i])
+                    if self._spoken_idioms:
+                        out[(i, j)] += self._spoken_idiom_candidates(plain, tokens, i, j, joined)
                 head_base = self._fixed_form_head(tokens, i, j)
                 if head_base is not None:
                     out[(i, j)] = out.get((i, j), ()) + ((joined, "F"),)
                     self._fixed_heads[(i, j)] = head_base
                 prefix = joined
+                if self._spoken_idioms:
+                    plain += _plain_spelling(tail)
                 source_end = tail_span[1]
         return out
+
+    def _spoken_idiom_candidates(self, plain: str, tokens: list, i: int, j: int, joined: str) -> Alternatives:
+        """The span's extra candidates: its plain spelling, and a dropped が put back.
+
+        ``plain`` is the plain spelling of ``tokens[i..j-1]``. Offered after the
+        span's own candidates, so a spelling the dictionary lists as written wins.
+        """
+        tail = tokens[j]
+        plain_joined = plain + _plain_spelling(tail)
+        extra: Alternatives = ()
+        if plain_joined != joined:
+            extra += self._candidate_for_tail(plain, tail, plain_joined, tokens[i])
+        if j == i + 1:
+            extra += _dropped_particle_candidates(tokens[i], tail, plain)
+        return extra
 
     def _fixed_form_head(self, tokens: list, i: int, j: int) -> str | None:
         """The head's own base when ``tokens[i..j]`` is a word + a _FIXED_FORM_TAILS tail, else None."""
@@ -641,6 +732,7 @@ class NameSpanMatcher(CompoundDictionaryMatcher):
 
     _default_max_span_chars = _MAX_NAME_SPAN_CHARS
     _fixed_forms = False
+    _spoken_idioms = False
 
     @staticmethod
     def _candidate_for_tail(prefix: str, tail, joined: str, head) -> Alternatives:
