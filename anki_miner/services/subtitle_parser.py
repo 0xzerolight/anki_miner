@@ -206,6 +206,14 @@ _KANA_AUX_WORDS: frozenset[str] = frozenset(
 # conjunctive particle (見ている, 来てくれた, やればいい).
 _AUX_AFTER_POS1: frozenset[str] = frozenset({"動詞", "形容詞", "助動詞"})
 
+# A joined word ending in the て of する or やる (どうして, として, どうやって) hides
+# that て from the check above, so どうしている would card いる. Owner's decision
+# of 2026-11-20: after such a join refuse only the words that follow a て as
+# grammar; できる, なる and the rest stay the line's own (どうしてできないの).
+# Other て-final joins (について, によって) keep これについていい案's いい.
+_AUX_AFTER_TE_JOIN: frozenset[str] = frozenset({"いる", "いい", "くれる", "ほしい"})
+_TE_JOIN_ENDINGS: tuple[str, ...] = ("して", "やって")
+
 # Cries the tagger reads as an auxiliary-capable word, by their tokens: やった
 # ('yes!', not 'did') and いてっ/いたっ ('ouch', 痛っ). Each is a cry only alone
 # between pauses: after a line start, a punctuation mark or an interjection.
@@ -3204,6 +3212,12 @@ class SubtitleParserService:
         if pos1 in _AUX_AFTER_POS1 or (pos1 == "助詞" and getattr(prev, "pos2", None) == "接続助詞"):
             return True
         if idx >= 2 and tokens[idx - 1].surface in ("も", "は") and tokens[idx - 2].surface in ("て", "で"):
+            return True
+        if (
+            getattr(tokens[idx - 1], "compound", False)
+            and tokens[idx - 1].surface.endswith(_TE_JOIN_ENDINGS)
+            and getattr(word_token.feature, "orthBase", None) in _AUX_AFTER_TE_JOIN
+        ):
             return True
         if pos1 not in (None, *_AUX_CRY_AFTER_POS1):
             return False
