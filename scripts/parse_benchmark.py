@@ -336,6 +336,8 @@ _ANCHOR_HEADWORDS: tuple[str, ...] = (
     "刑務所",
     "不可能",
     "不可能性",
+    # the crime suffix 犯 re-cut out of 犯っ|て keeps 殺人犯 whole (xg03)
+    "殺人犯",
     # colloquial orthBase targets (kana recovery mines these from すげえ/やべえ/
     # うめえ/わかんない; the expected form is the orthBase, never the kanji lemma)
     "やばい",
