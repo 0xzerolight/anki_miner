@@ -263,6 +263,20 @@ JOINS: tuple[tuple[str, str, str, str], ...] = (
     # After the adnominal な the expression is なんだ, なんです (好きなんだ, 歌手なんです).
     ("なんだ", "感動詞", "な|ん|だ", ""),
     ("なんです", "感動詞", "な|ん|です", ""),
+    # Conjunctions and adverbs the tagger cuts at an auxiliary or a particle.
+    # The copula rows only open a clause (だったら帰る; 丈夫だったら is the
+    # copula's own conditional), and っていう follows a noun as という does.
+    # Left out: と|し|たら, which after a volitional is "tried to" (渡そうとしたら).
+    ("だったら", "接続詞", "だっ|たら", "start"),
+    ("だが", "接続詞", "だ|が", "start"),
+    ("ですが", "接続詞", "です|が", "start"),
+    ("ですから", "接続詞", "です|から", "start"),
+    ("それより", "接続詞", "それ|より", "start"),
+    ("そしたら", "接続詞", "そ|し|たら", ""),
+    ("そうやって", "副詞", "そう|やっ|て", ""),
+    ("こうやって", "副詞", "こう|やっ|て", ""),
+    ("くせに", "副詞", "くせ|に", ""),
+    ("っていう", "連体詞", "って|いう", "noun"),
 )
 
 _HEADER = """\

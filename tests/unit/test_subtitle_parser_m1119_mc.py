@@ -151,3 +151,46 @@ class TestSentenceGrammar:
         fronts = [word.mined_form for word in _words("もういいの だから寝る", (*_GRAMMAR, "だから"))]
         assert "だから" in fronts
         assert "のだ" not in fronts
+
+
+_CONNECTIVES = (
+    "だったら",
+    "だが",
+    "ですが",
+    "ですから",
+    "それより",
+    "そしたら",
+    "としたら",
+    "そうやって",
+    "くせに",
+    "っていう",
+)
+
+
+class TestConnectives:
+    @pytest.mark.parametrize(
+        ("text", "front"),
+        [
+            ("だったら帰る", "だったら"),
+            ("だが断る", "だが"),
+            ("ですから無理です", "ですから"),
+            ("それより仕事だ", "それより"),
+            ("そしたら動かない", "そしたら"),
+            ("そうやって逃げる", "そうやって"),
+            ("父親のくせに泣く", "くせに"),
+            ("猫っていう動物", "っていう"),
+        ],
+    )
+    def test_mines_the_connective(self, text, front):
+        assert front in [word.mined_form for word in _words(text, _CONNECTIVES)]
+
+    @pytest.mark.parametrize(
+        ("text", "front"),
+        [
+            ("体が丈夫だったら行く", "だったら"),  # the copula's own conditional
+            ("静かだが暗い", "だが"),
+            ("彼が行くっていうから待つ", "っていう"),  # says, not called
+        ],
+    )
+    def test_the_same_tokens_inside_a_clause_stay_apart(self, text, front):
+        assert front not in [word.mined_form for word in _words(text, _CONNECTIVES)]
