@@ -40,3 +40,14 @@
 {"id":"mj30","sentence":"かしこまりました","expected":["かしこまりました"],"category":"m1119-kana-joins"}
 {"id":"mj31","sentence":"すまなかった","expected":["すまない"],"category":"m1119-kana-joins","note":"the apology in every inflection"}
 {"id":"mj32","sentence":"すまん、遅れた","expected":["すまん","遅れる"],"category":"m1119-kana-joins"}
+{"id":"mk13","sentence":"まぁ無理だ","expected":["まぁ","無理"],"category":"m1119-kana-rows","note":"the small-ぁ spelling of the listed まあ"}
+{"id":"mk14","sentence":"そりゃ無理だ","expected":["そりゃ","無理"],"category":"m1119-kana-rows","note":"spoken それは, a JMdict word of its own"}
+{"id":"mk15","sentence":"こりゃ大変だ","expected":["こりゃ","大変"],"category":"m1119-kana-rows"}
+{"id":"mk16","sentence":"なんぼ言っても聞かない","expected":["なんぼ","言う","聞く"],"category":"m1119-kana-rows"}
+{"id":"mk17","sentence":"ちょいと待ちな","expected":["ちょいと","待つ"],"category":"m1119-kana-rows"}
+{"id":"mk18","sentence":"どいつが犯人だ","expected":["どいつ","犯人"],"category":"m1119-kana-rows"}
+{"id":"mk19","sentence":"父のもとで働く","expected":["父","もと","働く"],"category":"m1119-kana-rows","note":"a two-kana noun named on the short list"}
+{"id":"mj33","sentence":"とっさに隠れた","expected":["とっさに","隠れる"],"category":"m1119-kana-joins"}
+{"id":"mj34","sentence":"じきに治る","expected":["じきに","治る"],"category":"m1119-kana-joins"}
+{"id":"mj35","sentence":"もうじき春だ","expected":["もうじき","春"],"category":"m1119-kana-joins","note":"not もう + じき"}
+{"id":"mj36","sentence":"そのかわり手伝って","expected":["そのかわり","手伝う"],"category":"m1119-kana-joins","note":"not その + かわり"}

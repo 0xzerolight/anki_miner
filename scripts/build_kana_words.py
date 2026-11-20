@@ -46,7 +46,7 @@ SHORT_NOUNS: frozenset[str] = frozenset(
     | {"ひと", "いぬ", "ねこ", "ごみ", "くそ"}
     | {"うそ", "ばか", "ただ", "ふう", "うえ", "いま", "けが", "むちゃ"}
     | {"くせ", "ほう", "まね", "ふり", "たび", "あと", "わけ", "とこ", "ころ"}
-    | {"もん"}
+    | {"もん", "もと", "じき"}
 )
 
 #: The only two-kana spellings of kanji-written words listed outside the nouns.
@@ -68,6 +68,7 @@ UNTAGGED_COMMON: frozenset[str] = frozenset(
     {"やっぱ", "とっても", "あくまで", "とっとと", "めっちゃ", "ちょい", "そこそこ", "またまた", "まんまと", "ばっちり"}
     | {"おかげ", "こないだ", "ほんと", "ほんま", "とことん", "ごっこ", "こだわり", "てめえ", "おめえ", "わたくし"}
     | {"ったく", "うむ", "おおきに", "てめぇ", "とやかく", "まんま"}
+    | {"まぁ", "そりゃ", "そりゃあ", "こりゃ", "ありゃ", "なんぼ", "ちょいと", "どいつ"}
 )
 
 #: Tags a line gives a word that no carrier sentence does: あんな is 形状詞 in every
@@ -274,6 +275,10 @@ JOINS: tuple[tuple[str, str, str, str], ...] = (
     ("いっしょに", "副詞", "いっしょ|に", ""),
     ("べつに", "副詞", "べつ|に", ""),
     ("かってに", "副詞", "かって|に", ""),
+    ("とっさに", "副詞", "とっさ|に", ""),
+    ("じきに", "副詞", "じき|に", ""),
+    ("もうじき", "副詞", "もう|じき", ""),
+    ("そのかわり", "接続詞", "その|かわり", ""),
     # Greetings and set phrases the tagger cuts at the polite prefix or ending;
     # the piece between is another word (やすみ, かえる) or none (めでとう). いただきます
     # only opens a clause: after て or a verb stem it is the humble auxiliary.

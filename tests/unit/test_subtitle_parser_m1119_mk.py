@@ -57,6 +57,8 @@ _ATTESTED = frozenset(
     | {front for _text, front in _JOINED}
     | {"おやすみ", "おやすみなさい", "おかえり", "おかえりなさい", "おめでとう", "ごちそうさま", "おつかれさま"}
     | {"ごめんなさい", "ごめん", "いただきます", "かしこまりました", "すまない", "すまん"}
+    | {"まぁ", "そりゃ", "そりゃあ", "こりゃ", "ありゃ", "なんぼ", "ちょいと", "どいつ", "もと", "じき"}
+    | {"とっさに", "じきに", "もうじき", "そのかわり", "その", "もう"}
 )
 
 
@@ -159,3 +161,37 @@ class TestGreetings:
 
     def test_the_humble_auxiliary_is_no_greeting(self):
         assert "いただきます" not in _fronts("見ていただきます")
+
+
+class TestSpokenRows:
+    @pytest.mark.parametrize(
+        ("text", "front"),
+        [
+            ("まぁいいか", "まぁ"),
+            ("そりゃ無理だ", "そりゃ"),
+            ("そりゃあ無理だ", "そりゃあ"),
+            ("こりゃ大変だ", "こりゃ"),
+            ("ありゃ嘘だ", "ありゃ"),
+            ("なんぼ言っても聞かない", "なんぼ"),
+            ("ちょいと待ちな", "ちょいと"),
+            ("どいつが犯人だ", "どいつ"),
+            ("父のもとで働く", "もと"),
+            ("じき春が来る", "じき"),
+        ],
+    )
+    def test_mines_a_spoken_kana_word_by_name(self, text, front):
+        assert front in _fronts(text)
+
+    @pytest.mark.parametrize(
+        ("text", "front", "pieces"),
+        [
+            ("とっさに隠れた", "とっさに", ("とっさ",)),
+            ("じきに治る", "じきに", ("じき",)),
+            ("もうじき春だ", "もうじき", ("もう", "じき")),
+            ("そのかわり手伝って", "そのかわり", ("その", "かわり")),
+        ],
+    )
+    def test_joins_the_longer_word(self, text, front, pieces):
+        fronts = _fronts(text)
+        assert front in fronts
+        assert not set(pieces) & set(fronts)
