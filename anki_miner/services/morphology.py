@@ -1052,6 +1052,58 @@ _MISSPLITS: dict[tuple[tuple[str, str | None], ...], tuple[tuple[str, dict[str, 
 }
 
 
+def _noun_tte_resplit(
+    noun: str, kana: str, pos3: str = "一般", lemma: str | None = None
+) -> tuple[tuple[str, dict[str, str]], ...]:
+    """The re-cut of a one-kanji noun + って the tagger read as a verb's て form (恋っ|て → 恋|って)."""
+    kana_fields = ("lForm", "pron", "pronBase", "kana", "kanaBase", "form", "formBase")
+    return (
+        (
+            noun,
+            {
+                "pos1": "名詞",
+                "pos2": "普通名詞",
+                "pos3": pos3,
+                "cType": "*",
+                "cForm": "*",
+                **dict.fromkeys(("orth", "orthBase"), noun),
+                "lemma": lemma or noun,
+                **dict.fromkeys(kana_fields, kana),
+            },
+        ),
+        (
+            "って",
+            {
+                "pos2": "副助詞",
+                **dict.fromkeys(("lemma", "orth", "orthBase"), "って"),
+                **dict.fromkeys(kana_fields, "ッテ"),
+            },
+        ),
+    )
+
+
+# 恋って, 番って and 敵って before the quoting って: unidic-lite reads the 促音便 of 恋う
+# (whose て form is 恋うて), 番う 'to mate' and 敵う (written 叶って when it is meant).
+# The cost is the rare 番っている and 敵っている, which now card the noun.
+# The rows after them are nouns it reads as a verb spelled without its okurigana
+# (味わう, 逆らう, 曲がる) or as an old verb (司る, 隣る, 因る, 減る, 凍る).
+_MISSPLITS.update(
+    {
+        (("恋っ", "恋う"), ("て", "て")): _noun_tte_resplit("恋", "コイ", "サ変可能"),
+        (("番っ", "番う"), ("て", "て")): _noun_tte_resplit("番", "バン"),
+        (("敵っ", "敵う"), ("て", "て")): _noun_tte_resplit("敵", "テキ"),
+        (("味っ", "味わう"), ("て", "て")): _noun_tte_resplit("味", "アジ"),
+        (("逆っ", "逆らう"), ("て", "て")): _noun_tte_resplit("逆", "ギャク", "形状詞可能"),
+        (("曲っ", "曲がる"), ("て", "て")): _noun_tte_resplit("曲", "キョク"),
+        (("主っ", "司る"), ("て", "て")): _noun_tte_resplit("主", "ヌシ"),
+        (("隣っ", "隣る"), ("て", "て")): _noun_tte_resplit("隣", "トナリ", lemma="隣り"),
+        (("縁っ", "因る"), ("て", "て")): _noun_tte_resplit("縁", "エン"),
+        (("空っ", "減る"), ("て", "て")): _noun_tte_resplit("空", "ソラ"),
+        (("氷っ", "凍る"), ("て", "て")): _noun_tte_resplit("氷", "コオリ"),
+    }
+)
+
+
 def _unknown_katakana_noun(token) -> bool:
     """A katakana word the tagger does not know: a 名詞 with no lemma (スマホ, コスパ)."""
     feature = getattr(token, "feature", None)

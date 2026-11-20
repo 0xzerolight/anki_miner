@@ -1,4 +1,4 @@
-"""Doubled katakana mimetic words (ドキドキ) are mined when the dictionary has them; sound effects stay out."""
+"""Lane MR: doubled katakana mimetic words (ドキドキ), and a noun + って the tagger reads as a rare verb (恋って)."""
 
 from __future__ import annotations
 
@@ -80,3 +80,50 @@ class TestAttestedKatakanaMimetics:
         service = _service(_MIMETICS)
         token = next(tok for tok in service._tagger()("胸がドキドキする") if tok.surface == "ドキドキ")
         assert service._should_include_word(token) is True
+
+
+class TestNounBeforeQuotingTte:
+    """恋って, 番って and 敵って are the noun and the particle って, not the て form of 恋う, 番う and 敵う."""
+
+    @pytest.mark.parametrize(
+        ("text", "noun", "verb"),
+        [
+            ("恋ってすごいですね", "恋", "恋う"),
+            ("次は私の番ってことでいいよね", "番", "番う"),
+            ("敵って誰のことですか", "敵", "敵う"),
+            ("この味って何だろう", "味", "味う"),
+            ("この曲っていいよね", "曲", "曲る"),
+            ("あの空ってきれいだね", "空", "空る"),
+            ("この氷って溶けないの", "氷", "氷る"),
+            ("この逆って何だろう", "逆", "逆う"),
+            ("この隣って誰の席", "隣", "隣る"),
+            ("この縁って大事だね", "縁", "縁る"),
+            ("森の主って誰のこと", "主", "主る"),
+        ],
+    )
+    def test_the_noun_is_mined_and_the_verb_is_not(self, text: str, noun: str, verb: str) -> None:
+        fronts = _fronts(SubtitleParserService(AnkiMinerConfig()), text)
+        assert noun in fronts
+        assert verb not in fronts
+
+    def test_the_card_highlights_the_noun_alone(self) -> None:
+        service = SubtitleParserService(AnkiMinerConfig())
+        words, _index, _counts = service.parse_text_units(
+            [ReadingUnit(text="恋ってすごいですね", index=0, location_label="t")], want_line_index=False
+        )
+        word = next(word for word in words if word.mined_form == "恋")
+        assert word.sentence[word.surface_start : word.highlight_end] == "恋"
+        assert word.sentence == "恋ってすごいですね"
+
+    @pytest.mark.parametrize(
+        ("text", "verb"),
+        [
+            ("彼には敵わない", "敵う"),
+            ("大きな声で歌って", "歌う"),
+            ("料理を味わって食べる", "味わう"),
+            ("角を曲がって進む", "曲がる"),
+            ("親に逆らってばかり", "逆らう"),
+        ],
+    )
+    def test_the_verbs_other_forms_are_untouched(self, text: str, verb: str) -> None:
+        assert verb in _fronts(SubtitleParserService(AnkiMinerConfig()), text)
