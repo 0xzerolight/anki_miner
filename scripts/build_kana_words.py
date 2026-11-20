@@ -359,6 +359,9 @@ JOINS: tuple[tuple[str, str, str, str], ...] = (
     ("じゃない", "形容詞", "じゃ|=ない", ""),
     ("ではない", "形容詞", "で|は|=ない", ""),
     ("っていうか", "接続詞", "って|いう|か", ""),
+    # After the adnominal な the expression is なんだ, なんです (好きなんだ, 歌手なんです).
+    ("なんだ", "感動詞", "な|ん|だ", ""),
+    ("なんです", "感動詞", "な|ん|です", ""),
     # Conjunctions and adverbs the tagger cuts at an auxiliary or a particle.
     # The copula rows only open a clause (だったら帰る; 丈夫だったら is the
     # copula's own conditional), and っていう follows a noun as という does.

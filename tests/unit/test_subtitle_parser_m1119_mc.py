@@ -115,6 +115,15 @@ class TestSentenceGrammar:
     def test_mines_the_expression(self, text, front):
         assert front in [word.mined_form for word in _grammar_words(text)]
 
+    @pytest.mark.parametrize(
+        ("text", "front", "shorter"),
+        [("本当に好きなんだ", "なんだ", "んだ"), ("彼は歌手なんですか", "なんです", "ですか")],
+    )
+    def test_the_adnominal_na_belongs_to_the_expression(self, text, front, shorter):
+        fronts = [word.mined_form for word in _words(text, (*_GRAMMAR, "なんだ", "なんです"))]
+        assert front in fronts
+        assert shorter not in fronts
+
     def test_the_longer_expression_takes_the_copula(self):
         fronts = [word.mined_form for word in _grammar_words("高いんですか")]
         assert "ですか" not in fronts
