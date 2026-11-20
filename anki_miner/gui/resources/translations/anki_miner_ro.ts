@@ -2694,6 +2694,14 @@ Nu se șterge niciun fișier index.</translation>
         <translation>Creează un card pentru 3本 sau 4人 ca un singur cuvânt, citit cu modificările sale fonetice (さんぼん, よにん) și definit prin clasificator.</translation>
     </message>
     <message>
+        <source>Mine grammar points</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Card sentence grammar such as んだ, でしょう and ください. Turn it off to mine words only.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Blacklist / whitelist words</source>
         <translation>Listă neagră / listă albă de cuvinte</translation>
     </message>
@@ -6080,6 +6088,18 @@ Nu se șterge niciun fișier de pe disc.</translation>
     <message>
         <source>Make a card for a number and its counter, read with its sound changes (3本 さんぼん, 4人 よにん), defined by the counter. One card per number.</source>
         <translation>Creează un card pentru un număr și clasificatorul său, citit cu modificările sale fonetice (3本 さんぼん, 4人 よにん) și definit prin clasificator. Un card pentru fiecare număr.</translation>
+    </message>
+    <message>
+        <source>Grammar</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mine grammar points</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Sentence grammar such as んだ, でしょう and ください becomes cards.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Reading</source>

@@ -1,6 +1,6 @@
 {"id":"xg01","sentence":"父が雁助と会う","expected":["父","会う"],"category":"kanji-glue","note":"助 here is UniDic's name-forming すけ (lemma 助): no card. 雁 is still mined as a name piece, by no rule of this category."}
 {"id":"xg02","sentence":"スケが来た","expected":["スケ","来る"],"category":"kanji-glue","note":"The katakana slang スケ shares the lemma 助 and stays."}
-{"id":"xg03","sentence":"殺人犯って何","expected":["殺人","何"],"category":"kanji-glue","note":"Before って the tagger reads 犯 as the verb 犯っ (orthBase 犯る, vulgar やる): no card."}
+{"id":"xg03","sentence":"殺人犯って何","expected":["殺人犯","何"],"category":"kanji-glue","note":"Before って the tagger reads 犯 as the verb 犯っ (orthBase 犯る, vulgar やる); _MISSPLITS re-cuts it to the suffix 犯 + って, so the attested compound 殺人犯 is carded."}
 {"id":"xg04","sentence":"夜神君が来た","expected":["来る"],"category":"kanji-glue","note":"A surname's last kanji + 君 is no 神君 (deified Ieyasu) card; 夜 is still mined as a piece, by no rule of this category."}
 {"id":"xg05","sentence":"上総守殿だ","expected":[],"category":"kanji-glue","note":"A title's 守 + 殿 after a kanji is no 守殿 card."}
 {"id":"xg06","sentence":"神さん！ 助けて","expected":["神さん","助ける"],"category":"kanji-glue","note":"At the line start 神さん is the word and stays."}

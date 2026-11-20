@@ -143,16 +143,18 @@ EXCLUDED: dict[tuple[str, str], str] = {
     **dict.fromkeys((("ふん", "感動詞"), ("おす", "感動詞")), "filler"),
 }
 
-#: Words the tagger cuts apart: (headword, pos1, tokens, where). Kana
+#: Words the tagger cuts apart: (headword, pos1, tokens, where[, "grammar"]). Kana
 #: spans join in LexicalJoiner rather than the compound matcher, which attests
 #: a span by its exact term and so misses words JMdict spells in kana only as a
 #: reading (どういう, そのうち). The pos1 is the joined token's, so it decides the
 #: card front like any token's. ``where`` is "" (anywhere), "start" (opening a line or
 #: clause: a conjunction there, で|も inside one is the particles, 学校でも), "noun"
-#: (after a noun) or "verb" (after a verb or an auxiliary). Left out: それ|に,
+#: (after a noun) or "verb" (after a verb or an auxiliary). A "grammar" row is a
+#: grammar point (んだ, ください), joined only while the user's Settings → Word
+#: Filters → Mine grammar points is on. Left out: それ|に,
 #: as a subtitle space before それに伴う reads as a clause break, and その|うち,
 #: which is "of those" before の (そのうちの１本).
-JOINS: tuple[tuple[str, str, str, str], ...] = (
+JOINS: tuple[tuple[str, str, str, str] | tuple[str, str, str, str, str], ...] = (
     ("そのまま", "副詞", "その|まま", ""),
     ("このまま", "副詞", "この|まま", ""),
     ("そのうえ", "接続詞", "その|うえ", ""),
@@ -340,6 +342,30 @@ JOINS: tuple[tuple[str, str, str, str], ...] = (
     ("そんで", "接続詞", "そん|で", "start"),
     ("そんなら", "接続詞", "そん|なら", "start"),
     ("ほんなら", "接続詞", "ほん|なら", "start"),
+    # Sentence grammar JMdict lists as expressions and the tagger files as
+    # auxiliaries and particles. A row of one token is the token itself, mined
+    # by name. A "clause" row joins after whatever can end a clause (行くんだ,
+    # 高いんです), not after the adnominal な (好きなんだ) nor where the ん is a
+    # verb's own contraction (やってんだ): LexicalJoiner._ends_clause. の|です
+    # after a noun is the possessive (私のです), hence "verb". A "copula" row
+    # refuses a verb before it: there the で or じゃ is the verb's te-form
+    # (読んではない, 読んじゃない), already in the verb's highlight.
+    ("んだ", "感動詞", "ん|だ", "clause", "grammar"),
+    ("んです", "感動詞", "ん|です", "clause", "grammar"),
+    ("のです", "感動詞", "の|です", "verb", "grammar"),
+    ("のだ", "感動詞", "の|だ", "verb", "grammar"),
+    ("ですか", "感動詞", "です|か", "", "grammar"),
+    ("だろう", "感動詞", "だろう", "", "grammar"),
+    ("でしょう", "感動詞", "でしょう", "", "grammar"),
+    ("だろ", "感動詞", "だろ", "", "grammar"),
+    ("でしょ", "感動詞", "でしょ", "", "grammar"),
+    ("ください", "感動詞", "ください", "", "grammar"),
+    ("じゃない", "形容詞", "じゃ|=ない", "copula", "grammar"),
+    ("ではない", "形容詞", "で|は|=ない", "copula", "grammar"),
+    ("っていうか", "接続詞", "って|いう|か", "", "grammar"),
+    # After the adnominal な the expression is なんだ, なんです (好きなんだ, 歌手なんです).
+    ("なんだ", "感動詞", "な|ん|だ", "", "grammar"),
+    ("なんです", "感動詞", "な|ん|です", "", "grammar"),
     # Conjunctions and adverbs the tagger cuts at an auxiliary or a particle.
     # The copula rows only open a clause (だったら帰る; 丈夫だったら is the
     # copula's own conditional), and っていう follows a noun as という does.
@@ -363,6 +389,9 @@ _HEADER = """\
 # form<TAB>pos1<TAB>tokens[<TAB>where]   tokens LexicalJoiner joins (where: start, only opening a line or
 #                                        clause; noun or verb, only after one; a last token =X: any
 #                                        token whose dictionary form is X)
+# form<TAB>pos1<TAB>tokens<TAB>where<TAB>grammar
+#                                        a grammar point (where may be empty), joined only while
+#                                        Mine grammar points is on
 """
 
 
@@ -436,7 +465,10 @@ def build(jmdict: Path) -> list[str]:
             elif form in kanji_readings and _kanji_reading_fits(form, pos1, kanji_readings[form]):
                 rows[form, pos1] = True
     lines = [f"{form}\t{pos1}" + ("\tkanji" if kanji else "") for (form, pos1), kanji in sorted(rows.items())]
-    lines += ["\t".join((form, pos1, tokens, *([where] if where else []))) for form, pos1, tokens, where in JOINS]
+    lines += [
+        "\t".join((form, pos1, tokens, *([where] if where or grammar else []), *grammar))
+        for form, pos1, tokens, where, *grammar in JOINS
+    ]
     return lines
 
 

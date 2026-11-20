@@ -2691,6 +2691,14 @@ Er worden geen indexbestanden gewist.</translation>
         <translation>3本 of 4人 als één woord op een kaart zetten, gelezen met de klankveranderingen (さんぼん, よにん) en gedefinieerd via het telwoord.</translation>
     </message>
     <message>
+        <source>Mine grammar points</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Card sentence grammar such as んだ, でしょう and ください. Turn it off to mine words only.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Blacklist / whitelist words</source>
         <translation>Woorden op blacklist / whitelist</translation>
     </message>
@@ -6043,6 +6051,18 @@ Er worden geen bestanden van de schijf gewist.</translation>
     <message>
         <source>Make a card for a number and its counter, read with its sound changes (3本 さんぼん, 4人 よにん), defined by the counter. One card per number.</source>
         <translation>Een kaart maken voor een getal met zijn telwoord, gelezen met de klankveranderingen (3本 さんぼん, 4人 よにん) en gedefinieerd via het telwoord. Eén kaart per getal.</translation>
+    </message>
+    <message>
+        <source>Grammar</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mine grammar points</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Sentence grammar such as んだ, でしょう and ください becomes cards.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Reading</source>

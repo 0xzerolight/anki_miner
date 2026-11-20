@@ -2688,6 +2688,14 @@ Indexfájl nem törlődik.</translation>
         <translation>A 3本 vagy 4人 egy szóként kerül kártyára, hangváltozásokkal olvasva (さんぼん, よにん), a számlálószó szerint definiálva.</translation>
     </message>
     <message>
+        <source>Mine grammar points</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Card sentence grammar such as んだ, でしょう and ください. Turn it off to mine words only.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Blacklist / whitelist words</source>
         <translation>Szavak fekete- és fehérlistája</translation>
     </message>
@@ -6006,6 +6014,18 @@ A lemezről nem törlődik fájl.</translation>
     <message>
         <source>Make a card for a number and its counter, read with its sound changes (3本 さんぼん, 4人 よにん), defined by the counter. One card per number.</source>
         <translation>Kártya készítése egy számhoz és a számlálószavához, hangváltozásokkal olvasva (3本 さんぼん, 4人 よにん), a számlálószó szerint definiálva. Számonként egy kártya.</translation>
+    </message>
+    <message>
+        <source>Grammar</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mine grammar points</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Sentence grammar such as んだ, でしょう and ください becomes cards.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Reading</source>

@@ -46,7 +46,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from functools import lru_cache
-from typing import Any, Callable, Iterable, Mapping, Sequence
+from typing import Any, Callable, Iterable, Iterator, Mapping, Sequence
 
 from anki_miner.utils.text_utils import katakana_to_hiragana
 
@@ -361,21 +361,22 @@ def find_highlight_end_with_trace(
     kana_stem = katakana_to_hiragana(stem)
     kana_targets = {katakana_to_hiragana(target) for target in targets} if kana_stem != stem else set()
     for candidate_end in reversed(candidate_ends):  # longest-first
-        candidate = text[tok_start:candidate_end]
-        for result in deinflector.transform(candidate):
-            base_matches = result.text in targets and conditions_match_mask(result.conditions, mask)
-            additional_matches = (
-                additional_target is not None
-                and result.text == additional_target
-                and conditions_match_mask(result.conditions, additional_mask)
-            )
-            if base_matches or additional_matches:
-                chain = tuple(frame[0] for frame in reversed(result.trace))
-                return candidate_end, chain
-        if kana_targets:
-            for result in deinflector.transform(kana_stem + text[tok_end:candidate_end]):
-                if result.text in kana_targets and conditions_match_mask(result.conditions, mask):
-                    return candidate_end, tuple(frame[0] for frame in reversed(result.trace))
+        # A stretched tail (歩い|たぁ, 食べ|ねー) is the chain of its plain spelling.
+        for candidate in _unstretched_forms(text[tok_start:candidate_end], tok_end - tok_start):
+            for result in deinflector.transform(candidate):
+                base_matches = result.text in targets and conditions_match_mask(result.conditions, mask)
+                additional_matches = (
+                    additional_target is not None
+                    and result.text == additional_target
+                    and conditions_match_mask(result.conditions, additional_mask)
+                )
+                if base_matches or additional_matches:
+                    chain = tuple(frame[0] for frame in reversed(result.trace))
+                    return candidate_end, chain
+            if kana_targets:
+                for result in deinflector.transform(kana_stem + candidate[tok_end - tok_start :]):
+                    if result.text in kana_targets and conditions_match_mask(result.conditions, mask):
+                        return candidate_end, tuple(frame[0] for frame in reversed(result.trace))
     return tok_end, ()
 
 
@@ -385,6 +386,7 @@ def find_highlight_end_with_trace(
 _STRETCH_MARKS = frozenset("ーぁぃぅぇぉァィゥェォ")
 _WAVE_DASHES = frozenset("〜～")
 _EMPHATIC_SOKUON = frozenset("っッ")
+_E_ROW_KANA = frozenset("えけげせぜてでねへべぺめれ")
 
 
 def _is_kana(ch: str) -> bool:
@@ -409,6 +411,41 @@ def stretched_highlight_end(text: str, end: int) -> int:
     if sokuon_end == len(text) or not _is_kana(text[sokuon_end]):
         return sokuon_end
     return end
+
+
+def _unstretched_forms(surface: str, floor: int) -> Iterator[str]:
+    """``surface``, then its spellings with the trailing stretch marks undone.
+
+    The marks come off one at a time, never into the first ``floor`` characters
+    (the mined token itself: 行っ keeps its っ). A long mark after an -え ending
+    is first read as that vowel, since the table knows ねえ and てえ, not ねー.
+    """
+    yield surface
+    form = surface
+    while len(form) > max(floor, 1) and (
+        form[-1] in _STRETCH_MARKS or form[-1] in _WAVE_DASHES or form[-1] in _EMPHATIC_SOKUON
+    ):
+        if form[-1] == "ー" and form[-2] in _E_ROW_KANA:
+            yield form[:-1] + "え"
+        form = form[:-1]
+        yield form
+
+
+def chain_spelling(surface: str, floor: int) -> str:
+    """The spelling of a highlighted span that the deinflection table can undo.
+
+    A span that ends in stretch marks (感じたぁー) deinflects as its plain
+    spelling (感じた). An ending the table itself knows (感じねぇ) is kept, and
+    so is a span with no such marks after its first ``floor`` characters.
+    """
+    if len(surface) <= max(floor, 1) or surface == next(reversed(list(_unstretched_forms(surface, floor)))):
+        return surface
+    deinflector = get_highlight_deinflector()
+    form = surface
+    for form in _unstretched_forms(surface, floor):
+        if any(result.text != form for result in deinflector.transform(form)):
+            return form
+    return form
 
 
 def conditions_match_mask(result_conditions: int, target_mask: int) -> bool:
@@ -575,9 +612,13 @@ def _extension_candidate_ends(text: str, raw_tokens: list, tok_end: int) -> list
             if end - tok_end > _WINDOW_CAP_CHARS:
                 break
             surface = text[start:end]
+            tail_feature = getattr(tail_token, "feature", None)
+            # An auxiliary written with a long mark (食べ|ねー) is still the chain;
+            # a particle so written (待って|ねー) is not.
+            if getattr(tail_feature, "pos1", None) == "助動詞":
+                surface = surface.rstrip("ー")
             if not _is_pure_hiragana(surface):
                 break
-            tail_feature = getattr(tail_token, "feature", None)
             if getattr(tail_feature, "pos1", None) not in _INFLECTIONAL_TAIL_POS1:
                 break
             ends.append(end)

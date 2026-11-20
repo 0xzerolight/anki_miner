@@ -2691,6 +2691,14 @@ Ingen indeksfiler slettes.</translation>
         <translation>Lag kort av 3本 eller 4人 som ett ord, lest med lydendringene (さんぼん, よにん) og definert ut fra telleordet.</translation>
     </message>
     <message>
+        <source>Mine grammar points</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Card sentence grammar such as んだ, でしょう and ください. Turn it off to mine words only.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Blacklist / whitelist words</source>
         <translation>Svarteliste / hviteliste ord</translation>
     </message>
@@ -6043,6 +6051,18 @@ Ingen filer på disken slettes.</translation>
     <message>
         <source>Make a card for a number and its counter, read with its sound changes (3本 さんぼん, 4人 よにん), defined by the counter. One card per number.</source>
         <translation>Lag et kort for et tall og telleordet, lest med lydendringene (3本 さんぼん, 4人 よにん) og definert ut fra telleordet. Ett kort per tall.</translation>
+    </message>
+    <message>
+        <source>Grammar</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mine grammar points</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Sentence grammar such as んだ, でしょう and ください becomes cards.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Reading</source>

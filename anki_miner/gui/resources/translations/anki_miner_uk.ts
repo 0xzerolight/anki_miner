@@ -2694,6 +2694,14 @@ No index files are deleted.</source>
         <translation>Створює картку для 3本 чи 4人 як для одного слова: читання зі звуковими змінами (さんぼん, よにん), визначення — за лічильним словом.</translation>
     </message>
     <message>
+        <source>Mine grammar points</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Card sentence grammar such as んだ, でしょう and ください. Turn it off to mine words only.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Blacklist / whitelist words</source>
         <translation>Чорний / білий список слів</translation>
     </message>
@@ -6080,6 +6088,18 @@ No files on disk are deleted.</source>
     <message>
         <source>Make a card for a number and its counter, read with its sound changes (3本 さんぼん, 4人 よにん), defined by the counter. One card per number.</source>
         <translation>Створює картку для числа та його лічильного слова з читанням зі звуковими змінами (3本 さんぼん, 4人 よにん) і визначенням за лічильним словом. Одна картка на кожне число.</translation>
+    </message>
+    <message>
+        <source>Grammar</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mine grammar points</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Sentence grammar such as んだ, でしょう and ください becomes cards.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Reading</source>

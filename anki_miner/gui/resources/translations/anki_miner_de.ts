@@ -2691,6 +2691,14 @@ Es werden keine Indexdateien gelöscht.</translation>
         <translation>3本 oder 4人 als ein Wort auf eine Karte bringen, mit Lautwandel gelesen (さんぼん, よにん) und über das Zählwort definiert.</translation>
     </message>
     <message>
+        <source>Mine grammar points</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Card sentence grammar such as んだ, でしょう and ください. Turn it off to mine words only.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Blacklist / whitelist words</source>
         <translation>Wörter auf die Sperr-/Freigabeliste setzen</translation>
     </message>
@@ -6044,6 +6052,18 @@ Es werden keine Dateien von der Festplatte gelöscht.</translation>
     <message>
         <source>Make a card for a number and its counter, read with its sound changes (3本 さんぼん, 4人 よにん), defined by the counter. One card per number.</source>
         <translation>Eine Karte für eine Zahl samt Zählwort erstellen, mit Lautwandel gelesen (3本 さんぼん, 4人 よにん) und über das Zählwort definiert. Eine Karte pro Zahl.</translation>
+    </message>
+    <message>
+        <source>Grammar</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mine grammar points</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Sentence grammar such as んだ, でしょう and ください becomes cards.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Reading</source>

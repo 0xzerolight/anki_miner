@@ -26,6 +26,7 @@ from anki_miner.services.deinflection import (
     TermCommonLookup,
     TermRulesLookup,
     _is_pure_hiragana,
+    chain_spelling,
     find_highlight_end,
     find_highlight_end_with_trace,
     get_highlight_deinflector,
@@ -134,6 +135,8 @@ PARSE_RELEVANT_CONFIG_FIELDS = (
     "skip_opening_ending",
     # A number and its counter merge into one cached token (3人).
     "mine_number_counters",
+    # A grammar point joins into one cached token (行く|んだ).
+    "mine_grammar_points",
 )
 
 # Dictionary-attested compound matching (Yomitan longest-match principle):
@@ -205,6 +208,14 @@ _KANA_AUX_WORDS: frozenset[str] = frozenset(
 # conjunctive particle (見ている, 来てくれた, やればいい).
 _AUX_AFTER_POS1: frozenset[str] = frozenset({"動詞", "形容詞", "助動詞"})
 
+# A joined word ending in the て of する or やる (どうして, として, どうやって) hides
+# that て from the check above, so どうしている would card いる. Owner's decision
+# of 2026-11-20: after such a join refuse only the words that follow a て as
+# grammar; できる, なる and the rest stay the line's own (どうしてできないの).
+# Other て-final joins (について, によって) keep これについていい案's いい.
+_AUX_AFTER_TE_JOIN: frozenset[str] = frozenset({"いる", "いい", "くれる", "ほしい"})
+_TE_JOIN_ENDINGS: tuple[str, ...] = ("して", "やって")
+
 # Cries the tagger reads as an auxiliary-capable word, by their tokens: やった
 # ('yes!', not 'did') and いてっ/いたっ ('ouch', 痛っ). Each is a cry only alone
 # between pauses: after a line start, a punctuation mark or an interjection.
@@ -229,8 +240,9 @@ _KANA_FUSED_LEMMAS: frozenset[str] = frozenset({"逸る", "抗する", "痛む",
 _KANJI_NAME_PIECE_LEMMAS: frozenset[str] = frozenset({"助"})
 
 # Kanji verbs the tagger makes by gluing a suffix to what follows, by their
-# orthBase: 犯る (vulgar やる) is the crime suffix 犯 before a quoting って
-# (殺人犯って, 同一犯って); the verb itself never stands alone in a line.
+# orthBase: 犯る (vulgar やる) is the crime suffix 犯 glued to what follows
+# (殺人犯ったら); the verb itself never stands alone in a line. Before a quoting
+# って the pair is re-cut on the raw stream instead (morphology._MISSPLITS).
 _KANJI_FUSED_ORTH_BASES: frozenset[str] = frozenset({"犯る"})
 
 # Honorific compounds the tagger (or the noun-suffix merge) makes from a name's
@@ -901,9 +913,12 @@ class SubtitleParserService:
         # Grammar-cut words (思わず, 実は, くだらない; see services/lexical_joiner.py).
         # Attested through the term-OR-reading probe because the kana adjectives
         # are JMdict readings; None without one keeps the no-dict output unchanged.
+        # Settings → Word Filters → Mine grammar points decides the list's grammar rows (んだ, ください).
         self._lexical_joiner: LexicalJoiner | None = None
         if kana_attest_lookup is not None:
-            self._lexical_joiner = LexicalJoiner(kana_attest_lookup, self._inclusion_rule.allowed_pos)
+            self._lexical_joiner = LexicalJoiner(
+                kana_attest_lookup, self._inclusion_rule.allowed_pos, grammar_points=config.mine_grammar_points
+            )
         # Name resources define raw-source boundaries independently of the
         # ordinary dictionary. This pass runs before dictionary matching so an
         # exact name remains available to the late exact name-wordset filter;
@@ -1679,10 +1694,6 @@ class SubtitleParserService:
                 additional_target=resolved_front,
             )
             highlight_end = max(highlight_end, resolved_end)
-        # A verb's or adjective's stretch marks stay outside its highlight for now:
-        # covering them cost form accuracy on the gold benchmark.
-        if word_token.feature.pos1 in ("動詞", "形容詞"):
-            return highlight_end
         return stretched_highlight_end(text, highlight_end)
 
     def _card_front(self, word_token: Any, text: str, tok_start: int, tok_end: int, raw_tokens: list) -> str:
@@ -2798,7 +2809,7 @@ class SubtitleParserService:
         # rightward highlight extension (感じた), or the bare surface when it did
         # not extend (感じ before a noun) — run either way, else 感じ-before-a-noun
         # keeps the archaic 感ずる.
-        inflected_surface = text[tok_start:highlight_end]
+        inflected_surface = chain_spelling(text[tok_start:highlight_end], len(word_token.surface))
         ctype = getattr(feature, "cType", None)
         # A godan imperative (持て, 従え) is never an -eru verb: its e-stem spelling
         # is also the stem of the attested ichidan 持てる/従える, which shares the
@@ -3206,6 +3217,12 @@ class SubtitleParserService:
         if pos1 in _AUX_AFTER_POS1 or (pos1 == "助詞" and getattr(prev, "pos2", None) == "接続助詞"):
             return True
         if idx >= 2 and tokens[idx - 1].surface in ("も", "は") and tokens[idx - 2].surface in ("て", "で"):
+            return True
+        if (
+            getattr(tokens[idx - 1], "compound", False)
+            and tokens[idx - 1].surface.endswith(_TE_JOIN_ENDINGS)
+            and getattr(word_token.feature, "orthBase", None) in _AUX_AFTER_TE_JOIN
+        ):
             return True
         if pos1 not in (None, *_AUX_CRY_AFTER_POS1):
             return False

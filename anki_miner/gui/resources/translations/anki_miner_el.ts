@@ -2691,6 +2691,14 @@ No index files are deleted.</source>
         <translation>Δημιουργία κάρτας για το 3本 ή το 4人 ως μία λέξη, με ανάγνωση που περιλαμβάνει τις ηχητικές αλλαγές (さんぼん, よにん) και ορισμό από τη λέξη μέτρησης.</translation>
     </message>
     <message>
+        <source>Mine grammar points</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Card sentence grammar such as んだ, でしょう and ください. Turn it off to mine words only.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Blacklist / whitelist words</source>
         <translation>Μαύρη / λευκή λίστα λέξεων</translation>
     </message>
@@ -6043,6 +6051,18 @@ No files on disk are deleted.</source>
     <message>
         <source>Make a card for a number and its counter, read with its sound changes (3本 さんぼん, 4人 よにん), defined by the counter. One card per number.</source>
         <translation>Δημιουργία κάρτας για έναν αριθμό και τη λέξη μέτρησής του, με ανάγνωση που περιλαμβάνει τις ηχητικές αλλαγές (3本 さんぼん, 4人 よにん) και ορισμό από τη λέξη μέτρησης. Μία κάρτα ανά αριθμό.</translation>
+    </message>
+    <message>
+        <source>Grammar</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mine grammar points</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Sentence grammar such as んだ, でしょう and ください becomes cards.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Reading</source>
