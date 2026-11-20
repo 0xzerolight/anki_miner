@@ -345,7 +345,9 @@ JOINS: tuple[tuple[str, str, str, str], ...] = (
     # by name. A "clause" row joins after whatever can end a clause (行くんだ,
     # 高いんです), not after the adnominal な (好きなんだ) nor where the ん is a
     # verb's own contraction (やってんだ): LexicalJoiner._ends_clause. の|です
-    # after a noun is the possessive (私のです), hence "verb".
+    # after a noun is the possessive (私のです), hence "verb". A "copula" row
+    # refuses a verb before it: there the で or じゃ is the verb's te-form
+    # (読んではない, 読んじゃない), already in the verb's highlight.
     ("んだ", "感動詞", "ん|だ", "clause"),
     ("んです", "感動詞", "ん|です", "clause"),
     ("のです", "感動詞", "の|です", "verb"),
@@ -356,8 +358,8 @@ JOINS: tuple[tuple[str, str, str, str], ...] = (
     ("だろ", "感動詞", "だろ", ""),
     ("でしょ", "感動詞", "でしょ", ""),
     ("ください", "感動詞", "ください", ""),
-    ("じゃない", "形容詞", "じゃ|=ない", ""),
-    ("ではない", "形容詞", "で|は|=ない", ""),
+    ("じゃない", "形容詞", "じゃ|=ない", "copula"),
+    ("ではない", "形容詞", "で|は|=ない", "copula"),
     ("っていうか", "接続詞", "って|いう|か", ""),
     # After the adnominal な the expression is なんだ, なんです (好きなんだ, 歌手なんです).
     ("なんだ", "感動詞", "な|ん|だ", ""),

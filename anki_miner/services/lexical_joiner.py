@@ -183,11 +183,15 @@ def _follows(tokens: list, i: int, after: str, joined_pos1: str | None = None) -
     auxiliary だ: the adnominal な of a na-adjective (嫌なこと) ends no verb. It is
     told by lemma: the voiced past だ (読んだ) shares orthBase だ but its lemma is た.
     A "clause" row (んだ, んです) follows whatever can end a clause (``_ends_clause``).
+    A "copula" row (じゃない, ではない) refuses a verb: there the で or じゃ is the
+    verb's te-form (読んではない, 読んじゃない), which its highlight already covers.
     """
     if not after:
         return True
     if after == "clause":
         return i == 0 or joined_pos1 is not None or _ends_clause(tokens[i - 1])
+    if after == "copula":
+        return i == 0 or (joined_pos1 or _pos1(tokens[i - 1])) != "動詞"
     if i == 0:
         return False
     before = tokens[i - 1]

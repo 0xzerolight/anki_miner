@@ -135,12 +135,29 @@ class TestSentenceGrammar:
             ("何をやってんだよ", "んだ"),  # the ん is やっている's own
             ("これは俺のだ", "のだ"),  # the possessive の
             ("魚が死んだ", "んだ"),  # 死ん|だ is the verb
+            ("まだ読んではないよ", "ではない"),  # the で is 読む's te-form
+            ("死んではない", "ではない"),
+            ("まだ読んじゃないよ", "じゃない"),  # the じゃ is 読む's contracted では
         ],
     )
     def test_the_same_kana_elsewhere_is_no_expression(self, text, front):
         assert front not in [word.mined_form for word in _grammar_words(text)]
 
-    @pytest.mark.parametrize("text", ["やめてください", "魚を食べたんだ", "行かないんです", "何をやってんだよ"])
+    @pytest.mark.parametrize(("text", "front"), [("それは本ではない", "ではない"), ("嘘じゃない", "じゃない")])
+    def test_the_copula_expression_follows_a_noun(self, text, front):
+        assert front in [word.mined_form for word in _grammar_words(text)]
+
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "やめてください",
+            "魚を食べたんだ",
+            "行かないんです",
+            "何をやってんだよ",
+            "まだ読んではないよ",
+            "まだ読んじゃないよ",
+        ],
+    )
     def test_no_card_starts_inside_the_word_before_it(self, text):
         words = sorted(_grammar_words(text), key=lambda word: word.surface_start)
         for before, after in zip(words, words[1:], strict=False):
