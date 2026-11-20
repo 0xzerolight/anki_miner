@@ -68,3 +68,8 @@
 {"id":"mj44","sentence":"しかたがないな","expected":["しかたがない"],"category":"m1119-kana-joins","note":"not しかた + ない"}
 {"id":"mj45","sentence":"しょうがなかった","expected":["しょうがない"],"category":"m1119-kana-joins","note":"the listed join now holds in every inflection"}
 {"id":"mj46","sentence":"もったいなかった","expected":["もったいない"],"category":"m1119-kana-joins"}
+{"id":"mj47","sentence":"このへんに住む","expected":["このへん","住む"],"category":"m1119-kana-joins","note":"not この + へん (read as 変)"}
+{"id":"mj48","sentence":"こっから行く","expected":["こっから","行く"],"category":"m1119-kana-joins","note":"the clipped ここから"}
+{"id":"mj49","sentence":"どっから来た","expected":["どっから","来る"],"category":"m1119-kana-joins"}
+{"id":"mj50","sentence":"どんだけ待つの","expected":["どんだけ","待つ"],"category":"m1119-kana-joins"}
+{"id":"mj51","sentence":"そんで帰った","expected":["そんで","帰る"],"category":"m1119-kana-joins","note":"a conjunction where it opens the line"}

@@ -62,6 +62,8 @@ _ATTESTED = frozenset(
     | {"ねえ", "ねぇ", "こら", "よっしゃ", "よーし", "いざ", "おう", "やあ", "おーい", "ほな", "へえ", "へぇ", "さぁ"}
     | {"ありがと", "なんちゃって", "はいはい", "はい"}
     | {"ごちそう", "おしまい", "おわび", "おしゃべり", "おせっかい", "おかわり", "おつかれ", "でかした"}
+    | {"このへん", "そのへん", "どのへん", "こっから", "そっから", "どっから", "どんだけ", "そんだけ", "こんだけ"}
+    | {"あんだけ", "そんで", "そんなら", "ほんなら", "この"}
     | {
         "どうしようもない",
         "しようがない",
@@ -275,3 +277,29 @@ class TestPrefixedAndNegativeJoins:
     def test_the_longer_greeting_still_wins(self):
         assert _fronts("ごちそうさまでした") == ["ごちそうさま"]
         assert _fronts("おつかれさま") == ["おつかれさま"]
+
+
+class TestClippedDemonstratives:
+    @pytest.mark.parametrize(
+        ("text", "front"),
+        [
+            ("このへんに住む", "このへん"),
+            ("そのへんにある", "そのへん"),
+            ("どのへんが痛い", "どのへん"),
+            ("こっから行く", "こっから"),
+            ("そっから見る", "そっから"),
+            ("どっから来た", "どっから"),
+            ("どんだけ待つの", "どんだけ"),
+            ("そんだけか", "そんだけ"),
+            ("こんだけある", "こんだけ"),
+            ("あんだけ言った", "あんだけ"),
+            ("そんで帰った", "そんで"),
+            ("そんなら行く", "そんなら"),
+            ("ほんなら行く", "ほんなら"),
+        ],
+    )
+    def test_joins_a_word_cut_after_a_clipped_demonstrative(self, text, front):
+        assert _fronts(text)[0] == front
+
+    def test_kono_is_not_left_beside_konohen(self):
+        assert "この" not in _fronts("このへんに住む")
