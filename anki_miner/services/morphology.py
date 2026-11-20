@@ -1049,7 +1049,63 @@ _MISSPLITS: dict[tuple[tuple[str, str | None], ...], tuple[tuple[str, dict[str, 
         ),
         ("ち", {**dict.fromkeys(("lemma", "orth", "orthBase"), "ち"), **dict.fromkeys(("lForm", "kana"), "チ")}),
     ),
+    # てらんない (ていられない): unidic-lite reads the らん as an adverb, which ends
+    # the verb's chain at て and leaves the ない after it standing as a word.
+    (("て", "て"), ("らん", "らん")): (("て", {}), ("らん", {"pos1": "助動詞"})),
+    (("で", "て"), ("らん", "らん")): (("で", {}), ("らん", {"pos1": "助動詞"})),
 }
+
+
+def _noun_tte_resplit(
+    noun: str, kana: str, pos3: str = "一般", lemma: str | None = None
+) -> tuple[tuple[str, dict[str, str]], ...]:
+    """The re-cut of a one-kanji noun + って the tagger read as a verb's て form (恋っ|て → 恋|って)."""
+    kana_fields = ("lForm", "pron", "pronBase", "kana", "kanaBase", "form", "formBase")
+    return (
+        (
+            noun,
+            {
+                "pos1": "名詞",
+                "pos2": "普通名詞",
+                "pos3": pos3,
+                "cType": "*",
+                "cForm": "*",
+                **dict.fromkeys(("orth", "orthBase"), noun),
+                "lemma": lemma or noun,
+                **dict.fromkeys(kana_fields, kana),
+            },
+        ),
+        (
+            "って",
+            {
+                "pos2": "副助詞",
+                **dict.fromkeys(("lemma", "orth", "orthBase"), "って"),
+                **dict.fromkeys(kana_fields, "ッテ"),
+            },
+        ),
+    )
+
+
+# 恋って, 番って and 敵って before the quoting って: unidic-lite reads the 促音便 of 恋う
+# (whose て form is 恋うて), 番う 'to mate' and 敵う (written 叶って when it is meant).
+# The cost is the rare 番っている and 敵っている, which now card the noun.
+# The rows after them are nouns it reads as a verb spelled without its okurigana
+# (味わう, 逆らう, 曲がる) or as an old verb (司る, 隣る, 因る, 減る, 凍る).
+_MISSPLITS.update(
+    {
+        (("恋っ", "恋う"), ("て", "て")): _noun_tte_resplit("恋", "コイ", "サ変可能"),
+        (("番っ", "番う"), ("て", "て")): _noun_tte_resplit("番", "バン"),
+        (("敵っ", "敵う"), ("て", "て")): _noun_tte_resplit("敵", "テキ"),
+        (("味っ", "味わう"), ("て", "て")): _noun_tte_resplit("味", "アジ"),
+        (("逆っ", "逆らう"), ("て", "て")): _noun_tte_resplit("逆", "ギャク", "形状詞可能"),
+        (("曲っ", "曲がる"), ("て", "て")): _noun_tte_resplit("曲", "キョク"),
+        (("主っ", "司る"), ("て", "て")): _noun_tte_resplit("主", "ヌシ"),
+        (("隣っ", "隣る"), ("て", "て")): _noun_tte_resplit("隣", "トナリ", lemma="隣り"),
+        (("縁っ", "因る"), ("て", "て")): _noun_tte_resplit("縁", "エン"),
+        (("空っ", "減る"), ("て", "て")): _noun_tte_resplit("空", "ソラ"),
+        (("氷っ", "凍る"), ("て", "て")): _noun_tte_resplit("氷", "コオリ"),
+    }
+)
 
 
 def _unknown_katakana_noun(token) -> bool:
@@ -1136,6 +1192,88 @@ def retag_mistagged_tokens(tokens: list, form_lookup: FormLookup | None = None) 
         elif token.surface in nouns and _unknown_katakana_noun(token):
             fields = dict.fromkeys(("lemma", "orthBase", "kana"), token.surface)
         out.append(token if fields is None else RetaggedToken(token, fields))
+    return out
+
+
+#: Adjectives spoken with an -ee ending (やばい → やべー) that unidic-lite has no
+#: path for and cuts into particles, sounds and stray nouns (や|べ|ー, で|けー,
+#: かっけ 'beriberi' |ー): the stem as written, then the dictionary form in kana,
+#: the lemma the tagger gives that form, and its reading. The tagger's own
+#: readings of other such forms (すげー, おもしれー, うるせー) need no entry.
+_CONTRACTED_ADJECTIVES: dict[str, tuple[str, str, str]] = {
+    "やべ": ("やばい", "やばい", "ヤバイ"),
+    "やっべ": ("やばい", "やばい", "ヤバイ"),
+    "でけ": ("でかい", "でかい", "デカイ"),
+    "でっけ": ("でっかい", "でかい", "デッカイ"),
+    "こえ": ("こわい", "怖い", "コワイ"),
+    "たけ": ("たかい", "高い", "タカイ"),
+    "うぜ": ("うざい", "うざい", "ウザイ"),
+    "うめ": ("うまい", "旨い", "ウマイ"),
+    "かっけ": ("かっこいい", "かっこいい", "カッコイイ"),
+    "めんどくせ": ("めんどくさい", "面倒臭い", "メンドクサイ"),
+    "あったけ": ("あったかい", "暖かい", "アッタカイ"),
+    "うっせ": ("うるさい", "煩い", "ウルサイ"),
+}
+_CONTRACTED_ENDING_MARKS = frozenset("ーえぇェ")
+_CONTRACTED_MAX_TOKENS = 6
+
+
+def _contracted_adjective(surface: str) -> tuple[str, str, str] | None:
+    """The ``_CONTRACTED_ADJECTIVES`` row *surface* spells: a stem plus at least one ending mark."""
+    stem = surface
+    while stem and stem[-1] in _CONTRACTED_ENDING_MARKS:
+        stem = stem[:-1]  # こえー is こえ + ー: an え may belong to the stem
+        if stem in _CONTRACTED_ADJECTIVES:
+            return _CONTRACTED_ADJECTIVES[stem]
+    return None
+
+
+def rejoin_contracted_adjectives(tokens: list) -> list:
+    """Join the pieces the tagger cuts a contracted -ee adjective into (``_CONTRACTED_ADJECTIVES``).
+
+    やべー arrives as や|べ|ー and でけー as で|けー: no piece is a word, so the
+    adjective was never mined. A run of unspaced tokens whose surfaces join to
+    a listed stem plus its ending marks (ー, え, ぇ) becomes one 形容詞 token
+    with the fields the tagger gives すげー: the kana dictionary form as its
+    orthBase, the listed lemma and reading. The longest such run from a token
+    wins (やべーー). A stem inside a longer token never matches (行こう|ぜー has
+    no う token), and a run the tagger already reads as one token is not a run.
+    """
+    out: list = []
+    i = 0
+    while i < len(tokens):
+        joined = tokens[i].surface if isinstance(tokens[i].surface, str) else ""
+        match: tuple[int, str, tuple[str, str, str]] | None = None
+        for j in range(i + 1, min(i + _CONTRACTED_MAX_TOKENS, len(tokens))):
+            surface = tokens[j].surface
+            white_space = getattr(tokens[j], "white_space", "")
+            if not isinstance(surface, str) or (isinstance(white_space, str) and white_space):
+                break
+            joined += surface
+            row = _contracted_adjective(joined)
+            if row is not None:
+                match = (j, joined, row)
+        if match is None or not hasattr(getattr(tokens[i], "feature", None), "_replace"):
+            out.append(tokens[i])
+            i += 1
+            continue
+        end, joined, (base, lemma, reading) = match
+        fields = {
+            "pos1": "形容詞",
+            "pos2": "一般",
+            "pos3": "*",
+            "pos4": "*",
+            "cType": "形容詞",
+            "cForm": "終止形-一般",
+            "lemma": lemma,
+            "orth": joined,
+            "orthBase": base,
+            "goshu": "和",
+            **dict.fromkeys(("lForm", "pronBase", "kanaBase", "formBase"), reading),
+            **dict.fromkeys(("pron", "kana", "form"), hiragana_to_katakana(joined)),
+        }
+        out.append(RetaggedToken(tokens[i], fields, joined))
+        i = end + 1
     return out
 
 

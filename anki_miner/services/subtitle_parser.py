@@ -30,6 +30,7 @@ from anki_miner.services.deinflection import (
     find_highlight_end_with_trace,
     get_highlight_deinflector,
     resolve_dictionary_form,
+    stretched_highlight_end,
 )
 from anki_miner.services.kana_words import is_kanji_spelled, is_listed
 from anki_miner.services.lexical_joiner import LexicalJoiner
@@ -56,6 +57,7 @@ from anki_miner.services.morphology import (
     iter_token_spans,
     merge_compound_suffixes,
     mining_base,
+    rejoin_contracted_adjectives,
     replace_overridden_spans,
     resolve_attested_reading,
     resolve_reading_override,
@@ -1582,6 +1584,7 @@ class SubtitleParserService:
         # from it, and a correction that re-cuts two tokens (自|分ち) would
         # otherwise leave the raw and merged streams out of step for the line.
         raw_tokens = retag_mistagged_tokens(raw_tokens, self._form_lookup)
+        raw_tokens = rejoin_contracted_adjectives(raw_tokens)
         merged_tokens = self._merge_compound_suffixes(raw_tokens)
         # Language-specific merge (ko: 공부 + 하 → 공부하다). Placed with the other
         # merge passes and gated on the same probe; no probe ⇒ no merge.
@@ -1637,7 +1640,21 @@ class SubtitleParserService:
         identically so the emitted highlight_end stays byte-identical between
         parse_subtitle_file and _with_index.
         """
+        if getattr(getattr(word_token, "feature", None), "written_base", None):
+            return self._spoken_idiom_highlight_end(text, raw_tokens, tok_start, tok_end, word_token)
         return find_highlight_end(text, raw_tokens, tok_start, tok_end, word_token)
+
+    @staticmethod
+    def _spoken_idiom_highlight_end(text: str, raw_tokens: list, tok_start: int, tok_end: int, word_token: Any) -> int:
+        """The highlight end of a join whose headword the line spells otherwise (腹減って for 腹が減る).
+
+        The matcher notes the base as written (腹減る, ``written_base``); the
+        line's text deinflects to that, never to the headword.
+        """
+        end, _chain = find_highlight_end_with_trace(
+            text, raw_tokens, tok_start, tok_end, word_token, additional_target=word_token.feature.written_base
+        )
+        return end
 
     def _emission_highlight_end(
         self, text: str, raw_tokens: list, tok_start: int, tok_end: int, word_token: Any
@@ -1662,7 +1679,11 @@ class SubtitleParserService:
                 additional_target=resolved_front,
             )
             highlight_end = max(highlight_end, resolved_end)
-        return highlight_end
+        # A verb's or adjective's stretch marks stay outside its highlight for now:
+        # covering them cost form accuracy on the gold benchmark.
+        if word_token.feature.pos1 in ("動詞", "形容詞"):
+            return highlight_end
+        return stretched_highlight_end(text, highlight_end)
 
     def _card_front(self, word_token: Any, text: str, tok_start: int, tok_end: int, raw_tokens: list) -> str:
         """The ``mined_form`` emission gives an included token: its card front.
@@ -2889,7 +2910,7 @@ class SubtitleParserService:
             return orth_base
         if katakana_to_hiragana(l_form) == katakana_to_hiragana(kana_base):
             # Equal-reading okurigana variant: preserve the source orthography.
-            return orth_base
+            return self._kana_part_front(orth_base, lemma)
         if getattr(feature, "pos1", None) == "動詞" and not _is_pure_hiragana(orth_base):
             # A potential whose lemma is spelled otherwise (帰れる → 返る, やり直せる
             # → 遣り直す) folds on its own stem (帰る, やり直す), never the lemma's
@@ -2910,6 +2931,40 @@ class SubtitleParserService:
             return orth_base  # a real headword — attestation decides, keep it
         if lemma not in attested:
             return orth_base  # no attested target to remap onto
+        return lemma
+
+    def _kana_part_front(self, orth_base: str, lemma: str) -> str:
+        """The lemma for a front that writes part of the word in kana and no dictionary lists.
+
+        つみ上げる is 積み上げる with its first kanji in kana. The two read the same,
+        so ``_attest_or_remap_front`` keeps the source spelling, but no dictionary
+        has that spelling as a headword: the card misses the exact-term lookups
+        and is filed apart from the 積み上げる card. The lemma is taken only when
+
+        * it holds every kanji of ``orth_base`` in order and at least one more.
+          An okurigana variant (変る for 変わる) adds no kanji and keeps the
+          source spelling whatever the dictionary lists (Issue #19/#5), and a
+          lemma written with other kanji (とり換える, lemma 取り替える) is never taken;
+        * the rest of ``orth_base`` is hiragana. A katakana part is a spelling
+          choice of its own, and its lemma is often a rare kanji form
+          (ブッ飛ばす, lemma 打っ飛ばす);
+        * the dictionary does not attest ``orth_base`` (やり直す, ぶち壊す stay);
+        * the dictionary attests the lemma.
+        """
+        own = [ch for ch in orth_base if "一" <= ch <= "鿿"]
+        theirs = [ch for ch in lemma if "一" <= ch <= "鿿"]
+        if (
+            not own
+            or len(theirs) <= len(own)
+            or not _is_pure_hiragana("".join(ch for ch in orth_base if ch not in own))
+        ):
+            return orth_base
+        rest = iter(theirs)
+        if not all(ch in rest for ch in own):
+            return orth_base
+        attested = self._memoized_attest([orth_base, lemma])
+        if orth_base in attested or lemma not in attested:
+            return orth_base
         return lemma
 
     def _fold_katakana_verb_front(self, orth_base: str, lemma: str | None = None) -> str:
@@ -2990,6 +3045,8 @@ class SubtitleParserService:
         """
         if self._inclusion_rule.should_include(word_token):
             return True
+        if self._is_attested_mimetic(word_token):
+            return True
         return self._recover_kana_content_word(word_token)
 
     def _mine_token(
@@ -3049,6 +3106,8 @@ class SubtitleParserService:
         if getattr(getattr(word_token, "feature", None), "number_counter", False) is True:
             return not self._ellipsis_reject(word_token, text, tok_start, tok_end)
         rejection = self._inclusion_rule.rejection(word_token)
+        if rejection is not None and self._is_attested_mimetic(word_token):
+            rejection = None
         if rejection is None:
             if self._is_katakana_run_fragment(word_token, text, tok_start, tok_end):
                 return False
@@ -3080,6 +3139,37 @@ class SubtitleParserService:
         if self._is_katakana_run_fragment(word_token, text, tok_start, tok_end):
             return False
         return not self._ellipsis_reject(word_token, text, tok_start, tok_end)
+
+    #: Kana that never make up a mimetic word's doubled half: the long mark, the small kana.
+    _MIMETIC_EXCLUDED_KANA: frozenset[str] = frozenset("ーッァィゥェォャュョヮ")
+    _MIMETIC_VOWELS: frozenset[str] = frozenset("アイウエオ")
+
+    def _is_attested_mimetic(self, word_token) -> bool:
+        """Whether a katakana adverb turned away as a sound effect is a mimetic word the dictionary has.
+
+        The inclusion rule drops every short katakana adverb of one or two
+        distinct kana as a sound effect, and with them the doubled mimetic words
+        a learner meets all the time (ドキドキ, ギリギリ, ワクワク), which are mined
+        when written in hiragana. Only the doubled two-kana shape (ABAB, no long
+        mark or small kana: ハァハァ and ゴーゴー stay out) that is a dictionary
+        headword as written comes back; フッ, ドン and パッ stay sound effects, and
+        a doubled call made of vowels alone (オイオイ) is no mimetic word.
+        Without a dictionary nothing changes.
+        """
+        surface = word_token.surface
+        if (
+            self._term_lookup is None
+            or len(surface) != 4
+            or surface[:2] != surface[2:]
+            or surface[0] == surface[1]
+            or not _is_all_katakana(surface)
+            or not self._MIMETIC_EXCLUDED_KANA.isdisjoint(surface)
+            or self._MIMETIC_VOWELS.issuperset(surface)
+        ):
+            return False
+        if self._inclusion_rule.rejection(word_token) != REJECT_SOUND_EFFECT:
+            return False
+        return surface in self._memoized_attest([surface])
 
     @staticmethod
     def _is_kanji_glue(word_token) -> bool:

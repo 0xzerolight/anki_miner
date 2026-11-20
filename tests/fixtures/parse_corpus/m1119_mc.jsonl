@@ -1,0 +1,6 @@
+{"id":"mc01","sentence":"ヤマを張るぞ","expected":["山を張る"],"category":"spoken-idiom","note":"Katakana ヤマ: the idiom is listed as 山を張る."}
+{"id":"mc02","sentence":"手ぇを貸せ","expected":["手を貸す"],"category":"spoken-idiom","note":"Drawn-out 手ぇ: the idiom is listed as 手を貸す."}
+{"id":"mc03","sentence":"頭痛いから帰る","expected":["頭が痛い","帰る"],"category":"spoken-idiom","note":"Dropped が before an adjective: 頭が痛い."}
+{"id":"mc04","sentence":"機嫌悪かったね","expected":["機嫌が悪い"],"category":"spoken-idiom","note":"Dropped が, inflected adjective."}
+{"id":"mc05","sentence":"腹減ったな","expected":["腹","減る"],"category":"spoken-idiom","note":"Guard: a bare noun + verb stays two words although 腹が減る is listed."}
+{"id":"mc06","sentence":"アンタ達は帰れ","expected":["アンタ","帰る"],"category":"spoken-idiom","note":"Guard: アンタ reads otherwise than its lemma 貴方, so 貴方達 is not joined."}

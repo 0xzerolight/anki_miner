@@ -1,0 +1,8 @@
+{"id":"mr01","sentence":"彼女はニコニコ笑った","expected":["彼女","ニコニコ","笑う"],"category":"katakana","note":"A doubled katakana mimetic adverb the dictionary has is a word, not a sound effect."}
+{"id":"mr02","sentence":"明日の旅行にワクワクしている","expected":["明日","旅行","ワクワク"],"category":"katakana","note":"Same before している."}
+{"id":"mr03","sentence":"急にドンと音がした","expected":["急","音"],"category":"katakana","note":"A one-beat sound effect stays out."}
+{"id":"mr04","sentence":"部屋でゴロゴロ寝ている","expected":["部屋","寝る"],"category":"katakana","note":"A doubled mimetic the fixture dictionary lacks stays out: the dictionary decides."}
+{"id":"mr05","sentence":"恋って何ですか","expected":["恋","何"],"category":"noun-tte","note":"unidic-lite reads 恋っ|て as the て form of 恋う; it is the noun and the quoting って."}
+{"id":"mr06","sentence":"次は私の番って言った","expected":["次","私","番","言う"],"category":"noun-tte","note":"Same for 番って (番う)."}
+{"id":"mr07","sentence":"敵って誰ですか","expected":["敵","誰"],"category":"noun-tte","note":"Same for 敵って (敵う)."}
+{"id":"mr08","sentence":"彼には敵わない","expected":["彼","敵う"],"category":"noun-tte","note":"The verb keeps its other forms."}
