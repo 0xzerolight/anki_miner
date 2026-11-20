@@ -8,6 +8,7 @@ from pathlib import Path
 
 import pytest
 from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QPalette
 
 from anki_miner.config import create_default_config
 from anki_miner.gui.i18n import available_languages
@@ -132,8 +133,24 @@ class TestActiveMarker:
         assert active_keys == ["catppuccin-mocha"]
 
 
+@pytest.fixture
+def app_appearance_restored(qapp):
+    """Put the shared QApplication's stylesheet and palette back afterwards.
+
+    A click on a theme card previews it app-wide. Left in place, this file's
+    fake theme repaints every widget a later test builds on the same xdist
+    worker: test_modern_button_press then read a press tint equal to the rest
+    colour (CI, 2026-11-20).
+    """
+    stylesheet = qapp.styleSheet()
+    palette = QPalette(qapp.palette())
+    yield
+    qapp.setStyleSheet(stylesheet)
+    qapp.setPalette(palette)
+
+
 class TestSelectionEmitsStateChanged:
-    def test_selecting_variant_emits_signal(self, panel: UISettingsPanel) -> None:
+    def test_selecting_variant_emits_signal(self, panel: UISettingsPanel, app_appearance_restored) -> None:
         captured: list[tuple[str, tuple]] = []
         panel.state_changed.connect(lambda active, favs: captured.append((active, favs)))
         panel.gallery.card("catppuccin-latte").click()
