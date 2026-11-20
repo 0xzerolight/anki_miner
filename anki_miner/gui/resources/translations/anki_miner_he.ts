@@ -2691,6 +2691,14 @@ No index files are deleted.</source>
         <translation>יצירת כרטיס ל-3本 או ל-4人 כמילה אחת, עם קריאה שכוללת את שינויי הצליל (さんぼん, よにん) והגדרה לפי מילת המנייה.</translation>
     </message>
     <message>
+        <source>Mine grammar points</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Card sentence grammar such as んだ, でしょう and ください. Turn it off to mine words only.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Blacklist / whitelist words</source>
         <translation>רשימה שחורה / לבנה של מילים</translation>
     </message>
@@ -6043,6 +6051,18 @@ No files on disk are deleted.</source>
     <message>
         <source>Make a card for a number and its counter, read with its sound changes (3本 さんぼん, 4人 よにん), defined by the counter. One card per number.</source>
         <translation>יצירת כרטיס למספר ולמילת המנייה שלו, עם קריאה שכוללת את שינויי הצליל (3本 さんぼん, 4人 よにん) והגדרה לפי מילת המנייה. כרטיס אחד לכל מספר.</translation>
+    </message>
+    <message>
+        <source>Grammar</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mine grammar points</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Sentence grammar such as んだ, でしょう and ください becomes cards.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Reading</source>

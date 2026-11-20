@@ -2691,6 +2691,14 @@ Indeksitiedostoja ei poisteta.</translation>
         <translation>Tee 3本 tai 4人 kortiksi yhtenä sanana, luettuna äänteenmuutoksineen (さんぼん, よにん) ja mittasanan mukaan määriteltynä.</translation>
     </message>
     <message>
+        <source>Mine grammar points</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Card sentence grammar such as んだ, でしょう and ください. Turn it off to mine words only.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Blacklist / whitelist words</source>
         <translation>Esto- ja sallittujen luettelot</translation>
     </message>
@@ -6043,6 +6051,18 @@ Levyltä ei poisteta tiedostoja.</translation>
     <message>
         <source>Make a card for a number and its counter, read with its sound changes (3本 さんぼん, 4人 よにん), defined by the counter. One card per number.</source>
         <translation>Tee kortti luvusta ja sen mittasanasta, luettuna äänteenmuutoksineen (3本 さんぼん, 4人 よにん) ja mittasanan mukaan määriteltynä. Yksi kortti lukua kohden.</translation>
+    </message>
+    <message>
+        <source>Grammar</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mine grammar points</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Sentence grammar such as んだ, でしょう and ください becomes cards.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Reading</source>

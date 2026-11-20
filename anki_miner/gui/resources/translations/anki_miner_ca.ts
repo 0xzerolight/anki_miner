@@ -2691,6 +2691,14 @@ No se suprimeix cap fitxer d'índex.</translation>
         <translation>Crea una targeta de 3本 o 4人 com una sola paraula, llegida amb els seus canvis fonètics (さんぼん, よにん) i definida pel comptador.</translation>
     </message>
     <message>
+        <source>Mine grammar points</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Card sentence grammar such as んだ, でしょう and ください. Turn it off to mine words only.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Blacklist / whitelist words</source>
         <translation>Llista negra / llista blanca de paraules</translation>
     </message>
@@ -6043,6 +6051,18 @@ No se suprimeix cap fitxer del disc.</translation>
     <message>
         <source>Make a card for a number and its counter, read with its sound changes (3本 さんぼん, 4人 よにん), defined by the counter. One card per number.</source>
         <translation>Crea una targeta per a un nombre i el seu comptador, llegida amb els seus canvis fonètics (3本 さんぼん, 4人 よにん) i definida pel comptador. Una targeta per nombre.</translation>
+    </message>
+    <message>
+        <source>Grammar</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mine grammar points</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Sentence grammar such as んだ, でしょう and ください becomes cards.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Reading</source>

@@ -2697,6 +2697,14 @@ Nobena datoteka indeksa ne bo izbrisana.</translation>
         <translation>Ustvari kartico za 3本 ali 4人 kot eno besedo, z branjem z glasovnimi spremembami (さんぼん, よにん) in definicijo klasifikatorja.</translation>
     </message>
     <message>
+        <source>Mine grammar points</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Card sentence grammar such as んだ, でしょう and ください. Turn it off to mine words only.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Blacklist / whitelist words</source>
         <translation>Črni / beli seznam besed</translation>
     </message>
@@ -6120,6 +6128,18 @@ Nobena datoteka na disku ne bo izbrisana.</translation>
     <message>
         <source>Make a card for a number and its counter, read with its sound changes (3本 さんぼん, 4人 よにん), defined by the counter. One card per number.</source>
         <translation>Ustvari kartico za število in njegov klasifikator, z branjem z glasovnimi spremembami (3本 さんぼん, 4人 よにん) in definicijo klasifikatorja. Ena kartica na število.</translation>
+    </message>
+    <message>
+        <source>Grammar</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mine grammar points</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Sentence grammar such as んだ, でしょう and ください becomes cards.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Reading</source>

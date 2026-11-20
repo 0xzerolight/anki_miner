@@ -2688,6 +2688,14 @@ No index files are deleted.</source>
         <translation>将 3本 或 4人 作为一个词制卡，读音体现音变（さんぼん、よにん），释义取自量词。</translation>
     </message>
     <message>
+        <source>Mine grammar points</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Card sentence grammar such as んだ, でしょう and ください. Turn it off to mine words only.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Blacklist / whitelist words</source>
         <translation>黑名单 / 白名单单词</translation>
     </message>
@@ -6006,6 +6014,18 @@ No files on disk are deleted.</source>
     <message>
         <source>Make a card for a number and its counter, read with its sound changes (3本 さんぼん, 4人 よにん), defined by the counter. One card per number.</source>
         <translation>为数字及其量词制作一张卡片，读音体现音变（3本 さんぼん、4人 よにん），释义取自量词。每个数字一张卡片。</translation>
+    </message>
+    <message>
+        <source>Grammar</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mine grammar points</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Sentence grammar such as んだ, でしょう and ください becomes cards.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Reading</source>

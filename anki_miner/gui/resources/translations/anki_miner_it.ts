@@ -2691,6 +2691,14 @@ Nessun file indice viene eliminato.</translation>
         <translation>Crea una carta per 3本 o 4人 come un'unica parola, letta con i suoi mutamenti fonetici (さんぼん, よにん) e definita dal classificatore.</translation>
     </message>
     <message>
+        <source>Mine grammar points</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Card sentence grammar such as んだ, でしょう and ください. Turn it off to mine words only.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Blacklist / whitelist words</source>
         <translation>Lista nera / lista bianca di parole</translation>
     </message>
@@ -6043,6 +6051,18 @@ Nessun file sul disco viene eliminato.</translation>
     <message>
         <source>Make a card for a number and its counter, read with its sound changes (3本 さんぼん, 4人 よにん), defined by the counter. One card per number.</source>
         <translation>Crea una carta per un numero e il suo classificatore, letta con i suoi mutamenti fonetici (3本 さんぼん, 4人 よにん) e definita dal classificatore. Una carta per numero.</translation>
+    </message>
+    <message>
+        <source>Grammar</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mine grammar points</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Sentence grammar such as んだ, でしょう and ください becomes cards.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Reading</source>

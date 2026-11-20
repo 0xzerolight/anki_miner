@@ -2688,6 +2688,14 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Tạo thẻ cho 3本 hoặc 4人 như một từ, đọc theo biến âm (さんぼん, よにん) và định nghĩa theo lượng từ.</translation>
     </message>
     <message>
+        <source>Mine grammar points</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Card sentence grammar such as んだ, でしょう and ください. Turn it off to mine words only.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Blacklist / whitelist words</source>
         <translation>Danh sách chặn / cho phép từ</translation>
     </message>
@@ -6006,6 +6014,18 @@ Không có tệp nào trên ổ đĩa bị xóa.</translation>
     <message>
         <source>Make a card for a number and its counter, read with its sound changes (3本 さんぼん, 4人 よにん), defined by the counter. One card per number.</source>
         <translation>Tạo một thẻ cho số kèm lượng từ, đọc theo biến âm (3本 さんぼん, 4人 よにん), định nghĩa theo lượng từ. Mỗi số một thẻ.</translation>
+    </message>
+    <message>
+        <source>Grammar</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mine grammar points</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Sentence grammar such as んだ, でしょう and ください becomes cards.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Reading</source>
