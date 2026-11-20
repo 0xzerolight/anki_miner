@@ -35,6 +35,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Japanese: contracted adjectives card as their adjective (やべー, でけー, かっけー, うっせぇ),** and a compound with a classical adjective tail joins (名高き → 名高い).
 - **Japanese: a verb written partly in kana cards as its dictionary spelling (盗みだす → 盗み出す),** てらんない / てらんねえ stays part of its verb, and a katakana verb stem highlights its whole chain (ヤラれた, フラれた).
 - **Japanese: a noun followed by って is no longer read as a rare verb (恋って → 恋う).**
+- **Japanese: capital-letter words the dictionary lists are mined (ＣＤ, ＯＫ, ＤＶＤ),** read without the dictionary's middle dot (ＣＤ is しーでぃー). Half-width letters (CD) are not mined yet.
 - **Japanese: a drawn-out ending stays inside the highlight (先輩ー, 嘘っ, 潜るー, 食べねー).**
 - **Japanese: 殺人犯って and 放火犯って card 殺人犯 and 放火犯,** with 犯 read はん in the sentence.
 ### Fixed
@@ -88,6 +89,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Setup wizard: the resource download waits for a language pack that is still downloading,** so the frequency list no longer fails.
 - **Setup wizard: after a switch to another language and back, the deck and note type picked for the other language are not saved for the first one.**
 - **Setup wizard: a pack download for a language no longer picked is not counted for the current one.**
+- **Setup wizard: Skip Setup or Escape during the resource download keeps the resources that finished importing switched on,** as Cancel does. If the mining language was changed back, nothing is switched on.
 - **Manage Known Words shows the Added date in local time.**
 - **Utilities → Download: the 720p, 1080p and 1440p presets download a direct video link.**
 - **Linux install outside the AppImage: Restart now (interface language, zoom) starts the app with its bundled libraries again.**

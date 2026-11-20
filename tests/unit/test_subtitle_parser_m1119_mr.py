@@ -1,4 +1,5 @@
-"""Lane MR: doubled katakana mimetic words (ドキドキ), and a noun + って the tagger reads as a rare verb (恋って)."""
+"""Lane MR: doubled katakana mimetic words (ドキドキ), a noun + って the tagger reads as a rare verb (恋って),
+and capital-letter words the dictionary has (ＣＤ)."""
 
 from __future__ import annotations
 
@@ -127,3 +128,77 @@ class TestNounBeforeQuotingTte:
     )
     def test_the_verbs_other_forms_are_untouched(self, text: str, verb: str) -> None:
         assert verb in _fronts(SubtitleParserService(AnkiMinerConfig()), text)
+
+
+class TestAttestedLetterWords:
+    _LETTER_WORDS = ("ＣＤ", "ＤＶＤ", "ＮＧ", "ＯＫ")
+
+    @pytest.mark.parametrize(
+        ("text", "front"),
+        [
+            ("新しいＣＤを買った", "ＣＤ"),
+            ("ＤＶＤで映画を見る", "ＤＶＤ"),
+            ("その言葉はＮＧだ", "ＮＧ"),
+            ("これでＯＫです", "ＯＫ"),
+        ],
+    )
+    def test_a_capital_letter_word_the_dictionary_has_is_mined(self, text: str, front: str) -> None:
+        assert front in _fronts(_service(self._LETTER_WORDS), text)
+
+    @pytest.mark.parametrize("text", ["新しいＣＤを買った", "これでＯＫです"])
+    def test_one_the_dictionary_lacks_stays_out(self, text: str) -> None:
+        assert not set(_fronts(_service(), text)) & set(self._LETTER_WORDS)
+
+    def test_nothing_changes_without_a_dictionary(self) -> None:
+        assert "ＣＤ" not in _fronts(SubtitleParserService(AnkiMinerConfig()), "新しいＣＤを買った")
+
+    @pytest.mark.parametrize(
+        ("text", "letters"),
+        [
+            ("ｙｏｕは誰だ", "ｙｏｕ"),
+            ("答えはＡだ", "Ａ"),
+            ("Ｎｏと言った", "Ｎｏ"),
+        ],
+    )
+    def test_lower_case_and_single_letters_stay_out_even_when_listed(self, text: str, letters: str) -> None:
+        assert letters not in _fronts(_service([letters]), text)
+
+
+def _reading_service(readings: dict[str, list[str]]) -> SubtitleParserService:
+    spelled = set(readings)
+    return SubtitleParserService(
+        AnkiMinerConfig(),
+        term_lookup=lambda terms: spelled.intersection(terms),
+        kana_attest_lookup=lambda forms: {form: form in spelled for form in forms},
+        reading_lookup=lambda terms: {term: readings[term] for term in terms if term in readings},
+    )
+
+
+def _word(service: SubtitleParserService, text: str, front: str):
+    words, _index, _counts = service.parse_text_units(
+        [ReadingUnit(text=text, index=0, location_label="t")], want_line_index=False
+    )
+    return next(word for word in words if word.mined_form == front)
+
+
+class TestLetterWordReadings:
+    """The dictionary writes a letter word's reading with ・ between the letter names; the card does not."""
+
+    def test_the_card_reading_has_no_middle_dot(self) -> None:
+        word = _word(_reading_service({"ＣＤ": ["シー・ディー"]}), "新しいＣＤを買った", "ＣＤ")
+        assert word.expression_reading == "しーでぃー"
+        assert word.lemma_reading == "しーでぃー"
+        assert "・" not in word.expression_furigana
+
+    def test_the_sentence_reading_has_no_middle_dot(self) -> None:
+        word = _word(_reading_service({"ＤＶＤ": ["ディー・ブイ・ディー"]}), "ＤＶＤで映画を見る", "ＤＶＤ")
+        assert word.sentence_reading.startswith("でぃーぶいでぃーで")
+        assert "・" not in word.sentence_furigana
+
+    def test_a_lone_dictionary_reading_other_than_the_taggers_is_taken_without_the_dot(self) -> None:
+        word = _word(_reading_service({"ＵＦＯ": ["ユー・エフ・オー"]}), "空にＵＦＯが見えた", "ＵＦＯ")
+        assert word.expression_reading == "ゆーえふおー"
+
+    def test_another_word_keeps_the_dictionary_reading_as_written(self) -> None:
+        word = _word(_reading_service({"映画": ["エイ・ガ"]}), "映画を見る", "映画")
+        assert word.expression_reading == "えい・が"
