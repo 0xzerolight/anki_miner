@@ -30,6 +30,7 @@ from anki_miner.services.deinflection import (
     find_highlight_end_with_trace,
     get_highlight_deinflector,
     resolve_dictionary_form,
+    stretched_highlight_end,
 )
 from anki_miner.services.kana_words import is_kanji_spelled, is_listed
 from anki_miner.services.lexical_joiner import LexicalJoiner
@@ -1662,7 +1663,11 @@ class SubtitleParserService:
                 additional_target=resolved_front,
             )
             highlight_end = max(highlight_end, resolved_end)
-        return highlight_end
+        # A verb's or adjective's stretch marks stay outside its highlight for now:
+        # covering them cost form accuracy on the gold benchmark.
+        if word_token.feature.pos1 in ("動詞", "形容詞"):
+            return highlight_end
+        return stretched_highlight_end(text, highlight_end)
 
     def _card_front(self, word_token: Any, text: str, tok_start: int, tok_end: int, raw_tokens: list) -> str:
         """The ``mined_form`` emission gives an included token: its card front.
