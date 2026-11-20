@@ -26,6 +26,7 @@ from anki_miner.services.deinflection import (
     TermCommonLookup,
     TermRulesLookup,
     _is_pure_hiragana,
+    chain_spelling,
     find_highlight_end,
     find_highlight_end_with_trace,
     get_highlight_deinflector,
@@ -1679,10 +1680,6 @@ class SubtitleParserService:
                 additional_target=resolved_front,
             )
             highlight_end = max(highlight_end, resolved_end)
-        # A verb's or adjective's stretch marks stay outside its highlight for now:
-        # covering them cost form accuracy on the gold benchmark.
-        if word_token.feature.pos1 in ("動詞", "形容詞"):
-            return highlight_end
         return stretched_highlight_end(text, highlight_end)
 
     def _card_front(self, word_token: Any, text: str, tok_start: int, tok_end: int, raw_tokens: list) -> str:
@@ -2798,7 +2795,7 @@ class SubtitleParserService:
         # rightward highlight extension (感じた), or the bare surface when it did
         # not extend (感じ before a noun) — run either way, else 感じ-before-a-noun
         # keeps the archaic 感ずる.
-        inflected_surface = text[tok_start:highlight_end]
+        inflected_surface = chain_spelling(text[tok_start:highlight_end], len(word_token.surface))
         ctype = getattr(feature, "cType", None)
         # A godan imperative (持て, 従え) is never an -eru verb: its e-stem spelling
         # is also the stem of the attested ichidan 持てる/従える, which shares the

@@ -12,7 +12,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from anki_miner.services.deinflection import stretched_highlight_end
+from anki_miner.services.deinflection import chain_spelling, stretched_highlight_end
 from anki_miner.services.subtitle_parser import SubtitleParserService
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -69,6 +69,27 @@ class TestStretchedHighlightEnd:
     def test_out_of_range_end_is_returned_as_is(self) -> None:
         assert stretched_highlight_end("潜る", 0) == 0
         assert stretched_highlight_end("潜る", 5) == 5
+
+
+class TestChainSpelling:
+    """The resolver deinflects the span without the marks the table cannot undo."""
+
+    def test_trailing_marks_are_removed(self) -> None:
+        assert chain_spelling("感じたぁー", 2) == "感じた"
+        assert chain_spelling("潜るー", 2) == "潜る"
+        assert chain_spelling("勝ったっ", 2) == "勝った"
+
+    def test_a_contracted_ending_the_table_knows_is_kept(self) -> None:
+        assert chain_spelling("感じねぇ", 2) == "感じねぇ"
+        assert chain_spelling("感じねぇー", 2) == "感じねぇ"
+        assert chain_spelling("放てぇっ", 2) == "放てぇ"
+
+    def test_long_mark_after_an_e_row_ending_reads_as_the_vowel(self) -> None:
+        assert chain_spelling("食べねー", 2) == "食べねえ"
+
+    def test_the_token_itself_is_never_cut(self) -> None:
+        assert chain_spelling("行っ", 2) == "行っ"
+        assert chain_spelling("歩いた", 2) == "歩いた"
 
 
 @pytest.mark.skipif(not _fugashi_available(), reason="fugashi/unidic-lite not installed")
@@ -238,3 +259,32 @@ def test_classical_adjective_compound_fixture(record: dict) -> None:
 @pytest.mark.skipif(not _fugashi_available(), reason="fugashi/unidic-lite not installed")
 def test_classical_adjective_compound_highlights_the_whole_word() -> None:
     assert ("誇り高き", "誇り高い") in _highlights("誇り高き戦士")
+
+
+@pytest.mark.skipif(not _fugashi_available(), reason="fugashi/unidic-lite not installed")
+class TestStretchedVerbSpans:
+    @pytest.mark.parametrize(
+        ("sentence", "highlight", "front"),
+        [
+            ("海に潜るー", "潜るー", "潜る"),
+            ("矢を放てぇっ！", "放てぇっ", "放つ"),
+            ("やっと歩いたぁ", "歩いたぁ", "歩く"),
+            ("試合に勝ったぁーー！", "勝ったぁーー", "勝つ"),
+            ("返事が遅いー", "遅いー", "遅い"),
+            ("痛みを感じたぁ", "感じたぁ", "感じる"),
+            ("もう食べねーよ", "食べねー", "食べる"),
+        ],
+    )
+    def test_stretch_marks_join_the_chain(self, sentence: str, highlight: str, front: str) -> None:
+        assert (highlight, front) in _highlights(sentence)
+
+    def test_quoting_tte_is_not_a_stretch(self) -> None:
+        assert ("潜る", "潜る") in _highlights("海に潜るって言った")
+
+    def test_particle_with_a_long_mark_stays_outside(self) -> None:
+        assert ("待って", "待つ") in _highlights("ここで待ってねー")
+
+
+@pytest.mark.skipif(not _fugashi_available(), reason="fugashi/unidic-lite not installed")
+def test_stretched_katakana_stem_chain() -> None:
+    assert ("ヤラれたぁ", "やる") in _highlights("あいつにヤラれたぁ")
