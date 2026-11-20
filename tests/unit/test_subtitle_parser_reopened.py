@@ -22,13 +22,17 @@ def _fugashi_available() -> bool:
 pytestmark = pytest.mark.skipif(not _fugashi_available(), reason="fugashi/unidic-lite not installed")
 
 
-def _fronts(text: str, attested: frozenset[str] = frozenset()) -> list[str]:
+def _words(text: str, attested: frozenset[str] = frozenset()) -> list:
     # The ja factory's parser: the name-piece rejects are Japanese-only.
     service = get_profile("ja").create_parser(AnkiMinerConfig(), term_lookup=lambda terms: set(terms) & attested)
     words, _index, _counts = service.parse_text_units(
         [ReadingUnit(text=text, index=0, location_label="t")], want_line_index=False
     )
-    return [word.mined_form for word in words]
+    return words
+
+
+def _fronts(text: str, attested: frozenset[str] = frozenset()) -> list[str]:
+    return [word.mined_form for word in _words(text, attested)]
 
 
 class TestNamePieces:
@@ -46,6 +50,19 @@ class TestKanjiVerbGlues:
         fronts = _fronts("殺人犯って何")
         assert "犯る" not in fronts
         assert "殺人" in fronts
+
+    def test_a_crime_suffix_before_tte_reads_han_on_every_card_of_the_line(self):
+        # 殺人|犯っ|て is re-cut to 殺人|犯|って, so the sentence reads はん and the suffix merge makes 殺人犯.
+        words = _words("殺人犯って誰？", frozenset({"殺人犯"}))
+        assert [word.mined_form for word in words] == ["殺人犯", "誰"]
+        for word in words:
+            # No reading lookup is wired, so the compound keeps per-token ruby (殺人犯[さつじんはん] with one).
+            assert word.sentence_furigana == "殺人[さつじん] 犯[はん]って 誰[だれ]？"
+            assert word.sentence_reading == "さつじんはんってだれ？"
+
+    def test_the_vulgar_verb_after_a_particle_is_not_re_cut(self):
+        words = _words("彼女を犯ってしまった")
+        assert "犯[や]って" in words[0].sentence_furigana
 
 
 class TestNameHonorifics:

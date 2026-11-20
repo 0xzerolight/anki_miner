@@ -1037,7 +1037,34 @@ _PREFIX_NOUNS: dict[str, dict[str, str]] = {
 #: Two tagger tokens cut at the wrong place, by their (surface, lemma), and the
 #: two (surface, fields) they are re-cut into. 自分ち 'my place' (ち from うち)
 #: has no path in unidic-lite, which reads 自 + 分ち (わかち 'division').
+#: 殺人犯って is read 殺人 + 犯っ (犯る, vulgar やる) + て: it is the crime suffix
+#: 犯 (ハン, the tag 殺人犯は gets) and the quoting って, so the noun-suffix merge
+#: makes 殺人犯 as it does before は. Only right after a noun stem
+#: (``_MISSPLIT_STEMS``): 彼女を犯って is the verb.
 _MISSPLITS: dict[tuple[tuple[str, str | None], ...], tuple[tuple[str, dict[str, str]], ...]] = {
+    (("犯っ", "遣る"), ("て", "て")): (
+        (
+            "犯",
+            {
+                "pos1": "接尾辞",
+                "pos2": "名詞的",
+                "pos3": "一般",
+                "cType": "*",
+                "cForm": "*",
+                "goshu": "漢",
+                **dict.fromkeys(("lemma", "orth", "orthBase"), "犯"),
+                **dict.fromkeys(("lForm", "pron", "pronBase", "kana", "kanaBase", "form", "formBase"), "ハン"),
+            },
+        ),
+        (
+            "って",
+            {
+                "pos2": "副助詞",
+                **dict.fromkeys(("lemma", "orth", "orthBase"), "って"),
+                **dict.fromkeys(("lForm", "pron", "pronBase", "kana", "kanaBase", "form", "formBase"), "ッテ"),
+            },
+        ),
+    ),
     (("自", "自"), ("分ち", "分かち")): (
         (
             "自分",
@@ -1106,6 +1133,13 @@ _MISSPLITS.update(
         (("氷っ", "凍る"), ("て", "て")): _noun_tte_resplit("氷", "コオリ"),
     }
 )
+
+
+#: The pairs of ``_MISSPLITS`` that are re-cut only right after (no space) a
+#: token of one of these parts of speech, the stem their first piece suffixes.
+_MISSPLIT_STEMS: dict[tuple[tuple[str, str | None], ...], frozenset[str]] = {
+    (("犯っ", "遣る"), ("て", "て")): frozenset({"名詞", "形状詞"}),
+}
 
 
 def _unknown_katakana_noun(token) -> bool:
@@ -1180,6 +1214,13 @@ def retag_mistagged_tokens(tokens: list, form_lookup: FormLookup | None = None) 
         if nxt is not None and not spaced:
             pair = ((token.surface, _lemma_or_none(token)), (nxt.surface, _lemma_or_none(nxt)))
             resplit = _MISSPLITS.get(pair)
+            stems = _MISSPLIT_STEMS.get(pair)
+            if stems is not None and not (
+                i > 0
+                and not getattr(token, "white_space", "")
+                and getattr(getattr(tokens[i - 1], "feature", None), "pos1", None) in stems
+            ):
+                resplit = None
             if resplit is not None:
                 out.append(RetaggedToken(token, resplit[0][1], resplit[0][0]))
                 continue

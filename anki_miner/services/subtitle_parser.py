@@ -230,8 +230,9 @@ _KANA_FUSED_LEMMAS: frozenset[str] = frozenset({"逸る", "抗する", "痛む",
 _KANJI_NAME_PIECE_LEMMAS: frozenset[str] = frozenset({"助"})
 
 # Kanji verbs the tagger makes by gluing a suffix to what follows, by their
-# orthBase: 犯る (vulgar やる) is the crime suffix 犯 before a quoting って
-# (殺人犯って, 同一犯って); the verb itself never stands alone in a line.
+# orthBase: 犯る (vulgar やる) is the crime suffix 犯 glued to what follows
+# (殺人犯ったら); the verb itself never stands alone in a line. Before a quoting
+# って the pair is re-cut on the raw stream instead (morphology._MISSPLITS).
 _KANJI_FUSED_ORTH_BASES: frozenset[str] = frozenset({"犯る"})
 
 # Honorific compounds the tagger (or the noun-suffix merge) makes from a name's
