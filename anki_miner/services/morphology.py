@@ -1143,6 +1143,88 @@ def retag_mistagged_tokens(tokens: list, form_lookup: FormLookup | None = None) 
     return out
 
 
+#: Adjectives spoken with an -ee ending (やばい → やべー) that unidic-lite has no
+#: path for and cuts into particles, sounds and stray nouns (や|べ|ー, で|けー,
+#: かっけ 'beriberi' |ー): the stem as written, then the dictionary form in kana,
+#: the lemma the tagger gives that form, and its reading. The tagger's own
+#: readings of other such forms (すげー, おもしれー, うるせー) need no entry.
+_CONTRACTED_ADJECTIVES: dict[str, tuple[str, str, str]] = {
+    "やべ": ("やばい", "やばい", "ヤバイ"),
+    "やっべ": ("やばい", "やばい", "ヤバイ"),
+    "でけ": ("でかい", "でかい", "デカイ"),
+    "でっけ": ("でっかい", "でかい", "デッカイ"),
+    "こえ": ("こわい", "怖い", "コワイ"),
+    "たけ": ("たかい", "高い", "タカイ"),
+    "うぜ": ("うざい", "うざい", "ウザイ"),
+    "うめ": ("うまい", "旨い", "ウマイ"),
+    "かっけ": ("かっこいい", "かっこいい", "カッコイイ"),
+    "めんどくせ": ("めんどくさい", "面倒臭い", "メンドクサイ"),
+    "あったけ": ("あったかい", "暖かい", "アッタカイ"),
+    "うっせ": ("うるさい", "煩い", "ウルサイ"),
+}
+_CONTRACTED_ENDING_MARKS = frozenset("ーえぇェ")
+_CONTRACTED_MAX_TOKENS = 6
+
+
+def _contracted_adjective(surface: str) -> tuple[str, str, str] | None:
+    """The ``_CONTRACTED_ADJECTIVES`` row *surface* spells: a stem plus at least one ending mark."""
+    stem = surface
+    while stem and stem[-1] in _CONTRACTED_ENDING_MARKS:
+        stem = stem[:-1]  # こえー is こえ + ー: an え may belong to the stem
+        if stem in _CONTRACTED_ADJECTIVES:
+            return _CONTRACTED_ADJECTIVES[stem]
+    return None
+
+
+def rejoin_contracted_adjectives(tokens: list) -> list:
+    """Join the pieces the tagger cuts a contracted -ee adjective into (``_CONTRACTED_ADJECTIVES``).
+
+    やべー arrives as や|べ|ー and でけー as で|けー: no piece is a word, so the
+    adjective was never mined. A run of unspaced tokens whose surfaces join to
+    a listed stem plus its ending marks (ー, え, ぇ) becomes one 形容詞 token
+    with the fields the tagger gives すげー: the kana dictionary form as its
+    orthBase, the listed lemma and reading. The longest such run from a token
+    wins (やべーー). A stem inside a longer token never matches (行こう|ぜー has
+    no う token), and a run the tagger already reads as one token is not a run.
+    """
+    out: list = []
+    i = 0
+    while i < len(tokens):
+        joined = tokens[i].surface if isinstance(tokens[i].surface, str) else ""
+        match: tuple[int, str, tuple[str, str, str]] | None = None
+        for j in range(i + 1, min(i + _CONTRACTED_MAX_TOKENS, len(tokens))):
+            surface = tokens[j].surface
+            white_space = getattr(tokens[j], "white_space", "")
+            if not isinstance(surface, str) or (isinstance(white_space, str) and white_space):
+                break
+            joined += surface
+            row = _contracted_adjective(joined)
+            if row is not None:
+                match = (j, joined, row)
+        if match is None or not hasattr(getattr(tokens[i], "feature", None), "_replace"):
+            out.append(tokens[i])
+            i += 1
+            continue
+        end, joined, (base, lemma, reading) = match
+        fields = {
+            "pos1": "形容詞",
+            "pos2": "一般",
+            "pos3": "*",
+            "pos4": "*",
+            "cType": "形容詞",
+            "cForm": "終止形-一般",
+            "lemma": lemma,
+            "orth": joined,
+            "orthBase": base,
+            "goshu": "和",
+            **dict.fromkeys(("lForm", "pronBase", "kanaBase", "formBase"), reading),
+            **dict.fromkeys(("pron", "kana", "form"), hiragana_to_katakana(joined)),
+        }
+        out.append(RetaggedToken(tokens[i], fields, joined))
+        i = end + 1
+    return out
+
+
 def _merge_prefix_compounds(tokens: list, attest: AttestLookup | None = None) -> list:
     """Merge 接頭辞 + 名詞/形状詞 pairs into a single token.
 

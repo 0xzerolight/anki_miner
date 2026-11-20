@@ -197,3 +197,25 @@ class TestTeRannaiChain:
         mined = _highlights(sentence)
         assert (highlight, front) in mined
         assert "ない" not in {front for _highlight, front in mined}
+
+
+@pytest.mark.skipif(not _fugashi_available(), reason="fugashi/unidic-lite not installed")
+class TestContractedAdjectives:
+    """An -ee adjective the tagger cuts into particles and sounds is read as the adjective."""
+
+    @pytest.mark.parametrize(
+        ("sentence", "highlight", "front"),
+        [
+            ("こいつはやべー", "やべー", "やばい"),
+            ("本当にやべぇな", "やべぇ", "やばい"),
+            ("あの家でけーな", "でけー", "でかい"),
+            ("この家でっけぇ", "でっけぇ", "でっかい"),
+            ("あの人かっけー", "かっけー", "かっこいい"),
+            ("やべーー", "やべーー", "やばい"),
+        ],
+    )
+    def test_contracted_adjective_is_mined(self, sentence: str, highlight: str, front: str) -> None:
+        assert (highlight, front) in _highlights(sentence)
+
+    def test_plain_tokens_are_left_alone(self) -> None:
+        assert not any(front == "うざい" for _highlight, front in _highlights("早く行こうぜー"))
