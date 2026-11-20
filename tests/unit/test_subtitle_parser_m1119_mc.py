@@ -90,6 +90,86 @@ class TestSpokenIdioms:
         assert front not in _fronts(text)
 
 
+_GRAMMAR = ("んだ", "んです", "のです", "のだ", "ですか", "だろう", "でしょう", "ください", "じゃない", "ではない")
+
+
+def _grammar_words(text: str):
+    return _words(text, _GRAMMAR)
+
+
+class TestSentenceGrammar:
+    @pytest.mark.parametrize(
+        ("text", "front"),
+        [
+            ("明日行くんだよ", "んだ"),
+            ("高いんですか", "んです"),
+            ("魚を食べたいのです", "のです"),
+            ("学生ですか", "ですか"),
+            ("そうだろう", "だろう"),
+            ("魚を食べるでしょう", "でしょう"),
+            ("やめてください", "ください"),
+            ("学生じゃなくて先生だ", "じゃない"),
+            ("学生ではない", "ではない"),
+        ],
+    )
+    def test_mines_the_expression(self, text, front):
+        assert front in [word.mined_form for word in _grammar_words(text)]
+
+    @pytest.mark.parametrize(
+        ("text", "front", "shorter"),
+        [("本当に好きなんだ", "なんだ", "んだ"), ("彼は歌手なんですか", "なんです", "ですか")],
+    )
+    def test_the_adnominal_na_belongs_to_the_expression(self, text, front, shorter):
+        fronts = [word.mined_form for word in _words(text, (*_GRAMMAR, "なんだ", "なんです"))]
+        assert front in fronts
+        assert shorter not in fronts
+
+    def test_the_longer_expression_takes_the_copula(self):
+        fronts = [word.mined_form for word in _grammar_words("高いんですか")]
+        assert "ですか" not in fronts
+
+    @pytest.mark.parametrize(
+        ("text", "front"),
+        [
+            ("本当に好きなんだ", "んだ"),  # after the adnominal な
+            ("何をやってんだよ", "んだ"),  # the ん is やっている's own
+            ("これは俺のだ", "のだ"),  # the possessive の
+            ("魚が死んだ", "んだ"),  # 死ん|だ is the verb
+            ("まだ読んではないよ", "ではない"),  # the で is 読む's te-form
+            ("死んではない", "ではない"),
+            ("まだ読んじゃないよ", "じゃない"),  # the じゃ is 読む's contracted では
+        ],
+    )
+    def test_the_same_kana_elsewhere_is_no_expression(self, text, front):
+        assert front not in [word.mined_form for word in _grammar_words(text)]
+
+    @pytest.mark.parametrize(("text", "front"), [("それは本ではない", "ではない"), ("嘘じゃない", "じゃない")])
+    def test_the_copula_expression_follows_a_noun(self, text, front):
+        assert front in [word.mined_form for word in _grammar_words(text)]
+
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "やめてください",
+            "魚を食べたんだ",
+            "行かないんです",
+            "何をやってんだよ",
+            "まだ読んではないよ",
+            "まだ読んじゃないよ",
+        ],
+    )
+    def test_no_card_starts_inside_the_word_before_it(self, text):
+        words = sorted(_grammar_words(text), key=lambda word: word.surface_start)
+        for before, after in zip(words, words[1:], strict=False):
+            assert before.highlight_end <= after.surface_start
+
+    def test_a_refused_row_leaves_its_tokens_to_the_next_one(self):
+        # の|だ across a space is no のだ; the だ|から behind it opens a clause and still joins.
+        fronts = [word.mined_form for word in _words("もういいの だから寝る", (*_GRAMMAR, "だから"))]
+        assert "だから" in fronts
+        assert "のだ" not in fronts
+
+
 _CONNECTIVES = (
     "だったら",
     "だが",
