@@ -59,6 +59,8 @@ _ATTESTED = frozenset(
     | {"ごめんなさい", "ごめん", "いただきます", "かしこまりました", "すまない", "すまん"}
     | {"まぁ", "そりゃ", "そりゃあ", "こりゃ", "ありゃ", "なんぼ", "ちょいと", "どいつ", "もと", "じき"}
     | {"とっさに", "じきに", "もうじき", "そのかわり", "その", "もう"}
+    | {"ねえ", "ねぇ", "こら", "よっしゃ", "よーし", "いざ", "おう", "やあ", "おーい", "ほな", "へえ", "へぇ", "さぁ"}
+    | {"ありがと", "なんちゃって", "はいはい", "はい"}
 )
 
 
@@ -195,3 +197,32 @@ class TestSpokenRows:
         fronts = _fronts(text)
         assert front in fronts
         assert not set(pieces) & set(fronts)
+
+
+class TestMoreInterjections:
+    @pytest.mark.parametrize(
+        ("text", "front"),
+        [
+            ("ねぇ、聞いて", "ねぇ"),
+            ("こら、待て", "こら"),
+            ("よっしゃ、勝った", "よっしゃ"),
+            ("よーし、行くぞ", "よーし"),
+            ("いざ、勝負", "いざ"),
+            ("おう、任せろ", "おう"),
+            ("やあ、元気か", "やあ"),
+            ("おーい、こっちだ", "おーい"),
+            ("ほな、帰る", "ほな"),
+            ("へえ、知らなかった", "へえ"),
+            ("さぁ、始めよう", "さぁ"),
+            ("ありがと", "ありがと"),
+        ],
+    )
+    def test_mines_an_interjection_named_on_the_list(self, text, front):
+        assert front in _fronts(text)
+
+    def test_joins_a_doubled_hai(self):
+        assert _fronts("はいはい、分かった")[0] == "はいはい"
+
+    @pytest.mark.parametrize(("text", "sound"), [("えっと、行きます", "えっと"), ("あっ、行く", "あっ")])
+    def test_fillers_stay_out(self, text, sound):
+        assert sound not in _fronts(text)

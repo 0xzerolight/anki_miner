@@ -51,3 +51,11 @@
 {"id":"mj34","sentence":"じきに治る","expected":["じきに","治る"],"category":"m1119-kana-joins"}
 {"id":"mj35","sentence":"もうじき春だ","expected":["もうじき","春"],"category":"m1119-kana-joins","note":"not もう + じき"}
 {"id":"mj36","sentence":"そのかわり手伝って","expected":["そのかわり","手伝う"],"category":"m1119-kana-joins","note":"not その + かわり"}
+{"id":"mk20","sentence":"ねぇ、聞いて","expected":["ねぇ","聞く"],"category":"m1119-kana-rows","note":"an interjection JMdict gives no priority tag"}
+{"id":"mk21","sentence":"こら、待て","expected":["こら","待つ"],"category":"m1119-kana-rows"}
+{"id":"mk22","sentence":"よっしゃ、勝った","expected":["よっしゃ","勝つ"],"category":"m1119-kana-rows"}
+{"id":"mk23","sentence":"やあ、元気か","expected":["やあ","元気"],"category":"m1119-kana-rows"}
+{"id":"mk24","sentence":"ほな、帰る","expected":["ほな","帰る"],"category":"m1119-kana-rows"}
+{"id":"mk25","sentence":"へえ、知らなかった","expected":["へえ","知る"],"category":"m1119-kana-rows"}
+{"id":"mk26","sentence":"ありがと","expected":["ありがと"],"category":"m1119-kana-rows","note":"the clipped ありがとう"}
+{"id":"mj37","sentence":"はいはい、分かった","expected":["はいはい","分かる"],"category":"m1119-kana-joins","note":"not はい twice"}
