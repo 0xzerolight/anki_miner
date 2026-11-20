@@ -90,8 +90,11 @@ class _FakeService:
         condense_failure: FfmpegStepFailure | None = None,
         concat_result: bool = True,
         concat_failure: FfmpegStepFailure | None = None,
+        missing_encoder_suffix: str | None = None,
     ) -> None:
         self._condense_result = condense_result
+        self._missing_encoder_suffix = missing_encoder_suffix
+        self.require_encoder_calls: list[Path] = []
         self._condense_failure = condense_failure
         self._concat_result = concat_result
         self._concat_failure = concat_failure
@@ -102,6 +105,11 @@ class _FakeService:
         self.condense_calls: list[dict] = []
         self.extract_calls: list[dict] = []
         self.concat_calls: list[dict] = []
+
+    def require_encoder(self, out_audio):
+        self.require_encoder_calls.append(out_audio)
+        if Path(out_audio).suffix == self._missing_encoder_suffix:
+            raise EncoderUnavailableError("ffmpeg encoder 'libmp3lame' is unavailable")
 
     def extract_embedded_subtitle(self, video, stream, out_dir, cancel_event=None):
         self.extract_calls.append({"video": video, "stream": stream, "out_dir": out_dir})
@@ -1221,6 +1229,29 @@ def test_merge_mode_stages_parts_and_merges_them(qapp, tmp_path):
     # Staging folder is gone.
     assert not staged[0].parent.exists()
     assert list(config.media_temp_folder.glob("condense_merge_*")) == []
+
+
+def test_merge_mode_stops_on_the_first_file_when_the_final_encoder_is_missing(qapp, tmp_path):
+    """The parts are FLAC, so the merge's own encoder is checked before the first part is made."""
+    config = _make_config(tmp_path)
+    items = _merge_items(tmp_path)
+    final = tmp_path / "season.mp3"
+
+    service = _FakeService(missing_encoder_suffix=".mp3")
+    worker = _make_worker(items, config, service=service, merge_into=final)
+    cap = _capture(worker)
+    worker.run()
+    worker.wait(2000)
+
+    assert service.require_encoder_calls == [final]
+    assert service.condense_calls == []
+    assert service.concat_calls == []
+    assert len(cap["finished"]) == 1
+    idx, out, err = cap["finished"][0]
+    assert idx == 0 and out is None and "libmp3lame" in err
+    assert cap["started"] == [0]
+    assert isinstance(worker.fatal_exception, EncoderUnavailableError)
+    assert worker.is_cancelled is False
 
 
 def test_merge_mode_reports_progress_for_the_merge_step(qapp, tmp_path):

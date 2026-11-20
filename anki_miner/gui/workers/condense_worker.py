@@ -336,6 +336,11 @@ class CondenseWorker(FileQueueWorker):
             self.file_progress.emit(idx, pct, tr_format(self.tr("Condensing: %1%"), pct))
 
         try:
+            if self._merge_into is not None:
+                # The parts are FLAC, which needs no probe: check the merge's own
+                # encoder here, so a missing one stops the run on its first file
+                # as a normal run does, not after every part was condensed.
+                self._service.require_encoder(self._merge_into)
             result = condense_one(
                 self._service,
                 self._config,
