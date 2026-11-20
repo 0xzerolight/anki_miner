@@ -61,6 +61,18 @@ _ATTESTED = frozenset(
     | {"とっさに", "じきに", "もうじき", "そのかわり", "その", "もう"}
     | {"ねえ", "ねぇ", "こら", "よっしゃ", "よーし", "いざ", "おう", "やあ", "おーい", "ほな", "へえ", "へぇ", "さぁ"}
     | {"ありがと", "なんちゃって", "はいはい", "はい"}
+    | {"ごちそう", "おしまい", "おわび", "おしゃべり", "おせっかい", "おかわり", "おつかれ", "でかした"}
+    | {
+        "どうしようもない",
+        "しようがない",
+        "しかたがない",
+        "しょうがない",
+        "もったいない",
+        "とんでもない",
+        "しかた",
+        "どう",
+        "ない",
+    }
 )
 
 
@@ -226,3 +238,40 @@ class TestMoreInterjections:
     @pytest.mark.parametrize(("text", "sound"), [("えっと、行きます", "えっと"), ("あっ、行く", "あっ")])
     def test_fillers_stay_out(self, text, sound):
         assert sound not in _fronts(text)
+
+
+class TestPrefixedAndNegativeJoins:
+    @pytest.mark.parametrize(
+        ("text", "front"),
+        [
+            ("ごちそうになった", "ごちそう"),
+            ("もうおしまいだ", "おしまい"),
+            ("おわびに来た", "おわび"),
+            ("おしゃべりな人", "おしゃべり"),
+            ("おせっかいだな", "おせっかい"),
+            ("おかわりを頼む", "おかわり"),
+            ("おつかれ", "おつかれ"),
+            ("でかした", "でかした"),
+        ],
+    )
+    def test_joins_a_word_cut_at_the_polite_prefix(self, text, front):
+        assert front in _fronts(text)
+
+    @pytest.mark.parametrize(
+        ("text", "front"),
+        [
+            ("どうしようもない", "どうしようもない"),
+            ("どうしようもなかった", "どうしようもない"),
+            ("しようがないな", "しようがない"),
+            ("しかたがなかった", "しかたがない"),
+            ("しょうがなかった", "しょうがない"),
+            ("もったいなかった", "もったいない"),
+            ("とんでもなかった", "とんでもない"),
+        ],
+    )
+    def test_joins_a_negative_adjective_in_every_inflection(self, text, front):
+        assert _fronts(text) == [front]
+
+    def test_the_longer_greeting_still_wins(self):
+        assert _fronts("ごちそうさまでした") == ["ごちそうさま"]
+        assert _fronts("おつかれさま") == ["おつかれさま"]

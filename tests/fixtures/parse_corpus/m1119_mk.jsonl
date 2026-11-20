@@ -59,3 +59,12 @@
 {"id":"mk25","sentence":"へえ、知らなかった","expected":["へえ","知る"],"category":"m1119-kana-rows"}
 {"id":"mk26","sentence":"ありがと","expected":["ありがと"],"category":"m1119-kana-rows","note":"the clipped ありがとう"}
 {"id":"mj37","sentence":"はいはい、分かった","expected":["はいはい","分かる"],"category":"m1119-kana-joins","note":"not はい twice"}
+{"id":"mj38","sentence":"ごちそうになった","expected":["ごちそう","なる"],"category":"m1119-kana-joins","note":"the word is cut at the polite prefix"}
+{"id":"mj39","sentence":"もうおしまいだ","expected":["もう","おしまい"],"category":"m1119-kana-joins"}
+{"id":"mj40","sentence":"おしゃべりな人","expected":["おしゃべり","人"],"category":"m1119-kana-joins"}
+{"id":"mj41","sentence":"おせっかいだな","expected":["おせっかい"],"category":"m1119-kana-joins"}
+{"id":"mj42","sentence":"でかした","expected":["でかした"],"category":"m1119-kana-joins"}
+{"id":"mj43","sentence":"どうしようもなかった","expected":["どうしようもない"],"category":"m1119-kana-joins","note":"the whole adjective; not どう + ない"}
+{"id":"mj44","sentence":"しかたがないな","expected":["しかたがない"],"category":"m1119-kana-joins","note":"not しかた + ない"}
+{"id":"mj45","sentence":"しょうがなかった","expected":["しょうがない"],"category":"m1119-kana-joins","note":"the listed join now holds in every inflection"}
+{"id":"mj46","sentence":"もったいなかった","expected":["もったいない"],"category":"m1119-kana-joins"}
