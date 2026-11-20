@@ -1637,7 +1637,21 @@ class SubtitleParserService:
         identically so the emitted highlight_end stays byte-identical between
         parse_subtitle_file and _with_index.
         """
+        if getattr(getattr(word_token, "feature", None), "written_base", None):
+            return self._spoken_idiom_highlight_end(text, raw_tokens, tok_start, tok_end, word_token)
         return find_highlight_end(text, raw_tokens, tok_start, tok_end, word_token)
+
+    @staticmethod
+    def _spoken_idiom_highlight_end(text: str, raw_tokens: list, tok_start: int, tok_end: int, word_token: Any) -> int:
+        """The highlight end of a join whose headword the line spells otherwise (腹減って for 腹が減る).
+
+        The matcher notes the base as written (腹減る, ``written_base``); the
+        line's text deinflects to that, never to the headword.
+        """
+        end, _chain = find_highlight_end_with_trace(
+            text, raw_tokens, tok_start, tok_end, word_token, additional_target=word_token.feature.written_base
+        )
+        return end
 
     def _emission_highlight_end(
         self, text: str, raw_tokens: list, tok_start: int, tok_end: int, word_token: Any

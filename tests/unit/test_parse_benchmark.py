@@ -169,6 +169,8 @@ _EXPECTED_CATEGORIES = {
     "kanji-glue",
     "m1119-kana-rows",
     "m1119-kana-joins",
+    "spoken-idiom",
+    "sentence-grammar",
 }
 
 

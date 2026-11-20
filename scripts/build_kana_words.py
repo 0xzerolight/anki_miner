@@ -340,6 +340,42 @@ JOINS: tuple[tuple[str, str, str, str], ...] = (
     ("そんで", "接続詞", "そん|で", "start"),
     ("そんなら", "接続詞", "そん|なら", "start"),
     ("ほんなら", "接続詞", "ほん|なら", "start"),
+    # Sentence grammar JMdict lists as expressions and the tagger files as
+    # auxiliaries and particles. A row of one token is the token itself, mined
+    # by name. A "clause" row joins after whatever can end a clause (行くんだ,
+    # 高いんです), not after the adnominal な (好きなんだ) nor where the ん is a
+    # verb's own contraction (やってんだ): LexicalJoiner._ends_clause. の|です
+    # after a noun is the possessive (私のです), hence "verb".
+    ("んだ", "感動詞", "ん|だ", "clause"),
+    ("んです", "感動詞", "ん|です", "clause"),
+    ("のです", "感動詞", "の|です", "verb"),
+    ("のだ", "感動詞", "の|だ", "verb"),
+    ("ですか", "感動詞", "です|か", ""),
+    ("だろう", "感動詞", "だろう", ""),
+    ("でしょう", "感動詞", "でしょう", ""),
+    ("だろ", "感動詞", "だろ", ""),
+    ("でしょ", "感動詞", "でしょ", ""),
+    ("ください", "感動詞", "ください", ""),
+    ("じゃない", "形容詞", "じゃ|=ない", ""),
+    ("ではない", "形容詞", "で|は|=ない", ""),
+    ("っていうか", "接続詞", "って|いう|か", ""),
+    # After the adnominal な the expression is なんだ, なんです (好きなんだ, 歌手なんです).
+    ("なんだ", "感動詞", "な|ん|だ", ""),
+    ("なんです", "感動詞", "な|ん|です", ""),
+    # Conjunctions and adverbs the tagger cuts at an auxiliary or a particle.
+    # The copula rows only open a clause (だったら帰る; 丈夫だったら is the
+    # copula's own conditional), and っていう follows a noun as という does.
+    # Left out: と|し|たら, which after a volitional is "tried to" (渡そうとしたら).
+    ("だったら", "接続詞", "だっ|たら", "start"),
+    ("だが", "接続詞", "だ|が", "start"),
+    ("ですが", "接続詞", "です|が", "start"),
+    ("ですから", "接続詞", "です|から", "start"),
+    ("それより", "接続詞", "それ|より", "start"),
+    ("そしたら", "接続詞", "そ|し|たら", ""),
+    ("そうやって", "副詞", "そう|やっ|て", ""),
+    ("こうやって", "副詞", "こう|やっ|て", ""),
+    ("くせに", "副詞", "くせ|に", ""),
+    ("っていう", "連体詞", "って|いう", "noun"),
 )
 
 _HEADER = """\
