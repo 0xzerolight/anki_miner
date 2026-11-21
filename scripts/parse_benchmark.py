@@ -630,6 +630,9 @@ _ANCHOR_HEADWORDS: tuple[str, ...] = (
     # ドキドキ: katakana.jsonl ka02 pins it as dropped when the dictionary lacks it)
     "ニコニコ",
     "ワクワク",
+    # k1120 MC: あとで is only the READING of 後で (kc01); もんか is spelled so (kc02)
+    "後で",
+    "もんか",
 )
 
 # Yomitan `ruleIdentifiers` per fixture headword. A real term bank ships these,
@@ -701,6 +704,7 @@ _ANCHOR_READINGS: dict[str, str] = {
     "詰まらない": "つまらない",
     "ガイル": "がいる",
     "二位": "にい",
+    "後で": "あとで",
 }
 
 _ANCHOR_COMMON_HEADWORDS = frozenset({"やる", "北海道", "パリ"})

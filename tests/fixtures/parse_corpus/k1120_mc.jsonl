@@ -1,0 +1,2 @@
+{"id":"kc01","sentence":"あとで帰る","expected":["あと","帰る"],"category":"lexicalized-window","note":"あとで is only the reading of 後で: a homophone window across the particle does not take the listed noun."}
+{"id":"kc02","sentence":"知るもんか","expected":["知る"],"category":"lexicalized-window","note":"Guard: もんか is spelled so in the dictionary, so もん stays out."}
