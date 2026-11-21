@@ -289,3 +289,22 @@ class TestPreNounRows:
     @pytest.mark.parametrize("text", ["誰かの声がする", "何かの間違いだ"])
     def test_ka_no_after_an_indefinite_is_no_card(self, text):
         assert "かの" not in _fronts(text)
+
+
+class TestRequestNoun:
+    @pytest.mark.parametrize("text", ["水をちょうだい", "お茶ちょうだい", "それ、ちょうだいよ", "すべてちょうだい"])
+    def test_mines_choudai_as_the_lines_own_word(self, text):
+        assert "ちょうだい" in _fronts(text)
+
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "少し待ってちょうだい",
+            "ここで待っててちょうだい",
+            "まだ飲んでちょうだい",
+            "行かせて…ちょうだい",
+            "持ってってちょうだい",
+        ],
+    )
+    def test_choudai_after_te_is_grammar(self, text):
+        assert "ちょうだい" not in _fronts(text)

@@ -14,3 +14,4 @@
 {"id":"kk14","sentence":"ホッとした","expected":["ホッと"],"category":"k1120-kana-words","note":"a と-adverb with a katakana stem, a dictionary headword as written"}
 {"id":"kk15","sentence":"ぞっとした","expected":["ぞっと"],"category":"k1120-kana-words","note":"a three-kana と-adverb, by its list row"}
 {"id":"kk16","sentence":"とある町で会った","expected":["とある","町","会う"],"category":"k1120-kana-words","note":"a kana pre-noun adjectival JMdict gives no priority tag"}
+{"id":"kk17","sentence":"水をちょうだい","expected":["水","ちょうだい"],"category":"k1120-kana-words","note":"the request noun as the line's own word"}

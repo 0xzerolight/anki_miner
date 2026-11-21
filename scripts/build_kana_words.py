@@ -149,8 +149,9 @@ EXCLUDED: dict[tuple[str, str], str] = {
     # the particle constant.
     **dict.fromkeys((("かも", "名詞"), ("かな", "名詞"), ("とも", "名詞"), ("かね", "名詞")), "particle"),
     **dict.fromkeys((("なし", "名詞"), ("たか", "名詞"), ("しな", "名詞")), "particle"),
-    # Requests after て (見てごらん, 待ってちょうだい).
-    **dict.fromkeys((("ごらん", "名詞"), ("ちょうだい", "名詞")), "auxiliary"),
+    # The request after て (見てごらん). ちょうだい is listed: it is also the noun
+    # (お茶をちょうだい), and the parser refuses it after て itself.
+    ("ごらん", "名詞"): "auxiliary",
     # 嫌々 'reluctantly' in a line is mostly the interjection いやいや 'no, no'.
     ("いやいや", "名詞"): "interjection",
     # Suffixes, grammar nouns and nouns a carrier tags 副詞.

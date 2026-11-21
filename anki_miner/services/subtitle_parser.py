@@ -3148,6 +3148,8 @@ class SubtitleParserService:
         if how is not None:
             if how == _KANA_AUX and self._used_as_auxiliary(word_token, tokens):
                 return False
+            if how == _KANA_LISTED_SPELLING and self._is_request_after_te(word_token, tokens):
+                return False
             if how != _KANA_LISTED and self._rejected_by_lexicalized_window(
                 word_token, tokens, from_left=how == _KANA_AUX
             ):
@@ -3280,6 +3282,30 @@ class SubtitleParserService:
             ):
                 return True
         return False
+
+    @staticmethod
+    def _is_request_after_te(word_token, tokens: list) -> bool:
+        """Whether ちょうだい is the request after a verb's て (待ってちょうだい), not the noun (お茶をちょうだい).
+
+        After て it stands where ください does: grammar, as ごらん always is
+        (見てごらん), which is why that one is no list row at all. Elsewhere it
+        is the line's own word, 'give me'.
+        """
+        if word_token.surface != "ちょうだい":
+            return False
+        idx = next((i for i, tok in enumerate(tokens) if tok is word_token), None)
+        if not idx:
+            return False
+        before = idx - 1
+        while before and not tokens[before].surface.strip("…‥・"):  # 行かせて… ちょうだい
+            before -= 1
+        prev = tokens[before]
+        if getattr(prev.feature, "pos1", None) not in ("助詞", "助動詞"):
+            return False
+        # って and てって are the same て said fast (持ってってちょうだい).
+        return prev.surface.endswith("て") or (
+            prev.surface == "で" and getattr(prev.feature, "pos2", None) == "接続助詞"
+        )
 
     #: The kana a verb's 連用形 ends in (尋ね, 帰り, 休み, 越し, 考え).
     _RENYOU_ENDINGS: frozenset[str] = frozenset("いきぎしちにびみりえけげせてねべめれ")
@@ -3757,7 +3783,7 @@ class SubtitleParserService:
     #: pieces of a longer word cut at a word the window check stops at
     #: (ひとたまり|も|ない, かけがえ|の|ない, のっぴき|なら|ない).
     _LONG_KANA_SPELLING_REJECTS: frozenset[str] = frozenset(
-        {"いやいや", "ちょうだい", "ちんちん", "きちがい", "ひとたまり", "かけがえ", "のっぴき"}
+        {"いやいや", "ちんちん", "きちがい", "ひとたまり", "かけがえ", "のっぴき"}
     )
 
     def _is_long_kana_spelling(self, word_token, pos1: str, surface: str, merged: bool) -> bool:
