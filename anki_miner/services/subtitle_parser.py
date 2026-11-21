@@ -3668,7 +3668,7 @@ class SubtitleParserService:
         """The windows that can turn away a recovered kana verb followed by its own negative (やま|ない, かまい|ませ|ん).
 
         The dictionary lists many negatives as words of their own in kanji (止まない,
-        構いません, 優れない), so the kana verb plus its own ない / ん / ぬ / ません
+        構いません), so the kana verb plus its own ない / ん / ぬ / ません
         read as one of them and the verb got no card, while the kanji spelling
         cards the verb. Such a window does not count when the entry is this
         verb's own negative (``_own_form_in_kanji``: 止む gives 止まない) and no
@@ -3678,15 +3678,17 @@ class SubtitleParserService:
         かかわら|ず is the adverb. And くだら, つまら, たまら and すま never come back
         this way: their negatives are the adjectives and the apology the joiner
         names (くだらない, すまぬ), also where a space or an unlisted ending kept
-        it from joining (くだら ない, たまりません). Nor does かなわ: the tagger
-        gives every kana かなわ 敵う 'to match', also the wish not granted (叶う),
-        and no context tells the two apart.
+        it from joining (くだら ない, たまりません). Nor do すぐれ and いたら, whose
+        negatives are words of their own (優れない 'unwell', 至らない
+        'inadequate'), nor かなわ: the tagger gives every kana かなわ 敵う
+        'to match', also the wish not granted (叶う), and no context tells the
+        two apart.
         """
         feature = getattr(tokens[idx], "feature", None)
         c_form = getattr(feature, "cForm", None)
         if getattr(feature, "pos1", None) != "動詞" or not isinstance(c_form, str) or "撥音便" in c_form:
             return windows
-        if extract_orth_base(tokens[idx]) in ("くだる", "つまる", "たまる", "すむ", "かなう"):
+        if extract_orth_base(tokens[idx]) in ("くだる", "つまる", "たまる", "すむ", "かなう", "すぐれる", "いたる"):
             return windows
         tail = [tok.surface for tok in tokens[idx + 1 : idx + 3]]
         if c_form.startswith("未然形") and tail[:1] and tail[0] in ("ない", "ねえ", "ねぇ", "ん", "ぬ"):

@@ -173,11 +173,19 @@ class TestKanaVerbBeforeItsOwnNegative:
         [
             ("雨がやまない", "やむ"),
             ("かまいませんよ", "かまう"),
-            ("気分がすぐれない", "すぐれる"),
         ],
     )
     def test_the_verb_is_mined(self, text, front):
         assert front in _fronts(text, _VERBS, _NEGATIVE_READINGS)
+
+    @pytest.mark.parametrize(
+        ("text", "verb"),
+        [("体調がすぐれない", "すぐれる"), ("気分がすぐれない", "すぐれる"), ("わたしのいたらない点", "いたる")],
+    )
+    def test_a_negative_that_is_its_own_adjective_cards_no_verb(self, text, verb):
+        # 優れない 'unwell' and 至らない 'inadequate' are words of their own, not 'to excel' / 'to arrive'.
+        terms = _VERBS | {"いたる", "至らない"}
+        assert verb not in _fronts(text, terms, _NEGATIVE_READINGS | {"いたらない"})
 
     @pytest.mark.parametrize("text", ["夢がかなわない", "あいつにはかなわない"])
     def test_kana_kanau_before_its_negative_keeps_the_reject(self, text):
