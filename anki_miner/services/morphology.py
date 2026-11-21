@@ -11,7 +11,7 @@ this module must never import ``subtitle_parser``.
 """
 
 from collections import Counter
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from types import SimpleNamespace
 from typing import Any, Iterator
@@ -1333,6 +1333,117 @@ def rejoin_contracted_adjectives(tokens: list) -> list:
         }
         out.append(RetaggedToken(tokens[i], fields, joined))
         i = end + 1
+    return out
+
+
+#: The mark that ends an adjective stem said as a cry (熱っ, 痛ッ), and the one
+#: its -ee contraction is written with on the kanji (痛ぇ, 遅ぇよ).
+_STEM_CRY_MARKS = frozenset("っッ")
+_STEM_CONTRACTION_MARKS = frozenset("ぇェ")
+#: What the tagger calls the kanji of a stem it does not read as one: 熱 名詞,
+#: 痛 接尾辞, 高 接頭辞, 遅 記号, 早 副詞, 酷 形状詞.
+_STEM_CRY_POS1 = frozenset({"名詞", "接尾辞", "接頭辞", "記号", "副詞", "形状詞"})
+
+
+def _pause_at(tokens: list, i: int) -> bool:
+    """Whether the line ends or pauses at ``tokens[i]``: no token, a space before it, or a mark."""
+    if i >= len(tokens):
+        return True
+    white_space = getattr(tokens[i], "white_space", "")
+    if isinstance(white_space, str) and white_space:
+        return True
+    return getattr(getattr(tokens[i], "feature", None), "pos1", None) in ("補助記号", "空白")
+
+
+def _stem_cry_kanji(tokens: list, i: int) -> str | None:
+    """The kanji of ``tokens[i]`` when the token is shaped like a stem cry, else ``None``.
+
+    Either a one-kanji token directly before っ and a pause (熱|っ！) or before
+    ぇ (痛|ぇ), or a verb the tagger makes of kanji + っ that nothing continues
+    (早っ！ as 早る): a real 促音便 is followed by て or た.
+    """
+    token = tokens[i]
+    surface = token.surface
+    feature = getattr(token, "feature", None)
+    if not isinstance(surface, str) or not hasattr(feature, "_replace"):
+        return None
+    if not surface or not "\u4e00" <= surface[0] <= "\u9fff":
+        return None
+    pos1 = getattr(feature, "pos1", None)
+    if len(surface) == 2 and surface[1] in _STEM_CRY_MARKS:
+        c_form = getattr(feature, "cForm", None)
+        cut_verb = pos1 == "動詞" and isinstance(c_form, str) and c_form.startswith("連用形-促音便")
+        return surface[0] if cut_verb and _pause_at(tokens, i + 1) else None
+    if len(surface) != 1 or pos1 not in _STEM_CRY_POS1 or i + 1 >= len(tokens):
+        return None
+    mark = tokens[i + 1]
+    white_space = getattr(mark, "white_space", "")
+    if isinstance(white_space, str) and white_space:
+        return None
+    if mark.surface in _STEM_CONTRACTION_MARKS:
+        return surface
+    return surface if mark.surface in _STEM_CRY_MARKS and _pause_at(tokens, i + 2) else None
+
+
+def _stem_adjective(kanji: str, tag: Callable[[str], Iterable[Any]], form_lookup: FormLookup) -> Any | None:
+    """The tagger's token for kanji + い when the dictionary lists that as an i-adjective, else ``None``.
+
+    The tagger alone is too generous (楽い, 空い, 大い are adjectives to it), and
+    the dictionary alone gives no fields, so both must agree.
+    """
+    word = kanji + "い"
+    found = list(tag(word))
+    if len(found) != 1:
+        return None
+    feature = found[0].feature
+    if getattr(feature, "pos1", None) != "形容詞" or getattr(feature, "orthBase", None) != word:
+        return None
+    reading = getattr(feature, "lForm", None)
+    if not isinstance(reading, str) or len(reading) < 2:
+        return None
+    tags = {tag_name for _content, row_tags in form_lookup([word]).get(word, ()) for tag_name in row_tags.split()}
+    return found[0] if "adj-i" in tags else None
+
+
+def rejoin_adjective_stem_cries(
+    tokens: list, tag: Callable[[str], Iterable[Any]], form_lookup: FormLookup | None
+) -> list:
+    """Read the kanji of an adjective cry as the adjective's stem (熱っ → 熱い, 痛ぇ → 痛い).
+
+    The tagger knows 怖っ as the stem of 怖い followed by the mark っ, but reads
+    熱っ as the noun 熱 (ねつ), 痛っ as a suffix, 高っ as a prefix and 早っ as the
+    verb 早る, so the card was a one-kanji noun or a rare verb. A token shaped
+    like such a cry (``_stem_cry_kanji``) whose kanji + い is a dictionary
+    i-adjective takes the fields the tagger gives that adjective, in the stem
+    form it gives 怖: the token keeps its surface, so nothing is re-cut. 何っ,
+    嘘っ, 嫌っ and 違っ stay as they are (no such adjective), and so does a mark
+    inside a word (全っ然). ``tag`` is the tagger; no dictionary, no change.
+    """
+    if form_lookup is None:
+        return tokens
+    cries = {i: kanji for i in range(len(tokens)) if (kanji := _stem_cry_kanji(tokens, i)) is not None}
+    if not cries:
+        return tokens
+    for token in tokens:
+        # fugashi parses a feature on first use, from memory the next tagger call reuses.
+        getattr(token, "feature", None)
+    out: list = []
+    for i, token in enumerate(tokens):
+        adjective = _stem_adjective(cries[i], tag, form_lookup) if i in cries else None
+        if adjective is None:
+            out.append(token)
+            continue
+        reading = adjective.feature.lForm
+        stem = reading[:-1] + hiragana_to_katakana(token.surface[1:])
+        fields = {
+            "cForm": "語幹-一般",
+            "orth": token.surface,
+            **dict.fromkeys(("pronBase", "kanaBase", "formBase"), reading),
+            **dict.fromkeys(("pron", "kana", "form"), stem),
+        }
+        retagged = RetaggedToken(adjective, fields, token.surface)
+        retagged.white_space = getattr(token, "white_space", "")
+        out.append(retagged)
     return out
 
 

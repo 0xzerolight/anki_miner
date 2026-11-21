@@ -58,6 +58,7 @@ from anki_miner.services.morphology import (
     iter_token_spans,
     merge_compound_suffixes,
     mining_base,
+    rejoin_adjective_stem_cries,
     rejoin_contracted_adjectives,
     replace_overridden_spans,
     resolve_attested_reading,
@@ -1616,6 +1617,7 @@ class SubtitleParserService:
         # otherwise leave the raw and merged streams out of step for the line.
         raw_tokens = retag_mistagged_tokens(raw_tokens, self._form_lookup)
         raw_tokens = rejoin_contracted_adjectives(raw_tokens)
+        raw_tokens = rejoin_adjective_stem_cries(raw_tokens, self._tagger(), self._form_lookup)
         merged_tokens = self._merge_compound_suffixes(raw_tokens)
         # Language-specific merge (ko: 공부 + 하 → 공부하다). Placed with the other
         # merge passes and gated on the same probe; no probe ⇒ no merge.
