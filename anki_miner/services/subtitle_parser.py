@@ -219,7 +219,13 @@ _TE_JOIN_ENDINGS: tuple[str, ...] = ("して", "やって")
 # Cries the tagger reads as an auxiliary-capable word, by their tokens: やった
 # ('yes!', not 'did') and いてっ/いたっ ('ouch', 痛っ). Each is a cry only alone
 # between pauses: after a line start, a punctuation mark or an interjection.
-_AUX_CRIES: tuple[tuple[str, ...], ...] = (("やっ", "た"), ("やっ", "たー"), ("い", "て", "っ"), ("い", "た", "っ"))
+_AUX_CRIES: tuple[tuple[str, ...], ...] = (
+    ("やっ", "た"),
+    ("やっ", "たー"),
+    ("やっ", "たぁ"),
+    ("い", "て", "っ"),
+    ("い", "た", "っ"),
+)
 _AUX_CRY_AFTER_POS1: frozenset[str] = frozenset({"補助記号", "感動詞", "フィラー"})
 
 # Kana verbs the tagger makes by gluing two words together, named by the lemma

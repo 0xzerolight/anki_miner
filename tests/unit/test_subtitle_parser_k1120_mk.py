@@ -25,6 +25,7 @@ pytestmark = pytest.mark.skipif(not _fugashi_available(), reason="fugashi/unidic
 _ATTESTED = frozenset(
     {
         "ぬいぐるみ",
+        "やる",
         "いかなる",
         "とある",
         "さらなる",
@@ -308,3 +309,13 @@ class TestRequestNoun:
     )
     def test_choudai_after_te_is_grammar(self, text):
         assert "ちょうだい" not in _fronts(text)
+
+
+class TestStretchedCry:
+    @pytest.mark.parametrize("text", ["やったぁ！", "やったぁー", "わあ、やったぁ"])
+    def test_a_stretched_yatta_is_a_cry(self, text):
+        assert "やる" not in _fronts(text)
+
+    @pytest.mark.parametrize("text", ["やったことない", "宿題はやったぁ？"])
+    def test_the_verb_after_a_word_is_kept(self, text):
+        assert "やる" in _fronts(text)
