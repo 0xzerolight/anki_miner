@@ -201,7 +201,8 @@ class TestKanaVerbBeforeItsOwnNegative:
         assert "あく" not in _fronts("それはあきません", _VERBS, _NEGATIVE_READINGS)
 
     def test_a_contracted_stem_keeps_the_reject(self):
-        assert "わかる" not in _fronts("もうわかんないよ", _VERBS, _NEGATIVE_READINGS)
+        # The joiner makes わかん|ない the listed contraction: one card, never わかる beside it.
+        assert _fronts("もうわかんないよ", _VERBS, _NEGATIVE_READINGS) == ["わかんない"]
 
     def test_the_adverb_with_zu_keeps_the_reject(self):
         assert "かかわる" not in _fronts("それにかかわらず", _VERBS, _NEGATIVE_READINGS)

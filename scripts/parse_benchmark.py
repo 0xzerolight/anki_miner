@@ -685,6 +685,8 @@ _ANCHOR_HEADWORDS: tuple[str, ...] = (
     "ついつい",
     "ごちゃごちゃ",
     "ちょちょ",
+    # k1120 MC: the spoken contraction わかんない, listed (co04)
+    "わかんない",
 )
 
 # Yomitan `ruleIdentifiers` per fixture headword. A real term bank ships these,

@@ -516,6 +516,8 @@ JOINS: tuple[tuple[str, str, str, str] | tuple[str, str, str, str, str], ...] = 
     # keeps すまない and すまねえ whole), and おもわ|ぬ is 思わぬ 'unexpected'.
     ("すまぬ", "感動詞", "すま|ぬ", ""),
     ("おもわぬ", "連体詞", "おもわ|ぬ", ""),
+    # K1120: the spoken contraction わかん|ない is the listed わかんない, not わかる.
+    ("わかんない", "形容詞", "わかん|=ない", ""),
 )
 
 _HEADER = """\

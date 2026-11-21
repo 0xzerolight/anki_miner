@@ -110,6 +110,7 @@ class TestSpokenWordsTheTaggerCuts:
 _NEGATIVES = frozenset(
     {
         "ふざけんな",
+        "わかんない",
         "わからん",
         "いらん",
         "かなわない",
@@ -136,6 +137,8 @@ class TestKanaVerbWithItsOwnNegative:
         ("text", "front"),
         [
             ("ふざけんなよ", "ふざけんな"),
+            ("わかんない", "わかんない"),
+            ("わかんなかった", "わかんない"),
             ("わからん", "わからん"),
             ("そんなものいらんわ", "いらん"),
             ("かまわないよ", "かまわない"),
@@ -153,7 +156,7 @@ class TestKanaVerbWithItsOwnNegative:
 
     @pytest.mark.parametrize(
         ("text", "front"),
-        [("わからない", "わかる"), ("わかんなかった", "わかる"), ("ふざけるな", "ふざける"), ("かまわん", "かまう")],
+        [("わからない", "わかる"), ("ふざけるな", "ふざける"), ("かまわん", "かまう")],
     )
     def test_the_plain_verb_stays(self, text, front):
         assert front in _fronts(text, terms=_NEGATIVES, readings=frozenset())

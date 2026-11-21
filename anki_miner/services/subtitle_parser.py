@@ -3677,8 +3677,8 @@ class SubtitleParserService:
         cards the verb. Such a window does not count when the entry is this
         verb's own negative (``_own_form_in_kanji``: 止む gives 止まない) and no
         dictionary spells it in kana. A homophone keeps the reject (やけ|ん is 野犬,
-        no 焼けん), and so does a 撥音便 stem (わかん|ない: which word the spoken
-        contraction cards is the owner's open call). ず is no tail here:
+        no 焼けん), and so does a 撥音便 stem (わかん|ない: the joiner makes it
+        the listed contraction わかんない, never a second card わかる). ず is no tail here:
         かかわら|ず is the adverb. And くだら, つまら, たまら and すま never come back
         this way: their negatives are the adjectives and the apology the joiner
         names (くだらない, すまぬ), also where a space or an unlisted ending kept
