@@ -293,7 +293,9 @@ def standardize_kanji_variants(text: str) -> str:
 # Device/speaker markers (📱 and ☎ phone-call lines), including U+FE0E/U+FE0F
 # presentation selectors attached to stripped glyphs.
 # Deliberately NOT stripped: ♪♫ music marks (the opt-in subtitle regex-filter
-# presets own that choice) and 《》〈〉 narration brackets (linguistic content).
+# presets own that choice), 《》〈〉 narration brackets (linguistic content), the
+# narration marks ≫ ≪, and 〓, which stands in for a kanji the caption could
+# not print.
 _CAPTION_GLYPHS = (
     "\u27a1"  # ➡
     "\u2192"  # →
@@ -302,6 +304,17 @@ _CAPTION_GLYPHS = (
     "\u2934\u2935"  # ⤴⤵
     "\U0001f4f1\U0001f4de\U0001f50a\U0001f4ac"  # 📱📞🔊💬
     "\u260e"  # ☎
+    # The same roles in other stations' and caption rippers' files: off-screen
+    # speech and device or speaker marks, which open a line. Their continuation
+    # arrows (➨ ➥ ￫ ↴) close one and stay: measured, the last word of the line
+    # is read differently once the arrow is gone.
+    "\u269e\u269f"  # ⚞⚟
+    "\U0001f4fa\U0001f5a9\u260f\u2706"  # 📺🖩☏✆
+    "\U0001f508\U0001f509\U0001f5e7"  # 🔈🔉🗧
+    "\U0001f4bb\U0001f5a5\U0001f581"  # 💻🖥🖁
+    "\U0001f3a4\U0001f4e2\U0001f399"  # 🎤📢🎙
+    "\U0001f4fb\U0001f4f3\U0001f4fc"  # 📻📳📼
+    "\u15d2\u15d5"  # ᗒᗕ
 )
 # Renderer garbage by definition, in any language's captions. This is the half
 # of the strip that is separable, and the reason :func:`strip_renderer_garbage`
@@ -417,6 +430,19 @@ def respell_wave_dash_interjections(text: str) -> str:
     for pattern, spelled in _WAVE_DASH_INTERJECTIONS:
         text = pattern.sub(spelled, text)
     return text
+
+
+# One caption-rip converter writes ・ where it cannot map a caption glyph. A
+# single ・ at the very start of a physical line is that placeholder (an
+# off-screen or music mark); a dotted ellipsis (・・・) and a dot inside the line
+# are text. The placeholder at a line's end (a continuation arrow) stays, like
+# the arrows above.
+_LEADING_DOT_RE = re.compile(r"^[ \t]*・(?!・)[ \t]*", re.MULTILINE)
+
+
+def strip_leading_dots(text: str) -> str:
+    """Delete a single ・ at the very start of each physical line."""
+    return _LEADING_DOT_RE.sub("", text) if "・" in text else text
 
 
 def normalize_for_tokenization(text: str) -> str:
@@ -582,13 +608,15 @@ def strip_caption_labels(text: str) -> str:
     """Delete the labels of a cue that are not speech: sound labels and scene-label lines.
 
     First respells what Japanese captions write differently
-    (:func:`rewrite_double_parens`, :func:`respell_wave_dash_interjections`),
+    (:func:`rewrite_double_parens`, :func:`respell_wave_dash_interjections`) and
+    deletes a converter's placeholder dot that opens a line (:func:`strip_leading_dots`),
     then runs :func:`strip_sound_labels` and blanks each physical line that is
     exactly 回想 or 心の声. The Japanese parser is given this as its
     ``strip_labels``; like :func:`is_chinese_line` it reads Japanese and is not
     part of the shared text cleaning, which Korean also runs.
     """
     text = respell_wave_dash_interjections(rewrite_double_parens(text))
+    text = strip_leading_dots(text)
     text = strip_sound_labels(text)
     if "回想" not in text and "心の声" not in text:
         return text

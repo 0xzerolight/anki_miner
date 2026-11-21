@@ -107,8 +107,9 @@ UNTAGGED_COMMON: frozenset[str] = frozenset(
     # Pre-noun adjectivals of formal and spoken lines. Not わが or かの: two kana are
     # as often a piece (the dialect わがんねえ, a name かのまた).
     | {"いかなる", "とある", "さらなる", "ひょんな", "おっきな", "ちっちゃな", "なんたる"}
-    # Short spoken and period adverbs. Not ちと: as often a piece (俺っ|ちと, 俺ん|ちと).
-    | {"あんま", "ちっと", "なんせ", "しばし"}
+    # Short spoken and period adverbs. The parser refuses ちと where it is glued to
+    # the word before it (俺っ|ちと, 俺ん|ちと).
+    | {"あんま", "ちっと", "ちと", "なんせ", "しばし"}
     | {"おら"}
     # The interjection ('hey, come on'), beside the adverb 追い追い the tagger always reads:
     # the parser retags the one that opens a line before a pause.
@@ -516,6 +517,8 @@ JOINS: tuple[tuple[str, str, str, str] | tuple[str, str, str, str, str], ...] = 
     # keeps すまない and すまねえ whole), and おもわ|ぬ is 思わぬ 'unexpected'.
     ("すまぬ", "感動詞", "すま|ぬ", ""),
     ("おもわぬ", "連体詞", "おもわ|ぬ", ""),
+    # K1120: the spoken contraction わかん|ない is the listed わかんない, not わかる.
+    ("わかんない", "形容詞", "わかん|=ない", ""),
 )
 
 _HEADER = """\

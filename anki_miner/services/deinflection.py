@@ -466,9 +466,9 @@ def common_prefix_len(a: str, b: str) -> int:
     return n
 
 
-def _kana_garu_verb(orth_base: str, candidates: Iterable[tuple[str, int]]) -> str | None:
-    """The がる verb of the kana adjective *orth_base* when the span deinflects to it (かわいがって → かわいがる)."""
-    if len(orth_base) < 2 or not orth_base.endswith("い") or not all("ぁ" <= ch <= "ゖ" for ch in orth_base):
+def _adjective_garu_verb(orth_base: str, candidates: Iterable[tuple[str, int]]) -> str | None:
+    """The がる verb of the adjective *orth_base* when the span deinflects to it (強がって → 強がる), else ``None``."""
+    if len(orth_base) < 2 or not orth_base.endswith("い"):
         return None
     verb = orth_base[:-1] + "がる"
     return verb if any(text == verb for text, _conditions in candidates) else None
@@ -527,11 +527,11 @@ def resolve_dictionary_form(
       own — self-limiting so a verb whose orthBase is already the longest prefix
       (乞う, 彷徨った, 帰れる, 立った) is kept unchanged.
 
-    * **The がる verb of a kana adjective competes on its reading** (かわいがって →
-      かわいがる, not かわいい). It is only a reading of its entry (可愛がる), which
-      the term probe cannot see: ``kana_lookup``, the term-or-reading probe,
-      attests it, and the commonness filter (which has no tag for a reading)
-      does not prune it. No such entry (うらやましがる) keeps the adjective.
+    * **The がる verb of the token's own adjective always competes** (強がって →
+      強がる, not 強い). It is a derived verb with its own entry and meaning, not
+      a rare twin, so the commonness filter does not prune it. A kana one
+      (かわいがる) is only a reading of its entry (可愛がる), which the term probe
+      cannot see: ``kana_lookup``, the term-or-reading probe, attests it.
 
     ``excluded`` is one candidate the caller knows is wrong for this token (the
     -aru verb 刺さる for the tagger's passive 刺さ|れ|た); it never competes.
@@ -556,11 +556,10 @@ def resolve_dictionary_form(
     # surface like any other candidate.
     candidates.add((inflected_surface, deinflector.condition_flags("v")))
     attested = term_rules_lookup(sorted(candidates))
-    garu = _kana_garu_verb(orth_base, candidates) if kana_lookup is not None else None
-    if garu is not None and garu not in attested and kana_lookup is not None and kana_lookup([garu]).get(garu):
+    garu = _adjective_garu_verb(orth_base, candidates)
+    kana_garu = garu is not None and garu not in attested and all("ぁ" <= ch <= "ゖ" for ch in garu)
+    if garu is not None and kana_garu and kana_lookup is not None and kana_lookup([garu]).get(garu):
         attested = {*attested, garu}
-    else:
-        garu = None
     if not attested:
         return orth_base
     attested_sorted = sorted(attested)

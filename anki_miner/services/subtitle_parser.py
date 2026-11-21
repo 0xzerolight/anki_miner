@@ -61,6 +61,8 @@ from anki_miner.services.morphology import (
     rejoin_adjective_stem_cries,
     rejoin_contracted_adjectives,
     replace_overridden_spans,
+    reread_daku_tokens,
+    reread_omote_tokens,
     resolve_attested_reading,
     resolve_reading_override,
     resolve_reading_override_in_line,
@@ -1701,6 +1703,8 @@ class SubtitleParserService:
         raw_tokens = retag_mistagged_tokens(raw_tokens, self._form_lookup)
         raw_tokens = rejoin_contracted_adjectives(raw_tokens)
         raw_tokens = rejoin_adjective_stem_cries(raw_tokens, self._tagger(), self._form_lookup)
+        raw_tokens = reread_daku_tokens(raw_tokens)
+        raw_tokens = reread_omote_tokens(raw_tokens)
         merged_tokens = self._merge_compound_suffixes(raw_tokens)
         # Language-specific merge (ko: 공부 + 하 → 공부하다). Placed with the other
         # merge passes and gated on the same probe; no probe ⇒ no merge.
@@ -3253,12 +3257,17 @@ class SubtitleParserService:
             return not self._ellipsis_reject(word_token, text, tok_start, tok_end)
         how = self._kana_recovery(word_token)
         if how is not None:
-            if how == _KANA_AUX and self._used_as_auxiliary(word_token, tokens):
+            after_conditional = how == _KANA_AUX and self._is_good_after_conditional(word_token, tokens)
+            if how == _KANA_AUX and not after_conditional and self._used_as_auxiliary(word_token, tokens):
                 return False
             if how in (_KANA_LISTED, _KANA_LISTED_SPELLING) and self._listed_word_is_out_of_place(word_token, tokens):
                 return False
-            if how != _KANA_LISTED and self._rejected_by_lexicalized_window(
-                word_token, tokens, from_left=how == _KANA_AUX, listed_spelling=how == _KANA_LISTED_SPELLING
+            if (
+                how != _KANA_LISTED
+                and not after_conditional
+                and self._rejected_by_lexicalized_window(
+                    word_token, tokens, from_left=how == _KANA_AUX, listed_spelling=how == _KANA_LISTED_SPELLING
+                )
             ):
                 return False
             if self._is_kana_glue(word_token, text, tok_start, tok_end):
@@ -3393,6 +3402,28 @@ class SubtitleParserService:
         return False
 
     @staticmethod
+    def _is_good_after_conditional(word_token, tokens: list) -> bool:
+        """Whether いい / よい follows a conditional as the line's own predicate (読めばいい, 聞いたらいい, すりゃいい).
+
+        After ば, たら or a contracted conditional (すりゃ, 行きゃ, なきゃ) the
+        adjective is what the line says: 'it would be good if'. The window check
+        is skipped with the auxiliary one, as ばいい and たらいい are dictionary
+        expressions that would take it.
+        """
+        if getattr(word_token.feature, "orthBase", None) not in ("いい", "よい"):
+            return False
+        idx = next((i for i, tok in enumerate(tokens) if tok is word_token), None)
+        if not idx:
+            return False
+        prev = tokens[idx - 1]
+        if prev.surface == "ば" and getattr(prev.feature, "pos2", None) == "接続助詞":
+            return True
+        if prev.surface in ("たら", "だら") and getattr(prev.feature, "pos1", None) == "助動詞":
+            return True
+        c_form = getattr(prev.feature, "cForm", None)
+        return isinstance(c_form, str) and c_form.startswith("仮定形-融合")
+
+    @staticmethod
     def _listed_word_is_out_of_place(word_token, tokens: list) -> bool:
         """Whether a kana word mined by name is no word where it stands.
 
@@ -3400,16 +3431,26 @@ class SubtitleParserService:
         ございます, the adjective よろしい in its う form, where よろしゅう頼む is
         the adverb; and おら anywhere but before a case or topic particle or a
         plural (おらは, おらの, おらたち): bare, or before よ, it is the shout
-        (立てよ、おら！ おらよ).
+        (立てよ、おら！ おらよ). ちと glued to the word before it is cut from that
+        word (俺っ|ちと, 俺ん|ちと); the adverb follows a space, a line start or a
+        particle.
         """
         surface = word_token.surface
         if surface == "ちょうだい":
             return SubtitleParserService._is_request_after_te(word_token, tokens)
-        if surface not in ("おら", "よろしゅう"):
+        if surface not in ("おら", "よろしゅう", "ちと"):
             return False
         idx = next((i for i, tok in enumerate(tokens) if tok is word_token), None)
         if idx is None:
             return False
+        if surface == "ちと":
+            if not idx:
+                return False
+            prev = tokens[idx - 1]
+            before = getattr(prev.feature, "pos1", None)
+            # A stray kana the tagger calls a symbol (俺|っ|ちと) is no pause.
+            pause = before == "助詞" or (before == "補助記号" and not _is_kana_candidate(prev.surface))
+            return not pause and not getattr(word_token, "white_space", "")
         after = tokens[idx + 1].feature if idx + 1 < len(tokens) else None
         if surface == "よろしゅう":
             return getattr(after, "lemma", None) == "御座る"
@@ -3673,8 +3714,8 @@ class SubtitleParserService:
         cards the verb. Such a window does not count when the entry is this
         verb's own negative (``_own_form_in_kanji``: 止む gives 止まない) and no
         dictionary spells it in kana. A homophone keeps the reject (やけ|ん is 野犬,
-        no 焼けん), and so does a 撥音便 stem (わかん|ない: which word the spoken
-        contraction cards is the owner's open call). ず is no tail here:
+        no 焼けん), and so does a 撥音便 stem (わかん|ない: the joiner makes it
+        the listed contraction わかんない, never a second card わかる). ず is no tail here:
         かかわら|ず is the adverb. And くだら, つまら, たまら and すま never come back
         this way: their negatives are the adjectives and the apology the joiner
         names (くだらない, すまぬ), also where a space or an unlisted ending kept

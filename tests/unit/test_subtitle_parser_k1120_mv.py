@@ -169,7 +169,7 @@ class TestAdjectiveStemCries:
 
 
 class TestAdjectiveGaruVerb:
-    """A kana adjective + がる span cards the がる verb the dictionary lists as a reading."""
+    """An adjective + がる span cards the がる verb the dictionary lists, common or not."""
 
     @staticmethod
     def _resolve(
@@ -183,6 +183,10 @@ class TestAdjectiveGaruVerb:
             kana_lookup=lambda fronts: {front: front in readings for front in fronts},
         )
 
+    def test_an_uncommon_garu_verb_beats_its_common_adjective(self) -> None:
+        assert self._resolve("強がって", "強い", {"強い", "強がる"}, {"強い"}) == "強がる"
+        assert self._resolve("寂しがってた", "寂しい", {"寂しい", "寂しがる"}, {"寂しい"}) == "寂しがる"
+
     def test_a_kana_garu_verb_is_attested_by_its_reading(self) -> None:
         readings = frozenset({"かわいがる"})
         assert self._resolve("かわいがって", "かわいい", {"かわいい"}, {"かわいい"}, readings) == "かわいがる"
@@ -195,7 +199,73 @@ class TestAdjectiveGaruVerb:
 
     def test_the_commonness_filter_still_prunes_a_rare_twin(self) -> None:
         assert self._resolve("呼ばれた", "呼ぶ", {"呼ぶ", "呼ばる"}, {"呼ぶ"}) == "呼ぶ"
-        # A span that is not the がる verb adds nothing to the pool.
-        assert (
-            self._resolve("かわいくて", "かわいい", {"かわいい"}, {"かわいい"}, frozenset({"かわいがる"})) == "かわいい"
-        )
+        # 強がり is not 強い + がる deinflected: nothing is added to the pool.
+        assert self._resolve("強くて", "強い", {"強い", "強がる"}, {"強い"}) == "強い"
+
+
+@needs_tagger
+class TestDakuReading:
+    """抱く reads だく unless its object is a feeling, on the card and in the sentence."""
+
+    @pytest.mark.parametrize(
+        ("sentence", "ruby"),
+        [
+            ("彼女を抱いた", "抱[だ]いた"),
+            ("赤ちゃんを抱いている", "抱[だ]いて"),
+            ("抱かれたい", "抱[だ]かれたい"),
+            ("胸に抱く", "抱[だ]く"),
+        ],
+    )
+    def test_holding_someone_reads_daku(self, sentence: str, ruby: str) -> None:
+        word = _words(sentence)["抱く"]
+        assert word.expression_reading == "だく"
+        assert word.expression_furigana == "抱[だ]く"
+        assert ruby in word.sentence_furigana
+
+    @pytest.mark.parametrize(
+        ("sentence", "ruby"),
+        [
+            ("夢を抱く", "抱[いだ]く"),
+            ("不安を抱いている", "抱[いだ]いて"),
+            ("好意を 抱いた", "抱[いだ]いた"),
+            ("恨みすら抱いた", "抱[いだ]いた"),
+            ("罪悪感は抱かない", "抱[いだ]かない"),
+        ],
+    )
+    def test_harbouring_a_feeling_keeps_idaku(self, sentence: str, ruby: str) -> None:
+        word = _words(sentence)["抱く"]
+        assert word.expression_reading == "いだく"
+        assert ruby in word.sentence_furigana
+
+    def test_other_words_written_with_the_kanji_are_untouched(self) -> None:
+        assert _words("強く抱きしめた")["抱きしめる"].expression_reading == "だきしめる"
+
+
+@needs_tagger
+class TestOmoteReading:
+    """A 表 that stands alone reads おもて; the tail of a compound and a table stay ひょう."""
+
+    @pytest.mark.parametrize(
+        "sentence",
+        ["表へ出ろ", "お客さん 表で待ってる", "表と裏がある", "感情を表に出す", "表の通りが工事中だ", "表は危ない"],
+    )
+    def test_the_front_or_outside_reads_omote(self, sentence: str) -> None:
+        word = _words(sentence)["表"]
+        assert word.expression_reading == "おもて"
+        assert "表[おもて]" in word.sentence_furigana
+
+    @pytest.mark.parametrize("sentence", ["この表をもとに話す", "パソコンで表を作った", "結果を表にまとめる"])
+    def test_a_table_keeps_hyou(self, sentence: str) -> None:
+        word = _words(sentence)["表"]
+        assert word.expression_reading == "ひょう"
+        assert "表[ひょう]" in word.sentence_furigana
+
+    def test_a_compound_tail_is_untouched(self) -> None:
+        import fugashi
+
+        from anki_miner.services.morphology import reread_omote_tokens
+
+        tagger = fugashi.Tagger()
+        for sentence in ("計画表の数字", "メンバー表を配る"):
+            tokens = list(tagger(sentence))
+            assert reread_omote_tokens(tokens) == tokens

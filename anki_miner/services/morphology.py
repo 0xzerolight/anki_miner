@@ -10,6 +10,7 @@ Import direction is one-way: ``subtitle_parser`` imports from this module;
 this module must never import ``subtitle_parser``.
 """
 
+import re
 from collections import Counter
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
@@ -645,6 +646,98 @@ def merge_compound_suffixes(
     tokens = _merge_noun_suffixes(tokens, attest)
     tokens = _merge_verb_nominalizers(tokens, attest)
     return tokens
+
+
+#: What 抱く takes when it reads いだく ('to harbour'): a feeling, a hope, a doubt,
+#: followed by its particle. Tuned on the dev shows: nouns ending in 意 (好意,
+#: 殺意), 感, 心, 念, 望, 情, 志, 想, 夢 or 欲, the listed words, and the kana-final
+#: 恨み, 思い, 憎しみ. Everything else is だく ('to hold in the arms').
+_IDAKU_OBJECT = re.compile(
+    "(?:[意感心念望情志想夢欲]|疑問|不満|期待|興味|恐怖|不審|覚悟|意識|屈辱|意思|虚無|憎悪|嫌悪|情熱|義憤|欲求"
+    "|不信|不安|印象|疑い|恨み|怒り|悩み|願い|望み|恐れ|憧れ|思い|想い|しみ|気持ち)(?:を|も|は|すら|さえ)$"
+)
+_IDAKU_KANA_FIELDS = ("kana", "kanaBase", "lForm", "pron", "pronBase", "form", "formBase")
+
+
+def reread_daku_tokens(tokens: list) -> list:
+    """Read 抱く as だく where its object is not a feeling (彼女を抱いた, 抱かれたい).
+
+    unidic-lite reads every 抱く イダク, the literary 'to harbour', which is
+    right only before an abstract object (夢を抱く, 不安を抱いている:
+    ``_IDAKU_OBJECT``); most lines mean 'to hold in the arms'. On the raw
+    stream, so the card and the sentence ruby agree. A token of the verb
+    written 抱… whose reading starts イダ loses that イ in every reading field;
+    抱きしめる and 抱っこ are their own words and never match.
+    """
+    out: list = []
+    before = ""
+    for token in tokens:
+        surface = token.surface if isinstance(token.surface, str) else ""
+        feature = getattr(token, "feature", None)
+        context = before.rstrip()
+        white_space = getattr(token, "white_space", "")
+        before += (white_space if isinstance(white_space, str) else "") + surface
+        if (
+            not surface.startswith("抱")
+            or getattr(feature, "pos1", None) != "動詞"
+            or getattr(feature, "lemma", None) != "抱く"
+            or not hasattr(feature, "_replace")
+            or _IDAKU_OBJECT.search(context)
+        ):
+            out.append(token)
+            continue
+        fields = {
+            name: value[1:]
+            for name in _IDAKU_KANA_FIELDS
+            if isinstance(value := getattr(feature, name, None), str) and value.startswith("イダ")
+        }
+        out.append(RetaggedToken(token, fields) if fields else token)
+    return out
+
+
+#: 表 as 'table' when it stands alone: after a demonstrative (この表をもとに) or
+#: before a verb of making one (表を作った, 表にまとめる).
+_HYOU_BEFORE = re.compile("(?:この|その|あの|どの|下の|上の|次の)$")
+_HYOU_AFTER = re.compile("(?:を|に)(?:作|書|まと|もと|埋|記入)")
+_OMOTE_KANA_FIELDS = ("kana", "kanaBase", "lForm", "pron", "pronBase", "form", "formBase")
+
+
+def reread_omote_tokens(tokens: list) -> list:
+    """Read a 表 that stands alone as おもて (表へ出ろ, 表で待ってる, 表と裏).
+
+    unidic-lite reads every noun 表 ヒョウ, 'table', which is right as the tail
+    of a compound (計画表, メンバー表: a noun, suffix or prefix token directly
+    before it) and in the few lines about a table (``_HYOU_BEFORE``,
+    ``_HYOU_AFTER``). On the dev shows 85 in 100 stand alone, and about 94 in
+    100 of those mean the front, the outside or the public face. 回表 is the
+    top of an inning and reads おもて too. On the raw stream, so the card and
+    the sentence ruby agree.
+    """
+    out: list = []
+    before = ""
+    for i, token in enumerate(tokens):
+        surface = token.surface if isinstance(token.surface, str) else ""
+        feature = getattr(token, "feature", None)
+        white_space = getattr(token, "white_space", "")
+        spaced = isinstance(white_space, str) and bool(white_space)
+        context = before
+        before += (white_space if isinstance(white_space, str) else "") + surface
+        if surface != "表" or getattr(feature, "pos1", None) != "名詞" or getattr(feature, "kana", None) != "ヒョウ":
+            out.append(token)
+            continue
+        previous = tokens[i - 1] if i else None
+        attached = (
+            previous is not None
+            and not spaced
+            and getattr(getattr(previous, "feature", None), "pos1", None) in ("名詞", "接尾辞", "接頭辞")
+            and previous.surface != "回"
+        )
+        after = "".join(t.surface for t in tokens[i + 1 : i + 3] if isinstance(t.surface, str))
+        if attached or _HYOU_BEFORE.search(context) or _HYOU_AFTER.match(after) or not hasattr(feature, "_replace"):
+            out.append(token)
+            continue
+        out.append(RetaggedToken(token, dict.fromkeys(_OMOTE_KANA_FIELDS, "オモテ")))
+    return out
 
 
 def _edit_distance(a: str, b: str) -> int:
