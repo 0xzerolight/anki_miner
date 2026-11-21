@@ -669,6 +669,10 @@ _ANCHOR_HEADWORDS: tuple[str, ...] = (
     # k1120b MC: words cut after お/ご, joined by list rows (kd01, kd03)
     "おいで",
     "ごきげんよう",
+    # k1120b MC: listed, but the tail is the benefactive auxiliary (kd04); the entry's own spelling joins (kd05)
+    "出してくれる",
+    "診てもらう",
+    "見てもらう",
 )
 
 # Yomitan `ruleIdentifiers` per fixture headword. A real term bank ships these,

@@ -122,3 +122,33 @@ class TestWordsCutAfterAPolitePrefix:
 
     def test_nothing_joins_without_the_dictionary_entry(self):
         assert "おいで" not in _fronts("こっちへおいで", frozenset({"こっち"}))
+
+
+_BENEFACTIVE = frozenset(
+    {"出してくれる", "見てもらう", "診てもらう", "貸してあげる", "持ってくる", "出す", "見る", "貸す", "持つ"}
+)
+
+
+class TestBenefactiveTailIsNoCompound:
+    """出してくれる / 見てもらう are listed, but after て the tail is the auxiliary any verb takes."""
+
+    @pytest.mark.parametrize(
+        ("text", "verb", "joined"),
+        [
+            ("お金を出してくれた", "出す", "出してくれる"),
+            ("ここから出してくれ", "出す", "出してくれる"),
+            ("部長にも見てもらいたい", "見る", "見てもらう"),
+            ("本を貸してあげる", "貸す", "貸してあげる"),
+            ("先生に見てもらえる", "見る", "見てもらう"),  # the potential folds to もらう
+        ],
+    )
+    def test_the_verb_keeps_the_card(self, text, verb, joined):
+        fronts = _fronts(text, _BENEFACTIVE)
+        assert verb in fronts
+        assert joined not in fronts
+
+    def test_the_entry_as_the_dictionary_heads_it_stays_joined(self):
+        assert "診てもらう" in _fronts("医者に診てもらう", _BENEFACTIVE)
+
+    def test_a_motion_verb_tail_still_joins(self):
+        assert "持ってくる" in _fronts("本を持ってくる", _BENEFACTIVE)
