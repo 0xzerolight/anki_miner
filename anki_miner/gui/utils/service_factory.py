@@ -56,7 +56,7 @@ from anki_miner.services.word_list_service import WordListService, active_whitel
 from anki_miner.services.wordset_service import WordsetService
 from anki_miner.services.youtube_fetcher import YouTubeFetcherService
 from anki_miner.utils.i18n import tr_format
-from anki_miner.utils.ja_normalize import is_chinese_line
+from anki_miner.utils.ja_normalize import chinese_style_lines, is_chinese_line, strip_caption_labels
 from anki_miner.utils.subtitle_encoding import script_check_kwarg
 
 logger = logging.getLogger(__name__)
@@ -808,6 +808,8 @@ def _create_subtitle_parser(config: AnkiMinerConfig, **lookups: Any) -> Subtitle
             config,
             has_target_script=profile.script.contains_target_script,
             skip_line=is_chinese_line,
+            strip_labels=strip_caption_labels,
+            skip_style_lines=chinese_style_lines,
             name_piece_rejects=True,
             **lookups,
         )
@@ -837,7 +839,12 @@ def create_profile_parser(
     """
     profile = get_profile(config_language(config))
     if profile.create_parser is get_profile("ja").create_parser:
-        return ja_parser_cls(config, has_target_script=profile.script.contains_target_script, skip_line=is_chinese_line)
+        return ja_parser_cls(
+            config,
+            has_target_script=profile.script.contains_target_script,
+            skip_line=is_chinese_line,
+            strip_labels=strip_caption_labels,
+        )
     return cast(SubtitleParserService, profile.create_parser(config))
 
 

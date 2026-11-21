@@ -466,12 +466,21 @@ def common_prefix_len(a: str, b: str) -> int:
     return n
 
 
+def _kana_garu_verb(orth_base: str, candidates: Iterable[tuple[str, int]]) -> str | None:
+    """The がる verb of the kana adjective *orth_base* when the span deinflects to it (かわいがって → かわいがる)."""
+    if len(orth_base) < 2 or not orth_base.endswith("い") or not all("ぁ" <= ch <= "ゖ" for ch in orth_base):
+        return None
+    verb = orth_base[:-1] + "がる"
+    return verb if any(text == verb for text, _conditions in candidates) else None
+
+
 def resolve_dictionary_form(
     inflected_surface: str,
     orth_base: str,
     term_rules_lookup: TermRulesLookup | None,
     term_common_lookup: TermCommonLookup | None = None,
     excluded: str = "",
+    kana_lookup: Callable[[list[str]], dict[str, bool]] | None = None,
 ) -> str:
     """Best modern JMdict-attested dictionary form for a 動詞/形容詞 card front.
 
@@ -518,6 +527,12 @@ def resolve_dictionary_form(
       own — self-limiting so a verb whose orthBase is already the longest prefix
       (乞う, 彷徨った, 帰れる, 立った) is kept unchanged.
 
+    * **The がる verb of a kana adjective competes on its reading** (かわいがって →
+      かわいがる, not かわいい). It is only a reading of its entry (可愛がる), which
+      the term probe cannot see: ``kana_lookup``, the term-or-reading probe,
+      attests it, and the commonness filter (which has no tag for a reading)
+      does not prune it. No such entry (うらやましがる) keeps the adjective.
+
     ``excluded`` is one candidate the caller knows is wrong for this token (the
     -aru verb 刺さる for the tagger's passive 刺さ|れ|た); it never competes.
 
@@ -541,6 +556,11 @@ def resolve_dictionary_form(
     # surface like any other candidate.
     candidates.add((inflected_surface, deinflector.condition_flags("v")))
     attested = term_rules_lookup(sorted(candidates))
+    garu = _kana_garu_verb(orth_base, candidates) if kana_lookup is not None else None
+    if garu is not None and garu not in attested and kana_lookup is not None and kana_lookup([garu]).get(garu):
+        attested = {*attested, garu}
+    else:
+        garu = None
     if not attested:
         return orth_base
     attested_sorted = sorted(attested)
@@ -549,7 +569,7 @@ def resolve_dictionary_form(
     # ⇒ the full attested set, pre-commonness behavior.
     common = term_common_lookup(attested_sorted) if term_common_lookup is not None else None
     if common is not None:
-        pool: list[str] = [c for c in attested_sorted if common.get(c)] or attested_sorted
+        pool: list[str] = [c for c in attested_sorted if common.get(c) or c == garu] or attested_sorted
     else:
         pool = attested_sorted
     # Rank: longest common prefix with the surface, then prefer the shorter

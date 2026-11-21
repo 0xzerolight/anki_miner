@@ -63,6 +63,7 @@ def clean_subtitle_text(
     *,
     normalize: Callable[[str], str] | None = None,
     has_target_script: Callable[[str], bool] | None = None,
+    strip_labels: Callable[[str], str] | None = None,
 ) -> str:
     """Remove formatting tags, then Japanese-normalize for tokenization.
 
@@ -89,11 +90,18 @@ def clean_subtitle_text(
     bilingual-cue drop (:func:`_drop_other_script_lines`). ``None`` — every
     language whose factory does not opt in — is byte-identical.
 
+    ``strip_labels`` is a mining language's own rule for labels that are not
+    speech (ja: a 〔…〕 group that names a sound). It reads the normalized cue
+    with its physical lines still apart, before the annotation strip, so a
+    speaker tag behind a deleted label is at its line's start. ``None`` is
+    byte-identical.
+
     Args:
         text: Raw subtitle text with possible formatting tags
         normalize: The mining language's normaliser, or None for the Japanese pair
         has_target_script: The mining language's script gate, or None to keep
             every physical line of a cue
+        strip_labels: The mining language's non-speech label strip, or None
 
     Returns:
         Cleaned, normalized text without formatting tags or annotations
@@ -113,6 +121,8 @@ def clean_subtitle_text(
         text = standardize_kanji_variants(text)
     else:
         text = normalize(text)
+    if strip_labels is not None:
+        text = strip_labels(text)
     text = strip_inline_annotations(text)
     if has_target_script is not None:
         text = _drop_other_script_lines(text, has_target_script)

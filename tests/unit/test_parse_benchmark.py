@@ -173,6 +173,7 @@ _EXPECTED_CATEGORIES = {
     "sentence-grammar",
     "kana-part-front",
     "noun-tte",
+    "k1120-kana-words",
 }
 
 

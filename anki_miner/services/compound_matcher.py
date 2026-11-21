@@ -181,6 +181,8 @@ _NON_CONTENT_POS1 = frozenset({"助詞", "助動詞", "記号", "補助記号", 
 # 何と is mostly 何となく, 何としても or a quoted 何と書かれて.
 _ADVERBIAL_PARTICLES = frozenset({"に", "も", "で", "か", "から", "まで", "や", "でも", "しか", "と"})
 _ADVERBIAL_TAGS = frozenset({"adv", "exp", "pn", "conj"})
+# JMdict verb classes (v1, v5k, vk, vs-i, vz): an entry with none of them does not inflect.
+_VERB_CLASS_TAGS = ("v1", "v5", "vk", "vs", "vz")
 
 
 def _adverbial_end(token) -> bool:
@@ -375,6 +377,8 @@ class CompoundDictionaryMatcher:
                     for candidate, kind in alternatives:
                         if not self._exist_cache.get(candidate):
                             continue
+                        if kind == "A" and self._inflects_pre_noun_word(tokens[j], candidate):
+                            continue
                         if kind == "F":
                             if self._exist_cache.get(self._fixed_heads[(i, j)]):
                                 continue
@@ -401,6 +405,23 @@ class CompoundDictionaryMatcher:
                 merged.append(token)
                 i += 1
         return merged
+
+    def _inflects_pre_noun_word(self, tail, headword: str) -> bool:
+        """Whether a deinflected span would inflect a word that only stands before a noun (そう言って).
+
+        The dictionary lists そう言う, こう言う and どう言う as pre-noun words
+        ('such', adj-pn) with no verb class: they have no て-form. With an
+        inflected tail the line is the adverb and the verb (そう言って笑った, 'said
+        so and laughed'); the base form before a noun stays joined (そう言う人).
+        """
+        if self._entry_tags is None or _pos1(tail) != "動詞" or tail.surface == extract_orth_base(tail):
+            return False
+        if headword not in self._tags_cache:
+            if len(self._tags_cache) >= _EXIST_CACHE_CAP:
+                self._tags_cache.clear()
+            self._tags_cache[headword] = self._entry_tags([headword]).get(headword, set())
+        tags = self._tags_cache[headword]
+        return "adj-pn" in tags and not any(tag.startswith(_VERB_CLASS_TAGS) for tag in tags)
 
     def _keep_written_base(self, synthetic, span: list, headword: str) -> None:
         """Note on a spoken-idiom join the base the line spells (腹減る for 腹が減る).

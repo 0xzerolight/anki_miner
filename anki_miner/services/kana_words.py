@@ -37,7 +37,7 @@ class KanaJoin(NamedTuple):
     headword: str
     pos1: str
     line_start: bool
-    #: "noun" or "verb": joined only right after one; "" anywhere.
+    #: "noun" or "verb": joined only right after one; "conditional": after one (ば, ては, ないと); "" anywhere.
     after: str = ""
     #: A grammar point (んだ, ください): joined only with ``mine_grammar_points`` on.
     grammar: bool = False

@@ -83,12 +83,20 @@ _NEGATIVE_ADJECTIVES: dict[str, str] = {
     "否める": "否めない",
 }
 
+# What follows the て of どう|し|て when it is the て-form of する, by dictionary form
+# in kana: the past, the polite ending and the て-auxiliaries (``_te_form_in_use``).
+_TE_FOLLOWERS = frozenset({"た", "ます", "いる", "いい", "くれる", "ほしい", "もらう", "あげる", "おく", "みる"})
 _GRAMMAR_POS1 = frozenset({"助詞", "助動詞"})
 _MAX_FIXED_TOKENS = max(len(key) for key in _FIXED_JOINS)
 _MAX_KANA_TOKENS = max(len(key) for key in (*kana_words().joins, *kana_words().base_joins))
 _CLAUSE_BREAK_POS1 = frozenset({"補助記号", "記号"})
 _NOUN_POS1 = frozenset({"名詞", "代名詞", "接尾辞"})
 _VERB_POS1 = frozenset({"動詞", "助動詞"})
+# What ends a conditional before the obligation unit (行かなければ|ならない,
+# 見ちゃ|いけない, 行ったら|いけません, 行かなきゃ|いけない). ては and ないと take two
+# tokens (``_after_conditional``).
+_CONDITIONAL_PARTICLES = frozenset({"ば", "ちゃ", "じゃ", "ちゃあ", "じゃあ"})
+_CONDITIONAL_AUXILIARIES = frozenset({"たら", "だら", "なきゃ", "なけりゃ"})
 
 # 思わず read as a negated verb, not the adverb: followed by に (思わずに
 # 'without thinking') or after とは/とも (そうとは思わず 'not thinking so'). A bare
@@ -158,11 +166,43 @@ def _kana_join(tokens: list, i: int, grammar_points: bool) -> _Join | None:
         span = tokens[i : i + size]
         surfaces = tuple(token.surface for token in span)
         row = listed.joins.get(surfaces) or listed.base_joins.get((*surfaces[:-1], extract_orth_base(span[-1])))
-        if row is not None and (grammar_points or not row.grammar):
+        if (
+            row is not None
+            and (grammar_points or not row.grammar)
+            and not _cut_from_negative(tokens, i + size - 1, row.line_start)
+            and not _te_form_in_use(row.headword, tokens, i + size)
+        ):
             return _Join(
                 i, i + size - 1, row.headword, row.pos1, listed=True, line_start=row.line_start, after=row.after
             )
     return None
+
+
+def _cut_from_negative(tokens: list, end: int, clause_opener: bool) -> bool:
+    """Whether a row's last token belongs to the negative after it, so the row is not the word here.
+
+    いらっしゃい|ませ|ん: the greeting ends on the imperative ませ; before ん the
+    same tokens are the honorific verb negated (先生はいらっしゃいませんか).
+    それ|じゃ|ない, それで|は|なく: after a clause opener, じゃ / は before ない is the
+    negative copula ('not that'), not the connective それじゃ / それでは.
+    """
+    if end + 1 >= len(tokens):
+        return False
+    last, after = tokens[end].surface, tokens[end + 1]
+    if last == "ませ":
+        return bool(after.surface == "ん")
+    return clause_opener and last in ("は", "じゃ", "じゃあ") and extract_orth_base(after) == "ない"
+
+
+def _te_form_in_use(headword: str, tokens: list, after: int) -> bool:
+    """Whether どう|し|て is the て-form of する here, not the adverb どうして 'why'.
+
+    A past, a polite ending or a て-auxiliary right after it inflects the verb:
+    どうしてた 'how were you doing', どうしていいか 'what to do', どうしてくれる
+    'what will you do about it'. The row is passed over and どう keeps its card.
+    やる is left out: どうしてやらないの is 'why' as often as not.
+    """
+    return headword == "どうして" and after < len(tokens) and extract_orth_base(tokens[after]) in _TE_FOLLOWERS
 
 
 def _opens_clause(tokens: list, spans: dict[int, tuple[int, int]], i: int) -> bool:
@@ -187,6 +227,7 @@ def _follows(tokens: list, i: int, after: str, joined_pos1: str | None = None) -
     A "clause" row (んだ, んです) follows whatever can end a clause (``_ends_clause``).
     A "copula" row (じゃない, ではない) refuses a verb: there the で or じゃ is the
     verb's te-form (読んではない, 読んじゃない), which its highlight already covers.
+    A "conditional" row (ならない, いけない) follows a conditional (``_after_conditional``).
     """
     if not after:
         return True
@@ -194,6 +235,8 @@ def _follows(tokens: list, i: int, after: str, joined_pos1: str | None = None) -
         return i == 0 or joined_pos1 is not None or _ends_clause(tokens[i - 1])
     if after == "copula":
         return i == 0 or (joined_pos1 or _pos1(tokens[i - 1])) != "動詞"
+    if after == "conditional":
+        return _after_conditional(tokens, i)
     if i == 0:
         return False
     before = tokens[i - 1]
@@ -203,6 +246,38 @@ def _follows(tokens: list, i: int, after: str, joined_pos1: str | None = None) -
     if joined_pos1 is None and pos1 == "助動詞" and extract_lemma(before) == "だ":
         return False
     return pos1 in _VERB_POS1
+
+
+def _after_conditional(tokens: list, i: int) -> bool:
+    """Whether ``tokens[i]`` comes right after a conditional, where ならない / いけない is the obligation unit.
+
+    行かなければ|ならない, 見ては|いけない, 行かないと|いけない, 食べちゃ|いかん: the unit
+    is what follows the conditional, and the verb chain before it keeps its own
+    card (a chain wins over an expression that starts inside it, so
+    なければならない is never one word). Anywhere else the same tokens are the
+    plain verb (医者にならない, 今日はいけない). と counts only after a negative
+    (ないと): 見るといけない is as often 'in case someone sees'.
+    """
+    if i == 0:
+        return False
+    before = tokens[i - 1]
+    pos1 = _pos1(before)
+    if pos1 == "助動詞":
+        return before.surface in _CONDITIONAL_AUXILIARIES
+    if pos1 != "助詞":
+        return False
+    earlier = tokens[i - 2] if i > 1 else None
+    if _pos2(before) == "接続助詞":
+        if before.surface == "と":
+            return earlier is not None and extract_orth_base(earlier) == "ない"
+        return before.surface in _CONDITIONAL_PARTICLES
+    # ては / では: the topic は right after a verb's て.
+    return (
+        before.surface == "は"
+        and earlier is not None
+        and _pos2(earlier) == "接続助詞"
+        and earlier.surface in ("て", "で")
+    )
 
 
 def _ends_clause(before) -> bool:

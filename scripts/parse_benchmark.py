@@ -630,6 +630,42 @@ _ANCHOR_HEADWORDS: tuple[str, ...] = (
     # ドキドキ: katakana.jsonl ka02 pins it as dropped when the dictionary lacks it)
     "ニコニコ",
     "ワクワク",
+    # k1120 MC: あとで is only the READING of 後で (kc01); もんか is spelled so (kc02)
+    "後で",
+    "もんか",
+    # k1120 MC: spoken words joined by list rows (kc03, kc04)
+    "やだ",
+    "すんません",
+    # k1120 MC: a kana verb + its own negative, listed (kc05)
+    "かまわない",
+    # k1120 MC: the obligation unit after a conditional (kc06)
+    "いけない",
+    # k1120 MC: kana expressions joined by list rows (kc07)
+    "そういえば",
+    # k1120 MC: set greetings joined by list rows (kc08)
+    "ようこそ",
+    # k1120 MC: clause-opening それでは (kc09)
+    "それでは",
+    # k1120 MK: long kana spellings of kanji-written nouns; せんかい and ちょうだい are
+    # attested so their rejects are the rule's, not a dictionary miss
+    "ぬいぐるみ",
+    "ないしょ",
+    "しきたり",
+    "せんかい",
+    "ちょうだい",
+    "ちきしょう",
+    "まさしく",
+    "さぞかし",
+    "とんでも",
+    "そなた",
+    "あっし",
+    "からだ",
+    "ちから",
+    "ホッと",
+    "ぞっと",
+    "とある",
+    "しばし",
+    "おら",
 )
 
 # Yomitan `ruleIdentifiers` per fixture headword. A real term bank ships these,
@@ -701,6 +737,7 @@ _ANCHOR_READINGS: dict[str, str] = {
     "詰まらない": "つまらない",
     "ガイル": "がいる",
     "二位": "にい",
+    "後で": "あとで",
 }
 
 _ANCHOR_COMMON_HEADWORDS = frozenset({"やる", "北海道", "パリ"})

@@ -1,0 +1,20 @@
+{"id":"kk01","sentence":"妹のぬいぐるみを洗った","expected":["妹","ぬいぐるみ","洗う"],"category":"k1120-kana-words","note":"a four-kana spelling of a kanji-written noun JMdict gives no priority tag"}
+{"id":"kk02","sentence":"ないしょの話を聞いた","expected":["ないしょ","話","聞く"],"category":"k1120-kana-words","note":"a Sino-Japanese noun subtitles write in kana, by its list row"}
+{"id":"kk03","sentence":"村のしきたりを守る","expected":["村","しきたり","守る"],"category":"k1120-kana-words"}
+{"id":"kk04","sentence":"早うせんかい","expected":["早い"],"category":"k1120-kana-words","note":"the dialect ending 〜せんかい, which the tagger reads as 旋回"}
+{"id":"kk05","sentence":"早く来てちょうだい","expected":["早い","来る"],"category":"k1120-kana-words","note":"the request after て"}
+{"id":"kk06","sentence":"ちきしょう、負けた","expected":["ちきしょう","負ける"],"category":"k1120-kana-words","note":"畜生 as the curse, by its list row"}
+{"id":"kk07","sentence":"まさしく本物だ","expected":["まさしく","本物"],"category":"k1120-kana-words","note":"a kana adverb of four kana JMdict gives no priority tag"}
+{"id":"kk08","sentence":"さぞかし驚いた","expected":["さぞかし","驚く"],"category":"k1120-kana-words"}
+{"id":"kk09","sentence":"とんでもねえ","expected":[],"category":"k1120-kana-words","note":"cut from とんでもない; attested, so the reject is the rule's"}
+{"id":"kk10","sentence":"そなたの名を聞こう","expected":["そなた","名","聞く"],"category":"k1120-kana-words","note":"a period pronoun JMdict marks archaic"}
+{"id":"kk11","sentence":"あっしに任せてくれ","expected":["あっし","任せる"],"category":"k1120-kana-words","note":"rough-speech 私; くれ after て is grammar"}
+{"id":"kk12","sentence":"ちからが強い","expected":["ちから","強い"],"category":"k1120-kana-words","note":"a three-kana spelling of an everyday noun, named"}
+{"id":"kk13","sentence":"からだが大きい","expected":["大きい"],"category":"k1120-kana-words","note":"left off the list: as often から + だ"}
+{"id":"kk14","sentence":"ホッとした","expected":["ホッと"],"category":"k1120-kana-words","note":"a と-adverb with a katakana stem, a dictionary headword as written"}
+{"id":"kk15","sentence":"ぞっとした","expected":["ぞっと"],"category":"k1120-kana-words","note":"a three-kana と-adverb, by its list row"}
+{"id":"kk16","sentence":"とある町で会った","expected":["とある","町","会う"],"category":"k1120-kana-words","note":"a kana pre-noun adjectival JMdict gives no priority tag"}
+{"id":"kk17","sentence":"水をちょうだい","expected":["水","ちょうだい"],"category":"k1120-kana-words","note":"the request noun as the line's own word"}
+{"id":"kk18","sentence":"しばし待たれよ","expected":["しばし","待つ"],"category":"k1120-kana-words","note":"a three-kana period adverb, by its list row"}
+{"id":"kk19","sentence":"おらの村だ","expected":["おら","村"],"category":"k1120-kana-words","note":"the rural pronoun, before a particle"}
+{"id":"kk20","sentence":"立てよ、おら","expected":["立てる"],"category":"k1120-kana-words","note":"the shout: no particle after it (the tagger reads 立てよ as 立てる)"}

@@ -34,7 +34,7 @@ from anki_miner.services.resource_catalog import RECOMMENDED_DEFAULT_SET
 from anki_miner.services.sentence_tts_fetcher import PAPAGO_SPEAKER_JA
 from anki_miner.services.subtitle_parser import SubtitleParserService
 from anki_miner.utils.audio_track_detector import JAPANESE_LANGUAGE_CODES
-from anki_miner.utils.ja_normalize import is_chinese_line
+from anki_miner.utils.ja_normalize import chinese_style_lines, is_chinese_line, strip_caption_labels
 
 __all__ = ["JA_AUDIO", "build_profile"]
 
@@ -68,11 +68,15 @@ def _create_parser(*args: Any, **kwargs: Any) -> SubtitleParserService:
     flattened cue becomes the card's Sentence: the script gate drops that line,
     as it drops a bilingual cue's English line in the other non-Latin languages.
     A Chinese line passes that gate (its kanji are Japanese script), so it is
-    named by ``is_chinese_line`` and not mined. The name-piece rejects read
+    named by ``is_chinese_line`` and not mined; the short lines that test
+    misses are named by their style (``chinese_style_lines``). A 〔…〕 group that names a
+    sound is deleted by ``strip_caption_labels``. The name-piece rejects read
     UniDic's lemmas, so only this parser runs them.
     """
     kwargs.setdefault("has_target_script", _JA_SCRIPT.contains_target_script)
     kwargs.setdefault("skip_line", is_chinese_line)
+    kwargs.setdefault("strip_labels", strip_caption_labels)
+    kwargs.setdefault("skip_style_lines", chinese_style_lines)
     kwargs.setdefault("name_piece_rejects", True)
     return SubtitleParserService(*args, **kwargs)
 

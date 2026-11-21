@@ -58,6 +58,7 @@ from __future__ import annotations
 import functools
 import re
 import unicodedata
+from collections.abc import Sequence
 
 # Halfwidth katakana → fullwidth mapping table. Each value is exactly three
 # characters: [base, dakuten form, handakuten form]; '-' marks an absent form.
@@ -347,6 +348,77 @@ def strip_decoration_glyphs(text: str) -> str:
     return _DECORATION_RUN_RE.sub(_repl, text)
 
 
+# The doubled parenthesis of TV captions: recalled speech, a thought, a voice in
+# a flashback. The same captions also print it as the white parenthesis ｟…｠,
+# which no cleaning step touches. Written as two plain parens it looked like a
+# sound label: a cue wholly inside one was dropped as a caption, and the default
+# cleanup pattern cut a group after other text at its first ")" and left the
+# second in the sentence.
+_PAREN_OPENERS = "(（"
+_PAREN_CLOSERS = ")）"
+_DOUBLE_PAREN_OPEN_RE = re.compile(r"\(\(|（（")
+_DOUBLE_PAREN_CLOSE_RE = re.compile(r"\)\)|））")
+# A doubled opener, text that holds only whole single groups (a reading, a
+# note), and a doubled closer. The closer of a nested single group, as in
+# (水篠(みずしの)), has no doubled opener and is never matched.
+_DOUBLE_PAREN_PAIR_RE = re.compile(r"(?:\(\(|（（)((?:[^()（）]|[(（][^()（）]*[)）])*)(?:\)\)|））)")
+_SINGLE_PAREN_GROUP_RE = re.compile(r"[(（][^()（）]*[)）]")
+
+
+def rewrite_double_parens(text: str) -> str:
+    """Respell the doubled parenthesis of a caption as the white parenthesis ｟…｠.
+
+    ``((そういう提案です))`` and its full-width form become
+    ``｟そういう提案です｠``, so the speech inside is kept like the white
+    parenthesis the same captions use. A speech that opens in one cue and
+    closes in a later one is respelled on each side: a doubled opener when no
+    paren closes after it, a doubled closer when no paren opens before it
+    (whole single groups such as a speaker label aside). Single parentheses,
+    and a doubled closer that ends a nested group, are left as they are.
+    """
+    if _DOUBLE_PAREN_OPEN_RE.search(text) is None and _DOUBLE_PAREN_CLOSE_RE.search(text) is None:
+        return text
+    text = _DOUBLE_PAREN_PAIR_RE.sub("｟\\1｠", text)
+    opener = _DOUBLE_PAREN_OPEN_RE.search(text)
+    if opener is not None:
+        rest = _SINGLE_PAREN_GROUP_RE.sub("", text[opener.end() :])
+        if not any(char in rest for char in _PAREN_OPENERS + _PAREN_CLOSERS):
+            text = f"{text[: opener.start()]}｟{text[opener.end() :]}"
+    closer = _DOUBLE_PAREN_CLOSE_RE.search(text)
+    if closer is not None:
+        before = _SINGLE_PAREN_GROUP_RE.sub("", text[: closer.start()])
+        if not any(char in before for char in _PAREN_OPENERS + _PAREN_CLOSERS):
+            text = f"{text[: closer.start()]}｠{text[closer.end() :]}"
+    return text
+
+
+# The wave dash inside う～ん, よ～い, わ～い and せ～の is the word's own long
+# vowel. The default cleanup pattern deletes every wave dash, which is what gets
+# a stretched word mined (すご～い as すごい), but it turns these four into other
+# words: うん, よい (良い), わい (read as 沸く) and せの. Spelled with the long
+# mark they are the interjections they are. A closed set, never a general rule:
+# written with ー, はーい and すごーい are not mined at all.
+_WAVE_DASH_INTERJECTIONS = (
+    # Not after a kana or kanji other than う (違う～んだ), not before と (う～んと速い).
+    (re.compile(r"(?<![ぁ-いぇ-ゖァ-ヺ一-鿿々])う[～〜]+ん(?!と)"), "うーん"),
+    # No hiragana on either side: よ～いしょ and はっけよ～い are other words.
+    (re.compile(r"(?<![ぁ-ゖ])よ[～〜]+い(?![ぁ-ゖ])"), "よーい"),
+    # No kana, kanji or stretch mark before it and no kana or stretch mark
+    # after: うわ～い, かわ～いい, 卑わ～い.
+    (re.compile(r"(?<![ぁ-ゖァ-ヺー～〜一-鿿々])わ[～〜]+い(?![ぁ-ゖァ-ヺー～〜])"), "わーい"),
+    (re.compile(r"(?<![ぁ-ゖ])せ[～〜]+の(?![ぁ-ゖ])"), "せーの"),
+)
+
+
+def respell_wave_dash_interjections(text: str) -> str:
+    """Spell う～ん, よ～い, わ～い and せ～の with the long mark (うーん, よーい, わーい, せーの)."""
+    if "～" not in text and "〜" not in text:
+        return text
+    for pattern, spelled in _WAVE_DASH_INTERJECTIONS:
+        text = pattern.sub(spelled, text)
+    return text
+
+
 def normalize_for_tokenization(text: str) -> str:
     """Ordered pre-tokenization normalization chain (Yomitan ja preprocessor order).
 
@@ -415,3 +487,109 @@ def is_chinese_line(line: str) -> bool:
     if not _CHINESE_ONLY_HAN.isdisjoint(han) and _KANA_RE.search(line) is None:
         return True
     return not all(_japanese_charset_has(char) for char in han)
+
+
+# Sound labels a caption service writes in tortoise-shell brackets: 〔ドアが開く音〕,
+# 〔銃声〕, 〔晴子の声〕. The same brackets carry speech in those files (a voice
+# over a device, a thought: 〔考えろ！〕), so the bracket alone decides nothing.
+# A label is short, holds no sentence mark and ends in a noun that names a sound.
+_TORTOISE_GROUP_RE = re.compile(r"〔([^〔〕]*)〕")
+_SOUND_LABEL_TAILS = (
+    "音",
+    "声",
+    "息",
+    "息遣い",
+    "拍手",
+    "悲鳴",
+    "ノック",
+    "チャイム",
+    "ざわめき",
+    "どよめき",
+    "せき込み",
+    "すすり泣き",
+    "いびき",
+)
+_SOUND_LABEL_MAX_CHARS = 16
+_SENTENCE_MARKS = frozenset("。！？!?")
+
+
+def _strip_sound_label_match(match: re.Match[str]) -> str:
+    """A space for a 〔…〕 group that names a sound; any other group as written."""
+    inner = "".join(match.group(1).split())
+    if len(inner) > _SOUND_LABEL_MAX_CHARS or not inner.endswith(_SOUND_LABEL_TAILS):
+        return match.group(0)
+    if not _SENTENCE_MARKS.isdisjoint(inner):
+        return match.group(0)
+    return " "
+
+
+def strip_sound_labels(text: str) -> str:
+    """Delete the 〔…〕 groups of a cue that name a sound, keeping the ones that are speech.
+
+    ``〔鍵を掛ける音〕 待って`` keeps ``待って`` and a cue that is only
+    ``〔銃声〕`` is left blank; ``〔考えろ！〕`` and ``〔お父さん…〕`` stay as
+    written. A group may wrap over two physical lines. The Japanese parser
+    runs it inside its ``strip_labels`` (:func:`strip_caption_labels`). Like :func:`is_chinese_line` it is not
+    part of the shared text cleaning: the test reads Japanese nouns, and drops
+    text for not being speech.
+    """
+    if "〔" not in text:
+        return text
+    return _TORTOISE_GROUP_RE.sub(_strip_sound_label_match, text)
+
+
+# The Chinese style of a bilingual ASS file (Dial-CH, Text - CN, 中文).
+# is_chinese_line judges a line alone and misses a short one written with
+# shared characters (不要, 明白, 真的假的): about one line in five. Its style
+# gives it away: most of the style's lines are named and few carry kana. A
+# Japanese style never qualifies, kana-less lines and all, because far more
+# than three in ten of its lines carry kana.
+_CHINESE_STYLE_MIN_LINES = 10
+
+
+def chinese_style_lines(lines: Sequence[tuple[str, str]]) -> list[bool]:
+    """For each ``(style, cleaned line)`` of one file: a kana-less line of a Chinese style.
+
+    A style is Chinese when it has at least ten lines with text,
+    :func:`is_chinese_line` names two in five or more of them, and under three
+    in ten carry kana. Every kana-less line of such a style is named; a line
+    with kana in it (「你好」って言ってみて) is not. The Japanese parser is given
+    this as its ``skip_style_lines`` and mines nothing from a named line.
+    """
+    counts: dict[str, list[int]] = {}
+    for style, text in lines:
+        if not text:
+            continue
+        count = counts.setdefault(style, [0, 0, 0])
+        count[0] += 1
+        count[1] += is_chinese_line(text)
+        count[2] += _KANA_RE.search(text) is not None
+    chinese = {
+        style
+        for style, (total, named, kana) in counts.items()
+        if total >= _CHINESE_STYLE_MIN_LINES and named * 5 >= total * 2 and kana * 10 < total * 3
+    }
+    return [bool(text) and style in chinese and _KANA_RE.search(text) is None for style, text in lines]
+
+
+# Scene labels a caption rip prints in a box of their own: 回想 (a flashback)
+# and 心の声 (a thought). A physical line that is nothing else is the label;
+# inside a sentence (あの日の回想にふけっていた) the words are speech.
+_SCENE_LABEL_LINES = frozenset({"回想", "心の声"})
+
+
+def strip_caption_labels(text: str) -> str:
+    """Delete the labels of a cue that are not speech: sound labels and scene-label lines.
+
+    First respells what Japanese captions write differently
+    (:func:`rewrite_double_parens`, :func:`respell_wave_dash_interjections`),
+    then runs :func:`strip_sound_labels` and blanks each physical line that is
+    exactly 回想 or 心の声. The Japanese parser is given this as its
+    ``strip_labels``; like :func:`is_chinese_line` it reads Japanese and is not
+    part of the shared text cleaning, which Korean also runs.
+    """
+    text = respell_wave_dash_interjections(rewrite_double_parens(text))
+    text = strip_sound_labels(text)
+    if "回想" not in text and "心の声" not in text:
+        return text
+    return "\n".join("" if line.strip() in _SCENE_LABEL_LINES else line for line in text.split("\n"))

@@ -38,6 +38,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Japanese: capital-letter words the dictionary lists are mined (ＣＤ, ＯＫ, ＤＶＤ),** read without the dictionary's middle dot (ＣＤ is しーでぃー). Half-width letters (CD) are not mined yet.
 - **Japanese: a drawn-out ending stays inside the highlight (先輩ー, 嘘っ, 潜るー, 食べねー).**
 - **Japanese: 殺人犯って and 放火犯って card 殺人犯 and 放火犯,** with 犯 read はん in the sentence.
+- **Japanese: kana nouns such as ほう, わけ and もん are mined next to the word after them (寝たほうがいい).** A dictionary entry made of the noun and the next word's start took its place.
+- **Japanese: spoken words the tagger cuts are mined whole (やだ, あかん, すんません, ほっとく).**
+- **Japanese: kana negatives the dictionary lists are mined as written (ふざけんな, わからん, いらん, かまわない, つまらん).**
+- **Japanese: the obligation after a conditional is mined (行かなきゃいけない mines いけない; also ならない, いかん).** It is a grammar point: Mine grammar points turns it off.
+- **Japanese: kana expressions the tagger cuts are mined whole (そういえば, もしも, なんとなく, どうにか).**
+- **Japanese: set greetings are mined whole (はじめまして, いらっしゃいませ, ようこそ, いってらっしゃい, どういたしまして).**
+- **Japanese: a clause-opening それでは, それじゃ or それじゃあ is mined as one word.**
+- **Japanese: long kana spellings of kanji-written nouns are mined (ぬいぐるみ, しきたり, ないしょ, まんじゅう).**
+- **Japanese: long kana adverbs are mined (まさしく, さぞかし, あくせく, めっぽう).**
+- **Japanese: period and rough-speech pronouns are mined (そなた, おぬし, それがし, あっし, おいら).**
+- **Japanese: three-kana spellings of everyday nouns are mined (ちから, いのち, ふたり, じじい).**
+- **Japanese: と-adverbs written with a katakana stem are mined (ホッと, ボーッと, ゾッと),** and ぞっと in kana.
+- **Japanese: kana pre-noun words are mined (いかなる, とある, さらなる, ちっちゃな).**
+- **Japanese: ちょうだい is mined as the request (お釣りちょうだい).** After て it is still grammar (見せてちょうだい).
+- **Japanese: short spoken and period adverbs are mined (あんま, ちっと, なんせ, しばし).**
+- **Japanese: おら is mined before a particle (おらは行く), and よろしゅう in よろしゅう頼む.**
+- **Japanese: a kanji adjective cry is mined as its adjective (熱っ → 熱い, 痛ぇ → 痛い, 早っ → 早い).**
+- **Japanese: かわいがる and こわがる are mined as the がる verb,** not as the adjective.
 ### Fixed
 - **Japanese verb cards show the verb the line uses.** An imperative (持て) mined 持てる, a passive (刺された) mined 刺さる, a potential (帰れない) mined 帰れる, a short causative (行かされた) mined 行かす and katakana フラれた mined the loanword フル; they now mine 持つ, 刺す, 帰る, 行く and ふる. The last three fronts had no dictionary entry, so the card was dropped.
 - **Kana fillers no longer become verb cards.** いえ ('no') mined いえる, a sound cut at っ (まっ, たっ) mined まつ and たつ, and the tagger's glues いたんだ, 違かった and ういっす mined 痛む, 買う and 逸する.
@@ -47,6 +65,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Pieces of a name are no longer mined as words.** The 介 or 助 that ends a given name (雁助, 欧介), 神さん and 守殿 after a name's last kanji (夜神さん, 伊豆守殿), and 犯る read out of 殺人犯って.
 - **Chinese lines in a Japanese subtitle file are not mined.** A fansub's credit line and the Chinese half of a bilingual file passed as Japanese because every kanji counts as Japanese script. A line is dropped when it holds a simplified character, or has no kana and a Chinese-only pronoun or particle; other Chinese lines still pass.
 - **Half-width caption punctuation (｡､｢｣) is read as punctuation, and →, ☎ and invisible left-to-right marks are removed from sentences.** After a half-width ｡ the tagger glued a particle to the next word (オレはやる｡ mined はやる).
+- **そう言って and こう言われて mine そう and 言う,** not the pre-noun そう言う ('such').
+- **どうしてたの and どうしていいか mine どう,** not どうして ('why').
+- **お帰りになる and お読みになりますか no longer mine なる.**
+- **A stretched やったぁ! is no longer mined as the verb やる.**
+- **Cries and word pieces are no longer mined as rare kana verbs** (うりゃ as 売る, こい as 濃い, わい as 沸く).
+- **More word pieces are no longer mined as kana verbs** (the ぬ of 気付かぬ as 寝る, and pieces read as 忌む, 経る or 繰る).
+- **A line-opening おいおい is no longer mined as 追い追い ('gradually'),** and ほら before a pause is the interjection.
+- **A clause-final いい (それでいい) is mined as いい,** not as the verb いう.
+- **Pieces of a longer run of capital letters are no longer mined** (ＮＣＩＳ mined ＩＳ).
+- **なんとかなった mines なんとか and なる,** not かなう.
+- **Kana おごる, つるむ and かなう get their own verb's definition** (奢る, not 驕る 'be proud').
+- **１日 reads いちにち ('one day'), and ついたち only after a month (４月１日).**
+- **Ruby readings an ASS file writes as half-size lines are no longer mined.**
+- **Speech in a doubled parenthesis ((助けて)) is mined;** it was removed as a note.
+- **Sound labels in tortoise-shell brackets (〔ドアの開く音〕) are no longer mined.**
+- **The Chinese style of a bilingual ASS file is skipped whole,** including its lines with no simplified character.
+- **Song styles named EDJP, OP1, JPED, IN-JP or 歌詞 are no longer mined.**
+- **う～ん, よ～い, わ～い and せ～の are read as one word** (う～ん mined うん, よ～い mined よい).
+- **Label rows 回想 and 心の声 above a line are no longer mined.**
 - **A batch no longer lets one file decide how a kana verb is treated in the next.** The verdict for つかめ (つかむ or つかめる) was remembered by spelling alone, so the same episode could mine differently depending on what was mined before it.
 - **Folder pairing (Batch, Condense, Retime) no longer reads encode and broadcast tags as the episode number.** Ma10p, YUV420P10, 2flac, AACx2, HDR10, 60fps, MPEG2, `[v2]` and the BS11 channel tag left videos unpaired or paired with another episode's subtitle.
 - **Folder pairing keeps a .5 special (`Show - 12.5`) apart from episode 5.**

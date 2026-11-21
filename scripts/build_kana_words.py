@@ -59,6 +59,11 @@ SHORT_SPELLED_NOUNS: frozenset[str] = frozenset(
     {"とおり", "おなか", "ゆうべ", "かぎり", "におい", "しょうゆ", "けんか", "うわさ", "まぬけ", "あげく"}
     | {"おかげ", "ほんと", "ほんま", "ごはん", "あした", "しかた", "ふだん", "ことし"}
     | {"ようす", "しっぽ", "きげん", "ぜんぶ"}
+    | {"ないしょ", "ひきょう", "いっちょ", "ちゅうちょ"}
+    # Not からだ, ことば or ありか: in a line each is as often two words (来た|から|だ,
+    # the dialect object こと|ば, 何でも|あり|か).
+    | {"ちから", "いのち", "かたち", "ふたり", "せがれ", "じじい", "ばばあ", "おかみ"}
+    | {"とどめ", "せりふ", "あるじ", "おなご", "だんご", "ささい", "うかつ"}
 )
 
 #: Spoken kana spellings JMdict gives no priority tag (やっぱ for 矢っ張り, the
@@ -83,6 +88,40 @@ UNTAGGED_COMMON: frozenset[str] = frozenset(
         "へぇ",
         "さぁ",
         "ありがと",
+    }
+    # Sino-Japanese nouns subtitles write in kana. The parser recovers a long kana
+    # spelling without a priority tag by rule only when the word is native
+    # (SubtitleParserService._is_long_kana_spelling), so these are named.
+    | {"ちきしょう", "いっちょ", "ないしょ", "ひきょう", "べっぴん", "じきじき", "まんじゅう", "こんにゃく"}
+    | {"ちゅうちょ", "しょんべん", "ようかん", "そうめん", "もうろく", "たくあん", "けいれん", "ろうぜき"}
+    # Pronouns of period, rural and rough speech (JMdict marks them archaic or
+    # dialect): the everyday words of period drama, fantasy and yakuza films, and
+    # none is the homograph of an everyday word, as the archaic rows left out below are.
+    # Left out: うぬ (as often the growl うぬぬ). おら is listed; the parser refuses the
+    # shout (おら！ おらよ) by what follows it.
+    | {"そなた", "そち", "おぬし", "それがし", "おいら", "あっし", "わて", "あたい", "あたくし"}
+    | {"こやつ", "あやつ", "こちとら"}
+    # と-adverbs under four kana or drawn out, which the parser's length rule leaves to the
+    # list. Not はっと or かっと: as often は|っと (戸締まりはっと) and ず|かっと.
+    | {"ぞっと", "じーっと", "そーっと"}
+    # Pre-noun adjectivals of formal and spoken lines. Not わが or かの: two kana are
+    # as often a piece (the dialect わがんねえ, a name かのまた).
+    | {"いかなる", "とある", "さらなる", "ひょんな", "おっきな", "ちっちゃな", "なんたる"}
+    # Short spoken and period adverbs. Not ちと: as often a piece (俺っ|ちと, 俺ん|ちと).
+    | {"あんま", "ちっと", "なんせ", "しばし"}
+    | {"おら"}
+    | {
+        "せがれ",
+        "じじい",
+        "ばばあ",
+        "おかみ",
+        "とどめ",
+        "せりふ",
+        "あるじ",
+        "おなご",
+        "だんご",
+        "ささい",
+        "うかつ",
     }
 )
 
@@ -114,8 +153,9 @@ EXCLUDED: dict[tuple[str, str], str] = {
     # the particle constant.
     **dict.fromkeys((("かも", "名詞"), ("かな", "名詞"), ("とも", "名詞"), ("かね", "名詞")), "particle"),
     **dict.fromkeys((("なし", "名詞"), ("たか", "名詞"), ("しな", "名詞")), "particle"),
-    # Requests after て (見てごらん, 待ってちょうだい).
-    **dict.fromkeys((("ごらん", "名詞"), ("ちょうだい", "名詞")), "auxiliary"),
+    # The request after て (見てごらん). ちょうだい is listed: it is also the noun
+    # (お茶をちょうだい), and the parser refuses it after て itself.
+    ("ごらん", "名詞"): "auxiliary",
     # 嫌々 'reluctantly' in a line is mostly the interjection いやいや 'no, no'.
     ("いやいや", "名詞"): "interjection",
     # Suffixes, grammar nouns and nouns a carrier tags 副詞.
@@ -380,6 +420,52 @@ JOINS: tuple[tuple[str, str, str, str] | tuple[str, str, str, str, str], ...] = 
     ("こうやって", "副詞", "こう|やっ|て", ""),
     ("くせに", "副詞", "くせ|に", ""),
     ("っていう", "連体詞", "って|いう", "noun"),
+    # K1120: spoken words the tagger cuts (や|だ, あか|ん; ほっ|とく was carded ほる 'dig').
+    ("やだ", "感動詞", "や|だ", ""),
+    ("あかん", "感動詞", "あか|ん", ""),
+    ("あかん", "感動詞", "あ|かん", ""),
+    ("すんません", "感動詞", "すん|ませ|ん", ""),
+    ("すんまへん", "感動詞", "すん|まへ|ん", ""),
+    ("ほっとく", "動詞", "ほっ|=とく", ""),
+    ("ほっておく", "動詞", "ほっ|て|=おく", ""),
+    ("ほっておく", "動詞", "ほっ|て|=おける", ""),
+    # K1120: a kana verb + its own negative the dictionary lists as a word (わかん|ない, いら|ん);
+    # つまら|ん, くだら|ん and たまら|ん are listed too, and never 詰まる / 下る / 堪る.
+    ("ふざけんな", "感動詞", "ふざけん|な", ""),
+    ("わからん", "感動詞", "わから|ん", ""),
+    ("いらん", "感動詞", "いら|ん", ""),
+    ("かまわない", "形容詞", "かまわ|=ない", ""),
+    ("つまらん", "感動詞", "つまら|ん", ""),
+    ("つまらぬ", "感動詞", "つまら|ぬ", ""),
+    ("くだらん", "感動詞", "くだら|ん", ""),
+    ("くだらぬ", "感動詞", "くだら|ぬ", ""),
+    ("たまらん", "感動詞", "たまら|ん", ""),
+    # K1120: the obligation unit after a conditional (行かなければ|ならない, 見ては|いけない). Never
+    # なければならない as one word: the verb chain keeps the conditional.
+    ("ならない", "形容詞", "なら|=ない", "conditional", "grammar"),
+    ("いけない", "形容詞", "いけ|=ない", "conditional", "grammar"),
+    ("いけません", "感動詞", "いけ|ませ|ん", "conditional", "grammar"),
+    ("いかん", "感動詞", "いか|ん", "conditional", "grammar"),
+    ("ならん", "感動詞", "なら|ん", "conditional", "grammar"),
+    ("なりません", "感動詞", "なり|ませ|ん", "conditional", "grammar"),
+    # K1120: kana expressions the tagger cuts (そう|いえ|ば was carded いう, そう|いや the adverb いや).
+    ("そういえば", "接続詞", "そう|いえ|ば", "start"),
+    ("そういや", "接続詞", "そう|いや", "start"),
+    ("なんとなく", "副詞", "なん|と|なく", ""),
+    ("もしも", "副詞", "もし|も", ""),
+    ("どうにか", "副詞", "どう|に|か", ""),
+    ("わがはい", "代名詞", "わが|はい", ""),
+    # K1120: set greetings (よう|こそ was carded よい, いっ|てらっしゃい carded いく).
+    ("はじめまして", "感動詞", "はじめ|まし|て", ""),
+    ("いらっしゃいませ", "感動詞", "いらっしゃい|ませ", ""),
+    ("ようこそ", "感動詞", "よう|こそ", ""),
+    ("いってらっしゃい", "感動詞", "いっ|てらっしゃい", ""),
+    ("どういたしまして", "感動詞", "どう|いたし|まし|て", ""),
+    ("おじゃま", "名詞", "お|じゃま", ""),
+    # K1120: clause-opening それでは / それじゃ (carded それで and それ); not before ない (それじゃない).
+    ("それでは", "接続詞", "それ|で|は", "start"),
+    ("それじゃ", "接続詞", "それ|じゃ", "start"),
+    ("それじゃあ", "接続詞", "それ|じゃあ", "start"),
 )
 
 _HEADER = """\
