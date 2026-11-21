@@ -171,3 +171,31 @@ class TestMoreKanaGlueVerbs:
     )
     def test_the_real_kana_word_keeps_its_card(self, text: str, front: str) -> None:
         assert front in _fronts(_service(self._HEADWORDS), text)
+
+
+class TestClauseFinalIi:
+    @staticmethod
+    def _ii(text: str):
+        import fugashi
+
+        from anki_miner.services.morphology import retag_mistagged_tokens
+
+        return next(tok for tok in retag_mistagged_tokens(list(fugashi.Tagger()(text))) if tok.surface == "いい")
+
+    @pytest.mark.parametrize("text", ["どうだっていい", "まあいい、次だ", "礼はいい、行くぜ", "名前はいい 行け"])
+    def test_before_a_pause_it_is_the_adjective(self, text: str) -> None:
+        feature = self._ii(text).feature
+        assert (feature.pos1, feature.lemma, feature.orthBase) == ("形容詞", "良い", "いい")
+
+    @pytest.mark.parametrize(
+        "text",
+        ["はっきりいいます", "いいながら笑った", "ウソをいい出した", "いいたいことがある", "色といい 形といい 見事だ"],
+    )
+    def test_before_its_ending_it_is_the_verb(self, text: str) -> None:
+        assert self._ii(text).feature.lemma == "言う"
+
+    def test_the_cards_follow_the_retag(self) -> None:
+        service = _service(("いう", "いい"))
+        assert "いう" not in _fronts(service, "どうだっていい")
+        assert "いう" not in _fronts(service, "礼はいい、行くぜ")
+        assert "いう" in _fronts(service, "はっきりいいます")

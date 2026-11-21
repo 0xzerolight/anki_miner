@@ -1200,6 +1200,8 @@ def retag_mistagged_tokens(tokens: list, form_lookup: FormLookup | None = None) 
     - An interjection read as another word before a space (おいおい as the
       adverb 追い追い, ほら as a stem of 放る) is the interjection
       (``_spaced_interjection_fields``).
+    - A clause-final いい read as the stem of 言う (どうだっていい) is the
+      adjective 良い (``_clause_final_ii_fields``).
     """
     unknown = {token.surface for token in tokens if _unknown_katakana_noun(token)}
     nouns = _dictionary_nouns(unknown, form_lookup) if unknown and form_lookup is not None else set()
@@ -1236,7 +1238,7 @@ def retag_mistagged_tokens(tokens: list, form_lookup: FormLookup | None = None) 
         elif token.surface in nouns and _unknown_katakana_noun(token):
             fields = dict.fromkeys(("lemma", "orthBase", "kana"), token.surface)
         if fields is None:
-            fields = _spaced_interjection_fields(tokens, i)
+            fields = _spaced_interjection_fields(tokens, i) or _clause_final_ii_fields(tokens, i)
         out.append(token if fields is None else RetaggedToken(token, fields))
     return out
 
@@ -1252,6 +1254,16 @@ _SPACED_INTERJECTIONS: dict[tuple[str, str | None], str] = {
 _PAUSE_POS1: frozenset[str] = frozenset({"補助記号", "感動詞", "フィラー"})
 
 
+def _before_pause(tokens: list, i: int) -> bool:
+    """Whether a space, a mark or the line end follows token ``i``."""
+    nxt = tokens[i + 1] if i + 1 < len(tokens) else None
+    return (
+        nxt is None
+        or bool(getattr(nxt, "white_space", ""))
+        or getattr(getattr(nxt, "feature", None), "pos1", None) == "補助記号"
+    )
+
+
 def _spaced_interjection_fields(tokens: list, i: int) -> dict[str, str] | None:
     """The 感動詞 fields of an interjection the tagger read as another word (``_SPACED_INTERJECTIONS``), or None.
 
@@ -1265,12 +1277,7 @@ def _spaced_interjection_fields(tokens: list, i: int) -> dict[str, str] | None:
     lemma = _SPACED_INTERJECTIONS.get((token.surface, _lemma_or_none(token)))
     if lemma is None:
         return None
-    nxt = tokens[i + 1] if i + 1 < len(tokens) else None
-    if (
-        nxt is not None
-        and not getattr(nxt, "white_space", "")
-        and getattr(getattr(nxt, "feature", None), "pos1", None) != "補助記号"
-    ):
+    if not _before_pause(tokens, i):
         return None
     before = getattr(getattr(tokens[i - 1], "feature", None), "pos1", None) if i else None
     if getattr(feature, "pos1", None) == "副詞" and before not in (None, *_PAUSE_POS1):
@@ -1280,6 +1287,39 @@ def _spaced_interjection_fields(tokens: list, i: int) -> dict[str, str] | None:
     if isinstance(kana, str):
         fields.update(dict.fromkeys(("lForm", "kanaBase", "formBase", "pronBase"), kana))
     return fields
+
+
+#: The fields unidic-lite gives the adjective いい (良い 'good, fine').
+_ADJECTIVE_II: dict[str, str] = {
+    "pos1": "形容詞",
+    "pos2": "非自立可能",
+    "cType": "形容詞",
+    "cForm": "終止形-一般",
+    "lForm": "ヨイ",
+    "lemma": "良い",
+    "orthBase": "いい",
+    "pronBase": "イー",
+    "kanaBase": "イイ",
+    "formBase": "イイ",
+}
+
+
+def _clause_final_ii_fields(tokens: list, i: int) -> dict[str, str] | None:
+    """The 良い fields of a clause-final いい the tagger read as the stem of 言う (どうだっていい, 礼はいい、…), or None.
+
+    The stem of 言う runs on into its ending (いいます, いいながら, いい出す);
+    before a space, a mark or the line end いい is the adjective. After a noun
+    + と it stays the verb, the pattern AといいBといい ('A as well as B'). The
+    literary そういい、彼は去った is read as the adjective too, and subtitles
+    rarely have it.
+    """
+    token = tokens[i]
+    if token.surface != "いい" or _lemma_or_none(token) != "言う" or not _before_pause(tokens, i):
+        return None
+    before = getattr(getattr(tokens[i - 2], "feature", None), "pos1", None) if i >= 2 else None
+    if before in ("名詞", "代名詞", "接尾辞") and tokens[i - 1].surface == "と":
+        return None
+    return _ADJECTIVE_II
 
 
 #: Adjectives spoken with an -ee ending (やばい → やべー) that unidic-lite has no

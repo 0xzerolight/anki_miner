@@ -5,3 +5,4 @@
 {"id":"k1mrj07","sentence":"わいも行くで","expected":["行く"],"category":"kanji-glue","note":"The Kansai わい is no 沸く (わく)."}
 {"id":"k1mrj15","sentence":"おいおい 待てよ","expected":["待つ"],"category":"kana-listed","note":"A line-opening おいおい is the interjection, not the adverb 追い追い the tagger reads."}
 {"id":"k1mrj16","sentence":"彼氏いんだよね","expected":["彼氏"],"category":"kanji-glue","note":"The いん of いるんだ is no 忌む."}
+{"id":"k1mrj17","sentence":"礼はいい、行くぜ","expected":["礼","行く"],"category":"aux-context","note":"A clause-final いい is 良い, not the stem of 言う the tagger reads."}
