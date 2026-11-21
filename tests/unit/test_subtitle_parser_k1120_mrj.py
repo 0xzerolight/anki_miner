@@ -40,12 +40,13 @@ _KANA_VERBS = (
 )
 
 
-def _service(headwords=()) -> SubtitleParserService:
+def _service(headwords=(), **kwargs) -> SubtitleParserService:
     spelled = set(headwords)
     return SubtitleParserService(
         AnkiMinerConfig(),
         term_lookup=lambda terms: spelled.intersection(terms),
         kana_attest_lookup=lambda forms: {form: form in spelled for form in forms},
+        **kwargs,
     )
 
 
@@ -205,7 +206,12 @@ class TestLetterRunFragments:
     _LETTER_WORDS = ("ＣＨ", "ＰＰ", "ＣＤ", "ＯＫ", "ＤＶＤ")
 
     def test_a_piece_of_a_longer_letter_run_is_not_carded(self) -> None:
-        assert not {"ＣＨ", "ＰＰ"} & set(_fronts(_service(self._LETTER_WORDS), "ＣＨＰＰの話"))
+        service = _service(self._LETTER_WORDS, name_piece_rejects=True)
+        assert not {"ＣＨ", "ＰＰ"} & set(_fronts(service, "ＣＨＰＰの話"))
+
+    def test_only_the_ja_factory_turns_letter_pieces_away(self) -> None:
+        # A Latin-script segmenter cuts gonna into gon|na: the guard reads UniDic's cuts only.
+        assert {"ＣＨ", "ＰＰ"} <= set(_fronts(_service(self._LETTER_WORDS), "ＣＨＰＰの話"))
 
     @pytest.mark.parametrize(
         ("text", "front"),
@@ -218,7 +224,7 @@ class TestLetterRunFragments:
         ],
     )
     def test_a_whole_letter_word_keeps_its_card(self, text: str, front: str) -> None:
-        assert front in _fronts(_service(self._LETTER_WORDS), text)
+        assert front in _fronts(_service(self._LETTER_WORDS, name_piece_rejects=True), text)
 
 
 class TestGluedKaNaru:

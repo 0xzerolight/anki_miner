@@ -790,7 +790,10 @@ class SubtitleParserService:
                 name is turned away (``_is_kanji_glue``,
                 ``_is_name_honorific_tail``): its tables read UniDic lemmas and
                 orthBases. ``True`` from the ja factory only; another
-                segmenter's 助 or 主殿 is an ordinary word.
+                segmenter's 助 or 主殿 is an ordinary word. The same holds for a
+                piece UniDic cut out of a run of Latin letters
+                (``_is_letter_run_fragment``, ＣＨ|ＰＰ): a Latin-script
+                segmenter's gon|na is two pieces of one word, each a card.
             ellipsis_fragment_guard: Whether the U8 truncation-fragment reject
                 (``_is_ellipsis_truncation_fragment``) runs at all. Both of its
                 signals read Japanese: a severed conjugation is recognised by a
@@ -3221,7 +3224,7 @@ class SubtitleParserService:
         if rejection is None:
             if self._is_katakana_run_fragment(word_token, text, tok_start, tok_end):
                 return False
-            if self._is_letter_run_fragment(word_token, text, tok_start, tok_end):
+            if self._name_piece_rejects and self._is_letter_run_fragment(word_token, text, tok_start, tok_end):
                 return False
             if self._name_piece_rejects and (
                 self._is_kanji_glue(word_token) or self._is_name_honorific_tail(word_token, text, tok_start)
