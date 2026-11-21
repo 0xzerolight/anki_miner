@@ -1271,6 +1271,10 @@ def _unknown_katakana_noun(token) -> bool:
 _SOUND_TAGS = frozenset({"int", "on-mim"})
 
 
+#: The surface pairs of ``_MISSPLITS``: a pair outside it needs no lemma lookup.
+_MISSPLIT_SURFACES: frozenset[tuple[str, str]] = frozenset((a[0], b[0]) for a, b in _MISSPLITS)
+
+
 def _lemma_or_none(token) -> str | None:
     lemma = getattr(getattr(token, "feature", None), "lemma", None)
     return lemma if isinstance(lemma, str) else None
@@ -1333,7 +1337,7 @@ def retag_mistagged_tokens(tokens: list, form_lookup: FormLookup | None = None) 
         nxt = tokens[i + 1] if i + 1 < len(tokens) else None
         white_space = getattr(nxt, "white_space", "")
         spaced = isinstance(white_space, str) and bool(white_space)
-        if nxt is not None and not spaced:
+        if nxt is not None and not spaced and (token.surface, nxt.surface) in _MISSPLIT_SURFACES:
             pair = ((token.surface, _lemma_or_none(token)), (nxt.surface, _lemma_or_none(nxt)))
             resplit = _MISSPLITS.get(pair)
             stems = _MISSPLIT_STEMS.get(pair)
@@ -1376,6 +1380,7 @@ _SPACED_INTERJECTIONS: dict[tuple[str, str | None], str] = {
     ("おいおい", "追い追い"): "おいおい",
     ("ほら", "放る"): "ほら",
 }
+_SPACED_INTERJECTION_SURFACES = frozenset(surface for surface, _lemma in _SPACED_INTERJECTIONS)
 _PAUSE_POS1: frozenset[str] = frozenset({"補助記号", "感動詞", "フィラー"})
 
 
@@ -1398,6 +1403,8 @@ def _spaced_interjection_fields(tokens: list, i: int) -> dict[str, str] | None:
     stands mid-clause (それは おいおい 考えます).
     """
     token = tokens[i]
+    if token.surface not in _SPACED_INTERJECTION_SURFACES:
+        return None
     feature = getattr(token, "feature", None)
     lemma = _SPACED_INTERJECTIONS.get((token.surface, _lemma_or_none(token)))
     if lemma is None:
@@ -1462,6 +1469,7 @@ _KANA_HOMOPHONE_LEMMAS: dict[tuple[str | None, str | None], str] = {
     ("つるむ", "交尾む"): "連む",
     ("かなう", "適う"): "叶う",
 }
+_KANA_HOMOPHONE_ORTHS = frozenset(orth_base for orth_base, _lemma in _KANA_HOMOPHONE_LEMMAS)
 
 
 def _kana_homophone_fields(tokens: list, i: int) -> dict[str, str] | None:
@@ -1470,9 +1478,10 @@ def _kana_homophone_fields(tokens: list, i: int) -> dict[str, str] | None:
     かなう right after に keeps 適う, the verb of 理にかなう and 目的にかなう.
     """
     token = tokens[i]
-    lemma = _KANA_HOMOPHONE_LEMMAS.get(
-        (getattr(getattr(token, "feature", None), "orthBase", None), _lemma_or_none(token))
-    )
+    orth_base = getattr(getattr(token, "feature", None), "orthBase", None)
+    if orth_base not in _KANA_HOMOPHONE_ORTHS:
+        return None
+    lemma = _KANA_HOMOPHONE_LEMMAS.get((orth_base, _lemma_or_none(token)))
     if lemma is None or (lemma == "叶う" and i and tokens[i - 1].surface == "に"):
         return None
     return {"lemma": lemma}
