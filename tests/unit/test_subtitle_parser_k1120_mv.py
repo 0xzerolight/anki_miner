@@ -169,7 +169,7 @@ class TestAdjectiveStemCries:
 
 
 class TestAdjectiveGaruVerb:
-    """A kana adjective + がる span cards the がる verb the dictionary lists as a reading."""
+    """An adjective + がる span cards the がる verb the dictionary lists, common or not."""
 
     @staticmethod
     def _resolve(
@@ -183,6 +183,10 @@ class TestAdjectiveGaruVerb:
             kana_lookup=lambda fronts: {front: front in readings for front in fronts},
         )
 
+    def test_an_uncommon_garu_verb_beats_its_common_adjective(self) -> None:
+        assert self._resolve("強がって", "強い", {"強い", "強がる"}, {"強い"}) == "強がる"
+        assert self._resolve("寂しがってた", "寂しい", {"寂しい", "寂しがる"}, {"寂しい"}) == "寂しがる"
+
     def test_a_kana_garu_verb_is_attested_by_its_reading(self) -> None:
         readings = frozenset({"かわいがる"})
         assert self._resolve("かわいがって", "かわいい", {"かわいい"}, {"かわいい"}, readings) == "かわいがる"
@@ -195,7 +199,5 @@ class TestAdjectiveGaruVerb:
 
     def test_the_commonness_filter_still_prunes_a_rare_twin(self) -> None:
         assert self._resolve("呼ばれた", "呼ぶ", {"呼ぶ", "呼ばる"}, {"呼ぶ"}) == "呼ぶ"
-        # A span that is not the がる verb adds nothing to the pool.
-        assert (
-            self._resolve("かわいくて", "かわいい", {"かわいい"}, {"かわいい"}, frozenset({"かわいがる"})) == "かわいい"
-        )
+        # 強がり is not 強い + がる deinflected: nothing is added to the pool.
+        assert self._resolve("強くて", "強い", {"強い", "強がる"}, {"強い"}) == "強い"
