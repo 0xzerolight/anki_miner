@@ -1,0 +1,7 @@
+{"id":"kd01","sentence":"おいで","expected":["おいで"],"category":"lexical-join","note":"お|いで joined: the tagger cuts the prefix and reads the rest as the old verb 出でる."}
+{"id":"kd02","sentence":"見ておいで","expected":["見る"],"category":"lexical-join","note":"Guard: after a verb's て, おいで is the auxiliary and the verb keeps the card."}
+{"id":"kd03","sentence":"ごきげんよう","expected":["ごきげんよう"],"category":"lexical-join","note":"ご|きげん|よう joined: the greeting is its own entry."}
+{"id":"kd04","sentence":"本を出してくれた","expected":["本","出す"],"category":"span-window","note":"出してくれる is listed, but くれる after て is the benefactive auxiliary: the verb keeps the card."}
+{"id":"kd05","sentence":"医者に診てもらう","expected":["医者","診てもらう"],"category":"span-window","note":"Guard: 診てもらう as the dictionary heads it stays one word."}
+{"id":"kd06","sentence":"部長に見てもらう","expected":["部長","見る"],"category":"span-window","note":"見てもらう is only a spelling of 診てもらう: here it is 見る + the benefactive."}
+{"id":"kd07","sentence":"雨がやまない","expected":["雨","やむ"],"category":"lexicalized-window","note":"やまない is only the reading of 止まない: the verb's own negative does not take the kana verb."}
