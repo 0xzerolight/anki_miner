@@ -7,3 +7,4 @@
 {"id":"k1mrj16","sentence":"彼氏いんだよね","expected":["彼氏"],"category":"kanji-glue","note":"The いん of いるんだ is no 忌む."}
 {"id":"k1mrj17","sentence":"礼はいい、行くぜ","expected":["礼","行く"],"category":"aux-context","note":"A clause-final いい is 良い, not the stem of 言う the tagger reads."}
 {"id":"k1mrj18","sentence":"ＣＨＰＰの話","expected":["話"],"category":"katakana-fragment","note":"Pieces of an unknown run of letters are no words, as for a katakana run."}
+{"id":"k1mrj19","sentence":"なんとかなった","expected":[],"category":"kanji-glue","note":"か + なっ glued into かなっ is no 適う (かなう); the fixture dictionary has neither なんとか nor なる."}

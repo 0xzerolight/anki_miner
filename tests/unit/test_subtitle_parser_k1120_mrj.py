@@ -219,3 +219,28 @@ class TestLetterRunFragments:
     )
     def test_a_whole_letter_word_keeps_its_card(self, text: str, front: str) -> None:
         assert front in _fronts(_service(self._LETTER_WORDS), text)
+
+
+class TestGluedKaNaru:
+    @staticmethod
+    def _tokens(text: str) -> list[tuple[str, str]]:
+        import fugashi
+
+        from anki_miner.services.morphology import retag_mistagged_tokens
+
+        return [(tok.surface, tok.feature.lemma) for tok in retag_mistagged_tokens(list(fugashi.Tagger()(text)))]
+
+    @pytest.mark.parametrize("text", ["なんとかなった", "何とかなって良かった", "どうにかなってしまいそう"])
+    def test_ka_and_naru_are_cut_apart(self, text: str) -> None:
+        tokens = self._tokens(text)
+        assert ("か", "か") in tokens and ("なっ", "成る") in tokens
+        assert "".join(surface for surface, _lemma in tokens) == text
+
+    @pytest.mark.parametrize("text", ["夢がかなって嬉しい", "理にかなった説明", "願いがかなった"])
+    def test_the_real_verb_stays(self, text: str) -> None:
+        assert ("かなっ", "適う") in self._tokens(text)
+
+    def test_the_cards_follow_the_cut(self) -> None:
+        service = _service(("かなう", "なんとか", "なる"))
+        assert "かなう" not in _fronts(service, "なんとかなった")
+        assert "かなう" in _fronts(service, "夢がかなった")

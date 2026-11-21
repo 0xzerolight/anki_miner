@@ -1202,6 +1202,8 @@ def retag_mistagged_tokens(tokens: list, form_lookup: FormLookup | None = None) 
       (``_spaced_interjection_fields``).
     - A clause-final いい read as the stem of 言う (どうだっていい) is the
       adjective 良い (``_clause_final_ii_fields``).
+    - か + なっ glued into かなっ (適う) after なんと, 何と or どうに is cut in two
+      (``_glued_ka_naru``).
     """
     unknown = {token.surface for token in tokens if _unknown_katakana_noun(token)}
     nouns = _dictionary_nouns(unknown, form_lookup) if unknown and form_lookup is not None else set()
@@ -1239,6 +1241,9 @@ def retag_mistagged_tokens(tokens: list, form_lookup: FormLookup | None = None) 
             fields = dict.fromkeys(("lemma", "orthBase", "kana"), token.surface)
         if fields is None:
             fields = _spaced_interjection_fields(tokens, i) or _clause_final_ii_fields(tokens, i)
+        if fields is None and (pieces := _glued_ka_naru(tokens, i)) is not None:
+            out.extend(pieces)
+            continue
         out.append(token if fields is None else RetaggedToken(token, fields))
     return out
 
@@ -1287,6 +1292,48 @@ def _spaced_interjection_fields(tokens: list, i: int) -> dict[str, str] | None:
     if isinstance(kana, str):
         fields.update(dict.fromkeys(("lForm", "kanaBase", "formBase", "pronBase"), kana))
     return fields
+
+
+#: The fields unidic-lite gives the particle か and the stem なっ of 成る, the two
+#: words it glues into かなっ (適う 'to come true') in なんとかなった.
+_KA_PARTICLE: dict[str, str] = {
+    "pos1": "助詞",
+    "pos2": "副助詞",
+    "cType": "*",
+    "cForm": "*",
+    **dict.fromkeys(("lemma", "orth", "orthBase"), "か"),
+    **dict.fromkeys(("lForm", "pron", "pronBase", "kana", "kanaBase", "form", "formBase"), "カ"),
+}
+_NARU_STEM: dict[str, str] = {
+    "pos1": "動詞",
+    "pos2": "非自立可能",
+    "cType": "五段-ラ行",
+    "cForm": "連用形-促音便",
+    "lemma": "成る",
+    "orth": "なっ",
+    "orthBase": "なる",
+    **dict.fromkeys(("pron", "kana", "form"), "ナッ"),
+    **dict.fromkeys(("lForm", "pronBase", "kanaBase", "formBase"), "ナル"),
+}
+
+
+def _glued_ka_naru(tokens: list, i: int) -> tuple[RetaggedToken, RetaggedToken] | None:
+    """The か and なっ of a かなっ the tagger glued (なんとかなった, どうにかなって), or None.
+
+    Only right after なん/何/どう + と/に, where no real かなう stands (夢がかなった,
+    理にかなった keep the verb). The pieces join to the same text, and なんとか
+    can then join as the adverb it is.
+    """
+    token = tokens[i]
+    if i < 2 or token.surface != "かなっ" or _lemma_or_none(token) != "適う":
+        return None
+    if tokens[i - 1].surface not in ("と", "に") or tokens[i - 2].surface not in ("なん", "何", "どう"):
+        return None
+    if getattr(token, "white_space", "") or getattr(tokens[i - 1], "white_space", ""):
+        return None
+    stem = RetaggedToken(token, _NARU_STEM, "なっ")
+    stem.white_space = ""
+    return RetaggedToken(token, _KA_PARTICLE, "か"), stem
 
 
 #: The fields unidic-lite gives the adjective いい (良い 'good, fine').
