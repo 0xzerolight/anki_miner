@@ -41,6 +41,12 @@ _GRAMMAR_LINES = (
     ("っていうか誰だよ", "っていうか"),
     ("本当に好きなんだ", "なんだ"),
     ("彼は歌手なんですか", "なんです"),
+    ("早く行かなきゃいけない", "いけない"),
+    ("遅れてはいけません", "いけません"),
+    ("食べなきゃいかん", "いかん"),
+    ("宿題をしなければならない", "ならない"),
+    ("行かなきゃならん", "ならん"),
+    ("書かなければなりません", "なりません"),
 )
 
 #: Joined expressions and connectives that are no grammar points: always mined.
@@ -128,7 +134,7 @@ class TestMining:
         assert spans(True) == off
 
 
-def test_the_list_marks_exactly_the_fifteen_grammar_points():
+def test_the_list_marks_exactly_the_grammar_points():
     listed = kana_words.kana_words()
     marked = {row.headword for row in (*listed.joins.values(), *listed.base_joins.values()) if row.grammar}
     assert marked == {front for _text, front in _GRAMMAR_LINES}
