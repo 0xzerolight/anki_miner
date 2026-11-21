@@ -501,6 +501,10 @@ JOINS: tuple[tuple[str, str, str, str] | tuple[str, str, str, str, str], ...] = 
     ("おあずけ", "名詞", "お|あずけ", ""),
     ("ごほうび", "名詞", "ご|ほうび", ""),
     ("おまいり", "名詞", "お|まいり", ""),
+    # K1120b: negatives that are words of their own: すま|ぬ is the apology 済まぬ, never 済む (the tagger
+    # keeps すまない and すまねえ whole), and おもわ|ぬ is 思わぬ 'unexpected'.
+    ("すまぬ", "感動詞", "すま|ぬ", ""),
+    ("おもわぬ", "連体詞", "おもわ|ぬ", ""),
 )
 
 _HEADER = """\

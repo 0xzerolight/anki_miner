@@ -152,3 +152,56 @@ class TestBenefactiveTailIsNoCompound:
 
     def test_a_motion_verb_tail_still_joins(self):
         assert "持ってくる" in _fronts("本を持ってくる", _BENEFACTIVE)
+
+
+# Kana verbs, the negatives the dictionary lists in kanji (their kana is a reading
+# only), and あきません, which it also spells in kana. やまん reads another word.
+_VERBS = frozenset(
+    {"やむ", "かまう", "すぐれる", "かなう", "あく", "わかる", "かかわる", "おもう"}
+    | {"止まない", "構いません", "優れない", "敵わない", "明きません", "分かんない", "すまぬ", "おもわぬ", "あきません"}
+)
+_NEGATIVE_READINGS = frozenset(
+    {"やまない", "やまん", "かまいません", "すぐれない", "かなわない", "わかんない", "かかわらず", "すまぬ"}
+)
+
+
+class TestKanaVerbBeforeItsOwnNegative:
+    """やま|ない reads 止まない, the verb's own negative listed in kanji: the kana verb keeps its card."""
+
+    @pytest.mark.parametrize(
+        ("text", "front"),
+        [
+            ("雨がやまない", "やむ"),
+            ("かまいませんよ", "かまう"),
+            ("気分がすぐれない", "すぐれる"),
+            ("あいつにはかなわない", "かなう"),
+        ],
+    )
+    def test_the_verb_is_mined(self, text, front):
+        assert front in _fronts(text, _VERBS, _NEGATIVE_READINGS)
+
+    def test_a_window_that_reads_another_word_keeps_the_reject(self):
+        # やまん is attested by reading, but no dictionary lists 止まん.
+        assert "やむ" not in _fronts("雨がやまん", _VERBS, _NEGATIVE_READINGS)
+
+    def test_a_negative_the_dictionary_spells_in_kana_takes_the_verb(self):
+        assert "あく" not in _fronts("それはあきません", _VERBS, _NEGATIVE_READINGS)
+
+    def test_a_contracted_stem_keeps_the_reject(self):
+        assert "わかる" not in _fronts("もうわかんないよ", _VERBS, _NEGATIVE_READINGS)
+
+    def test_the_adverb_with_zu_keeps_the_reject(self):
+        assert "かかわる" not in _fronts("それにかかわらず", _VERBS, _NEGATIVE_READINGS)
+
+    def test_the_old_apology_is_its_own_word(self):
+        assert _fronts("すまぬ", _VERBS, _NEGATIVE_READINGS) == ["すまぬ"]
+
+    def test_a_negative_that_is_a_word_of_its_own_is_joined(self):
+        fronts = _fronts("おもわぬ結果だ", _VERBS, _NEGATIVE_READINGS)
+        assert "おもわぬ" in fronts
+        assert "おもう" not in fronts
+
+    def test_the_stem_of_a_negative_adjective_never_comes_back(self):
+        # くだら ない with a space is still くだらない, never 下る.
+        terms = frozenset({"くだる", "下らない"})
+        assert "くだる" not in _fronts("くだら ない話だ", terms, frozenset({"くだらない"}))
