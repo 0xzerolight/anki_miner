@@ -9,3 +9,5 @@
 {"id":"kk09","sentence":"とんでもねえ","expected":[],"category":"k1120-kana-words","note":"cut from とんでもない; attested, so the reject is the rule's"}
 {"id":"kk10","sentence":"そなたの名を聞こう","expected":["そなた","名","聞く"],"category":"k1120-kana-words","note":"a period pronoun JMdict marks archaic"}
 {"id":"kk11","sentence":"あっしに任せてくれ","expected":["あっし","任せる"],"category":"k1120-kana-words","note":"rough-speech 私; くれ after て is grammar"}
+{"id":"kk12","sentence":"ちからが強い","expected":["ちから","強い"],"category":"k1120-kana-words","note":"a three-kana spelling of an everyday noun, named"}
+{"id":"kk13","sentence":"からだが大きい","expected":["大きい"],"category":"k1120-kana-words","note":"left off the list: as often から + だ"}

@@ -25,6 +25,16 @@ pytestmark = pytest.mark.skipif(not _fugashi_available(), reason="fugashi/unidic
 _ATTESTED = frozenset(
     {
         "ぬいぐるみ",
+        "からだ",
+        "ちから",
+        "いのち",
+        "おかみ",
+        "とどめ",
+        "ささい",
+        "せがれ",
+        "ひいき",
+        "ありか",
+        "まこと",
         "そなた",
         "おぬし",
         "あっし",
@@ -165,3 +175,33 @@ class TestPeriodPronouns:
 
     def test_the_shout_ora_is_no_card(self):
         assert "おら" not in _fronts("おらおら、どけ")
+
+
+class TestShortKanaNouns:
+    @pytest.mark.parametrize(
+        ("text", "front"),
+        [
+            ("ちからを貸してくれ", "ちから"),
+            ("いのちは大切だ", "いのち"),
+            ("旅館のおかみに聞いた", "おかみ"),
+            ("とどめの一撃だ", "とどめ"),
+            ("ささいな事だ", "ささい"),
+            ("うちのせがれです", "せがれ"),
+        ],
+    )
+    def test_mines_a_named_three_kana_spelling_of_an_everyday_noun(self, text, front):
+        assert front in _fronts(text)
+        assert is_listed(front, "名詞", merged=False) and is_kanji_spelled(front, "名詞")
+
+    @pytest.mark.parametrize(
+        ("text", "front"),
+        [
+            ("ひかりちゃんが来た", "ひかり"),
+            ("えこひいきだ", "ひいき"),
+            ("まことに残念だ", "まこと"),
+            ("そんなのありかよ", "ありか"),
+            ("からだが大きい", "からだ"),
+        ],
+    )
+    def test_a_name_a_piece_or_a_homograph_of_two_words_stays_out(self, text, front):
+        assert front not in _fronts(text)

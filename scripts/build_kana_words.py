@@ -60,6 +60,10 @@ SHORT_SPELLED_NOUNS: frozenset[str] = frozenset(
     | {"おかげ", "ほんと", "ほんま", "ごはん", "あした", "しかた", "ふだん", "ことし"}
     | {"ようす", "しっぽ", "きげん", "ぜんぶ"}
     | {"ないしょ", "いっしょ", "ひきょう", "いっちょ", "ちゅうちょ"}
+    # Not からだ, ことば or ありか: in a line each is as often two words (来た|から|だ,
+    # the dialect object こと|ば, 何でも|あり|か).
+    | {"ちから", "いのち", "かたち", "ふたり", "せがれ", "じじい", "ばばあ", "おかみ"}
+    | {"とどめ", "せりふ", "あるじ", "おなご", "だんご", "ささい", "うかつ"}
 )
 
 #: Spoken kana spellings JMdict gives no priority tag (やっぱ for 矢っ張り, the
@@ -96,6 +100,19 @@ UNTAGGED_COMMON: frozenset[str] = frozenset(
     # Left out: うぬ (as often the growl うぬぬ) and おら (the shout おら！).
     | {"そなた", "そち", "おぬし", "それがし", "おいら", "あっし", "わて", "あたい", "あたくし"}
     | {"こやつ", "あやつ", "こちとら"}
+    | {
+        "せがれ",
+        "じじい",
+        "ばばあ",
+        "おかみ",
+        "とどめ",
+        "せりふ",
+        "あるじ",
+        "おなご",
+        "だんご",
+        "ささい",
+        "うかつ",
+    }
 )
 
 #: Tags a line gives a word that no carrier sentence does: あんな is 形状詞 in every
