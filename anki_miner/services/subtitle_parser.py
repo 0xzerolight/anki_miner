@@ -3637,7 +3637,7 @@ class SubtitleParserService:
             return None
         surface = word_token.surface
         if not _is_kana_candidate(surface):
-            return None
+            return _KANA_LISTED if self._is_katakana_to_adverb(word_token) else None
         feature = getattr(word_token, "feature", None)
         pos1 = getattr(feature, "pos1", None)
         if not isinstance(pos1, str):
@@ -3665,6 +3665,27 @@ class SubtitleParserService:
                 self._kana_recover_cache.clear()
             self._kana_recover_cache[key] = self._probe_kana_recovery(word_token, pos1, surface, recoverable, merged)
         return self._kana_recover_cache[key]
+
+    def _is_katakana_to_adverb(self, word_token) -> bool:
+        """Whether a と-adverb written with a katakana stem is a word the dictionary has as written (ホッと, ボーッと).
+
+        The script check above keeps kana recovery to hiragana, so the mimetic
+        と-adverbs a subtitle writes with a katakana stem are lost while their
+        hiragana spelling is mined (ほっと). One 副詞 token of a katakana stem +
+        と comes back when it is a dictionary headword as written, and the card
+        front stays as written. A sound without と (フッ, ドン) stays out, and so
+        does a spelling the dictionary has only in hiragana (ジッと).
+        """
+        surface = word_token.surface
+        if (
+            self._term_lookup is None
+            or len(surface) < 3
+            or not surface.endswith("と")
+            or not _is_all_katakana(surface[:-1])
+            or getattr(getattr(word_token, "feature", None), "pos1", None) != "副詞"
+        ):
+            return False
+        return surface in self._memoized_attest([surface])
 
     def _aux_word(self, word_token, pos1: str, surface: str, form: str, merged: bool) -> bool:
         """Whether a 非自立可能 kana token is one of ``_KANA_AUX_WORDS``, spelled as that word.

@@ -100,6 +100,9 @@ UNTAGGED_COMMON: frozenset[str] = frozenset(
     # Left out: うぬ (as often the growl うぬぬ) and おら (the shout おら！).
     | {"そなた", "そち", "おぬし", "それがし", "おいら", "あっし", "わて", "あたい", "あたくし"}
     | {"こやつ", "あやつ", "こちとら"}
+    # と-adverbs under four kana or drawn out, which the parser's length rule leaves to the
+    # list. Not はっと or かっと: as often は|っと (戸締まりはっと) and ず|かっと.
+    | {"ぞっと", "じーっと", "そーっと"}
     | {
         "せがれ",
         "じじい",

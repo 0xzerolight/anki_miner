@@ -25,6 +25,13 @@ pytestmark = pytest.mark.skipif(not _fugashi_available(), reason="fugashi/unidic
 _ATTESTED = frozenset(
     {
         "ぬいぐるみ",
+        "ぞっと",
+        "はっと",
+        "じーっと",
+        "そーっと",
+        "ホッと",
+        "ボーッと",
+        "フッ",
         "なる",
         "からだ",
         "ちから",
@@ -68,11 +75,11 @@ _ATTESTED = frozenset(
 )
 
 
-def _fronts(text: str) -> list[str]:
-    """Card fronts of ``text`` with only ``_ATTESTED`` in the dictionary, so a window can miss."""
+def _fronts(text: str, terms: frozenset[str] = frozenset()) -> list[str]:
+    """Card fronts of ``text`` with only ``_ATTESTED`` in the dictionary (``terms`` as headwords), so a window can miss."""
     service = SubtitleParserService(
         AnkiMinerConfig(),
-        term_lookup=lambda terms: set(),
+        term_lookup=lambda asked: {term for term in asked if term in terms},
         kana_attest_lookup=lambda forms: {form: form in _ATTESTED for form in forms},
     )
     words, _index, _counts = service.parse_text_units(
@@ -226,3 +233,28 @@ class TestHonorificNaru:
     )
     def test_naru_after_a_noun_is_the_lines_own_word(self, text):
         assert "なる" in _fronts(text)
+
+
+class TestToAdverbs:
+    @pytest.mark.parametrize(("text", "front"), [("ホッとした", "ホッと"), ("ボーッとしていた", "ボーッと")])
+    def test_mines_a_katakana_to_adverb_the_dictionary_has_as_written(self, text, front):
+        assert front in _fronts(text, frozenset({"ホッと", "ボーッと"}))
+
+    @pytest.mark.parametrize(("text", "front"), [("ホッとした", "ホッと"), ("フッ", "フッ")])
+    def test_a_spelling_the_dictionary_lacks_or_a_bare_sound_stays_out(self, text, front):
+        assert front not in _fronts(text, frozenset({"フッ"}))
+
+    @pytest.mark.parametrize(
+        ("text", "front"),
+        [
+            ("ぞっとした", "ぞっと"),
+            ("じーっと見る", "じーっと"),
+            ("そーっと歩く", "そーっと"),
+        ],
+    )
+    def test_mines_a_short_or_drawn_out_to_adverb_by_its_list_row(self, text, front):
+        assert front in _fronts(text)
+        assert is_listed(front, "副詞", merged=False)
+
+    def test_a_short_hiragana_to_adverb_cut_from_a_particle_stays_out(self):
+        assert "はっと" not in _fronts("戸締まりはっと")

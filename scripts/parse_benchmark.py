@@ -645,6 +645,8 @@ _ANCHOR_HEADWORDS: tuple[str, ...] = (
     "あっし",
     "からだ",
     "ちから",
+    "ホッと",
+    "ぞっと",
 )
 
 # Yomitan `ruleIdentifiers` per fixture headword. A real term bank ships these,
