@@ -1,0 +1,3 @@
+{"id":"kd01","sentence":"おいで","expected":["おいで"],"category":"lexical-join","note":"お|いで joined: the tagger cuts the prefix and reads the rest as the old verb 出でる."}
+{"id":"kd02","sentence":"見ておいで","expected":["見る"],"category":"lexical-join","note":"Guard: after a verb's て, おいで is the auxiliary and the verb keeps the card."}
+{"id":"kd03","sentence":"ごきげんよう","expected":["ごきげんよう"],"category":"lexical-join","note":"ご|きげん|よう joined: the greeting is its own entry."}

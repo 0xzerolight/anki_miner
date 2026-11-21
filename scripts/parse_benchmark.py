@@ -666,6 +666,9 @@ _ANCHOR_HEADWORDS: tuple[str, ...] = (
     "とある",
     "しばし",
     "おら",
+    # k1120b MC: words cut after お/ご, joined by list rows (kd01, kd03)
+    "おいで",
+    "ごきげんよう",
 )
 
 # Yomitan `ruleIdentifiers` per fixture headword. A real term bank ships these,
