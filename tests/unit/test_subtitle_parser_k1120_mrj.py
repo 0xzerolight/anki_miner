@@ -138,7 +138,8 @@ class TestInterjectionsReadAsAnotherWord:
 
     def test_the_cards_follow_the_retag(self) -> None:
         service = _service(("おいおい", "ほら"))
-        assert "おいおい" not in _fronts(service, "おいおい 待てよ")
+        # Wave 2 lists the interjection (a 感動詞 row), so both uses are cards.
+        assert "おいおい" in _fronts(service, "おいおい 待てよ")
         assert "おいおい" in _fronts(service, "それは おいおい 考えます")
         assert _fronts(service, "ほら ない")[:1] == ["ほら"]
 

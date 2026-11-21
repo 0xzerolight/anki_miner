@@ -70,3 +70,18 @@ class TestKanjiRequest:
 
     def test_a_dictionary_without_the_request_keeps_the_verb(self):
         assert "下さる" in _fronts(_service(("下さる", "待つ")), "待って下さい")
+
+
+class TestListedInterjectionOioi:
+    """A line-opening おいおい ('hey, come on') is a listed interjection, carded under its own lemma."""
+
+    _DICT = ("おいおい", "待つ", "考える", "冗談")
+
+    @pytest.mark.parametrize("text", ["おいおい 待てよ", "おいおい 冗談だろ"])
+    def test_the_interjection_is_carded(self, text):
+        word = next(w for w in _words(_service(self._DICT), text) if w.mined_form == "おいおい")
+        assert word.lemma == "おいおい"
+
+    def test_the_adverb_mid_clause_keeps_its_lemma(self):
+        word = next(w for w in _words(_service(self._DICT), "それは おいおい 考えます") if w.mined_form == "おいおい")
+        assert word.lemma == "追い追い"

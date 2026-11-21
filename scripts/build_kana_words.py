@@ -110,6 +110,9 @@ UNTAGGED_COMMON: frozenset[str] = frozenset(
     # Short spoken and period adverbs. Not ちと: as often a piece (俺っ|ちと, 俺ん|ちと).
     | {"あんま", "ちっと", "なんせ", "しばし"}
     | {"おら"}
+    # The interjection ('hey, come on'), beside the adverb 追い追い the tagger always reads:
+    # the parser retags the one that opens a line before a pause.
+    | {"おいおい"}
     | {
         "せがれ",
         "じじい",
