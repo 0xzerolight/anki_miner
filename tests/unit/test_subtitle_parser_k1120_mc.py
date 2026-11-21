@@ -6,6 +6,7 @@ import pytest
 
 from anki_miner.config.config import AnkiMinerConfig
 from anki_miner.models.reading import ReadingUnit
+from anki_miner.services.compound_matcher import CompoundDictionaryMatcher
 from anki_miner.services.subtitle_parser import SubtitleParserService
 
 
@@ -202,3 +203,33 @@ class TestObligationAfterAConditional:
         config = AnkiMinerConfig(mine_grammar_points=False)
         fronts = _fronts("行かなきゃいけない", terms=_OBLIGATION, readings=frozenset(), config=config)
         assert "いけない" not in fronts
+
+
+class TestPreNounWordIsNotInflected:
+    """そう言う is the pre-noun 'such' (adj-pn): it has no て-form, so そう言って is そう + 言う."""
+
+    @staticmethod
+    def _fronts(text: str) -> list[str]:
+        terms = {"そう言う", "言う", "そう", "笑う", "人"}
+        service = SubtitleParserService(
+            AnkiMinerConfig(),
+            term_lookup=lambda forms: {form for form in forms if form in terms},
+            kana_attest_lookup=lambda forms: {form: form in terms for form in forms},
+        )
+        matcher = next(value for value in vars(service).values() if isinstance(value, CompoundDictionaryMatcher))
+        matcher._entry_tags = lambda heads: {
+            head: {"adj-pn", "uk"} if head == "そう言う" else {"v5u"} for head in heads
+        }
+        words, _index, _counts = service.parse_text_units(
+            [ReadingUnit(text=text, index=0, location_label="t")], want_line_index=False
+        )
+        return [word.mined_form for word in words]
+
+    @pytest.mark.parametrize("text", ["そう言って笑った", "そう言えばいい"])
+    def test_an_inflected_tail_is_the_verb(self, text):
+        fronts = self._fronts(text)
+        assert "言う" in fronts
+        assert "そう言う" not in fronts
+
+    def test_the_base_form_before_a_noun_stays_joined(self):
+        assert "そう言う" in self._fronts("そう言う人もいる")
