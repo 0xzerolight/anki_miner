@@ -25,6 +25,13 @@ pytestmark = pytest.mark.skipif(not _fugashi_available(), reason="fugashi/unidic
 _ATTESTED = frozenset(
     {
         "ぬいぐるみ",
+        "いかなる",
+        "とある",
+        "さらなる",
+        "ひょんな",
+        "なんたる",
+        "かの",
+        "わが",
         "ぞっと",
         "はっと",
         "じーっと",
@@ -258,3 +265,27 @@ class TestToAdverbs:
 
     def test_a_short_hiragana_to_adverb_cut_from_a_particle_stays_out(self):
         assert "はっと" not in _fronts("戸締まりはっと")
+
+
+class TestPreNounRows:
+    @pytest.mark.parametrize(
+        ("text", "front"),
+        [
+            ("いかなる時も諦めない", "いかなる"),
+            ("とある町で会った", "とある"),
+            ("さらなる努力が要る", "さらなる"),
+            ("ひょんなことから知り合った", "ひょんな"),
+            ("なんたる失態だ", "なんたる"),
+        ],
+    )
+    def test_mines_a_kana_pre_noun_adjectival(self, text, front):
+        assert front in _fronts(text)
+        assert is_listed(front, "連体詞", merged=False)
+
+    @pytest.mark.parametrize(("text", "front"), [("かの有名な画家だ", "かの"), ("わが手にある", "わが")])
+    def test_a_two_kana_pre_noun_word_stays_out(self, text, front):
+        assert front not in _fronts(text)
+
+    @pytest.mark.parametrize("text", ["誰かの声がする", "何かの間違いだ"])
+    def test_ka_no_after_an_indefinite_is_no_card(self, text):
+        assert "かの" not in _fronts(text)

@@ -103,6 +103,9 @@ UNTAGGED_COMMON: frozenset[str] = frozenset(
     # と-adverbs under four kana or drawn out, which the parser's length rule leaves to the
     # list. Not はっと or かっと: as often は|っと (戸締まりはっと) and ず|かっと.
     | {"ぞっと", "じーっと", "そーっと"}
+    # Pre-noun adjectivals of formal and spoken lines. Not わが or かの: two kana are
+    # as often a piece (the dialect わがんねえ, a name かのまた).
+    | {"いかなる", "とある", "さらなる", "ひょんな", "おっきな", "ちっちゃな", "なんたる"}
     | {
         "せがれ",
         "じじい",
