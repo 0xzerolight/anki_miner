@@ -106,6 +106,8 @@ UNTAGGED_COMMON: frozenset[str] = frozenset(
     # Pre-noun adjectivals of formal and spoken lines. Not わが or かの: two kana are
     # as often a piece (the dialect わがんねえ, a name かのまた).
     | {"いかなる", "とある", "さらなる", "ひょんな", "おっきな", "ちっちゃな", "なんたる"}
+    # Short spoken and period adverbs. Not ちと: as often a piece (俺っ|ちと, 俺ん|ちと).
+    | {"あんま", "ちっと", "なんせ", "しばし"}
     | {
         "せがれ",
         "じじい",

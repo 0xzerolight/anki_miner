@@ -15,3 +15,4 @@
 {"id":"kk15","sentence":"ぞっとした","expected":["ぞっと"],"category":"k1120-kana-words","note":"a three-kana と-adverb, by its list row"}
 {"id":"kk16","sentence":"とある町で会った","expected":["とある","町","会う"],"category":"k1120-kana-words","note":"a kana pre-noun adjectival JMdict gives no priority tag"}
 {"id":"kk17","sentence":"水をちょうだい","expected":["水","ちょうだい"],"category":"k1120-kana-words","note":"the request noun as the line's own word"}
+{"id":"kk18","sentence":"しばし待たれよ","expected":["しばし","待つ"],"category":"k1120-kana-words","note":"a three-kana period adverb, by its list row"}

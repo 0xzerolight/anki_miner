@@ -25,6 +25,12 @@ pytestmark = pytest.mark.skipif(not _fugashi_available(), reason="fugashi/unidic
 _ATTESTED = frozenset(
     {
         "ぬいぐるみ",
+        "あんま",
+        "ちっと",
+        "ちと",
+        "なんせ",
+        "しばし",
+        "ちっとも",
         "やる",
         "いかなる",
         "とある",
@@ -319,3 +325,23 @@ class TestStretchedCry:
     @pytest.mark.parametrize("text", ["やったことない", "宿題はやったぁ？"])
     def test_the_verb_after_a_word_is_kept(self, text):
         assert "やる" in _fronts(text)
+
+
+class TestShortAdverbRows:
+    @pytest.mark.parametrize(
+        ("text", "front"),
+        [
+            ("あんま食べない", "あんま"),
+            ("ちっとは考えろ", "ちっと"),
+            ("なんせ古い家だ", "なんせ"),
+            ("しばし待たれよ", "しばし"),
+        ],
+    )
+    def test_mines_a_short_spoken_or_period_adverb(self, text, front):
+        assert front in _fronts(text)
+        assert is_listed(front, "副詞", merged=False)
+
+    def test_chittomo_is_its_own_word(self):
+        fronts = _fronts("ちっとも分からない")
+        assert "ちっとも" in fronts
+        assert "ちっと" not in fronts
