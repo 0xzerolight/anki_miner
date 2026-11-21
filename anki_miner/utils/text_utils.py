@@ -4,6 +4,7 @@ import html
 import re
 import unicodedata
 from collections.abc import Callable, Iterable
+from functools import lru_cache
 from typing import TYPE_CHECKING, Any
 
 from anki_miner.utils.furigana_distribute import distribute_furigana
@@ -355,13 +356,13 @@ def katakana_to_hiragana(text: str) -> str:
     Returns:
         Text with katakana converted to hiragana
     """
-    result = []
-    for ch in text:
-        if "ァ" <= ch <= "ヶ":
-            result.append(chr(ord(ch) - 0x60))
-        else:
-            result.append(ch)
-    return "".join(result)
+    return text.translate(_KATAKANA_TO_HIRAGANA)
+
+
+#: ァ..ヶ to the hiragana 0x60 below, for ``str.translate``.
+_KATAKANA_TO_HIRAGANA: dict[int, int] = {
+    code_point: code_point - 0x60 for code_point in range(ord("ァ"), ord("ヶ") + 1)
+}
 
 
 def hiragana_to_katakana(text: str) -> str:
@@ -521,7 +522,7 @@ def _render_furigana_token(token: Any) -> tuple[str, bool]:
     kana) is never ruby-led, so a literal ``[`` is never mistaken for a ruby group.
     """
     surface: str = token.surface
-    if not any(_is_kanji(c) for c in surface):
+    if not _surface_has_kanji(surface):
         return surface, False
     try:
         kana = token.feature.kana
@@ -529,6 +530,22 @@ def _render_furigana_token(token: Any) -> tuple[str, bool]:
         return surface, False
     if not kana:
         return surface, False
+    return _render_kana_furigana(surface, kana)
+
+
+@lru_cache(maxsize=16384)
+def _surface_has_kanji(surface: str) -> bool:
+    """Whether a token surface holds a kanji (``_is_kanji``), memoized per surface."""
+    return any(_is_kanji(c) for c in surface)
+
+
+@lru_cache(maxsize=16384)
+def _render_kana_furigana(surface: str, kana: str) -> tuple[str, bool]:
+    """The rest of :func:`_render_furigana_token` for a kanji surface with a kana reading.
+
+    A function of the two strings alone, memoized: a sentence's tokens are rendered
+    again for each word mined from it.
+    """
     hiragana = katakana_to_hiragana(kana)
     if hiragana == surface:
         return surface, False

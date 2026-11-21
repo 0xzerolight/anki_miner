@@ -169,6 +169,10 @@ def _in_ranges(code_point: int, ranges: tuple[tuple[int, int], ...]) -> bool:
     return any(low <= code_point <= high for low, high in ranges)
 
 
+#: The lowest code point of any ideograph block: kana, ASCII and punctuation sit below it.
+_CJK_IDEOGRAPH_MIN = min(low for low, _high in CJK_IDEOGRAPH_RANGES)
+
+
 def is_cjk_ideograph(char: str) -> bool:
     """True iff ``char`` is a CJK ideograph in any ``CJK_IDEOGRAPH_RANGES`` block.
 
@@ -178,7 +182,8 @@ def is_cjk_ideograph(char: str) -> bool:
     include the iteration mark 々 (U+3005) — callers that need it add it
     explicitly, matching Yomitan's kanji-range semantics.
     """
-    return _in_ranges(ord(char), CJK_IDEOGRAPH_RANGES)
+    code_point = ord(char)
+    return code_point >= _CJK_IDEOGRAPH_MIN and _in_ranges(code_point, CJK_IDEOGRAPH_RANGES)
 
 
 def convert_halfwidth_katakana(text: str) -> str:
