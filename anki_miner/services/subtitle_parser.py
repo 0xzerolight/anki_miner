@@ -2852,6 +2852,7 @@ class SubtitleParserService:
                     self._term_rules_lookup,
                     self._memoized_term_common,
                     excluded=passive_aru,
+                    kana_lookup=self._kana_attest_lookup,
                 )
             )
             # The deinflection resolver only rewrites じる/ずる (and leaves every

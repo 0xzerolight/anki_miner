@@ -11,6 +11,7 @@ from pathlib import Path
 
 import pytest
 
+from anki_miner.services.deinflection import resolve_dictionary_form
 from anki_miner.services.morphology import rejoin_adjective_stem_cries, resolve_reading_override_in_line
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -165,3 +166,36 @@ class TestAdjectiveStemCries:
         words, _index, _counts = parser.parse_text_units([unit], want_line_index=False)
         assert [(w.mined_form, w.expression_reading) for w in words] == [(front, reading)]
         assert words[0].sentence_furigana.startswith(f"{front[0]}[{reading[:-1]}]")
+
+
+class TestAdjectiveGaruVerb:
+    """A kana adjective + がる span cards the がる verb the dictionary lists as a reading."""
+
+    @staticmethod
+    def _resolve(
+        surface: str, orth_base: str, terms: set[str], common: set[str], readings: frozenset[str] = frozenset()
+    ):
+        return resolve_dictionary_form(
+            surface,
+            orth_base,
+            lambda candidates: {text for text, _conditions in candidates if text in terms},
+            lambda found: {term: term in common for term in found},
+            kana_lookup=lambda fronts: {front: front in readings for front in fronts},
+        )
+
+    def test_a_kana_garu_verb_is_attested_by_its_reading(self) -> None:
+        readings = frozenset({"かわいがる"})
+        assert self._resolve("かわいがって", "かわいい", {"かわいい"}, {"かわいい"}, readings) == "かわいがる"
+
+    def test_no_dictionary_verb_keeps_the_adjective(self) -> None:
+        assert self._resolve("うらやましがられる", "うらやましい", {"うらやましい"}, {"うらやましい"}) == "うらやましい"
+        # A kanji spelling is never taken on a reading alone.
+        readings = frozenset({"怪しがる"})
+        assert self._resolve("怪しがられて", "怪しい", {"怪しい"}, {"怪しい"}, readings) == "怪しい"
+
+    def test_the_commonness_filter_still_prunes_a_rare_twin(self) -> None:
+        assert self._resolve("呼ばれた", "呼ぶ", {"呼ぶ", "呼ばる"}, {"呼ぶ"}) == "呼ぶ"
+        # A span that is not the がる verb adds nothing to the pool.
+        assert (
+            self._resolve("かわいくて", "かわいい", {"かわいい"}, {"かわいい"}, frozenset({"かわいがる"})) == "かわいい"
+        )
