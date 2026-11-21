@@ -232,8 +232,9 @@ _AUX_CRY_AFTER_POS1: frozenset[str] = frozenset({"補助記号", "感動詞", "�
 # the real verb (恨みをかう).
 _KANA_FUSED_LEMMAS: frozenset[str] = frozenset({"逸る", "抗する", "痛む", "買う", "逸する"}) | frozenset(
     # 凍てる is the cry いてて and the Kansai いてる (いる), 憩う the いこう of
-    # 〜といこう, 干る the Kansai negative ひん (できひん).
-    {"凍てる", "憩う", "干る"}
+    # 〜といこう, 干る the Kansai negative ひん (できひん), 忌む the いん of いるん
+    # (彼氏いんだ), 経る the ふ of ふぬ！ and ちはやふる.
+    {"凍てる", "憩う", "干る", "忌む", "経る"}
 )
 
 # Cries, dialect words and word pieces the tagger reads as one form of a kana
@@ -242,20 +243,25 @@ _KANA_FUSED_LEMMAS: frozenset[str] = frozenset({"逸る", "抗する", "痛む",
 # ('take that!') as 売る, こい (来い) and the dialect けえ as 濃い, the あら of
 # あら そう as 粗い, the ぜっ of ぜってえ (絶対) as 競る, ほら and ほりゃ as 放る, and
 # as 知れる the tail of a かもしれない that a space or a variant keeps from
-# joining (かも しれねえ, やもしれません, かもしんない).
+# joining (かも しれねえ, やもしれません, かもしんない). A bare ぬ (ぬん！, うぬぬ) is
+# read as the classical 寝, and the あしい of じゃかあしい as 悪しい.
 _KANA_FUSED_FORMS: frozenset[tuple[str, str]] = frozenset(
     {("うりゃ", "売る"), ("こい", "濃い"), ("けえ", "濃い"), ("あら", "粗い"), ("ぜっ", "競る")}
     | {("ほら", "放る"), ("ほりゃ", "放る"), ("しれ", "知れる"), ("しん", "知れる")}
+    | {("ぬ", "寝る"), ("あしい", "悪しい")}
 )
 
 # Kana verbs that are mostly a piece of another word, by lemma, with what the
 # line names before the token when the verb is the real one: 孵る is
 # お|かえんなさい and 帰る in kana unless an egg or a chick comes first, 吊る is
 # っつって (と言って), つられて (釣られる) and つりそう (攣る) unless an object or a
-# neck does.
+# neck does, 繰る is しくった, くっだらない and 停学くった unless an object does
+# (ネタをくる), and 生る is 成る and 鳴る in kana unless a fruit does (実がなる).
 _KANA_FUSED_UNLESS_AFTER: dict[str, tuple[str, ...]] = {
     "孵る": ("卵", "たまご", "タマゴ", "雛", "ひな", "ヒナ"),
     "吊る": ("を", "首"),
+    "繰る": ("を",),
+    "生る": ("実",),
 }
 
 # Kanji tokens the tagger cuts out of a name, by the lemma it gives them. 助 is
@@ -3316,7 +3322,8 @@ class SubtitleParserService:
         Three more by the text around the token: わい is 沸く only before
         た/て/ち (わいてきた) and else the Kansai 'I' or a sentence ending;
         出でる is お|いで and 騒|いでる except a clause-opening いでよ ('come
-        forth'); 愛でる right after お is おめでと.
+        forth'); 愛でる right after お is おめでと; 駆る is a piece of 見っかった,
+        行けんかろ or 机の上から except right after に (不安にかられた).
         """
         surface = word_token.surface
         lemma = self._extract_lemma(word_token)
@@ -3329,6 +3336,8 @@ class SubtitleParserService:
             return surface != "いでよ" or before[-1:].isalnum()
         if lemma == "愛でる":
             return before.endswith("お")
+        if lemma == "駆る":
+            return not before.endswith("に")
         marks = _KANA_FUSED_UNLESS_AFTER.get(lemma)
         return marks is not None and not any(mark in before for mark in marks)
 

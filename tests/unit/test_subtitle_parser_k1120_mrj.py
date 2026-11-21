@@ -140,3 +140,34 @@ class TestInterjectionsReadAsAnotherWord:
         assert "おいおい" not in _fronts(service, "おいおい 待てよ")
         assert "おいおい" in _fronts(service, "それは おいおい 考えます")
         assert _fronts(service, "ほら ない")[:1] == ["ほら"]
+
+
+class TestMoreKanaGlueVerbs:
+    _HEADWORDS = ("くる", "いむ", "ふ", "ぬ", "かる", "なる", "あしい", "ねる")
+
+    @pytest.mark.parametrize(
+        ("text", "junk"),
+        [
+            ("あー しくった", "くる"),  # しくじった read as 繰る
+            ("彼氏いんだよね", "いむ"),  # いるんだ read as 忌む
+            ("ふぬ！", "ふ"),  # a grunt read as 経る
+            ("ぬん！", "ぬ"),  # a grunt read as the classical 寝
+            ("じゃかあしい！", "あしい"),  # やかましい read as 悪しい
+            ("もし見っかったら終わりだ", "かる"),  # 見つかったら read as 駆る
+            ("態度がなっておりません", "なる"),  # 成る read as 生る
+        ],
+    )
+    def test_a_word_piece_is_not_carded_as_the_verb(self, text: str, junk: str) -> None:
+        assert junk not in _fronts(_service(self._HEADWORDS), text)
+
+    @pytest.mark.parametrize(
+        ("text", "front"),
+        [
+            ("ネタをくってる時", "くる"),
+            ("不安にかられた", "かる"),
+            ("折あしく雨が降った", "あしい"),
+            ("もうねる時間だ", "ねる"),
+        ],
+    )
+    def test_the_real_kana_word_keeps_its_card(self, text: str, front: str) -> None:
+        assert front in _fronts(_service(self._HEADWORDS), text)
