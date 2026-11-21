@@ -422,7 +422,7 @@ def respell_wave_dash_interjections(text: str) -> str:
 def normalize_for_tokenization(text: str) -> str:
     """Ordered pre-tokenization normalization chain (Yomitan ja preprocessor order).
 
-    Applies, in order: the doubled-parenthesis and wave-dash respellings (owned), decoration-glyph strip (owned, non-Yomitan), halfwidth-
+    Applies, in order: decoration-glyph strip (owned, non-Yomitan), halfwidth-
     katakana folding, halfwidth-punctuation widening (owned), CJK-compatibility
     NFKD, radical NFKD, then a final NFC pass. NFC both composes input NFD kana (か + U+3099 → が) and recomposes the
     katakana the NFKD steps decomposed, so MeCab always receives precomposed
@@ -430,8 +430,6 @@ def normalize_for_tokenization(text: str) -> str:
     (stdlib NFC in place of the guarded combining fold, NFC as the final rather
     than an intermediate step, and the decoration strip).
     """
-    text = rewrite_double_parens(text)
-    text = respell_wave_dash_interjections(text)
     text = strip_decoration_glyphs(text)
     text = convert_halfwidth_katakana(text)
     text = convert_halfwidth_punctuation(text)
@@ -583,11 +581,14 @@ _SCENE_LABEL_LINES = frozenset({"回想", "心の声"})
 def strip_caption_labels(text: str) -> str:
     """Delete the labels of a cue that are not speech: sound labels and scene-label lines.
 
-    Runs :func:`strip_sound_labels`, then blanks each physical line that is
+    First respells what Japanese captions write differently
+    (:func:`rewrite_double_parens`, :func:`respell_wave_dash_interjections`),
+    then runs :func:`strip_sound_labels` and blanks each physical line that is
     exactly 回想 or 心の声. The Japanese parser is given this as its
     ``strip_labels``; like :func:`is_chinese_line` it reads Japanese and is not
-    part of the shared text cleaning.
+    part of the shared text cleaning, which Korean also runs.
     """
+    text = respell_wave_dash_interjections(rewrite_double_parens(text))
     text = strip_sound_labels(text)
     if "回想" not in text and "心の声" not in text:
         return text

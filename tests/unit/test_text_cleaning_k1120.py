@@ -11,6 +11,7 @@ import pytest
 from anki_miner.config.config import AnkiMinerConfig
 from anki_miner.gui.utils.service_factory import _create_subtitle_parser
 from anki_miner.languages.registry import get_profile
+from anki_miner.languages.switching import switch_language
 from anki_miner.services.subtitle_cleaner import mining_events
 from anki_miner.utils.ja_normalize import chinese_style_lines, strip_caption_labels, strip_sound_labels
 from anki_miner.utils.text_utils import clean_subtitle_text
@@ -40,6 +41,11 @@ def _srt(tmp_path, *lines: str):
 
 def _listed(parser, path) -> list[str]:
     return [text for _start, _end, text in parser.parse_raw_entries(path)]
+
+
+def _ja_clean(text: str) -> str:
+    """A cue cleaned the way the Japanese parser cleans it (its injected label strip included)."""
+    return clean_subtitle_text(text, strip_labels=strip_caption_labels)
 
 
 def _event(text: str, *, start: int = 0, end: int = 2000, style: str = "Default") -> pysubs2.SSAEvent:
@@ -96,33 +102,33 @@ class TestDoubleParenSpeech:
     """TV captions print recalled or thought speech in a doubled parenthesis, not a sound label."""
 
     def test_whole_cue_is_kept_in_white_parens(self):
-        assert clean_subtitle_text("((そういう提案です))") == "｟そういう提案です｠"
+        assert _ja_clean("((そういう提案です))") == "｟そういう提案です｠"
 
     def test_full_width_pair(self):
-        assert clean_subtitle_text("（（そういう提案です））") == "｟そういう提案です｠"
+        assert _ja_clean("（（そういう提案です））") == "｟そういう提案です｠"
 
     def test_speaker_label_before_it_still_goes(self):
-        assert clean_subtitle_text("(健)((お願いだ！))") == "｟お願いだ！｠"
+        assert _ja_clean("(健)((お願いだ！))") == "｟お願いだ！｠"
 
     def test_speech_wrapped_over_two_lines(self):
-        assert clean_subtitle_text("((あの時は\\N本当にすまなかった))") == "｟あの時は 本当にすまなかった｠"
+        assert _ja_clean("((あの時は\\N本当にすまなかった))") == "｟あの時は 本当にすまなかった｠"
 
     def test_reading_inside_the_speech_is_still_stripped(self):
-        assert clean_subtitle_text("((水篠(みずしの)が来た))") == "｟水篠が来た｠"
+        assert _ja_clean("((水篠(みずしの)が来た))") == "｟水篠が来た｠"
 
     def test_opened_here_and_closed_in_a_later_cue(self):
-        assert clean_subtitle_text("((昨日の話だけど") == "｟昨日の話だけど"
-        assert clean_subtitle_text("(健)((昨日の話だけど") == "｟昨日の話だけど"
-        assert clean_subtitle_text("もう忘れてくれ))") == "もう忘れてくれ｠"
+        assert _ja_clean("((昨日の話だけど") == "｟昨日の話だけど"
+        assert _ja_clean("(健)((昨日の話だけど") == "｟昨日の話だけど"
+        assert _ja_clean("もう忘れてくれ))") == "もう忘れてくれ｠"
 
     def test_single_parens_are_unchanged(self):
-        assert clean_subtitle_text("（ドアが開く音）") == ""
-        assert clean_subtitle_text("（健）待ってくれ") == "待ってくれ"
+        assert _ja_clean("（ドアが開く音）") == ""
+        assert _ja_clean("（健）待ってくれ") == "待ってくれ"
 
     def test_close_of_a_nested_reading_is_not_a_double_paren(self):
-        assert clean_subtitle_text("(水篠(みずしの))待て") == "待て"
-        assert clean_subtitle_text("(水篠(みずしの))") == ""
-        assert clean_subtitle_text("((健)の声)") == ""
+        assert _ja_clean("(水篠(みずしの))待て") == "待て"
+        assert _ja_clean("(水篠(みずしの))") == ""
+        assert _ja_clean("((健)の声)") == ""
 
     @needs_tagger
     @pytest.mark.parametrize("build", JA_BUILDERS)
@@ -132,6 +138,15 @@ class TestDoubleParenSpeech:
 
         assert _listed(parser, path) == ["｟約束を守れ｠ ｟嫌だよ｠", "今日は｟提案があります｠"]
         assert {"約束", "守る", "提案"} <= {word.mined_form for word in parser.parse_subtitle_file(path)}
+
+    def test_korean_cleaning_is_unchanged(self):
+        # Korean shares the Japanese normalisation pair; the doubled parenthesis
+        # is a Japanese caption convention, so a Korean sound label still goes.
+        pytest.importorskip("kiwipiepy")
+        parser = get_profile("ko").create_parser(switch_language(AnkiMinerConfig(), "ko"))
+
+        assert parser._clean_line_text("((웃음)) 안녕하세요") == "안녕하세요"
+        assert parser._clean_line_text("((박수))") == ""
 
 
 class TestTortoiseBracketSoundLabels:
@@ -366,7 +381,7 @@ class TestWaveDashInterjections:
         ],
     )
     def test_respelled_with_the_long_mark(self, raw, clean):
-        assert clean_subtitle_text(raw) == clean
+        assert _ja_clean(raw) == clean
 
     @pytest.mark.parametrize(
         "line",
@@ -383,7 +398,7 @@ class TestWaveDashInterjections:
         ],
     )
     def test_every_other_wave_dash_is_left_to_the_cleanup_pattern(self, line):
-        assert clean_subtitle_text(line) == line
+        assert _ja_clean(line) == line
 
     @needs_tagger
     @pytest.mark.parametrize("build", JA_BUILDERS)
