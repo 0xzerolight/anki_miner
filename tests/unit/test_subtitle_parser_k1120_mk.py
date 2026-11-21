@@ -25,6 +25,7 @@ pytestmark = pytest.mark.skipif(not _fugashi_available(), reason="fugashi/unidic
 _ATTESTED = frozenset(
     {
         "ぬいぐるみ",
+        "なる",
         "からだ",
         "ちから",
         "いのち",
@@ -205,3 +206,23 @@ class TestShortKanaNouns:
     )
     def test_a_name_a_piece_or_a_homograph_of_two_words_stays_out(self, text, front):
         assert front not in _fronts(text)
+
+
+class TestHonorificNaru:
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "先生がお尋ねになりました",
+            "社長がお帰りになる",
+            "先生がお読みになった本です",
+            "どうぞお休みになってください",
+        ],
+    )
+    def test_naru_after_an_honorific_stem_is_grammar(self, text):
+        assert "なる" not in _fronts(text)
+
+    @pytest.mark.parametrize(
+        "text", ["医者になりました", "お金になる仕事", "もうお昼になる", "邪魔になるぞ", "お金持ちになりたい"]
+    )
+    def test_naru_after_a_noun_is_the_lines_own_word(self, text):
+        assert "なる" in _fronts(text)

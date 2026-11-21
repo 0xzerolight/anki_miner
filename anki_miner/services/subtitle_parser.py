@@ -3246,6 +3246,8 @@ class SubtitleParserService:
         the line's own word (猫がいる, 問題ない, もういい). A cry the tagger reads
         as the word (``_AUX_CRIES``) is no word either, when it stands alone
         between pauses (やった！, いてっ！) and not after a word (上で やった).
+        And なる after an honorific stem + に is that stem's honorific
+        (お尋ねになる, ``_is_honorific_stem``).
         """
         idx = next((i for i, tok in enumerate(tokens) if tok is word_token), None)
         if idx is None:
@@ -3262,6 +3264,13 @@ class SubtitleParserService:
             and getattr(word_token.feature, "orthBase", None) in _AUX_AFTER_TE_JOIN
         ):
             return True
+        if (
+            idx >= 2
+            and getattr(word_token.feature, "orthBase", None) == "なる"
+            and tokens[idx - 1].surface == "に"
+            and SubtitleParserService._is_honorific_stem(tokens, idx - 2)
+        ):
+            return True
         if pos1 not in (None, *_AUX_CRY_AFTER_POS1):
             return False
         for cry in _AUX_CRIES:
@@ -3271,6 +3280,37 @@ class SubtitleParserService:
             ):
                 return True
         return False
+
+    #: The kana a verb's 連用形 ends in (尋ね, 帰り, 休み, 越し, 考え).
+    _RENYOU_ENDINGS: frozenset[str] = frozenset("いきぎしちにびみりえけげせてねべめれ")
+    #: Nouns of that shape whose なる is the line's own 'become' (お金持ちになりたい).
+    _HONORIFIC_STEM_NOUNS: frozenset[str] = frozenset({"金持ち", "気に入り", "開き", "祭り", "知り合い", "年寄り"})
+
+    @staticmethod
+    def _is_honorific_stem(tokens: list, idx: int) -> bool:
+        """Whether ``tokens[idx]`` is the stem of an honorific お〜になる (お尋ね, お帰り, お|読み).
+
+        There なる is grammar, the honorific of the stem's verb (お尋ねになる is
+        尋ねる), not the line's own 'become'. The stem is a verb's 連用形 written
+        with a kanji and its okurigana after the prefix お or ご, either joined
+        with it by the prefix merge (お尋ね) or still its own token (お|読み). A
+        noun without okurigana keeps its なる (お金になる, 医者になる), and so do
+        the nouns made from a verb that ``_HONORIFIC_STEM_NOUNS`` names.
+        """
+        surface = tokens[idx].surface
+        if len(surface) > 2 and surface[0] in "おご御":
+            stem = surface[1:]
+        elif (
+            idx
+            and tokens[idx - 1].surface in ("お", "ご", "御")
+            and getattr(tokens[idx - 1].feature, "pos1", None) == "接頭辞"
+        ):
+            stem = surface
+        else:
+            return False
+        if stem in SubtitleParserService._HONORIFIC_STEM_NOUNS:
+            return False
+        return len(stem) >= 2 and is_cjk_ideograph(stem[0]) and stem[-1] in SubtitleParserService._RENYOU_ENDINGS
 
     @staticmethod
     def _is_cut_sokuon_stem(word_token, text: str, tok_end: int) -> bool:
