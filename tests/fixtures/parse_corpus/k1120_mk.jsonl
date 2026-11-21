@@ -4,3 +4,6 @@
 {"id":"kk04","sentence":"早うせんかい","expected":["早い"],"category":"k1120-kana-words","note":"the dialect ending 〜せんかい, which the tagger reads as 旋回"}
 {"id":"kk05","sentence":"早く来てちょうだい","expected":["早い","来る"],"category":"k1120-kana-words","note":"the request after て"}
 {"id":"kk06","sentence":"ちきしょう、負けた","expected":["ちきしょう","負ける"],"category":"k1120-kana-words","note":"畜生 as the curse, by its list row"}
+{"id":"kk07","sentence":"まさしく本物だ","expected":["まさしく","本物"],"category":"k1120-kana-words","note":"a kana adverb of four kana JMdict gives no priority tag"}
+{"id":"kk08","sentence":"さぞかし驚いた","expected":["さぞかし","驚く"],"category":"k1120-kana-words"}
+{"id":"kk09","sentence":"とんでもねえ","expected":[],"category":"k1120-kana-words","note":"cut from とんでもない; attested, so the reject is the rule's"}

@@ -25,6 +25,16 @@ pytestmark = pytest.mark.skipif(not _fugashi_available(), reason="fugashi/unidic
 _ATTESTED = frozenset(
     {
         "ぬいぐるみ",
+        "まさしく",
+        "さぞかし",
+        "どのみち",
+        "ちゃっかり",
+        "やっぱし",
+        "とんでも",
+        "おうおう",
+        "はあはあ",
+        "よろしゅう",
+        "じゃーん",
         "ないしょ",
         "しきたり",
         "かくれんぼ",
@@ -97,3 +107,31 @@ class TestLongKanaSpellings:
 
     def test_a_three_kana_noun_stays_by_name(self):
         assert "ひかり" not in _fronts("ひかりが見えた")
+
+
+class TestLongKanaAdverbs:
+    @pytest.mark.parametrize(
+        ("text", "front"),
+        [
+            ("まさしく本物だ", "まさしく"),
+            ("さぞかし驚いた", "さぞかし"),
+            ("どのみち同じ結果だ", "どのみち"),
+            ("ちゃっかり席を取った", "ちゃっかり"),
+            ("やっぱし無理だ", "やっぱし"),
+        ],
+    )
+    def test_mines_a_long_kana_adverb_jmdict_gives_no_priority_tag(self, text, front):
+        assert front in _fronts(text)
+
+    @pytest.mark.parametrize(
+        ("text", "front"),
+        [
+            ("とんでもねえ", "とんでも"),
+            ("よろしゅうございます", "よろしゅう"),
+            ("おうおう、兄ちゃん", "おうおう"),
+            ("はあはあ", "はあはあ"),
+            ("じゃーん", "じゃーん"),
+        ],
+    )
+    def test_a_piece_or_a_doubled_sound_stays_out(self, text, front):
+        assert front not in _fronts(text)

@@ -3673,7 +3673,9 @@ class SubtitleParserService:
         aux = not recoverable and self._aux_word(word_token, pos1, surface, form, merged)
         spelled = False
         if not recoverable and not aux and not is_listed(form, pos1, merged=merged):
-            spelled = self._is_long_kana_spelling(word_token, pos1, surface, merged)
+            spelled = self._is_long_kana_spelling(word_token, pos1, surface, merged) or self._is_long_kana_adverb(
+                pos1, surface, merged
+            )
             if not spelled:
                 return None
         probe_start = time.perf_counter()
@@ -3722,3 +3724,27 @@ class SubtitleParserService:
             return False
         lemma = self._extract_lemma(word_token)
         return isinstance(lemma, str) and lemma != surface and any(is_cjk_ideograph(ch) for ch in lemma)
+
+    #: Long kana adverbs that are no word where the tagger finds them: とんでも is
+    #: cut from とんでもねえ and とんでもありません, かったん is a dialect past's tail,
+    #: and よろしゅう before ございます the adjective よろしい.
+    _LONG_KANA_ADVERB_REJECTS: frozenset[str] = frozenset({"とんでも", "かったん", "よろしゅう"})
+
+    def _is_long_kana_adverb(self, pos1: str, surface: str, merged: bool) -> bool:
+        """Whether an unlisted kana adverb is long enough to be mined without a list row (まさしく, さぞかし, ばったり).
+
+        As with the nouns above, the list names an adverb only when JMdict gives
+        it a priority tag, which leaves out the spoken, mimetic and literary ones
+        (やっぱし, ちゃっかり, おのずと). One adverb token of four or more kana
+        that the dictionary has counts as a listed kana spelling. Left to the
+        list: a doubled pair (あらあら, おうおう, ちょちょ), as often an
+        interjection, a sound or a stutter as a word; a surface with a long mark
+        or a final っ, a sound drawn out or cut short (じゃーん, どかーん); and one
+        ending in ちゃん, a sound that is as often cut from a nickname (す|がちゃん).
+        """
+        if merged or pos1 != "副詞" or len(surface) < 4 or surface in self._LONG_KANA_ADVERB_REJECTS:
+            return False
+        half = len(surface) // 2
+        if "ー" in surface or surface.endswith(("っ", "ちゃん")):
+            return False
+        return not (len(surface) % 2 == 0 and surface[:half] == surface[half:])
