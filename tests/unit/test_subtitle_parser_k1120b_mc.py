@@ -174,11 +174,16 @@ class TestKanaVerbBeforeItsOwnNegative:
             ("雨がやまない", "やむ"),
             ("かまいませんよ", "かまう"),
             ("気分がすぐれない", "すぐれる"),
-            ("あいつにはかなわない", "かなう"),
         ],
     )
     def test_the_verb_is_mined(self, text, front):
         assert front in _fronts(text, _VERBS, _NEGATIVE_READINGS)
+
+    @pytest.mark.parametrize("text", ["夢がかなわない", "あいつにはかなわない"])
+    def test_kana_kanau_before_its_negative_keeps_the_reject(self, text):
+        # The tagger gives every kana かなわ 敵う 'to match', also the wish that is not
+        # granted (叶う), and no context tells the two apart (tradeoffs/kanawanai.md).
+        assert "かなう" not in _fronts(text, _VERBS, _NEGATIVE_READINGS)
 
     def test_a_window_that_reads_another_word_keeps_the_reject(self):
         # やまん is attested by reading, but no dictionary lists 止まん.
