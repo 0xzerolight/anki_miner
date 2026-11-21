@@ -335,3 +335,20 @@ class TestClauseOpeningSoredewa:
 
     def test_the_longer_connective_stays(self):
         assert "それでも" in _fronts("それでも行く", terms=_OPENERS, readings=frozenset())
+
+
+_WHY = frozenset({"どうして", "どう", "できる", "来る", "わかる", "いい", "くれる", "いる", "やる"})
+
+
+class TestDoushiteAsTheTeFormOfSuru:
+    @pytest.mark.parametrize(
+        "text", ["どうしてたの", "どうしていいかわからない", "どうしてくれるんだ", "どうしてますか"]
+    )
+    def test_the_te_form_in_use_is_no_why(self, text):
+        fronts = _fronts(text, terms=_WHY, readings=frozenset())
+        assert "どう" in fronts
+        assert not {"どうして", "いい", "くれる", "いる"} & set(fronts)
+
+    @pytest.mark.parametrize("text", ["どうして来たの", "どうしてできないの", "どうしてやらないの", "どうして？"])
+    def test_why_stays(self, text):
+        assert "どうして" in _fronts(text, terms=_WHY, readings=frozenset())

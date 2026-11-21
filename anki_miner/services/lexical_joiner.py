@@ -83,6 +83,9 @@ _NEGATIVE_ADJECTIVES: dict[str, str] = {
     "否める": "否めない",
 }
 
+# What follows the て of どう|し|て when it is the て-form of する, by dictionary form
+# in kana: the past, the polite ending and the て-auxiliaries (``_te_form_in_use``).
+_TE_FOLLOWERS = frozenset({"た", "ます", "いる", "いい", "くれる", "ほしい", "もらう", "あげる", "おく", "みる"})
 _GRAMMAR_POS1 = frozenset({"助詞", "助動詞"})
 _MAX_FIXED_TOKENS = max(len(key) for key in _FIXED_JOINS)
 _MAX_KANA_TOKENS = max(len(key) for key in (*kana_words().joins, *kana_words().base_joins))
@@ -167,6 +170,7 @@ def _kana_join(tokens: list, i: int, grammar_points: bool) -> _Join | None:
             row is not None
             and (grammar_points or not row.grammar)
             and not _cut_from_negative(tokens, i + size - 1, row.line_start)
+            and not _te_form_in_use(row.headword, tokens, i + size)
         ):
             return _Join(
                 i, i + size - 1, row.headword, row.pos1, listed=True, line_start=row.line_start, after=row.after
@@ -188,6 +192,17 @@ def _cut_from_negative(tokens: list, end: int, clause_opener: bool) -> bool:
     if last == "ませ":
         return bool(after.surface == "ん")
     return clause_opener and last in ("は", "じゃ", "じゃあ") and extract_orth_base(after) == "ない"
+
+
+def _te_form_in_use(headword: str, tokens: list, after: int) -> bool:
+    """Whether どう|し|て is the て-form of する here, not the adverb どうして 'why'.
+
+    A past, a polite ending or a て-auxiliary right after it inflects the verb:
+    どうしてた 'how were you doing', どうしていいか 'what to do', どうしてくれる
+    'what will you do about it'. The row is passed over and どう keeps its card.
+    やる is left out: どうしてやらないの is 'why' as often as not.
+    """
+    return headword == "どうして" and after < len(tokens) and extract_orth_base(tokens[after]) in _TE_FOLLOWERS
 
 
 def _opens_clause(tokens: list, spans: dict[int, tuple[int, int]], i: int) -> bool:
