@@ -979,6 +979,8 @@ class SubtitleParserService:
             self._lexical_joiner = LexicalJoiner(
                 kana_attest_lookup, self._inclusion_rule.allowed_pos, grammar_points=config.mine_grammar_points
             )
+        # The same setting decides the kanji spelling of the ください row (下さい; see _kanji_request_front).
+        self._grammar_points: bool = config.mine_grammar_points
         # Name resources define raw-source boundaries independently of the
         # ordinary dictionary. This pass runs before dictionary matching so an
         # exact name remains available to the late exact name-wordset filter;
@@ -2904,6 +2906,8 @@ class SubtitleParserService:
             return orth_base
         if orth_base != extract_orth_base(word_token):
             return orth_base
+        if (request := self._kanji_request_front(word_token, orth_base)) is not None:
+            return request
         # The inflected span the resolver deinflects: the token surface plus its
         # rightward highlight extension (感じた), or the bare surface when it did
         # not extend (感じ before a noun) — run either way, else 感じ-before-a-noun
@@ -2958,6 +2962,22 @@ class SubtitleParserService:
     def _godan_verb_exists(self, orth_base: str) -> bool:
         """Whether the dictionary has *orth_base*; True with no dictionary wired (nothing to ask)."""
         return self._attest is None or orth_base in self._attest([orth_base])
+
+    def _kanji_request_front(self, word_token, orth_base: str) -> str | None:
+        """下さい, the request, as its own card front (待って下さい, 水を下さい), or None.
+
+        The kana ください is one token and a grammar row of the kana word list,
+        carded ください. The kanji spelling is to the tagger the imperative of
+        下さる and was carded 下さる, a verb the line does not use as one: the
+        dictionary lists the request under 下さい. Only the imperative: the
+        下さい of 下さいます is the verb's stem. With Mine grammar points off the
+        kana row is not mined, and the kanji spelling keeps its verb.
+        """
+        if not self._grammar_points or orth_base != "下さる" or word_token.surface != "下さい":
+            return None
+        if not _is_godan_imperative(getattr(word_token, "feature", None)):
+            return None
+        return "下さい" if "下さい" in self._memoized_attest(["下さい"]) else None
 
     def _attest_or_remap_front(self, word_token, orth_base: str) -> str:
         """Remap a non-attested derived 動詞/形容詞 front to its attested lemma.

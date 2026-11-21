@@ -1,0 +1,2 @@
+{"id":"k2mx01","sentence":"待って下さい","expected":["待つ","下さい"],"category":"kana-listed","note":"The request 下さい is carded as written, as the kana row cards ください; not the verb 下さる."}
+{"id":"k2mx02","sentence":"先生が本を下さった","expected":["先生","本","下さる"],"category":"kana-listed","note":"The verb 下さる keeps its dictionary form."}

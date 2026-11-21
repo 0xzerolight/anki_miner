@@ -666,6 +666,8 @@ _ANCHOR_HEADWORDS: tuple[str, ...] = (
     "とある",
     "しばし",
     "おら",
+    # k1120b MX: the request 下さい (k2mx01)
+    "下さい",
 )
 
 # Yomitan `ruleIdentifiers` per fixture headword. A real term bank ships these,
