@@ -230,7 +230,33 @@ _AUX_CRY_AFTER_POS1: frozenset[str] = frozenset({"補助記号", "感動詞", "�
 # 痛む is いた + んだ/みたい (彼氏いたんだ), 買う the かっ/かい of 違かった, からかう
 # and 芝居がかって, 逸する the いっす of ういっす; each costs the kana spelling of
 # the real verb (恨みをかう).
-_KANA_FUSED_LEMMAS: frozenset[str] = frozenset({"逸る", "抗する", "痛む", "買う", "逸する"})
+_KANA_FUSED_LEMMAS: frozenset[str] = frozenset({"逸る", "抗する", "痛む", "買う", "逸する"}) | frozenset(
+    # 凍てる is the cry いてて and the Kansai いてる (いる), 憩う the いこう of
+    # 〜といこう, 干る the Kansai negative ひん (できひん).
+    {"凍てる", "憩う", "干る"}
+)
+
+# Cries, dialect words and word pieces the tagger reads as one form of a kana
+# verb or adjective, by (token surface, lemma). Only that form is turned away,
+# so the word keeps its others (うって, こくなる, あらい, せってる, ほったら): うりゃ
+# ('take that!') as 売る, こい (来い) and the dialect けえ as 濃い, the あら of
+# あら そう as 粗い, the ぜっ of ぜってえ (絶対) as 競る, ほら and ほりゃ as 放る, and
+# as 知れる the tail of a かもしれない that a space or a variant keeps from
+# joining (かも しれねえ, やもしれません, かもしんない).
+_KANA_FUSED_FORMS: frozenset[tuple[str, str]] = frozenset(
+    {("うりゃ", "売る"), ("こい", "濃い"), ("けえ", "濃い"), ("あら", "粗い"), ("ぜっ", "競る")}
+    | {("ほら", "放る"), ("ほりゃ", "放る"), ("しれ", "知れる"), ("しん", "知れる")}
+)
+
+# Kana verbs that are mostly a piece of another word, by lemma, with what the
+# line names before the token when the verb is the real one: 孵る is
+# お|かえんなさい and 帰る in kana unless an egg or a chick comes first, 吊る is
+# っつって (と言って), つられて (釣られる) and つりそう (攣る) unless an object or a
+# neck does.
+_KANA_FUSED_UNLESS_AFTER: dict[str, tuple[str, ...]] = {
+    "孵る": ("卵", "たまご", "タマゴ", "雛", "ひな", "ヒナ"),
+    "吊る": ("を", "首"),
+}
 
 # Kanji tokens the tagger cuts out of a name, by the lemma it gives them. 助 is
 # UniDic's name-forming すけ, whose surfaces 介, 助, 亮 and 佐 end given names
@@ -3152,6 +3178,8 @@ class SubtitleParserService:
                 word_token, tokens, from_left=how == _KANA_AUX
             ):
                 return False
+            if self._is_kana_glue(word_token, text, tok_start, tok_end):
+                return False
             if (
                 word_token.surface in _KANA_BARE_INTERJECTIONS
                 and self._find_highlight_end(text, raw_tokens, tok_start, tok_end, word_token) == tok_end
@@ -3279,6 +3307,30 @@ class SubtitleParserService:
         if not isinstance(cform, str) or not cform.startswith("連用形-促音便"):
             return False
         return tok_end >= len(text) or text[tok_end] not in _SOKUON_CONTINUATIONS
+
+    def _is_kana_glue(self, word_token, text: str, tok_start: int, tok_end: int) -> bool:
+        """Whether a recovered kana verb or adjective is a cry, a dialect word or a piece of another word here.
+
+        One form of the word (``_KANA_FUSED_FORMS``), or a lemma whose real
+        verb the line shows by what comes before it (``_KANA_FUSED_UNLESS_AFTER``).
+        Three more by the text around the token: わい is 沸く only before
+        た/て/ち (わいてきた) and else the Kansai 'I' or a sentence ending;
+        出でる is お|いで and 騒|いでる except a clause-opening いでよ ('come
+        forth'); 愛でる right after お is おめでと.
+        """
+        surface = word_token.surface
+        lemma = self._extract_lemma(word_token)
+        if (surface, lemma) in _KANA_FUSED_FORMS:
+            return True
+        before = text[:tok_start]
+        if lemma == "沸く":
+            return surface == "わい" and text[tok_end : tok_end + 1] not in ("た", "て", "ち")
+        if lemma == "出でる":
+            return surface != "いでよ" or before[-1:].isalnum()
+        if lemma == "愛でる":
+            return before.endswith("お")
+        marks = _KANA_FUSED_UNLESS_AFTER.get(lemma)
+        return marks is not None and not any(mark in before for mark in marks)
 
     def _rescue_eligible(self, word_token) -> bool:
         """Whether any whitelist entry could rescue this token: ``_whitelist_rescues``' token-only checks.
