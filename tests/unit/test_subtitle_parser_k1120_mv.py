@@ -239,3 +239,33 @@ class TestDakuReading:
 
     def test_other_words_written_with_the_kanji_are_untouched(self) -> None:
         assert _words("強く抱きしめた")["抱きしめる"].expression_reading == "だきしめる"
+
+
+@needs_tagger
+class TestOmoteReading:
+    """A 表 that stands alone reads おもて; the tail of a compound and a table stay ひょう."""
+
+    @pytest.mark.parametrize(
+        "sentence",
+        ["表へ出ろ", "お客さん 表で待ってる", "表と裏がある", "感情を表に出す", "表の通りが工事中だ", "表は危ない"],
+    )
+    def test_the_front_or_outside_reads_omote(self, sentence: str) -> None:
+        word = _words(sentence)["表"]
+        assert word.expression_reading == "おもて"
+        assert "表[おもて]" in word.sentence_furigana
+
+    @pytest.mark.parametrize("sentence", ["この表をもとに話す", "パソコンで表を作った", "結果を表にまとめる"])
+    def test_a_table_keeps_hyou(self, sentence: str) -> None:
+        word = _words(sentence)["表"]
+        assert word.expression_reading == "ひょう"
+        assert "表[ひょう]" in word.sentence_furigana
+
+    def test_a_compound_tail_is_untouched(self) -> None:
+        import fugashi
+
+        from anki_miner.services.morphology import reread_omote_tokens
+
+        tagger = fugashi.Tagger()
+        for sentence in ("計画表の数字", "メンバー表を配る"):
+            tokens = list(tagger(sentence))
+            assert reread_omote_tokens(tokens) == tokens

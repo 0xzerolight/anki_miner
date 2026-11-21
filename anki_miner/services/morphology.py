@@ -695,6 +695,51 @@ def reread_daku_tokens(tokens: list) -> list:
     return out
 
 
+#: 表 as 'table' when it stands alone: after a demonstrative (この表をもとに) or
+#: before a verb of making one (表を作った, 表にまとめる).
+_HYOU_BEFORE = re.compile("(?:この|その|あの|どの|下の|上の|次の)$")
+_HYOU_AFTER = re.compile("(?:を|に)(?:作|書|まと|もと|埋|記入)")
+_OMOTE_KANA_FIELDS = ("kana", "kanaBase", "lForm", "pron", "pronBase", "form", "formBase")
+
+
+def reread_omote_tokens(tokens: list) -> list:
+    """Read a 表 that stands alone as おもて (表へ出ろ, 表で待ってる, 表と裏).
+
+    unidic-lite reads every noun 表 ヒョウ, 'table', which is right as the tail
+    of a compound (計画表, メンバー表: a noun, suffix or prefix token directly
+    before it) and in the few lines about a table (``_HYOU_BEFORE``,
+    ``_HYOU_AFTER``). On the dev shows 85 in 100 stand alone, and about 94 in
+    100 of those mean the front, the outside or the public face. 回表 is the
+    top of an inning and reads おもて too. On the raw stream, so the card and
+    the sentence ruby agree.
+    """
+    out: list = []
+    before = ""
+    for i, token in enumerate(tokens):
+        surface = token.surface if isinstance(token.surface, str) else ""
+        feature = getattr(token, "feature", None)
+        white_space = getattr(token, "white_space", "")
+        spaced = isinstance(white_space, str) and bool(white_space)
+        context = before
+        before += (white_space if isinstance(white_space, str) else "") + surface
+        if surface != "表" or getattr(feature, "pos1", None) != "名詞" or getattr(feature, "kana", None) != "ヒョウ":
+            out.append(token)
+            continue
+        previous = tokens[i - 1] if i else None
+        attached = (
+            previous is not None
+            and not spaced
+            and getattr(getattr(previous, "feature", None), "pos1", None) in ("名詞", "接尾辞", "接頭辞")
+            and previous.surface != "回"
+        )
+        after = "".join(t.surface for t in tokens[i + 1 : i + 3] if isinstance(t.surface, str))
+        if attached or _HYOU_BEFORE.search(context) or _HYOU_AFTER.match(after) or not hasattr(feature, "_replace"):
+            out.append(token)
+            continue
+        out.append(RetaggedToken(token, dict.fromkeys(_OMOTE_KANA_FIELDS, "オモテ")))
+    return out
+
+
 def _edit_distance(a: str, b: str) -> int:
     """Plain Levenshtein distance (readings are short; O(len*len) is fine)."""
     if a == b:
