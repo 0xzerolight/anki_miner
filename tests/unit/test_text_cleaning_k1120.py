@@ -6,8 +6,39 @@ Every line here is hand-written in the shape the corpus files have.
 from __future__ import annotations
 
 import pysubs2
+import pytest
 
+from anki_miner.config.config import AnkiMinerConfig
+from anki_miner.gui.utils.service_factory import _create_subtitle_parser
+from anki_miner.languages.registry import get_profile
 from anki_miner.services.subtitle_cleaner import mining_events
+from anki_miner.utils.text_utils import clean_subtitle_text
+
+
+def _fugashi_available() -> bool:
+    try:
+        import fugashi  # noqa: F401
+        import unidic_lite  # noqa: F401
+
+        return True
+    except ImportError:
+        return False
+
+
+needs_tagger = pytest.mark.skipif(not _fugashi_available(), reason="fugashi/unidic-lite not installed")
+#: The two places the Japanese parser is built; both must clean a file the same way.
+JA_BUILDERS = [_create_subtitle_parser, get_profile("ja").create_parser]
+
+
+def _srt(tmp_path, *lines: str):
+    path = tmp_path / "sub.srt"
+    cues = "".join(f"{i}\n00:00:{i:02},000 --> 00:00:{i:02},900\n{line}\n\n" for i, line in enumerate(lines, 1))
+    path.write_text(cues, encoding="utf-8")
+    return path
+
+
+def _listed(parser, path) -> list[str]:
+    return [text for _start, _end, text in parser.parse_raw_entries(path)]
 
 
 def _event(text: str, *, start: int = 0, end: int = 2000, style: str = "Default") -> pysubs2.SSAEvent:
@@ -58,3 +89,45 @@ class TestRubyReadingEvents:
     def test_scale_set_after_the_first_block_is_not_a_reading_row(self):
         events = [_event(r"{\pos(272,497)}今日は{\fscx50\fscy50}いい天気")]
         assert _mined_texts(events) == ["今日はいい天気"]
+
+
+class TestDoubleParenSpeech:
+    """TV captions print recalled or thought speech in a doubled parenthesis, not a sound label."""
+
+    def test_whole_cue_is_kept_in_white_parens(self):
+        assert clean_subtitle_text("((そういう提案です))") == "｟そういう提案です｠"
+
+    def test_full_width_pair(self):
+        assert clean_subtitle_text("（（そういう提案です））") == "｟そういう提案です｠"
+
+    def test_speaker_label_before_it_still_goes(self):
+        assert clean_subtitle_text("(健)((お願いだ！))") == "｟お願いだ！｠"
+
+    def test_speech_wrapped_over_two_lines(self):
+        assert clean_subtitle_text("((あの時は\\N本当にすまなかった))") == "｟あの時は 本当にすまなかった｠"
+
+    def test_reading_inside_the_speech_is_still_stripped(self):
+        assert clean_subtitle_text("((水篠(みずしの)が来た))") == "｟水篠が来た｠"
+
+    def test_opened_here_and_closed_in_a_later_cue(self):
+        assert clean_subtitle_text("((昨日の話だけど") == "｟昨日の話だけど"
+        assert clean_subtitle_text("(健)((昨日の話だけど") == "｟昨日の話だけど"
+        assert clean_subtitle_text("もう忘れてくれ))") == "もう忘れてくれ｠"
+
+    def test_single_parens_are_unchanged(self):
+        assert clean_subtitle_text("（ドアが開く音）") == ""
+        assert clean_subtitle_text("（健）待ってくれ") == "待ってくれ"
+
+    def test_close_of_a_nested_reading_is_not_a_double_paren(self):
+        assert clean_subtitle_text("(水篠(みずしの))待て") == "待て"
+        assert clean_subtitle_text("(水篠(みずしの))") == ""
+        assert clean_subtitle_text("((健)の声)") == ""
+
+    @needs_tagger
+    @pytest.mark.parametrize("build", JA_BUILDERS)
+    def test_speech_survives_the_default_cleanup_and_is_mined(self, tmp_path, build):
+        parser = build(AnkiMinerConfig())
+        path = _srt(tmp_path, "(健)((約束を守れ)) (花)((嫌だよ))", "今日は((提案があります))", "（ドアが開く音）")
+
+        assert _listed(parser, path) == ["｟約束を守れ｠ ｟嫌だよ｠", "今日は｟提案があります｠"]
+        assert {"約束", "守る", "提案"} <= {word.mined_form for word in parser.parse_subtitle_file(path)}

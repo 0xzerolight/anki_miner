@@ -347,10 +347,54 @@ def strip_decoration_glyphs(text: str) -> str:
     return _DECORATION_RUN_RE.sub(_repl, text)
 
 
+# The doubled parenthesis of TV captions: recalled speech, a thought, a voice in
+# a flashback. The same captions also print it as the white parenthesis ｟…｠,
+# which no cleaning step touches. Written as two plain parens it looked like a
+# sound label: a cue wholly inside one was dropped as a caption, and the default
+# cleanup pattern cut a group after other text at its first ")" and left the
+# second in the sentence.
+_PAREN_OPENERS = "(（"
+_PAREN_CLOSERS = ")）"
+_DOUBLE_PAREN_OPEN_RE = re.compile(r"\(\(|（（")
+_DOUBLE_PAREN_CLOSE_RE = re.compile(r"\)\)|））")
+# A doubled opener, text that holds only whole single groups (a reading, a
+# note), and a doubled closer. The closer of a nested single group, as in
+# (水篠(みずしの)), has no doubled opener and is never matched.
+_DOUBLE_PAREN_PAIR_RE = re.compile(r"(?:\(\(|（（)((?:[^()（）]|[(（][^()（）]*[)）])*)(?:\)\)|））)")
+_SINGLE_PAREN_GROUP_RE = re.compile(r"[(（][^()（）]*[)）]")
+
+
+def rewrite_double_parens(text: str) -> str:
+    """Respell the doubled parenthesis of a caption as the white parenthesis ｟…｠.
+
+    ``((そういう提案です))`` and its full-width form become
+    ``｟そういう提案です｠``, so the speech inside is kept like the white
+    parenthesis the same captions use. A speech that opens in one cue and
+    closes in a later one is respelled on each side: a doubled opener when no
+    paren closes after it, a doubled closer when no paren opens before it
+    (whole single groups such as a speaker label aside). Single parentheses,
+    and a doubled closer that ends a nested group, are left as they are.
+    """
+    if _DOUBLE_PAREN_OPEN_RE.search(text) is None and _DOUBLE_PAREN_CLOSE_RE.search(text) is None:
+        return text
+    text = _DOUBLE_PAREN_PAIR_RE.sub("｟\\1｠", text)
+    opener = _DOUBLE_PAREN_OPEN_RE.search(text)
+    if opener is not None:
+        rest = _SINGLE_PAREN_GROUP_RE.sub("", text[opener.end() :])
+        if not any(char in rest for char in _PAREN_OPENERS + _PAREN_CLOSERS):
+            text = f"{text[: opener.start()]}｟{text[opener.end() :]}"
+    closer = _DOUBLE_PAREN_CLOSE_RE.search(text)
+    if closer is not None:
+        before = _SINGLE_PAREN_GROUP_RE.sub("", text[: closer.start()])
+        if not any(char in before for char in _PAREN_OPENERS + _PAREN_CLOSERS):
+            text = f"{text[: closer.start()]}｠{text[closer.end() :]}"
+    return text
+
+
 def normalize_for_tokenization(text: str) -> str:
     """Ordered pre-tokenization normalization chain (Yomitan ja preprocessor order).
 
-    Applies, in order: decoration-glyph strip (owned, non-Yomitan), halfwidth-
+    Applies, in order: the doubled-parenthesis respelling (owned), decoration-glyph strip (owned, non-Yomitan), halfwidth-
     katakana folding, halfwidth-punctuation widening (owned), CJK-compatibility
     NFKD, radical NFKD, then a final NFC pass. NFC both composes input NFD kana (か + U+3099 → が) and recomposes the
     katakana the NFKD steps decomposed, so MeCab always receives precomposed
@@ -358,6 +402,7 @@ def normalize_for_tokenization(text: str) -> str:
     (stdlib NFC in place of the guarded combining fold, NFC as the final rather
     than an intermediate step, and the decoration strip).
     """
+    text = rewrite_double_parens(text)
     text = strip_decoration_glyphs(text)
     text = convert_halfwidth_katakana(text)
     text = convert_halfwidth_punctuation(text)
