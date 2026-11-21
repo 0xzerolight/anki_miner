@@ -1197,6 +1197,15 @@ def retag_mistagged_tokens(tokens: list, form_lookup: FormLookup | None = None) 
       interjections and sound words (ワーオ, ピーポー), some of them as nouns.
     - Two tokens cut at the wrong place (``_MISSPLITS``: 自|分ち) are re-cut
       (自分|ち); the pair's surfaces join to the same text.
+    - An interjection read as another word before a space (おいおい as the
+      adverb 追い追い, ほら as a stem of 放る) is the interjection
+      (``_spaced_interjection_fields``).
+    - A clause-final いい read as the stem of 言う (どうだっていい) is the
+      adjective 良い (``_clause_final_ii_fields``).
+    - か + なっ glued into かなっ (適う) after なんと, 何と or どうに is cut in two
+      (``_glued_ka_naru``).
+    - A kana verb filed under a homophone's lemma (おごる under 驕る) takes
+      the lemma of the verb it is (``_kana_homophone_fields``).
     """
     unknown = {token.surface for token in tokens if _unknown_katakana_noun(token)}
     nouns = _dictionary_nouns(unknown, form_lookup) if unknown and form_lookup is not None else set()
@@ -1232,8 +1241,165 @@ def retag_mistagged_tokens(tokens: list, form_lookup: FormLookup | None = None) 
             fields = _PREFIX_NOUNS.get(token.surface)
         elif token.surface in nouns and _unknown_katakana_noun(token):
             fields = dict.fromkeys(("lemma", "orthBase", "kana"), token.surface)
+        if fields is None and (pieces := _glued_ka_naru(tokens, i)) is not None:
+            out.extend(pieces)
+            continue
+        if fields is None:
+            fields = (
+                _spaced_interjection_fields(tokens, i)
+                or _clause_final_ii_fields(tokens, i)
+                or _kana_homophone_fields(tokens, i)
+            )
         out.append(token if fields is None else RetaggedToken(token, fields))
     return out
+
+
+#: Interjections unidic-lite reads as another word where a space follows them,
+#: by (surface, lemma), with the interjection's own lemma: おいおい ('hey, come
+#: on') is to it always the adverb 追い追い 'gradually', and ほら before a spaced
+#: ねえ or ない the stem of 放る (ほら ねえ).
+_SPACED_INTERJECTIONS: dict[tuple[str, str | None], str] = {
+    ("おいおい", "追い追い"): "おいおい",
+    ("ほら", "放る"): "ほら",
+}
+_PAUSE_POS1: frozenset[str] = frozenset({"補助記号", "感動詞", "フィラー"})
+
+
+def _before_pause(tokens: list, i: int) -> bool:
+    """Whether a space, a mark or the line end follows token ``i``."""
+    nxt = tokens[i + 1] if i + 1 < len(tokens) else None
+    return (
+        nxt is None
+        or bool(getattr(nxt, "white_space", ""))
+        or getattr(getattr(nxt, "feature", None), "pos1", None) == "補助記号"
+    )
+
+
+def _spaced_interjection_fields(tokens: list, i: int) -> dict[str, str] | None:
+    """The 感動詞 fields of an interjection the tagger read as another word (``_SPACED_INTERJECTIONS``), or None.
+
+    Only where a space, a mark or the line end follows: a verb stem is never
+    spaced from its ending (ほらん), and an adverb runs on into its clause. An
+    adverb must also open the line or follow a pause, as the real 追い追い
+    stands mid-clause (それは おいおい 考えます).
+    """
+    token = tokens[i]
+    feature = getattr(token, "feature", None)
+    lemma = _SPACED_INTERJECTIONS.get((token.surface, _lemma_or_none(token)))
+    if lemma is None:
+        return None
+    if not _before_pause(tokens, i):
+        return None
+    before = getattr(getattr(tokens[i - 1], "feature", None), "pos1", None) if i else None
+    if getattr(feature, "pos1", None) == "副詞" and before not in (None, *_PAUSE_POS1):
+        return None
+    fields = {"pos1": "感動詞", "pos2": "一般", "cType": "*", "cForm": "*", "lemma": lemma, "orthBase": token.surface}
+    kana = getattr(feature, "kana", None)
+    if isinstance(kana, str):
+        fields.update(dict.fromkeys(("lForm", "kanaBase", "formBase", "pronBase"), kana))
+    return fields
+
+
+#: Kana verbs unidic-lite files under a homophone's lemma, by (orthBase, lemma),
+#: with the lemma of the verb the kana spelling nearly always is: おごる is 奢る
+#: 'to treat' (not 驕る 'to be haughty'), つるむ 連む 'to hang around with' (not
+#: 交尾む 'to copulate'), かなう 叶う 'to come true' (not 適う 'to suit'). A
+#: hiragana card takes the definition of the tagger's lemma, so the wrong lemma
+#: is the wrong card.
+_KANA_HOMOPHONE_LEMMAS: dict[tuple[str | None, str | None], str] = {
+    ("おごる", "驕る"): "奢る",
+    ("つるむ", "交尾む"): "連む",
+    ("かなう", "適う"): "叶う",
+}
+
+
+def _kana_homophone_fields(tokens: list, i: int) -> dict[str, str] | None:
+    """The corrected lemma of a kana verb the tagger files under its homophone (``_KANA_HOMOPHONE_LEMMAS``), or None.
+
+    かなう right after に keeps 適う, the verb of 理にかなう and 目的にかなう.
+    """
+    token = tokens[i]
+    lemma = _KANA_HOMOPHONE_LEMMAS.get(
+        (getattr(getattr(token, "feature", None), "orthBase", None), _lemma_or_none(token))
+    )
+    if lemma is None or (lemma == "叶う" and i and tokens[i - 1].surface == "に"):
+        return None
+    return {"lemma": lemma}
+
+
+#: The fields unidic-lite gives the particle か and the stem なっ of 成る, the two
+#: words it glues into かなっ (適う 'to come true') in なんとかなった.
+_KA_PARTICLE: dict[str, str] = {
+    "pos1": "助詞",
+    "pos2": "副助詞",
+    "cType": "*",
+    "cForm": "*",
+    **dict.fromkeys(("lemma", "orth", "orthBase"), "か"),
+    **dict.fromkeys(("lForm", "pron", "pronBase", "kana", "kanaBase", "form", "formBase"), "カ"),
+}
+_NARU_STEM: dict[str, str] = {
+    "pos1": "動詞",
+    "pos2": "非自立可能",
+    "cType": "五段-ラ行",
+    "cForm": "連用形-促音便",
+    "lemma": "成る",
+    "orth": "なっ",
+    "orthBase": "なる",
+    **dict.fromkeys(("pron", "kana", "form"), "ナッ"),
+    **dict.fromkeys(("lForm", "pronBase", "kanaBase", "formBase"), "ナル"),
+}
+
+
+def _glued_ka_naru(tokens: list, i: int) -> tuple[RetaggedToken, RetaggedToken] | None:
+    """The か and なっ of a かなっ the tagger glued (なんとかなった, どうにかなって), or None.
+
+    Only right after なん/何/どう + と/に, where no real かなう stands (夢がかなった,
+    理にかなった keep the verb). The pieces join to the same text, and なんとか
+    can then join as the adverb it is.
+    """
+    token = tokens[i]
+    if i < 2 or token.surface != "かなっ" or _lemma_or_none(token) != "適う":
+        return None
+    if tokens[i - 1].surface not in ("と", "に") or tokens[i - 2].surface not in ("なん", "何", "どう"):
+        return None
+    if getattr(token, "white_space", "") or getattr(tokens[i - 1], "white_space", ""):
+        return None
+    stem = RetaggedToken(token, _NARU_STEM, "なっ")
+    stem.white_space = ""
+    return RetaggedToken(token, _KA_PARTICLE, "か"), stem
+
+
+#: The fields unidic-lite gives the adjective いい (良い 'good, fine').
+_ADJECTIVE_II: dict[str, str] = {
+    "pos1": "形容詞",
+    "pos2": "非自立可能",
+    "cType": "形容詞",
+    "cForm": "終止形-一般",
+    "lForm": "ヨイ",
+    "lemma": "良い",
+    "orthBase": "いい",
+    "pronBase": "イー",
+    "kanaBase": "イイ",
+    "formBase": "イイ",
+}
+
+
+def _clause_final_ii_fields(tokens: list, i: int) -> dict[str, str] | None:
+    """The 良い fields of a clause-final いい the tagger read as the stem of 言う (どうだっていい, 礼はいい、…), or None.
+
+    The stem of 言う runs on into its ending (いいます, いいながら, いい出す);
+    before a space, a mark or the line end いい is the adjective. After a noun
+    + と it stays the verb, the pattern AといいBといい ('A as well as B'). The
+    literary そういい、彼は去った is read as the adjective too, and subtitles
+    rarely have it.
+    """
+    token = tokens[i]
+    if token.surface != "いい" or _lemma_or_none(token) != "言う" or not _before_pause(tokens, i):
+        return None
+    before = getattr(getattr(tokens[i - 2], "feature", None), "pos1", None) if i >= 2 else None
+    if before in ("名詞", "代名詞", "接尾辞") and tokens[i - 1].surface == "と":
+        return None
+    return _ADJECTIVE_II
 
 
 #: Adjectives spoken with an -ee ending (やばい → やべー) that unidic-lite has no
