@@ -100,3 +100,56 @@ class TestSpokenWordsTheTaggerCuts:
         fronts = _fronts(text, terms=_SPOKEN, readings=frozenset())
         assert front in fronts
         assert not {"やだ", "あかん", "ほっとく"} & set(fronts)
+
+
+_NEGATIVES = frozenset(
+    {
+        "ふざけんな",
+        "わからん",
+        "いらん",
+        "かなわない",
+        "かまわない",
+        "つまらん",
+        "つまらぬ",
+        "くだらん",
+        "くだらぬ",
+        "たまらん",
+        "わかる",
+        "ふざける",
+        "かまう",
+        "つまる",
+        "くだる",
+        "たまる",
+    }
+)
+
+
+class TestKanaVerbWithItsOwnNegative:
+    """A contraction the dictionary lists is the card, not the verb the tagger cut it from."""
+
+    @pytest.mark.parametrize(
+        ("text", "front"),
+        [
+            ("ふざけんなよ", "ふざけんな"),
+            ("わからん", "わからん"),
+            ("そんなものいらんわ", "いらん"),
+            ("かなわない", "かなわない"),
+            ("かまわないよ", "かまわない"),
+            ("つまらん", "つまらん"),
+            ("つまらぬ", "つまらぬ"),
+            ("くだらん", "くだらん"),
+            ("くだらぬ", "くだらぬ"),
+            ("たまらん", "たまらん"),
+        ],
+    )
+    def test_mines_the_listed_negative(self, text, front):
+        fronts = _fronts(text, terms=_NEGATIVES, readings=frozenset())
+        assert front in fronts
+        assert not {"つまる", "くだる", "たまる"} & set(fronts)
+
+    @pytest.mark.parametrize(
+        ("text", "front"),
+        [("わからない", "わかる"), ("わかんなかった", "わかる"), ("ふざけるな", "ふざける"), ("かまわん", "かまう")],
+    )
+    def test_the_plain_verb_stays(self, text, front):
+        assert front in _fronts(text, terms=_NEGATIVES, readings=frozenset())

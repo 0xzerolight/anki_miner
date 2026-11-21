@@ -636,6 +636,8 @@ _ANCHOR_HEADWORDS: tuple[str, ...] = (
     # k1120 MC: spoken words joined by list rows (kc03, kc04)
     "やだ",
     "すんません",
+    # k1120 MC: a kana verb + its own negative, listed (kc05)
+    "かまわない",
 )
 
 # Yomitan `ruleIdentifiers` per fixture headword. A real term bank ships these,
