@@ -219,7 +219,13 @@ _TE_JOIN_ENDINGS: tuple[str, ...] = ("して", "やって")
 # Cries the tagger reads as an auxiliary-capable word, by their tokens: やった
 # ('yes!', not 'did') and いてっ/いたっ ('ouch', 痛っ). Each is a cry only alone
 # between pauses: after a line start, a punctuation mark or an interjection.
-_AUX_CRIES: tuple[tuple[str, ...], ...] = (("やっ", "た"), ("やっ", "たー"), ("い", "て", "っ"), ("い", "た", "っ"))
+_AUX_CRIES: tuple[tuple[str, ...], ...] = (
+    ("やっ", "た"),
+    ("やっ", "たー"),
+    ("やっ", "たぁ"),
+    ("い", "て", "っ"),
+    ("い", "た", "っ"),
+)
 _AUX_CRY_AFTER_POS1: frozenset[str] = frozenset({"補助記号", "感動詞", "フィラー"})
 
 # Kana verbs the tagger makes by gluing two words together, named by the lemma
@@ -3148,6 +3154,8 @@ class SubtitleParserService:
         if how is not None:
             if how == _KANA_AUX and self._used_as_auxiliary(word_token, tokens):
                 return False
+            if how in (_KANA_LISTED, _KANA_LISTED_SPELLING) and self._listed_word_is_out_of_place(word_token, tokens):
+                return False
             if how != _KANA_LISTED and self._rejected_by_lexicalized_window(
                 word_token, tokens, from_left=how == _KANA_AUX, listed_spelling=how == _KANA_LISTED_SPELLING
             ):
@@ -3246,6 +3254,8 @@ class SubtitleParserService:
         the line's own word (猫がいる, 問題ない, もういい). A cry the tagger reads
         as the word (``_AUX_CRIES``) is no word either, when it stands alone
         between pauses (やった！, いてっ！) and not after a word (上で やった).
+        And なる after an honorific stem + に is that stem's honorific
+        (お尋ねになる, ``_is_honorific_stem``).
         """
         idx = next((i for i, tok in enumerate(tokens) if tok is word_token), None)
         if idx is None:
@@ -3262,6 +3272,13 @@ class SubtitleParserService:
             and getattr(word_token.feature, "orthBase", None) in _AUX_AFTER_TE_JOIN
         ):
             return True
+        if (
+            idx >= 2
+            and getattr(word_token.feature, "orthBase", None) == "なる"
+            and tokens[idx - 1].surface == "に"
+            and SubtitleParserService._is_honorific_stem(tokens, idx - 2)
+        ):
+            return True
         if pos1 not in (None, *_AUX_CRY_AFTER_POS1):
             return False
         for cry in _AUX_CRIES:
@@ -3271,6 +3288,87 @@ class SubtitleParserService:
             ):
                 return True
         return False
+
+    @staticmethod
+    def _listed_word_is_out_of_place(word_token, tokens: list) -> bool:
+        """Whether a kana word mined by name is no word where it stands.
+
+        ちょうだい after a verb's て (``_is_request_after_te``); よろしゅう before
+        ございます, the adjective よろしい in its う form, where よろしゅう頼む is
+        the adverb; and おら anywhere but before a case or topic particle or a
+        plural (おらは, おらの, おらたち): bare, or before よ, it is the shout
+        (立てよ、おら！ おらよ).
+        """
+        surface = word_token.surface
+        if surface == "ちょうだい":
+            return SubtitleParserService._is_request_after_te(word_token, tokens)
+        if surface not in ("おら", "よろしゅう"):
+            return False
+        idx = next((i for i, tok in enumerate(tokens) if tok is word_token), None)
+        if idx is None:
+            return False
+        after = tokens[idx + 1].feature if idx + 1 < len(tokens) else None
+        if surface == "よろしゅう":
+            return getattr(after, "lemma", None) == "御座る"
+        pos1 = getattr(after, "pos1", None)
+        return not (
+            pos1 == "接尾辞" or (pos1 == "助詞" and getattr(after, "pos2", None) in ("格助詞", "係助詞", "副助詞"))
+        )
+
+    @staticmethod
+    def _is_request_after_te(word_token, tokens: list) -> bool:
+        """Whether ちょうだい is the request after a verb's て (待ってちょうだい), not the noun (お茶をちょうだい).
+
+        After て it stands where ください does: grammar, as ごらん always is
+        (見てごらん), which is why that one is no list row at all. Elsewhere it
+        is the line's own word, 'give me'.
+        """
+        if word_token.surface != "ちょうだい":
+            return False
+        idx = next((i for i, tok in enumerate(tokens) if tok is word_token), None)
+        if not idx:
+            return False
+        before = idx - 1
+        while before and not tokens[before].surface.strip("…‥・"):  # 行かせて… ちょうだい
+            before -= 1
+        prev = tokens[before]
+        if getattr(prev.feature, "pos1", None) not in ("助詞", "助動詞"):
+            return False
+        # って and てって are the same て said fast (持ってってちょうだい).
+        return prev.surface.endswith("て") or (
+            prev.surface == "で" and getattr(prev.feature, "pos2", None) == "接続助詞"
+        )
+
+    #: The kana a verb's 連用形 ends in (尋ね, 帰り, 休み, 越し, 考え).
+    _RENYOU_ENDINGS: frozenset[str] = frozenset("いきぎしちにびみりえけげせてねべめれ")
+    #: Nouns of that shape whose なる is the line's own 'become' (お金持ちになりたい).
+    _HONORIFIC_STEM_NOUNS: frozenset[str] = frozenset({"金持ち", "気に入り", "開き", "祭り", "知り合い", "年寄り"})
+
+    @staticmethod
+    def _is_honorific_stem(tokens: list, idx: int) -> bool:
+        """Whether ``tokens[idx]`` is the stem of an honorific お〜になる (お尋ね, お帰り, お|読み).
+
+        There なる is grammar, the honorific of the stem's verb (お尋ねになる is
+        尋ねる), not the line's own 'become'. The stem is a verb's 連用形 written
+        with a kanji and its okurigana after the prefix お or ご, either joined
+        with it by the prefix merge (お尋ね) or still its own token (お|読み). A
+        noun without okurigana keeps its なる (お金になる, 医者になる), and so do
+        the nouns made from a verb that ``_HONORIFIC_STEM_NOUNS`` names.
+        """
+        surface = tokens[idx].surface
+        if len(surface) > 2 and surface[0] in "おご御":
+            stem = surface[1:]
+        elif (
+            idx
+            and tokens[idx - 1].surface in ("お", "ご", "御")
+            and getattr(tokens[idx - 1].feature, "pos1", None) == "接頭辞"
+        ):
+            stem = surface
+        else:
+            return False
+        if stem in SubtitleParserService._HONORIFIC_STEM_NOUNS:
+            return False
+        return len(stem) >= 2 and is_cjk_ideograph(stem[0]) and stem[-1] in SubtitleParserService._RENYOU_ENDINGS
 
     @staticmethod
     def _is_cut_sokuon_stem(word_token, text: str, tok_end: int) -> bool:
@@ -3623,7 +3721,7 @@ class SubtitleParserService:
             return None
         surface = word_token.surface
         if not _is_kana_candidate(surface):
-            return None
+            return _KANA_LISTED if self._is_katakana_to_adverb(word_token) else None
         feature = getattr(word_token, "feature", None)
         pos1 = getattr(feature, "pos1", None)
         if not isinstance(pos1, str):
@@ -3651,6 +3749,27 @@ class SubtitleParserService:
                 self._kana_recover_cache.clear()
             self._kana_recover_cache[key] = self._probe_kana_recovery(word_token, pos1, surface, recoverable, merged)
         return self._kana_recover_cache[key]
+
+    def _is_katakana_to_adverb(self, word_token) -> bool:
+        """Whether a と-adverb written with a katakana stem is a word the dictionary has as written (ホッと, ボーッと).
+
+        The script check above keeps kana recovery to hiragana, so the mimetic
+        と-adverbs a subtitle writes with a katakana stem are lost while their
+        hiragana spelling is mined (ほっと). One 副詞 token of a katakana stem +
+        と comes back when it is a dictionary headword as written, and the card
+        front stays as written. A sound without と (フッ, ドン) stays out, and so
+        does a spelling the dictionary has only in hiragana (ジッと).
+        """
+        surface = word_token.surface
+        if (
+            self._term_lookup is None
+            or len(surface) < 3
+            or not surface.endswith("と")
+            or not _is_all_katakana(surface[:-1])
+            or getattr(getattr(word_token, "feature", None), "pos1", None) != "副詞"
+        ):
+            return False
+        return surface in self._memoized_attest([surface])
 
     def _aux_word(self, word_token, pos1: str, surface: str, form: str, merged: bool) -> bool:
         """Whether a 非自立可能 kana token is one of ``_KANA_AUX_WORDS``, spelled as that word.
@@ -3697,8 +3816,13 @@ class SubtitleParserService:
         if not form:
             return None
         aux = not recoverable and self._aux_word(word_token, pos1, surface, form, merged)
+        spelled = False
         if not recoverable and not aux and not is_listed(form, pos1, merged=merged):
-            return None
+            spelled = self._is_long_kana_spelling(word_token, pos1, surface, merged) or self._is_long_kana_adverb(
+                pos1, surface, merged
+            )
+            if not spelled:
+                return None
         probe_start = time.perf_counter()
         attested = bool(lookup([form]).get(form))
         self._probe_time_s += time.perf_counter() - probe_start
@@ -3710,4 +3834,61 @@ class SubtitleParserService:
             return _KANA_RECOVERED
         if aux:
             return _KANA_AUX
-        return _KANA_LISTED_SPELLING if not merged and is_kanji_spelled(form, pos1) else _KANA_LISTED
+        return _KANA_LISTED_SPELLING if spelled or (not merged and is_kanji_spelled(form, pos1)) else _KANA_LISTED
+
+    #: Long kana nouns that are no word where the tagger finds them: the rows the
+    #: list builder leaves out by name (scripts/build_kana_words.py EXCLUDED) and
+    #: pieces of a longer word cut at a word the window check stops at
+    #: (ひとたまり|も|ない, かけがえ|の|ない, のっぴき|なら|ない).
+    _LONG_KANA_SPELLING_REJECTS: frozenset[str] = frozenset(
+        {"いやいや", "ちんちん", "きちがい", "ひとたまり", "かけがえ", "のっぴき"}
+    )
+
+    def _is_long_kana_spelling(self, word_token, pos1: str, surface: str, merged: bool) -> bool:
+        """Whether an unlisted kana noun is the kana spelling of a kanji-written word (ぬいぐるみ, しきたり).
+
+        The list names a kana spelling only when JMdict gives it a priority tag,
+        which leaves out the long tail subtitles write in kana (かくれんぼ,
+        とっておき, いきさつ). One common-noun token of four or more kana whose
+        tagger lemma is a kanji-written word is that word, so it counts as a
+        listed kana spelling and takes the same window check. A shorter one
+        stays by name: at that length a kana noun is as often the tail of a
+        longer word or a given name (ひかり).
+
+        Only a native or mixed word (the tagger's 語種 和 or 混). A piece the
+        tagger cuts out of a kana run is nearly always read as a Sino-Japanese
+        word (具|もうまい as 蒙昧, 早う|せんかい as 旋回, こうげ|きりょく as 気力),
+        so those stay by name too (ちきしょう, ないしょ, まんじゅう). A noun the
+        suffix merge built (おっ|さん) has no 語種 of its own and is a dictionary
+        word by that merge's own check.
+        """
+        if merged or pos1 != "名詞" or len(surface) < 4 or surface in self._LONG_KANA_SPELLING_REJECTS:
+            return False
+        feature = word_token.feature
+        if getattr(feature, "pos2", None) != "普通名詞" or getattr(feature, "goshu", None) not in ("和", "混", None):
+            return False
+        lemma = self._extract_lemma(word_token)
+        return isinstance(lemma, str) and lemma != surface and any(is_cjk_ideograph(ch) for ch in lemma)
+
+    #: Long kana adverbs that are no word where the tagger finds them: とんでも is
+    #: cut from とんでもねえ and とんでもありません, かったん is a dialect past's tail.
+    _LONG_KANA_ADVERB_REJECTS: frozenset[str] = frozenset({"とんでも", "かったん"})
+
+    def _is_long_kana_adverb(self, pos1: str, surface: str, merged: bool) -> bool:
+        """Whether an unlisted kana adverb is long enough to be mined without a list row (まさしく, さぞかし, ばったり).
+
+        As with the nouns above, the list names an adverb only when JMdict gives
+        it a priority tag, which leaves out the spoken, mimetic and literary ones
+        (やっぱし, ちゃっかり, おのずと). One adverb token of four or more kana
+        that the dictionary has counts as a listed kana spelling. Left to the
+        list: a doubled pair (あらあら, おうおう, ちょちょ), as often an
+        interjection, a sound or a stutter as a word; a surface with a long mark
+        or a final っ, a sound drawn out or cut short (じゃーん, どかーん); and one
+        ending in ちゃん, a sound that is as often cut from a nickname (す|がちゃん).
+        """
+        if merged or pos1 != "副詞" or len(surface) < 4 or surface in self._LONG_KANA_ADVERB_REJECTS:
+            return False
+        half = len(surface) // 2
+        if "ー" in surface or surface.endswith(("っ", "ちゃん")):
+            return False
+        return not (len(surface) % 2 == 0 and surface[:half] == surface[half:])

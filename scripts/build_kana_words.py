@@ -59,6 +59,11 @@ SHORT_SPELLED_NOUNS: frozenset[str] = frozenset(
     {"とおり", "おなか", "ゆうべ", "かぎり", "におい", "しょうゆ", "けんか", "うわさ", "まぬけ", "あげく"}
     | {"おかげ", "ほんと", "ほんま", "ごはん", "あした", "しかた", "ふだん", "ことし"}
     | {"ようす", "しっぽ", "きげん", "ぜんぶ"}
+    | {"ないしょ", "いっしょ", "ひきょう", "いっちょ", "ちゅうちょ"}
+    # Not からだ, ことば or ありか: in a line each is as often two words (来た|から|だ,
+    # the dialect object こと|ば, 何でも|あり|か).
+    | {"ちから", "いのち", "かたち", "ふたり", "せがれ", "じじい", "ばばあ", "おかみ"}
+    | {"とどめ", "せりふ", "あるじ", "おなご", "だんご", "ささい", "うかつ"}
 )
 
 #: Spoken kana spellings JMdict gives no priority tag (やっぱ for 矢っ張り, the
@@ -83,6 +88,40 @@ UNTAGGED_COMMON: frozenset[str] = frozenset(
         "へぇ",
         "さぁ",
         "ありがと",
+    }
+    # Sino-Japanese nouns subtitles write in kana. The parser recovers a long kana
+    # spelling without a priority tag by rule only when the word is native
+    # (SubtitleParserService._is_long_kana_spelling), so these are named.
+    | {"ちきしょう", "いっちょ", "ないしょ", "いっしょ", "ひきょう", "べっぴん", "じきじき", "まんじゅう", "こんにゃく"}
+    | {"ちゅうちょ", "しょんべん", "がってん", "ようかん", "そうめん", "もうろく", "たくあん", "けいれん", "ろうぜき"}
+    # Pronouns of period, rural and rough speech (JMdict marks them archaic or
+    # dialect): the everyday words of period drama, fantasy and yakuza films, and
+    # none is the homograph of an everyday word, as the archaic rows left out below are.
+    # Left out: うぬ (as often the growl うぬぬ). おら is listed; the parser refuses the
+    # shout (おら！ おらよ) by what follows it.
+    | {"そなた", "そち", "おぬし", "それがし", "おいら", "あっし", "わて", "あたい", "あたくし"}
+    | {"こやつ", "あやつ", "こちとら"}
+    # と-adverbs under four kana or drawn out, which the parser's length rule leaves to the
+    # list. Not はっと or かっと: as often は|っと (戸締まりはっと) and ず|かっと.
+    | {"ぞっと", "じーっと", "そーっと"}
+    # Pre-noun adjectivals of formal and spoken lines. Not わが or かの: two kana are
+    # as often a piece (the dialect わがんねえ, a name かのまた).
+    | {"いかなる", "とある", "さらなる", "ひょんな", "おっきな", "ちっちゃな", "なんたる"}
+    # Short spoken and period adverbs. Not ちと: as often a piece (俺っ|ちと, 俺ん|ちと).
+    | {"あんま", "ちっと", "なんせ", "しばし"}
+    | {"おら"}
+    | {
+        "せがれ",
+        "じじい",
+        "ばばあ",
+        "おかみ",
+        "とどめ",
+        "せりふ",
+        "あるじ",
+        "おなご",
+        "だんご",
+        "ささい",
+        "うかつ",
     }
 )
 
@@ -114,8 +153,9 @@ EXCLUDED: dict[tuple[str, str], str] = {
     # the particle constant.
     **dict.fromkeys((("かも", "名詞"), ("かな", "名詞"), ("とも", "名詞"), ("かね", "名詞")), "particle"),
     **dict.fromkeys((("なし", "名詞"), ("たか", "名詞"), ("しな", "名詞")), "particle"),
-    # Requests after て (見てごらん, 待ってちょうだい).
-    **dict.fromkeys((("ごらん", "名詞"), ("ちょうだい", "名詞")), "auxiliary"),
+    # The request after て (見てごらん). ちょうだい is listed: it is also the noun
+    # (お茶をちょうだい), and the parser refuses it after て itself.
+    ("ごらん", "名詞"): "auxiliary",
     # 嫌々 'reluctantly' in a line is mostly the interjection いやいや 'no, no'.
     ("いやいや", "名詞"): "interjection",
     # Suffixes, grammar nouns and nouns a carrier tags 副詞.

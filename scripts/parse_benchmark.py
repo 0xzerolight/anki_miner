@@ -646,6 +646,26 @@ _ANCHOR_HEADWORDS: tuple[str, ...] = (
     "ようこそ",
     # k1120 MC: clause-opening それでは (kc09)
     "それでは",
+    # k1120 MK: long kana spellings of kanji-written nouns; せんかい and ちょうだい are
+    # attested so their rejects are the rule's, not a dictionary miss
+    "ぬいぐるみ",
+    "ないしょ",
+    "しきたり",
+    "せんかい",
+    "ちょうだい",
+    "ちきしょう",
+    "まさしく",
+    "さぞかし",
+    "とんでも",
+    "そなた",
+    "あっし",
+    "からだ",
+    "ちから",
+    "ホッと",
+    "ぞっと",
+    "とある",
+    "しばし",
+    "おら",
 )
 
 # Yomitan `ruleIdentifiers` per fixture headword. A real term bank ships these,
