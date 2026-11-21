@@ -199,3 +199,23 @@ class TestClauseFinalIi:
         assert "いう" not in _fronts(service, "どうだっていい")
         assert "いう" not in _fronts(service, "礼はいい、行くぜ")
         assert "いう" in _fronts(service, "はっきりいいます")
+
+
+class TestLetterRunFragments:
+    _LETTER_WORDS = ("ＣＨ", "ＰＰ", "ＣＤ", "ＯＫ", "ＤＶＤ")
+
+    def test_a_piece_of_a_longer_letter_run_is_not_carded(self) -> None:
+        assert not {"ＣＨ", "ＰＰ"} & set(_fronts(_service(self._LETTER_WORDS), "ＣＨＰＰの話"))
+
+    @pytest.mark.parametrize(
+        ("text", "front"),
+        [
+            ("新しいＣＤを買った", "ＣＤ"),
+            ("これでＯＫです", "ＯＫ"),
+            ("ＤＶＤを見た", "ＤＶＤ"),
+            ("ＣＤ ＤＶＤ 何でもある", "ＣＤ"),
+            ("ＯＫＯＫ 分かった", "ＯＫ"),
+        ],
+    )
+    def test_a_whole_letter_word_keeps_its_card(self, text: str, front: str) -> None:
+        assert front in _fronts(_service(self._LETTER_WORDS), text)

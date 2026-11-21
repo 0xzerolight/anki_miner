@@ -3171,6 +3171,8 @@ class SubtitleParserService:
         if rejection is None:
             if self._is_katakana_run_fragment(word_token, text, tok_start, tok_end):
                 return False
+            if self._is_letter_run_fragment(word_token, text, tok_start, tok_end):
+                return False
             if self._name_piece_rejects and (
                 self._is_kanji_glue(word_token) or self._is_name_honorific_tail(word_token, text, tok_start)
             ):
@@ -3578,6 +3580,34 @@ class SubtitleParserService:
             if folded != orth_base and not _is_all_katakana(folded):
                 return False
         return True
+
+    @staticmethod
+    def _is_letter_run_fragment(word_token, text: str, tok_start: int, tok_end: int) -> bool:
+        """Whether a capital-letter word is a piece of a longer run of letters (ＣＨ|ＰＰ).
+
+        The letter twin of ``_is_katakana_run_fragment``: the tagger cuts a run
+        of letters it does not know into pieces, and a piece the dictionary
+        lists (ＰＰ) is no word of the line. A Latin letter of either width
+        right before or after the token continues the run; a joined compound
+        is the whole run, and a run that only repeats the word (ＯＫＯＫ) is
+        that word said twice.
+        """
+        surface = getattr(word_token, "surface", None)
+        if not isinstance(surface, str) or not surface or getattr(word_token, "compound", False) is True:
+            return False
+
+        def letter(ch: str) -> bool:
+            return bool(ch) and ((ch.isascii() and ch.isalpha()) or "Ａ" <= ch <= "Ｚ" or "ａ" <= ch <= "ｚ")
+
+        if not all(letter(ch) for ch in surface):
+            return False
+        start, end = tok_start, tok_end
+        while start > 0 and letter(text[start - 1]):
+            start -= 1
+        while end < len(text) and letter(text[end]):
+            end += 1
+        run = text[start:end]
+        return run != surface * (len(run) // len(surface))
 
     def _is_ellipsis_truncation_fragment(self, word_token, text: str, tok_start: int, tok_end: int) -> bool:
         """Whether an accepted token is a word cut off mid-utterance at an ellipsis.
