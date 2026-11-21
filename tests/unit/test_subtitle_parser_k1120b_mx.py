@@ -85,3 +85,27 @@ class TestListedInterjectionOioi:
     def test_the_adverb_mid_clause_keeps_its_lemma(self):
         word = next(w for w in _words(_service(self._DICT), "それは おいおい 考えます") if w.mined_form == "おいおい")
         assert word.lemma == "追い追い"
+
+
+class TestDoubledKanaAdverbs:
+    """Doubled kana adverbs are list rows: the long-adverb rule refuses every exact pair, as most are cries."""
+
+    @pytest.mark.parametrize(
+        ("text", "front"),
+        [
+            ("部屋がごちゃごちゃしている", "ごちゃごちゃ"),
+            ("ぼちぼち行こうか", "ぼちぼち"),
+            ("ついつい食べすぎた", "ついつい"),
+            ("のこのこ出てきた", "のこのこ"),
+            ("もたもたするな", "もたもた"),
+            ("ただただ驚いた", "ただただ"),
+            ("よくよく考えた", "よくよく"),
+            ("うすうす気づいていた", "うすうす"),
+        ],
+    )
+    def test_a_listed_doubled_adverb_is_carded(self, text, front):
+        assert front in _fronts(_service((front,)), text)
+
+    @pytest.mark.parametrize(("text", "cry"), [("ちょちょ 待って", "ちょちょ"), ("あらあら 大変", "あらあら")])
+    def test_a_doubled_cry_stays_out(self, text, cry):
+        assert cry not in _fronts(_service((cry,)), text)

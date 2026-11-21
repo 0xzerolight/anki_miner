@@ -670,6 +670,11 @@ _ANCHOR_HEADWORDS: tuple[str, ...] = (
     "下さい",
     # k1120b MX: the listed interjection おいおい (k1mrj15)
     "おいおい",
+    # k1120b MX: doubled kana adverbs named by list rows; ちょちょ is attested so its reject is the rule's
+    "ぼちぼち",
+    "ついつい",
+    "ごちゃごちゃ",
+    "ちょちょ",
 )
 
 # Yomitan `ruleIdentifiers` per fixture headword. A real term bank ships these,

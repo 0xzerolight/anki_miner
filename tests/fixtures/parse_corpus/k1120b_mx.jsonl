@@ -1,2 +1,6 @@
 {"id":"k2mx01","sentence":"待って下さい","expected":["待つ","下さい"],"category":"kana-listed","note":"The request 下さい is carded as written, as the kana row cards ください; not the verb 下さる."}
 {"id":"k2mx02","sentence":"先生が本を下さった","expected":["先生","本","下さる"],"category":"kana-listed","note":"The verb 下さる keeps its dictionary form."}
+{"id":"k2mx03","sentence":"ぼちぼち行こうか","expected":["ぼちぼち","行く"],"category":"kana-listed","note":"A doubled kana adverb is a list row: the long-adverb rule refuses every exact pair."}
+{"id":"k2mx04","sentence":"ついつい笑った","expected":["ついつい","笑う"],"category":"kana-listed","note":"ついつい is listed."}
+{"id":"k2mx05","sentence":"部屋がごちゃごちゃしている","expected":["部屋","ごちゃごちゃ"],"category":"kana-listed","note":"ごちゃごちゃ is listed."}
+{"id":"k2mx06","sentence":"ちょちょ 待って","expected":["待つ"],"category":"kana-listed","note":"A doubled cry is no row and stays out."}
