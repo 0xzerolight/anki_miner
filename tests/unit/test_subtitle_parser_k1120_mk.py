@@ -25,6 +25,15 @@ pytestmark = pytest.mark.skipif(not _fugashi_available(), reason="fugashi/unidic
 _ATTESTED = frozenset(
     {
         "ぬいぐるみ",
+        "そなた",
+        "おぬし",
+        "あっし",
+        "おいら",
+        "それがし",
+        "こやつ",
+        "こちとら",
+        "おら",
+        "わし",
         "まさしく",
         "さぞかし",
         "どのみち",
@@ -135,3 +144,24 @@ class TestLongKanaAdverbs:
     )
     def test_a_piece_or_a_doubled_sound_stays_out(self, text, front):
         assert front not in _fronts(text)
+
+
+class TestPeriodPronouns:
+    @pytest.mark.parametrize(
+        ("text", "front"),
+        [
+            ("そなたの名を聞こう", "そなた"),
+            ("おぬしは誰だ", "おぬし"),
+            ("あっしに任せてくれ", "あっし"),
+            ("おいらの勝ちだ", "おいら"),
+            ("それがしが参ります", "それがし"),
+            ("こやつを捕らえろ", "こやつ"),
+            ("こちとら忙しいんだ", "こちとら"),
+        ],
+    )
+    def test_mines_a_pronoun_of_period_or_rough_speech(self, text, front):
+        assert front in _fronts(text)
+        assert is_listed(front, "代名詞", merged=False)
+
+    def test_the_shout_ora_is_no_card(self):
+        assert "おら" not in _fronts("おらおら、どけ")

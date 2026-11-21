@@ -7,3 +7,5 @@
 {"id":"kk07","sentence":"まさしく本物だ","expected":["まさしく","本物"],"category":"k1120-kana-words","note":"a kana adverb of four kana JMdict gives no priority tag"}
 {"id":"kk08","sentence":"さぞかし驚いた","expected":["さぞかし","驚く"],"category":"k1120-kana-words"}
 {"id":"kk09","sentence":"とんでもねえ","expected":[],"category":"k1120-kana-words","note":"cut from とんでもない; attested, so the reject is the rule's"}
+{"id":"kk10","sentence":"そなたの名を聞こう","expected":["そなた","名","聞く"],"category":"k1120-kana-words","note":"a period pronoun JMdict marks archaic"}
+{"id":"kk11","sentence":"あっしに任せてくれ","expected":["あっし","任せる"],"category":"k1120-kana-words","note":"rough-speech 私; くれ after て is grammar"}

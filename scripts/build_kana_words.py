@@ -90,6 +90,12 @@ UNTAGGED_COMMON: frozenset[str] = frozenset(
     # (SubtitleParserService._is_long_kana_spelling), so these are named.
     | {"ちきしょう", "いっちょ", "ないしょ", "いっしょ", "ひきょう", "べっぴん", "じきじき", "まんじゅう", "こんにゃく"}
     | {"ちゅうちょ", "しょんべん", "がってん", "ようかん", "そうめん", "もうろく", "たくあん", "けいれん", "ろうぜき"}
+    # Pronouns of period, rural and rough speech (JMdict marks them archaic or
+    # dialect): the everyday words of period drama, fantasy and yakuza films, and
+    # none is the homograph of an everyday word, as the archaic rows left out below are.
+    # Left out: うぬ (as often the growl うぬぬ) and おら (the shout おら！).
+    | {"そなた", "そち", "おぬし", "それがし", "おいら", "あっし", "わて", "あたい", "あたくし"}
+    | {"こやつ", "あやつ", "こちとら"}
 )
 
 #: Tags a line gives a word that no carrier sentence does: あんな is 形状詞 in every
