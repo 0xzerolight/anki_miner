@@ -163,20 +163,31 @@ def _kana_join(tokens: list, i: int, grammar_points: bool) -> _Join | None:
         span = tokens[i : i + size]
         surfaces = tuple(token.surface for token in span)
         row = listed.joins.get(surfaces) or listed.base_joins.get((*surfaces[:-1], extract_orth_base(span[-1])))
-        if row is not None and (grammar_points or not row.grammar) and not _polite_negative(tokens, i + size - 1):
+        if (
+            row is not None
+            and (grammar_points or not row.grammar)
+            and not _cut_from_negative(tokens, i + size - 1, row.line_start)
+        ):
             return _Join(
                 i, i + size - 1, row.headword, row.pos1, listed=True, line_start=row.line_start, after=row.after
             )
     return None
 
 
-def _polite_negative(tokens: list, end: int) -> bool:
-    """Whether a row ending on ませ is cut from the polite negative ません (いらっしゃい|ませ|ん).
+def _cut_from_negative(tokens: list, end: int, clause_opener: bool) -> bool:
+    """Whether a row's last token belongs to the negative after it, so the row is not the word here.
 
-    The greeting いらっしゃいませ ends on the imperative ませ. Before ん the same
-    two tokens are the honorific verb negated (先生はいらっしゃいませんか).
+    いらっしゃい|ませ|ん: the greeting ends on the imperative ませ; before ん the
+    same tokens are the honorific verb negated (先生はいらっしゃいませんか).
+    それ|じゃ|ない, それで|は|なく: after a clause opener, じゃ / は before ない is the
+    negative copula ('not that'), not the connective それじゃ / それでは.
     """
-    return tokens[end].surface == "ませ" and end + 1 < len(tokens) and tokens[end + 1].surface == "ん"
+    if end + 1 >= len(tokens):
+        return False
+    last, after = tokens[end].surface, tokens[end + 1]
+    if last == "ませ":
+        return bool(after.surface == "ん")
+    return clause_opener and last in ("は", "じゃ", "じゃあ") and extract_orth_base(after) == "ない"
 
 
 def _opens_clause(tokens: list, spans: dict[int, tuple[int, int]], i: int) -> bool:

@@ -313,3 +313,25 @@ class TestSetGreetings:
     @pytest.mark.parametrize("text", ["授業をはじめます", "先生がいらっしゃいます", "先生はいらっしゃいませんか"])
     def test_the_plain_verb_is_no_greeting(self, text):
         assert not _GREETINGS & set(_fronts(text, terms=_GREETINGS, readings=frozenset()))
+
+
+_OPENERS = frozenset({"それでは", "それじゃ", "それじゃあ", "それ", "それで", "それでも", "じゃない", "ない", "また"})
+
+
+class TestClauseOpeningSoredewa:
+    @pytest.mark.parametrize(
+        ("text", "front"),
+        [("それでは始めます", "それでは"), ("それじゃ行こう", "それじゃ"), ("それじゃあまた", "それじゃあ")],
+    )
+    def test_mines_the_connective(self, text, front):
+        fronts = _fronts(text, terms=_OPENERS, readings=frozenset())
+        assert front in fronts
+        assert not {"それ", "それで"} & set(fronts)
+
+    @pytest.mark.parametrize("text", ["それじゃない", "それじゃなくて", "それではなく別の本だ", "私はそれじゃ困る"])
+    def test_the_negative_copula_and_a_mid_clause_pronoun_are_no_connective(self, text):
+        fronts = _fronts(text, terms=_OPENERS, readings=frozenset())
+        assert not {"それでは", "それじゃ"} & set(fronts)
+
+    def test_the_longer_connective_stays(self):
+        assert "それでも" in _fronts("それでも行く", terms=_OPENERS, readings=frozenset())
