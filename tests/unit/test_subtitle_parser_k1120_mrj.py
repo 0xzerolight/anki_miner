@@ -101,3 +101,42 @@ class TestKanaGlueVerbs:
     )
     def test_the_real_kana_verb_keeps_its_card(self, text: str, front: str) -> None:
         assert front in _fronts(_service(_KANA_VERBS), text)
+
+
+class TestInterjectionsReadAsAnotherWord:
+    @staticmethod
+    def _retagged(text: str) -> list:
+        import fugashi
+
+        from anki_miner.services.morphology import retag_mistagged_tokens
+
+        return retag_mistagged_tokens(list(fugashi.Tagger()(text)))
+
+    @pytest.mark.parametrize(
+        ("text", "surface"),
+        [
+            ("おいおい 冗談だろ", "おいおい"),  # tagged the adverb 追い追い 'gradually'
+            ("ほら ない", "ほら"),  # tagged a stem of 放る
+        ],
+    )
+    def test_before_a_space_it_is_the_interjection(self, text: str, surface: str) -> None:
+        token = next(tok for tok in self._retagged(text) if tok.surface == surface)
+        assert (token.feature.pos1, token.feature.lemma, token.feature.orthBase) == ("感動詞", surface, surface)
+
+    @pytest.mark.parametrize(
+        ("text", "surface", "lemma"),
+        [
+            ("それは おいおい 考えます", "おいおい", "追い追い"),  # the adverb, mid-clause
+            ("おいおい分かってくる", "おいおい", "追い追い"),  # no space: runs on into its clause
+            ("そこにほらんといて", "ほら", "放る"),  # the Kansai verb, unspaced from its ending
+        ],
+    )
+    def test_the_other_word_stays(self, text: str, surface: str, lemma: str) -> None:
+        token = next(tok for tok in self._retagged(text) if tok.surface == surface)
+        assert token.feature.lemma == lemma
+
+    def test_the_cards_follow_the_retag(self) -> None:
+        service = _service(("おいおい", "ほら"))
+        assert "おいおい" not in _fronts(service, "おいおい 待てよ")
+        assert "おいおい" in _fronts(service, "それは おいおい 考えます")
+        assert _fronts(service, "ほら ない")[:1] == ["ほら"]

@@ -3,3 +3,4 @@
 {"id":"k1mrj04","sentence":"家にかえった","expected":["家"],"category":"kanji-glue","note":"帰る in kana, which the tagger reads 孵る, is not carded 'to hatch'."}
 {"id":"k1mrj06","sentence":"合格おめでと","expected":["合格"],"category":"kanji-glue","note":"お|めで|と is no 愛でる."}
 {"id":"k1mrj07","sentence":"わいも行くで","expected":["行く"],"category":"kanji-glue","note":"The Kansai わい is no 沸く (わく)."}
+{"id":"k1mrj15","sentence":"おいおい 待てよ","expected":["待つ"],"category":"kana-listed","note":"A line-opening おいおい is the interjection, not the adverb 追い追い the tagger reads."}

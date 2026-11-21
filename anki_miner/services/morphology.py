@@ -1197,6 +1197,9 @@ def retag_mistagged_tokens(tokens: list, form_lookup: FormLookup | None = None) 
       interjections and sound words (ワーオ, ピーポー), some of them as nouns.
     - Two tokens cut at the wrong place (``_MISSPLITS``: 自|分ち) are re-cut
       (自分|ち); the pair's surfaces join to the same text.
+    - An interjection read as another word before a space (おいおい as the
+      adverb 追い追い, ほら as a stem of 放る) is the interjection
+      (``_spaced_interjection_fields``).
     """
     unknown = {token.surface for token in tokens if _unknown_katakana_noun(token)}
     nouns = _dictionary_nouns(unknown, form_lookup) if unknown and form_lookup is not None else set()
@@ -1232,8 +1235,51 @@ def retag_mistagged_tokens(tokens: list, form_lookup: FormLookup | None = None) 
             fields = _PREFIX_NOUNS.get(token.surface)
         elif token.surface in nouns and _unknown_katakana_noun(token):
             fields = dict.fromkeys(("lemma", "orthBase", "kana"), token.surface)
+        if fields is None:
+            fields = _spaced_interjection_fields(tokens, i)
         out.append(token if fields is None else RetaggedToken(token, fields))
     return out
+
+
+#: Interjections unidic-lite reads as another word where a space follows them,
+#: by (surface, lemma), with the interjection's own lemma: おいおい ('hey, come
+#: on') is to it always the adverb 追い追い 'gradually', and ほら before a spaced
+#: ねえ or ない the stem of 放る (ほら ねえ).
+_SPACED_INTERJECTIONS: dict[tuple[str, str | None], str] = {
+    ("おいおい", "追い追い"): "おいおい",
+    ("ほら", "放る"): "ほら",
+}
+_PAUSE_POS1: frozenset[str] = frozenset({"補助記号", "感動詞", "フィラー"})
+
+
+def _spaced_interjection_fields(tokens: list, i: int) -> dict[str, str] | None:
+    """The 感動詞 fields of an interjection the tagger read as another word (``_SPACED_INTERJECTIONS``), or None.
+
+    Only where a space, a mark or the line end follows: a verb stem is never
+    spaced from its ending (ほらん), and an adverb runs on into its clause. An
+    adverb must also open the line or follow a pause, as the real 追い追い
+    stands mid-clause (それは おいおい 考えます).
+    """
+    token = tokens[i]
+    feature = getattr(token, "feature", None)
+    lemma = _SPACED_INTERJECTIONS.get((token.surface, _lemma_or_none(token)))
+    if lemma is None:
+        return None
+    nxt = tokens[i + 1] if i + 1 < len(tokens) else None
+    if (
+        nxt is not None
+        and not getattr(nxt, "white_space", "")
+        and getattr(getattr(nxt, "feature", None), "pos1", None) != "補助記号"
+    ):
+        return None
+    before = getattr(getattr(tokens[i - 1], "feature", None), "pos1", None) if i else None
+    if getattr(feature, "pos1", None) == "副詞" and before not in (None, *_PAUSE_POS1):
+        return None
+    fields = {"pos1": "感動詞", "pos2": "一般", "cType": "*", "cForm": "*", "lemma": lemma, "orthBase": token.surface}
+    kana = getattr(feature, "kana", None)
+    if isinstance(kana, str):
+        fields.update(dict.fromkeys(("lForm", "kanaBase", "formBase", "pronBase"), kana))
+    return fields
 
 
 #: Adjectives spoken with an -ee ending (やばい → やべー) that unidic-lite has no
