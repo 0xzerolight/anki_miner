@@ -56,6 +56,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Japanese: おら is mined before a particle (おらは行く), and よろしゅう in よろしゅう頼む.**
 - **Japanese: a kanji adjective cry is mined as its adjective (熱っ → 熱い, 痛ぇ → 痛い, 早っ → 早い).**
 - **Japanese: かわいがる and こわがる are mined as the がる verb,** not as the adjective.
+- **Japanese: words the tagger cuts after お or ご are mined whole (おいで, おすすめ, ごきげんよう, おめでたい).** In 見ておいで it is still the helper verb.
+- **Japanese: a kana verb before its own negative is mined (雨がやまない mines やむ, かまいません mines かまう),** and すまぬ and おもわぬ are mined as written.
+- **Japanese: a line-opening おいおい is mined as the interjection ('hey, come on').**
+- **Japanese: doubled kana adverbs are mined (ぼちぼち, ついつい, ごちゃごちゃ, じわじわ).**
 ### Fixed
 - **Japanese verb cards show the verb the line uses.** An imperative (持て) mined 持てる, a passive (刺された) mined 刺さる, a potential (帰れない) mined 帰れる, a short causative (行かされた) mined 行かす and katakana フラれた mined the loanword フル; they now mine 持つ, 刺す, 帰る, 行く and ふる. The last three fronts had no dictionary entry, so the card was dropped.
 - **Kana fillers no longer become verb cards.** いえ ('no') mined いえる, a sound cut at っ (まっ, たっ) mined まつ and たつ, and the tagger's glues いたんだ, 違かった and ういっす mined 痛む, 買う and 逸する.
@@ -84,6 +88,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Song styles named EDJP, OP1, JPED, IN-JP or 歌詞 are no longer mined.**
 - **う～ん, よ～い, わ～い and せ～の are read as one word** (う～ん mined うん, よ～い mined よい).
 - **Label rows 回想 and 心の声 above a line are no longer mined.**
+- **出してくれる, 貸してあげる and 見てもらう mine the verb (出す, 貸す, 見る),** not the dictionary's pair; 診てもらう ('see a doctor') stays one word.
+- **下さい mines 下さい ('please'),** not the verb 下さる; with Mine grammar points off it still mines 下さる.
+- **若 as an address ('young master') mines the noun 若,** not the adjective 若い.
 - **A batch no longer lets one file decide how a kana verb is treated in the next.** The verdict for つかめ (つかむ or つかめる) was remembered by spelling alone, so the same episode could mine differently depending on what was mined before it.
 - **Folder pairing (Batch, Condense, Retime) no longer reads encode and broadcast tags as the episode number.** Ma10p, YUV420P10, 2flac, AACx2, HDR10, 60fps, MPEG2, `[v2]` and the BS11 channel tag left videos unpaired or paired with another episode's subtitle.
 - **Folder pairing keeps a .5 special (`Show - 12.5`) apart from episode 5.**

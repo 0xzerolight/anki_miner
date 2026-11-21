@@ -209,6 +209,8 @@ def _adverbial_end(token) -> bool:
 # own word, so 構わない never merges.
 _FIXED_FORM_TAILS = frozenset({"て", "で", "ない", "ず", "ぬ", "なく"})
 _FIXED_FORM_LINKS = frozenset({"なら"})
+# The benefactive auxiliaries after て, in kana as they are written (``_benefactive_after_te``).
+_BENEFACTIVE_TAILS = frozenset({"くれる", "もらう", "あげる"})
 
 # A dictionary entry's tags, by headword (JMdict's adv, exp, n, …).
 EntryTagsLookup = Callable[[list[str]], dict[str, set[str]]]
@@ -379,6 +381,8 @@ class CompoundDictionaryMatcher:
                             continue
                         if kind == "A" and self._inflects_pre_noun_word(tokens[j], candidate):
                             continue
+                        if kind == "A" and self._benefactive_after_te(tokens, i, j):
+                            continue
                         if kind == "F":
                             if self._exist_cache.get(self._fixed_heads[(i, j)]):
                                 continue
@@ -422,6 +426,23 @@ class CompoundDictionaryMatcher:
             self._tags_cache[headword] = self._entry_tags([headword]).get(headword, set())
         tags = self._tags_cache[headword]
         return "adj-pn" in tags and not any(tag.startswith(_VERB_CLASS_TAGS) for tag in tags)
+
+    @staticmethod
+    def _benefactive_after_te(tokens: list, i: int, j: int) -> bool:
+        """Whether a span ends on くれる / もらう / あげる right after a verb's て (出し|て|くれる, 見|て|もらう).
+
+        The dictionary lists 出してくれる, 貸してあげる and 見てもらう (a spelling of
+        診てもらう 'to see a doctor'), but in a line the tail is the benefactive
+        auxiliary any verb takes (お金を出してくれた, 部長に見てもらう): the verb keeps
+        the card, as 聞いてくれる cards 聞く. 診てもらう as the dictionary heads it
+        stays joined.
+        """
+        if j - i < 2 or (_potential_base(tokens[j]) or extract_orth_base(tokens[j])) not in _BENEFACTIVE_TAILS:
+            return False
+        link = tokens[j - 1]
+        if _pos2(link) != "接続助詞" or link.surface not in ("て", "で"):
+            return False
+        return bool(tokens[i].surface != "診")
 
     def _keep_written_base(self, synthetic, span: list, headword: str) -> None:
         """Note on a spoken-idiom join the base the line spells (腹減る for 腹が減る).

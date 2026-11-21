@@ -979,6 +979,8 @@ class SubtitleParserService:
             self._lexical_joiner = LexicalJoiner(
                 kana_attest_lookup, self._inclusion_rule.allowed_pos, grammar_points=config.mine_grammar_points
             )
+        # The same setting decides the kanji spelling of the ください row (下さい; see _kanji_request_front).
+        self._grammar_points: bool = config.mine_grammar_points
         # Name resources define raw-source boundaries independently of the
         # ordinary dictionary. This pass runs before dictionary matching so an
         # exact name remains available to the late exact name-wordset filter;
@@ -2904,6 +2906,8 @@ class SubtitleParserService:
             return orth_base
         if orth_base != extract_orth_base(word_token):
             return orth_base
+        if (request := self._kanji_request_front(word_token, orth_base)) is not None:
+            return request
         # The inflected span the resolver deinflects: the token surface plus its
         # rightward highlight extension (感じた), or the bare surface when it did
         # not extend (感じ before a noun) — run either way, else 感じ-before-a-noun
@@ -2958,6 +2962,22 @@ class SubtitleParserService:
     def _godan_verb_exists(self, orth_base: str) -> bool:
         """Whether the dictionary has *orth_base*; True with no dictionary wired (nothing to ask)."""
         return self._attest is None or orth_base in self._attest([orth_base])
+
+    def _kanji_request_front(self, word_token, orth_base: str) -> str | None:
+        """下さい, the request, as its own card front (待って下さい, 水を下さい), or None.
+
+        The kana ください is one token and a grammar row of the kana word list,
+        carded ください. The kanji spelling is to the tagger the imperative of
+        下さる and was carded 下さる, a verb the line does not use as one: the
+        dictionary lists the request under 下さい. Only the imperative: the
+        下さい of 下さいます is the verb's stem. With Mine grammar points off the
+        kana row is not mined, and the kanji spelling keeps its verb.
+        """
+        if not self._grammar_points or orth_base != "下さる" or word_token.surface != "下さい":
+            return None
+        if not _is_godan_imperative(getattr(word_token, "feature", None)):
+            return None
+        return "下さい" if "下さい" in self._memoized_attest(["下さい"]) else None
 
     def _attest_or_remap_front(self, word_token, orth_base: str) -> str:
         """Remap a non-attested derived 動詞/形容詞 front to its attested lemma.
@@ -3606,6 +3626,7 @@ class SubtitleParserService:
             return self._attest is not None and bool(self._attest(windows))
         if listed_spelling:
             windows = self._listed_spelling_windows(tokens, idx, windows)
+        windows = windows if listed_spelling else self._own_negative_windows(tokens, idx, windows)
         uncached = [w for w in windows if w not in self._kana_window_cache]
         # Snapshot the already-cached verdicts BEFORE the clear-on-cap below can
         # evict a window this candidate still needs: the shared cache may be wiped
@@ -3642,6 +3663,58 @@ class SubtitleParserService:
             if getattr(getattr(tokens[start], "feature", None), "pos1", None) == "接頭辞"
         ]
         return [w for w in windows if w in spelled or any(w.startswith(opener) for opener in openers)]
+
+    def _own_negative_windows(self, tokens: list, idx: int, windows: list[str]) -> list[str]:
+        """The windows that can turn away a recovered kana verb followed by its own negative (やま|ない, かまい|ませ|ん).
+
+        The dictionary lists many negatives as words of their own in kanji (止まない,
+        構いません), so the kana verb plus its own ない / ん / ぬ / ません
+        read as one of them and the verb got no card, while the kanji spelling
+        cards the verb. Such a window does not count when the entry is this
+        verb's own negative (``_own_form_in_kanji``: 止む gives 止まない) and no
+        dictionary spells it in kana. A homophone keeps the reject (やけ|ん is 野犬,
+        no 焼けん), and so does a 撥音便 stem (わかん|ない: which word the spoken
+        contraction cards is the owner's open call). ず is no tail here:
+        かかわら|ず is the adverb. And くだら, つまら, たまら and すま never come back
+        this way: their negatives are the adjectives and the apology the joiner
+        names (くだらない, すまぬ), also where a space or an unlisted ending kept
+        it from joining (くだら ない, たまりません). Nor do すぐれ and いたら, whose
+        negatives are words of their own (優れない 'unwell', 至らない
+        'inadequate'), nor かなわ: the tagger gives every kana かなわ 敵う
+        'to match', also the wish not granted (叶う), and no context tells the
+        two apart.
+        """
+        feature = getattr(tokens[idx], "feature", None)
+        c_form = getattr(feature, "cForm", None)
+        if getattr(feature, "pos1", None) != "動詞" or not isinstance(c_form, str) or "撥音便" in c_form:
+            return windows
+        if extract_orth_base(tokens[idx]) in ("くだる", "つまる", "たまる", "すむ", "かなう", "すぐれる", "いたる"):
+            return windows
+        tail = [tok.surface for tok in tokens[idx + 1 : idx + 3]]
+        if c_form.startswith("未然形") and tail[:1] and tail[0] in ("ない", "ねえ", "ねぇ", "ん", "ぬ"):
+            negative = tail[0]
+        elif c_form.startswith("連用形") and tail == ["ませ", "ん"]:
+            negative = "ません"
+        else:
+            return windows
+        own = tokens[idx].surface + negative
+        spelled = self._own_form_in_kanji(tokens[idx], negative)
+        if own not in windows or not spelled or self._attest is None:
+            return windows
+        listed = self._attest([own, spelled])
+        return [w for w in windows if w != own] if spelled in listed and own not in listed else windows
+
+    @staticmethod
+    def _own_form_in_kanji(token, tail: str) -> str:
+        """A kana verb token + ``tail`` as its lemma spells them (なくし + て → 無くして), "" when the lemma has no kanji."""
+        lemma, base = extract_lemma(token) or "", extract_orth_base(token) or ""
+        shared = 0
+        while shared < min(len(lemma), len(base)) and lemma[-1 - shared] == base[-1 - shared]:
+            shared += 1
+        kana_head = base[: len(base) - shared]
+        if not shared or not kana_head or not token.surface.startswith(kana_head):
+            return ""
+        return str(lemma[: len(lemma) - shared] + token.surface[len(kana_head) :] + tail)
 
     def _lexicalized_window_surfaces(self, tokens: list, idx: int, *, from_left: bool = False) -> list[str]:
         """Joined surfaces of every functional-neighbor window strictly containing ``tokens[idx]``.

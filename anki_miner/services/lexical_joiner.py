@@ -171,6 +171,7 @@ def _kana_join(tokens: list, i: int, grammar_points: bool) -> _Join | None:
             and (grammar_points or not row.grammar)
             and not _cut_from_negative(tokens, i + size - 1, row.line_start)
             and not _te_form_in_use(row.headword, tokens, i + size)
+            and not _auxiliary_after_te(row.headword, tokens, i)
         ):
             return _Join(
                 i, i + size - 1, row.headword, row.pos1, listed=True, line_start=row.line_start, after=row.after
@@ -203,6 +204,18 @@ def _te_form_in_use(headword: str, tokens: list, after: int) -> bool:
     やる is left out: どうしてやらないの is 'why' as often as not.
     """
     return headword == "どうして" and after < len(tokens) and extract_orth_base(tokens[after]) in _TE_FOLLOWERS
+
+
+def _auxiliary_after_te(headword: str, tokens: list, start: int) -> bool:
+    """Whether お|いで follows a verb's て, where it is an auxiliary and not the word おいで 'come'.
+
+    見ておいで 'go and look', 起きておいでですか 'are you up': after て it stands in for
+    きなさい / いらっしゃる, as くる and いる do there, and the verb keeps the line's card.
+    """
+    if headword != "おいで" or start == 0:
+        return False
+    before = tokens[start - 1]
+    return _pos2(before) == "接続助詞" and before.surface in ("て", "で")
 
 
 def _opens_clause(tokens: list, spans: dict[int, tuple[int, int]], i: int) -> bool:
