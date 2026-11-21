@@ -201,3 +201,41 @@ class TestAdjectiveGaruVerb:
         assert self._resolve("呼ばれた", "呼ぶ", {"呼ぶ", "呼ばる"}, {"呼ぶ"}) == "呼ぶ"
         # 強がり is not 強い + がる deinflected: nothing is added to the pool.
         assert self._resolve("強くて", "強い", {"強い", "強がる"}, {"強い"}) == "強い"
+
+
+@needs_tagger
+class TestDakuReading:
+    """抱く reads だく unless its object is a feeling, on the card and in the sentence."""
+
+    @pytest.mark.parametrize(
+        ("sentence", "ruby"),
+        [
+            ("彼女を抱いた", "抱[だ]いた"),
+            ("赤ちゃんを抱いている", "抱[だ]いて"),
+            ("抱かれたい", "抱[だ]かれたい"),
+            ("胸に抱く", "抱[だ]く"),
+        ],
+    )
+    def test_holding_someone_reads_daku(self, sentence: str, ruby: str) -> None:
+        word = _words(sentence)["抱く"]
+        assert word.expression_reading == "だく"
+        assert word.expression_furigana == "抱[だ]く"
+        assert ruby in word.sentence_furigana
+
+    @pytest.mark.parametrize(
+        ("sentence", "ruby"),
+        [
+            ("夢を抱く", "抱[いだ]く"),
+            ("不安を抱いている", "抱[いだ]いて"),
+            ("好意を 抱いた", "抱[いだ]いた"),
+            ("恨みすら抱いた", "抱[いだ]いた"),
+            ("罪悪感は抱かない", "抱[いだ]かない"),
+        ],
+    )
+    def test_harbouring_a_feeling_keeps_idaku(self, sentence: str, ruby: str) -> None:
+        word = _words(sentence)["抱く"]
+        assert word.expression_reading == "いだく"
+        assert ruby in word.sentence_furigana
+
+    def test_other_words_written_with_the_kanji_are_untouched(self) -> None:
+        assert _words("強く抱きしめた")["抱きしめる"].expression_reading == "だきしめる"

@@ -10,6 +10,7 @@ Import direction is one-way: ``subtitle_parser`` imports from this module;
 this module must never import ``subtitle_parser``.
 """
 
+import re
 from collections import Counter
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
@@ -645,6 +646,53 @@ def merge_compound_suffixes(
     tokens = _merge_noun_suffixes(tokens, attest)
     tokens = _merge_verb_nominalizers(tokens, attest)
     return tokens
+
+
+#: What 抱く takes when it reads いだく ('to harbour'): a feeling, a hope, a doubt,
+#: followed by its particle. Tuned on the dev shows: nouns ending in 意 (好意,
+#: 殺意), 感, 心, 念, 望, 情, 志, 想, 夢 or 欲, the listed words, and the kana-final
+#: 恨み, 思い, 憎しみ. Everything else is だく ('to hold in the arms').
+_IDAKU_OBJECT = re.compile(
+    "(?:[意感心念望情志想夢欲]|疑問|不満|期待|興味|恐怖|不審|覚悟|意識|屈辱|意思|虚無|憎悪|嫌悪|情熱|義憤|欲求"
+    "|不信|不安|印象|疑い|恨み|怒り|悩み|願い|望み|恐れ|憧れ|思い|想い|しみ|気持ち)(?:を|も|は|すら|さえ)$"
+)
+_IDAKU_KANA_FIELDS = ("kana", "kanaBase", "lForm", "pron", "pronBase", "form", "formBase")
+
+
+def reread_daku_tokens(tokens: list) -> list:
+    """Read 抱く as だく where its object is not a feeling (彼女を抱いた, 抱かれたい).
+
+    unidic-lite reads every 抱く イダク, the literary 'to harbour', which is
+    right only before an abstract object (夢を抱く, 不安を抱いている:
+    ``_IDAKU_OBJECT``); most lines mean 'to hold in the arms'. On the raw
+    stream, so the card and the sentence ruby agree. A token of the verb
+    written 抱… whose reading starts イダ loses that イ in every reading field;
+    抱きしめる and 抱っこ are their own words and never match.
+    """
+    out: list = []
+    before = ""
+    for token in tokens:
+        surface = token.surface if isinstance(token.surface, str) else ""
+        feature = getattr(token, "feature", None)
+        context = before.rstrip()
+        white_space = getattr(token, "white_space", "")
+        before += (white_space if isinstance(white_space, str) else "") + surface
+        if (
+            not surface.startswith("抱")
+            or getattr(feature, "pos1", None) != "動詞"
+            or getattr(feature, "lemma", None) != "抱く"
+            or not hasattr(feature, "_replace")
+            or _IDAKU_OBJECT.search(context)
+        ):
+            out.append(token)
+            continue
+        fields = {
+            name: value[1:]
+            for name in _IDAKU_KANA_FIELDS
+            if isinstance(value := getattr(feature, name, None), str) and value.startswith("イダ")
+        }
+        out.append(RetaggedToken(token, fields) if fields else token)
+    return out
 
 
 def _edit_distance(a: str, b: str) -> int:
