@@ -3257,12 +3257,17 @@ class SubtitleParserService:
             return not self._ellipsis_reject(word_token, text, tok_start, tok_end)
         how = self._kana_recovery(word_token)
         if how is not None:
-            if how == _KANA_AUX and self._used_as_auxiliary(word_token, tokens):
+            after_conditional = how == _KANA_AUX and self._is_good_after_conditional(word_token, tokens)
+            if how == _KANA_AUX and not after_conditional and self._used_as_auxiliary(word_token, tokens):
                 return False
             if how in (_KANA_LISTED, _KANA_LISTED_SPELLING) and self._listed_word_is_out_of_place(word_token, tokens):
                 return False
-            if how != _KANA_LISTED and self._rejected_by_lexicalized_window(
-                word_token, tokens, from_left=how == _KANA_AUX, listed_spelling=how == _KANA_LISTED_SPELLING
+            if (
+                how != _KANA_LISTED
+                and not after_conditional
+                and self._rejected_by_lexicalized_window(
+                    word_token, tokens, from_left=how == _KANA_AUX, listed_spelling=how == _KANA_LISTED_SPELLING
+                )
             ):
                 return False
             if self._is_kana_glue(word_token, text, tok_start, tok_end):
@@ -3395,6 +3400,28 @@ class SubtitleParserService:
             ):
                 return True
         return False
+
+    @staticmethod
+    def _is_good_after_conditional(word_token, tokens: list) -> bool:
+        """Whether いい / よい follows a conditional as the line's own predicate (読めばいい, 聞いたらいい, すりゃいい).
+
+        After ば, たら or a contracted conditional (すりゃ, 行きゃ, なきゃ) the
+        adjective is what the line says: 'it would be good if'. The window check
+        is skipped with the auxiliary one, as ばいい and たらいい are dictionary
+        expressions that would take it.
+        """
+        if getattr(word_token.feature, "orthBase", None) not in ("いい", "よい"):
+            return False
+        idx = next((i for i, tok in enumerate(tokens) if tok is word_token), None)
+        if not idx:
+            return False
+        prev = tokens[idx - 1]
+        if prev.surface == "ば" and getattr(prev.feature, "pos2", None) == "接続助詞":
+            return True
+        if prev.surface in ("たら", "だら") and getattr(prev.feature, "pos1", None) == "助動詞":
+            return True
+        c_form = getattr(prev.feature, "cForm", None)
+        return isinstance(c_form, str) and c_form.startswith("仮定形-融合")
 
     @staticmethod
     def _listed_word_is_out_of_place(word_token, tokens: list) -> bool:

@@ -87,7 +87,6 @@ class TestAuxCapableWordsAsMainWords:
             ("学生ではない", "ない"),
             ("学生である", "ある"),
             ("来てほしい", "ほしい"),
-            ("やればいい", "いい"),
             # Cries the tagger reads as やる and いる.
             ("やった！", "やる"),
             ("よし、やった", "やる"),

@@ -25,6 +25,8 @@ pytestmark = pytest.mark.skipif(not _fugashi_available(), reason="fugashi/unidic
 _ATTESTED = frozenset(
     {
         "ぬいぐるみ",
+        "いい",
+        "よい",
         "あんま",
         "ちっと",
         "ちと",
@@ -372,3 +374,13 @@ class TestWordsRefusedByPosition:
 
     def test_yoroshuu_before_gozaimasu_is_the_adjective(self):
         assert "よろしゅう" not in _fronts("よろしゅうございますか")
+
+
+class TestGoodAfterConditional:
+    @pytest.mark.parametrize("text", ["本を読めばいい", "先生に聞いたらいい", "どうすりゃいい", "早く行きゃいいんだ"])
+    def test_ii_after_a_conditional_is_the_lines_own_word(self, text):
+        assert "いい" in _fronts(text)
+
+    @pytest.mark.parametrize("text", ["食べてもいい", "見ていい", "帰っていいよ"])
+    def test_ii_after_te_stays_grammar(self, text):
+        assert "いい" not in _fronts(text)
