@@ -286,3 +286,66 @@ class TestChineseStyleOfABilingualFile:
         parser = build(AnkiMinerConfig())
 
         assert "了解" in {word.mined_form for word in parser.parse_subtitle_file(_ass(tmp_path, rows))}
+
+
+class TestSongStyleNames:
+    """Song styles of fansub ASS that carry a digit or a language code glued to OP / ED."""
+
+    @staticmethod
+    def _file(style: str) -> list[pysubs2.SSAEvent]:
+        dialogue = [_event("今日は学校に行く", start=i * 3000, end=i * 3000 + 2500, style="Dial-JP") for i in range(5)]
+        return [*dialogue, _event(r"{\fad(400,400)\blur2.5}変わらないよ", start=20000, end=22000, style=style)]
+
+    @pytest.mark.parametrize(
+        "style",
+        [
+            "EDJP",
+            "OPJP",
+            "OPJ",
+            "EDJ",
+            "JPED",
+            "OP1",
+            "ED2-JP",
+            "OPCN",
+            "OPCH",
+            "OPED_CH",
+            "Insert",
+            "IN-JP",
+            "injp",
+            "Music",
+            "*music",
+            "Lyrics",
+            "歌詞",
+            "OP歌词",
+            "片头",
+            "片尾曲",
+            "主题曲",
+        ],
+    )
+    def test_song_style_is_dropped(self, style):
+        assert "変わらないよ" not in _mined_texts(self._file(style))
+
+    @pytest.mark.parametrize(
+        "style",
+        [
+            "Text - JP - Top",
+            "JP-UP",
+            "jp_ontop",
+            "Dial-JP2",
+            "Intro",
+            "Edward",
+            "Opinion",
+            "Chopin",
+            "Main JP",
+            "music - up",
+        ],
+    )
+    def test_dialogue_style_stays(self, style):
+        assert "変わらないよ" in _mined_texts(self._file(style))
+
+    def test_main_style_named_like_a_song_is_never_dropped(self):
+        events = [_event("今日は学校に行く", start=i * 3000, end=i * 3000 + 2500, style="EDJP") for i in range(5)]
+        assert len(_mined_texts(events)) == 5
+
+    def test_kept_when_the_opening_ending_switch_is_off(self):
+        assert "変わらないよ" in _mined_texts(self._file("EDJP"), skip_non_dialogue=False)

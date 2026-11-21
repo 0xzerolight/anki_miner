@@ -58,10 +58,21 @@ __all__ = [
 #: ASS style names that mark an event as something other than dialogue. The
 #: alternation is bounded by non-word characters on both sides so a style named
 #: ``Subtitle`` does not match ``title`` and ``Fixed`` does not match ``ed``.
+#: An opening or ending style may carry a number and a language code glued to
+#: the word (``OP1``, ``EDJP``, ``JPED``, ``OPCN``); ``Top``, ``Edward`` and
+#: ``Intro`` still do not match. ``Music`` is a song style only as the whole
+#: name: ``music - up`` holds the dialogue shown above a song. The Chinese and
+#: Japanese names have no word boundary to test and match anywhere in the name.
+_STYLE_LANGUAGE_PREFIX = r"(?:jpn?|cn|chs|cht)"
+_STYLE_LANGUAGE_SUFFIX = r"(?:jpn?|j|cn|chs|cht|ch|日文|中文)"
 NON_DIALOGUE_STYLE_RE = re.compile(
     r"(?:^|[\W_])"
-    r"(?:signs?|songs?|karaoke|kara|op|ed|opening|ending|credits?|titles?|captions?|notes?|typeset\w*)"
-    r"(?:$|[\W_])",
+    r"(?:signs?|songs?|karaoke|kara|opening|ending|credits?|titles?|captions?|notes?|typeset\w*"
+    r"|insert|in[-_ ]?jp|lyrics?"
+    rf"|{_STYLE_LANGUAGE_PREFIX}?(?:oped|op|ed)\d*{_STYLE_LANGUAGE_SUFFIX}?)"
+    r"(?:$|[\W_])"
+    r"|^[\W_]*music[\W_]*$"
+    r"|歌詞|歌词|主题曲|片头|片尾",
     re.IGNORECASE,
 )
 
