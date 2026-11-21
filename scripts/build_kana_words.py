@@ -110,6 +110,17 @@ UNTAGGED_COMMON: frozenset[str] = frozenset(
     # Short spoken and period adverbs. Not ちと: as often a piece (俺っ|ちと, 俺ん|ちと).
     | {"あんま", "ちっと", "なんせ", "しばし"}
     | {"おら"}
+    # The interjection ('hey, come on'), beside the adverb 追い追い the tagger always reads:
+    # the parser retags the one that opens a line before a pause.
+    | {"おいおい"}
+    # Doubled adverbs without a priority tag. The parser's long-adverb rule refuses every exact
+    # pair, as the commonest are cries (ちょちょ, あらあら, おうおう), so the words are named.
+    # Not ちょいちょい (as often the cry ちょいちょいちょい) or しゃあしゃあ (the tail of いけしゃあしゃあ).
+    | {"ごちゃごちゃ", "ただただ", "ぼちぼち", "ついつい", "のこのこ", "もたもた", "よくよく"}
+    | {"ゆくゆく", "じゃんじゃん", "もろもろ", "ぬけぬけ", "むざむざ", "おめおめ", "ちょこちょこ", "うじうじ"}
+    | {"ほとほと", "ちまちま", "ぐんぐん", "うかうか", "じわじわ", "うじゃうじゃ", "ぐだぐだ", "すくすく"}
+    | {"おちおち", "もやもや", "ぬくぬく", "ぼつぼつ", "まずまず", "ばたばた", "へらへら", "めそめそ"}
+    | {"いちゃいちゃ", "ひやひや", "うだうだ", "うすうす", "やすやす"}
     | {
         "せがれ",
         "じじい",

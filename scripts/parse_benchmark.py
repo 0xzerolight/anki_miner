@@ -676,6 +676,15 @@ _ANCHOR_HEADWORDS: tuple[str, ...] = (
     # k1120b MC: やまない is only the READING of 止まない, the verb's own negative (kd07)
     "やむ",
     "止まない",
+    # k1120b MX: the request 下さい (k2mx01)
+    "下さい",
+    # k1120b MX: the listed interjection おいおい (k1mrj15)
+    "おいおい",
+    # k1120b MX: doubled kana adverbs named by list rows; ちょちょ is attested so its reject is the rule's
+    "ぼちぼち",
+    "ついつい",
+    "ごちゃごちゃ",
+    "ちょちょ",
 )
 
 # Yomitan `ruleIdentifiers` per fixture headword. A real term bank ships these,
