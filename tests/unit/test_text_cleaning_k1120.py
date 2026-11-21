@@ -12,7 +12,7 @@ from anki_miner.config.config import AnkiMinerConfig
 from anki_miner.gui.utils.service_factory import _create_subtitle_parser
 from anki_miner.languages.registry import get_profile
 from anki_miner.services.subtitle_cleaner import mining_events
-from anki_miner.utils.ja_normalize import strip_sound_labels
+from anki_miner.utils.ja_normalize import chinese_style_lines, strip_sound_labels
 from anki_miner.utils.text_utils import clean_subtitle_text
 
 
@@ -195,3 +195,94 @@ class TestTortoiseBracketSoundLabels:
         mined = {word.mined_form for word in parser.parse_subtitle_file(path)}
         assert "約束" in mined
         assert not {"ドア", "開く", "音", "銃声"} & mined
+
+
+# Lines of a made-up bilingual fansub file. is_chinese_line names the first ten
+# Chinese lines (a simplified form, or 你 without kana) and not the last two.
+_CHINESE_NAMED = [
+    "你今天怎么样",
+    "我们走吧",
+    "这是什么东西",
+    "他说的对吗",
+    "谢谢你的帮助",
+    "请问现在几点",
+    "我觉得很好",
+    "这个问题很难",
+    "对不起我来晚了",
+    "没关系别担心",
+]
+_CHINESE_UNNAMED = ["不要", "明白"]
+_JAPANESE_KANA = [
+    "今日はいい天気ですね",
+    "早く学校に行こう",
+    "約束を守ってください",
+    "この本は面白いよ",
+    "駅まで歩きましょう",
+    "猫が窓から逃げた",
+    "明日は雨が降るらしい",
+    "静かにしてくれ",
+    "荷物を運ぶのを手伝って",
+    "彼女は医者になった",
+]
+_JAPANESE_KANA_LESS = ["了解", "先生..."]
+
+
+def _ass(tmp_path, rows: list[tuple[str, str]]):
+    subs = pysubs2.SSAFile()
+    for style in {style for style, _text in rows}:
+        subs.styles[style] = pysubs2.SSAStyle()
+    for i, (style, text) in enumerate(rows):
+        subs.events.append(pysubs2.SSAEvent(start=i * 2000, end=i * 2000 + 1500, text=text, style=style))
+    path = tmp_path / "sub.ass"
+    subs.save(str(path))
+    return path
+
+
+class TestChineseStyleOfABilingualFile:
+    """is_chinese_line misses a short Chinese line; the style it sits in names it."""
+
+    def test_kana_less_lines_of_a_chinese_style_are_named(self):
+        chinese = [("Dial-CH", text) for text in _CHINESE_NAMED + _CHINESE_UNNAMED]
+        japanese = [("Dial-JP", text) for text in _JAPANESE_KANA + _JAPANESE_KANA_LESS]
+        assert chinese_style_lines(chinese + japanese) == [True] * 12 + [False] * 12
+
+    def test_a_line_with_kana_in_a_chinese_style_stays(self):
+        lines = [("Dial-CH", text) for text in [*_CHINESE_NAMED, *_CHINESE_UNNAMED, "「你好」って言ってみて"]]
+        assert chinese_style_lines(lines) == [True] * 12 + [False]
+
+    def test_a_japanese_style_with_kana_less_lines_is_not_chinese(self):
+        lines = [("Default", text) for text in _JAPANESE_KANA + _JAPANESE_KANA_LESS * 4]
+        assert not any(chinese_style_lines(lines))
+
+    def test_a_style_that_holds_both_languages_is_not_chinese(self):
+        lines = [("Default", text) for text in _CHINESE_NAMED + _JAPANESE_KANA + _CHINESE_UNNAMED]
+        assert not any(chinese_style_lines(lines))
+
+    def test_a_style_of_a_few_lines_is_not_judged(self):
+        lines = [("Dial-CH", text) for text in _CHINESE_NAMED[:7] + _CHINESE_UNNAMED]
+        assert not any(chinese_style_lines(lines))
+
+    @needs_tagger
+    @pytest.mark.parametrize("build", JA_BUILDERS)
+    def test_japanese_parser_mines_nothing_from_the_chinese_style(self, tmp_path, build):
+        japanese = _JAPANESE_KANA + _JAPANESE_KANA_LESS
+        chinese = _CHINESE_NAMED + _CHINESE_UNNAMED
+        rows = [
+            row for pair in zip(japanese, chinese, strict=True) for row in (("Dial-JP", pair[0]), ("Dial-CH", pair[1]))
+        ]
+        parser = build(AnkiMinerConfig())
+        path = _ass(tmp_path, rows)
+
+        mined = {word.mined_form for word in parser.parse_subtitle_file(path)}
+        assert {"了解", "先生", "約束"} <= mined
+        assert not {"不要", "明白"} & mined
+        # Still listed: previews and the line list show the file as written.
+        assert "不要" in _listed(parser, path)
+
+    @needs_tagger
+    @pytest.mark.parametrize("build", JA_BUILDERS)
+    def test_japanese_only_file_keeps_its_kana_less_lines(self, tmp_path, build):
+        rows = [("Default", text) for text in _JAPANESE_KANA] + [("Top", text) for text in _JAPANESE_KANA_LESS * 6]
+        parser = build(AnkiMinerConfig())
+
+        assert "了解" in {word.mined_form for word in parser.parse_subtitle_file(_ass(tmp_path, rows))}

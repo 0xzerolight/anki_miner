@@ -58,6 +58,7 @@ from __future__ import annotations
 import functools
 import re
 import unicodedata
+from collections.abc import Sequence
 
 # Halfwidth katakana → fullwidth mapping table. Each value is exactly three
 # characters: [base, dakuten form, handakuten form]; '-' marks an absent form.
@@ -509,3 +510,37 @@ def strip_sound_labels(text: str) -> str:
     if "〔" not in text:
         return text
     return _TORTOISE_GROUP_RE.sub(_strip_sound_label_match, text)
+
+
+# The Chinese style of a bilingual ASS file (Dial-CH, Text - CN, 中文).
+# is_chinese_line judges a line alone and misses a short one written with
+# shared characters (不要, 明白, 真的假的): about one line in five. Its style
+# gives it away: most of the style's lines are named and few carry kana. A
+# Japanese style never qualifies, kana-less lines and all, because far more
+# than three in ten of its lines carry kana.
+_CHINESE_STYLE_MIN_LINES = 10
+
+
+def chinese_style_lines(lines: Sequence[tuple[str, str]]) -> list[bool]:
+    """For each ``(style, cleaned line)`` of one file: a kana-less line of a Chinese style.
+
+    A style is Chinese when it has at least ten lines with text,
+    :func:`is_chinese_line` names two in five or more of them, and under three
+    in ten carry kana. Every kana-less line of such a style is named; a line
+    with kana in it (「你好」って言ってみて) is not. The Japanese parser is given
+    this as its ``skip_style_lines`` and mines nothing from a named line.
+    """
+    counts: dict[str, list[int]] = {}
+    for style, text in lines:
+        if not text:
+            continue
+        count = counts.setdefault(style, [0, 0, 0])
+        count[0] += 1
+        count[1] += is_chinese_line(text)
+        count[2] += _KANA_RE.search(text) is not None
+    chinese = {
+        style
+        for style, (total, named, kana) in counts.items()
+        if total >= _CHINESE_STYLE_MIN_LINES and named * 5 >= total * 2 and kana * 10 < total * 3
+    }
+    return [bool(text) and style in chinese and _KANA_RE.search(text) is None for style, text in lines]

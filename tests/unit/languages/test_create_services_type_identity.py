@@ -318,6 +318,8 @@ JA_PARSER_KEYWORDS = {
     "name_piece_rejects",
     # The 〔…〕 sound-label strip, ja's own factory's too.
     "strip_labels",
+    # The Chinese-style skip of a bilingual ASS file, ja's own factory's too.
+    "skip_style_lines",
 }
 
 
