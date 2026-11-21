@@ -97,7 +97,8 @@ UNTAGGED_COMMON: frozenset[str] = frozenset(
     # Pronouns of period, rural and rough speech (JMdict marks them archaic or
     # dialect): the everyday words of period drama, fantasy and yakuza films, and
     # none is the homograph of an everyday word, as the archaic rows left out below are.
-    # Left out: うぬ (as often the growl うぬぬ) and おら (the shout おら！).
+    # Left out: うぬ (as often the growl うぬぬ). おら is listed; the parser refuses the
+    # shout (おら！ おらよ) by what follows it.
     | {"そなた", "そち", "おぬし", "それがし", "おいら", "あっし", "わて", "あたい", "あたくし"}
     | {"こやつ", "あやつ", "こちとら"}
     # と-adverbs under four kana or drawn out, which the parser's length rule leaves to the
@@ -108,6 +109,7 @@ UNTAGGED_COMMON: frozenset[str] = frozenset(
     | {"いかなる", "とある", "さらなる", "ひょんな", "おっきな", "ちっちゃな", "なんたる"}
     # Short spoken and period adverbs. Not ちと: as often a piece (俺っ|ちと, 俺ん|ちと).
     | {"あんま", "ちっと", "なんせ", "しばし"}
+    | {"おら"}
     | {
         "せがれ",
         "じじい",

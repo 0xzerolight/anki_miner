@@ -16,3 +16,5 @@
 {"id":"kk16","sentence":"とある町で会った","expected":["とある","町","会う"],"category":"k1120-kana-words","note":"a kana pre-noun adjectival JMdict gives no priority tag"}
 {"id":"kk17","sentence":"水をちょうだい","expected":["水","ちょうだい"],"category":"k1120-kana-words","note":"the request noun as the line's own word"}
 {"id":"kk18","sentence":"しばし待たれよ","expected":["しばし","待つ"],"category":"k1120-kana-words","note":"a three-kana period adverb, by its list row"}
+{"id":"kk19","sentence":"おらの村だ","expected":["おら","村"],"category":"k1120-kana-words","note":"the rural pronoun, before a particle"}
+{"id":"kk20","sentence":"立てよ、おら","expected":["立てる"],"category":"k1120-kana-words","note":"the shout: no particle after it (the tagger reads 立てよ as 立てる)"}

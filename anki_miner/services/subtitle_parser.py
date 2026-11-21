@@ -3154,7 +3154,7 @@ class SubtitleParserService:
         if how is not None:
             if how == _KANA_AUX and self._used_as_auxiliary(word_token, tokens):
                 return False
-            if how == _KANA_LISTED_SPELLING and self._is_request_after_te(word_token, tokens):
+            if how in (_KANA_LISTED, _KANA_LISTED_SPELLING) and self._listed_word_is_out_of_place(word_token, tokens):
                 return False
             if how != _KANA_LISTED and self._rejected_by_lexicalized_window(
                 word_token, tokens, from_left=how == _KANA_AUX
@@ -3288,6 +3288,32 @@ class SubtitleParserService:
             ):
                 return True
         return False
+
+    @staticmethod
+    def _listed_word_is_out_of_place(word_token, tokens: list) -> bool:
+        """Whether a kana word mined by name is no word where it stands.
+
+        ちょうだい after a verb's て (``_is_request_after_te``); よろしゅう before
+        ございます, the adjective よろしい in its う form, where よろしゅう頼む is
+        the adverb; and おら anywhere but before a case or topic particle or a
+        plural (おらは, おらの, おらたち): bare, or before よ, it is the shout
+        (立てよ、おら！ おらよ).
+        """
+        surface = word_token.surface
+        if surface == "ちょうだい":
+            return SubtitleParserService._is_request_after_te(word_token, tokens)
+        if surface not in ("おら", "よろしゅう"):
+            return False
+        idx = next((i for i, tok in enumerate(tokens) if tok is word_token), None)
+        if idx is None:
+            return False
+        after = tokens[idx + 1].feature if idx + 1 < len(tokens) else None
+        if surface == "よろしゅう":
+            return getattr(after, "lemma", None) == "御座る"
+        pos1 = getattr(after, "pos1", None)
+        return not (
+            pos1 == "接尾辞" or (pos1 == "助詞" and getattr(after, "pos2", None) in ("格助詞", "係助詞", "副助詞"))
+        )
 
     @staticmethod
     def _is_request_after_te(word_token, tokens: list) -> bool:
@@ -3819,9 +3845,8 @@ class SubtitleParserService:
         return isinstance(lemma, str) and lemma != surface and any(is_cjk_ideograph(ch) for ch in lemma)
 
     #: Long kana adverbs that are no word where the tagger finds them: とんでも is
-    #: cut from とんでもねえ and とんでもありません, かったん is a dialect past's tail,
-    #: and よろしゅう before ございます the adjective よろしい.
-    _LONG_KANA_ADVERB_REJECTS: frozenset[str] = frozenset({"とんでも", "かったん", "よろしゅう"})
+    #: cut from とんでもねえ and とんでもありません, かったん is a dialect past's tail.
+    _LONG_KANA_ADVERB_REJECTS: frozenset[str] = frozenset({"とんでも", "かったん"})
 
     def _is_long_kana_adverb(self, pos1: str, surface: str, merged: bool) -> bool:
         """Whether an unlisted kana adverb is long enough to be mined without a list row (まさしく, さぞかし, ばったり).

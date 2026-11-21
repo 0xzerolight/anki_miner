@@ -345,3 +345,19 @@ class TestShortAdverbRows:
         fronts = _fronts("ちっとも分からない")
         assert "ちっとも" in fronts
         assert "ちっと" not in fronts
+
+
+class TestWordsRefusedByPosition:
+    @pytest.mark.parametrize("text", ["おらは行くだ", "おらの村だ", "おらたちの村だ"])
+    def test_mines_ora_the_pronoun_before_a_particle_or_a_plural(self, text):
+        assert "おら" in _fronts(text)
+
+    @pytest.mark.parametrize("text", ["おらよ", "立てよ、おら", "おら、どけ"])
+    def test_ora_the_shout_is_no_card(self, text):
+        assert "おら" not in _fronts(text)
+
+    def test_mines_yoroshuu_the_adverb(self):
+        assert "よろしゅう" in _fronts("よろしゅう頼みます")
+
+    def test_yoroshuu_before_gozaimasu_is_the_adjective(self):
+        assert "よろしゅう" not in _fronts("よろしゅうございますか")
