@@ -12,7 +12,7 @@ from anki_miner.config.config import AnkiMinerConfig
 from anki_miner.gui.utils.service_factory import _create_subtitle_parser
 from anki_miner.languages.registry import get_profile
 from anki_miner.services.subtitle_cleaner import mining_events
-from anki_miner.utils.ja_normalize import chinese_style_lines, strip_sound_labels
+from anki_miner.utils.ja_normalize import chinese_style_lines, strip_caption_labels, strip_sound_labels
 from anki_miner.utils.text_utils import clean_subtitle_text
 
 
@@ -393,3 +393,38 @@ class TestWaveDashInterjections:
 
         assert _listed(parser, path) == ["うーん どうしようかな", "すごい"]
         assert "うん" not in {word.mined_form for word in parser.parse_subtitle_file(path)}
+
+
+class TestSceneLabelLines:
+    """A caption rip boxes 回想 (a flashback) and 心の声 (a thought) as a row of their own."""
+
+    @staticmethod
+    def _clean(text: str) -> str:
+        return clean_subtitle_text(text, strip_labels=strip_caption_labels)
+
+    @pytest.mark.parametrize("label", ["回想", "心の声", r"{\pos(300,400)}回想", "　心の声　"])
+    def test_a_cue_that_is_only_the_label_is_dropped(self, label):
+        assert self._clean(label) == ""
+
+    def test_label_row_above_speech_goes_and_the_speech_stays(self):
+        assert self._clean("回想\\Nあの日は雨だった") == "あの日は雨だった"
+        assert self._clean("心の声\\Nどうしよう") == "どうしよう"
+
+    @pytest.mark.parametrize(
+        "line",
+        ["あの日の回想にふけっていた。", "僕たち 心の声が たまに聞こえちゃうんだ", "心の声を聞けば", "回想シーン"],
+    )
+    def test_the_words_inside_a_sentence_stay(self, line):
+        assert self._clean(line) == line
+
+    def test_sound_labels_still_go(self):
+        assert self._clean("〔銃声〕 危ない") == "危ない"
+
+    @needs_tagger
+    @pytest.mark.parametrize("build", JA_BUILDERS)
+    def test_japanese_parser_lists_no_label_row(self, tmp_path, build):
+        parser = build(AnkiMinerConfig())
+        path = _srt(tmp_path, "回想", "心の声", "あの日の回想にふけっていた。")
+
+        assert _listed(parser, path) == ["あの日の回想にふけっていた。"]
+        assert "回想" in {word.mined_form for word in parser.parse_subtitle_file(path)}

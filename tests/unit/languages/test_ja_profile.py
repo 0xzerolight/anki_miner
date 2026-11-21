@@ -24,7 +24,7 @@ from anki_miner.utils.ja_normalize import (
     is_chinese_line,
     normalize_for_tokenization,
     standardize_kanji_variants,
-    strip_sound_labels,
+    strip_caption_labels,
 )
 from anki_miner.utils.text_utils import (
     generate_furigana_from_tokens,
@@ -129,7 +129,7 @@ def test_create_parser_delegates_to_the_subtitle_parser_service(profile, monkeyp
             "has_target_script": profile.script.contains_target_script,
             "skip_line": is_chinese_line,
             "name_piece_rejects": True,
-            "strip_labels": strip_sound_labels,
+            "strip_labels": strip_caption_labels,
             "skip_style_lines": chinese_style_lines,
         },
     }

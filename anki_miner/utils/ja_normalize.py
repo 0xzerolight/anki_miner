@@ -530,8 +530,8 @@ def strip_sound_labels(text: str) -> str:
 
     ``〔鍵を掛ける音〕 待って`` keeps ``待って`` and a cue that is only
     ``〔銃声〕`` is left blank; ``〔考えろ！〕`` and ``〔お父さん…〕`` stay as
-    written. A group may wrap over two physical lines. The Japanese parser is
-    given this as its ``strip_labels``. Like :func:`is_chinese_line` it is not
+    written. A group may wrap over two physical lines. The Japanese parser
+    runs it inside its ``strip_labels`` (:func:`strip_caption_labels`). Like :func:`is_chinese_line` it is not
     part of the shared text cleaning: the test reads Japanese nouns, and drops
     text for not being speech.
     """
@@ -572,3 +572,23 @@ def chinese_style_lines(lines: Sequence[tuple[str, str]]) -> list[bool]:
         if total >= _CHINESE_STYLE_MIN_LINES and named * 5 >= total * 2 and kana * 10 < total * 3
     }
     return [bool(text) and style in chinese and _KANA_RE.search(text) is None for style, text in lines]
+
+
+# Scene labels a caption rip prints in a box of their own: 回想 (a flashback)
+# and 心の声 (a thought). A physical line that is nothing else is the label;
+# inside a sentence (あの日の回想にふけっていた) the words are speech.
+_SCENE_LABEL_LINES = frozenset({"回想", "心の声"})
+
+
+def strip_caption_labels(text: str) -> str:
+    """Delete the labels of a cue that are not speech: sound labels and scene-label lines.
+
+    Runs :func:`strip_sound_labels`, then blanks each physical line that is
+    exactly 回想 or 心の声. The Japanese parser is given this as its
+    ``strip_labels``; like :func:`is_chinese_line` it reads Japanese and is not
+    part of the shared text cleaning.
+    """
+    text = strip_sound_labels(text)
+    if "回想" not in text and "心の声" not in text:
+        return text
+    return "\n".join("" if line.strip() in _SCENE_LABEL_LINES else line for line in text.split("\n"))

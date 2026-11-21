@@ -24,7 +24,7 @@ from anki_miner.utils.ja_normalize import (
     is_chinese_line,
     normalize_for_tokenization,
     standardize_kanji_variants,
-    strip_sound_labels,
+    strip_caption_labels,
 )
 from anki_miner.utils.text_utils import clean_subtitle_text, strip_inline_annotations, strip_subtitle_markup
 from tests.e2e.fixtures_subtitle import SUBTITLE_LINES
@@ -223,7 +223,7 @@ def test_display_parsers_follow_the_profile_factory(test_config, monkeypatch):
     # ja: the caller's own class, with the script gate and Chinese-line skip ja's factory adds
     gate = get_profile("ja").script.contains_target_script
     assert calls == [
-        (test_config, {"has_target_script": gate, "skip_line": is_chinese_line, "strip_labels": strip_sound_labels})
+        (test_config, {"has_target_script": gate, "skip_line": is_chinese_line, "strip_labels": strip_caption_labels})
     ]
 
     zh_parser = object()
