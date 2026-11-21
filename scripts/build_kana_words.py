@@ -409,6 +409,13 @@ JOINS: tuple[tuple[str, str, str, str] | tuple[str, str, str, str, str], ...] = 
     ("いかん", "感動詞", "いか|ん", "conditional", "grammar"),
     ("ならん", "感動詞", "なら|ん", "conditional", "grammar"),
     ("なりません", "感動詞", "なり|ませ|ん", "conditional", "grammar"),
+    # K1120: kana expressions the tagger cuts (そう|いえ|ば was carded いう, そう|いや the adverb いや).
+    ("そういえば", "接続詞", "そう|いえ|ば", "start"),
+    ("そういや", "接続詞", "そう|いや", "start"),
+    ("なんとなく", "副詞", "なん|と|なく", ""),
+    ("もしも", "副詞", "もし|も", ""),
+    ("どうにか", "副詞", "どう|に|か", ""),
+    ("わがはい", "代名詞", "わが|はい", ""),
 )
 
 _HEADER = """\

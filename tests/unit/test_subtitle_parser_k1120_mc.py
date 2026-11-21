@@ -233,3 +233,46 @@ class TestPreNounWordIsNotInflected:
 
     def test_the_base_form_before_a_noun_stays_joined(self):
         assert "そう言う" in self._fronts("そう言う人もいる")
+
+
+_EXPRESSIONS = frozenset(
+    {
+        "そういえば",
+        "そういや",
+        "なんとなく",
+        "もしも",
+        "どうにか",
+        "わがはい",
+        "そう",
+        "いう",
+        "もし",
+        "どう",
+        "はい",
+        "もしもし",
+    }
+)
+
+
+class TestKanaExpressionsTheTaggerCuts:
+    @pytest.mark.parametrize(
+        ("text", "front", "pieces"),
+        [
+            ("そういえば昨日会った", "そういえば", {"そう", "いう"}),
+            ("そういや忘れてた", "そういや", {"そう"}),
+            ("なんとなくわかる", "なんとなく", set()),
+            ("もしも雨なら", "もしも", {"もし"}),
+            ("どうにかする", "どうにか", {"どう"}),
+            ("わがはいは猫である", "わがはい", {"はい"}),
+        ],
+    )
+    def test_mines_the_expression(self, text, front, pieces):
+        fronts = _fronts(text, terms=_EXPRESSIONS, readings=frozenset())
+        assert front in fronts
+        assert not pieces & set(fronts)
+
+    def test_the_connective_only_opens_a_clause(self):
+        fronts = _fronts("彼がそういえば", terms=_EXPRESSIONS, readings=frozenset())
+        assert "そういえば" not in fronts
+
+    def test_a_doubled_word_is_untouched(self):
+        assert _fronts("もしもし", terms=_EXPRESSIONS, readings=frozenset()) == ["もしもし"]

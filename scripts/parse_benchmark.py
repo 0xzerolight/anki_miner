@@ -640,6 +640,8 @@ _ANCHOR_HEADWORDS: tuple[str, ...] = (
     "かまわない",
     # k1120 MC: the obligation unit after a conditional (kc06)
     "いけない",
+    # k1120 MC: kana expressions joined by list rows (kc07)
+    "そういえば",
 )
 
 # Yomitan `ruleIdentifiers` per fixture headword. A real term bank ships these,
