@@ -460,3 +460,52 @@ def is_chinese_line(line: str) -> bool:
     if not _CHINESE_ONLY_HAN.isdisjoint(han) and _KANA_RE.search(line) is None:
         return True
     return not all(_japanese_charset_has(char) for char in han)
+
+
+# Sound labels a caption service writes in tortoise-shell brackets: 〔ドアが開く音〕,
+# 〔銃声〕, 〔晴子の声〕. The same brackets carry speech in those files (a voice
+# over a device, a thought: 〔考えろ！〕), so the bracket alone decides nothing.
+# A label is short, holds no sentence mark and ends in a noun that names a sound.
+_TORTOISE_GROUP_RE = re.compile(r"〔([^〔〕]*)〕")
+_SOUND_LABEL_TAILS = (
+    "音",
+    "声",
+    "息",
+    "息遣い",
+    "拍手",
+    "悲鳴",
+    "ノック",
+    "チャイム",
+    "ざわめき",
+    "どよめき",
+    "せき込み",
+    "すすり泣き",
+    "いびき",
+)
+_SOUND_LABEL_MAX_CHARS = 16
+_SENTENCE_MARKS = frozenset("。！？!?")
+
+
+def _strip_sound_label_match(match: re.Match[str]) -> str:
+    """A space for a 〔…〕 group that names a sound; any other group as written."""
+    inner = "".join(match.group(1).split())
+    if len(inner) > _SOUND_LABEL_MAX_CHARS or not inner.endswith(_SOUND_LABEL_TAILS):
+        return match.group(0)
+    if not _SENTENCE_MARKS.isdisjoint(inner):
+        return match.group(0)
+    return " "
+
+
+def strip_sound_labels(text: str) -> str:
+    """Delete the 〔…〕 groups of a cue that name a sound, keeping the ones that are speech.
+
+    ``〔鍵を掛ける音〕 待って`` keeps ``待って`` and a cue that is only
+    ``〔銃声〕`` is left blank; ``〔考えろ！〕`` and ``〔お父さん…〕`` stay as
+    written. A group may wrap over two physical lines. The Japanese parser is
+    given this as its ``strip_labels``. Like :func:`is_chinese_line` it is not
+    part of the shared text cleaning: the test reads Japanese nouns, and drops
+    text for not being speech.
+    """
+    if "〔" not in text:
+        return text
+    return _TORTOISE_GROUP_RE.sub(_strip_sound_label_match, text)

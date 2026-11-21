@@ -12,6 +12,7 @@ from anki_miner.config.config import AnkiMinerConfig
 from anki_miner.gui.utils.service_factory import _create_subtitle_parser
 from anki_miner.languages.registry import get_profile
 from anki_miner.services.subtitle_cleaner import mining_events
+from anki_miner.utils.ja_normalize import strip_sound_labels
 from anki_miner.utils.text_utils import clean_subtitle_text
 
 
@@ -131,3 +132,66 @@ class TestDoubleParenSpeech:
 
         assert _listed(parser, path) == ["｟約束を守れ｠ ｟嫌だよ｠", "今日は｟提案があります｠"]
         assert {"約束", "守る", "提案"} <= {word.mined_form for word in parser.parse_subtitle_file(path)}
+
+
+class TestTortoiseBracketSoundLabels:
+    """A caption service writes sound descriptions as 〔…〕; the same brackets also carry speech."""
+
+    @staticmethod
+    def _clean(text: str) -> str:
+        return clean_subtitle_text(text, strip_labels=strip_sound_labels)
+
+    @pytest.mark.parametrize(
+        "label",
+        [
+            "〔ドアが開く音〕",
+            "〔銃声〕",
+            "〔荒い息〕",
+            "〔拍手〕",
+            "〔悲鳴〕",
+            "〔ノック〕",
+            "〔チャイム〕",
+            "〔ため息〕",
+            "〔ざわめき〕",
+        ],
+    )
+    def test_a_cue_that_is_a_sound_label_is_dropped(self, label):
+        assert self._clean(label) == ""
+
+    def test_label_beside_speech_goes_and_the_speech_stays(self):
+        assert self._clean("〔鍵を掛ける音〕 待って") == "待って"
+        assert self._clean("危ない！〔銃声〕") == "危ない！"
+
+    def test_a_voice_label_goes_like_a_speaker_label(self):
+        assert self._clean("〔晴子の声〕早く来て") == "早く来て"
+
+    def test_label_wrapped_over_two_lines(self):
+        assert self._clean("〔ドアが\\N開く音〕") == ""
+
+    def test_a_paren_label_after_the_sound_label_is_still_stripped(self):
+        assert self._clean("〔鍵を掛ける音〕（健）待って") == "待って"
+
+    @pytest.mark.parametrize(
+        "speech", ["〔考えろ！〕", "〔お父さん…〕", "〔もしもし 聞こえる？〕", "〔何の音？〕", "〔パン！〕"]
+    )
+    def test_speech_in_the_same_brackets_stays(self, speech):
+        assert self._clean(speech) == speech
+
+    def test_a_long_bracket_is_not_a_label(self):
+        speech = "〔あの夜に確かに聞こえたのは彼女の声〕"
+        assert self._clean(speech) == speech
+
+    def test_shared_cleaning_keeps_the_bracket(self):
+        # The rule drops text for not being Japanese speech, so only the Japanese factory passes it.
+        assert clean_subtitle_text("〔ドアが開く音〕") == "〔ドアが開く音〕"
+
+    @needs_tagger
+    @pytest.mark.parametrize("build", JA_BUILDERS)
+    def test_japanese_parser_mines_nothing_from_a_sound_label(self, tmp_path, build):
+        parser = build(AnkiMinerConfig())
+        path = _srt(tmp_path, "〔ドアが開く音〕", "〔銃声〕 危ない", "(健)〔約束を守れ！〕")
+
+        assert _listed(parser, path) == ["危ない", "〔約束を守れ！〕"]
+        mined = {word.mined_form for word in parser.parse_subtitle_file(path)}
+        assert "約束" in mined
+        assert not {"ドア", "開く", "音", "銃声"} & mined

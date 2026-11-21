@@ -616,6 +616,7 @@ class SubtitleParserService:
         normalize: Callable[[str], str] | None = None,
         has_target_script: Callable[[str], bool] | None = None,
         skip_line: Callable[[str], bool] | None = None,
+        strip_labels: Callable[[str], str] | None = None,
         name_piece_rejects: bool = False,
         ellipsis_fragment_guard: bool = True,
         sentence_annotation: bool = True,
@@ -733,6 +734,10 @@ class SubtitleParserService:
                 file). Such a line is listed and previewed like any other and
                 never tokenized, so no word is mined from it. ``None`` — every
                 language but ja — tokenizes every line.
+            strip_labels: Rewrites a cue's normalized text, its physical lines
+                still apart, deleting labels that are not speech (ja: a 〔…〕
+                group that names a sound; :func:`clean_subtitle_text`).
+                ``None`` — every language but ja — changes nothing.
             name_piece_rejects: Whether a token UniDic cut out of a Japanese
                 name is turned away (``_is_kanji_glue``,
                 ``_is_name_honorific_tail``): its tables read UniDic lemmas and
@@ -814,6 +819,8 @@ class SubtitleParserService:
         # Same-script foreign-line reject for the flattened cue (see the
         # skip_line argument): what is left for it is a cue of such lines only.
         self._skip_line = skip_line
+        # Non-speech label strip, run inside the text cleaning (see the strip_labels argument).
+        self._strip_labels = strip_labels
         # Sentence furigana/reading generation (spec 6.1 #2); False ⇒ the three
         # annotation fields stay "".
         self._sentence_annotation = sentence_annotation
@@ -1326,7 +1333,8 @@ class SubtitleParserService:
     def _clean_line_text(self, raw_text: str, *, translation: bool = False) -> str:
         """Full per-line text pipeline shared by the mining and display paths.
 
-        Order: markup strip → JP normalization → per-physical-line annotation
+        Order: markup strip → JP normalization → the language's label strip
+        (only where one was injected) → per-physical-line annotation
         strip (always on) → other-script line drop (only where a language
         injected the gate) → whitespace collapse → ``_apply_text_filter``.
         Applied identically
@@ -1337,7 +1345,8 @@ class SubtitleParserService:
         the other-script gate.
         """
         gate = None if translation else self._has_target_script
-        cleaned = clean_subtitle_text(raw_text, normalize=self._normalize, has_target_script=gate)
+        labels = None if translation else self._strip_labels
+        cleaned = clean_subtitle_text(raw_text, normalize=self._normalize, has_target_script=gate, strip_labels=labels)
         if not translation and self._skips_as_written(cleaned):
             return cleaned
         return self._apply_text_filter(cleaned)
