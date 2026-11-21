@@ -63,6 +63,8 @@ TermCommonLookup = Callable[[list[str]], dict[str, bool] | None]
 
 _MAX_CONDITION_FLAGS = 32
 _MAX_RESULTS = 4096
+# Texts whose ``transform`` results one Deinflector keeps; the memo is emptied when full.
+_TRANSFORM_MEMO_SIZE = 16384
 
 # Trace frame: (transform_id, rule_index, text-before-deinflection).
 _TraceFrame = tuple[str, int, str]
@@ -176,6 +178,7 @@ class Deinflector:
         self._rules_by_last_char: dict[str, list[tuple[str, int, Rule]]] = {}
         self.transform_count = 0
         self.rule_count = 0
+        self._transform_memo: dict[str, tuple[TransformedText, ...]] = {}
         for transform in transforms:
             transform_id = str(transform["id"])
             self.transform_count += 1
@@ -228,7 +231,18 @@ class Deinflector:
         skip any (transform, rule, text) frame already on the path
         (``isCycle``). Result order differs from upstream (rule bucketing)
         but the result SET is identical; callers only test membership.
+
+        The rules never change after ``__init__``, so the results of a text are
+        memoized (``_TRANSFORM_MEMO_SIZE``); each call gets its own list.
         """
+        cached = self._transform_memo.get(source_text)
+        if cached is None:
+            if len(self._transform_memo) >= _TRANSFORM_MEMO_SIZE:
+                self._transform_memo.clear()
+            cached = self._transform_memo[source_text] = tuple(self._transform_uncached(source_text))
+        return list(cached)
+
+    def _transform_uncached(self, source_text: str) -> list[TransformedText]:
         results = [TransformedText(source_text, 0, ())]
         index = 0
         while index < len(results):
