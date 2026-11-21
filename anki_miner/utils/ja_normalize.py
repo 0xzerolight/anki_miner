@@ -392,10 +392,37 @@ def rewrite_double_parens(text: str) -> str:
     return text
 
 
+# The wave dash inside う～ん, よ～い, わ～い and せ～の is the word's own long
+# vowel. The default cleanup pattern deletes every wave dash, which is what gets
+# a stretched word mined (すご～い as すごい), but it turns these four into other
+# words: うん, よい (良い), わい (read as 沸く) and せの. Spelled with the long
+# mark they are the interjections they are. A closed set, never a general rule:
+# written with ー, はーい and すごーい are not mined at all.
+_WAVE_DASH_INTERJECTIONS = (
+    # Not after a kana or kanji other than う (違う～んだ), not before と (う～んと速い).
+    (re.compile(r"(?<![ぁ-いぇ-ゖァ-ヺ一-鿿々])う[～〜]+ん(?!と)"), "うーん"),
+    # No hiragana on either side: よ～いしょ and はっけよ～い are other words.
+    (re.compile(r"(?<![ぁ-ゖ])よ[～〜]+い(?![ぁ-ゖ])"), "よーい"),
+    # No kana, kanji or stretch mark before it and no kana or stretch mark
+    # after: うわ～い, かわ～いい, 卑わ～い.
+    (re.compile(r"(?<![ぁ-ゖァ-ヺー～〜一-鿿々])わ[～〜]+い(?![ぁ-ゖァ-ヺー～〜])"), "わーい"),
+    (re.compile(r"(?<![ぁ-ゖ])せ[～〜]+の(?![ぁ-ゖ])"), "せーの"),
+)
+
+
+def respell_wave_dash_interjections(text: str) -> str:
+    """Spell う～ん, よ～い, わ～い and せ～の with the long mark (うーん, よーい, わーい, せーの)."""
+    if "～" not in text and "〜" not in text:
+        return text
+    for pattern, spelled in _WAVE_DASH_INTERJECTIONS:
+        text = pattern.sub(spelled, text)
+    return text
+
+
 def normalize_for_tokenization(text: str) -> str:
     """Ordered pre-tokenization normalization chain (Yomitan ja preprocessor order).
 
-    Applies, in order: the doubled-parenthesis respelling (owned), decoration-glyph strip (owned, non-Yomitan), halfwidth-
+    Applies, in order: the doubled-parenthesis and wave-dash respellings (owned), decoration-glyph strip (owned, non-Yomitan), halfwidth-
     katakana folding, halfwidth-punctuation widening (owned), CJK-compatibility
     NFKD, radical NFKD, then a final NFC pass. NFC both composes input NFD kana (か + U+3099 → が) and recomposes the
     katakana the NFKD steps decomposed, so MeCab always receives precomposed
@@ -404,6 +431,7 @@ def normalize_for_tokenization(text: str) -> str:
     than an intermediate step, and the decoration strip).
     """
     text = rewrite_double_parens(text)
+    text = respell_wave_dash_interjections(text)
     text = strip_decoration_glyphs(text)
     text = convert_halfwidth_katakana(text)
     text = convert_halfwidth_punctuation(text)

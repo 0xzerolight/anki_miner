@@ -349,3 +349,47 @@ class TestSongStyleNames:
 
     def test_kept_when_the_opening_ending_switch_is_off(self):
         assert "変わらないよ" in _mined_texts(self._file("EDJP"), skip_non_dialogue=False)
+
+
+class TestWaveDashInterjections:
+    """う～ん, よ～い, わ～い, せ～の: the wave dash is the word's own long vowel."""
+
+    @pytest.mark.parametrize(
+        ("raw", "clean"),
+        [
+            ("う～ん どうしようかな", "うーん どうしようかな"),
+            ("う〜ん…", "うーん…"),
+            ("ううう～～ん", "うううーん"),
+            ("よ～い ドン！", "よーい ドン！"),
+            ("わ～い やった", "わーい やった"),
+            ("せ～の！", "せーの！"),
+        ],
+    )
+    def test_respelled_with_the_long_mark(self, raw, clean):
+        assert clean_subtitle_text(raw) == clean
+
+    @pytest.mark.parametrize(
+        "line",
+        [
+            "すご～い",
+            "は～い 分かりました",
+            "足が う～んと速いから",
+            "よ～いしょ",
+            "うわ～い",
+            "かわ～いい",
+            "違う～んだよ",
+            "卑わ～い",
+            "2〜3日",
+        ],
+    )
+    def test_every_other_wave_dash_is_left_to_the_cleanup_pattern(self, line):
+        assert clean_subtitle_text(line) == line
+
+    @needs_tagger
+    @pytest.mark.parametrize("build", JA_BUILDERS)
+    def test_a_hesitation_is_not_mined_as_yes(self, tmp_path, build):
+        parser = build(AnkiMinerConfig())
+        path = _srt(tmp_path, "う～ん どうしようかな", "すご～い")
+
+        assert _listed(parser, path) == ["うーん どうしようかな", "すごい"]
+        assert "うん" not in {word.mined_form for word in parser.parse_subtitle_file(path)}
