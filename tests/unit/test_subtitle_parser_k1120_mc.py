@@ -138,7 +138,6 @@ class TestKanaVerbWithItsOwnNegative:
             ("ふざけんなよ", "ふざけんな"),
             ("わからん", "わからん"),
             ("そんなものいらんわ", "いらん"),
-            ("かなわない", "かなわない"),
             ("かまわないよ", "かまわない"),
             ("つまらん", "つまらん"),
             ("つまらぬ", "つまらぬ"),
@@ -158,6 +157,11 @@ class TestKanaVerbWithItsOwnNegative:
     )
     def test_the_plain_verb_stays(self, text, front):
         assert front in _fronts(text, terms=_NEGATIVES, readings=frozenset())
+
+    def test_a_wish_that_did_not_come_true_is_not_no_match(self):
+        # かなわない is 敵わない 'no match for' and the tagger gives every かなわ 敵う,
+        # so no join can tell 夢がかなわなかった (叶う) apart: the row is parked.
+        assert "かなわない" not in _fronts("夢がかなわなかった", terms=_NEGATIVES, readings=frozenset())
 
 
 _OBLIGATION = frozenset(
