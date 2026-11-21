@@ -27,16 +27,20 @@ _TERMS = frozenset({"わけ", "ほう", "あと", "うえ", "もん", "あいさ
 _READINGS = frozenset({"たわけ", "ほうが", "あとで", "たうえ", "たもん", "ごあいさつ"})
 
 
-def _fronts(text: str, terms=_TERMS, readings=_READINGS) -> list[str]:
+def _words(text: str, terms=_TERMS, readings=_READINGS, config: AnkiMinerConfig | None = None):
     service = SubtitleParserService(
-        AnkiMinerConfig(),
+        config or AnkiMinerConfig(),
         term_lookup=lambda forms: {form for form in forms if form in terms},
         kana_attest_lookup=lambda forms: {form: form in terms or form in readings for form in forms},
     )
     words, _index, _counts = service.parse_text_units(
         [ReadingUnit(text=text, index=0, location_label="t")], want_line_index=False
     )
-    return [word.mined_form for word in words]
+    return words
+
+
+def _fronts(text: str, terms=_TERMS, readings=_READINGS, config: AnkiMinerConfig | None = None) -> list[str]:
+    return [word.mined_form for word in _words(text, terms, readings, config)]
 
 
 class TestListedSpellingWindow:
@@ -153,3 +157,48 @@ class TestKanaVerbWithItsOwnNegative:
     )
     def test_the_plain_verb_stays(self, text, front):
         assert front in _fronts(text, terms=_NEGATIVES, readings=frozenset())
+
+
+_OBLIGATION = frozenset(
+    {"ならない", "いけない", "いけません", "いかん", "ならん", "なりません", "なる", "いく", "いける"}
+)
+
+
+class TestObligationAfterAConditional:
+    """ならない / いけない after a conditional is the unit; the verb chain before it keeps its card."""
+
+    @pytest.mark.parametrize(
+        ("text", "front"),
+        [
+            ("行かなきゃいけない", "いけない"),
+            ("見てはいけない", "いけない"),
+            ("行かないといけない", "いけない"),
+            ("言っちゃいけなかった", "いけない"),
+            ("行ったらいけません", "いけません"),
+            ("食べちゃいかん", "いかん"),
+            ("行かなければならない", "ならない"),
+            ("行かなくちゃならない", "ならない"),
+            ("行かねばならん", "ならん"),
+            ("触ってはなりません", "なりません"),
+        ],
+    )
+    def test_mines_the_unit_after_the_conditional(self, text, front):
+        fronts = _fronts(text, terms=_OBLIGATION, readings=frozenset())
+        assert fronts[0] in {"行く", "見る", "言う", "食べる", "触る"}
+        assert fronts[1:] == [front]
+
+    @pytest.mark.parametrize("text", ["医者にならない", "それはいけない", "今日はいけない", "見るといけない"])
+    def test_no_unit_without_a_conditional(self, text):
+        fronts = _fronts(text, terms=_OBLIGATION, readings=frozenset())
+        assert not {"ならない", "いけない"} & set(fronts)
+
+    def test_the_unit_starts_after_the_verb_chain(self):
+        text = "行かなければならない"
+        verb, unit = _words(text, terms=_OBLIGATION, readings=frozenset())
+        assert text[verb.surface_start : verb.highlight_end] == "行かなければ"
+        assert text[unit.surface_start : unit.highlight_end] == "ならない"
+
+    def test_no_unit_with_grammar_points_off(self):
+        config = AnkiMinerConfig(mine_grammar_points=False)
+        fronts = _fronts("行かなきゃいけない", terms=_OBLIGATION, readings=frozenset(), config=config)
+        assert "いけない" not in fronts

@@ -401,6 +401,14 @@ JOINS: tuple[tuple[str, str, str, str] | tuple[str, str, str, str, str], ...] = 
     ("くだらん", "感動詞", "くだら|ん", ""),
     ("くだらぬ", "感動詞", "くだら|ぬ", ""),
     ("たまらん", "感動詞", "たまら|ん", ""),
+    # K1120: the obligation unit after a conditional (行かなければ|ならない, 見ては|いけない). Never
+    # なければならない as one word: the verb chain keeps the conditional.
+    ("ならない", "形容詞", "なら|=ない", "conditional", "grammar"),
+    ("いけない", "形容詞", "いけ|=ない", "conditional", "grammar"),
+    ("いけません", "感動詞", "いけ|ませ|ん", "conditional", "grammar"),
+    ("いかん", "感動詞", "いか|ん", "conditional", "grammar"),
+    ("ならん", "感動詞", "なら|ん", "conditional", "grammar"),
+    ("なりません", "感動詞", "なり|ませ|ん", "conditional", "grammar"),
 )
 
 _HEADER = """\

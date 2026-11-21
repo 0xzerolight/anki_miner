@@ -638,6 +638,8 @@ _ANCHOR_HEADWORDS: tuple[str, ...] = (
     "すんません",
     # k1120 MC: a kana verb + its own negative, listed (kc05)
     "かまわない",
+    # k1120 MC: the obligation unit after a conditional (kc06)
+    "いけない",
 )
 
 # Yomitan `ruleIdentifiers` per fixture headword. A real term bank ships these,

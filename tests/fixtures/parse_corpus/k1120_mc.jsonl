@@ -3,3 +3,4 @@
 {"id":"kc03","sentence":"もうやだ","expected":["もう","やだ"],"category":"lexical-join","note":"や|だ joined: the spoken いやだ is listed as やだ."}
 {"id":"kc04","sentence":"すんません","expected":["すんません"],"category":"lexical-join","note":"すん|ませ|ん joined, as すみません is."}
 {"id":"kc05","sentence":"かまわないよ","expected":["かまわない"],"category":"lexical-join","note":"かまわ|ない joined: 構わない is its own entry."}
+{"id":"kc06","sentence":"行かなきゃいけない","expected":["行く","いけない"],"category":"lexical-join","note":"The obligation unit is what follows the conditional; 行かなきゃ stays the verb's chain."}

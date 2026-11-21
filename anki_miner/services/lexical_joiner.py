@@ -89,6 +89,11 @@ _MAX_KANA_TOKENS = max(len(key) for key in (*kana_words().joins, *kana_words().b
 _CLAUSE_BREAK_POS1 = frozenset({"補助記号", "記号"})
 _NOUN_POS1 = frozenset({"名詞", "代名詞", "接尾辞"})
 _VERB_POS1 = frozenset({"動詞", "助動詞"})
+# What ends a conditional before the obligation unit (行かなければ|ならない,
+# 見ちゃ|いけない, 行ったら|いけません, 行かなきゃ|いけない). ては and ないと take two
+# tokens (``_after_conditional``).
+_CONDITIONAL_PARTICLES = frozenset({"ば", "ちゃ", "じゃ", "ちゃあ", "じゃあ"})
+_CONDITIONAL_AUXILIARIES = frozenset({"たら", "だら", "なきゃ", "なけりゃ"})
 
 # 思わず read as a negated verb, not the adverb: followed by に (思わずに
 # 'without thinking') or after とは/とも (そうとは思わず 'not thinking so'). A bare
@@ -187,6 +192,7 @@ def _follows(tokens: list, i: int, after: str, joined_pos1: str | None = None) -
     A "clause" row (んだ, んです) follows whatever can end a clause (``_ends_clause``).
     A "copula" row (じゃない, ではない) refuses a verb: there the で or じゃ is the
     verb's te-form (読んではない, 読んじゃない), which its highlight already covers.
+    A "conditional" row (ならない, いけない) follows a conditional (``_after_conditional``).
     """
     if not after:
         return True
@@ -194,6 +200,8 @@ def _follows(tokens: list, i: int, after: str, joined_pos1: str | None = None) -
         return i == 0 or joined_pos1 is not None or _ends_clause(tokens[i - 1])
     if after == "copula":
         return i == 0 or (joined_pos1 or _pos1(tokens[i - 1])) != "動詞"
+    if after == "conditional":
+        return _after_conditional(tokens, i)
     if i == 0:
         return False
     before = tokens[i - 1]
@@ -203,6 +211,38 @@ def _follows(tokens: list, i: int, after: str, joined_pos1: str | None = None) -
     if joined_pos1 is None and pos1 == "助動詞" and extract_lemma(before) == "だ":
         return False
     return pos1 in _VERB_POS1
+
+
+def _after_conditional(tokens: list, i: int) -> bool:
+    """Whether ``tokens[i]`` comes right after a conditional, where ならない / いけない is the obligation unit.
+
+    行かなければ|ならない, 見ては|いけない, 行かないと|いけない, 食べちゃ|いかん: the unit
+    is what follows the conditional, and the verb chain before it keeps its own
+    card (a chain wins over an expression that starts inside it, so
+    なければならない is never one word). Anywhere else the same tokens are the
+    plain verb (医者にならない, 今日はいけない). と counts only after a negative
+    (ないと): 見るといけない is as often 'in case someone sees'.
+    """
+    if i == 0:
+        return False
+    before = tokens[i - 1]
+    pos1 = _pos1(before)
+    if pos1 == "助動詞":
+        return before.surface in _CONDITIONAL_AUXILIARIES
+    if pos1 != "助詞":
+        return False
+    earlier = tokens[i - 2] if i > 1 else None
+    if _pos2(before) == "接続助詞":
+        if before.surface == "と":
+            return earlier is not None and extract_orth_base(earlier) == "ない"
+        return before.surface in _CONDITIONAL_PARTICLES
+    # ては / では: the topic は right after a verb's て.
+    return (
+        before.surface == "は"
+        and earlier is not None
+        and _pos2(earlier) == "接続助詞"
+        and earlier.surface in ("て", "で")
+    )
 
 
 def _ends_clause(before) -> bool:
