@@ -3431,16 +3431,26 @@ class SubtitleParserService:
         ございます, the adjective よろしい in its う form, where よろしゅう頼む is
         the adverb; and おら anywhere but before a case or topic particle or a
         plural (おらは, おらの, おらたち): bare, or before よ, it is the shout
-        (立てよ、おら！ おらよ).
+        (立てよ、おら！ おらよ). ちと glued to the word before it is cut from that
+        word (俺っ|ちと, 俺ん|ちと); the adverb follows a space, a line start or a
+        particle.
         """
         surface = word_token.surface
         if surface == "ちょうだい":
             return SubtitleParserService._is_request_after_te(word_token, tokens)
-        if surface not in ("おら", "よろしゅう"):
+        if surface not in ("おら", "よろしゅう", "ちと"):
             return False
         idx = next((i for i, tok in enumerate(tokens) if tok is word_token), None)
         if idx is None:
             return False
+        if surface == "ちと":
+            if not idx:
+                return False
+            prev = tokens[idx - 1]
+            before = getattr(prev.feature, "pos1", None)
+            # A stray kana the tagger calls a symbol (俺|っ|ちと) is no pause.
+            pause = before == "助詞" or (before == "補助記号" and not _is_kana_candidate(prev.surface))
+            return not pause and not getattr(word_token, "white_space", "")
         after = tokens[idx + 1].feature if idx + 1 < len(tokens) else None
         if surface == "よろしゅう":
             return getattr(after, "lemma", None) == "御座る"

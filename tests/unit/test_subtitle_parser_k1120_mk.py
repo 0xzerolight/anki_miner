@@ -375,6 +375,14 @@ class TestWordsRefusedByPosition:
     def test_yoroshuu_before_gozaimasu_is_the_adjective(self):
         assert "よろしゅう" not in _fronts("よろしゅうございますか")
 
+    @pytest.mark.parametrize("text", ["ちと尋ねたい", "お城で ちと話がある", "子供にはちと重い"])
+    def test_mines_chito_after_a_pause_or_a_particle(self, text):
+        assert "ちと" in _fronts(text)
+
+    @pytest.mark.parametrize("text", ["俺っちと来い", "俺んちと隣の家だ"])
+    def test_chito_glued_to_the_word_before_it_is_a_piece(self, text):
+        assert "ちと" not in _fronts(text)
+
 
 class TestGoodAfterConditional:
     @pytest.mark.parametrize("text", ["本を読めばいい", "先生に聞いたらいい", "どうすりゃいい", "早く行きゃいいんだ"])
