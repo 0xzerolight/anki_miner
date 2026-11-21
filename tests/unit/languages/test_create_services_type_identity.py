@@ -316,6 +316,10 @@ JA_PARSER_KEYWORDS = {
     "skip_line",
     # The UniDic name-piece rejects (助, 夜|神君), ja's own factory's too.
     "name_piece_rejects",
+    # The 〔…〕 sound-label strip, ja's own factory's too.
+    "strip_labels",
+    # The Chinese-style skip of a bilingual ASS file, ja's own factory's too.
+    "skip_style_lines",
 }
 
 

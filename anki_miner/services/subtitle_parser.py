@@ -656,6 +656,8 @@ class SubtitleParserService:
         normalize: Callable[[str], str] | None = None,
         has_target_script: Callable[[str], bool] | None = None,
         skip_line: Callable[[str], bool] | None = None,
+        strip_labels: Callable[[str], str] | None = None,
+        skip_style_lines: Callable[[Sequence[tuple[str, str]]], Sequence[bool]] | None = None,
         name_piece_rejects: bool = False,
         ellipsis_fragment_guard: bool = True,
         sentence_annotation: bool = True,
@@ -773,6 +775,17 @@ class SubtitleParserService:
                 file). Such a line is listed and previewed like any other and
                 never tokenized, so no word is mined from it. ``None`` — every
                 language but ja — tokenizes every line.
+            strip_labels: Rewrites a cue's normalized text, its physical lines
+                still apart, deleting labels that are not speech (ja: a 〔…〕
+                group that names a sound; :func:`clean_subtitle_text`).
+                ``None`` — every language but ja — changes nothing.
+            skip_style_lines: Given every cue of one file as ``(style, cleaned
+                text)``, says for each whether its style marks it as another
+                language (ja: a kana-less line in the Chinese style of a
+                bilingual ASS file, which ``skip_line`` judges alone and
+                misses). Such a cue is listed and never tokenized, like one
+                ``skip_line`` names. ``None`` — every language but ja — asks
+                nothing.
             name_piece_rejects: Whether a token UniDic cut out of a Japanese
                 name is turned away (``_is_kanji_glue``,
                 ``_is_name_honorific_tail``): its tables read UniDic lemmas and
@@ -854,6 +867,10 @@ class SubtitleParserService:
         # Same-script foreign-line reject for the flattened cue (see the
         # skip_line argument): what is left for it is a cue of such lines only.
         self._skip_line = skip_line
+        # Non-speech label strip, run inside the text cleaning (see the strip_labels argument).
+        self._strip_labels = strip_labels
+        # Per-file style reject (see the skip_style_lines argument).
+        self._skip_style_lines = skip_style_lines
         # Sentence furigana/reading generation (spec 6.1 #2); False ⇒ the three
         # annotation fields stay "".
         self._sentence_annotation = sentence_annotation
@@ -1366,7 +1383,8 @@ class SubtitleParserService:
     def _clean_line_text(self, raw_text: str, *, translation: bool = False) -> str:
         """Full per-line text pipeline shared by the mining and display paths.
 
-        Order: markup strip → JP normalization → per-physical-line annotation
+        Order: markup strip → JP normalization → the language's label strip
+        (only where one was injected) → per-physical-line annotation
         strip (always on) → other-script line drop (only where a language
         injected the gate) → whitespace collapse → ``_apply_text_filter``.
         Applied identically
@@ -1377,7 +1395,8 @@ class SubtitleParserService:
         the other-script gate.
         """
         gate = None if translation else self._has_target_script
-        cleaned = clean_subtitle_text(raw_text, normalize=self._normalize, has_target_script=gate)
+        labels = None if translation else self._strip_labels
+        cleaned = clean_subtitle_text(raw_text, normalize=self._normalize, has_target_script=gate, strip_labels=labels)
         if not translation and self._skips_as_written(cleaned):
             return cleaned
         return self._apply_text_filter(cleaned)
@@ -1581,6 +1600,7 @@ class SubtitleParserService:
                 self._line_cache.pop(key)
 
         subs = self._load_subs(subtitle_file)
+        unmined = self._style_skipped_events(subs)
 
         # Tokenize lazily and yield each line as it is produced — preserving the
         # exact interleaving of tokenizer calls with any per-word tagger work a
@@ -1603,7 +1623,12 @@ class SubtitleParserService:
             # Convert timing from milliseconds to seconds. The offset is NOT
             # applied here: what the cache stores must stay offset-neutral so a
             # later parse at a different offset can replay it.
-            line_state = self._build_line_state(text, line.start / 1000.0, line.end / 1000.0)
+            start, end = line.start / 1000.0, line.end / 1000.0
+            if id(line) in unmined:
+                # Listed like any other cue and never tokenized, as a line skip_line names.
+                line_state = (text, [], [], start, end, end - start)
+            else:
+                line_state = self._build_line_state(text, start, end)
             line_states.append(line_state)
             # The cache keeps every line; registered chapter spans (F-08) apply
             # here, on the file's own timeline, as in the replay above.
@@ -1622,6 +1647,21 @@ class SubtitleParserService:
             if len(self._line_cache) >= _LINE_CACHE_MAX_FILES:
                 self._line_cache.pop(next(iter(self._line_cache)))
             self._line_cache[key] = (fingerprint, line_states)
+
+    def _style_skipped_events(self, subs: Any) -> frozenset[int]:
+        """The ``id`` of each cue of a loaded file that the injected ``skip_style_lines`` names.
+
+        Asked once per file, and only of a file with more than one style: the
+        rule reads how the lines of a style are written as a whole. A test's
+        stand-in for a loaded file is left alone, as in ``_load_subs``.
+        """
+        if self._skip_style_lines is None or not isinstance(subs, pysubs2.SSAFile):
+            return frozenset()
+        events = [event for event in subs if getattr(event, "is_comment", None) is not True]
+        if len({event.style for event in events}) < 2:
+            return frozenset()
+        named = self._skip_style_lines([(event.style, self._clean_line_text(event.text)) for event in events])
+        return frozenset(id(event) for event, skip in zip(events, named, strict=True) if skip)
 
     def _build_line_state(
         self, text: str, start: float, end: float

@@ -58,10 +58,21 @@ __all__ = [
 #: ASS style names that mark an event as something other than dialogue. The
 #: alternation is bounded by non-word characters on both sides so a style named
 #: ``Subtitle`` does not match ``title`` and ``Fixed`` does not match ``ed``.
+#: An opening or ending style may carry a number and a language code glued to
+#: the word (``OP1``, ``EDJP``, ``JPED``, ``OPCN``); ``Top``, ``Edward`` and
+#: ``Intro`` still do not match. ``Music`` is a song style only as the whole
+#: name: ``music - up`` holds the dialogue shown above a song. The Chinese and
+#: Japanese names have no word boundary to test and match anywhere in the name.
+_STYLE_LANGUAGE_PREFIX = r"(?:jpn?|cn|chs|cht)"
+_STYLE_LANGUAGE_SUFFIX = r"(?:jpn?|j|cn|chs|cht|ch|日文|中文)"
 NON_DIALOGUE_STYLE_RE = re.compile(
     r"(?:^|[\W_])"
-    r"(?:signs?|songs?|karaoke|kara|op|ed|opening|ending|credits?|titles?|captions?|notes?|typeset\w*)"
-    r"(?:$|[\W_])",
+    r"(?:signs?|songs?|karaoke|kara|opening|ending|credits?|titles?|captions?|notes?|typeset\w*"
+    r"|insert|in[-_ ]?jp|lyrics?"
+    rf"|{_STYLE_LANGUAGE_PREFIX}?(?:oped|op|ed)\d*{_STYLE_LANGUAGE_SUFFIX}?)"
+    r"(?:$|[\W_])"
+    r"|^[\W_]*music[\W_]*$"
+    r"|歌詞|歌词|主题曲|片头|片尾",
     re.IGNORECASE,
 )
 
@@ -563,17 +574,48 @@ def clamp_rolling_ends(events: Sequence[pysubs2.SSAEvent]) -> list[pysubs2.SSAEv
 def mining_events(events: Sequence[pysubs2.SSAEvent], *, skip_non_dialogue: bool) -> list[pysubs2.SSAEvent]:
     """The cues mining, Condense and Readability read from a loaded file.
 
-    Comment events go, karaoke and animated-sign bursts collapse (MS-12, always),
+    Comment events and ruby reading rows (:func:`_is_ruby_reading_event`) go,
+    karaoke and animated-sign bursts collapse (MS-12, always),
     and with *skip_non_dialogue* (``config.skip_opening_ending``, F-08) songs,
     signs and drawings go too. The collapse runs first, so a karaoke opening's
     hundreds of frames cannot make its style the file's main style. A rolling
     caption track then has its cue ends pulled in to the next cue's start
     (:func:`clamp_rolling_ends`), judged on the dialogue that is left.
     """
-    spoken = [event for event in events if getattr(event, "is_comment", None) is not True]
+    spoken = [
+        event
+        for event in events
+        if getattr(event, "is_comment", None) is not True and not _is_ruby_reading_event(event)
+    ]
     collapsed = collapse_frame_bursts(spoken)
     dialogue = drop_non_dialogue_events(collapsed) if skip_non_dialogue else collapsed
     return clamp_rolling_ends(dialogue)
+
+
+#: The first override block of an event, and one scale override in a block.
+_LEADING_OVERRIDE_RE = re.compile(r"^\{[^}]*\}")
+_SCALE_TAG_RE = re.compile(r"\\fsc([xy])(\d+(?:\.\d+)?)")
+
+
+def _is_ruby_reading_event(event: pysubs2.SSAEvent) -> bool:
+    """Whether a cue is a ruby reading drawn as its own half-size event.
+
+    A caption rip writes the reading of a kanji as a separate event in the
+    dialogue style, above the caption row and at the same time. It is drawn at
+    half size in both directions for the whole event: the first override block
+    sets ``\\fscx50`` and ``\\fscy50`` and no later block sets another scale.
+    The scale is exactly 50 and not a threshold: half width alone is half-width
+    kana and punctuation inside speech, and dialogue drawn at two thirds size
+    exists. Always dropped, like the burst collapse: the reading is not speech
+    whatever the opening/ending switch says.
+    """
+    text = event.text or ""
+    lead = _LEADING_OVERRIDE_RE.match(text)
+    if lead is None:
+        return False
+    if {axis for axis, _value in _SCALE_TAG_RE.findall(lead.group())} != {"x", "y"}:
+        return False
+    return all(value == "50" for _axis, value in _SCALE_TAG_RE.findall(text))
 
 
 #: Chapter titles that mark an opening, ending, preview or credits (F-08,
