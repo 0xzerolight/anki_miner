@@ -86,6 +86,7 @@ _ATTESTED = frozenset(
         "べっぴん",
     }
     | {"いやいや", "ちょうだい", "ごらん", "せんかい", "もったい", "ひかり", "かけがえ", "こんなん", "じょじょ"}
+    | {"いっしょ", "がってん"}
 )
 
 
@@ -145,6 +146,16 @@ class TestLongKanaSpellings:
     @pytest.mark.parametrize(("text", "front"), [("早うせんかい", "せんかい"), ("じょじょじょ、上手だね", "じょじょ")])
     def test_an_unlisted_sino_japanese_reading_is_no_card(self, text, front):
         assert front not in _fronts(text)
+
+    @pytest.mark.parametrize(
+        ("text", "front"),
+        [("そんなわけないっしょ", "いっしょ"), ("もう いいっしょ", "いっしょ"), ("何を 残念がってんの？", "がってん")],
+    )
+    def test_a_piece_of_a_contraction_is_no_card(self, text, front):
+        # The tagger cuts っしょ (でしょ) after an い-ending word as い|いっしょ and
+        # 〜がってる as た|がってん: a listed row would card the piece.
+        assert front not in _fronts(text)
+        assert not is_listed(front, "名詞", merged=False)
 
     def test_a_three_kana_noun_stays_by_name(self):
         assert "ひかり" not in _fronts("ひかりが見えた")

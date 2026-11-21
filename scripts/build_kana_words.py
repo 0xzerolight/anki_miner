@@ -59,7 +59,7 @@ SHORT_SPELLED_NOUNS: frozenset[str] = frozenset(
     {"とおり", "おなか", "ゆうべ", "かぎり", "におい", "しょうゆ", "けんか", "うわさ", "まぬけ", "あげく"}
     | {"おかげ", "ほんと", "ほんま", "ごはん", "あした", "しかた", "ふだん", "ことし"}
     | {"ようす", "しっぽ", "きげん", "ぜんぶ"}
-    | {"ないしょ", "いっしょ", "ひきょう", "いっちょ", "ちゅうちょ"}
+    | {"ないしょ", "ひきょう", "いっちょ", "ちゅうちょ"}
     # Not からだ, ことば or ありか: in a line each is as often two words (来た|から|だ,
     # the dialect object こと|ば, 何でも|あり|か).
     | {"ちから", "いのち", "かたち", "ふたり", "せがれ", "じじい", "ばばあ", "おかみ"}
@@ -92,8 +92,8 @@ UNTAGGED_COMMON: frozenset[str] = frozenset(
     # Sino-Japanese nouns subtitles write in kana. The parser recovers a long kana
     # spelling without a priority tag by rule only when the word is native
     # (SubtitleParserService._is_long_kana_spelling), so these are named.
-    | {"ちきしょう", "いっちょ", "ないしょ", "いっしょ", "ひきょう", "べっぴん", "じきじき", "まんじゅう", "こんにゃく"}
-    | {"ちゅうちょ", "しょんべん", "がってん", "ようかん", "そうめん", "もうろく", "たくあん", "けいれん", "ろうぜき"}
+    | {"ちきしょう", "いっちょ", "ないしょ", "ひきょう", "べっぴん", "じきじき", "まんじゅう", "こんにゃく"}
+    | {"ちゅうちょ", "しょんべん", "ようかん", "そうめん", "もうろく", "たくあん", "けいれん", "ろうぜき"}
     # Pronouns of period, rural and rough speech (JMdict marks them archaic or
     # dialect): the everyday words of period drama, fantasy and yakuza films, and
     # none is the homograph of an everyday word, as the archaic rows left out below are.
