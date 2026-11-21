@@ -443,3 +443,68 @@ class TestSceneLabelLines:
 
         assert _listed(parser, path) == ["あの日の回想にふけっていた。"]
         assert "回想" in {word.mined_form for word in parser.parse_subtitle_file(path)}
+
+
+class TestCaptionMarks:
+    """Marks other stations and caption rippers print where ➡ and 📱 are already stripped."""
+
+    @pytest.mark.parametrize(
+        ("raw", "clean"),
+        [
+            ("⚟おはよう", "おはよう"),
+            ("⚟健太⚞", "健太"),
+            ("🖩もしもし 田中です", "もしもし 田中です"),
+            ("📺次のニュースです", "次のニュースです"),
+            ("🎤ありがとう 🔈聞こえますか", "ありがとう 聞こえますか"),
+            ("☏はい 山田です", "はい 山田です"),
+        ],
+    )
+    def test_caption_marks_leave_the_sentence(self, raw, clean):
+        assert clean_subtitle_text(raw) == clean
+
+    def test_a_cue_of_marks_alone_is_empty(self):
+        assert clean_subtitle_text("⚟ 📺") == ""
+
+    @pytest.mark.parametrize(
+        "line", ["♪ 夜空を見上げて", "《あの時の約束》", "〓の字が読めない", "≫続いては天気予報です"]
+    )
+    def test_music_marks_narration_marks_and_the_missing_kanji_mark_stay(self, line):
+        assert clean_subtitle_text(line) == line
+
+
+class TestLoneDotAtALineStart:
+    """One caption-rip converter writes ・ for a caption glyph it cannot map."""
+
+    def test_leading_dot_goes(self):
+        assert _ja_clean("・じゃあ お疲れ。") == "じゃあ お疲れ。"
+
+    def test_speaker_label_behind_a_leading_dot_is_stripped(self):
+        assert _ja_clean("・(圭吾)じゃあ お疲れ") == "じゃあ お疲れ"
+
+    def test_dot_at_the_start_of_the_second_physical_line(self):
+        assert _ja_clean("到着しました\\N・二人です") == "到着しました 二人です"
+
+    def test_a_cue_that_is_only_the_dot_is_empty(self):
+        assert _ja_clean("・") == ""
+
+    @pytest.mark.parametrize(
+        "line",
+        [
+            "オッケー これで・・・",
+            "・・・そうか",
+            "ジョージ・メイキッド監督",
+            "和・洋・中",
+            "約束してもさ・",
+            "手伝ってくれ➨",
+        ],
+    )
+    def test_dotted_ellipsis_inner_dots_and_line_end_marks_stay(self, line):
+        assert _ja_clean(line) == line
+
+    def test_korean_keeps_a_leading_dot(self):
+        # The placeholder dot is a Japanese caption-rip convention: the ja factory's
+        # label strip deletes it, the shared cleaning Korean runs does not.
+        pytest.importorskip("kiwipiepy")
+        parser = get_profile("ko").create_parser(switch_language(AnkiMinerConfig(), "ko"))
+
+        assert parser._clean_line_text("・안녕하세요") == "・안녕하세요"
