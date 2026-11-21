@@ -642,6 +642,8 @@ _ANCHOR_HEADWORDS: tuple[str, ...] = (
     "いけない",
     # k1120 MC: kana expressions joined by list rows (kc07)
     "そういえば",
+    # k1120 MC: set greetings joined by list rows (kc08)
+    "ようこそ",
 )
 
 # Yomitan `ruleIdentifiers` per fixture headword. A real term bank ships these,

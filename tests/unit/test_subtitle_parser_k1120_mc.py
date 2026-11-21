@@ -276,3 +276,40 @@ class TestKanaExpressionsTheTaggerCuts:
 
     def test_a_doubled_word_is_untouched(self):
         assert _fronts("もしもし", terms=_EXPRESSIONS, readings=frozenset()) == ["もしもし"]
+
+
+_GREETINGS = frozenset(
+    {
+        "はじめまして",
+        "いらっしゃいませ",
+        "ようこそ",
+        "いってらっしゃい",
+        "どういたしまして",
+        "おじゃま",
+        "よい",
+        "いく",
+        "どう",
+    }
+)
+
+
+class TestSetGreetings:
+    @pytest.mark.parametrize(
+        ("text", "front"),
+        [
+            ("はじめまして", "はじめまして"),
+            ("いらっしゃいませ", "いらっしゃいませ"),
+            ("ようこそ", "ようこそ"),
+            ("いってらっしゃい", "いってらっしゃい"),
+            ("どういたしまして", "どういたしまして"),
+            ("おじゃまします", "おじゃま"),
+        ],
+    )
+    def test_mines_the_greeting(self, text, front):
+        fronts = _fronts(text, terms=_GREETINGS, readings=frozenset())
+        assert front in fronts
+        assert not {"よい", "いく", "どう"} & set(fronts)
+
+    @pytest.mark.parametrize("text", ["授業をはじめます", "先生がいらっしゃいます", "先生はいらっしゃいませんか"])
+    def test_the_plain_verb_is_no_greeting(self, text):
+        assert not _GREETINGS & set(_fronts(text, terms=_GREETINGS, readings=frozenset()))

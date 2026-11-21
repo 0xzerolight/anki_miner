@@ -5,3 +5,4 @@
 {"id":"kc05","sentence":"かまわないよ","expected":["かまわない"],"category":"lexical-join","note":"かまわ|ない joined: 構わない is its own entry."}
 {"id":"kc06","sentence":"行かなきゃいけない","expected":["行く","いけない"],"category":"lexical-join","note":"The obligation unit is what follows the conditional; 行かなきゃ stays the verb's chain."}
 {"id":"kc07","sentence":"そういえば昨日会った","expected":["そういえば","昨日","会う"],"category":"lexical-join","note":"そう|いえ|ば at a clause start is the connective, not そう + いう."}
+{"id":"kc08","sentence":"ようこそ","expected":["ようこそ"],"category":"lexical-join","note":"よう|こそ joined: the greeting, not よい."}
