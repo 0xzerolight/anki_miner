@@ -3671,8 +3671,11 @@ class SubtitleParserService:
         if not form:
             return None
         aux = not recoverable and self._aux_word(word_token, pos1, surface, form, merged)
+        spelled = False
         if not recoverable and not aux and not is_listed(form, pos1, merged=merged):
-            return None
+            spelled = self._is_long_kana_spelling(word_token, pos1, surface, merged)
+            if not spelled:
+                return None
         probe_start = time.perf_counter()
         attested = bool(lookup([form]).get(form))
         self._probe_time_s += time.perf_counter() - probe_start
@@ -3684,4 +3687,38 @@ class SubtitleParserService:
             return _KANA_RECOVERED
         if aux:
             return _KANA_AUX
-        return _KANA_LISTED_SPELLING if not merged and is_kanji_spelled(form, pos1) else _KANA_LISTED
+        return _KANA_LISTED_SPELLING if spelled or (not merged and is_kanji_spelled(form, pos1)) else _KANA_LISTED
+
+    #: Long kana nouns that are no word where the tagger finds them: the rows the
+    #: list builder leaves out by name (scripts/build_kana_words.py EXCLUDED) and
+    #: pieces of a longer word cut at a word the window check stops at
+    #: (ひとたまり|も|ない, かけがえ|の|ない, のっぴき|なら|ない).
+    _LONG_KANA_SPELLING_REJECTS: frozenset[str] = frozenset(
+        {"いやいや", "ちょうだい", "ちんちん", "きちがい", "ひとたまり", "かけがえ", "のっぴき"}
+    )
+
+    def _is_long_kana_spelling(self, word_token, pos1: str, surface: str, merged: bool) -> bool:
+        """Whether an unlisted kana noun is the kana spelling of a kanji-written word (ぬいぐるみ, しきたり).
+
+        The list names a kana spelling only when JMdict gives it a priority tag,
+        which leaves out the long tail subtitles write in kana (かくれんぼ,
+        とっておき, いきさつ). One common-noun token of four or more kana whose
+        tagger lemma is a kanji-written word is that word, so it counts as a
+        listed kana spelling and takes the same window check. A shorter one
+        stays by name: at that length a kana noun is as often the tail of a
+        longer word or a given name (ひかり).
+
+        Only a native or mixed word (the tagger's 語種 和 or 混). A piece the
+        tagger cuts out of a kana run is nearly always read as a Sino-Japanese
+        word (具|もうまい as 蒙昧, 早う|せんかい as 旋回, こうげ|きりょく as 気力),
+        so those stay by name too (ちきしょう, ないしょ, まんじゅう). A noun the
+        suffix merge built (おっ|さん) has no 語種 of its own and is a dictionary
+        word by that merge's own check.
+        """
+        if merged or pos1 != "名詞" or len(surface) < 4 or surface in self._LONG_KANA_SPELLING_REJECTS:
+            return False
+        feature = word_token.feature
+        if getattr(feature, "pos2", None) != "普通名詞" or getattr(feature, "goshu", None) not in ("和", "混", None):
+            return False
+        lemma = self._extract_lemma(word_token)
+        return isinstance(lemma, str) and lemma != surface and any(is_cjk_ideograph(ch) for ch in lemma)

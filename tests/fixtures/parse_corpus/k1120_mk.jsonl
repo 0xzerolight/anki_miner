@@ -1,0 +1,6 @@
+{"id":"kk01","sentence":"妹のぬいぐるみを洗った","expected":["妹","ぬいぐるみ","洗う"],"category":"k1120-kana-words","note":"a four-kana spelling of a kanji-written noun JMdict gives no priority tag"}
+{"id":"kk02","sentence":"ないしょの話を聞いた","expected":["ないしょ","話","聞く"],"category":"k1120-kana-words","note":"a Sino-Japanese noun subtitles write in kana, by its list row"}
+{"id":"kk03","sentence":"村のしきたりを守る","expected":["村","しきたり","守る"],"category":"k1120-kana-words"}
+{"id":"kk04","sentence":"早うせんかい","expected":["早い"],"category":"k1120-kana-words","note":"the dialect ending 〜せんかい, which the tagger reads as 旋回"}
+{"id":"kk05","sentence":"早く来てちょうだい","expected":["早い","来る"],"category":"k1120-kana-words","note":"the request after て"}
+{"id":"kk06","sentence":"ちきしょう、負けた","expected":["ちきしょう","負ける"],"category":"k1120-kana-words","note":"畜生 as the curse, by its list row"}

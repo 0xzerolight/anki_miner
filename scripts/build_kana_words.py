@@ -59,6 +59,7 @@ SHORT_SPELLED_NOUNS: frozenset[str] = frozenset(
     {"とおり", "おなか", "ゆうべ", "かぎり", "におい", "しょうゆ", "けんか", "うわさ", "まぬけ", "あげく"}
     | {"おかげ", "ほんと", "ほんま", "ごはん", "あした", "しかた", "ふだん", "ことし"}
     | {"ようす", "しっぽ", "きげん", "ぜんぶ"}
+    | {"ないしょ", "いっしょ", "ひきょう", "いっちょ", "ちゅうちょ"}
 )
 
 #: Spoken kana spellings JMdict gives no priority tag (やっぱ for 矢っ張り, the
@@ -84,6 +85,11 @@ UNTAGGED_COMMON: frozenset[str] = frozenset(
         "さぁ",
         "ありがと",
     }
+    # Sino-Japanese nouns subtitles write in kana. The parser recovers a long kana
+    # spelling without a priority tag by rule only when the word is native
+    # (SubtitleParserService._is_long_kana_spelling), so these are named.
+    | {"ちきしょう", "いっちょ", "ないしょ", "いっしょ", "ひきょう", "べっぴん", "じきじき", "まんじゅう", "こんにゃく"}
+    | {"ちゅうちょ", "しょんべん", "がってん", "ようかん", "そうめん", "もうろく", "たくあん", "けいれん", "ろうぜき"}
 )
 
 #: Tags a line gives a word that no carrier sentence does: あんな is 形状詞 in every

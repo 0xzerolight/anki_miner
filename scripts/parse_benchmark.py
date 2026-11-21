@@ -630,6 +630,14 @@ _ANCHOR_HEADWORDS: tuple[str, ...] = (
     # ドキドキ: katakana.jsonl ka02 pins it as dropped when the dictionary lacks it)
     "ニコニコ",
     "ワクワク",
+    # k1120 MK: long kana spellings of kanji-written nouns; せんかい and ちょうだい are
+    # attested so their rejects are the rule's, not a dictionary miss
+    "ぬいぐるみ",
+    "ないしょ",
+    "しきたり",
+    "せんかい",
+    "ちょうだい",
+    "ちきしょう",
 )
 
 # Yomitan `ruleIdentifiers` per fixture headword. A real term bank ships these,
