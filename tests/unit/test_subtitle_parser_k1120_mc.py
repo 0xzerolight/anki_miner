@@ -64,3 +64,39 @@ class TestListedSpellingWindow:
 
     def test_the_noun_alone_is_mined(self):
         assert "あいさつ" in _fronts("あいさつに来ました")
+
+
+_SPOKEN = frozenset(
+    {"やだ", "あかん", "すんません", "すんまへん", "ほっとく", "ほっておく", "ほる", "いや", "かんぱい"}
+)
+
+
+class TestSpokenWordsTheTaggerCuts:
+    """や|だ, あか|ん, すん|ませ|ん and ほっ|とく are one listed word each."""
+
+    @pytest.mark.parametrize(
+        ("text", "front"),
+        [
+            ("もうやだ", "やだ"),
+            ("それはあかんわ", "あかん"),
+            ("あかん", "あかん"),  # alone the tagger reads あ|かん
+            ("すんません", "すんません"),
+            ("すんまへん", "すんまへん"),
+            ("ほっといて", "ほっとく"),
+            ("ほっとけ", "ほっとく"),
+            ("ほっておいて", "ほっておく"),
+            ("ほっておけない", "ほっておく"),
+        ],
+    )
+    def test_mines_the_spoken_word(self, text, front):
+        fronts = _fronts(text, terms=_SPOKEN, readings=frozenset())
+        assert front in fronts
+        assert "ほる" not in fronts  # 放る 'dig', the tagger's reading of ほっ
+
+    @pytest.mark.parametrize(
+        ("text", "front"), [("いやだ", "いや"), ("あ、かんぱい", "かんぱい"), ("ほったらどうなる", "ほる")]
+    )
+    def test_the_other_words_stay(self, text, front):
+        fronts = _fronts(text, terms=_SPOKEN, readings=frozenset())
+        assert front in fronts
+        assert not {"やだ", "あかん", "ほっとく"} & set(fronts)

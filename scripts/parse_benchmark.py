@@ -633,6 +633,9 @@ _ANCHOR_HEADWORDS: tuple[str, ...] = (
     # k1120 MC: あとで is only the READING of 後で (kc01); もんか is spelled so (kc02)
     "後で",
     "もんか",
+    # k1120 MC: spoken words joined by list rows (kc03, kc04)
+    "やだ",
+    "すんません",
 )
 
 # Yomitan `ruleIdentifiers` per fixture headword. A real term bank ships these,
