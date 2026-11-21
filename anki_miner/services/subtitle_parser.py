@@ -3149,7 +3149,7 @@ class SubtitleParserService:
             if how == _KANA_AUX and self._used_as_auxiliary(word_token, tokens):
                 return False
             if how != _KANA_LISTED and self._rejected_by_lexicalized_window(
-                word_token, tokens, from_left=how == _KANA_AUX
+                word_token, tokens, from_left=how == _KANA_AUX, listed_spelling=how == _KANA_LISTED_SPELLING
             ):
                 return False
             if (
@@ -3358,8 +3358,13 @@ class SubtitleParserService:
             return False
         return self._is_ellipsis_truncation_fragment(word_token, text, tok_start, tok_end)
 
-    def _rejected_by_lexicalized_window(self, word_token, tokens: list, *, from_left: bool = False) -> bool:
+    def _rejected_by_lexicalized_window(
+        self, word_token, tokens: list, *, from_left: bool = False, listed_spelling: bool = False
+    ) -> bool:
         """Whether a recovered kana fragment sits inside an attested lexicalized expression.
+
+        ``listed_spelling`` narrows the windows for a listed kana spelling of a
+        kanji-written word (``_listed_spelling_windows``).
 
         ``from_left`` is the check for an auxiliary-capable word. Only the windows
         that open before it count: joined with its own inflection it is often
@@ -3391,6 +3396,8 @@ class SubtitleParserService:
             return False
         if from_left:
             return self._attest is not None and bool(self._attest(windows))
+        if listed_spelling:
+            windows = self._listed_spelling_windows(tokens, idx, windows)
         uncached = [w for w in windows if w not in self._kana_window_cache]
         # Snapshot the already-cached verdicts BEFORE the clear-on-cap below can
         # evict a window this candidate still needs: the shared cache may be wiped
@@ -3408,6 +3415,25 @@ class SubtitleParserService:
             for w in uncached:
                 verdicts[w] = self._kana_window_cache[w] = bool(hits.get(w))
         return any(verdicts[w] for w in windows)
+
+    def _listed_spelling_windows(self, tokens: list, idx: int, windows: list[str]) -> list[str]:
+        """The windows that can turn away a listed kana spelling of a kanji-written word (ほう, わけ, あと).
+
+        Such a word takes the window check for one reason: it may be the tail of
+        a longer kana word the tagger cut after お/ご (ご|ちそう, お|しまい). So a
+        window that opens with a 接頭辞 counts as for any recovered word, by term
+        or reading. Every other window counts only when a dictionary spells it
+        that way (もんか, もんで): one that is just the reading of a word written
+        otherwise is a homophone across the word boundary (た|わけ reads 戯け,
+        ほう|が 邦画, た|うえ 田植え) or the noun's own particle phrase (あと|で 後で).
+        """
+        spelled = self._attest(windows) if self._attest is not None else set()
+        openers = [
+            "".join(tok.surface for tok in tokens[start : idx + 1])
+            for start in range(max(0, idx - _KANA_RECOVER_WINDOW_MAX_SIDE), idx)
+            if getattr(getattr(tokens[start], "feature", None), "pos1", None) == "接頭辞"
+        ]
+        return [w for w in windows if w in spelled or any(w.startswith(opener) for opener in openers)]
 
     def _lexicalized_window_surfaces(self, tokens: list, idx: int, *, from_left: bool = False) -> list[str]:
         """Joined surfaces of every functional-neighbor window strictly containing ``tokens[idx]``.

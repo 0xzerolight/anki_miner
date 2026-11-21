@@ -1,0 +1,9 @@
+{"id":"kc01","sentence":"あとで帰る","expected":["あと","帰る"],"category":"lexicalized-window","note":"あとで is only the reading of 後で: a homophone window across the particle does not take the listed noun."}
+{"id":"kc02","sentence":"知るもんか","expected":["知る"],"category":"lexicalized-window","note":"Guard: もんか is spelled so in the dictionary, so もん stays out."}
+{"id":"kc03","sentence":"もうやだ","expected":["もう","やだ"],"category":"lexical-join","note":"や|だ joined: the spoken いやだ is listed as やだ."}
+{"id":"kc04","sentence":"すんません","expected":["すんません"],"category":"lexical-join","note":"すん|ませ|ん joined, as すみません is."}
+{"id":"kc05","sentence":"かまわないよ","expected":["かまわない"],"category":"lexical-join","note":"かまわ|ない joined: 構わない is its own entry."}
+{"id":"kc06","sentence":"行かなきゃいけない","expected":["行く","いけない"],"category":"lexical-join","note":"The obligation unit is what follows the conditional; 行かなきゃ stays the verb's chain."}
+{"id":"kc07","sentence":"そういえば昨日会った","expected":["そういえば","昨日","会う"],"category":"lexical-join","note":"そう|いえ|ば at a clause start is the connective, not そう + いう."}
+{"id":"kc08","sentence":"ようこそ","expected":["ようこそ"],"category":"lexical-join","note":"よう|こそ joined: the greeting, not よい."}
+{"id":"kc09","sentence":"それでは始めます","expected":["それでは","始める"],"category":"lexical-join","note":"それで|は opening a clause is the connective それでは, not それで."}
