@@ -60,6 +60,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Japanese: a kana verb before its own negative is mined (雨がやまない mines やむ, かまいません mines かまう),** and すまぬ and おもわぬ are mined as written.
 - **Japanese: a line-opening おいおい is mined as the interjection ('hey, come on').**
 - **Japanese: doubled kana adverbs are mined (ぼちぼち, ついつい, ごちゃごちゃ, じわじわ).**
+- **Japanese: an adjective + がる is mined as the がる verb also when the verb is the less common word (強がって mines 強がる, 恥ずかしがらないで mines 恥ずかしがる).**
+- **Japanese: わかんない is mined as the dictionary's contraction (わかんなかった mines わかんない).** A bare わかんない was left out, and an inflected one mined わかる.
+- **Japanese: いい after a conditional is mined (どうすればいい, 聞いたらいい, 行きゃいい).** After て it is still grammar (見ていい).
+- **Japanese: the period adverb ちと is mined (ちと尋ねたい),** except where it is a piece of the word before it (俺っちと).
 ### Fixed
 - **Japanese verb cards show the verb the line uses.** An imperative (持て) mined 持てる, a passive (刺された) mined 刺さる, a potential (帰れない) mined 帰れる, a short causative (行かされた) mined 行かす and katakana フラれた mined the loanword フル; they now mine 持つ, 刺す, 帰る, 行く and ふる. The last three fronts had no dictionary entry, so the card was dropped.
 - **Kana fillers no longer become verb cards.** いえ ('no') mined いえる, a sound cut at っ (まっ, たっ) mined まつ and たつ, and the tagger's glues いたんだ, 違かった and ういっす mined 痛む, 買う and 逸する.
@@ -91,6 +95,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **出してくれる, 貸してあげる and 見てもらう mine the verb (出す, 貸す, 見る),** not the dictionary's pair; 診てもらう ('see a doctor') stays one word.
 - **下さい mines 下さい ('please'),** not the verb 下さる; with Mine grammar points off it still mines 下さる.
 - **若 as an address ('young master') mines the noun 若,** not the adjective 若い.
+- **抱く reads だく ('to hold') in 彼女を抱いた,** and いだく ('to harbour') only when what is held is a feeling (夢を抱く).
+- **A 表 that stands alone reads おもて ('outside': 表へ出ろ),** and still ひょう ('table') in 計画表.
+- **Caption marks that open a line (⚟, 📺, 🎤) and a lone ・ at the start of a line are removed from sentences.**
 - **A batch no longer lets one file decide how a kana verb is treated in the next.** The verdict for つかめ (つかむ or つかめる) was remembered by spelling alone, so the same episode could mine differently depending on what was mined before it.
 - **Folder pairing (Batch, Condense, Retime) no longer reads encode and broadcast tags as the episode number.** Ma10p, YUV420P10, 2flac, AACx2, HDR10, 60fps, MPEG2, `[v2]` and the BS11 channel tag left videos unpaired or paired with another episode's subtitle.
 - **Folder pairing keeps a .5 special (`Show - 12.5`) apart from episode 5.**
