@@ -109,3 +109,23 @@ class TestDoubledKanaAdverbs:
     @pytest.mark.parametrize(("text", "cry"), [("ちょちょ 待って", "ちょちょ"), ("あらあら 大変", "あらあら")])
     def test_a_doubled_cry_stays_out(self, text, cry):
         assert cry not in _fronts(_service((cry,)), text)
+
+
+class TestWakaAddress:
+    """若 the address ('young master') is the noun 若, not the stem of 若い the tagger reads before a pause."""
+
+    @pytest.mark.parametrize("text", ["若、お待ちください", "若 こちらです", "若！", "若のおっしゃるとおりです"])
+    def test_the_address_is_the_noun(self, text):
+        fronts = _fronts(_service(("若い", "若")), text)
+        assert "若い" not in fronts
+        assert "若" in fronts
+
+    def test_the_address_reads_waka(self):
+        word = next(w for w in _words(_service(("若い", "若")), "若、お待ちください") if w.mined_form == "若")
+        assert word.expression_reading == "わか"
+
+    @pytest.mark.parametrize("text", ["若い人が来た", "まだ若すぎる", "若そうに見える", "若か男はおらん"])
+    def test_the_adjective_stays(self, text):
+        fronts = _fronts(_service(("若い", "若")), text)
+        assert "若い" in fronts
+        assert "若" not in fronts

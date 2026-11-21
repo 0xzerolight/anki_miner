@@ -1224,6 +1224,8 @@ def retag_mistagged_tokens(tokens: list, form_lookup: FormLookup | None = None) 
       (``_glued_ka_naru``).
     - A kana verb filed under a homophone's lemma (おごる under 驕る) takes
       the lemma of the verb it is (``_kana_homophone_fields``).
+    - 若 read as the stem of 若い where a pause or a case particle follows is the
+      address 'young master', the noun 若 (``_address_waka_fields``).
     """
     unknown = {token.surface for token in tokens if _unknown_katakana_noun(token)}
     nouns = _dictionary_nouns(unknown, form_lookup) if unknown and form_lookup is not None else set()
@@ -1267,6 +1269,7 @@ def retag_mistagged_tokens(tokens: list, form_lookup: FormLookup | None = None) 
                 _spaced_interjection_fields(tokens, i)
                 or _clause_final_ii_fields(tokens, i)
                 or _kana_homophone_fields(tokens, i)
+                or _address_waka_fields(tokens, i)
             )
         out.append(token if fields is None else RetaggedToken(token, fields))
     return out
@@ -1315,6 +1318,43 @@ def _spaced_interjection_fields(tokens: list, i: int) -> dict[str, str] | None:
     kana = getattr(feature, "kana", None)
     if isinstance(kana, str):
         fields.update(dict.fromkeys(("lForm", "kanaBase", "formBase", "pronBase"), kana))
+    return fields
+
+
+#: What follows 若 the address: a case or topic particle, or the copula. Not か:
+#: 若か is the Kyushu 若い (若か男).
+_WAKA_FOLLOWERS: frozenset[str] = frozenset(
+    {"は", "が", "を", "の", "に", "も", "と", "へ", "や", "って", "だ", "です"}
+)
+#: Marks that continue an adjective's stem instead of ending the word: the cry (若っ, 若ー) and a trailing-off 若….
+_STEM_RUN_ON_MARKS = frozenset("っッーぇェ〜～…‥")
+
+
+def _address_waka_fields(tokens: list, i: int) -> dict[str, str] | None:
+    """The noun fields of 若 used as an address ('young master'), or None.
+
+    unidic-lite reads a 若 that a pause follows (若、お待ちを) as the stem of 若い,
+    which was carded 若い; elsewhere it reads the same address as the noun 若
+    (若！, 若を頼む), which is the card. The adjective's stem runs on into its
+    ending (若すぎる, 若そう, the cry 若っ), so before a space, a mark that ends
+    the word, the line end, a case or topic particle or the copula 若 is the
+    address and takes the noun's fields. A noun after it (若旦那, 若先生) is left
+    to the tagger.
+    """
+    token = tokens[i]
+    feature = getattr(token, "feature", None)
+    if token.surface != "若" or getattr(feature, "pos1", None) != "形容詞" or _lemma_or_none(token) != "若い":
+        return None
+    nxt = tokens[i + 1] if i + 1 < len(tokens) else None
+    if nxt is not None and not getattr(nxt, "white_space", ""):
+        nxt_pos1 = getattr(getattr(nxt, "feature", None), "pos1", None)
+        if nxt.surface[:1] in _STEM_RUN_ON_MARKS:
+            return None
+        if nxt_pos1 != "補助記号" and not (nxt_pos1 in ("助詞", "助動詞") and nxt.surface in _WAKA_FOLLOWERS):
+            return None
+    fields = {"pos1": "名詞", "pos2": "普通名詞", "pos3": "一般", "pos4": "*", "cType": "*", "cForm": "*"}
+    fields.update(dict.fromkeys(("lemma", "orthBase"), "若"))
+    fields.update(dict.fromkeys(("lForm", "kanaBase", "formBase", "pronBase"), "ワカ"))
     return fields
 
 
