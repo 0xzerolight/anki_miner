@@ -191,6 +191,9 @@ def resolve_special_reading(head_surface: str, next_surface: str | None) -> str 
 #   (蛙, かわず) → かえる: UniDic emits the poetic カワズ in every context.
 #   (日本語/日本人, にっぽん…) → にほん…: UniDic reads 日本 ニッポン, and the
 #       dictionary attests both readings, so the merge keeps the rarer one.
+#   (１日, ついたち) → いちにち: the digit spelling keeps its own front, so the
+#       一日 row misses it. The one row with a context: after a month it stays
+#       the date (``resolve_reading_override_in_line``).
 _READING_OVERRIDES: dict[tuple[str, str], str] = {
     ("一日", "ついたち"): "いちにち",
     ("仏", "ふつ"): "ほとけ",
@@ -211,6 +214,7 @@ _READING_OVERRIDES: dict[tuple[str, str], str] = {
     ("日本", "にっぽん"): "にほん",
     ("日本語", "にっぽんご"): "にほんご",
     ("日本人", "にっぽんじん"): "にほんじん",
+    ("１日", "ついたち"): "いちにち",
 }
 
 
@@ -227,6 +231,20 @@ def resolve_reading_override(spelling: str, derived_reading: str) -> str | None:
     this returns an unconditional hiragana correction.
     """
     return _READING_OVERRIDES.get((spelling, derived_reading))
+
+
+def resolve_reading_override_in_line(spelling: str, derived_reading: str, text_before: str) -> str | None:
+    """``resolve_reading_override`` for a token whose line is known.
+
+    ``text_before`` is the line up to the token. The digit spelling １日 is the
+    one row with a context where the tagger is right: directly after a month
+    (３月１日, 毎月１日) it is the date ついたち, so the row is skipped there and
+    'one day' (今日１日, あと１日) takes it everywhere else. The card and the
+    sentence ruby both ask here, so they agree.
+    """
+    if spelling == "１日" and text_before.endswith("月"):
+        return None
+    return resolve_reading_override(spelling, derived_reading)
 
 
 def apply_special_readings(tokens: list) -> list:

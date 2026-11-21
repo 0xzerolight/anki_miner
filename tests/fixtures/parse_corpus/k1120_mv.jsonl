@@ -1,0 +1,2 @@
+{"id":"k1120-mv01","sentence":"今日も１日 頑張ろう","expected":["今日","１日","頑張る"],"category":"reading-overrides","note":"１日 not after a month is 'one day' and reads いちにち"}
+{"id":"k1120-mv02","sentence":"３月１日に会おう","expected":["月","１日","会う"],"category":"reading-overrides","note":"after a month it is the date and keeps ついたち"}
