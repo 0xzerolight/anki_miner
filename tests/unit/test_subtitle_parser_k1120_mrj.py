@@ -238,9 +238,45 @@ class TestGluedKaNaru:
 
     @pytest.mark.parametrize("text", ["夢がかなって嬉しい", "理にかなった説明", "願いがかなった"])
     def test_the_real_verb_stays(self, text: str) -> None:
-        assert ("かなっ", "適う") in self._tokens(text)
+        assert "かなっ" in [surface for surface, _lemma in self._tokens(text)]
 
     def test_the_cards_follow_the_cut(self) -> None:
         service = _service(("かなう", "なんとか", "なる"))
         assert "かなう" not in _fronts(service, "なんとかなった")
         assert "かなう" in _fronts(service, "夢がかなった")
+
+
+class TestKanaHomophoneLemmas:
+    @staticmethod
+    def _lemmas(text: str) -> list[str]:
+        import fugashi
+
+        from anki_miner.services.morphology import retag_mistagged_tokens
+
+        return [tok.feature.lemma for tok in retag_mistagged_tokens(list(fugashi.Tagger()(text)))]
+
+    @pytest.mark.parametrize(
+        ("text", "lemma", "wrong"),
+        [
+            ("今日は俺がおごるよ", "奢る", "驕る"),
+            ("コーヒーおごって", "奢る", "驕る"),
+            ("まだあいつらとつるんでるのか", "連む", "交尾む"),
+            ("やっと夢がかなう", "叶う", "適う"),
+            ("願いがかなった", "叶う", "適う"),
+        ],
+    )
+    def test_the_kana_verb_takes_the_lemma_of_the_verb_it_is(self, text: str, lemma: str, wrong: str) -> None:
+        lemmas = self._lemmas(text)
+        assert lemma in lemmas and wrong not in lemmas
+
+    @pytest.mark.parametrize(
+        ("text", "lemma"), [("理にかなう", "適う"), ("奢るよ", "驕る"), ("彼にはかなわない", "敵う")]
+    )
+    def test_other_spellings_and_lemmas_stay(self, text: str, lemma: str) -> None:
+        assert lemma in self._lemmas(text)
+
+    def test_the_card_carries_the_corrected_lemma(self) -> None:
+        words, _index, _counts = _service(("おごる",)).parse_text_units(
+            [ReadingUnit(text="今日は俺がおごるよ", index=0, location_label="t")], want_line_index=False
+        )
+        assert [(word.mined_form, word.lemma) for word in words if word.mined_form == "おごる"] == [("おごる", "奢る")]

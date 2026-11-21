@@ -1204,6 +1204,8 @@ def retag_mistagged_tokens(tokens: list, form_lookup: FormLookup | None = None) 
       adjective 良い (``_clause_final_ii_fields``).
     - か + なっ glued into かなっ (適う) after なんと, 何と or どうに is cut in two
       (``_glued_ka_naru``).
+    - A kana verb filed under a homophone's lemma (おごる under 驕る) takes
+      the lemma of the verb it is (``_kana_homophone_fields``).
     """
     unknown = {token.surface for token in tokens if _unknown_katakana_noun(token)}
     nouns = _dictionary_nouns(unknown, form_lookup) if unknown and form_lookup is not None else set()
@@ -1239,11 +1241,15 @@ def retag_mistagged_tokens(tokens: list, form_lookup: FormLookup | None = None) 
             fields = _PREFIX_NOUNS.get(token.surface)
         elif token.surface in nouns and _unknown_katakana_noun(token):
             fields = dict.fromkeys(("lemma", "orthBase", "kana"), token.surface)
-        if fields is None:
-            fields = _spaced_interjection_fields(tokens, i) or _clause_final_ii_fields(tokens, i)
         if fields is None and (pieces := _glued_ka_naru(tokens, i)) is not None:
             out.extend(pieces)
             continue
+        if fields is None:
+            fields = (
+                _spaced_interjection_fields(tokens, i)
+                or _clause_final_ii_fields(tokens, i)
+                or _kana_homophone_fields(tokens, i)
+            )
         out.append(token if fields is None else RetaggedToken(token, fields))
     return out
 
@@ -1292,6 +1298,33 @@ def _spaced_interjection_fields(tokens: list, i: int) -> dict[str, str] | None:
     if isinstance(kana, str):
         fields.update(dict.fromkeys(("lForm", "kanaBase", "formBase", "pronBase"), kana))
     return fields
+
+
+#: Kana verbs unidic-lite files under a homophone's lemma, by (orthBase, lemma),
+#: with the lemma of the verb the kana spelling nearly always is: おごる is 奢る
+#: 'to treat' (not 驕る 'to be haughty'), つるむ 連む 'to hang around with' (not
+#: 交尾む 'to copulate'), かなう 叶う 'to come true' (not 適う 'to suit'). A
+#: hiragana card takes the definition of the tagger's lemma, so the wrong lemma
+#: is the wrong card.
+_KANA_HOMOPHONE_LEMMAS: dict[tuple[str | None, str | None], str] = {
+    ("おごる", "驕る"): "奢る",
+    ("つるむ", "交尾む"): "連む",
+    ("かなう", "適う"): "叶う",
+}
+
+
+def _kana_homophone_fields(tokens: list, i: int) -> dict[str, str] | None:
+    """The corrected lemma of a kana verb the tagger files under its homophone (``_KANA_HOMOPHONE_LEMMAS``), or None.
+
+    かなう right after に keeps 適う, the verb of 理にかなう and 目的にかなう.
+    """
+    token = tokens[i]
+    lemma = _KANA_HOMOPHONE_LEMMAS.get(
+        (getattr(getattr(token, "feature", None), "orthBase", None), _lemma_or_none(token))
+    )
+    if lemma is None or (lemma == "叶う" and i and tokens[i - 1].surface == "に"):
+        return None
+    return {"lemma": lemma}
 
 
 #: The fields unidic-lite gives the particle か and the stem なっ of 成る, the two
