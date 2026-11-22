@@ -109,6 +109,8 @@ _MOTION_VERBS = frozenset({"くる", "来る", "いく", "行く", "帰る"})
 # Rows of a verb + ず that are a noun where a noun stands, and what follows that noun (``_noun_place``).
 _NEGATIVE_NOUNS = frozenset({"役立たず"})
 _NOUN_FOLLOWERS = frozenset({"が", "の", "め", "だ", "な", "は", "を", "と", "ども", "です", "じゃ"})
+# Verbs of saying, by lemma: before one なん|と is 'what', before any other verb 'with what' (``_with_what``).
+_SAYING_VERBS = frozenset({"言う", "申す", "呼ぶ", "仰る"})
 # "noun" rows that also open a clause before the noun they name (``_opens_before_a_noun``).
 _NAMING_ROWS = frozenset({"という"})
 _GRAMMAR_POS1 = frozenset({"助詞", "助動詞"})
@@ -230,6 +232,7 @@ def _kana_join(
             and not _no_of_noda(row.headword, tokens, i + size)
             and not _copula_de_negated(row.headword, tokens, i + size)
             and not _volitional_you(tokens, i)
+            and not _with_what(row.headword, tokens, i + size)
         ):
             return _Join(
                 i,
@@ -380,6 +383,25 @@ def _noun_place(candidate: _Join, tokens: list, spans: dict[int, tuple[int, int]
     if candidate.start > 0 and _pos1(tokens[candidate.start - 1]) == "連体詞":
         return True
     return _stands_alone(tokens, spans, candidate.end) or tokens[candidate.end + 1].surface in _NOUN_FOLLOWERS
+
+
+def _with_what(headword: str, tokens: list, after: int) -> bool:
+    """Whether なん|と is 'with what' (何と戦う, 何と何), not the adverb なんと 'what; how …!'.
+
+    The adverb stands before what it exclaims at (なんと美しい) or before a verb
+    of saying (なんと言えばいい). The row is passed over before any other verb
+    and before a pronoun. なん|て is passed over before a kana いう: なんていうか
+    'how to put it' is one expression, and joining its なんて leaves いう a card.
+    """
+    if headword not in ("なんと", "なんて") or after >= len(tokens):
+        return False
+    following = tokens[after]
+    if headword == "なんて":
+        said = _pos1(following) == "動詞" and extract_lemma(following) == "言う"
+        return said and is_kana_only(following.surface)
+    if _pos1(following) == "代名詞":
+        return True
+    return _pos1(following) == "動詞" and extract_lemma(following) not in _SAYING_VERBS
 
 
 def _no_of_noda(headword: str, tokens: list, after: int) -> bool:

@@ -369,3 +369,33 @@ def test_yakutatazu_where_a_noun_stands_is_the_noun(sentence: str) -> None:
 
 def test_yakutatazu_before_a_clause_is_the_verb_negated() -> None:
     assert "役立たず" not in _l4_fronts("何も役立たず終わった")
+
+
+# --- L-6: words the tagger cuts after the kana なん ---------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("sentence", "front"),
+    [
+        ("なんと美しい花だ", "なんと"),
+        ("なんと言えばいいか", "なんと"),
+        ("なんとしても勝つ", "なんとしても"),
+        ("なんてこった", "なんてこった"),
+        ("なんというか、困る", "なんというか"),
+        ("なんという人だ", "なんという"),
+        ("なんて日だ", "なんて"),
+        ("なんともない", "なんとも"),
+    ],
+)
+def test_word_after_the_kana_nan_is_one_entry(sentence: str, front: str) -> None:
+    assert front in _l4_fronts(sentence)
+
+
+def test_nante_before_a_kana_iu_is_left_alone() -> None:
+    assert "なんて" not in _l4_fronts("なんていうか、変だ")
+    assert "何て" in _l4_fronts("何て言ったの")
+
+
+@pytest.mark.parametrize("sentence", ["なんと戦っているの", "なんとこれを比べる"])
+def test_nan_to_before_another_verb_or_a_pronoun_is_with_what(sentence: str) -> None:
+    assert "なんと" not in _l4_fronts(sentence)

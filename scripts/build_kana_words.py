@@ -666,6 +666,17 @@ JOINS: tuple[tuple[str, str, str, str] | tuple[str, str, str, str, str], ...] = 
     # K1121 LIST: 役立た|ず is the noun 役立たず where a noun stands (この役立たずが, 役立たずだ:
     # lexical_joiner._noun_place); before a clause it is the verb negated.
     ("役立たず", "名詞", "役立た|ず", ""),
+    # K1121 LIST: words the tagger cuts after the kana なん. なん|と is the adverb before what it exclaims at or
+    # before a verb of saying (なんと美しい, なんと言えばいい); before another verb or a pronoun the と is 'with'
+    # (何と戦う, 何と何: lexical_joiner._with_what). なん|て is passed over before a kana いう: なんていうか is no
+    # entry of the dictionaries, and its いう would be carded alone.
+    ("なんと", "副詞", "なん|と", ""),
+    ("なんとも", "副詞", "なん|と|も", ""),
+    ("なんとしても", "副詞", "なん|と|し|て|も", ""),
+    ("なんという", "連体詞", "なん|と|いう", ""),
+    ("なんというか", "副詞", "なん|と|いう|か", ""),
+    ("なんて", "副詞", "なん|て", ""),
+    ("なんてこった", "感動詞", "なん|てこっ|た", ""),
 )
 
 _HEADER = """\
