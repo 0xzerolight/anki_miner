@@ -556,7 +556,7 @@ JOINS: tuple[tuple[str, str, str, str] | tuple[str, str, str, str, str], ...] = 
     ("いいよ", "感動詞", "いい|よ", "alone"),
     ("なんなの", "副詞", "なん|な|の", "start"),
     ("どうしたの", "感動詞", "どう|し|た|の", "start"),
-    ("どうしたん", "感動詞", "どう|し|た|ん", "start"),
+    ("どうしたん", "感動詞", "どう|し|た|ん", "alone"),
     ("どうしよう", "感動詞", "どう|しよう", ""),
     # K1121 EXPR: particle-headed expressions after a noun, and ほうがいい after a verb. に|とっ|て is passed
     # over before a verb, where it is the て-form of とる (lexical_joiner._verb_te_form).
