@@ -3900,6 +3900,8 @@ class SubtitleParserService:
                 return False
             if how == _KANA_AUX_CLASS and self._aux_class_word_is_out_of_place(word_token, tokens, text, tok_end):
                 return False
+            if how == _KANA_AUX_CLASS and self._aux_class_word_is_piece(word_token, tokens):
+                return False
             if how in (_KANA_LISTED, _KANA_LISTED_SPELLING) and self._listed_word_is_out_of_place(word_token, tokens):
                 return False
             if (
@@ -4168,6 +4170,50 @@ class SubtitleParserService:
             and before in ("名詞", "代名詞", "副詞", "接尾辞")
             and not getattr(word_token, "white_space", "")
         )
+
+    def _aux_class_word_is_piece(self, word_token, tokens: list) -> bool:
+        """Whether a kana verb of the auxiliary-capable class is a piece of a dictionary word made with the content word beside it.
+
+        The window check joins functional neighbours only, so two shapes never
+        meet it:
+
+        - a bare 連用形 glued to the noun or verb after it, where the two are
+          one word: つけ|もの is 漬物, つけ|こん|で is 付け込む;
+        - the verb after a noun and its case particle, where the noun, the
+          particle and the godan verb this one is the potential of are one
+          expression: 職に|つけ|ない is 職に就く 'cannot find work', うそを|つけ
+          the imperative of 嘘をつく, both read as つける.
+        """
+        idx = next((i for i, tok in enumerate(tokens) if tok is word_token), None)
+        if idx is None:
+            return False
+
+        def tag(tok, field: str) -> str:
+            return str(getattr(getattr(tok, "feature", None), field, None) or "")
+
+        windows: list[str] = []
+        after = tokens[idx + 1] if idx + 1 < len(tokens) else None
+        if (
+            after is not None
+            and tag(word_token, "cForm").startswith("連用形")
+            and tag(after, "pos1") in ("名詞", "動詞")
+            and not getattr(after, "white_space", "")
+        ):
+            windows.append(word_token.surface + (extract_orth_base(after) or after.surface))
+        form = tag(word_token, "orthBase")
+        if (
+            idx >= 2
+            and len(form) >= 3
+            and form.endswith("る")
+            and form[-2] in _POTENTIAL_E_TO_U
+            and tokens[idx - 1].surface in ("を", "に", "が")
+            and tag(tokens[idx - 1], "pos2") == "格助詞"
+            and tag(tokens[idx - 2], "pos1") == "名詞"
+        ):
+            noun = katakana_to_hiragana(extract_reading(tokens[idx - 2]) or "")
+            if noun:
+                windows.append(noun + tokens[idx - 1].surface + form[:-2] + _POTENTIAL_E_TO_U[form[-2]])
+        return bool(windows) and bool(self._kana_windows_attested(windows))
 
     @staticmethod
     def _is_good_after_conditional(word_token, tokens: list) -> bool:

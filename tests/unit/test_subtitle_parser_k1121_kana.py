@@ -32,6 +32,8 @@ _ATTESTED = frozenset(
     # Windows a dictionary has as the reading of a word written otherwise.
     | {"という", "といい", "かわいそうに", "ですき", "とって", "にもかかわらず", "かかわらず"}
     | {"ぼける", "とぼけ", "とぼける"}
+    # Longer words and expressions a class verb is a piece of.
+    | {"つけもの", "つけこむ", "しょくにつく", "うそをつく", "せきにつく"}
 )
 
 # Dictionary entry tags by headword: a word with no row here has no entry at all.
@@ -185,6 +187,33 @@ class TestAuxiliaryCapableVerbClass:
 
     def test_a_bare_stem_before_a_shout_is_no_card(self):
         assert "つける" not in _fronts("ウソつけ！")
+
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "手作りつけものとごはん。",  # つけ|もの is 漬物
+            "自家製のつけものだ。",
+            "いい職につけなかった。",  # the potential of 職に就く
+            "まだ席につけない。",
+            "うそをつけ 知ってるぞ。",  # the imperative of 嘘をつく
+            "うそをつけない人だ。",
+        ],
+    )
+    def test_a_piece_of_a_longer_word_with_the_content_word_beside_it_is_no_card(self, text):
+        assert "つける" not in _fronts(text)
+
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "電気をつけた。",
+            "名前をつけ、紙に書いた。",
+            "壁に絵をつけたり外したりする。",
+            "クリームつけて食べる。",
+            "薬をつけ 包帯を巻く。",
+        ],
+    )
+    def test_the_verb_beside_a_word_it_makes_no_entry_with_keeps_its_card(self, text):
+        assert "つける" in _fronts(text)
 
     def test_a_voiced_tail_is_no_card(self):
         assert "つける" not in _fronts("元気づける言葉だ。")
