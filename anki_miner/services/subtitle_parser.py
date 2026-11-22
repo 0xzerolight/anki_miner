@@ -1122,6 +1122,12 @@ class SubtitleParserService:
         # tokens and never by a file's names; bounded like _exist_memo. It also
         # holds _fold_katakana_native_front's dictionary verdict, by surface.
         self._katakana_run_memo: dict[tuple[Any, ...], bool] = {}
+        # Whether the dictionary tags a surface as an interjection (_is_listed_interjection),
+        # by surface and never by the switch; bounded like _front_cache.
+        self._interjection_memo: dict[str, bool] = {}
+        # Mine the interjections the dictionary lists (_is_listed_interjection). A plain
+        # attribute read at every token, so it can be set after construction; no setting reads it.
+        self._mine_interjections: bool = False
 
     # ------------------------------------------------------------------
     # Per-parse memoization helpers
@@ -3934,10 +3940,13 @@ class SubtitleParserService:
             if (
                 word_token.surface in _KANA_BARE_INTERJECTIONS
                 and self._find_highlight_end(text, raw_tokens, tok_start, tok_end, word_token) == tok_end
+                and not self._is_listed_interjection(word_token, text, tok_start, tok_end)
             ):
                 return False
             if self._is_cut_sokuon_stem(word_token, text, tok_end):
                 return False
+            return not self._ellipsis_reject(word_token, text, tok_start, tok_end)
+        if self._is_listed_interjection(word_token, text, tok_start, tok_end):
             return not self._ellipsis_reject(word_token, text, tok_start, tok_end)
         if not self._whitelist_rescues(word_token, text, tok_start, tok_end, tokens, raw_tokens):
             if rejects is not None:
@@ -3946,6 +3955,61 @@ class SubtitleParserService:
         if self._is_katakana_run_fragment(word_token, text, tok_start, tok_end, tokens):
             return False
         return not self._ellipsis_reject(word_token, text, tok_start, tok_end)
+
+    #: Small kana add no mora of their own (あぁ and きゃ are one mora).
+    _INTERJECTION_SMALL_KANA: frozenset[str] = frozenset("ぁぃぅぇぉゃゅょゎァィゥェォャュョヮ")
+
+    @staticmethod
+    def _is_word_character(ch: str) -> bool:
+        """Whether ``ch`` belongs to a word: kana, kanji, a letter, a digit, the long mark or a wave dash.
+
+        The empty string (a line edge) is none.
+        """
+        return ch.isalnum() or ch in ("〜", "～")
+
+    def _is_listed_interjection(self, word_token, text: str, tok_start: int, tok_end: int) -> bool:
+        """Whether the interjection switch mines this token (``_mine_interjections``, off by default).
+
+        Every interjection the dictionary lists is a card with the switch on:
+        fillers and calls (えっと, ねえ), gasps down to one mora (あっ, あ) and
+        laughs (ははは), whatever the inclusion rule said about the token. What
+        keeps the garbage out:
+
+        - the tagger calls the token an interjection, and the dictionary tags
+          the surface ``int``: a shout with no entry is no card;
+        - it stands alone: the line edge, a space or punctuation on both sides.
+          Glued to a word it is a piece of it (あり|えへん, いただき|まー|す) or of
+          a name (うー|ちゃん);
+        - it is no stammer: a token of one mora with no っ whose kana also opens
+          the next word or closes the one before (あ、ありがとう).
+
+        It changes acceptance only; the caller still runs the ellipsis guard.
+        """
+        if not self._mine_interjections:
+            return False
+        surface = word_token.surface
+        if (
+            getattr(getattr(word_token, "feature", None), "pos1", None) != "感動詞"
+            or getattr(word_token, "compound", False) is True
+            or text[tok_start:tok_end] != surface
+        ):
+            return False
+        is_word = self._is_word_character
+        if is_word(text[tok_start - 1 : tok_start]) or is_word(text[tok_end : tok_end + 1]):
+            return False
+        core = surface.rstrip("っッー")
+        morae = sum(ch not in self._INTERJECTION_SMALL_KANA for ch in core)
+        if core and morae <= 1 and not surface.endswith(("っ", "ッ")):
+            kana = katakana_to_hiragana(core)
+            following = "".join(ch for ch in text[tok_end:] if is_word(ch))[: len(core)]
+            preceding = "".join(ch for ch in text[:tok_start] if is_word(ch))[-len(core) :]
+            if kana in (katakana_to_hiragana(following), katakana_to_hiragana(preceding)):
+                return False
+        if surface not in self._interjection_memo:
+            if len(self._interjection_memo) >= _FRONT_CACHE_CAP:
+                self._interjection_memo.clear()
+            self._interjection_memo[surface] = "int" in self._entry_tags([surface]).get(surface, ())
+        return self._interjection_memo[surface]
 
     #: Kana that never make up a mimetic word's doubled half: the long mark, the small kana.
     _MIMETIC_EXCLUDED_KANA: frozenset[str] = frozenset("ーッァィゥェォャュョヮ")

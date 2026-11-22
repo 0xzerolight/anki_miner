@@ -1,0 +1,2 @@
+{"id":"k21i01","sentence":"えっと、鍵を忘れた","expected":["鍵","忘れる"],"category":"k1121-intj","note":"an interjection is no card at the default settings (the switch is off)"}
+{"id":"k21i02","sentence":"あ、鍵を忘れた","expected":["鍵","忘れる"],"category":"k1121-intj","note":"a one-mora gasp is no card at the default settings"}
