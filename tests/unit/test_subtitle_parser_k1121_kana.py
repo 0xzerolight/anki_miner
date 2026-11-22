@@ -28,6 +28,7 @@ _ATTESTED = frozenset(
     | {"あり", "ある", "だす", "きる", "きれる", "つくす"}
     # Windows a dictionary has as the reading of a word written otherwise.
     | {"という", "といい", "かわいそうに", "ですき", "とって", "にもかかわらず", "かかわらず"}
+    | {"ぼける", "とぼけ", "とぼける"}
 )
 
 # Dictionary entry tags by headword: a word with no row here has no entry at all.
@@ -185,3 +186,41 @@ class TestAuxiliaryCapableVerbClass:
 
     def test_suru_after_a_class_verb_stays_grammar(self):
         assert "する" not in _fronts("お手数をおかけします。")
+
+
+class TestKanaWindowChoice:
+    def test_iu_after_the_quoting_to_is_its_own_word(self):
+        # という is only the reading of と言う, the word itself with one particle.
+        assert "いう" in _fronts("行かないという人がいます。", frozenset({"と言う"}))
+
+    def test_a_kana_adjectival_noun_with_its_particle_is_its_own_word(self):
+        assert "かわいそう" in _fronts("かわいそうに思った。", frozenset({"可哀想に"}))
+
+    def test_a_reading_that_is_no_headword_in_the_words_own_kanji_still_wins(self):
+        assert "いう" not in _fronts("行かないという人がいます。")
+        assert "すき" not in _fronts("本気ですきだと言った。", frozenset({"出好き"}))
+
+    @pytest.mark.parametrize(
+        ("text", "front", "terms"),
+        [
+            ("彼は田中といいます。", "いう", {"といい", "と言う"}),
+            ("弟にやってもらう。", "やる", {"にやっ"}),
+            ("変な音がした。", "する", {"がし"}),
+        ],
+    )
+    def test_a_window_that_ends_inside_the_words_own_inflection_is_no_window(self, text, front, terms):
+        assert front in _fronts(text, frozenset(terms))
+
+    def test_a_cut_whose_dictionary_form_is_a_longer_verb_still_wins(self):
+        # と|ぼけ|ない: とぼけ is a reading, and とぼける the verb the tagger split.
+        assert "ぼける" not in _fronts("とぼけないでよ。")
+
+    def test_an_expression_that_swallows_two_words_still_wins(self):
+        assert "かかわる" not in _fronts("雨にもかかわらず出かけた。", frozenset({"にも関わらず"}))
+
+    def test_the_words_own_te_form_homophone_still_wins(self):
+        assert "とる" not in _fronts("彼にとって大事だ。", frozenset({"取って"}))
+
+    @pytest.mark.parametrize(("text", "window"), [("行くしかない。", "しかない"), ("そうやないですよ。", "やない")])
+    def test_a_window_spelled_in_kana_still_wins(self, text, window):
+        assert "ない" not in _fronts(text, frozenset({window}))

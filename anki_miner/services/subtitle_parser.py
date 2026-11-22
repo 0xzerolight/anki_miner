@@ -3821,6 +3821,7 @@ class SubtitleParserService:
         if idx is None:  # defensive: candidate not in the list ⇒ no context to judge
             return False
         windows = self._lexicalized_window_surfaces(tokens, idx, from_left=from_left)
+        windows = self._kana_window_choice(tokens, idx, windows, own_word=not (from_left or listed_spelling))
         if not windows:
             return False
         if from_left:
@@ -3845,6 +3846,127 @@ class SubtitleParserService:
             for w in uncached:
                 verdicts[w] = self._kana_window_cache[w] = bool(hits.get(w))
         return any(verdicts[w] for w in windows)
+
+    def _kana_window_choice(self, tokens: list, idx: int, windows: list[str], *, own_word: bool) -> list[str]:
+        """The windows that are still a candidate against the kana word at ``tokens[idx]``.
+
+        Two kinds of window are no expression around the word, whatever a
+        dictionary reads into them, and are left out for every recovered word:
+
+        - one that ends at the word while the word's own inflection goes on
+          (に|やっ|て reads にやっ, が|し|た the suffix がし): the string is cut
+          inside a word. A final form keeps its windows (そう|や|ない|です is
+          やない). So does the cut of a recovered word whose dictionary form is
+          a word too: と|ぼけ|ない is とぼける, a longer verb the tagger split.
+          Unless that word is this one with its particle (と|いい|ます: という
+          is と言う), by the test below;
+        - one that opens on the auxiliary tail of the word before it
+          (決め|た|とき reads たとき): that た belongs to the verb.
+
+        With ``own_word`` (a recovered word, not a listed spelling or an
+        auxiliary-capable one), a window that is only a reading also yields
+        when it is the word itself with one particle: re-spelled with the
+        word's own kanji it is a headword (と言う, って言う, 可哀想に), and it
+        takes in exactly one token that is neither a prefix nor the word's own
+        tail. The card is then the word. A window a dictionary spells in kana
+        still wins (しかない, について), and so does a homophone of another
+        word (で|すき is 出好き) or an expression of two or more other tokens
+        (か|も|しれ|ない, と|は|いえ).
+        """
+        token = tokens[idx]
+
+        def pos1(tok) -> str | None:
+            return getattr(getattr(tok, "feature", None), "pos1", None)
+
+        def is_tail(tok) -> bool:
+            return pos1(tok) == "助動詞" or (pos1(tok) == "助詞" and getattr(tok.feature, "pos2", None) == "接続助詞")
+
+        inflects = pos1(token) in ("動詞", "形容詞")
+        c_form = getattr(token.feature, "cForm", None)
+        goes_on = (
+            inflects
+            and idx + 1 < len(tokens)
+            and is_tail(tokens[idx + 1])
+            and not (isinstance(c_form, str) and c_form.startswith(("終止形", "連体形", "命令形")))
+        )
+        wanted = set(windows)
+        dropped: set[str] = set()
+        spans: list[tuple[int, int, str]] = []
+        base, lemma = extract_orth_base(token) or "", extract_lemma(token) or ""
+        in_kanji = lemma if any(is_cjk_ideograph(ch) for ch in lemma) else ""
+        cuts: dict[str, tuple[str, str]] = {}
+        for start in range(max(0, idx - _KANA_RECOVER_WINDOW_MAX_SIDE), idx + 1):
+            on_tail = (
+                0 < start < idx
+                and pos1(tokens[start]) == "助動詞"
+                and pos1(tokens[start - 1]) in _AUX_AFTER_POS1
+                and not getattr(tokens[start], "white_space", "")
+            )
+            for end in range(idx, min(len(tokens) - 1, idx + _KANA_RECOVER_WINDOW_MAX_SIDE) + 1):
+                window = "".join(tok.surface for tok in tokens[start : end + 1])
+                if window not in wanted:
+                    continue
+                if on_tail or end == idx and goes_on and not own_word:
+                    dropped.add(window)
+                elif end == idx and goes_on:
+                    left = window[: len(window) - len(token.surface)]
+                    particle = sum(1 for tok in tokens[start:idx] if pos1(tok) != "接頭辞") == 1
+                    cuts[window] = (left + base, left + in_kanji if particle and in_kanji else "")
+                elif own_word:
+                    spans.append((start, end, window))
+        if cuts:
+            # One probe for the cuts' dictionary forms and the windows the caller reads next.
+            words = self._kana_windows_attested([*windows, *(whole for whole, _ in cuts.values())])
+            own = [spelled for whole, spelled in cuts.values() if spelled and whole in words]
+            listed = self._attest([*own, *words]) if own and self._attest is not None else set()
+            for window, (whole, spelled) in cuts.items():
+                if whole not in words or (spelled in listed and whole not in listed):
+                    dropped.add(window)
+        kanji = self._kana_own_kanji(token) if spans and self._attest is not None else ""
+        respelled: dict[str, str] = {}
+        for start, end, window in spans if kanji else ():
+            if start < idx and pos1(tokens[start]) == "接頭辞":
+                continue
+            foreign = sum(1 for tok in tokens[start:idx] if pos1(tok) != "接頭辞")
+            own_tail = inflects
+            for tok in tokens[idx + 1 : end + 1]:
+                own_tail = own_tail and is_tail(tok)
+                foreign += not own_tail
+            if foreign == 1:
+                respelled[window] = (
+                    "".join(tok.surface for tok in tokens[start:idx])
+                    + kanji
+                    + "".join(tok.surface for tok in tokens[idx + 1 : end + 1])
+                )
+        if respelled and self._attest is not None:
+            listed = self._attest([*respelled, *respelled.values()])
+            dropped.update(w for w, spelled in respelled.items() if w not in listed and spelled in listed)
+        return [w for w in windows if w not in dropped]
+
+    def _kana_windows_attested(self, windows: list[str]) -> set[str]:
+        """The ``windows`` a dictionary has as a term or a reading, through the window memo."""
+        lookup = self._kana_attest_lookup
+        if lookup is None:
+            return set()
+        unknown = [w for w in dict.fromkeys(windows) if w not in self._kana_window_cache]
+        verdicts = {w: self._kana_window_cache[w] for w in windows if w not in unknown}
+        if unknown:
+            if len(self._kana_window_cache) + len(unknown) > _FRONT_CACHE_CAP:
+                self._kana_window_cache.clear()
+            hits = lookup(unknown)
+            for w in unknown:
+                verdicts[w] = self._kana_window_cache[w] = bool(hits.get(w))
+        return {w for w, attested in verdicts.items() if attested}
+
+    def _kana_own_kanji(self, token) -> str:
+        """The kana token as its lemma spells it (いい → 言い, かわいそう → 可哀想), "" when the lemma has no kanji."""
+        spelled = self._own_form_in_kanji(token, "")
+        if spelled:
+            return spelled
+        lemma = extract_lemma(token) or ""
+        if token.surface == (extract_orth_base(token) or "") and any(is_cjk_ideograph(ch) for ch in lemma):
+            return str(lemma)
+        return ""
 
     def _listed_spelling_windows(self, tokens: list, idx: int, windows: list[str]) -> list[str]:
         """The windows that can turn away a listed kana spelling of a kanji-written word (ほう, わけ, あと).
