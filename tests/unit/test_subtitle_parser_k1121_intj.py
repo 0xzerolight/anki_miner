@@ -226,3 +226,16 @@ class TestHumbleSuru:
     def test_suru_before_tai_stays_out(self):
         fronts = _fronts("先生にお会いしたかったです。", interjections=False)
         assert "する" not in fronts and "したい" not in fronts
+
+
+class TestIiAfterAClauseParticle:
+    @pytest.mark.parametrize("text", ["寒いけどいい。", "明日は休むからいい。", "安いしいいね。"])
+    def test_ii_after_a_clause_particle_is_the_predicate(self, text):
+        assert "いい" in _fronts(text, interjections=False)
+
+    @pytest.mark.parametrize("text", ["食べていい？", "言ってもいい。", "早く行くといい。"])
+    def test_ii_in_a_grammar_frame_stays_out(self, text):
+        assert "いい" not in _fronts(text, interjections=False)
+
+    def test_ii_that_opens_ii_kara_stays_out(self):
+        assert _fronts("寒いけどいいから早く。", interjections=False).count("いい") == 0

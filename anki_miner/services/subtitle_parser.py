@@ -4164,6 +4164,11 @@ class SubtitleParserService:
           (お持ちします, and お待たせしました over the causative せ). Not before
           たい: し + たい takes the front したい, which the dictionary has only
           as the reading of other words (死体).
+        - いい after a particle that closes a clause of its own (寒いけどいい,
+          休むからいい, 安いしいい). After て, で, ば, と and ても it is the
+          grammar frame (食べていい) and stays out, and so it does after が:
+          見るがいい is the pattern がいい, not a clause and its predicate.
+          Before から it opens the listed いいから (いいから いいから).
         """
         base = getattr(word_token.feature, "orthBase", None)
         prev = tokens[idx - 1]
@@ -4185,6 +4190,10 @@ class SubtitleParserService:
                 return False
             head = tokens[stem - 1]
             return head.surface in ("お", "ご") and getattr(getattr(head, "feature", None), "pos1", None) == "接頭辞"
+        if base in ("いい", "良い", "よい") and pos1 == "助詞":
+            if idx + 1 < len(tokens) and tokens[idx + 1].surface == "から":
+                return False
+            return prev.surface in ("から", "けど", "けれど", "けれども", "し", "ので", "のに")
         return False
 
     def _is_not_main_verb(self, word_token, tokens: list) -> bool:
