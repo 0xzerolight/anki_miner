@@ -236,6 +236,7 @@ def _kana_join(
             and not _runs_on(row.headword, tokens, i + size)
             and not _misread_ja_nai(row.headword, tokens, i)
             and not _no_of_noda(row.headword, tokens, i + size)
+            and not _inside_longer_entry(row.headword, tokens, i + size)
             and not _copula_de_negated(row.headword, tokens, i + size)
             and not _volitional_you(tokens, i)
             and not _with_what(row.headword, tokens, i + size)
@@ -438,6 +439,16 @@ def _no_of_noda(headword: str, tokens: list, after: int) -> bool:
         return False
     following = tokens[after]
     return _pos1(following) == "助動詞" and extract_lemma(following) in ("だ", "です")
+
+
+def _inside_longer_entry(headword: str, tokens: list, after: int) -> bool:
+    """Whether どう|し|た opens the entry どうしたものか 'what should I do', not the question どうした.
+
+    The row is passed over before もの / もん + か, and どう keeps its own card.
+    """
+    if headword != "どうした" or after + 1 >= len(tokens):
+        return False
+    return tokens[after].surface in ("もの", "もん") and tokens[after + 1].surface == "か"
 
 
 def _verb_te_form(headword: str, tokens: list, after: int) -> bool:

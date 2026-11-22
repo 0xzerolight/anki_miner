@@ -522,6 +522,15 @@ def test_other_bare_noun_and_verb_pairs_stay_two_words(sentence: str, entry: str
     assert entry not in _l5_fronts(sentence)
 
 
+@pytest.mark.parametrize("sentence", ["どうしたものかな", "さて、どうしたもんか"])
+def test_dou_shita_inside_dou_shita_mono_ka_is_no_row(sentence: str) -> None:
+    assert "どうした" not in _fronts(sentence)
+
+
+def test_dou_shita_before_another_mono_stays() -> None:
+    assert "どうした" in _fronts("どうしたもんだ")
+
+
 # --- L-6, second half: the kana なん as a word --------------------------------------------
 
 
