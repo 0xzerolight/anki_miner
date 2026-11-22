@@ -1,3 +1,5 @@
 {"id":"k21l01","sentence":"今日は雪らしい","expected":["今日","雪","らしい"],"category":"k1121-list","note":"The auxiliary らしい is a grammar card (one-token row, the tagger's 助動詞 only)."}
 {"id":"k21l02","sentence":"今日は寝るべきだ","expected":["今日","寝る","べき"],"category":"k1121-list","note":"べき after a verb's dictionary form is its own grammar card; the verb keeps its card."}
 {"id":"k21l03","sentence":"検討すべき問題だ","expected":["検討","すべき","問題"],"category":"k1121-list","note":"す|べき is the entry すべき, not a refused す and a bare べき."}
+{"id":"k21l04","sentence":"天気がよくなる","expected":["天気","よくなる"],"category":"k1121-list","note":"よく|なる is the listed よくなる: one card, no よい and no bare なる."}
+{"id":"k21l05","sentence":"泣きそうになった","expected":["泣く","そうになる"],"category":"k1121-list","note":"そう|に|なる right after a verb stem is the listed そうになる; the verb keeps its card."}

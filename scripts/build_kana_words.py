@@ -677,6 +677,10 @@ JOINS: tuple[tuple[str, str, str, str] | tuple[str, str, str, str, str], ...] = 
     ("なんというか", "副詞", "なん|と|いう|か", ""),
     ("なんて", "副詞", "なん|て", ""),
     ("なんてこった", "感動詞", "なん|てこっ|た", ""),
+    # K1121 LIST: listed expressions on なる, so that the adjective + なる reading does not card their pieces:
+    # よく|なる is よくなる 'get better'; そう|に|なる right after a verb's stem is そうになる 'almost do' (泣きそうになった).
+    ("よくなる", "動詞", "よく|=なる", ""),
+    ("そうになる", "動詞", "そう|に|=なる", "verb"),
 )
 
 _HEADER = """\

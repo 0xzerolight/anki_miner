@@ -399,3 +399,34 @@ def test_nante_before_a_kana_iu_is_left_alone() -> None:
 @pytest.mark.parametrize("sentence", ["なんと戦っているの", "なんとこれを比べる"])
 def test_nan_to_before_another_verb_or_a_pronoun_is_with_what(sentence: str) -> None:
     assert "なんと" not in _l4_fronts(sentence)
+
+
+# --- Listed expressions on なる (lane INTJ's P-1 leaves them to these rows) ------------------
+
+
+@pytest.mark.parametrize(
+    ("sentence", "front"),
+    [
+        ("天気がよくなる", "よくなる"),
+        ("全然よくならない", "よくなる"),
+        ("泣きそうになった", "そうになる"),
+        ("落ちそうになる", "そうになる"),
+    ],
+)
+def test_listed_naru_expression_is_one_entry(sentence: str, front: str) -> None:
+    fronts = _l4_fronts(sentence)
+    assert front in fronts
+    assert "なる" not in fronts
+    assert "よい" not in fronts
+
+
+@pytest.mark.parametrize(
+    ("sentence", "row"),
+    [
+        ("おいしそうになった", "そうになる"),  # after an adjective's stem: 'came to look tasty'
+        ("そうなるよ", "そうになる"),
+        ("眠くなる", "よくなる"),
+    ],
+)
+def test_other_naru_lines_have_no_row(sentence: str, row: str) -> None:
+    assert row not in _l4_fronts(sentence)

@@ -709,6 +709,9 @@ _ANCHOR_HEADWORDS: tuple[str, ...] = (
     "らしい",
     "べき",
     "すべき",
+    # k1121 LIST: listed expressions on なる (k21l04, k21l05)
+    "よくなる",
+    "そうになる",
 )
 
 # Yomitan `ruleIdentifiers` per fixture headword. A real term bank ships these,
