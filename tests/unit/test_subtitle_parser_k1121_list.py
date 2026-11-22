@@ -39,6 +39,9 @@ _ATTESTED = frozenset(
         "じゃあ",
         "じゃない",
         "しかるべき",
+        "なん",
+        "なんか",
+        "これ",
         "のです",
         "ことがある",
         # L-2
@@ -476,3 +479,24 @@ def test_idiom_with_a_dropped_particle_or_a_voiced_tail_is_one_entry(sentence: s
 )
 def test_other_bare_noun_and_verb_pairs_stay_two_words(sentence: str, entry: str) -> None:
     assert entry not in _l5_fronts(sentence)
+
+
+# --- L-6, second half: the kana なん as a word --------------------------------------------
+
+
+@pytest.mark.parametrize("sentence", ["これはなんですか", "なんの話だ", "それがなんだ"])
+def test_kana_nan_is_the_word_nani(sentence: str) -> None:
+    assert "なん" in _fronts(sentence)
+
+
+def test_kana_nan_inside_a_listed_word_is_no_card() -> None:
+    # After て the tagger still cuts なん|か, and なんか is a dictionary word: the window takes it.
+    service = SubtitleParserService(
+        AnkiMinerConfig(),
+        term_lookup=lambda terms: {term for term in terms if term == "なんか"},
+        kana_attest_lookup=lambda terms: {term: term in _ATTESTED for term in terms},
+    )
+    words, _index, _counts = service.parse_text_units(
+        [ReadingUnit(text="照れてなんかない", index=0, location_label="t")], want_line_index=False
+    )
+    assert "なん" not in [word.mined_form for word in words]

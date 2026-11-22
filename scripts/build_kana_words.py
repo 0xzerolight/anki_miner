@@ -51,7 +51,7 @@ SHORT_NOUNS: frozenset[str] = frozenset(
 )
 
 #: The only two-kana spellings of kanji-written words listed outside the nouns.
-SHORT_READINGS: frozenset[str] = frozenset({"きみ", "ぼく", "おれ", "かれ", "だれ", "ぜひ", "われ"})
+SHORT_READINGS: frozenset[str] = frozenset({"きみ", "ぼく", "おれ", "かれ", "だれ", "ぜひ", "われ", "なん"})
 
 #: The only kanji-written nouns of three morae listed by their kana spelling: those
 #: commonly written in kana. A three-mora kana noun is otherwise as often the tail
