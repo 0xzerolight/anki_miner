@@ -597,6 +597,13 @@ JOINS: tuple[tuple[str, str, str, str] | tuple[str, str, str, str, str], ...] = 
     ("みたい", "形状詞", "みたい", "", "grammar"),
     ("じゃないか", "感動詞", "じゃ|ない|か", "copula", "grammar"),
     ("でしょうか", "感動詞", "でしょう|か", "", "grammar"),
+    # K1121 EXPR: greetings JMdict lists whole. The two with a kanji token are 副詞 so that they pass the run's
+    # allowed_pos (a join that is not pure kana is no list word).
+    ("ありがとうございます", "感動詞", "ありがとう|ござい|ます", ""),
+    ("ありがとうございました", "感動詞", "ありがとう|ござい|まし|た", ""),
+    ("おはようございます", "感動詞", "おはよう|ござい|ます", ""),
+    ("よろしくお願いします", "副詞", "よろしく|お願い|し|ます", ""),
+    ("ご覧ください", "副詞", "ご覧|ください", ""),
 )
 
 _HEADER = """\

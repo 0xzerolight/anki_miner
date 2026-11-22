@@ -114,6 +114,13 @@ _ATTESTED = frozenset(
         "でしょう",
         "でしょうか",
         "かもしれない",
+        # E-5b
+        "ありがとう",
+        "ありがとうございます",
+        "ありがとうございました",
+        "おはようございます",
+        "よろしくお願いします",
+        "ご覧ください",
     }
 )
 
@@ -421,3 +428,17 @@ def test_ka_before_mo_belongs_to_kamoshirenai() -> None:
     assert "かもしれない" in fronts
     assert "じゃない" in fronts
     assert "じゃないか" not in fronts
+
+
+# --- E-5b: greetings the dictionary lists whole ----------------------------------------------
+
+
+@pytest.mark.parametrize("sentence", ["ありがとうございます", "ありがとうございました", "おはようございます"])
+def test_greeting_is_one_entry(sentence: str) -> None:
+    # よろしくお願いします and ご覧ください need the compound matcher's お願い / ご覧 token, which this
+    # dictionary-less parser does not build; the lane probed them against the real dictionary.
+    assert _fronts(sentence) == [sentence]
+
+
+def test_plain_thanks_keeps_its_card() -> None:
+    assert _fronts("ありがとう、助かった")[0] == "ありがとう"
