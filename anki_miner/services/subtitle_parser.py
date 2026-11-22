@@ -4268,13 +4268,15 @@ class SubtitleParserService:
         word (俺っ|ちと, 俺ん|ちと); the adverb follows a space, a line start or a
         particle. とき glued to a verb's 連用形 is the contracted ておき
         (待っ|とき, やめ|とき); the noun follows a 連体形 (待つとき, 決めたとき).
+        うぬ is held to おら's rule: the pronoun takes a particle or a plural
+        (うぬは, うぬの, うぬら); bare, or in うぬぬ, it is a growl.
         """
         surface = word_token.surface
         if surface == "ちょうだい":
             return SubtitleParserService._is_request_after_te(word_token, tokens)
         if surface == "なん":
             return SubtitleParserService._nan_is_cut_from_a_verb(word_token, tokens)
-        if surface not in ("おら", "よろしゅう", "ちと", "とき"):
+        if surface not in ("おら", "よろしゅう", "ちと", "とき", "うぬ"):
             return False
         idx = next((i for i, tok in enumerate(tokens) if tok is word_token), None)
         if idx is None:

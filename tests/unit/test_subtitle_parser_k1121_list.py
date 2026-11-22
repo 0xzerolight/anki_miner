@@ -591,6 +591,11 @@ def test_archaic_pronoun_is_a_word(sentence: str, front: str) -> None:
     assert front in _fronts(sentence)
 
 
+@pytest.mark.parametrize("sentence", ["うぬぬ", "うぬ。では次だ"])
+def test_unu_as_a_growl_is_no_card(sentence: str) -> None:
+    assert "うぬ" not in _fronts(sentence)
+
+
 def test_nannano_before_a_copula_leaves_nan() -> None:
     fronts = _fronts("なんなのだ")
     assert "なんなの" not in fronts
