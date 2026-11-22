@@ -49,6 +49,7 @@ _TAGS = {
     "いやあ": "int",
     "フフ": "int",
     "えっ": "int",
+    "お願い": "n vs",
 }
 
 # Headwords with no tags of their own: spelling rows of another entry.
@@ -209,3 +210,19 @@ class TestNaruAsThePredicate:
     @pytest.mark.parametrize("text", ["病気がよくなった。", "鍵を忘れそうになった。"])
     def test_naru_inside_a_longer_entry_nothing_joins_stays_out(self, text):
         assert "なる" not in _fronts(text, interjections=False)
+
+
+class TestHumbleSuru:
+    @pytest.mark.parametrize("text", ["ご面倒おかけします。", "お待たせしました。", "荷物をお持ちします。"])
+    def test_suru_after_a_prefixed_verb_stem_is_the_predicate(self, text):
+        assert "する" in _fronts(text, interjections=False)
+
+    @pytest.mark.parametrize(
+        "text", ["勉強する。", "本を読んだりした。", "お願いします。", "お願いいたします。", "鍵を持ちします。"]
+    )
+    def test_suru_elsewhere_is_unchanged(self, text):
+        assert "する" not in _fronts(text, interjections=False)
+
+    def test_suru_before_tai_stays_out(self):
+        fronts = _fronts("先生にお会いしたかったです。", interjections=False)
+        assert "する" not in fronts and "したい" not in fronts

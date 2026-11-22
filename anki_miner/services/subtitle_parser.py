@@ -4160,6 +4160,10 @@ class SubtitleParserService:
           auxiliary and stays grammar. Two longer entries nothing joins stay
           out, as なる would be a piece of them: よく + なる (良くなる in kana)
           and そう + に + なる (そうになる).
+        - する after お / ご + a verb's continuative, the humble form
+          (お持ちします, and お待たせしました over the causative せ). Not before
+          たい: し + たい takes the front したい, which the dictionary has only
+          as the reading of other words (死体).
         """
         base = getattr(word_token.feature, "orthBase", None)
         prev = tokens[idx - 1]
@@ -4172,6 +4176,15 @@ class SubtitleParserService:
                     idx >= 2
                     and (tokens[idx - 2].surface == "そう" or SubtitleParserService._is_honorific_stem(tokens, idx - 2))
                 )
+        if base == "する":
+            stem = idx - 2 if pos1 == "助動詞" and prev.surface in ("せ", "させ") else idx - 1
+            if stem < 1 or getattr(getattr(tokens[stem], "feature", None), "pos1", None) != "動詞":
+                return False
+            following = tokens[idx + 1] if idx + 1 < len(tokens) else None
+            if getattr(getattr(following, "feature", None), "lemma", None) == "たい":
+                return False
+            head = tokens[stem - 1]
+            return head.surface in ("お", "ご") and getattr(getattr(head, "feature", None), "pos1", None) == "接頭辞"
         return False
 
     def _is_not_main_verb(self, word_token, tokens: list) -> bool:
