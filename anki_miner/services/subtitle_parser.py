@@ -1825,6 +1825,7 @@ class SubtitleParserService:
         honorifics: collections.Counter[str] = collections.Counter()
         called: collections.Counter[str] = collections.Counter()
         katakana: collections.Counter[str] = collections.Counter()
+        repeated: collections.Counter[str] = collections.Counter()
         for line in subs:
             if getattr(line, "is_comment", None) is True:
                 continue
@@ -1842,7 +1843,8 @@ class SubtitleParserService:
                 honorifics.update(self._names_before_honorifics(line_state))
                 called.update(self._names_called(line_state))
                 katakana.update(self._katakana_runs_named(self._tokenizer_text(text)))
-        names = self._file_names(labels, honorifics, called)
+                repeated.update(self._one_kanji_runs(line_state))
+        names = self._file_names(labels, honorifics, called, repeated)
         if names:
             line_states = [self._merge_file_names(line_state, names) for line_state in line_states]
         # A katakana name is known by the same evidence, whatever its length and its tokens:
@@ -1978,6 +1980,51 @@ class SubtitleParserService:
             previous_end = end
         return names
 
+    #: A line that can hold a run of one-kanji tokens: two kanji side by side.
+    _ONE_KANJI_RUN_HINT_RE = re.compile(r"[一-鿿々〆]{2}")
+
+    def _one_kanji_runs(self, line_state: tuple[str, list, list, float, float, float]) -> list[str]:
+        """Each unspaced run of two to four one-kanji nouns of a line (嵐|牙 in 嵐牙が来た).
+
+        A name no dictionary has, that no label and no honorific marks, still
+        comes out as a row of one-kanji nouns, each carded as a word. A file
+        that writes the same row three times uses it as one word
+        (``_file_names``, class ``R``). Read from the merged tokens, where a
+        compound the dictionary lists is one token already, and from the tokens
+        rather than the cards: every piece is ONE kanji and a noun that is no
+        numeral (a pronoun is no noun), and a suffix may close the run, as the
+        tagger files the last kanji of many names (蒼|刃). The run is the whole
+        row: a longer one is no name, and a part of one is not counted. What
+        follows a number is its counter and starts no run (３|年|前).
+        """
+        line = self._tokenizer_text(line_state[0])
+        if self._ONE_KANJI_RUN_HINT_RE.search(line) is None:
+            return []
+        runs: list[str] = []
+        run: list[str] = []
+        closed = counter = False
+        previous_end = -1
+        for token, start, end in [*self._iter_token_spans(line, line_state[2]), (None, -1, -1)]:
+            feature = getattr(token, "feature", None)
+            pos1, numeral = getattr(feature, "pos1", None), getattr(feature, "pos2", None) == "数詞"
+            noun = pos1 == "名詞" and not numeral
+            piece = (
+                token is not None
+                and (noun or pos1 == "接尾辞")
+                and len(token.surface) == 1
+                and self._FILE_NAME_KANJI_RE.match(token.surface) is not None
+            )
+            if run and (not piece or closed or start != previous_end):
+                if 2 <= len(run) <= 4:
+                    runs.append("".join(run))
+                run = []
+            if piece and (run or (noun and not counter)):
+                run.append(token.surface)
+                closed = not noun
+            counter = numeral
+            previous_end = end
+        return runs
+
     def _is_name_honorific(self, token: Any) -> bool:
         """Whether a raw token is what a name is called with: さん and its kin as a suffix, 先生, 先輩."""
         surface = token.surface
@@ -2000,7 +2047,11 @@ class SubtitleParserService:
         )
 
     def _file_names(
-        self, labels: collections.Counter[str], honorifics: collections.Counter[str], called: collections.Counter[str]
+        self,
+        labels: collections.Counter[str],
+        honorifics: collections.Counter[str],
+        called: collections.Counter[str],
+        repeated: collections.Counter[str],
     ) -> dict[str, str]:
         """The names one file vouches for, each with its kind of evidence.
 
@@ -2008,7 +2059,8 @@ class SubtitleParserService:
         the name stands twice before an honorific. ``V``: it is called by name
         and stands before an honorific (水竜さん！ alone is both). A name that is
         only shouted is not listed: a move's name is shouted the same way, and
-        its pieces are words. A name is 2 to 6 characters with
+        its pieces are words. ``R``: a run of one-kanji nouns the file writes
+        three times (``_one_kanji_runs``). A name is 2 to 6 characters with
         a kanji and no dictionary headword as written: a role (店員) and a word
         that is also a name (森) stay words. Without a dictionary there is no
         list.
@@ -2016,7 +2068,7 @@ class SubtitleParserService:
         if self._term_lookup is None:
             return {}
         names: dict[str, str] = {}
-        for name in sorted({*labels, *honorifics, *called}):
+        for name in sorted({*labels, *honorifics, *called, *repeated}):
             if not (self._FILE_NAME_RE.fullmatch(name) and self._FILE_NAME_KANJI_RE.search(name)):
                 continue
             if labels[name] >= 2 or (labels[name] and honorifics[name] + called[name] >= 2):
@@ -2025,6 +2077,8 @@ class SubtitleParserService:
                 names[name] = "H"
             elif called[name] and honorifics[name]:
                 names[name] = "V"
+            elif repeated[name] >= 3:
+                names[name] = "R"
         if not names:
             return {}
         listed = self._memoized_attest(sorted(names))
@@ -2102,8 +2156,12 @@ class SubtitleParserService:
           and adjectival nouns, holds no numeral, and never ends in such a rank
           or house word, whatever stands before it: a shop no dictionary lists
           (鯖|屋 in 鯖屋さん) keeps its noun.
-        * A name that is only called (``V``) is one kanji per piece and does not
-          start with a prefix word (元|父): a shouted compound keeps its words.
+        * A name that is only called (``V``) or only repeated (``R``) is one
+          kanji per piece and does not start with a prefix word (元|父): a
+          shouted compound keeps its words.
+        * A repeated run that a suffix closes holds a noun that is no common
+          word: a common word and its suffix (娘|達, 時|用) are written three
+          times in any file. Without a commonness probe no such run is a name.
         """
         kanji = False
         known = 0
@@ -2122,13 +2180,18 @@ class SubtitleParserService:
             elif len(surface) >= (3 if _is_all_katakana(surface) else 2):
                 return False
             holds_kanji = self._FILE_NAME_KANJI_RE.search(surface) is not None
-            if (len(surface) == 1 or kind == "V") and not (len(surface) == 1 and holds_kanji):
+            if (len(surface) == 1 or kind in "VR") and not (len(surface) == 1 and holds_kanji):
                 return False
             kanji = kanji or holds_kanji
         if tokens[-1].surface in self._NAME_TITLE_TAILS and (kind != "L" or known == len(tokens) - 1):
             return False
-        if kind == "V" and tokens[0].surface in self._NAME_PREFIX_HEADS:
+        if kind in "VR" and tokens[0].surface in self._NAME_PREFIX_HEADS:
             return False
+        if kind == "R" and getattr(getattr(tokens[-1], "feature", None), "pos1", None) == "接尾辞":
+            heads = [token.surface for token in tokens[:-1]]
+            common = self._memoized_term_common(heads)
+            if common is None or all(common.get(head) for head in heads):
+                return False
         return kanji and known < len(tokens)
 
     def _style_skipped_events(self, subs: Any) -> frozenset[int]:
