@@ -624,6 +624,24 @@ JOINS: tuple[tuple[str, str, str, str] | tuple[str, str, str, str, str], ...] = 
     ("じゃね", "感動詞", "じゃ|ね", "noun", "grammar"),
     ("うる", "動詞", "うる", "verb", "grammar"),
     ("しかるべき", "連体詞", "しかる|べき", ""),
+    # K1121 LIST: やらしい is one adjective (the tagger cuts や + the auxiliary らしい).
+    ("やらしい", "形容詞", "や|=らしい", ""),
+    # K1121 LIST: the entry どうした before the explanatory ん / の + a copula (どうした + んだ, どうした + のだ). The
+    # longer どうしたん / どうしたの are the card only where the clause ends on them: a row that does not fit gives
+    # its tokens to the next one down (LexicalJoiner._kana_row), and どう|し|た|の is passed over before だ / です
+    # (lexical_joiner._no_of_noda).
+    ("どうした", "感動詞", "どう|し|た", "start"),
+    # K1121 LIST: entries whose kana verb (する, くる, すぎる) was carded alone. ちょっと|し|た only before a noun
+    # (_adnominal_only); に|つれ|て not before くる / いく (家につれてくる: _verb_te_form); しだい|に only opening a
+    # clause (気持ちしだいになる is the suffix 次第 + に). No やってくる row: a third of its lines are やる + くる
+    # (昔からやってきた, 代わりにやってきました).
+    ("ちょっとした", "連体詞", "ちょっと|し|た", ""),
+    ("につれて", "副詞", "に|つれ|て", ""),
+    ("にすぎない", "形容詞", "に|すぎ|=ない", ""),
+    ("にすぎない", "形容詞", "に|すぎ|ませ|ん", ""),
+    ("ときたら", "副詞", "と|き|たら", "noun"),
+    ("しだいに", "副詞", "しだい|に", "start"),
+    ("さすれば", "接続詞", "さ|すれ|ば", "start"),
 )
 
 _HEADER = """\

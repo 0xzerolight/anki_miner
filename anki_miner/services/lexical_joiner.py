@@ -100,6 +100,14 @@ _QUESTION_VERBS = frozenset(
 _AUXILIARY_ROWS = frozenset({"らしい", "やろ"})
 # Rows that are the word only where the line or the sentence stops after them (``_runs_on``).
 _STOP_AFTER = frozenset({"じゃね"})
+# Joined rows that end a predicate: a row right after one still follows an auxiliary (``_joined_pos1``).
+_PREDICATE_ROWS = _AUXILIARY_ROWS | {"どうした"}
+# Pre-noun rows whose tokens are an adverb + a verb's past anywhere else (``_adnominal_only``).
+_ADNOMINAL_ROWS = frozenset({"そういった", "ちょっとした"})
+# What makes に|つれ|て the verb 連れて: a verb of coming or going right after it (``_verb_te_form``).
+_MOTION_VERBS = frozenset({"くる", "来る", "いく", "行く", "帰る"})
+# "noun" rows that also open a clause before the noun they name (``_opens_before_a_noun``).
+_NAMING_ROWS = frozenset({"という"})
 _GRAMMAR_POS1 = frozenset({"助詞", "助動詞"})
 _MAX_FIXED_TOKENS = max(len(key) for key in _FIXED_JOINS)
 _MAX_KANA_TOKENS = max(len(key) for key in (*kana_words().joins, *kana_words().base_joins))
@@ -173,8 +181,12 @@ def _kana_join(
     grammar_points: bool,
     keys: list[str] | None = None,
     written_ok: Callable[[str], bool] | None = None,
+    below: int | None = None,
 ) -> _Join | None:
     """The longest kana word list join starting at ``tokens[i]``: by surfaces, or ending on a dictionary form.
+
+    ``below`` asks for a join of fewer tokens than that: the next row down, when
+    the longer one does not fit where it stands (``LexicalJoiner._kana_row``).
 
     A row of one token (だろう, ください) is no join but the same kind of word: a
     grammar expression the tagger files as an auxiliary, named by the list.
@@ -190,7 +202,7 @@ def _kana_join(
     """
     listed = kana_words()
     read = keys is not None and written_ok is not None and keys[i] in listed.heads
-    for size in range(min(_MAX_KANA_TOKENS, len(tokens) - i), 0, -1):
+    for size in range(min(_MAX_KANA_TOKENS, len(tokens) - i, (below or _MAX_KANA_TOKENS + 1) - 1), 0, -1):
         span = tokens[i : i + size]
         surfaces = tuple(token.surface for token in span)
         row = listed.joins.get(surfaces) or listed.base_joins.get((*surfaces[:-1], extract_orth_base(span[-1])))
@@ -212,6 +224,7 @@ def _kana_join(
             and not _not_the_auxiliary(row.headword, span)
             and not _runs_on(row.headword, tokens, i + size)
             and not _misread_ja_nai(row.headword, tokens, i)
+            and not _no_of_noda(row.headword, tokens, i + size)
         ):
             return _Join(
                 i,
@@ -323,9 +336,21 @@ def _adnominal_only(headword: str, tokens: list, after: int) -> bool:
     """Whether そう|いっ|た is 'said so' here, not the pre-noun そういった 'that kind of'.
 
     The pre-noun word stands before its noun (そういった話); anywhere else the
-    same tokens are そう + 言った (彼がそういったんだ).
+    same tokens are そう + 言った (彼がそういったんだ). ちょっと|し|た is the same:
+    ちょっとした問題 'a minor problem' against ちょっとしたんだ 'did a little'.
     """
-    return headword == "そういった" and not (after < len(tokens) and _pos1(tokens[after]) in _NOUN_POS1)
+    return headword in _ADNOMINAL_ROWS and not (after < len(tokens) and _pos1(tokens[after]) in _NOUN_POS1)
+
+
+def _no_of_noda(headword: str, tokens: list, after: int) -> bool:
+    """Whether the の of どう|し|た|の opens のだ / のです: どうしたのだ is どうした + のだ, not the question どうしたの.
+
+    The row is passed over, so the shorter どう|し|た joins and の|だ stays whole for its own row.
+    """
+    if headword != "どうしたの" or after >= len(tokens):
+        return False
+    following = tokens[after]
+    return _pos1(following) == "助動詞" and extract_lemma(following) in ("だ", "です")
 
 
 def _verb_te_form(headword: str, tokens: list, after: int) -> bool:
@@ -333,9 +358,12 @@ def _verb_te_form(headword: str, tokens: list, after: int) -> bool:
 
     A verb right after it takes that て: 写真にとって送った 'took a photo and sent
     it', ここにとっておいた 'kept it here'. The expression is followed by what it
-    qualifies (彼にとって大事だ) or by は / も.
+    qualifies (彼にとって大事だ) or by は / も. に|つれ|て before a verb of coming
+    or going is 連れて (家につれてくる), not につれて 'as; in proportion to'.
     """
-    return headword == "にとって" and after < len(tokens) and _pos1(tokens[after]) == "動詞"
+    if after >= len(tokens) or _pos1(tokens[after]) != "動詞":
+        return False
+    return headword == "にとって" or (headword == "につれて" and extract_orth_base(tokens[after]) in _MOTION_VERBS)
 
 
 def _te_form_in_use(headword: str, tokens: list, after: int) -> bool:
@@ -397,10 +425,28 @@ def _misread_ja_nai(headword: str, tokens: list, start: int) -> bool:
 
 
 def _joined_pos1(previous: _Join | None) -> str | None:
-    """The POS a row sees in the join right before it: a joined auxiliary is still one (らしい|のです)."""
+    """The POS a row sees in the join right before it: a joined predicate still ends on an auxiliary.
+
+    らしい|のです and どうした|のだ: the "verb" row のです follows the joined らしい as it followed the token.
+    """
     if previous is None:
         return None
-    return "助動詞" if previous.headword in _AUXILIARY_ROWS else previous.pos1
+    return "助動詞" if previous.headword in _PREDICATE_ROWS else previous.pos1
+
+
+def _opens_before_a_noun(candidate: _Join, tokens: list, spans: dict[int, tuple[int, int]]) -> bool:
+    """Whether と|いう, after no noun, opens its clause right before the noun it names.
+
+    A subtitle breaks a sentence there (…/という話だ): the line starts on the
+    same という 'called; that says', not on the verb 言う.
+    """
+    after = candidate.end + 1
+    return (
+        candidate.headword in _NAMING_ROWS
+        and _opens_clause(tokens, spans, candidate.start)
+        and after < len(tokens)
+        and _pos1(tokens[after]) in _NOUN_POS1
+    )
 
 
 def _opens_clause(tokens: list, spans: dict[int, tuple[int, int]], i: int) -> bool:
@@ -570,7 +616,9 @@ class LexicalJoiner:
             if candidate.after == "alone":
                 if not _stands_alone(tokens, spans, candidate.end):
                     return False
-            elif not _follows(tokens, candidate.start, candidate.after, _joined_pos1(previous)):
+            elif not _follows(
+                tokens, candidate.start, candidate.after, _joined_pos1(previous)
+            ) and not _opens_before_a_noun(candidate, tokens, spans):
                 return False
             kept.append(candidate)
             return True
@@ -625,12 +673,28 @@ class LexicalJoiner:
         last = len(tokens) - 1
         keys = [_row_key(token) for token in tokens]
         while i <= last:
-            join = (i < last and (_fixed_join(tokens, i) or _negative_adjective(tokens, i))) or _kana_join(
-                tokens, i, self._grammar_points, keys, self._written
-            )
-            if not join or not fits(join):
+            join = (i < last and (_fixed_join(tokens, i) or _negative_adjective(tokens, i))) or None
+            if join is None:
+                join = self._kana_row(tokens, i, keys, fits)
+            elif not fits(join):
+                join = None
+            if join is None:
                 i += 1
             else:
                 found.append(join)
                 i = join.end + 1
         return found
+
+    def _kana_row(self, tokens: list, i: int, keys: list[str], fits: Callable[[_Join], bool]) -> _Join | None:
+        """The longest kana row at ``tokens[i]`` that fits where it stands.
+
+        A longer row that does not fit gives way to the next one down: どう|し|た|ん
+        is the reply only before a pause, so before だ the row どう|し|た joins and
+        ん|だ stays for its own row (どうした + んだ).
+        """
+        below: int | None = None
+        while True:
+            join = _kana_join(tokens, i, self._grammar_points, keys, self._written, below)
+            if join is None or fits(join):
+                return join
+            below = join.end - i + 1

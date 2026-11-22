@@ -41,6 +41,25 @@ _ATTESTED = frozenset(
         "しかるべき",
         "のです",
         "ことがある",
+        # L-2
+        "どう",
+        "どうした",
+        "どうしたの",
+        "どうしたん",
+        "どうして",
+        "んだ",
+        "んです",
+        "のだ",
+        "だろう",
+        "ちょっと",
+        "ちょっとした",
+        "につれて",
+        "にすぎない",
+        "ときたら",
+        "しだいに",
+        "さすれば",
+        "という",
+        "やらしい",
     }
 )
 
@@ -133,3 +152,77 @@ def test_rows_after_a_joined_auxiliary_still_follow_an_auxiliary() -> None:
 def test_beki_before_koto_ga_aru_leaves_the_noun() -> None:
     # やるべきことがある is 'there is something to do', not the experiential ことがある.
     assert "ことがある" not in _fronts("やるべきことがある")
+
+
+# --- L-2: the shorter row where the longer one does not fit, どうした, rows over wave 1's kana verbs ---
+
+
+@pytest.mark.parametrize(
+    ("sentence", "fronts"),
+    [
+        ("どうしたんだ", ["どうした", "んだ"]),
+        ("どうしたんですか", ["どうした", "んです"]),
+        ("どうしたのだ", ["どうした", "のだ"]),
+        ("どうしたのです", ["どうした", "のです"]),
+        ("どうしたんだろう", ["どうした", "だろう"]),
+    ],
+)
+def test_doushita_before_the_explanatory_copula(sentence: str, fronts: list[str]) -> None:
+    assert _fronts(sentence) == fronts
+
+
+@pytest.mark.parametrize(
+    ("sentence", "front"),
+    [
+        ("どうしたの？", "どうしたの"),
+        ("どうしたん？", "どうしたん"),
+        ("どうしたの、その顔", "どうしたの"),
+        ("どうしたのかな", "どうしたの"),
+        ("どうして泣くの", "どうして"),
+    ],
+)
+def test_doushita_rows_at_a_pause_stay(sentence: str, front: str) -> None:
+    fronts = _fronts(sentence)
+    assert front in fronts
+    assert "どうした" not in fronts
+
+
+@pytest.mark.parametrize("sentence", ["どうしたらいい", "一体どうしたんだ"])
+def test_doushita_needs_its_tokens_at_a_clause_start(sentence: str) -> None:
+    assert "どうした" not in _fronts(sentence)
+
+
+@pytest.mark.parametrize(
+    ("sentence", "front"),
+    [
+        ("ちょっとした事故があった", "ちょっとした"),
+        ("時がたつにつれて忘れた", "につれて"),
+        ("ただの偶然にすぎない", "にすぎない"),
+        ("ただの偶然にすぎません", "にすぎない"),
+        ("うちの兄ときたら寝てばかりだ", "ときたら"),
+        ("しだいに寒くなった", "しだいに"),
+        ("さすれば道は開ける", "さすれば"),
+        ("という噂を聞いた", "という"),
+        ("やらしい目で見るな", "やらしい"),
+    ],
+)
+def test_expression_takes_the_kana_verb_card(sentence: str, front: str) -> None:
+    fronts = _fronts(sentence, allowed=(*_DEFAULT_POS, "接続詞", "連体詞"))
+    assert front in fronts
+    assert not {"する", "くる", "やる", "いう", "すぎる", "しだい", "らしい"} & set(fronts)
+
+
+@pytest.mark.parametrize(
+    ("sentence", "row"),
+    [
+        ("ちょっとしたら戻る", "ちょっとした"),
+        ("ちょっとしたんだ", "ちょっとした"),  # not before a noun
+        ("昔からやってきた", "やってくる"),  # no row: やる + くる as often as 'come along'
+        ("犬を家につれてくる", "につれて"),  # 連れて + 来る
+        ("気持ちしだいになる", "しだいに"),  # the suffix 次第 + に
+        ("というか違う", "という"),  # opens the clause, but before no noun
+        ("嘘だという", "という"),  # inside a clause, after no noun
+    ],
+)
+def test_expression_row_needs_its_place(sentence: str, row: str) -> None:
+    assert row not in _fronts(sentence, allowed=(*_DEFAULT_POS, "接続詞", "連体詞"))
