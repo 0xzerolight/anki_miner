@@ -123,6 +123,14 @@ class TestSuffixAfterSpace:
     def test_what_stays(self, tagger, text):
         assert _tags(_retag(tagger, text)) == _tags(list(tagger(text)))
 
+    def test_tokens_after_the_clause_keep_their_features(self, tagger):
+        """Green with and without the forced feature read before the second tagger call: no line that needs it was found."""
+        tail = "明日は雨が降るらしい"
+        read = [(token.surface, token.feature.pos1, token.feature.lemma) for token in tagger(tail)]
+        out = _retag(tagger, "彼を利用し 周りをだました " + tail)
+        assert ("周り", "名詞") in _tags(out)
+        assert [(token.surface, token.feature.pos1, token.feature.lemma) for token in out][-len(read) :] == read
+
     def test_the_text_and_its_spaces_are_kept(self, tagger):
         text = "生徒 立って答えて 周りを見て"
         out = _retag(tagger, text)
@@ -267,19 +275,27 @@ class TestRecutUnlistedKanji:
         {"落とす", "白い", "出す", "来る", "振る", "終わる", "叱る", "褒める", "合う", "倒す", "入れる"}
     )
 
-    def _recut(self, tagger, text: str, listed=None) -> list:
+    def _recut(self, tagger, text: str, listed=None, common=None, inflecting=None, base=None) -> list:
         listed = self._LISTED if listed is None else listed
+        common = self._COMMON if common is None else common
+        inflecting = self._INFLECTING if inflecting is None else inflecting
+        base = morphology.mining_base if base is None else base
         tokens = morphology.retag_mistagged_tokens(list(tagger(text)), None, tagger)
         return morphology.recut_unlisted_kanji_tokens(
             text,
             tokens,
             tagger,
             lambda words: {word for word in words if word in listed},
-            lambda words: {word: word in self._COMMON for word in words},
-            lambda candidates: {form for form, _conditions in candidates if form in self._INFLECTING},
-            lambda token, _text, _start, _end, _tokens: morphology.mining_base(token),
-            morphology.mining_base,
+            lambda words: {word: word in common for word in words},
+            lambda candidates: {form for form, _conditions in candidates if form in inflecting},
+            lambda token, _text, _start, _end, _tokens: base(token),
+            base,
         )
+
+    def _stays(self, tagger, text: str, listed, common=(), inflecting=(), base=None) -> bool:
+        tokens = morphology.retag_mistagged_tokens(list(tagger(text)), None, tagger)
+        out = self._recut(tagger, text, frozenset(listed), frozenset(common), frozenset(inflecting), base)
+        return _tags(out) == _tags(tokens)
 
     @staticmethod
     def _bases(tokens: list) -> list[tuple[str, str]]:
@@ -332,6 +348,76 @@ class TestRecutUnlistedKanji:
         bases = self._bases(self._recut(tagger, "ご飯は山盛り入れてください", listed))
         assert ("山盛り", "山盛り") in bases
         assert any(base == "入れる" for _surface, base in bases)
+
+    # One line per gate of ``_recut_once``, each with the dictionary shaped so that only
+    # that gate refuses the re-cut (seen re-cut with the gate taken out). Two gates have no
+    # line: "the same, where the edge is the first verb" refuses spans the gate "a split
+    # inside the hole alone" has refused before it, and the forced feature read repeats
+    # what the scan for kanji tokens has read already (the last test holds either way).
+
+    def test_another_compound_verb_is_not_cut_where_the_noun_before_it_is_a_word(self, tagger):
+        listed = {"ご飯", "山", "山盛り", "盛る", "入れる"}
+        common = frozenset({"山", "山盛り", "盛る", "入れる"})
+        bases = self._bases(self._recut(tagger, "ご飯は山盛り入れてください", listed, common, {"盛る", "入れる"}))
+        assert ("山盛り", "山盛り") in bases
+        assert "盛る" not in [base for _surface, base in bases]
+
+    def test_a_listed_join_of_whole_tokens_is_left_to_the_matcher(self, tagger):
+        assert self._stays(tagger, "城南部員が集合", {"城南", "部員", "集合"})
+
+    def test_a_noun_edge_leaves_no_one_kanji_word(self, tagger):
+        assert self._stays(tagger, "城南部員が来た", {"城", "南部", "部", "来る"}, {"城", "部"}, {"来る"})
+
+    def test_a_noun_edge_never_starts_at_a_prefix(self, tagger):
+        assert self._stays(tagger, "お宮入りになった", {"お宮", "入り"}, {"入り"})
+
+    def test_the_tagger_must_read_the_edge_as_the_word(self, tagger):
+        assert self._stays(tagger, "家来って何人いるの", {"家", "来る"}, {"家"}, {"来る"})
+
+    def test_a_recut_must_win_by_the_margin(self, tagger):
+        listed = {"白", "白い", "尾", "振る", "犬"}
+        assert not self._stays(tagger, "白き尾を振る犬", listed, {"尾"}, {"白い", "振る"})
+        assert self._stays(tagger, "白き尾を振る犬", listed | {"驥尾"}, {"尾"}, {"白い", "振る"})
+
+    @pytest.mark.parametrize(("listed", "common"), [({"敵", "落とす", "終わる"}, {"首"}), (_LISTED, set())])
+    def test_a_leftover_is_a_listed_word_and_one_kanji_a_common_one(self, tagger, listed, common):
+        assert self._stays(tagger, "敵の首落とさないと終わらない", listed, common, {"落とす", "終わる"})
+
+    def test_a_noun_edge_covers_no_particle(self, tagger):
+        assert self._stays(tagger, "茶の間取りを見た", {"茶", "茶の間", "取り", "見る"}, {"茶"}, {"見る"})
+
+    def test_a_token_is_not_split_into_two_halves(self, tagger):
+        assert self._stays(tagger, "あいつは腹黒くなった", {"腹", "黒い"}, {"腹"}, {"黒い"})
+
+    def test_a_line_without_kana_is_not_recut(self, tagger):
+        listed = {"屋根", "修理", "直す"}
+        assert not self._stays(tagger, "八百屋根を直した", listed, (), {"直す"})
+        assert self._stays(tagger, "八百屋根修理", listed)
+
+    def test_a_cut_falls_only_inside_an_unlisted_token(self, tagger):
+        listed = {"白い", "尾", "振る", "犬", "き尾"}
+        assert self._stays(tagger, "白き尾を振る犬", listed, {"尾"}, {"白い", "振る"})
+
+    def test_a_window_over_sixteen_characters_is_left(self, tagger):
+        assert not self._stays(tagger, "敵の首落とさないと", {"首", "落とす"}, {"首"}, {"落とす"})
+        assert self._stays(tagger, "インフラストラクチャーの首落とさないと", {"首", "落とす"}, {"首"}, {"落とす"})
+
+    def test_tokens_outside_the_recut_keep_their_features(self, tagger):
+        tail = "明日は雨が降るらしい"
+        read = [(token.surface, token.feature.pos1, token.feature.lemma) for token in tagger(tail)]
+        text = "敵の首落とさないと終わらない " + tail
+        out = morphology.recut_unlisted_kanji_tokens(
+            text,
+            list(tagger(text)),
+            tagger,
+            lambda words: {word for word in words if word in self._LISTED},
+            lambda words: {word: word in self._COMMON for word in words},
+            lambda candidates: {form for form, _conditions in candidates if form in self._INFLECTING},
+            lambda token, _text, _start, _end, _tokens: morphology.mining_base(token),
+            morphology.mining_base,
+        )
+        assert "首" in [token.surface for token in out]
+        assert [(token.surface, token.feature.pos1, token.feature.lemma) for token in out][-len(read) :] == read
 
     def test_the_text_is_kept(self, tagger):
         text = "ほら 敵の首落とさないと終わらない"
