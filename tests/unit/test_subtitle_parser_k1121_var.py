@@ -395,6 +395,8 @@ class TestShreddedStretch:
             ("もーっと食べたい", "もっと", "もーっと"),
             ("聞こえなーい", "聞こえる", "聞こえなーい"),  # the chain runs through the stretch
             ("食べたーい", "食べる", "食べたーい"),
+            ("食べまーす", "食べる", "食べまーす"),  # ます drawn out, not the interjection まー
+            ("始めまーす", "始める", "始めまーす"),  # 始め is the verb again, not the noun
         ],
     )
     def test_cards_the_word_over_the_text_as_written(self, text, front, written):
@@ -413,6 +415,8 @@ class TestShreddedStretch:
             "おばーさんが来た",
             "めーるを送る",
             "このやろー",
+            "まーくんと遊ぶ",  # the interjection まー is a real headword
+            "まー、いいか",
         ],
     )
     def test_a_line_the_gate_refuses_is_read_as_before(self, text):
@@ -444,6 +448,11 @@ class TestShreddedStretch:
     )
     def test_a_stretch_makes_no_verb_of_sounds(self, text, front):
         assert front not in _cards(text)
+
+    def test_two_stretches_in_one_line_are_each_read(self):
+        text, raw_tokens, *_rest = _service()._build_line_state("食べまーす すごーい", 0.0, 1.0)
+        assert "".join(token.surface for token in raw_tokens) == text.replace(" ", "")
+        assert [word_surface(token) for token in raw_tokens] == ["食べ", "ます", "すごい"]
 
     def test_the_sentence_and_its_furigana_bold_the_whole_stretched_chain(self):
         text = "よく聞こえなーいよ"

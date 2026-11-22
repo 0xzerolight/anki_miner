@@ -19,3 +19,4 @@
 {"id":"k21v19","sentence":"食べたーい","expected":["食べる"],"category":"k1121-var","note":"V-W"}
 {"id":"k21v20","sentence":"こーひーを飲む","expected":["飲む"],"category":"k1121-var","note":"no such word: left alone"}
 {"id":"k21v21","sentence":"わたしもーいく","expected":["わたし","いく"],"category":"k1121-var","note":"a clean reading is not replaced"}
+{"id":"k21v22","sentence":"始めまーす","expected":["始める"],"category":"k1121-var","note":"V-5: ます drawn out; 始め is the verb, not the noun"}

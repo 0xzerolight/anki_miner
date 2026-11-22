@@ -2310,9 +2310,27 @@ def read_variants(text: str, tokens: list, tag: Callable[[str], Iterable[Any]], 
     for token in tokens:
         # fugashi parses a feature on first use, from memory the next tagger call reuses.
         getattr(token, "feature", None)
-    for site in sites:
-        tokens = _read_variant_site(text, tokens, site, tag, headword)
-    return tokens
+    # Every site is read against the line's own tokens (its candidate differs from the line
+    # by that one edit), then the readings are put in from the right; one that overlaps a
+    # reading already put in is left out.
+    out = tokens
+    floor = len(tokens)
+    for site in reversed(sites):
+        once = _read_variant_site(text, tokens, site, tag, headword)
+        if once is tokens:
+            continue
+        first = 0
+        while first < min(len(tokens), len(once)) and once[first] is tokens[first]:
+            first += 1
+        after = 0
+        while after < min(len(tokens), len(once)) - first and once[-1 - after] is tokens[-1 - after]:
+            after += 1
+        stop = len(tokens) - after
+        if stop > floor:
+            continue
+        out = out[:first] + once[first : len(once) - after] + out[stop:]
+        floor = first
+    return out
 
 
 #: The spoken ない as a subtitle writes it.
@@ -2535,11 +2553,17 @@ def _read_variant_site(
     holder = next((token for token, a, b in located if a < start <= b), None)
     if holder is None or not hasattr(getattr(holder, "feature", None), "_replace"):
         return tokens
-    # A spelling the dictionary has as a real headword is that word as written.
+    # A spelling the dictionary has as a real headword is that word as written. Not まー before
+    # す: that is ます drawn out (始め|まー|す), never the interjection.
     written = _field(holder, "orthBase")
-    if _field(holder, "pos1") in _VARIANT_CONTENT_POS1 | {"感動詞"} and (
-        (len(holder.surface) > 1 and headword(holder.surface) == 2)
-        or (any(ch in _VARIANT_MARKS or ch in _SMALL_VOWELS for ch in written) and headword(written) == 2)
+    masu = holder.surface.rstrip("".join(_VARIANT_MARKS)) == "ま" and text[end : end + 1] == "す"
+    if (
+        not masu
+        and _field(holder, "pos1") in _VARIANT_CONTENT_POS1 | {"感動詞"}
+        and (
+            (len(holder.surface) > 1 and headword(holder.surface) == 2)
+            or (any(ch in _VARIANT_MARKS or ch in _SMALL_VOWELS for ch in written) and headword(written) == 2)
+        )
     ):
         return tokens
     # A stretch that ends a word is looked at only beside a token that looks shredded.
@@ -2589,11 +2613,11 @@ def _variant_reading(
     new interjection, and are never more than the old ones. There must be
     evidence (a flagged old token, or fewer tokens), the edited word reaches
     past the run (a stretch that ends its word shreds nothing) and is an
-    adjective or an adverb of three kana or たい / ない, never a verb; a known
+    adjective or an adverb of three kana or たい / ない / ます, never a verb; a known
     word of two or more kana that the stretch sits in keeps its word unless a
     neighbour is garbage, and every word the tagger read well beside the
     stretch stays. A particle drawn out is read anew only where the pieces are
-    one word together (もー|っと) or the particle is たい or ない.
+    one word together (もー|っと) or the particle is たい, ない or ます.
     """
     candidate = text[:start] + vowel + text[end:]
     read_tokens = list(tag(candidate))
@@ -2739,12 +2763,12 @@ def _variant_reading(
             not hard
             and holder_pos1 not in _VARIANT_CONTENT_POS1
             and len(new) > 1
-            and lemma not in ("たい", "ない", "無い")
+            and lemma not in ("たい", "ない", "無い", "ます")
         ):
             # か|なぁ|って: a particle drawn out is that particle, unless the pieces are one
             # word together (もー|っと) or the particle is たい or ない stretched (食べ|たー|い).
             return None
-        size = lemma in ("たい", "ない", "無い") if pos1 == "助動詞" else len(word.surface) >= 3
+        size = lemma in ("たい", "ない", "無い", "ます") if pos1 == "助動詞" else len(word.surface) >= 3
         fits = pos1 in _VARIANT_INFLECTING_POS1 and size and (hard or fewer)
         if not fits or (pos1 != "助動詞" and not headword(form)):
             return None
