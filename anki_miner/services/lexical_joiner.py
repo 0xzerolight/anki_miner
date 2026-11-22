@@ -96,6 +96,25 @@ _COPULA_VERBS = frozenset({"ある", "ござる"})
 _QUESTION_VERBS = frozenset(
     {"分かる", "知る", "覚える", "忘れる", "聞く", "教える", "言う", "思う", "考える", "調べる"}
 )
+# One-token grammar rows that are the word only as the tagger's auxiliary (``_not_the_auxiliary``).
+_AUXILIARY_ROWS = frozenset({"らしい", "やろ"})
+# Rows that are the word only where the line or the sentence stops after them (``_runs_on``).
+_STOP_AFTER = frozenset({"じゃね", "だったりして"})
+# Joined rows that end a predicate: a row right after one still follows an auxiliary (``_joined_pos1``).
+_PREDICATE_ROWS = _AUXILIARY_ROWS | {"どうした"}
+# Pre-noun rows whose tokens are an adverb + a verb's past anywhere else (``_adnominal_only``).
+_ADNOMINAL_ROWS = frozenset({"そういった", "ちょっとした"})
+# What makes に|つれ|て the verb 連れて: a verb of coming or going right after it (``_verb_te_form``).
+_MOTION_VERBS = frozenset({"くる", "来る", "いく", "行く", "帰る"})
+# Rows of a verb + ず that are a noun where a noun stands, and what follows that noun (``_noun_place``).
+_NEGATIVE_NOUNS = frozenset({"役立たず"})
+_NOUN_FOLLOWERS = frozenset({"が", "の", "め", "だ", "な", "は", "を", "と", "ども", "です", "じゃ"})
+# Verbs of saying, by lemma: before one なん|と is 'what', before any other verb 'with what' (``_with_what``).
+_SAYING_VERBS = frozenset({"言う", "申す", "呼ぶ", "仰る"})
+# The reply rows that are also the hearsay そうだ after a plain form (``_hearsay``).
+_HEARSAY_ROWS = frozenset({"そうだ", "そうです"})
+# "noun" rows that also open a clause before the noun they name (``_opens_before_a_noun``).
+_NAMING_ROWS = frozenset({"という"})
 _GRAMMAR_POS1 = frozenset({"助詞", "助動詞"})
 _MAX_FIXED_TOKENS = max(len(key) for key in _FIXED_JOINS)
 _MAX_KANA_TOKENS = max(len(key) for key in (*kana_words().joins, *kana_words().base_joins))
@@ -169,8 +188,12 @@ def _kana_join(
     grammar_points: bool,
     keys: list[str] | None = None,
     written_ok: Callable[[str], bool] | None = None,
+    below: int | None = None,
 ) -> _Join | None:
     """The longest kana word list join starting at ``tokens[i]``: by surfaces, or ending on a dictionary form.
+
+    ``below`` asks for a join of fewer tokens than that: the next row down, when
+    the longer one does not fit where it stands (``LexicalJoiner._kana_row``).
 
     A row of one token (だろう, ください) is no join but the same kind of word: a
     grammar expression the tagger files as an auxiliary, named by the list.
@@ -186,7 +209,7 @@ def _kana_join(
     """
     listed = kana_words()
     read = keys is not None and written_ok is not None and keys[i] in listed.heads
-    for size in range(min(_MAX_KANA_TOKENS, len(tokens) - i), 0, -1):
+    for size in range(min(_MAX_KANA_TOKENS, len(tokens) - i, (below or _MAX_KANA_TOKENS + 1) - 1), 0, -1):
         span = tokens[i : i + size]
         surfaces = tuple(token.surface for token in span)
         row = listed.joins.get(surfaces) or listed.base_joins.get((*surfaces[:-1], extract_orth_base(span[-1])))
@@ -205,6 +228,15 @@ def _kana_join(
             and not _adnominal_only(row.headword, tokens, i + size)
             and not (row.grammar and _ka_of_kamo(surfaces[-1], tokens, i + size))
             and not _auxiliary_after_te(row.headword, tokens, i)
+            and not _not_the_auxiliary(row.headword, span)
+            and not _runs_on(row.headword, tokens, i + size)
+            and not _misread_ja_nai(row.headword, tokens, i)
+            and not _no_of_noda(row.headword, tokens, i + size)
+            and not _copula_de_negated(row.headword, tokens, i + size)
+            and not _volitional_you(tokens, i)
+            and not _with_what(row.headword, tokens, i + size)
+            and not _bare_me(row.headword, tokens, i)
+            and not _allowed_now(row.headword, tokens, i)
         ):
             return _Join(
                 i,
@@ -316,9 +348,92 @@ def _adnominal_only(headword: str, tokens: list, after: int) -> bool:
     """Whether そう|いっ|た is 'said so' here, not the pre-noun そういった 'that kind of'.
 
     The pre-noun word stands before its noun (そういった話); anywhere else the
-    same tokens are そう + 言った (彼がそういったんだ).
+    same tokens are そう + 言った (彼がそういったんだ). ちょっと|し|た is the same:
+    ちょっとした問題 'a minor problem' against ちょっとしたんだ 'did a little'.
     """
-    return headword == "そういった" and not (after < len(tokens) and _pos1(tokens[after]) in _NOUN_POS1)
+    return headword in _ADNOMINAL_ROWS and not (after < len(tokens) and _pos1(tokens[after]) in _NOUN_POS1)
+
+
+def _copula_de_negated(headword: str, tokens: list, after: int) -> bool:
+    """Whether the で of の|せい|で is the copula before は / も: 誰のせいでもない, 君のせいではない, 僕のせいでもある.
+
+    The row is passed over: せい keeps its card and the negative its own.
+    """
+    if headword != "のせいで" or after + 1 >= len(tokens) or tokens[after].surface not in ("は", "も"):
+        return False
+    return extract_orth_base(tokens[after + 1]) in ("ない", "ある")
+
+
+def _volitional_you(tokens: list, i: int) -> bool:
+    """Whether a row opens on the よう of a volitional (考え|よう|に|も), which is the verb's own ending.
+
+    The noun よう of ように / ような follows a verb's dictionary form (考えるように).
+    Right after a 連用形 or 未然形 the tagger still files よう as that noun, but it
+    is the ichidan volitional, and the verb's highlight already covers it. Not
+    after いい: the tagger reads the adjective of いいように as 言い.
+    """
+    if tokens[i].surface != "よう" or i == 0 or _pos1(tokens[i - 1]) != "動詞" or tokens[i - 1].surface == "いい":
+        return False
+    c_form = getattr(getattr(tokens[i - 1], "feature", None), "cForm", None)
+    return isinstance(c_form, str) and c_form.startswith(("連用形", "未然形"))
+
+
+def _noun_place(candidate: _Join, tokens: list, spans: dict[int, tuple[int, int]]) -> bool:
+    """Whether 役立た|ず stands where a noun does, so it is 役立たず 'good-for-nothing' and not the verb negated.
+
+    After a pre-noun word (この役立たず), before a pause, or before a particle or
+    the copula (役立たずが, 役立たずだ). 何も役立たず終わった goes on as a clause.
+    """
+    if candidate.start > 0 and _pos1(tokens[candidate.start - 1]) == "連体詞":
+        return True
+    return _stands_alone(tokens, spans, candidate.end) or tokens[candidate.end + 1].surface in _NOUN_FOLLOWERS
+
+
+def _with_what(headword: str, tokens: list, after: int) -> bool:
+    """Whether なん|と is 'with what' (何と戦う, 何と何), not the adverb なんと 'what; how …!'.
+
+    The adverb stands before what it exclaims at (なんと美しい) or before a verb
+    of saying (なんと言えばいい). The row is passed over before any other verb
+    and before a pronoun. なん|て is passed over before a kana いう: なんていうか
+    'how to put it' is one expression, and joining its なんて leaves いう a card.
+    """
+    if headword not in ("なんと", "なんて") or after >= len(tokens):
+        return False
+    following = tokens[after]
+    if headword == "なんて":
+        said = _pos1(following) == "動詞" and extract_lemma(following) == "言う"
+        return said and is_kana_only(following.surface)
+    if _pos1(following) == "代名詞":
+        return True
+    return _pos1(following) == "動詞" and extract_lemma(following) not in _SAYING_VERBS
+
+
+def _allowed_now(headword: str, tokens: list, i: int) -> bool:
+    """Whether よく|なる follows も, where it is 〜てもいい + なる and not よくなる 'get better'.
+
+    どうでもよくなった 'stopped caring', 出なくてもよくなる 'no longer have to go out'.
+    """
+    return headword == "よくなる" and i > 0 and tokens[i - 1].surface.endswith("も")
+
+
+def _bare_me(headword: str, tokens: list, i: int) -> bool:
+    """Whether 目|に|ある has no modifier before 目, where it is 'in the eye' and not 目にあう 'go through'.
+
+    The entry is said of an experience: ひどい目にあった, こんな目にあうなんて.
+    """
+    return headword == "目にあう" and not (i > 0 and _pos1(tokens[i - 1]) in ("形容詞", "連体詞"))
+
+
+def _no_of_noda(headword: str, tokens: list, after: int) -> bool:
+    """Whether the の of どう|し|た|の opens のだ / のです: どうしたのだ is どうした + のだ, not the question どうしたの.
+
+    The row is passed over, so the shorter どう|し|た joins and の|だ stays whole for its own row.
+    なん|な|の before a copula is the same: なんなのだ is 何 + なのだ, and なん keeps its own card.
+    """
+    if headword not in ("どうしたの", "なんなの") or after >= len(tokens):
+        return False
+    following = tokens[after]
+    return _pos1(following) == "助動詞" and extract_lemma(following) in ("だ", "です")
 
 
 def _verb_te_form(headword: str, tokens: list, after: int) -> bool:
@@ -326,9 +441,12 @@ def _verb_te_form(headword: str, tokens: list, after: int) -> bool:
 
     A verb right after it takes that て: 写真にとって送った 'took a photo and sent
     it', ここにとっておいた 'kept it here'. The expression is followed by what it
-    qualifies (彼にとって大事だ) or by は / も.
+    qualifies (彼にとって大事だ) or by は / も. に|つれ|て before a verb of coming
+    or going is 連れて (家につれてくる), not につれて 'as; in proportion to'.
     """
-    return headword == "にとって" and after < len(tokens) and _pos1(tokens[after]) == "動詞"
+    if after >= len(tokens) or _pos1(tokens[after]) != "動詞":
+        return False
+    return headword == "にとって" or (headword == "につれて" and extract_orth_base(tokens[after]) in _MOTION_VERBS)
 
 
 def _te_form_in_use(headword: str, tokens: list, after: int) -> bool:
@@ -363,6 +481,69 @@ def _auxiliary_after_te(headword: str, tokens: list, start: int) -> bool:
         return False
     before = tokens[start - 1]
     return _pos2(before) == "接続助詞" and before.surface in ("て", "で")
+
+
+def _not_the_auxiliary(headword: str, span: list) -> bool:
+    """Whether a one-token row of ``_AUXILIARY_ROWS`` met another token with its kana.
+
+    雨らしい is the auxiliary 'it seems'; 春らしい is the suffix '-like', which the
+    compound matcher joins where the dictionary lists the word (男らしい). 知らんやろ
+    is the Kansai だろう; the verb やろ is やる's clipped volitional.
+    """
+    return headword in _AUXILIARY_ROWS and _pos1(span[0]) != "助動詞"
+
+
+def _runs_on(headword: str, tokens: list, after: int) -> bool:
+    """Whether a word follows じゃ|ね, where it is じゃ + the particle ね and not じゃね 'isn't it'.
+
+    学生じゃね？ and 終了じゃね stop there. そんなことじゃね 無理だ goes on after a
+    mere space ('with that, you know, …'), as does じゃねとか.
+    """
+    return headword in _STOP_AFTER and after < len(tokens) and _pos1(tokens[after]) not in _CLAUSE_BREAK_POS1
+
+
+def _misread_ja_nai(headword: str, tokens: list, start: int) -> bool:
+    """Whether や|ない is the tail of a じゃない written with a large や (いい頃じやない), not the Kansai やない."""
+    return headword == "やない" and start > 0 and tokens[start - 1].surface.endswith(("じ", "ゃ", "や"))
+
+
+def _joined_pos1(previous: _Join | None) -> str | None:
+    """The POS a row sees in the join right before it: a joined predicate still ends on an auxiliary.
+
+    らしい|のです and どうした|のだ: the "verb" row のです follows the joined らしい as it followed the token.
+    """
+    if previous is None:
+        return None
+    return "助動詞" if previous.headword in _PREDICATE_ROWS else previous.pos1
+
+
+def _hearsay(candidate: _Join, tokens: list) -> bool:
+    """Whether そう|だ / そう|です is the hearsay そうだ after a plain form (雨が降るそうだ 'they say it will rain').
+
+    The tagger files that そう apart (そう-伝聞) from the reply's adverb and from
+    the そう of 泣きそうだ. The same entry lists the reply and the hearsay; this
+    one is a grammar point, joined only while Mine grammar points is on.
+    """
+    return (
+        candidate.headword in _HEARSAY_ROWS
+        and candidate.start > 0
+        and extract_lemma(tokens[candidate.start]) == "そう-伝聞"
+    )
+
+
+def _opens_before_a_noun(candidate: _Join, tokens: list, spans: dict[int, tuple[int, int]]) -> bool:
+    """Whether と|いう, after no noun, opens its clause right before the noun it names.
+
+    A subtitle breaks a sentence there (…/という話だ): the line starts on the
+    same という 'called; that says', not on the verb 言う.
+    """
+    after = candidate.end + 1
+    return (
+        candidate.headword in _NAMING_ROWS
+        and _opens_clause(tokens, spans, candidate.start)
+        and after < len(tokens)
+        and _pos1(tokens[after]) in _NOUN_POS1
+    )
 
 
 def _opens_clause(tokens: list, spans: dict[int, tuple[int, int]], i: int) -> bool:
@@ -524,15 +705,22 @@ class LexicalJoiner:
                 spans.update(CompoundDictionaryMatcher._source_spans(text, tokens))
             if not _contiguous(spans, candidate.start, candidate.end):
                 return False
+            if self._grammar_points and _hearsay(candidate, tokens):
+                kept.append(candidate)
+                return True
             if candidate.line_start and not _opens_clause(tokens, spans, candidate.start):
                 return False
             if _quotes_what_precedes(candidate.headword, tokens, candidate.start):
+                return False
+            if candidate.headword in _NEGATIVE_NOUNS and not _noun_place(candidate, tokens, spans):
                 return False
             previous = kept[-1] if kept and kept[-1].end == candidate.start - 1 else None
             if candidate.after == "alone":
                 if not _stands_alone(tokens, spans, candidate.end):
                     return False
-            elif not _follows(tokens, candidate.start, candidate.after, previous.pos1 if previous else None):
+            elif not _follows(
+                tokens, candidate.start, candidate.after, _joined_pos1(previous)
+            ) and not _opens_before_a_noun(candidate, tokens, spans):
                 return False
             kept.append(candidate)
             return True
@@ -587,12 +775,29 @@ class LexicalJoiner:
         last = len(tokens) - 1
         keys = [_row_key(token) for token in tokens]
         while i <= last:
-            join = (i < last and (_fixed_join(tokens, i) or _negative_adjective(tokens, i))) or _kana_join(
-                tokens, i, self._grammar_points, keys, self._written
-            )
-            if not join or not fits(join):
+            join = (i < last and (_fixed_join(tokens, i) or _negative_adjective(tokens, i))) or None
+            if join is None:
+                join = self._kana_row(tokens, i, keys, fits)
+            elif not fits(join):
+                join = None
+            if join is None:
                 i += 1
             else:
                 found.append(join)
                 i = join.end + 1
         return found
+
+    def _kana_row(self, tokens: list, i: int, keys: list[str], fits: Callable[[_Join], bool]) -> _Join | None:
+        """The longest kana row at ``tokens[i]`` that fits where it stands.
+
+        A longer row that does not fit gives way to the next one down: どう|し|た|ん
+        is the reply only before a pause, so before だ the row どう|し|た joins and
+        ん|だ stays for its own row (どうした + んだ). So does a row the run's
+        dictionaries lack: without おめでとうございます the row お|めでとう still joins.
+        """
+        below: int | None = None
+        while True:
+            join = _kana_join(tokens, i, self._grammar_points, keys, self._written, below)
+            if join is None or (self._written(join.headword) and fits(join)):
+                return join
+            below = join.end - i + 1

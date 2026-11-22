@@ -4435,11 +4435,15 @@ class SubtitleParserService:
         word (俺っ|ちと, 俺ん|ちと); the adverb follows a space, a line start or a
         particle. とき glued to a verb's 連用形 is the contracted ておき
         (待っ|とき, やめ|とき); the noun follows a 連体形 (待つとき, 決めたとき).
+        うぬ is held to おら's rule: the pronoun takes a particle or a plural
+        (うぬは, うぬの, うぬら); bare, or in うぬぬ, it is a growl.
         """
         surface = word_token.surface
         if surface == "ちょうだい":
             return SubtitleParserService._is_request_after_te(word_token, tokens)
-        if surface not in ("おら", "よろしゅう", "ちと", "とき"):
+        if surface == "なん":
+            return SubtitleParserService._nan_is_cut_from_a_verb(word_token, tokens)
+        if surface not in ("おら", "よろしゅう", "ちと", "とき", "うぬ"):
             return False
         idx = next((i for i, tok in enumerate(tokens) if tok is word_token), None)
         if idx is None:
@@ -4465,6 +4469,26 @@ class SubtitleParserService:
         pos1 = getattr(after, "pos1", None)
         return not (
             pos1 == "接尾辞" or (pos1 == "助詞" and getattr(after, "pos2", None) in ("格助詞", "係助詞", "副助詞"))
+        )
+
+    @staticmethod
+    def _nan_is_cut_from_a_verb(word_token, tokens: list) -> bool:
+        """Whether a kana なん is a piece of a contracted verb, not the word 何.
+
+        邪魔になんなよ is になるな and 気になんない is にならない; the Kansai かなんわ is
+        かなわんわ. The tagger cuts なん out of each as the pronoun. 私になんの用 and
+        これかなんの話 keep the word.
+        """
+        idx = next((i for i, tok in enumerate(tokens) if tok is word_token), None)
+        if not idx:
+            return False
+        before = tokens[idx - 1].surface
+        after = tokens[idx + 1] if idx + 1 < len(tokens) else None
+        if before == "か":
+            pos = getattr(after, "feature", None)
+            return after is None or getattr(pos, "pos2", None) == "終助詞" or getattr(pos, "pos1", None) == "補助記号"
+        return (
+            before in ("に", "く") and after is not None and after.surface in ("な", "ない", "ねえ", "なく", "なかっ")
         )
 
     @staticmethod

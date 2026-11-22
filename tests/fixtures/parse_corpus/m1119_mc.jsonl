@@ -2,7 +2,7 @@
 {"id":"mc02","sentence":"手ぇを貸せ","expected":["手を貸す"],"category":"spoken-idiom","note":"Drawn-out 手ぇ: the idiom is listed as 手を貸す."}
 {"id":"mc03","sentence":"頭痛いから帰る","expected":["頭が痛い","帰る"],"category":"spoken-idiom","note":"Dropped が before an adjective: 頭が痛い."}
 {"id":"mc04","sentence":"機嫌悪かったね","expected":["機嫌が悪い"],"category":"spoken-idiom","note":"Dropped が, inflected adjective."}
-{"id":"mc05","sentence":"腹減ったな","expected":["腹","減る"],"category":"spoken-idiom","note":"Guard: a bare noun + verb stays two words although 腹が減る is listed."}
+{"id":"mc05","sentence":"腹減ったな","expected":["腹が減る"],"category":"spoken-idiom","note":"腹 + 減る is one of the few noun + verb idioms listed by name: the dropped が is put back (K1121 LIST). Other bare noun + verb pairs stay two words."}
 {"id":"mc06","sentence":"アンタ達は帰れ","expected":["あんた","帰る"],"category":"spoken-idiom","note":"Guard: アンタ reads otherwise than its lemma 貴方, so 貴方達 is not joined. The card is あんた: a pronoun written in katakana folds to its listed hiragana (k1121)."}
 {"id":"mc07","sentence":"昨日魚を食べたのだ","expected":["昨日","魚","食べる","のだ"],"category":"sentence-grammar","note":"の|だ joined after a verb chain."}
 {"id":"mc08","sentence":"魚を食べたいのです","expected":["魚","食べる","のです"],"category":"sentence-grammar","note":"の|です joined after a verb chain."}
