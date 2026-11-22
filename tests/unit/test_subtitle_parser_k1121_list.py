@@ -632,3 +632,23 @@ def test_hearsay_souda_is_a_grammar_card(sentence: str, front: str) -> None:
 @pytest.mark.parametrize("sentence", ["泣きそうだ", "おいしそうです"])
 def test_the_sou_of_appearance_is_no_card(sentence: str) -> None:
     assert not {"そうだ", "そうです"} & set(_fronts(sentence))
+
+
+# --- L-8, KANA 002: お / ご + a kana noun the dictionary lists whole ------------------------
+
+
+@pytest.mark.parametrize(
+    "word",
+    [
+        "おかね",
+        "おみず",
+        "おちゃ",
+        "おさけ",
+        "おふろ",
+        "おはなし",
+        "おなまえ",
+        "おからだ",
+    ],
+)
+def test_prefixed_kana_noun_is_one_entry(word: str) -> None:
+    assert word in _l4_fronts(f"これは{word}です")
