@@ -181,6 +181,7 @@ _EXPECTED_CATEGORIES = {
     "k1121-tag",
     "k1121-list",
     "k1121-intj",
+    "k1121-var",
 }
 
 

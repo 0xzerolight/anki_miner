@@ -1,0 +1,22 @@
+{"id":"k21v01","sentence":"ぜーんぶ食べた","expected":["ぜんぶ","食べる"],"category":"k1121-var","note":"V-K: a stretched spelling the tagger resolves cards the standard word"}
+{"id":"k21v02","sentence":"みーんな来たよ","expected":["みんな","来る"],"category":"k1121-var","note":"V-K"}
+{"id":"k21v03","sentence":"すごーい","expected":["すごい"],"category":"k1121-var","note":"V-K: a search-only spelling is no front"}
+{"id":"k21v04","sentence":"それはちがーう","expected":["それ","ちがう"],"category":"k1121-var","note":"V-K: a verb"}
+{"id":"k21v05","sentence":"ずーっと待ってた","expected":["ずーっと","待つ"],"category":"k1121-var","note":"a real headword as written stays"}
+{"id":"k21v06","sentence":"このやろー","expected":["この"],"category":"k1121-var","note":"やろう is another word: left alone"}
+{"id":"k21v07","sentence":"どーこですか","expected":[],"category":"k1121-var","note":"a one-kana stem before a stray kana is no どう"}
+{"id":"k21v08","sentence":"カードを切る","expected":["カード","切る"],"category":"k1121-var","note":"katakana before the mark is no site"}
+{"id":"k21v09","sentence":"ここにもねえのかよ","expected":["ここ","ねえ"],"category":"k1121-var","note":"V-NAI: ねえ alone is the word ない, carded ねえ"}
+{"id":"k21v10","sentence":"才能ねえし","expected":["才能","ねえ"],"category":"k1121-var","note":"V-NAI"}
+{"id":"k21v11","sentence":"ねえねえ、聞いてよ","expected":["聞く"],"category":"k1121-var","note":"the call ねえ is no card"}
+{"id":"k21v12","sentence":"やるしかねえ","expected":["やる"],"category":"k1121-var","note":"しかねえ is the expression しかない: no ねえ"}
+{"id":"k21v13","sentence":"信じらんねえ","expected":["信じる"],"category":"k1121-var","note":"ねえ after a contracted negative is a chain piece"}
+{"id":"k21v14","sentence":"間違いねえ","expected":["間違いない"],"category":"k1121-var","note":"V-N: X + ねえ where X + ない is an entry"}
+{"id":"k21v15","sentence":"金がねえ","expected":["金がない"],"category":"k1121-var","note":"V-N"}
+{"id":"k21v16","sentence":"大変ねえ","expected":["大変"],"category":"k1121-var","note":"大変ない is no entry: ねえ stays the particle"}
+{"id":"k21v17","sentence":"こわーい","expected":["こわい"],"category":"k1121-var","note":"V-W: a shredded stretch re-read"}
+{"id":"k21v18","sentence":"聞こえなーい","expected":["聞こえる"],"category":"k1121-var","note":"V-W: the chain runs through the stretch"}
+{"id":"k21v19","sentence":"食べたーい","expected":["食べる"],"category":"k1121-var","note":"V-W"}
+{"id":"k21v20","sentence":"こーひーを飲む","expected":["飲む"],"category":"k1121-var","note":"no such word: left alone"}
+{"id":"k21v21","sentence":"わたしもーいく","expected":["わたし","いく"],"category":"k1121-var","note":"a clean reading is not replaced"}
+{"id":"k21v22","sentence":"始めまーす","expected":["始める"],"category":"k1121-var","note":"V-5: ます drawn out; 始め is the verb, not the noun"}

@@ -124,9 +124,12 @@ class TestAuxCapableWordsAsMainWords:
         # The tagger reads the くん after a nickname it does not know as a contracted くれ.
         assert "くれる" not in _fronts(_service(_AUX_WORDS), "まあくんって呼んで")
 
-    def test_a_contracted_spelling_is_not_its_word(self):
-        # ねぇ is the spoken ない: the card would teach ない from a line that never says it.
-        assert "ない" not in _fronts(_service(_AUX_WORDS), "そんなもんねぇよ")
+    def test_a_contracted_spelling_is_carded_as_said(self):
+        # ねぇ is the spoken ない. The word is mined (K1121 V-2 reverses the earlier ruling), and
+        # its card says ねえ: a card ない would teach ない from a line that never says it.
+        fronts = _fronts(_service(_AUX_WORDS), "そんなもんねぇよ")
+        assert "ねえ" in fronts
+        assert "ない" not in fronts
 
     def test_other_auxiliary_capable_verbs_stay_out(self):
         # しまう and おく are not on the list: the bare kana is too often a cut-off aux.

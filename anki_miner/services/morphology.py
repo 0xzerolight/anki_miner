@@ -2680,6 +2680,653 @@ def recut_unlisted_kanji_tokens(
     return tokens
 
 
+#: The marks that stretch the hiragana before them, and the small vowels that
+#: repeat its vowel (すごーい, だってぇ). Katakana before a mark is no site.
+_VARIANT_MARKS = frozenset("ー〜～")
+_SMALL_VOWELS = {"ぁ": "a", "ぃ": "i", "ぅ": "u", "ぇ": "e", "ぉ": "o"}
+_KANA_VOWELS: dict[str, str] = {
+    kana: vowel
+    for row in (
+        "あいうえお",
+        "かきくけこ",
+        "がぎぐげご",
+        "さしすせそ",
+        "ざじずぜぞ",
+        "たちつてと",
+        "だぢづでど",
+        "なにぬねの",
+        "はひふへほ",
+        "ばびぶべぼ",
+        "ぱぴぷぺぽ",
+        "まみむめも",
+        "らりるれろ",
+    )
+    for kana, vowel in zip(row, "aiueo", strict=True)
+} | {"や": "a", "ゆ": "u", "よ": "o", "わ": "a", "ゃ": "a", "ゅ": "u", "ょ": "o"}
+#: The kana a stretch can stand for, by the vowel before it (せんせー is せんせい, ねー is ねえ).
+_LONG_VOWELS = {"a": "あ", "i": "い", "u": "う", "e": "いえ", "o": "うお"}
+_VARIANT_SITE_RE = re.compile("[ぁ-ゖ][ー〜～ぁぃぅぇぉ]")
+_VARIANT_CONTENT_POS1 = frozenset({"名詞", "動詞", "形容詞", "副詞", "代名詞", "形状詞", "連体詞", "接続詞"})
+_VARIANT_INFLECTING_POS1 = frozenset({"形容詞", "動詞", "副詞", "助動詞"})
+#: The kinds of variant reading that are on: K, a stretched spelling the tagger
+#: resolves, and W, a stretch that shreds its word (``_variant_reading``); A, ねえ alone as the word ない
+#: (``_read_spoken_nai``); N, ねえ as the ない of an entry (``_read_particle_nai``).
+#: With none the pass and its readers are wired and the parser reads every line
+#: as before.
+_VARIANT_CLASSES: frozenset[str] = frozenset({"K", "W", "A", "N"})
+
+
+class VariantToken(RetaggedToken):
+    """A token read from the line's standard spelling, placed over the text as written.
+
+    ``surface`` is the text of the line (すごーい), so the tokens still spell the
+    line and everything that locates or displays a word works as before.
+    ``shadow`` is the standard spelling the features belong to (すごい): what
+    asks which word this is reads :func:`word_surface`.
+    """
+
+    __slots__ = ("shadow",)
+
+    def __init__(self, token, surface: str, shadow: str | None = None):
+        super().__init__(token, {"orth": surface}, surface)
+        self.shadow: str = token.surface if shadow is None else shadow
+
+
+def word_surface(token) -> str:
+    """The spelling that names ``token``'s word: the standard one where the line stretches it.
+
+    A :class:`VariantToken` carries it. A join made over one (どー|も, the entry
+    どうも) is spelled as the line is, and its headword is that spelling with
+    the stretch read: the headword names it.
+    """
+    if isinstance(token, VariantToken):
+        return token.shadow
+    surface: str = token.surface
+    if _VARIANT_CLASSES and getattr(token, "compound", False) is True and _VARIANT_SITE_RE.search(surface):
+        headword = _field(token, "lemma")
+        if headword != surface and _is_stretch_of(surface, headword):
+            return headword
+    return surface
+
+
+def _is_stretch_of(surface: str, standard: str, i: int = 0, j: int = 0) -> bool:
+    """Whether ``standard`` is ``surface`` with every stretch read as a long vowel or left out (どーも, どうも)."""
+    while i < len(surface):
+        vowel = _KANA_VOWELS.get(surface[i - 1]) if i else None
+        if vowel is not None and (surface[i] in _VARIANT_MARKS or _SMALL_VOWELS.get(surface[i]) == vowel):
+            end = i
+            while end < len(surface) and (surface[end] in _VARIANT_MARKS or _SMALL_VOWELS.get(surface[end]) == vowel):
+                end += 1
+            return (
+                j < len(standard)
+                and standard[j] in _LONG_VOWELS[vowel]
+                and _is_stretch_of(surface, standard, end, j + 1)
+            ) or _is_stretch_of(surface, standard, end, j)
+        if j >= len(standard) or surface[i] != standard[j]:
+            return False
+        i += 1
+        j += 1
+    return j == len(standard)
+
+
+class _VariantReading(NamedTuple):
+    """An accepted candidate of one site: ``tokens`` replace the line's ``[first : len - after]``."""
+
+    kind: str
+    first: int
+    after: int
+    tokens: list
+    # Tokens gained (never above zero), and the length of the word that holds the edit.
+    delta: int
+    length: int
+
+
+def _field(token, name: str) -> str:
+    value = getattr(getattr(token, "feature", None), name, None)
+    return value if isinstance(value, str) else ""
+
+
+def _variant_sites(text: str) -> list[tuple[int, int]]:
+    """The mark runs written right after a hiragana: long marks, and small vowels that repeat its vowel."""
+    sites: list[tuple[int, int]] = []
+    i = 1
+    while i < len(text):
+        vowel = _KANA_VOWELS.get(text[i - 1])
+        if vowel is None or not (text[i] in _VARIANT_MARKS or _SMALL_VOWELS.get(text[i]) == vowel):
+            i += 1
+            continue
+        end = i
+        while end < len(text) and (text[end] in _VARIANT_MARKS or _SMALL_VOWELS.get(text[end]) == vowel):
+            end += 1
+        sites.append((i, end))
+        i = end
+    return sites
+
+
+def _variant_flag(token, headword: Callable[[str], int]) -> str:
+    """Why a token beside a stretch looks like a piece of a shredded word, "" when it does not."""
+    pos1, surface = _field(token, "pos1"), token.surface
+    if getattr(token, "is_unk", False) is True:
+        return "unknown"
+    if pos1 == "記号":
+        return "symbol"
+    if (
+        len(surface) == 1
+        and "ぁ" <= surface <= "ゖ"
+        and ((pos1 in _VARIANT_CONTENT_POS1 and pos1 != "動詞") or pos1 == "接頭辞")
+    ):
+        return "one-kana"
+    base = _field(token, "orthBase")
+    if pos1 in _VARIANT_CONTENT_POS1 and not _VARIANT_MARKS.isdisjoint(base) and headword(base) < 2:
+        return "stretched"
+    if pos1 == "感動詞" and sum(ch not in _VARIANT_MARKS for ch in surface) <= 2:
+        return "interjection"
+    return ""
+
+
+def read_variants(text: str, tokens: list, tag: Callable[[str], Iterable[Any]], headword: Callable[[str], int]) -> list:
+    """Read a stretched hiragana spelling as the standard word it stands for (ぜーんぶ → ぜんぶ).
+
+    The tagger gets the line as written, and a stretch inside a hiragana word
+    leaves it with a spelling no card should carry (ぜーんぶ, すごーい) or with
+    pieces (こ|わーい). For each mark run right after a hiragana
+    (``_variant_sites``) the whole line is tagged again with ONE edit there:
+    the run read as the long vowel of the kana before it, or left out. A
+    candidate is taken only through the gate of ``_variant_reading``; its
+    tokens then replace the line's own as :class:`VariantToken`, which keep the
+    text as written and carry the standard spelling as ``shadow``. The stored
+    text never changes.
+
+    ``headword(spelling)`` is the dictionary's word on a spelling: 2 a real
+    headword as written, 1 listed (a search-only row, or a reading), 0 unknown.
+    A spelling that is a real headword as written is no variant (ずーっと, おーい).
+    """
+    if not _VARIANT_CLASSES:
+        return tokens
+    if "A" in _VARIANT_CLASSES and _SPOKEN_NAI_RE.search(text) is not None:
+        tokens = _read_spoken_nai(text, tokens, headword)
+    if "N" in _VARIANT_CLASSES and _SPOKEN_NAI_RE.search(text) is not None:
+        tokens = _read_particle_nai(text, tokens, tag, headword)
+    if _VARIANT_SITE_RE.search(text) is None:
+        return tokens
+    sites = _variant_sites(text)
+    if not sites:
+        return tokens
+    for token in tokens:
+        # fugashi parses a feature on first use, from memory the next tagger call reuses.
+        getattr(token, "feature", None)
+    # Every site is read against the line's own tokens (its candidate differs from the line
+    # by that one edit), then the readings are put in from the right; one that overlaps a
+    # reading already put in is left out.
+    out = tokens
+    floor = len(tokens)
+    for site in reversed(sites):
+        once = _read_variant_site(text, tokens, site, tag, headword)
+        if once is tokens:
+            continue
+        first = 0
+        while first < min(len(tokens), len(once)) and once[first] is tokens[first]:
+            first += 1
+        after = 0
+        while after < min(len(tokens), len(once)) - first and once[-1 - after] is tokens[-1 - after]:
+            after += 1
+        stop = len(tokens) - after
+        if stop > floor:
+            continue
+        out = out[:first] + once[first : len(once) - after] + out[stop:]
+        floor = first
+    return out
+
+
+#: The spoken ない as a subtitle writes it.
+_SPOKEN_NAI = frozenset({"ねえ", "ねぇ", "ねー"})
+_SPOKEN_NAI_RE = re.compile("ね[えぇー]")
+#: The nouns whose predicate ない is: before a pause their ねえ is the word (勝てるわけねえ).
+_NAI_NOUNS = frozenset({"わけ", "こと", "はず", "訳", "事", "筈"})
+
+
+def _read_spoken_nai(text: str, tokens: list, headword: Callable[[str], int]) -> list:
+    """ねえ the tagger itself reads as the adjective 無い is the word ない, carded ねえ (才能ねえし, ここにもねえのか).
+
+    Kind A. The token keeps its text and its tags and names ない to everything
+    that asks which word it is (the auxiliary-word test, the windows しかない
+    and でもない, the join keys); its card front is the word as said
+    (:func:`spoken_front`). Only where ``_spoken_nai_stands``.
+    """
+    located: list[tuple[Any, int, int]] | None = None
+    out: list | None = None
+    for i, token in enumerate(tokens):
+        if (
+            token.surface not in _SPOKEN_NAI
+            or _field(token, "pos1") != "形容詞"
+            or _field(token, "lemma") != "無い"
+            or not hasattr(getattr(token, "feature", None), "_replace")
+        ):
+            continue
+        if located is None:
+            located = list(iter_token_spans(text, tokens))
+            if len(located) != len(tokens):
+                return tokens
+        if not _spoken_nai_stands(located, i, headword):
+            continue
+        if out is None:
+            out = list(tokens)
+        out[i] = VariantToken(token, token.surface, "ない")
+    return tokens if out is None else out
+
+
+def spoken_front(token, front: str) -> str:
+    """The card front of a word said the spoken way: ねえ for the ない of ``_read_spoken_nai``, else ``front``."""
+    if isinstance(token, VariantToken) and front == "ない" and token.surface in _SPOKEN_NAI:
+        return "ねえ"
+    return front
+
+
+def _spoken_nai_stands(located: list[tuple[Any, int, int]], i: int, headword: Callable[[str], int]) -> bool:
+    """Whether a ねえ the tagger reads as 無い is the word ない where it stands, not the call or the particle ねえ.
+
+    The tagger gives the same tag to the interjection (ねえ、聞いて) and to the
+    sentence-final particle drawn out (そうねえ, ごめんねー). The word has a
+    word glued right before it (才能ねえ) or a particle or an auxiliary other
+    than ね glued right after it (ねえのか, ねえし). It is not the word: before
+    another ねえ; after そう or ごめん; after は or も when a pause follows
+    (それはねえ、…); after the ん of a contracted negative (信じらんねえ), after
+    て / で or a く form, also with a particle between (甘くなんかねえ), where it
+    is a piece of the chain; after a bare word when a pause follows (ケンカねえ…),
+    unless the word is one of ``_NAI_NOUNS``; and where the words before it +
+    ない are an entry of their own (みっともねえ, おとなげねえ), which is that
+    entry's ending.
+    """
+    start, end = located[i][1], located[i][2]
+    before = located[i - 1][0] if i and located[i - 1][2] == start else None
+    after = located[i + 1][0] if i + 1 < len(located) and located[i + 1][1] == end else None
+    before_pos1 = _field(before, "pos1") if before is not None else ""
+    after_pos1 = _field(after, "pos1") if after is not None else ""
+    word_before = (
+        before is not None
+        and before_pos1 not in ("補助記号", "感動詞", "記号", "空白")
+        and before.surface not in _SPOKEN_NAI
+    )
+    particle_after = after is not None and after_pos1 in ("助詞", "助動詞") and not after.surface.startswith("ね")
+    if (not word_before and not particle_after) or (after is not None and after.surface in _SPOKEN_NAI):
+        return False
+    if before is None or not word_before:
+        return True
+    if before.surface in ("そう", "そ", "て", "で", "じゃ", "ごめん", "死") or (
+        before.surface.endswith("ん") and before_pos1 in ("動詞", "助動詞", "助詞")
+    ):
+        return False
+    if before_pos1 == "助詞" and before.surface in ("は", "も") and not particle_after:
+        return False
+    # 甘く|なん|か|ねえ, 見たく|も|ねえ, 流されて|なんか|ねえ: the negative of the word before the particles.
+    back = i - 1
+    while (
+        back > i - 4
+        and back > 0
+        and located[back - 1][2] == located[back][1]
+        and (_field(located[back][0], "pos1") == "助詞" or located[back][0].surface == "なん")
+    ):
+        back -= 1
+    if _negated_by_nai(located[back][0]):
+        return False
+    # ケンカねえ…, あんた達ねぇ…: before a pause a bare word + ねえ is as often the particle; わけ, こと and はず take ない.
+    if not particle_after and before_pos1 != "助詞" and before.surface not in _NAI_NOUNS:
+        return False
+    joined = ""
+    for back in range(i - 1, max(i - 4, -1), -1):
+        if located[back][2] != (located[back + 1][1]):
+            break
+        joined = located[back][0].surface + joined
+        # A long kana run listed only as a reading is still that entry (おとなげない); a short one is
+        # another word's reading (もんない is 門内).
+        known = headword(joined + "ない")
+        if known == 2 or (known == 1 and len(joined) >= 4):
+            return False
+    return True
+
+
+def _read_particle_nai(
+    text: str, tokens: list, tag: Callable[[str], Iterable[Any]], headword: Callable[[str], int]
+) -> list:
+    """X + ねえ where X + ない is an entry of its own: that ねえ is the entry's ない (間違いねえ, 金がねえ).
+
+    Kind N. At a clause end the tagger calls ねえ the particle ね, and the
+    entry is lost (間違い is carded alone). Where the words right before it +
+    ない are a real headword (``_nai_entry_before``), the line is tagged again
+    with ない in its place; where that changes this one token alone, its new
+    reading comes back over the text as written, and the joins then make the
+    entry as they do for the standard spelling. またねー, もんねえ and それがねえ
+    name no entry and stay.
+    """
+    for _attempt in range(3):
+        located = list(iter_token_spans(text, tokens))
+        if len(located) != len(tokens):
+            return tokens
+        at = next(
+            (
+                i
+                for i, token in enumerate(tokens)
+                if token.surface in _SPOKEN_NAI
+                and _field(token, "pos1") == "助詞"
+                and _field(token, "lemma") == "ね"
+                and _nai_entry_before(located, i, headword)
+            ),
+            None,
+        )
+        if at is None:
+            return tokens
+        for token in tokens:
+            # fugashi parses a feature on first use, from memory the next tagger call reuses.
+            getattr(token, "feature", None)
+        start, end = located[at][1], located[at][2]
+        candidate = text[:start] + "ない" + text[end:]
+        read_tokens = list(tag(candidate))
+        for token in read_tokens:
+            getattr(token, "feature", None)
+        read = list(iter_token_spans(candidate, read_tokens))
+        if len(read) != len(read_tokens):
+            return tokens
+
+        def same(own: tuple[Any, int, int], other: tuple[Any, int, int]) -> bool:
+            return (
+                own[1:] == other[1:]
+                and own[0].surface == other[0].surface
+                and _field(own[0], "lemma") == _field(other[0], "lemma")
+                and _field(own[0], "pos1") == _field(other[0], "pos1")
+            )
+
+        first = 0
+        while first < min(at, len(read)) and same(located[first], read[first]):
+            first += 1
+        after = 0
+        while after < min(len(located) - at - 1, len(read) - first) and same(located[-1 - after], read[-1 - after]):
+            after += 1
+        old, new = located[first : len(located) - after], read[first : len(read) - after]
+        word = next((token for token, a, b in new if a == start and b == end), None)
+        if (
+            word is None
+            or _field(word, "lemma") not in ("無い", "ない")
+            or _field(word, "pos1") not in ("形容詞", "助動詞")
+            # Only the ねえ may change: where the words before it are read anew as well
+            # (鼻持ち|なら|ねえ), no join is sure to follow and a new word would be carded.
+            or len(old) != 1
+            or len(new) != 1
+        ):
+            return tokens
+        tokens = (
+            tokens[:first] + [VariantToken(token, text[a:b]) for token, a, b in new] + tokens[len(tokens) - after :]
+        )
+    return tokens
+
+
+def _nai_entry_before(located: list[tuple[Any, int, int]], i: int, headword: Callable[[str], int]) -> bool:
+    """Whether up to three words glued right before ``located[i]`` + ない are a real headword (間違いない, 金がない).
+
+    The run opens with a noun, a pronoun, a verb or an adjective; a single
+    auxiliary-capable word is no such opening (もん|ねえ).
+    """
+    joined = ""
+    for depth, back in enumerate(range(i - 1, max(i - 4, -1), -1), start=1):
+        if located[back][2] != located[back + 1][1]:
+            return False
+        head = located[back][0]
+        joined = head.surface + joined
+        if (
+            _field(head, "pos1") in ("名詞", "代名詞", "形状詞", "動詞", "形容詞")
+            and (depth > 1 or _field(head, "pos2") != "非自立可能")
+            and headword(joined + "ない") == 2
+        ):
+            return True
+    return False
+
+
+def _negated_by_nai(token) -> bool:
+    """Whether ない right after ``token`` is its negative, not a word: a く form (甘く, 見たく, 見づらく) or て / で."""
+    if token.surface in ("て", "で"):
+        return True
+    return token.surface.endswith("く") and _field(token, "pos1") in ("形容詞", "接尾辞", "助動詞")
+
+
+def _read_variant_site(
+    text: str, tokens: list, site: tuple[int, int], tag: Callable[[str], Iterable[Any]], headword: Callable[[str], int]
+) -> list:
+    """``tokens`` with the best accepted reading of one site put in, or ``tokens`` itself."""
+    start, end = site
+    located = list(iter_token_spans(text, tokens))
+    if len(located) != len(tokens):
+        return tokens
+    holder = next((token for token, a, b in located if a < start <= b), None)
+    if holder is None or not hasattr(getattr(holder, "feature", None), "_replace"):
+        return tokens
+    # A spelling the dictionary has as a real headword is that word as written. Not まー before
+    # す: that is ます drawn out (始め|まー|す), never the interjection.
+    written = _field(holder, "orthBase")
+    masu = holder.surface.rstrip("".join(_VARIANT_MARKS)) == "ま" and text[end : end + 1] == "す"
+    if (
+        not masu
+        and _field(holder, "pos1") in _VARIANT_CONTENT_POS1 | {"感動詞"}
+        and (
+            (len(holder.surface) > 1 and headword(holder.surface) == 2)
+            or (any(ch in _VARIANT_MARKS or ch in _SMALL_VOWELS for ch in written) and headword(written) == 2)
+        )
+    ):
+        return tokens
+    # A stretch that ends a word is looked at only beside a token that looks shredded.
+    inside = end < len(text) and "ぁ" <= text[end] <= "ゖ"
+    if not inside and not any(
+        _variant_flag(token, headword) for token, a, b in located if a < end + 1 and b > start - 2
+    ):
+        return tokens
+    best: tuple[tuple[bool, int, int, int], _VariantReading] | None = None
+    for order, vowel in enumerate((*_LONG_VOWELS[_KANA_VOWELS[text[start - 1]]], "")):
+        reading = _variant_reading(text, located, start, end, vowel, holder, tag, headword)
+        if reading is None or reading.kind not in _VARIANT_CLASSES:
+            continue
+        key = (reading.kind != "K", reading.delta, -reading.length, order)
+        if best is None or key < best[0]:
+            best = (key, reading)
+    if best is None:
+        return tokens
+    reading = best[1]
+    return tokens[: reading.first] + reading.tokens + tokens[len(tokens) - reading.after :]
+
+
+def _variant_reading(
+    text: str,
+    located: list[tuple[Any, int, int]],
+    start: int,
+    end: int,
+    vowel: str,
+    holder: Any,
+    tag: Callable[[str], Iterable[Any]],
+    headword: Callable[[str], int],
+) -> _VariantReading | None:
+    """The line read with the run ``text[start:end]`` as ``vowel`` ("" leaves it out), when the gate takes it.
+
+    The candidate's tokens are mapped back onto the line (the edit is one
+    known place) and compared with the line's own: equal tokens before and
+    after the site drop out, the rest is the changed stretch, old against new.
+
+    Kind K, one token against one with the same lemma and part of speech: the
+    tagger knew the word and only its spelling was the stretched one. The new
+    form must be listed and hold no mark; a one-kana stem (そー, どー) is read
+    only between clean neighbours, and an interjection written with a small
+    vowel is its own spelling.
+
+    Kind W, a shredded stretch, only with the run left out: the new tokens hold
+    nothing unknown, no symbol, no proper noun, no one-kana content word and no
+    new interjection, and are never more than the old ones. There must be
+    evidence (a flagged old token, or fewer tokens), the edited word reaches
+    past the run (a stretch that ends its word shreds nothing) and is an
+    adjective or an adverb of three kana or たい / ない / ます, never a verb; a known
+    word of two or more kana that the stretch sits in keeps its word unless a
+    neighbour is garbage, and every word the tagger read well beside the
+    stretch stays. A particle drawn out is read anew only where the pieces are
+    one word together (もー|っと) or the particle is たい, ない or ます.
+    """
+    candidate = text[:start] + vowel + text[end:]
+    read_tokens = list(tag(candidate))
+    for token in read_tokens:
+        # Read now: the next tagger call reuses the memory a feature is parsed from.
+        getattr(token, "feature", None)
+    edit, cut = len(vowel), end - start
+    read = [
+        (
+            token,
+            a if a < start or (edit and a == start) else a - edit + cut,
+            b if b < start or (edit and b == start) else b - edit + cut,
+            a,
+            b,
+        )
+        for token, a, b in iter_token_spans(candidate, read_tokens)
+    ]
+    if len(read) != len(read_tokens):
+        return None
+
+    def same(own: tuple[Any, int, int], other: tuple[Any, int, int, int, int]) -> bool:
+        return (
+            own[1] == other[1]
+            and own[2] == other[2]
+            and own[0].surface == other[0].surface
+            and _field(own[0], "lemma") == _field(other[0], "lemma")
+            and _field(own[0], "pos1") == _field(other[0], "pos1")
+        )
+
+    first = 0
+    while first < min(len(located), len(read)) and located[first][2] <= start and same(located[first], read[first]):
+        first += 1
+    after = 0
+    while (
+        after < min(len(located), len(read)) - first
+        and located[-1 - after][1] >= end
+        and same(located[-1 - after], read[-1 - after])
+    ):
+        after += 1
+    old, new = located[first : len(located) - after], read[first : len(read) - after]
+    if not old or not new or old[0][1] != new[0][1] or old[-1][2] != new[-1][2]:
+        return None
+    if len(old) > 6 or old[-1][2] - old[0][1] > 16 or len(new) > len(old):
+        return None
+    low, high = (start - 1, start) if edit else (start - 1, start - 1)
+    star = next((item for item in new if item[3] <= low and high < item[4]), None)
+    if star is None:
+        return None
+    word = star[0]
+    for item in new:
+        token, pos1 = item[0], _field(item[0], "pos1")
+        if getattr(token, "is_unk", False) is True or pos1 == "記号" or _field(token, "pos2") == "固有名詞":
+            return None
+        if _variant_flag(token, headword) == "one-kana" or (pos1 == "感動詞" and token is not word):
+            return None
+    pos1, lemma = _field(word, "pos1"), _field(word, "lemma")
+    form = _field(word, "orthBase") or lemma
+    old_token = old[0][0]
+    if (
+        len(old) == 1
+        and len(new) == 1
+        and lemma
+        and lemma == _field(old_token, "lemma")
+        and pos1 == _field(old_token, "pos1")
+    ):
+        kind = "K"
+        old_base = _field(old_token, "orthBase")
+        if not any(ch in _VARIANT_MARKS or ch in _SMALL_VOWELS for ch in old_base) and headword(old_base):
+            return None  # the tagger's own reading is a listed form already (すげえ → すごい)
+        if pos1 not in _VARIANT_CONTENT_POS1 | {"感動詞"} or not headword(form) or not _VARIANT_MARKS.isdisjoint(form):
+            return None
+        if all(ch in _SMALL_VOWELS for ch in text[start:end]) and (pos1 == "感動詞" or end == old[0][2]):
+            return None  # a small vowel that ends the word is that spelling's own (あぁ, いやぁ)
+        if sum(ch not in _VARIANT_MARKS and ch not in _SMALL_VOWELS for ch in old_token.surface) <= 1:
+            before = located[first - 1][0] if first > 0 and located[first - 1][2] == old[0][1] else None
+            following = (
+                located[first + 1][0] if first + 1 < len(located) and located[first + 1][1] == old[0][2] else None
+            )
+            following_pos1 = _field(following, "pos1") if following is not None else "補助記号"
+            if following is not None and (
+                _field(following, "pos2") == "固有名詞"
+                or following_pos1 not in ("助詞", "助動詞", "補助記号", "動詞", "形容詞")
+                # どー|こ, こー|い (来い), こー|の (この), こー|くん (a nickname): the stem is a piece of that word.
+                or (
+                    following_pos1 in ("動詞", "形容詞")
+                    and len(following.surface) == 1
+                    and _field(following, "lemma") != "為る"
+                )
+                or following.surface in ("い", "の", "くん")
+            ):
+                return None
+            # できたて|どー: a stem that ends its clause right after a word is a sentence-final sound.
+            if following_pos1 == "補助記号" and before is not None:
+                return None
+            if any(_variant_flag(token, headword) for token in (before, following) if token is not None):
+                return None
+    else:
+        kind = "W"
+        flags = {_variant_flag(item[0], headword) for item in old}
+        hard = bool(flags & {"unknown", "symbol", "one-kana", "stretched"})
+        if (
+            _field(holder, "pos1") in _VARIANT_CONTENT_POS1
+            and len(holder.surface) >= 2
+            and _variant_flag(holder, headword) not in ("unknown", "symbol")
+        ):
+            holder_lemma = _field(holder, "lemma")
+            kept = any(
+                _field(item[0], "lemma") == holder_lemma
+                or (holder_lemma == "無い" and _field(item[0], "lemma") == "ない")
+                or item[0].surface == holder.surface
+                for item in new
+            )
+            beside = {_variant_flag(item[0], headword) for item in old if item[0] is not holder}
+            if not kept and not beside & {"unknown", "symbol", "one-kana"}:
+                return None
+        # A word the tagger read well beside the stretch stays that word (よぉ|わかっ|て keeps わかる);
+        # only a stem it called a noun may become its verb (聞こえ|なーい, 待ち|なさーい).
+        for own in old:
+            token = own[0]
+            if own[1] < end and own[2] >= start:
+                continue  # the stretched word itself and its marks
+            if _field(token, "pos1") not in _VARIANT_CONTENT_POS1 or _variant_flag(token, headword):
+                continue
+            if not any(
+                (_field(other[0], "lemma"), _field(other[0], "pos1")) == (_field(token, "lemma"), _field(token, "pos1"))
+                or (_field(token, "pos1") == "名詞" and _field(other[0], "pos1") == "動詞" and other[1:3] == own[1:3])
+                for other in new
+            ):
+                return None
+        fewer = len(new) < len(old)
+        inside = star[2] > end
+        if not inside:
+            return None  # a stretch that ends its word shreds nothing (ぎいいー, うっそぉー)
+        if edit or pos1 == "動詞":
+            # W leaves the run out and never reads a verb at the stretch: a vowel put in and a
+            # verb stem make words of sounds (おもー|てなし is no 思う, だしー|て no 強いて, つもーん
+            # no 積もる). A verb comes back through its own たい / ない (聞こえ|なーい).
+            return None
+        holder_pos1 = _field(holder, "pos1")
+        if holder_pos1 == "感動詞" and all(ch in _SMALL_VOWELS for ch in text[start:end]):
+            return None  # a small vowel on an interjection is that spelling's own (さぁ|て)
+        if (
+            not hard
+            and holder_pos1 not in _VARIANT_CONTENT_POS1
+            and len(new) > 1
+            and lemma not in ("たい", "ない", "無い", "ます")
+        ):
+            # か|なぁ|って: a particle drawn out is that particle, unless the pieces are one
+            # word together (もー|っと) or the particle is たい or ない stretched (食べ|たー|い).
+            return None
+        size = lemma in ("たい", "ない", "無い", "ます") if pos1 == "助動詞" else len(word.surface) >= 3
+        fits = pos1 in _VARIANT_INFLECTING_POS1 and size and (hard or fewer)
+        if not fits or (pos1 != "助動詞" and not headword(form)):
+            return None
+    return _VariantReading(
+        kind,
+        first,
+        after,
+        [VariantToken(item[0], text[item[1] : item[2]]) for item in new],
+        len(new) - len(old),
+        len(word.surface),
+    )
+
+
 def _merge_prefix_compounds(tokens: list, attest: AttestLookup | None = None) -> list:
     """Merge 接頭辞 + 名詞/形状詞 pairs into a single token.
 
@@ -3099,7 +3746,7 @@ class TokenInclusionRule:
         if reason is not None:
             return reason
 
-        surface = word_token.surface
+        surface = word_surface(word_token)
         if self.script_gate is not None:
             return None if self.script_gate(surface) else REJECT_SCRIPT
 

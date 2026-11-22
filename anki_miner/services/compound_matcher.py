@@ -35,6 +35,7 @@ from anki_miner.services.morphology import (
     extract_reading,
     iter_token_spans,
     mining_base,
+    word_surface,
 )
 from anki_miner.utils.text_utils import katakana_to_hiragana
 
@@ -621,7 +622,7 @@ class CompoundDictionaryMatcher:
             start_span = source_spans.get(i)
             if start_span is None or not self._can_start_at(tokens, i):
                 continue
-            prefix = tokens[i].surface
+            prefix = word_surface(tokens[i])
             plain = _plain_spelling(tokens[i]) if self._spoken_idioms else prefix
             source_end = start_span[1]
             for j in range(i + 1, min(i + self._max_span, n)):
@@ -632,7 +633,7 @@ class CompoundDictionaryMatcher:
                 # elsewhere in the line cannot license a merge here.
                 if tail_span is None or tail_span[0] != source_end:
                     break
-                joined = prefix + tail.surface
+                joined = prefix + word_surface(tail)
                 if len(joined) > self._max_span_chars:
                     break
                 # Span-end rule: non-content ends are not candidate endpoints,
