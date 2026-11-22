@@ -447,6 +447,11 @@ def _shadow_of(token: Any) -> str | None:
     return shadow if isinstance(shadow, str) else None
 
 
+#: The last line ``shadow_line`` read, and its answer. A line is asked once for every
+#: word traced in it, and its raw tokens are one list that is never changed.
+_shadow_line_memo: tuple[list, str, tuple[str, list, list[tuple[int, int, int, int]]] | None] | None = None
+
+
 def shadow_line(text: str, raw_tokens: list) -> tuple[str, list, list[tuple[int, int, int, int]]] | None:
     """The line as its standard spellings read (すごーいね → すごいね), or None when no token carries one.
 
@@ -456,6 +461,17 @@ def shadow_line(text: str, raw_tokens: list) -> tuple[str, list, list[tuple[int,
     asks which word a stretch of the line is reads this; what locates or
     displays a word keeps the line.
     """
+    global _shadow_line_memo
+    memo = _shadow_line_memo
+    if memo is not None and memo[0] is raw_tokens and memo[1] == text:
+        return memo[2]
+    shadowed = _read_shadow_line(text, raw_tokens)
+    _shadow_line_memo = (raw_tokens, text, shadowed)
+    return shadowed
+
+
+def _read_shadow_line(text: str, raw_tokens: list) -> tuple[str, list, list[tuple[int, int, int, int]]] | None:
+    """``shadow_line`` for a line not asked just before."""
     if not any(isinstance(getattr(token, "shadow", None), str) for token in raw_tokens):
         return None
     from anki_miner.services.morphology import iter_token_spans
