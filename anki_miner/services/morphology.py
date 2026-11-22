@@ -945,6 +945,10 @@ _READING_CONTEXT: tuple[_ReadingRow, ...] = (
     _reading_row("言う", ("動詞",), "ユウ", "イウ", base=True),
     # 不味い: the tagger says まじい for the plain form.
     _reading_row("不味い", ("形容詞",), "マジイ", "マズイ", base=True),
+    # 体: the tagger says たい, the reading of the suffix (団体), for the noun that
+    # opens a clause after a spaced name (田中さん 体は大丈夫？). Standing free it is
+    # からだ; attached to the word before it the tagger's reading stays.
+    _reading_row("体", _NOUN_POS, "タイ", "カラダ", prev=("",)),
 )
 _READING_CONTEXT_BY_SURFACE: dict[str, tuple[_ReadingRow, ...]] = {
     word: tuple(row for row in _READING_CONTEXT if row.word == word)
@@ -1599,7 +1603,9 @@ def _dictionary_nouns(surfaces: set[str], form_lookup: FormLookup) -> set[str]:
     return nouns
 
 
-def retag_mistagged_tokens(tokens: list, form_lookup: FormLookup | None = None) -> list:
+def retag_mistagged_tokens(
+    tokens: list, form_lookup: FormLookup | None = None, tag: Callable[[str], Iterable[Any]] | None = None
+) -> list:
     """Correct a tagger part of speech the next token disproves, or fill in a lemma it lacks.
 
     Fugashi tokens carry the space before them as ``white_space``; a token
@@ -1608,7 +1614,8 @@ def retag_mistagged_tokens(tokens: list, form_lookup: FormLookup | None = None) 
     - あの/その tagged as the filler directly before a noun, with no space or
       mark between, are the pre-noun adjective (あの女, あの橋): a filler is
       followed by a pause or a particle (あの…, あの 山田さん, あのね). A pronoun
-      is left out on purpose: あの私 is "um, I".
+      is left out on purpose: あの私 is "um, I". An adjective and its noun
+      count as the noun (あの有名な店, あの大きな犬; ``_noun_phrase_follows``).
     - 今/次 tagged as a prefix with a space after them are the nouns 'now' and
       'next' (今 駅にいる): the tagger skips the subtitle space and reads 今 駅
       as it reads 今大会. A prefix is never spaced from its noun, so the
@@ -1633,13 +1640,23 @@ def retag_mistagged_tokens(tokens: list, form_lookup: FormLookup | None = None) 
       the lemma of the verb it is (``_kana_homophone_fields``).
     - 若 read as the stem of 若い where a pause or a case particle follows is the
       address 'young master', the noun 若 (``_address_waka_fields``).
+    - A suffix with a space before it is no suffix: its clause is tagged alone
+      (彼を利用し 周りをだました: 周り the noun; ``_spaced_suffix_recut``). Needs
+      ``tag``, the tagger.
+    - A noun right after を and before a space that is the continuative of a
+      listed verb is the verb (戦を嫌い 山に住む; ``_object_stem_verb``).
+      Needs ``tag`` and the dictionary.
     """
     unknown = {token.surface for token in tokens if _unknown_katakana_noun(token)}
     nouns = _dictionary_nouns(unknown, form_lookup) if unknown and form_lookup is not None else set()
     out: list = []
     resplit: tuple[tuple[str, dict[str, str]], ...] | None = None
     missplit_surfaces = _missplit_surfaces()
+    skip = 0
     for i, token in enumerate(tokens):
+        if skip:
+            skip -= 1
+            continue
         if resplit is not None:
             out.append(RetaggedToken(token, resplit[1][1], resplit[1][0]))
             resplit = None
@@ -1662,9 +1679,9 @@ def retag_mistagged_tokens(tokens: list, form_lookup: FormLookup | None = None) 
                 out.append(RetaggedToken(token, resplit[0][1], resplit[0][0]))
                 continue
         fields: dict[str, str] | None = None
-        if pos1 == "感動詞" and nxt is not None and not spaced:
-            if getattr(getattr(nxt, "feature", None), "pos1", None) == "名詞":
-                fields = _FILLER_PRENOUNS.get(token.surface)
+        if pos1 == "感動詞" and nxt is not None and not spaced and token.surface in _FILLER_PRENOUNS:
+            if getattr(getattr(nxt, "feature", None), "pos1", None) == "名詞" or _noun_phrase_follows(tokens, i + 1):
+                fields = _FILLER_PRENOUNS[token.surface]
         elif pos1 == "接頭辞" and spaced:
             fields = _PREFIX_NOUNS.get(token.surface)
         elif token.surface in nouns and _unknown_katakana_noun(token):
@@ -1672,6 +1689,16 @@ def retag_mistagged_tokens(tokens: list, form_lookup: FormLookup | None = None) 
         if fields is None and (pieces := _glued_ka_naru(tokens, i) or _potential_imperative_yo(tokens, i)) is not None:
             out.extend(pieces)
             continue
+        if fields is None and tag is not None:
+            if pos1 == "接尾辞" and i and (recut := _spaced_suffix_recut(tokens, i, tag)) is not None:
+                out.extend(recut[0])
+                skip = recut[1] - 1
+                continue
+            if pos1 == "名詞" and spaced and form_lookup is not None:
+                verb = _object_stem_verb(tokens, i, tag, form_lookup)
+                if verb is not None:
+                    out.append(verb)
+                    continue
         if fields is None:
             fields = (
                 _spaced_interjection_fields(tokens, i)
@@ -1909,6 +1936,169 @@ def _potential_imperative_yo(tokens: list, i: int) -> tuple[RetaggedToken, Retag
     return RetaggedToken(token, fields, stem), particle
 
 
+#: What a clause may open with in place of the tagger's suffix, and the ones of
+#: them that must stand free (a particle, the copula or the clause end after them).
+_CLAUSE_OPENERS = frozenset({"名詞", "代名詞", "動詞", "形容詞", "副詞"})
+_NOMINAL_OPENERS = frozenset({"名詞", "代名詞"})
+#: The verbs a continuative + に names the purpose of (書類 出しに行く).
+_PURPOSE_VERBS = frozenset({"行く", "来る"})
+
+
+def _stands_free(after: Any | None, may_end: bool) -> bool:
+    """Whether the word before ``after`` is a word of its own: a particle or the copula follows it.
+
+    With ``may_end`` it may also end the clause (nothing or a mark follows).
+    Not before な: a one-kanji stem there is a verb told what to do (それ 着な).
+    """
+    if after is None:
+        return may_end
+    if after.surface == "な":
+        return False
+    feature = after.feature
+    pos1 = getattr(feature, "pos1", None)
+    if pos1 == "補助記号":
+        return may_end
+    return pos1 in ("助詞", "助動詞") or getattr(feature, "pos2", None) == "助動詞語幹"
+
+
+def _purpose_stem(clause: list[RetaggedToken]) -> bool:
+    """Whether the clause opens with a stem + に + 行く / 来る (書類 出しに行く).
+
+    The stem names the purpose of the motion and is a verb, which the tagger
+    reads as the noun of the same spelling when the clause stands alone.
+    """
+    if len(clause) < 3 or clause[1].surface != "に" or not "ぁ" <= clause[0].surface[-1] <= "ん":
+        return False
+    return getattr(clause[2].feature, "lemma", None) in _PURPOSE_VERBS
+
+
+def _spaced_suffix_recut(
+    tokens: list, i: int, tag: Callable[[str], Iterable[Any]]
+) -> tuple[list[RetaggedToken], int] | None:
+    """What a suffix after a space is re-read into, with the count of tagger tokens it replaces, or None.
+
+    The tagger skips a subtitle space, so a word that opens a clause is to it a
+    suffix of the word before the space (彼を利用し 周りをだました: 周り 接尾辞),
+    which no inclusion check takes. A suffix is never spaced from its stem, so
+    the clause (the text up to the next space) is tagged alone, and that reading
+    replaces the tagger's up to the first cut both share: 周り the noun, 君 the
+    pronoun, ちゃん|と the adverb ちゃんと, 立|って the verb 立っ|て.
+
+    Left alone: a counter after a spaced number (３ 人); anything after a spaced
+    name (山田 君, 山田 尊: an honorific or the given name), after a word the
+    tagger does not know (most often a name) or after a word in Latin
+    letters; a clause that alone opens with a suffix too (田中 さん), with
+    a name, a number or a katakana word; and a noun that does not stand free
+    (待ってくれ 安さん, a name before its honorific; a piece of an unlisted
+    word). A noun of one character needs a particle or the copula
+    after it: alone between pauses it is as often a name. A stem before に +
+    行く / 来る is left too (``_purpose_stem``).
+    """
+    token = tokens[i]
+    white_space = getattr(token, "white_space", "")
+    if not (isinstance(white_space, str) and white_space):
+        return None
+    previous = tokens[i - 1]
+    before = getattr(previous, "feature", None)
+    if getattr(before, "pos2", None) in ("数詞", "固有名詞") or not getattr(before, "lemma", None):
+        return None
+    if isinstance(previous.surface, str) and previous.surface.isascii():
+        return None
+    end = i + 1
+    while end < len(tokens) and not getattr(tokens[end], "white_space", ""):
+        end += 1
+    for other in tokens:
+        # fugashi parses a feature on first use, from memory the next tagger call reuses.
+        getattr(other, "feature", None)
+    clause = [RetaggedToken(piece, {}) for piece in tag("".join(old.surface for old in tokens[i:end]))]
+    if not clause:
+        return None
+    opener = clause[0].feature
+    pos1 = getattr(opener, "pos1", None)
+    if pos1 not in _CLAUSE_OPENERS or getattr(opener, "pos2", None) in ("固有名詞", "数詞"):
+        return None
+    if any("ァ" <= char <= "ヺ" for char in clause[0].surface):
+        return None
+    cuts = set()
+    length = 0
+    for old in tokens[i:end]:
+        length += len(old.surface)
+        cuts.add(length)
+    length = 0
+    for count, piece in enumerate(clause, 1):
+        length += len(piece.surface)
+        if length in cuts:
+            if pos1 in _NOMINAL_OPENERS:
+                after = clause[1] if len(clause) > 1 else None
+                if count != 1 or not _stands_free(after, len(clause[0].surface) > 1) or _purpose_stem(clause):
+                    return None
+            clause[0].white_space = white_space
+            return clause[:count], sum(1 for cut in cuts if cut <= length)
+    return None
+
+
+def _noun_phrase_follows(tokens: list, i: int) -> bool:
+    """Whether ``tokens[i]`` opens an adjective and its noun: 有名|な|店, 大きな|犬, 美しい|花.
+
+    Nothing is spaced up to the adjective's end. The noun may stand after a
+    subtitle space where the adjective cannot end a clause (有名な 店, 大きな 犬);
+    after 美しい, which can, it must be attached.
+    """
+    pos1 = getattr(getattr(tokens[i], "feature", None), "pos1", None)
+    if pos1 == "形状詞":
+        i += 1
+        if i >= len(tokens) or tokens[i].surface != "な" or bool(getattr(tokens[i], "white_space", "")):
+            return False
+    elif pos1 not in ("形容詞", "連体詞"):
+        return False
+    noun = tokens[i + 1] if i + 1 < len(tokens) else None
+    if noun is None or (pos1 == "形容詞" and bool(getattr(noun, "white_space", ""))):
+        return False
+    return getattr(getattr(noun, "feature", None), "pos1", None) == "名詞"
+
+
+#: The dictionary tags of a verb entry, by their first letters (v1, v5r, vk, vs-i, vz).
+_VERB_ENTRY_TAGS = ("v1", "v5", "vk", "vs", "vz")
+
+
+def _object_stem_verb(
+    tokens: list, i: int, tag: Callable[[str], Iterable[Any]], form_lookup: FormLookup
+) -> RetaggedToken | None:
+    """The verb token of a continuative the tagger read as a noun before a space (戦を嫌い 山に住む), or None.
+
+    A clause that ends on a verb's continuative, with a space and another clause
+    after it, is to the tagger the noun of the same spelling (嫌い, 祭り, 頼り).
+    Right after を it is the verb: a noun takes no object. The fields are the
+    ones the tagger gives the same surface before ます, and the dictionary must
+    list that verb. A stem the dictionary also lists as an adverb stays the
+    tagger's (歌を思いきり 歌う, 先生をはじめ 全員).
+    """
+    token = tokens[i]
+    surface = token.surface
+    if i == 0 or not isinstance(surface, str) or len(surface) < 2 or bool(getattr(token, "white_space", "")):
+        return None
+    if tokens[i - 1].surface != "を":
+        return None
+    for other in tokens:
+        # fugashi parses a feature on first use, from memory the next tagger call reuses.
+        getattr(other, "feature", None)
+    found = [RetaggedToken(piece, {}) for piece in tag(surface + "ます")]
+    if len(found) != 2 or found[0].surface != surface:
+        return None
+    feature = found[0].feature
+    c_form, base = getattr(feature, "cForm", None), getattr(feature, "orthBase", None)
+    if getattr(feature, "pos1", None) != "動詞" or not isinstance(base, str):
+        return None
+    if not (isinstance(c_form, str) and c_form.startswith("連用形")):
+        return None
+    rows = form_lookup([surface, base])
+    stem_tags = {name for _content, row_tags in rows.get(surface, ()) for name in row_tags.split()}
+    base_tags = {name for _content, row_tags in rows.get(base, ()) for name in row_tags.split()}
+    if "adv" in stem_tags or not any(name.startswith(_VERB_ENTRY_TAGS) for name in base_tags):
+        return None
+    return found[0]
+
+
 #: The fields unidic-lite gives the adjective いい (良い 'good, fine').
 _ADJECTIVE_II: dict[str, str] = {
     "pos1": "形容詞",
@@ -2133,6 +2323,361 @@ def rejoin_adjective_stem_cries(
         retagged.white_space = getattr(token, "white_space", "")
         out.append(retagged)
     return out
+
+
+#: The private score of ``recut_unlisted_kanji_tokens``: what a listed word of
+#: n kanji-bearing characters is worth, what an unlisted character costs, what
+#: every word costs (fewer pieces win a tie) and by how much a re-cut must win.
+_RECUT_WORD_SCORE = (0, 2, 8, 24, 40, 60)
+_RECUT_GAP_COST = 8
+_RECUT_WORD_COST = 2
+_RECUT_MARGIN = 8
+_RECUT_GLUE_POS = frozenset({"助詞", "助動詞", "補助記号", "記号", "接尾辞", "接頭辞", "空白", "感動詞"})
+_RECUT_CONTENT_POS = frozenset({"名詞", "動詞", "形容詞", "形状詞", "副詞", "代名詞", "連体詞", "接続詞"})
+_RECUT_BREAK_POS = frozenset({"補助記号", "空白", "記号"})
+_RECUT_KANJI_RE = re.compile("[一-鿿㐀-䶿々〆]")
+_RECUT_WORD_CHARS_RE = re.compile("[一-鿿㐀-䶿々〆ぁ-ん]+")
+
+
+def _pos1(token: Any) -> Any:
+    return getattr(getattr(token, "feature", None), "pos1", None)
+
+
+def _recut_tag(tag: Callable[[str], Iterable[Any]], text: str) -> list[RetaggedToken]:
+    """The tagger's tokens for ``text``, every feature read before the next tagger call."""
+    return [RetaggedToken(piece, {}) for piece in tag(text)]
+
+
+def _recut_edge(
+    token: Any,
+    exists: Callable[[list[str]], set[str]],
+    common: Callable[[str], bool],
+    more_keys: Callable[[], Iterable[Any]] | None = None,
+) -> tuple[str, int]:
+    """(kind, score) of one token: GLUE, KEEP (a name, a kana word), WORD, LEMMA (only its lemma is listed) or GAP."""
+    feature = getattr(token, "feature", None)
+    surface = token.surface
+    pos1, pos2 = getattr(feature, "pos1", None), getattr(feature, "pos2", None)
+    if pos1 in _RECUT_GLUE_POS or pos2 == "数詞" or pos1 not in _RECUT_CONTENT_POS:
+        return "GLUE", 0
+    if not _RECUT_KANJI_RE.search(surface):
+        return ("GLUE", 0) if pos2 == "非自立可能" else ("KEEP", 0)
+    if pos2 == "固有名詞":
+        return "KEEP", 0
+    score = _RECUT_WORD_SCORE[min(len(surface), 5)]
+    keys = [surface, getattr(feature, "orthBase", None)]
+    for attempt in range(2):
+        keys = [key for key in dict.fromkeys(keys) if isinstance(key, str) and key]
+        listed = exists(keys)
+        for key in keys:
+            if key in listed:
+                return "WORD", (score * 3 // 2 if common(key) else score) - _RECUT_WORD_COST
+        if attempt or more_keys is None:
+            break
+        keys = list(more_keys())
+    lemma = getattr(feature, "lemma", None)
+    lemma = lemma.split("-")[0] if isinstance(lemma, str) else ""
+    if lemma and lemma in exists([lemma]):
+        return "LEMMA", score // 2 - _RECUT_WORD_COST
+    return "GAP", -_RECUT_GAP_COST * len(surface)
+
+
+def _recut_listed(token: Any, exists: Callable[[list[str]], set[str]], base: Callable[[Any], str]) -> bool:
+    """Whether the dictionary form of ``token`` is listed."""
+    form = base(token)
+    return form in exists([form])
+
+
+def _recut_leftover(
+    piece: Any, exists: Callable[[list[str]], set[str]], common: Callable[[str], bool], base: Callable[[Any], str]
+) -> tuple[str, int]:
+    """The edge of a re-tagged leftover, its dictionary form counted as a listed spelling."""
+    return _recut_edge(piece, exists, common, lambda: (base(piece),))
+
+
+def _recut_inflected(text: str, rules: Callable[[list], Iterable[str]]) -> str | None:
+    """A listed dictionary form ``text`` deinflects to, the two differing in their kana tails only."""
+    from anki_miner.services.deinflection import get_japanese_deinflector
+
+    candidates = [
+        (result.text, result.conditions)
+        for result in get_japanese_deinflector().transform(text)
+        if result.text != text and result.conditions
+    ]
+    best = None
+    for head in sorted(rules(candidates)) if candidates else ():
+        shared = 0
+        while shared < min(len(text), len(head)) and text[shared] == head[shared]:
+            shared += 1
+        if shared and not _RECUT_KANJI_RE.search(text[shared:]) and not _RECUT_KANJI_RE.search(head[shared:]):
+            best = head
+    return best
+
+
+def _recut_agrees(form: str, inflected: bool, pieces: list, base: Callable[[Any], str]) -> bool:
+    """Whether the tagger, shown the edge alone, reads it as the dictionary word ``form``.
+
+    A listed spelling must tag as nominal pieces. An inflected one must open
+    with a verb or adjective whose dictionary form is ``form`` and go on with
+    auxiliaries, a conjunctive particle, a suffix or a helper verb: 来 + the
+    quoting って is no form of 来る.
+    """
+    if not inflected:
+        return all(_pos1(piece) in ("名詞", "接尾辞", "接頭辞", "形状詞") for piece in pieces)
+    for index, piece in enumerate(pieces):
+        if _pos1(piece) in ("動詞", "形容詞"):
+            tail = pieces[index + 1 :]
+            if any(_pos1(other) not in ("助動詞", "助詞", "接尾辞", "動詞", "形容詞") for other in tail):
+                return False
+            particle = tail[0] if tail and _pos1(tail[0]) == "助詞" else None
+            if particle is not None and getattr(particle.feature, "pos2", None) != "接続助詞":
+                return (
+                    particle.surface in ("たり", "だり")
+                    and "".join(other.surface for other in pieces[:index]) + base(piece) == form
+                )
+            return "".join(other.surface for other in pieces[:index]) + base(piece) == form
+    return False
+
+
+#: The second verbs an unlisted compound verb is cut before (励まし合う, 塗り直す).
+_RECUT_SECOND_VERBS = frozenset({"合う", "直す"})
+
+
+def _recut_second_verb(pieces: list, base: Callable[[Any], str]) -> bool:
+    """Whether ``pieces`` open with 合う or 直す, the second verb of a compound verb that is cut in two."""
+    return bool(pieces) and _pos1(pieces[0]) == "動詞" and base(pieces[0]) in _RECUT_SECOND_VERBS
+
+
+def _recut_once(
+    text: str,
+    tokens: list,
+    tag: Callable[[str], Iterable[Any]],
+    exists: Callable[[list[str]], set[str]],
+    common: Callable[[str], bool],
+    rules: Callable[[list], Iterable[str]],
+    front: Callable[[Any, str, int, int, list], str],
+    base: Callable[[Any], str],
+) -> list | None:
+    """One re-cut of ``tokens`` (the best one at the first hole that has one), or None."""
+    maybe = [
+        index
+        for index, token in enumerate(tokens)
+        if _pos1(token) in _RECUT_CONTENT_POS
+        and isinstance(token.surface, str)
+        and _RECUT_KANJI_RE.search(token.surface)
+        and getattr(token.feature, "pos2", None) not in ("固有名詞", "数詞")
+    ]
+    if not maybe:
+        return None
+    keys = {key for index in maybe for key in (tokens[index].surface, getattr(tokens[index].feature, "orthBase", None))}
+    listed = exists(sorted(key for key in keys if isinstance(key, str) and key))
+    maybe = [
+        index
+        for index in maybe
+        if tokens[index].surface not in listed and getattr(tokens[index].feature, "orthBase", None) not in listed
+    ]
+    if not maybe or not any("ぁ" <= char <= "ヺ" for char in text):
+        return None
+    spans = list(iter_token_spans(text, tokens))
+    if len(spans) != len(tokens):
+        return None
+    for token in tokens:
+        # fugashi parses a feature on first use, from memory the next tagger call reuses.
+        getattr(token, "feature", None)
+    edges: dict[int, tuple[str, int]] = {}
+
+    def edge(index: int) -> tuple[str, int]:
+        if index not in edges:
+            token, start, end = spans[index]
+            edges[index] = _recut_edge(
+                token, exists, common, lambda: (base(token), front(token, text, start, end, tokens))
+            )
+        return edges[index]
+
+    def is_hole(index: int) -> bool:
+        kind = edge(index)[0]
+        return kind == "GAP" or (kind == "LEMMA" and not _RECUT_KANJI_RE.match(tokens[index].surface))
+
+    for hole in maybe:
+        if not is_hole(hole):
+            continue
+        low = high = hole
+        while (
+            low > max(0, hole - 2)
+            and spans[low - 1][2] == spans[low][1]
+            and _pos1(tokens[low - 1]) not in _RECUT_BREAK_POS
+        ):
+            low -= 1
+        while (
+            high < min(len(spans) - 1, hole + 3)
+            and spans[high][2] == spans[high + 1][1]
+            and _pos1(tokens[high + 1]) not in _RECUT_BREAK_POS
+        ):
+            high += 1
+        window = range(low, high + 1)
+        start, stop = spans[low][1], spans[high][2]
+        if not 2 <= stop - start <= 16:
+            continue
+        bounds = {spans[index][1] for index in window} | {stop}
+        own = {(spans[index][1], spans[index][2]) for index in window}
+        hole_start, hole_end = spans[hole][1], spans[hole][2]
+        pieces_at: dict[tuple[int, int], str] = {}
+        for left in range(start, stop):
+            for right in range(left + 2, min(stop, left + 10) + 1):
+                if (left, right) in own or not (left < hole_end and right > hole_start):
+                    continue
+                piece_text = text[left:right]
+                if _RECUT_KANJI_RE.search(piece_text) and _RECUT_WORD_CHARS_RE.fullmatch(piece_text):
+                    pieces_at[(left, right)] = piece_text
+        listed = exists(sorted(set(pieces_at.values())))
+        if any(word in listed and at[0] in bounds and at[1] in bounds for at, word in pieces_at.items()):
+            continue  # a listed join of whole tokens over the hole is the compound matcher's
+        cuts = {cut for index in window if is_hole(index) for cut in range(spans[index][1], spans[index][2] + 1)}
+        best: tuple[int, int, int, int, list] | None = None
+        for (left, right), word in pieces_at.items():
+            if not ((left in bounds or left in cuts) and (right in bounds or right in cuts)):
+                continue  # a cut is made only inside a hole
+            glue = [
+                index
+                for index in window
+                if index != hole
+                and spans[index][1] < right
+                and spans[index][2] > left
+                and _pos1(tokens[index]) in ("助詞", "助動詞")
+            ]
+            if any(spans[index][1] <= left for index in glue) or (word in listed and glue):
+                continue  # no edge starts on a particle or auxiliary; a noun edge covers none
+            whole = left in bounds and right in bounds
+            if not whole and hole_start <= left and right <= hole_end:
+                continue  # a split inside the hole alone (two unlisted halves) is not this pass
+            form = word if word in listed else _recut_inflected(word, rules)
+            if form is None:
+                continue
+            inflected = word not in listed
+            edge_tokens = _recut_tag(tag, word)
+            if not _recut_agrees(form, inflected, edge_tokens, base):
+                continue
+            old_left = max(bound for bound in bounds if bound <= left)
+            old_right = min(bound for bound in bounds if bound >= right)
+            before = _recut_tag(tag, text[old_left:left]) if old_left < left else []
+            after: list[RetaggedToken] = []
+            if right < old_right:
+                # The leftover after the edge is tagged with what follows it in the window
+                # (直し + た is a verb, 直し alone a noun) and must end on the old boundary.
+                taken = 0
+                for piece in _recut_tag(tag, text[right:stop]):
+                    if taken >= old_right - right:
+                        break
+                    after.append(piece)
+                    taken += len(piece.surface)
+                if taken != old_right - right:
+                    continue
+            verb_hole = _pos1(tokens[hole]) == "動詞"
+            if before and left >= hole_start:
+                # A verb stem alone reads as a noun (出し|直した): ask with ます after it.
+                stem_text = text[old_left:left]
+                stem = _recut_tag(tag, stem_text + "ます") if inflected and _RECUT_KANJI_RE.search(stem_text) else []
+                is_stem = (
+                    bool(stem)
+                    and stem[0].surface == stem_text
+                    and _pos1(stem[0]) == "動詞"
+                    and _recut_listed(stem[0], exists, base)
+                )
+                if is_stem and (verb_hole or _pos1(before[-1]) == "名詞"):
+                    before = [stem[0]]
+                if verb_hole and not (is_stem and _recut_second_verb(edge_tokens, base)):
+                    continue  # an unlisted compound verb is cut in two only before 合う / 直す
+            first_verb = verb_hole and inflected and left >= hole_start and bool(after) and right < hole_end
+            if first_verb and not _recut_second_verb(after, base):
+                continue  # the same, where the edge is the first verb
+            rest = [(_recut_leftover(piece, exists, common, base), piece) for piece in before + after]
+            if not inflected and not whole:
+                # A noun edge across a hole's border leaves no one-kanji word (城|南部 out of
+                # 城南|部員) and never starts at an honorific prefix (お|宮入り, not お宮 + 入り).
+                if any(kind == "WORD" and len(piece.surface) == 1 for (kind, _score), piece in rest):
+                    continue
+                if any(spans[index][1] == left and _pos1(tokens[index]) == "接頭辞" for index in window):
+                    continue
+            if any(kind in ("GAP", "LEMMA", "KEEP") for (kind, _score), _piece in rest):
+                continue  # the leftovers are glue or listed words
+            if any(
+                kind == "WORD" and len(piece.surface) == 1 and not common(piece.surface)
+                for (kind, _score), piece in rest
+            ):
+                continue  # a one-kanji leftover word is a common one, not a piece of a name
+            length = right - left
+            new_score = _RECUT_WORD_SCORE[min(length, 5)] * (3 if common(form) else 2) // 2 - _RECUT_WORD_COST
+            new_score += sum(score for (_kind, score), _piece in rest)
+            old_score = sum(
+                edge(index)[1] for index in window if spans[index][1] >= old_left and spans[index][2] <= old_right
+            )
+            if new_score < old_score + _RECUT_MARGIN:
+                continue
+            candidate = (new_score - old_score, length, old_left, old_right, before + edge_tokens + after)
+            if best is None or candidate[:2] > best[:2]:
+                best = candidate
+        if best is None:
+            continue
+        _gain, _length, old_left, old_right, replacement = best
+        first = next(index for index in window if spans[index][1] == old_left)
+        last = next(index for index in window if spans[index][2] == old_right)
+        replacement[0].white_space = getattr(tokens[first], "white_space", "")
+        return tokens[:first] + replacement + tokens[last + 1 :]
+    return None
+
+
+def recut_unlisted_kanji_tokens(
+    text: str,
+    tokens: list,
+    tag: Callable[[str], Iterable[Any]],
+    exists: Callable[[list[str]], set[str]] | None,
+    common_lookup: Callable[[list[str]], dict[str, bool] | None],
+    rules: Callable[[list], Iterable[str]] | None,
+    front: Callable[[Any, str, int, int, list], str],
+    base: Callable[[Any], str],
+) -> list:
+    """Cut a kanji token no dictionary lists into the listed words the line holds there.
+
+    Where a particle is dropped the tagger glues a noun to the head of the
+    next word and leaves kana rubble: 首落|とさ|ない for 首 + 落とさない, 白|き尾
+    for 白き + 尾. A token with kanji is a hole when neither its surface, its
+    dictionary form nor the front the parser would card (``front``) is listed
+    by spelling; a name, a number and a kana or katakana word never are. Around
+    a hole (two tokens before, three after, no space or mark, 16 characters)
+    every kanji-bearing piece of the text that overlaps the hole and is a
+    listed word, or deinflects to one, is a candidate edge; the edge and the
+    leftovers beside it are tagged alone and replace the old tokens when
+
+    - the tagger reads the edge as that word (``_recut_agrees``);
+    - a cut falls only inside a hole, never inside a listed token, and no
+      edge starts on or (for a noun) covers a particle or an auxiliary;
+    - no listed join of whole tokens covers the hole (the compound matcher
+      makes that one);
+    - the leftovers are glue or listed words, a one-kanji leftover a common
+      one, and a noun edge leaves no one-kanji leftover at all;
+    - the private score (``_RECUT_WORD_SCORE``: listed kanji length, a cost per
+      unlisted character and per word) rises by ``_RECUT_MARGIN``.
+
+    An unlisted compound verb is cut into its two verbs only before 合う or 直す
+    (励まし合った → 励ます + 合う); any other stays whole.
+
+    A line without kana is never re-cut (a Chinese line of a bilingual file),
+    nor is anything without a dictionary. At most three re-cuts a line. Tokens
+    are never mutated; the first new token carries the old one's space.
+    """
+    if exists is None or rules is None:
+        return tokens
+
+    def common(word: str) -> bool:
+        found = common_lookup([word])
+        return bool(found and found.get(word))
+
+    for _round in range(3):
+        recut = _recut_once(text, tokens, tag, exists, common, rules, front, base)
+        if recut is None:
+            break
+        tokens = recut
+    return tokens
 
 
 def _merge_prefix_compounds(tokens: list, attest: AttestLookup | None = None) -> list:

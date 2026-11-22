@@ -60,6 +60,7 @@ from anki_miner.services.morphology import (
     iter_token_spans,
     merge_compound_suffixes,
     mining_base,
+    recut_unlisted_kanji_tokens,
     rejoin_adjective_stem_cries,
     rejoin_contracted_adjectives,
     replace_overridden_spans,
@@ -2176,9 +2177,19 @@ class SubtitleParserService:
         # Tagger corrections go on the raw stream: the sentence display is built
         # from it, and a correction that re-cuts two tokens (自|分ち) would
         # otherwise leave the raw and merged streams out of step for the line.
-        raw_tokens = retag_mistagged_tokens(raw_tokens, self._form_lookup)
+        raw_tokens = retag_mistagged_tokens(raw_tokens, self._form_lookup, self._tagger())
         raw_tokens = rejoin_contracted_adjectives(raw_tokens)
         raw_tokens = rejoin_adjective_stem_cries(raw_tokens, self._tagger(), self._form_lookup)
+        raw_tokens = recut_unlisted_kanji_tokens(
+            text,
+            raw_tokens,
+            self._tagger(),
+            self._memoized_attest if self._attest is not None else None,
+            self._memoized_term_common,
+            self._term_rules_lookup,
+            self._card_front,
+            self._mining_base,
+        )
         raw_tokens = reread_daku_tokens(raw_tokens)
         raw_tokens = reread_omote_tokens(raw_tokens)
         raw_tokens = reread_in_context(raw_tokens)
