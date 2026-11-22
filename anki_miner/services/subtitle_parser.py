@@ -222,6 +222,23 @@ _KANA_AUX_WORDS: frozenset[str] = frozenset(
     }
 )
 
+# The other auxiliary-capable kana verbs (あげる, かける, つく, すぎる, みせる) come
+# back as a class, under the same test and the full window check. Not these:
+# forms of する the tagger lemmatises apart (さす is its Kansai causative), the
+# honorific and aspect verbs whose bare kana is the auxiliary, the literary あり
+# (the word is ある, above), だす, which is the Kansai です as often as 出す, and
+# short verbs the tagger gives to name pieces and dialect endings (きっちゃん,
+# えるちゃん, さって, 行かぬか, つくしちゃん, いねがった). A potential of one of
+# them or of a word above stays out too (なれる, いける, おれる: the card would
+# show 慣れる, 行ける, 折れる).
+_KANA_AUX_CLASS_DENY: frozenset[str] = frozenset(
+    {"される", "させる", "せる", "す", "したい", "さす", "ござる", "おる", "みる", "しまう", "なさる", "おく"}
+    | {"いたす", "いただく", "いただける", "くださる", "くだされる", "いらっしゃる", "らっしゃる", "まいる"}
+    | {"たまう", "あそばす", "やがる", "なはる", "おわす"}
+    | {"あり", "だす", "きる", "える", "さる", "ぬく", "つくす", "ねがう"}
+)
+_POTENTIAL_E_TO_U: dict[str, str] = dict(zip("えけげせてねべめれ", "うくぐすつぬぶむる", strict=True))
+
 # Particles after which する belongs to the phrase before it and is no verb of
 # its own: the quoted try or thought (行こうとした, 帰るってした), the listed act
 # (見たりした, 掃除とかする) and the choice (行くかしないか).
@@ -338,6 +355,7 @@ _SOKUON_CONTINUATIONS: frozenset[str] = frozenset("たてだでちじと")
 # longer expressions are listed spans, merged or joined before it is judged alone.
 _KANA_RECOVERED = "recovered"
 _KANA_AUX = "aux"
+_KANA_AUX_CLASS = "aux class"
 _KANA_LISTED = "listed"
 _KANA_LISTED_SPELLING = "listed spelling"
 
@@ -3288,9 +3306,15 @@ class SubtitleParserService:
         how = self._kana_recovery(word_token)
         if how is not None:
             after_conditional = how == _KANA_AUX and self._is_good_after_conditional(word_token, tokens)
-            if how == _KANA_AUX and not after_conditional and self._used_as_auxiliary(word_token, tokens):
+            if (
+                how in (_KANA_AUX, _KANA_AUX_CLASS)
+                and not after_conditional
+                and self._used_as_auxiliary(word_token, tokens)
+            ):
                 return False
             if how == _KANA_AUX and self._is_not_main_suru(word_token, tokens):
+                return False
+            if how == _KANA_AUX_CLASS and self._aux_class_word_is_out_of_place(word_token, tokens, text, tok_end):
                 return False
             if how in (_KANA_LISTED, _KANA_LISTED_SPELLING) and self._listed_word_is_out_of_place(word_token, tokens):
                 return False
@@ -3505,6 +3529,37 @@ class SubtitleParserService:
             tags = self._entry_tags([front]).get(front)
             self._takes_suru_memo[front] = any(tag.startswith("vs") for tag in tags) if tags else None
         return self._takes_suru_memo[front]
+
+    @staticmethod
+    def _aux_class_word_is_out_of_place(word_token, tokens: list, text: str, tok_end: int) -> bool:
+        """Whether an auxiliary-capable kana verb of the class (あげる, かける, つく) is no word of its own here.
+
+        ``_used_as_auxiliary`` has refused it after a verb, an adjective, an
+        auxiliary or a て. Left are a 撥音便 stem that nothing continues, as a
+        cut 促音便 stem; a bare 連用形 at the line end or before a shout, which
+        is another verb's imperative (ウソつけ！ is つく, read as つける); any
+        such verb right after an adjectival noun; and すぎる glued to the word
+        before it (静か|すぎる, バカ|すぎる, 突然|すぎて), that word's tail as
+        it is after a verb.
+        """
+        feature = word_token.feature
+        c_form = getattr(feature, "cForm", None) or ""
+        following = text[tok_end : tok_end + 1]
+        if c_form.startswith("連用形-撥音便") and following not in ("だ", "で", "じ"):
+            return True
+        if c_form.startswith("連用形") and following in ("", "！", "!"):
+            return True
+        idx = next((i for i, tok in enumerate(tokens) if tok is word_token), None)
+        if not idx:
+            return False
+        before = getattr(getattr(tokens[idx - 1], "feature", None), "pos1", None)
+        if before == "形状詞":
+            return True
+        return (
+            getattr(feature, "orthBase", None) == "すぎる"
+            and before in ("名詞", "代名詞", "副詞", "接尾辞")
+            and not getattr(word_token, "white_space", "")
+        )
 
     @staticmethod
     def _is_good_after_conditional(word_token, tokens: list) -> bool:
@@ -4050,7 +4105,7 @@ class SubtitleParserService:
         return self._kana_recovery(word_token) is not None
 
     def _kana_recovery(self, word_token) -> str | None:
-        """How an otherwise-rejected hiragana word comes back: ``_KANA_RECOVERED``, ``_KANA_AUX``, ``_KANA_LISTED``, ``_KANA_LISTED_SPELLING`` or None.
+        """How an otherwise-rejected hiragana word comes back: ``_KANA_RECOVERED``, ``_KANA_AUX``, ``_KANA_AUX_CLASS``, ``_KANA_LISTED``, ``_KANA_LISTED_SPELLING`` or None.
 
         Gate (ALL must hold; cheap checks first so the SQLite probe is the last
         resort and only distinct tokens ever reach it):
@@ -4141,10 +4196,29 @@ class SubtitleParserService:
         feature = word_token.feature
         if merged or pos1 not in _KANA_RECOVER_POS1 or getattr(feature, "pos2", None) != "非自立可能":
             return False
-        if form not in _KANA_AUX_WORDS or surface == "くん" or not self._inclusion_rule.content_gate_ok(word_token):
+        if form not in _KANA_AUX_WORDS and not self._is_aux_class_word(feature, pos1, surface, form):
+            return False
+        if surface == "くん" or not self._inclusion_rule.content_gate_ok(word_token):
             return False
         c_type = getattr(feature, "cType", None)
         return surface[0] == form[0] or (isinstance(c_type, str) and c_type.startswith(("カ行変格", "サ行変格")))
+
+    @staticmethod
+    def _is_aux_class_word(feature, pos1: str, surface: str, form: str) -> bool:
+        """Whether a 非自立可能 kana verb outside ``_KANA_AUX_WORDS`` is mined as one of its class (あげる, かける, つく).
+
+        Not a word of ``_KANA_AUX_CLASS_DENY`` nor the potential of one or of a
+        listed word; at least two kana; and the surface starts as the lemma
+        reads, which a voiced tail does not (ぎる, づける).
+        """
+        if pos1 != "動詞" or form in _KANA_AUX_CLASS_DENY or len(surface) < 2:
+            return False
+        potential_of = ""
+        if len(form) >= 3 and form.endswith("る") and form[-2] in _POTENTIAL_E_TO_U:
+            potential_of = form[:-2] + _POTENTIAL_E_TO_U[form[-2]]
+        if potential_of in _KANA_AUX_WORDS or potential_of in _KANA_AUX_CLASS_DENY:
+            return False
+        return katakana_to_hiragana(str(getattr(feature, "lForm", "") or ""))[:1] == surface[:1]
 
     def _probe_kana_recovery(self, word_token, pos1: str, surface: str, recoverable: bool, merged: bool) -> str | None:
         """The content gate (recovered) or list membership (listed), then attestation of the front.
@@ -4191,7 +4265,7 @@ class SubtitleParserService:
         if recoverable and not (merged and is_listed(form, pos1, merged=True)):
             return _KANA_RECOVERED
         if aux:
-            return _KANA_AUX
+            return _KANA_AUX if form in _KANA_AUX_WORDS else _KANA_AUX_CLASS
         return _KANA_LISTED_SPELLING if spelled or (not merged and is_kanji_spelled(form, pos1)) else _KANA_LISTED
 
     #: Long kana nouns that are no word where the tagger finds them: the rows the

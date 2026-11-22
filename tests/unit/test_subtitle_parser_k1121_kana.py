@@ -1,4 +1,4 @@
-"""Kana words session K1121 brought back: する as the line's own verb."""
+"""Kana words session K1121 brought back: する as the line's own verb, the auxiliary-capable verb class."""
 
 from __future__ import annotations
 
@@ -21,7 +21,14 @@ def _fugashi_available() -> bool:
 
 pytestmark = pytest.mark.skipif(not _fugashi_available(), reason="fugashi/unidic-lite not installed")
 
-_ATTESTED = frozenset({"する", "びっくり", "ゆっくり", "ごろごろ", "どう", "せい", "くせ", "きれい"})
+_ATTESTED = frozenset(
+    {"する", "びっくり", "ゆっくり", "ごろごろ", "どう", "せい", "くせ", "きれい"}
+    | {"あげる", "すぎる", "かける", "みせる", "つける", "つく", "なれる", "おれる", "いける", "もらえる", "つづく"}
+    | {"いう", "かわいそう", "やる", "とる", "すき", "かかわる", "ない"}
+    | {"あり", "ある", "だす", "きる", "きれる", "つくす"}
+    # Windows a dictionary has as the reading of a word written otherwise.
+    | {"という", "といい", "かわいそうに", "ですき", "とって", "にもかかわらず", "かかわらず"}
+)
 
 # Dictionary entry tags by headword: a word with no row here has no entry at all.
 _TAGS = {
@@ -112,3 +119,69 @@ class TestSuruAsTheLinesOwnVerb:
     )
     def test_suru_in_its_own_frame_is_mined(self, text):
         assert "する" in _fronts(text)
+
+
+class TestAuxiliaryCapableVerbClass:
+    @pytest.mark.parametrize(
+        ("text", "front"),
+        [
+            ("本をあげる。", "あげる"),
+            ("時間がすぎるのは早い。", "すぎる"),
+            ("お手数をおかけします。", "かける"),
+            ("写真をみせる。", "みせる"),
+            ("ドアにかぎをかけた。", "かける"),
+            ("かたをつけてやる。", "つける"),
+            ("ちゃんとみせて。", "みせる"),
+        ],
+    )
+    def test_mines_an_auxiliary_capable_kana_verb_as_the_main_verb(self, text, front):
+        assert front in _fronts(text)
+
+    @pytest.mark.parametrize(
+        ("text", "front"),
+        [
+            ("読んであげる。", "あげる"),
+            ("食べすぎた。", "すぎる"),
+            ("若すぎるのう。", "すぎる"),
+            ("雨がふりつづく。", "つづく"),
+        ],
+    )
+    def test_after_a_verb_or_an_adjective_it_is_grammar(self, text, front):
+        assert front not in _fronts(text)
+
+    @pytest.mark.parametrize("text", ["バカすぎる。", "静かすぎる。", "突然すぎて驚いた。"])
+    def test_sugiru_glued_to_the_word_before_it_is_that_words_tail(self, text):
+        assert "すぎる" not in _fronts(text)
+
+    @pytest.mark.parametrize(
+        ("text", "front"),
+        [
+            ("騎士になれる。", "なれる"),
+            ("家におれんようになった。", "おれる"),
+            ("それはいけない。", "いける"),
+            ("それ、もらえる？", "もらえる"),
+        ],
+    )
+    def test_the_potential_of_a_listed_or_denied_word_is_no_card(self, text, front):
+        assert front not in _fronts(text)
+
+    @pytest.mark.parametrize(
+        ("text", "front"),
+        [
+            ("命あらば助けよう。", "あり"),
+            ("ええ人だすなあ。", "だす"),
+            ("きっちゃんが来た。", "きる"),
+            ("つくしちゃんに会った。", "つくす"),
+        ],
+    )
+    def test_a_denied_verb_is_no_card(self, text, front):
+        assert front not in _fronts(text)
+
+    def test_a_bare_stem_before_a_shout_is_no_card(self):
+        assert "つける" not in _fronts("ウソつけ！")
+
+    def test_a_voiced_tail_is_no_card(self):
+        assert "つける" not in _fronts("元気づける言葉だ。")
+
+    def test_suru_after_a_class_verb_stays_grammar(self):
+        assert "する" not in _fronts("お手数をおかけします。")
