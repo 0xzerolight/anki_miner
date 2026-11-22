@@ -773,6 +773,10 @@ _READING_CONTEXT: tuple[_ReadingRow, ...] = (
     ),
     _reading_row("何", _WHAT_POS, "ナン", "ナン", nxt=("助数詞",)),
     _reading_row("何", _WHAT_POS, "ナン", "ナニ"),
+    # 何時 as one token: the tagger says なんどき, which lives on in いつ何時; asked
+    # of the clock it is なんじ (今何時ですか).
+    _reading_row("何時", _NOUN_POS, "ナンドキ", "ナンドキ", before="いつ$"),
+    _reading_row("何時", _NOUN_POS, "ナンドキ", "ナンジ"),
     # 私: the tagger says わたくし wherever it stands; a card takes わたし, as the
     # ワタシ fold in models/word.py does. The humble 私ども and 私め keep わたくし,
     # and so does a humble or ladylike line (ございます, 申します, 参ります, 存じます,

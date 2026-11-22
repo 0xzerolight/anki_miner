@@ -79,6 +79,7 @@ _LISTED_READINGS: dict[str, set[str]] = {
     "通り": {"とおり", "どおり"},
     "頃": {"ころ", "ごろ"},
     "度": {"たび", "ど"},
+    "何時": {"いつ", "なんじ", "なんどき"},
     "側": {"がわ", "そば", "かわ"},
     "主": {"ぬし", "あるじ", "しゅ", "おも"},
     "留まる": {"とどまる", "とまる"},
@@ -101,7 +102,7 @@ class TestReadingTable:
             new = katakana_to_hiragana(row.new)
             assert any(reading.startswith(new) for reading in _LISTED_READINGS[row.word]), row
 
-    def test_a_change_row_is_the_last_word_of_its_group_or_has_a_test(self) -> None:
+    def test_every_row_names_a_part_of_speech_and_two_readings(self) -> None:
         for row in morphology._READING_CONTEXT:
             assert row.old and row.new and row.pos1, row
 
@@ -450,3 +451,17 @@ class TestBesideAndMaster:
     )
     def test_the_token_reading(self, sentence: str, surface: str, kana: str) -> None:
         assert _kana(sentence, surface) == [kana]
+
+
+@needs_tagger
+class TestWhatTime:
+    """何時 as one token is なんじ; なんどき belongs to いつ何時."""
+
+    @pytest.mark.parametrize("sentence", ["今何時ですか", "今 何時？"])
+    def test_nanji_on_the_card_and_in_the_sentence(self, sentence: str) -> None:
+        word = _words(sentence)["何時"]
+        assert word.expression_reading == "なんじ"
+        assert "何時[なんじ]" in word.sentence_furigana
+
+    def test_itsu_is_untouched(self) -> None:
+        assert _kana("何時から始まる", "何時") == ["イツ"]

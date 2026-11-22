@@ -9,3 +9,4 @@
 {"id":"k21rd09","sentence":"何と何を買うの","expected":["何","買う"],"expected_readings":{"何":"なに"},"category":"k1121-readings"}
 {"id":"k21rd10","sentence":"明日は晴れだ","expected":["明日","晴れ"],"expected_readings":{"明日":"あした"},"category":"k1121-readings"}
 {"id":"k21rd11","sentence":"私は学生だ","expected":["私","学生"],"expected_readings":{"私":"わたし"},"category":"k1121-readings"}
+{"id":"k21rd12","sentence":"今何時ですか","expected":["今","何時"],"expected_readings":{"何時":"なんじ"},"category":"k1121-readings"}
