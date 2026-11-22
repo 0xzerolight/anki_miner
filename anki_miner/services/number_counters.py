@@ -142,6 +142,13 @@ _COUNTERS: dict[str, _Counter] = {
     "位": _Counter("い"),
     "キロ": _Counter("きろ", frozenset({"ろく", "じゅう", "ひゃく"})),
     "ドル": _Counter("どる"),
+    "世紀": _Counter("せいき", _GEMINATE_ST),
+    "勝": _Counter("しょう", _GEMINATE_ST),
+    "着": _Counter("ちゃく", _GEMINATE_ST),
+    "隻": _Counter("せき", _GEMINATE_ST),
+    "丁目": _Counter("ちょうめ", _GEMINATE_ST),
+    "代": _Counter("だい"),
+    "年生": _Counter("ねんせい", endings={"よん": "よ"}),
     "つ": _Counter(
         "",
         exact={
@@ -167,7 +174,28 @@ _COUNTER_POS3 = frozenset({"助数詞", "助数詞可能", "一般"})
 _MINUTE_POS3 = "副詞可能"
 #: Counters unidic tags as plain nouns of other kinds (話 is サ変可能, 巻 a noun read まき):
 #: right after a numeral they are the counter whatever the tag.
-_UNTAGGED_COUNTERS = frozenset({"体", "頭", "発", "歩", "曲", "巻", "話", "段", "位", "キロ", "ドル"})
+_UNTAGGED_COUNTERS = frozenset(
+    {
+        "体",
+        "頭",
+        "発",
+        "歩",
+        "曲",
+        "巻",
+        "話",
+        "段",
+        "位",
+        "キロ",
+        "ドル",
+        "世紀",
+        "勝",
+        "着",
+        "隻",
+        "丁目",
+        "代",
+        "年生",
+    }
+)
 #: What the suffix pass joins onto a counter, with its reading (回目, 日後, 分間, 年前, 人中): after a
 #: number the counter belongs to the quantity and this tail is a token of its own (3回|目, 10人|中).
 _COUNTER_TAILS = {"目": "め", "後": "ご", "間": "かん", "前": "まえ", "中": "ちゅう"}
@@ -271,7 +299,7 @@ def counter_of(front: str) -> str | None:
 
 def _counter_and_tail(surface: str) -> tuple[str, str] | None:
     """A token the suffix pass built from a counter and what follows it (回目, 日後, 人中), cut in two, else None."""
-    if surface in _NOT_COUNTER_AND_TAIL:
+    if surface in _NOT_COUNTER_AND_TAIL or surface in _COUNTERS:
         return None
     for tail in _COUNTER_TAILS:
         if surface.endswith(tail) and surface[: -len(tail)] in _COUNTERS:

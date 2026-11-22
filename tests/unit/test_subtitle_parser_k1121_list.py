@@ -531,6 +531,14 @@ def test_kana_nan_inside_a_listed_word_is_no_card() -> None:
         (6, "キロ", "ろっきろ"),
         (1, "キロ", "いちきろ"),
         (10, "ドル", "じゅうどる"),
+        (8, "世紀", "はっせいき"),
+        (21, "世紀", "にじゅういっせいき"),
+        (10, "勝", "じゅっしょう"),
+        (1, "着", "いっちゃく"),
+        (2, "隻", "にせき"),
+        (3, "丁目", "さんちょうめ"),
+        (4, "代", "よんだい"),
+        (4, "年生", "よねんせい"),
     ],
 )
 def test_added_counter_reads_with_its_sound_changes(number: int, counter: str, reading: str) -> None:
@@ -555,7 +563,8 @@ def test_counter_and_tail_cut() -> None:
     assert number_counters._counter_and_tail("回目") == ("回", "目")
     assert number_counters._counter_and_tail("人中") == ("人", "中")
     assert number_counters._counter_and_tail("人前") is None  # 2人前 is ににんまえ 'two portions'
-    assert number_counters._counter_and_tail("代目") is None
+    assert number_counters._counter_and_tail("代目") == ("代", "目")
+    assert number_counters._counter_and_tail("丁目") is None  # a counter of its own (3丁目)
     assert number_counters.counter_of("３回目") is None  # the tail is no part of a number + counter front
 
 
