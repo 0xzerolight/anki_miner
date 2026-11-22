@@ -601,6 +601,15 @@ class AnkiMinerConfig:
     # PARSE_RELEVANT_CONFIG_FIELDS.
     mine_grammar_points: bool = True
 
+    # Interjection cards (えっと, ねえ, あっ, ははは): every interjection the
+    # dictionary lists, standing alone in its line (SubtitleParserService.
+    # _is_listed_interjection), and the kana word list rows marked
+    # "interjection" (あのね, しまった). A stammer or a cry with no dictionary
+    # entry is never mined. Off by default (owner): most learners do not want a
+    # card for a gasp. Japanese only (Word Filters shows it under the kana
+    # filters); the parser reads it, so it is in PARSE_RELEVANT_CONFIG_FIELDS.
+    mine_interjections: bool = False
+
     # Language-scoped display/content preferences (multi-language transition).
     # Deliberately generic rather than zh-prefixed: they are carried per
     # language by LANGUAGE_SCOPED_FIELDS, so ja/ko keep "" / False and zh gets

@@ -122,7 +122,8 @@ def unlabelled(tmp_path: Path) -> Path:
 
 class TestSpeakerLabelNames:
     def test_the_pieces_of_a_labelled_name_are_no_cards(self, labelled: Path, unlabelled: Path) -> None:
-        plain = _line_cards(_service(), unlabelled)
+        # Without its labels the file still writes the name three times, which is evidence of its own.
+        plain = _line_cards(_switched_off(_service()), unlabelled)
         assert "凛" in [front for _text, fronts in plain for front in fronts]
         assert _line_cards(_service(), labelled) == _without_pieces(plain)
 
@@ -184,7 +185,9 @@ class TestSpeakerLabelNames:
 class TestFileState:
     """One parser serves a batch of files: a file's names never reach another file."""
 
-    def test_names_do_not_leak_into_the_next_file(self, labelled: Path, unlabelled: Path) -> None:
+    def test_names_do_not_leak_into_the_next_file(self, labelled: Path, tmp_path: Path) -> None:
+        # The next file writes the name once: no label, and too few times to be a name by repetition.
+        unlabelled = _srt(tmp_path / "once.srt", _UNLABELLED[:3])
         alone = _mined(_service(), unlabelled)
         service = _service()
         _mined(service, labelled)
@@ -320,10 +323,11 @@ class TestCalledNames:
         assert dict(_line_cards(_service(), path))["水竜が竜の巣に帰った"] == ["竜", "巣", "帰る"]
 
     def test_a_shout_without_an_honorific_is_no_evidence(self, tmp_path: Path) -> None:
-        # A move's name is shouted like a person's, and its pieces are words.
-        path = _srt(tmp_path / "shout.srt", ["雷凰！", "雷凰！ 逃げるな", "雷凰！", "雷凰の剣は速い"])
+        # A move's name is shouted like a person's, and its pieces are words. (Written three times it is a
+        # name by repetition, whoever shouts it.)
+        path = _srt(tmp_path / "shout.srt", ["雷凰！", "雷凰！ 逃げるな", "森の剣は速い"])
         assert _line_cards(_service(), path) == _line_cards(_switched_off(_service()), path)
-        assert "雷" in dict(_line_cards(_service(), path))["雷凰の剣は速い"]
+        assert "雷" in dict(_line_cards(_service(), path))["雷凰！ 逃げるな"]
 
     @pytest.mark.parametrize(
         "lines",

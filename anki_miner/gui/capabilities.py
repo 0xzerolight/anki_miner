@@ -927,6 +927,18 @@ CAPABILITIES: tuple[Capability, ...] = (
         requires="kana_filters",
     ),
     Capability(
+        id="interjections",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Mine interjections"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Card the interjections the dictionary lists, such as えっと, ねえ, あっ and ははは. Off by default.",
+        ),
+        category=_CAT_FILTERING,
+        target=CapabilityTarget("settings", "filtering"),
+        keywords=("interjection", "filler", "exclamation", "感動詞", "間投詞", "えっと", "あっ"),
+        requires="kana_filters",
+    ),
+    Capability(
         id="word-lists",
         title=QT_TRANSLATE_NOOP("Capabilities", "Blacklist / whitelist words"),
         description=QT_TRANSLATE_NOOP(

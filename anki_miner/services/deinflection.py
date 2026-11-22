@@ -370,6 +370,8 @@ def find_highlight_end_with_trace(
         return tok_end, ()
     if not (0 <= tok_start < tok_end <= len(text)):
         return tok_end, ()
+    if (shadowed := shadow_line(text, raw_tokens)) is not None:
+        return _shadow_trace(shadowed, tok_start, tok_end, token, additional_target, chain_end)
 
     targets = set()
     orth_base = _str_or_none(getattr(feature, "orthBase", None))
@@ -426,6 +428,123 @@ def find_highlight_end_with_trace(
                 break  # refused: the next shorter end is tried
             return candidate.end, chain
     return tok_end, ()
+
+
+class _ShadowToken:
+    """A raw token under its standard spelling (``morphology.VariantToken.shadow``)."""
+
+    __slots__ = ("surface", "feature", "white_space")
+
+    def __init__(self, token: Any, surface: str):
+        self.surface = surface
+        self.feature = token.feature
+        self.white_space = getattr(token, "white_space", "")
+
+
+def _shadow_of(token: Any) -> str | None:
+    """The standard spelling a token carries; ``isinstance`` because a mock token invents any attribute."""
+    shadow = getattr(token, "shadow", None)
+    return shadow if isinstance(shadow, str) else None
+
+
+#: The last line ``shadow_line`` read, and its answer. A line is asked once for every
+#: word traced in it, and its raw tokens are one list that is never changed.
+_shadow_line_memo: tuple[list, str, tuple[str, list, list[tuple[int, int, int, int]]] | None] | None = None
+
+
+def shadow_line(text: str, raw_tokens: list) -> tuple[str, list, list[tuple[int, int, int, int]]] | None:
+    """The line as its standard spellings read (すごーいね → すごいね), or None when no token carries one.
+
+    Returns the shadow text, its tokens (a respelled token under its standard
+    surface) and, for every located token, ``(start, end, shadow_start,
+    shadow_end)``: the map :func:`shadow_offset` converts offsets with. What
+    asks which word a stretch of the line is reads this; what locates or
+    displays a word keeps the line.
+    """
+    global _shadow_line_memo
+    memo = _shadow_line_memo
+    if memo is not None and memo[0] is raw_tokens and memo[1] == text:
+        return memo[2]
+    shadowed = _read_shadow_line(text, raw_tokens)
+    _shadow_line_memo = (raw_tokens, text, shadowed)
+    return shadowed
+
+
+def _read_shadow_line(text: str, raw_tokens: list) -> tuple[str, list, list[tuple[int, int, int, int]]] | None:
+    """``shadow_line`` for a line not asked just before."""
+    if not any(isinstance(getattr(token, "shadow", None), str) for token in raw_tokens):
+        return None
+    from anki_miner.services.morphology import iter_token_spans
+
+    parts: list[str] = []
+    tokens: list = []
+    bounds: list[tuple[int, int, int, int]] = []
+    cursor = position = 0
+    for token, start, end in iter_token_spans(text, raw_tokens):
+        parts.append(text[cursor:start])
+        position += start - cursor
+        shadow = _shadow_of(token)
+        spelling = text[start:end] if shadow is None else shadow
+        bounds.append((start, end, position, position + len(spelling)))
+        parts.append(spelling)
+        tokens.append(token if shadow is None else _ShadowToken(token, shadow))
+        position += len(spelling)
+        cursor = end
+    parts.append(text[cursor:])
+    return "".join(parts), tokens, bounds
+
+
+def shadow_offset(bounds: list[tuple[int, int, int, int]], offset: int, *, to_shadow: bool) -> int:
+    """``offset`` of the line in its shadow text (``to_shadow``), or one of the shadow text back in the line.
+
+    An offset inside a respelled token keeps its distance from the token's
+    start, capped at the token's end (a chain can end inside a token).
+    """
+    last: tuple[int, int] | None = None
+    for start, end, shadow_start, shadow_end in bounds:
+        a, b, new_a, new_b = (
+            (start, end, shadow_start, shadow_end) if to_shadow else (shadow_start, shadow_end, start, end)
+        )
+        if offset == a:
+            return new_a
+        if offset == b:
+            return new_b
+        if a < offset < b:
+            return min(new_a + (offset - a), new_b)
+        if b <= offset:
+            last = (b, new_b)
+    return offset if last is None else last[1] + (offset - last[0])
+
+
+def shadow_span(token: Any, text: str, start: int, end: int) -> str:
+    """``text[start:end]`` with ``token``'s own stretch read as its standard spelling (ちがーうよ → ちがうよ)."""
+    shadow = _shadow_of(token)
+    if shadow is None or not text.startswith(token.surface, start):
+        return text[start:end]
+    return shadow + text[start + len(token.surface) : end]
+
+
+def _shadow_trace(
+    shadowed: tuple[str, list, list[tuple[int, int, int, int]]],
+    tok_start: int,
+    tok_end: int,
+    token: Any,
+    additional_target: str | None,
+    chain_end: bool,
+) -> tuple[int, tuple[str, ...]]:
+    """``find_highlight_end_with_trace`` on the shadow line, its end mapped back onto the line."""
+    text, tokens, bounds = shadowed
+    shadow = _shadow_of(token)
+    end, chain = find_highlight_end_with_trace(
+        text,
+        tokens,
+        shadow_offset(bounds, tok_start, to_shadow=True),
+        shadow_offset(bounds, tok_end, to_shadow=True),
+        token if shadow is None else _ShadowToken(token, shadow),
+        additional_target,
+        chain_end,
+    )
+    return shadow_offset(bounds, end, to_shadow=False), chain
 
 
 def _reaching_chain(

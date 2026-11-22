@@ -35,6 +35,7 @@ from anki_miner.services.morphology import (
     extract_reading,
     iter_token_spans,
     mining_base,
+    word_surface,
 )
 from anki_miner.utils.text_utils import katakana_to_hiragana
 
@@ -153,16 +154,41 @@ def _plain_spelling(token) -> str:
 # is as often そんな事ない or 心配する事ない as the 事がない of 見た事がない.
 _DROPPED_PARTICLE = "が"
 _DROPPED_PARTICLE_REJECT_HEADS = frozenset({"事"})
+# The few noun + verb idioms that are one word to the speaker, by the noun's plain
+# spelling and the verb's base, with the particle speech drops (腹減った, 喉渇いた,
+# 気いつけて). Every other bare noun + verb pair stays two words, as measured above.
+_DROPPED_PARTICLE_VERBS: dict[tuple[str, str], str] = {
+    ("腹", "減る"): "が",
+    ("お腹", "減る"): "が",
+    ("喉", "渇く"): "が",
+    ("気", "つける"): "を",
+}
 
 
 def _dropped_particle_candidates(head, tail, prefix: str) -> Alternatives:
-    """The kind-A candidate for a bare noun + adjective with が put back."""
-    if _pos1(head) != "名詞" or _pos2(head) != "普通名詞" or _pos1(tail) != "形容詞":
-        return ()
-    if head.surface in _DROPPED_PARTICLE_REJECT_HEADS:
+    """The kind-A candidate for a bare noun + adjective with が put back, or a listed noun + verb idiom."""
+    if _pos1(head) != "名詞" or _pos2(head) != "普通名詞":
         return ()
     base = extract_orth_base(tail)
+    if _pos1(tail) == "動詞":
+        particle = _DROPPED_PARTICLE_VERBS.get((prefix, base))
+        return ((prefix + particle + base, "A"),) if particle else ()
+    if _pos1(tail) != "形容詞" or head.surface in _DROPPED_PARTICLE_REJECT_HEADS:
+        return ()
     return ((prefix + _DROPPED_PARTICLE + base, "A"),) if base else ()
+
+
+def _voiced_base(token) -> str:
+    """A tail's base with the voiced first kana of its surface, or "" when they agree.
+
+    元気|づけよう: the tagger gives the volitional the orthBase つける, and the
+    entry is 元気づける.
+    """
+    surface = getattr(token, "surface", None) or ""
+    base = extract_orth_base(token)
+    if not surface or not base or surface[0] == base[0] or _unvoiced(surface[0]) != base[0]:
+        return ""
+    return surface[0] + base[1:]
 
 
 # A span must END on a content token. Without this rule, JMdict's thousands of
@@ -226,6 +252,8 @@ EntryTagsLookup = Callable[[list[str]], dict[str, set[str]]]
 # die on the end-on-content rule; everything else dies on attestation.
 # Exact name matching uses 24 chars, the longest current bundled name-wordset
 # entry; curated-resource membership is itself the boundary attestation.
+# Verbs whose と quotes the 何か before it (``_other_words_here``).
+_QUOTING_VERBS = frozenset({"思う", "言う", "聞く"})
 _MAX_SPAN_CHARS = 16
 _MAX_NAME_SPAN_CHARS = 24
 _MAX_SPAN_TOKENS = 5
@@ -379,6 +407,8 @@ class CompoundDictionaryMatcher:
                     for candidate, kind in alternatives:
                         if not self._exist_cache.get(candidate):
                             continue
+                        if self._other_words_here(tokens, i, j, candidate):
+                            continue
                         if kind == "A" and self._inflects_pre_noun_word(tokens[j], candidate):
                             continue
                         if kind == "A" and self._benefactive_after_te(tokens, i, j):
@@ -409,6 +439,22 @@ class CompoundDictionaryMatcher:
                 merged.append(token)
                 i += 1
         return merged
+
+    @staticmethod
+    def _other_words_here(tokens: list, i: int, j: int, headword: str) -> bool:
+        """Whether an attested span is other words where it stands, by headword.
+
+        こんな物がある 'there is such a thing': the entry 物がある 'to be (very) …'
+        closes a clause (胸に迫る物がある), so after a pre-noun word or の its 物 is
+        the plain noun. 何かと思えば, 何かと言うと: before a verb of thinking,
+        saying or asking the と quotes 何か, and 何かと 'in various ways' is no
+        word there.
+        """
+        if headword == "物がある":
+            return i > 0 and (_pos1(tokens[i - 1]) == "連体詞" or tokens[i - 1].surface == "の")
+        if headword == "何かと" and j + 1 < len(tokens):
+            return getattr(getattr(tokens[j + 1], "feature", None), "lemma", None) in _QUOTING_VERBS
+        return False
 
     def _inflects_pre_noun_word(self, tail, headword: str) -> bool:
         """Whether a deinflected span would inflect a word that only stands before a noun (そう言って).
@@ -572,11 +618,12 @@ class CompoundDictionaryMatcher:
         out: dict[tuple[int, int], Alternatives] = {}
         self._fixed_heads = {}
         source_spans = self._source_spans(text, tokens)
+        surfaces = [word_surface(token) for token in tokens]
         for i in range(n - 1):
             start_span = source_spans.get(i)
             if start_span is None or not self._can_start_at(tokens, i):
                 continue
-            prefix = tokens[i].surface
+            prefix = surfaces[i]
             plain = _plain_spelling(tokens[i]) if self._spoken_idioms else prefix
             source_end = start_span[1]
             for j in range(i + 1, min(i + self._max_span, n)):
@@ -587,7 +634,7 @@ class CompoundDictionaryMatcher:
                 # elsewhere in the line cannot license a merge here.
                 if tail_span is None or tail_span[0] != source_end:
                     break
-                joined = prefix + tail.surface
+                joined = prefix + surfaces[j]
                 if len(joined) > self._max_span_chars:
                     break
                 # Span-end rule: non-content ends are not candidate endpoints,
@@ -664,6 +711,9 @@ class CompoundDictionaryMatcher:
         folded = _potential_base(tail)
         if folded:
             alternatives += ((prefix + folded, "A"),)
+        voiced = _voiced_base(tail)
+        if voiced:
+            alternatives += ((prefix + voiced, "A"),)
         # A classical 連体形 (名|高き, orthBase 高し) is looked up by its modern base
         # too: the dictionary lists 名高い.
         modern = mining_base(tail)

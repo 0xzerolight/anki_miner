@@ -50,6 +50,8 @@ class KanaJoin(NamedTuple):
     after: str = ""
     #: A grammar point (んだ, ください): joined only with ``mine_grammar_points`` on.
     grammar: bool = False
+    #: An interjection (あのね, しまった): joined only while the parser mines interjections.
+    interjection: bool = False
 
 
 class KanaWords(NamedTuple):
@@ -81,7 +83,14 @@ def kana_words() -> KanaWords:
             *head, last = rest[0].split("|")
             where = rest[1] if len(rest) > 1 else ""
             opens = where in ("start", "alone")
-            join = KanaJoin(form, pos1, opens, "" if where == "start" else where, rest[2:] == ["grammar"])
+            join = KanaJoin(
+                form,
+                pos1,
+                opens,
+                "" if where == "start" else where,
+                rest[2:] == ["grammar"],
+                rest[2:] == ["interjection"],
+            )
             if last.startswith("="):
                 base_joins[(*head, last[1:])] = join
             else:

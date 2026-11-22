@@ -33,6 +33,7 @@ from anki_miner.services.deinflection import (
     find_highlight_end_with_trace,
     get_highlight_deinflector,
     resolve_dictionary_form,
+    shadow_span,
     stretched_highlight_end,
 )
 from anki_miner.services.kana_words import is_kanji_spelled, is_listed
@@ -60,6 +61,8 @@ from anki_miner.services.morphology import (
     iter_token_spans,
     merge_compound_suffixes,
     mining_base,
+    read_variants,
+    recut_unlisted_kanji_tokens,
     rejoin_adjective_stem_cries,
     rejoin_contracted_adjectives,
     replace_overridden_spans,
@@ -71,6 +74,8 @@ from anki_miner.services.morphology import (
     retag_mistagged_tokens,
     short_causative_bases,
     source_spelling_fold,
+    spoken_front,
+    word_surface,
 )
 from anki_miner.services.number_counters import merge_number_counters
 from anki_miner.services.reading.ruby_hints import apply_author_ruby
@@ -145,6 +150,8 @@ PARSE_RELEVANT_CONFIG_FIELDS = (
     "mine_number_counters",
     # A grammar point joins into one cached token (行く|んだ).
     "mine_grammar_points",
+    # An interjection row joins into one cached token (あの|ね).
+    "mine_interjections",
 )
 
 # Dictionary-attested compound matching (Yomitan longest-match principle):
@@ -1031,11 +1038,15 @@ class SubtitleParserService:
         # Grammar-cut words (思わず, 実は, くだらない; see services/lexical_joiner.py).
         # Attested through the term-OR-reading probe because the kana adjectives
         # are JMdict readings; None without one keeps the no-dict output unchanged.
-        # Settings → Word Filters → Mine grammar points decides the list's grammar rows (んだ, ください).
+        # Settings → Word Filters → Mine grammar points decides the list's grammar rows (んだ, ください),
+        # Mine interjections its interjection rows (あのね, しまった).
         self._lexical_joiner: LexicalJoiner | None = None
         if kana_attest_lookup is not None:
             self._lexical_joiner = LexicalJoiner(
-                kana_attest_lookup, self._inclusion_rule.allowed_pos, grammar_points=config.mine_grammar_points
+                kana_attest_lookup,
+                self._inclusion_rule.allowed_pos,
+                grammar_points=config.mine_grammar_points,
+                interjections=config.mine_interjections,
             )
         # The same setting decides the kanji spelling of the ください row (下さい; see _kanji_request_front).
         self._grammar_points: bool = config.mine_grammar_points
@@ -1107,6 +1118,7 @@ class SubtitleParserService:
         self._kana_window_cache: dict[str, bool] = {}
         # Whether a word before する takes it (_takes_suru), by that word's front.
         self._takes_suru_memo: dict[str, bool | None] = {}
+        self._variant_headword_memo: dict[str, int] = {}
         # The line last asked for an emission highlight end, with the ends found on it:
         # (raw tokens, text, {(start, end): (token, highlight end)}). See _emission_highlight_end.
         self._emission_end_line: tuple[Any, str, dict[tuple[int, int], tuple[Any, int]]] = (None, "", {})
@@ -1122,6 +1134,12 @@ class SubtitleParserService:
         # tokens and never by a file's names; bounded like _exist_memo. It also
         # holds _fold_katakana_native_front's dictionary verdict, by surface.
         self._katakana_run_memo: dict[tuple[Any, ...], bool] = {}
+        # Whether the dictionary tags a surface as an interjection (_is_listed_interjection),
+        # by surface and never by the switch; bounded like _front_cache.
+        self._interjection_memo: dict[str, bool] = {}
+        # Mine the interjections the dictionary lists (_is_listed_interjection): Settings → Word
+        # Filters → Mine interjections. Read at every token, so it can be set after construction.
+        self._mine_interjections: bool = config.mine_interjections
 
     # ------------------------------------------------------------------
     # Per-parse memoization helpers
@@ -1152,6 +1170,7 @@ class SubtitleParserService:
         self.last_parse_rejects: dict[str, NotMinedReason] = {}
         self._reset_perf_counters()
         self._takes_suru_memo = {}
+        self._variant_headword_memo = {}
 
     def _reset_perf_counters(self) -> None:
         """Zero the per-parse probe/tokenize cumulative counters (Task 28)."""
@@ -1784,6 +1803,8 @@ class SubtitleParserService:
         """A line's merged tokens, with the katakana runs of that line which its file uses as names."""
 
         name_runs: frozenset[str] = frozenset()
+        #: Where the file's sentence-end tic starts in this line (``_with_line_end_tic``).
+        tic_starts: frozenset[int] = frozenset()
 
     class _FileNameToken(CompoundSyntheticToken):
         """A name its file vouches for, joined from the tagger's pieces (``_merge_file_names``).
@@ -1825,6 +1846,10 @@ class SubtitleParserService:
         honorifics: collections.Counter[str] = collections.Counter()
         called: collections.Counter[str] = collections.Counter()
         katakana: collections.Counter[str] = collections.Counter()
+        repeated: collections.Counter[str] = collections.Counter()
+        endings: collections.Counter[str] = collections.Counter()
+        ending_lines: collections.defaultdict[str, set[str]] = collections.defaultdict(set)
+        shorts: collections.Counter[str] = collections.Counter()
         for line in subs:
             if getattr(line, "is_comment", None) is True:
                 continue
@@ -1842,7 +1867,16 @@ class SubtitleParserService:
                 honorifics.update(self._names_before_honorifics(line_state))
                 called.update(self._names_called(line_state))
                 katakana.update(self._katakana_runs_named(self._tokenizer_text(text)))
-        names = self._file_names(labels, honorifics, called)
+                repeated.update(self._one_kanji_runs(line_state))
+                for surface, _start in self._sentence_end_katakana(line_state):
+                    endings[surface] += 1
+                    ending_lines[surface].add(text)
+                shorts.update(
+                    run.group()
+                    for run in self._KATAKANA_RUN_RE.finditer(self._tokenizer_text(text))
+                    if len(run.group()) <= 4
+                )
+        names = self._file_names(labels, honorifics, called, repeated)
         if names:
             line_states = [self._merge_file_names(line_state, names) for line_state in line_states]
         # A katakana name is known by the same evidence, whatever its length and its tokens:
@@ -1851,6 +1885,12 @@ class SubtitleParserService:
         runs.update(name for name in labels if self._KATAKANA_RUN_RE.fullmatch(name))
         if runs:
             line_states = [self._with_name_runs(line_state, runs) for line_state in line_states]
+        # A way of speaking: a short katakana word that ends eight different lines right after a
+        # predicate, and stands that way in three of five of its uses. A noun at the end of a
+        # relative clause does the same a few times in a file, and a sung line many times over.
+        tics = {word for word, count in endings.items() if len(ending_lines[word]) >= 8 and count >= 0.6 * shorts[word]}
+        if tics:
+            line_states = [self._with_line_end_tic(line_state, tics) for line_state in line_states]
         return line_states
 
     def _katakana_runs_named(self, line: str) -> list[str]:
@@ -1890,6 +1930,27 @@ class SubtitleParserService:
             return line_state
         noted = self._NameRunTokens(merged_tokens)
         noted.name_runs = present
+        return (text, raw_tokens, noted, start, end, duration)
+
+    def _with_line_end_tic(
+        self, line_state: tuple[str, list, list, float, float, float], tics: set[str]
+    ) -> tuple[str, list, list, float, float, float]:
+        """``line_state`` with the places of the file's sentence-end tics in this line noted on its merged tokens.
+
+        A new state with a new list of the same tokens, as in
+        ``_with_name_runs`` (whose note it keeps). ``_is_katakana_run_fragment``
+        turns the token at such a place away; the same word standing anywhere
+        else, in this file or another, is a word.
+        """
+        places = frozenset(
+            start for surface, start in self._sentence_end_katakana(line_state, known=True) if surface in tics
+        )
+        if not places:
+            return line_state
+        text, raw_tokens, merged_tokens, start, end, duration = line_state
+        noted = self._NameRunTokens(merged_tokens)
+        noted.name_runs = getattr(merged_tokens, "name_runs", noted.name_runs)
+        noted.tic_starts = places
         return (text, raw_tokens, noted, start, end, duration)
 
     def _speaker_label_names(self, raw_text: str) -> list[str]:
@@ -1978,6 +2039,109 @@ class SubtitleParserService:
             previous_end = end
         return names
 
+    #: A line that can hold a run of one-kanji tokens: two kanji side by side.
+    _ONE_KANJI_RUN_HINT_RE = re.compile(r"[一-鿿々〆]{2}")
+
+    def _one_kanji_runs(self, line_state: tuple[str, list, list, float, float, float]) -> list[str]:
+        """Each unspaced run of two to four one-kanji nouns of a line (嵐|牙 in 嵐牙が来た).
+
+        A name no dictionary has, that no label and no honorific marks, still
+        comes out as a row of one-kanji nouns, each carded as a word. A file
+        that writes the same row three times uses it as one word
+        (``_file_names``, class ``R``). Read from the merged tokens, where a
+        compound the dictionary lists is one token already, and from the tokens
+        rather than the cards: every piece is ONE kanji and a noun that is no
+        numeral (a pronoun is no noun), and a suffix may close the run, as the
+        tagger files the last kanji of many names (蒼|刃). The run is the whole
+        row: a longer one is no name, and a part of one is not counted. What
+        follows a number is its counter and starts no run (３|年|前).
+        """
+        line = self._tokenizer_text(line_state[0])
+        if self._ONE_KANJI_RUN_HINT_RE.search(line) is None:
+            return []
+        # A run needs two one-kanji tokens in a row: most lines have none, and need no token spans.
+        kanji = self._FILE_NAME_KANJI_RE.match
+        single = [len(token.surface) == 1 and kanji(token.surface) is not None for token in line_state[2]]
+        if not any(left and right for left, right in zip(single, single[1:], strict=False)):
+            return []
+        runs: list[str] = []
+        run: list[str] = []
+        closed = counter = False
+        previous_end = -1
+        for token, start, end in [*self._iter_token_spans(line, line_state[2]), (None, -1, -1)]:
+            feature = getattr(token, "feature", None)
+            pos1, numeral = getattr(feature, "pos1", None), getattr(feature, "pos2", None) == "数詞"
+            noun = pos1 == "名詞" and not numeral
+            piece = (
+                token is not None
+                and (noun or pos1 == "接尾辞")
+                and len(token.surface) == 1
+                and self._FILE_NAME_KANJI_RE.match(token.surface) is not None
+            )
+            if run and (not piece or closed or start != previous_end):
+                if 2 <= len(run) <= 4:
+                    runs.append("".join(run))
+                run = []
+            if piece and (run or (noun and not counter)):
+                run.append(token.surface)
+                closed = not noun
+            counter = numeral
+            previous_end = end
+        return runs
+
+    #: A line that may hold a way of speaking: a letter, two to four katakana, and no letter after them.
+    _SENTENCE_END_KATAKANA_RE = re.compile(
+        r"[ぁ-ゖ一-鿿々][ァ-ヺー]{2,4}(?![ぁ-ゖァ-ヺー一-鿿々〆0-9０-９A-Za-zＡ-Ｚａ-ｚ])"
+    )
+    #: What a sentence-end tic follows: a predicate, or the particle that closes or links one.
+    _TIC_AFTER_POS1: frozenset[str] = frozenset({"動詞", "形容詞", "助動詞"})
+    _TIC_AFTER_PARTICLES: frozenset[str] = frozenset({"終助詞", "接続助詞"})
+    #: What a word already known as the file's tic also follows (そうゲス, 元気ゲス).
+    _TIC_AFTER_LOOSE_POS1: frozenset[str] = frozenset({"副詞", "感動詞", "接続詞", "形状詞"})
+
+    def _sentence_end_katakana(
+        self, line_state: tuple[str, list, list, float, float, float], *, known: bool = False
+    ) -> list[tuple[str, int]]:
+        """Each katakana noun that ends a sentence right after a predicate, with its place (ゲス in 行くでゲス).
+
+        Some characters end their sentences with a word of their own, and the
+        tagger reads it as a noun (ゲス, ゾイ). It is one noun token of two to
+        four katakana with no space before it and a pause after it (the line's
+        end, a space, a punctuation mark), and what stands before it is a verb,
+        an adjective, an auxiliary, a sentence-final or conjunctive particle,
+        or か (the で of 見たでゲス is a conjunction to the tagger). A noun after
+        の, を, が or another noun is the sentence's own last word (私のパン) and
+        is not read. ``known``: the word is the file's tic already, and an
+        adverb, an interjection, a conjunction or an adjectival noun before it
+        will do.
+        """
+        line = self._tokenizer_text(line_state[0])
+        if self._SENTENCE_END_KATAKANA_RE.search(line) is None:
+            return []
+        found: list[tuple[str, int]] = []
+        spans = list(self._iter_token_spans(line, line_state[2]))
+        for index, (token, start, end) in enumerate(spans):
+            surface = token.surface
+            if not (index and 2 <= len(surface) <= 4 and spans[index - 1][2] == start and _is_all_katakana(surface)):
+                continue
+            if getattr(getattr(token, "feature", None), "pos1", None) != "名詞" or getattr(token, "compound", False):
+                continue
+            if index + 1 < len(spans) and spans[index + 1][1] == end:
+                after = getattr(getattr(spans[index + 1][0], "feature", None), "pos1", None)
+                if after not in self._NAME_PAUSE_POS1:
+                    continue
+            before = spans[index - 1][0]
+            feature = getattr(before, "feature", None)
+            pos1, pos2 = getattr(feature, "pos1", None), getattr(feature, "pos2", None)
+            if (
+                pos1 in self._TIC_AFTER_POS1
+                or (pos1 == "助詞" and (pos2 in self._TIC_AFTER_PARTICLES or before.surface == "か"))
+                or (pos1 == "接続詞" and before.surface == "で")
+                or (known and pos1 in self._TIC_AFTER_LOOSE_POS1)
+            ):
+                found.append((surface, start))
+        return found
+
     def _is_name_honorific(self, token: Any) -> bool:
         """Whether a raw token is what a name is called with: さん and its kin as a suffix, 先生, 先輩."""
         surface = token.surface
@@ -2000,7 +2164,11 @@ class SubtitleParserService:
         )
 
     def _file_names(
-        self, labels: collections.Counter[str], honorifics: collections.Counter[str], called: collections.Counter[str]
+        self,
+        labels: collections.Counter[str],
+        honorifics: collections.Counter[str],
+        called: collections.Counter[str],
+        repeated: collections.Counter[str],
     ) -> dict[str, str]:
         """The names one file vouches for, each with its kind of evidence.
 
@@ -2008,7 +2176,8 @@ class SubtitleParserService:
         the name stands twice before an honorific. ``V``: it is called by name
         and stands before an honorific (水竜さん！ alone is both). A name that is
         only shouted is not listed: a move's name is shouted the same way, and
-        its pieces are words. A name is 2 to 6 characters with
+        its pieces are words. ``R``: a run of one-kanji nouns the file writes
+        three times (``_one_kanji_runs``). A name is 2 to 6 characters with
         a kanji and no dictionary headword as written: a role (店員) and a word
         that is also a name (森) stay words. Without a dictionary there is no
         list.
@@ -2016,7 +2185,7 @@ class SubtitleParserService:
         if self._term_lookup is None:
             return {}
         names: dict[str, str] = {}
-        for name in sorted({*labels, *honorifics, *called}):
+        for name in sorted({*labels, *honorifics, *called, *repeated}):
             if not (self._FILE_NAME_RE.fullmatch(name) and self._FILE_NAME_KANJI_RE.search(name)):
                 continue
             if labels[name] >= 2 or (labels[name] and honorifics[name] + called[name] >= 2):
@@ -2025,6 +2194,8 @@ class SubtitleParserService:
                 names[name] = "H"
             elif called[name] and honorifics[name]:
                 names[name] = "V"
+            elif repeated[name] >= 3:
+                names[name] = "R"
         if not names:
             return {}
         listed = self._memoized_attest(sorted(names))
@@ -2102,8 +2273,12 @@ class SubtitleParserService:
           and adjectival nouns, holds no numeral, and never ends in such a rank
           or house word, whatever stands before it: a shop no dictionary lists
           (鯖|屋 in 鯖屋さん) keeps its noun.
-        * A name that is only called (``V``) is one kanji per piece and does not
-          start with a prefix word (元|父): a shouted compound keeps its words.
+        * A name that is only called (``V``) or only repeated (``R``) is one
+          kanji per piece and does not start with a prefix word (元|父): a
+          shouted compound keeps its words.
+        * A repeated run that a suffix closes holds a noun that is no common
+          word: a common word and its suffix (娘|達, 時|用) are written three
+          times in any file. Without a commonness probe no such run is a name.
         """
         kanji = False
         known = 0
@@ -2122,13 +2297,18 @@ class SubtitleParserService:
             elif len(surface) >= (3 if _is_all_katakana(surface) else 2):
                 return False
             holds_kanji = self._FILE_NAME_KANJI_RE.search(surface) is not None
-            if (len(surface) == 1 or kind == "V") and not (len(surface) == 1 and holds_kanji):
+            if (len(surface) == 1 or kind in "VR") and not (len(surface) == 1 and holds_kanji):
                 return False
             kanji = kanji or holds_kanji
         if tokens[-1].surface in self._NAME_TITLE_TAILS and (kind != "L" or known == len(tokens) - 1):
             return False
-        if kind == "V" and tokens[0].surface in self._NAME_PREFIX_HEADS:
+        if kind in "VR" and tokens[0].surface in self._NAME_PREFIX_HEADS:
             return False
+        if kind == "R" and getattr(getattr(tokens[-1], "feature", None), "pos1", None) == "接尾辞":
+            heads = [token.surface for token in tokens[:-1]]
+            common = self._memoized_term_common(heads)
+            if common is None or all(common.get(head) for head in heads):
+                return False
         return kanji and known < len(tokens)
 
     def _style_skipped_events(self, subs: Any) -> frozenset[int]:
@@ -2176,9 +2356,20 @@ class SubtitleParserService:
         # Tagger corrections go on the raw stream: the sentence display is built
         # from it, and a correction that re-cuts two tokens (自|分ち) would
         # otherwise leave the raw and merged streams out of step for the line.
-        raw_tokens = retag_mistagged_tokens(raw_tokens, self._form_lookup)
+        raw_tokens = retag_mistagged_tokens(raw_tokens, self._form_lookup, self._tagger())
         raw_tokens = rejoin_contracted_adjectives(raw_tokens)
         raw_tokens = rejoin_adjective_stem_cries(raw_tokens, self._tagger(), self._form_lookup)
+        raw_tokens = self._read_variants(text, raw_tokens)
+        raw_tokens = recut_unlisted_kanji_tokens(
+            text,
+            raw_tokens,
+            self._tagger(),
+            self._memoized_attest if self._attest is not None else None,
+            self._memoized_term_common,
+            self._term_rules_lookup,
+            self._card_front,
+            self._mining_base,
+        )
         raw_tokens = reread_daku_tokens(raw_tokens)
         raw_tokens = reread_omote_tokens(raw_tokens)
         raw_tokens = reread_in_context(raw_tokens)
@@ -2209,6 +2400,37 @@ class SubtitleParserService:
         # no reading_lookup is wired or the line produced no merges.
         merged_tokens = attest_merged_readings(merged_tokens, self._reading_lookup)
         return (stored_text, raw_tokens, merged_tokens, start, end, end - start)
+
+    def _read_variants(self, text: str, raw_tokens: list) -> list:
+        """``read_variants`` with this parser's dictionary; without one the line stays as the tagger read it."""
+        if self._kana_attest_lookup is None:
+            return raw_tokens
+        return read_variants(text, raw_tokens, self._tagger(), self._variant_headword)
+
+    def _variant_headword(self, spelling: str) -> int:
+        """What the dictionary says of ``spelling``: 2 a real headword as written, 1 listed, 0 unknown.
+
+        A real headword has an entry with tags, or readings of its own; a row
+        without either is a search-only form (すごーい points at すごい), and a
+        kana string may be listed only as the reading of another spelling.
+        Without the entry lookup the two cannot be told apart, and a listed
+        spelling counts as a real headword: nothing listed is then re-read.
+        """
+        known = self._variant_headword_memo.get(spelling)
+        if known is None:
+            lookup = self._kana_attest_lookup
+            attested = lookup is not None and bool(lookup([spelling]).get(spelling))
+            if self._form_lookup is None:
+                known = 2 if attested else 0
+            else:
+                rows = self._form_lookup([spelling]).get(spelling, ())
+                readings = self._reading_lookup([spelling]).get(spelling) if self._reading_lookup is not None else None
+                real = bool(readings) or any(tags.strip() for _content, tags in rows)
+                known = 2 if real else int(bool(rows) or attested)
+            if len(self._variant_headword_memo) >= _FRONT_CACHE_CAP:
+                self._variant_headword_memo.clear()
+            self._variant_headword_memo[spelling] = known
+        return known
 
     @staticmethod
     def _iter_token_spans(text: str, tokens: list) -> Iterator[tuple[Any, int, int]]:
@@ -2364,6 +2586,7 @@ class SubtitleParserService:
 
     def _front_for(self, word_token: Any, front: str, lemma: str) -> str:
         """The card front the mined-form policy picks for ``word_token`` given its dictionary form."""
+        front = spoken_front(word_token, front)
         pronunciation = getattr(word_token.feature, "pron", "")
         if not isinstance(pronunciation, str):
             pronunciation = ""
@@ -2372,14 +2595,14 @@ class SubtitleParserService:
                 word_token.feature.pos1,
                 front,
                 lemma,
-                word_token.surface,
+                word_surface(word_token),
                 pronunciation=pronunciation,
             )
         return self._mined_form_policy.mined_form(
             word_token.feature.pos1,
             front,
             lemma,
-            word_token.surface,
+            word_surface(word_token),
             pronunciation,
         )
 
@@ -2778,9 +3001,30 @@ class SubtitleParserService:
             if cover is None:
                 continue
             covered_to = cover
+            self._stop_before_join(text, included_tokens, included_spans, word_token, tok_start)
             included_tokens.append(word_token)
             included_spans.append((tok_start, tok_end, highlight_end))
         return included_tokens, included_spans
+
+    def _stop_before_join(
+        self, text: str, included_tokens: list, included_spans: list[tuple[int, int, int]], word_token, tok_start: int
+    ) -> None:
+        """End the previous word's highlight where a joined entry mined after it starts.
+
+        A row that opens on a token of the verb's chain (泣き|そう|に|なっ|た →
+        泣く + そうになる, 認め|ざる|を|えない → 認める + ざるをえない) would
+        otherwise leave that token in two highlights. Only the highlight moves:
+        where the shorter end resolves another card front, the end stays.
+        """
+        if not included_spans or not getattr(word_token, "compound", False):
+            return
+        prev_start, prev_end, prev_highlight = included_spans[-1]
+        if not prev_end <= tok_start < prev_highlight:
+            return
+        prev_token = included_tokens[-1]
+        front = self._resolve_word_identity(prev_token, text, prev_start, prev_highlight)[2]
+        if self._resolve_word_identity(prev_token, text, prev_start, tok_start)[2] == front:
+            included_spans[-1] = (prev_start, prev_end, tok_start)
 
     def _chain_cover(
         self,
@@ -3500,7 +3744,9 @@ class SubtitleParserService:
         # rightward highlight extension (感じた), or the bare surface when it did
         # not extend (感じ before a noun) — run either way, else 感じ-before-a-noun
         # keeps the archaic 感ずる.
-        inflected_surface = chain_spelling(text[tok_start:highlight_end], len(word_token.surface))
+        inflected_surface = chain_spelling(
+            shadow_span(word_token, text, tok_start, highlight_end), len(word_surface(word_token))
+        )
         ctype = getattr(feature, "cType", None)
         # A godan imperative (持て, 従え) is never an -eru verb: its e-stem spelling
         # is also the stem of the attested ichidan 持てる/従える, which shares the
@@ -3934,10 +4180,13 @@ class SubtitleParserService:
             if (
                 word_token.surface in _KANA_BARE_INTERJECTIONS
                 and self._find_highlight_end(text, raw_tokens, tok_start, tok_end, word_token) == tok_end
+                and not self._is_listed_interjection(word_token, text, tok_start, tok_end)
             ):
                 return False
             if self._is_cut_sokuon_stem(word_token, text, tok_end):
                 return False
+            return not self._ellipsis_reject(word_token, text, tok_start, tok_end)
+        if self._is_listed_interjection(word_token, text, tok_start, tok_end):
             return not self._ellipsis_reject(word_token, text, tok_start, tok_end)
         if not self._whitelist_rescues(word_token, text, tok_start, tok_end, tokens, raw_tokens):
             if rejects is not None:
@@ -3946,6 +4195,123 @@ class SubtitleParserService:
         if self._is_katakana_run_fragment(word_token, text, tok_start, tok_end, tokens):
             return False
         return not self._ellipsis_reject(word_token, text, tok_start, tok_end)
+
+    #: Small kana add no mora of their own (あぁ and きゃ are one mora).
+    _INTERJECTION_SMALL_KANA: frozenset[str] = frozenset("ぁぃぅぇぉゃゅょゎァィゥェォャュョヮ")
+
+    @staticmethod
+    def _is_word_character(ch: str) -> bool:
+        """Whether ``ch`` belongs to a word: kana, kanji, a letter, a digit, the long mark or a wave dash.
+
+        The empty string (a line edge) is none.
+        """
+        return ch.isalnum() or ch in ("〜", "～")
+
+    def _is_listed_interjection(self, word_token, text: str, tok_start: int, tok_end: int) -> bool:
+        """Whether the interjection switch mines this token (``_mine_interjections``, off by default).
+
+        Every interjection the dictionary lists is a card with the switch on:
+        fillers and calls (えっと, ねえ), gasps down to one mora (あっ, あ) and
+        laughs (ははは), whatever the inclusion rule said about the token. What
+        keeps the garbage out:
+
+        - the tagger calls the token an interjection, and the dictionary tags
+          the surface ``int``: a shout with no entry is no card;
+        - it stands alone: the line edge, a space or punctuation on both sides.
+          Glued to a word it is a piece of it (あり|えへん, いただき|まー|す) or of
+          a name (うー|ちゃん);
+        - it is no stammer: a token of one mora with no っ whose kana also opens
+          the next word or closes the one before (あ、ありがとう).
+        - it is no letter of a word written with spaces (``_is_spaced_letter``),
+          and no spelling that names another word (``_INTERJECTION_HOMOGRAPHS``).
+
+        It changes acceptance only; the caller still runs the ellipsis guard.
+        """
+        if not self._mine_interjections:
+            return False
+        surface = word_token.surface
+        if (
+            getattr(getattr(word_token, "feature", None), "pos1", None) != "感動詞"
+            or getattr(word_token, "compound", False) is True
+            or text[tok_start:tok_end] != surface
+        ):
+            return False
+        is_word = self._is_word_character
+        if is_word(text[tok_start - 1 : tok_start]) or is_word(text[tok_end : tok_end + 1]):
+            return False
+        if katakana_to_hiragana(surface) in self._INTERJECTION_HOMOGRAPHS:
+            return False
+        if self._is_spaced_letter(text, tok_start, tok_end):
+            return False
+        core = surface.rstrip("っッー")
+        morae = sum(ch not in self._INTERJECTION_SMALL_KANA for ch in core)
+        if core and morae <= 1 and not surface.endswith(("っ", "ッ")):
+            kana = katakana_to_hiragana(core)
+            following = "".join(ch for ch in text[tok_end:] if is_word(ch))[: len(core)]
+            preceding = "".join(ch for ch in text[:tok_start] if is_word(ch))[-len(core) :]
+            if kana in (katakana_to_hiragana(following), katakana_to_hiragana(preceding)):
+                return False
+        if surface not in self._interjection_memo:
+            if len(self._interjection_memo) >= _FRONT_CACHE_CAP:
+                self._interjection_memo.clear()
+            self._interjection_memo[surface] = "int" in self._entry_tags([surface]).get(
+                surface, ()
+            ) or self._is_listed_interjection_variant(surface)
+        return self._interjection_memo[surface]
+
+    #: Spellings the dictionary tags ``int`` for a sense the card would not show: the entry
+    #: a learner gets for あい is 愛, for オラ the Spanish greeting. The call and the shout stay out.
+    _INTERJECTION_HOMOGRAPHS: frozenset[str] = frozenset({"あい", "おら"})
+
+    @classmethod
+    def _is_spaced_letter(cls, text: str, tok_start: int, tok_end: int) -> bool:
+        """Whether a one-kana token is a letter of a word written with a space after every letter (い ま さ ら).
+
+        It stands in a run of three or more single kana, one space between each.
+        Two are as often two sounds (え あ ごちそうさま).
+        """
+        if tok_end - tok_start != 1:
+            return False
+
+        def lone(at: int) -> bool:
+            return (
+                0 <= at < len(text)
+                and "ぁ" <= text[at] <= "ヺ"
+                and not cls._is_word_character(text[max(at - 1, 0) : at])
+                and not cls._is_word_character(text[at + 1 : at + 2])
+            )
+
+        run = 1
+        at = tok_start - 2
+        while at >= 0 and text[at + 1].isspace() and lone(at):
+            run += 1
+            at -= 2
+        at = tok_end + 1
+        while at < len(text) and text[at - 1].isspace() and lone(at):
+            run += 1
+            at += 2
+        return run >= 3
+
+    #: ッ and the small vowels of a variant spelling, with the plain kana each stands for (あぁ is ああ).
+    _INTERJECTION_PLAIN_KANA = str.maketrans("ッぁぃぅぇぉァィゥェォ", "っあいうえおアイウエオ")
+
+    def _is_listed_interjection_variant(self, surface: str) -> bool:
+        """Whether ``surface`` is a small-vowel or ッ spelling of a listed interjection, itself a headword.
+
+        あぁ, いやぁ and フフッ are headwords with no tags of their own, spelling
+        rows of ああ, いやあ and フフ: the plain spelling carries ``int``, in
+        either script and with or without its final っ. The card front stays
+        the spelling as written. A variant that is no headword (えッ, うわぁ)
+        would need the listed spelling as its front, and stays out.
+        """
+        plain = surface.translate(self._INTERJECTION_PLAIN_KANA)
+        if plain == surface or self._term_lookup is None or surface not in self._memoized_attest([surface]):
+            return False
+        spellings = {plain, katakana_to_hiragana(plain)}
+        spellings |= {spelling.rstrip("っ") for spelling in spellings}
+        spellings.discard("")
+        tags = self._entry_tags(sorted(spellings))
+        return any("int" in tags.get(spelling, ()) for spelling in spellings)
 
     #: Kana that never make up a mimetic word's doubled half: the long mark, the small kana.
     _MIMETIC_EXCLUDED_KANA: frozenset[str] = frozenset("ーッァィゥェォャュョヮ")
@@ -4034,7 +4400,7 @@ class SubtitleParserService:
         prev = getattr(tokens[idx - 1], "feature", None) if idx else None
         pos1 = getattr(prev, "pos1", None)
         if pos1 in _AUX_AFTER_POS1 or (pos1 == "助詞" and getattr(prev, "pos2", None) == "接続助詞"):
-            return True
+            return not SubtitleParserService._is_own_predicate(word_token, tokens, idx)
         if idx >= 2 and tokens[idx - 1].surface in ("も", "は") and tokens[idx - 2].surface in ("て", "で"):
             return True
         if (
@@ -4058,6 +4424,58 @@ class SubtitleParserService:
                 end == len(tokens) or getattr(tokens[end].feature, "pos1", None) == "補助記号"
             ):
                 return True
+        return False
+
+    @staticmethod
+    def _is_own_predicate(word_token, tokens: list, idx: int) -> bool:
+        """Whether an auxiliary-capable word right after a verb, adjective, auxiliary or conjunctive particle is the line's own predicate.
+
+        ``_used_as_auxiliary`` takes every word in that place for grammar. One
+        frame each where it is the predicate, a card of its own:
+
+        - なる after an adjective's く form (暗くなる) and after the auxiliary に
+          of an adjectival noun (夢中になる), but not after an honorific stem +
+          に (お尋ねになる). A negative or たい in く form (行かなくなる) is an
+          auxiliary and stays grammar. Two longer entries nothing joins stay
+          out, as なる would be a piece of them: よく + なる (良くなる in kana)
+          and そう + に + なる (そうになる).
+        - する after お / ご + a verb's continuative, the humble form
+          (お持ちします, and お待たせしました over the causative せ). Not before
+          たい: し + たい takes the front したい, which the dictionary has only
+          as the reading of other words (死体).
+        - いい after a particle that closes a clause of its own (寒いけどいい,
+          休むからいい, 安いしいい). After て, で, ば, と and ても it is the
+          grammar frame (食べていい) and stays out, and so it does after が:
+          見るがいい is the pattern がいい, not a clause and its predicate.
+          Before から it opens the listed いいから (いいから いいから).
+        - ない after the auxiliary に (降りそうにない).
+        """
+        base = getattr(word_token.feature, "orthBase", None)
+        prev = tokens[idx - 1]
+        pos1 = getattr(getattr(prev, "feature", None), "pos1", None)
+        if base == "なる":
+            if pos1 == "形容詞":
+                return bool(prev.surface.endswith("く")) and prev.surface != "よく"
+            if pos1 == "助動詞" and prev.surface == "に":
+                return not (
+                    idx >= 2
+                    and (tokens[idx - 2].surface == "そう" or SubtitleParserService._is_honorific_stem(tokens, idx - 2))
+                )
+        if base == "する":
+            stem = idx - 2 if pos1 == "助動詞" and prev.surface in ("せ", "させ") else idx - 1
+            if stem < 1 or getattr(getattr(tokens[stem], "feature", None), "pos1", None) != "動詞":
+                return False
+            following = tokens[idx + 1] if idx + 1 < len(tokens) else None
+            if getattr(getattr(following, "feature", None), "lemma", None) == "たい":
+                return False
+            head = tokens[stem - 1]
+            return head.surface in ("お", "ご") and getattr(getattr(head, "feature", None), "pos1", None) == "接頭辞"
+        if base in ("いい", "良い", "よい") and pos1 == "助詞":
+            if idx + 1 < len(tokens) and tokens[idx + 1].surface == "から":
+                return False
+            return prev.surface in ("から", "けど", "けれど", "けれども", "し", "ので", "のに")
+        if base in ("ない", "無い"):
+            return pos1 == "助動詞" and prev.surface == "に"
         return False
 
     def _is_not_main_verb(self, word_token, tokens: list) -> bool:
@@ -4268,11 +4686,15 @@ class SubtitleParserService:
         word (俺っ|ちと, 俺ん|ちと); the adverb follows a space, a line start or a
         particle. とき glued to a verb's 連用形 is the contracted ておき
         (待っ|とき, やめ|とき); the noun follows a 連体形 (待つとき, 決めたとき).
+        うぬ is held to おら's rule: the pronoun takes a particle or a plural
+        (うぬは, うぬの, うぬら); bare, or in うぬぬ, it is a growl.
         """
         surface = word_token.surface
         if surface == "ちょうだい":
             return SubtitleParserService._is_request_after_te(word_token, tokens)
-        if surface not in ("おら", "よろしゅう", "ちと", "とき"):
+        if surface == "なん":
+            return SubtitleParserService._nan_is_cut_from_a_verb(word_token, tokens)
+        if surface not in ("おら", "よろしゅう", "ちと", "とき", "うぬ"):
             return False
         idx = next((i for i, tok in enumerate(tokens) if tok is word_token), None)
         if idx is None:
@@ -4298,6 +4720,34 @@ class SubtitleParserService:
         pos1 = getattr(after, "pos1", None)
         return not (
             pos1 == "接尾辞" or (pos1 == "助詞" and getattr(after, "pos2", None) in ("格助詞", "係助詞", "副助詞"))
+        )
+
+    @staticmethod
+    def _nan_is_cut_from_a_verb(word_token, tokens: list) -> bool:
+        """Whether a kana なん is a piece of a contracted verb, not the word 何.
+
+        迷惑になんなよ is になるな and 気になんない is にならない; the Kansai かなんわ is
+        かなわんわ. The tagger cuts なん out of each as the pronoun. 私になんの用 and
+        これかなんの話 keep the word. So is the なん of a longer word the tagger
+        shreds: なん|や|かん|や, なん|ちっ|て (なんちゃって said short).
+        """
+        idx = next((i for i, tok in enumerate(tokens) if tok is word_token), None)
+        if idx is None:
+            return False
+        after = tokens[idx + 1] if idx + 1 < len(tokens) else None
+        if after is not None and (
+            (after.surface == "や" and idx + 2 < len(tokens) and tokens[idx + 2].surface == "かん")
+            or (after.surface in ("ちっ", "ちゃっ") and getattr(after.feature, "pos1", None) == "助動詞")
+        ):
+            return True
+        if not idx:
+            return False
+        before = tokens[idx - 1].surface
+        if before == "か":
+            pos = getattr(after, "feature", None)
+            return after is None or getattr(pos, "pos2", None) == "終助詞" or getattr(pos, "pos1", None) == "補助記号"
+        return (
+            before in ("に", "く") and after is not None and after.surface in ("な", "ない", "ねえ", "なく", "なかっ")
         )
 
     @staticmethod
@@ -4764,7 +5214,7 @@ class SubtitleParserService:
             for end in range(idx, right + 1):
                 if start == idx and end == idx:
                     continue
-                windows.append("".join(tokens[i].surface for i in range(start, end + 1)))
+                windows.append("".join(word_surface(tokens[i]) for i in range(start, end + 1)))
         return list(dict.fromkeys(windows))
 
     @staticmethod
@@ -4821,6 +5271,9 @@ class SubtitleParserService:
         surface = getattr(word_token, "surface", None)
         if not isinstance(surface, str) or not _is_all_katakana(surface):
             return False
+        # The file's way of ending a sentence (_with_line_end_tic), turned away where it stands so.
+        if tok_start in getattr(tokens, "tic_starts", ()):
+            return True
         left = text[tok_start - 1] if tok_start > 0 else ""
         right = text[tok_end] if tok_end < len(text) else ""
         if not (_continues_katakana_run(left) or _continues_katakana_run(right)):
@@ -4855,6 +5308,24 @@ class SubtitleParserService:
         }
     )
 
+    #: Katakana number words: after a word they make a call sign or a model (チーム|セブン), not two words.
+    _KATAKANA_NUMBER_WORDS: frozenset[str] = frozenset(
+        {
+            "ゼロ",
+            "ワン",
+            "ツー",
+            "スリー",
+            "フォー",
+            "ファイブ",
+            "シックス",
+            "セブン",
+            "エイト",
+            "ナイン",
+            "テン",
+            "イレブン",
+        }
+    )
+
     def _katakana_run_is_words(self, text: str, tok_start: int, tok_end: int, tokens: list | None) -> bool:
         """Whether the katakana run around a token is a row of common dictionary words, as the tagger cut it.
 
@@ -4865,12 +5336,15 @@ class SubtitleParserService:
 
         * the whole run is exactly two or more tokens of the line;
         * each is an all-katakana noun of three kana or more (no proper noun,
-          no numeral) that the dictionary lists by spelling AND tags common: a
-          rare short word inside an unknown name (ライド|ウォッチ) fails here. A
+          no numeral) that the dictionary lists by spelling. One at least is
+          tagged common, and one that is not has four kana or more
+          (シールド|タックル): a rare short word inside an unknown name
+          (ライド|ウォッチ, アース|ガロン) fails here. A
           token the compound matcher made counts as listed, and a katakana verb
           the front fold cards (ゲーム|ヤラれた) is covered;
-        * the pieces are not one word said over (ベリーベリー), and the first is
-          no title (``_KATAKANA_TITLES``);
+        * the pieces are not one word said over (ベリーベリー), the first is no
+          title (``_KATAKANA_TITLES``), and none is a number word: a word and
+          a number are a call sign (チーム|セブン);
         * the run as a whole is listed neither by spelling nor as a reading;
         * no ・ or ゠ stands beside the run, and no honorific, suffix or one-kanji
           word follows it (スカイハートさん, ミクロリサーチ社);
@@ -4948,6 +5422,8 @@ class SubtitleParserService:
             words.append(surface)
         if not words or (len(words) > 1 and len(set(words)) == 1) or words[0] in self._KATAKANA_TITLES:
             return False
+        if self._KATAKANA_NUMBER_WORDS.intersection(words):
+            return False
         if following is not None:
             surface, pos1 = following.surface, getattr(getattr(following, "feature", None), "pos1", None)
             if (
@@ -4958,7 +5434,9 @@ class SubtitleParserService:
             ):
                 return False
         common = self._memoized_term_common(words)
-        if common is None or not all(common.get(word) for word in words):
+        if common is None or not any(common.get(word) for word in words):
+            return False
+        if any(len(word) < 4 for word in words if not common.get(word)):
             return False
         if len(self._memoized_attest(words)) != len(set(words)):
             return False
@@ -5069,7 +5547,7 @@ class SubtitleParserService:
         """
         if self._kana_attest_lookup is None:
             return None
-        surface = word_token.surface
+        surface = word_surface(word_token)
         if not _is_kana_candidate(surface):
             return _KANA_LISTED if self._is_katakana_to_adverb(word_token) else None
         feature = getattr(word_token, "feature", None)

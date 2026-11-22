@@ -705,6 +705,15 @@ _ANCHOR_HEADWORDS: tuple[str, ...] = (
     # k1121 EXPR: replies that stand alone (k21e11); そうだ is attested so that the reject is the rule's (k21e12)
     "そうか",
     "そうだ",
+    # k1121 LIST: grammar words of one or two tokens (k21l01 to k21l03)
+    "らしい",
+    "べき",
+    "すべき",
+    # k1121 LIST: listed expressions on なる (k21l04, k21l05)
+    "よくなる",
+    "そうになる",
+    # k1121 LIST: a listed noun + verb idiom with its particle dropped (mc05)
+    "腹が減る",
 )
 
 # Yomitan `ruleIdentifiers` per fixture headword. A real term bank ships these,

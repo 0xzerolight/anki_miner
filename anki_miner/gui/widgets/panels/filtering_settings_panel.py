@@ -483,6 +483,17 @@ class FilteringSettingsPanel(FormPanel):
             self.grammar_points_checkbox,
             helper=self.tr("Sentence grammar such as んだ, でしょう and ください becomes cards."),
         )
+        # Interjection cards (SubtitleParserService._is_listed_interjection). Japanese only:
+        # the dictionary's interjection tags and the kana list rows are Japanese.
+        self.interjections_checkbox = QCheckBox(self.tr("Mine interjections"))
+        self.add_field(
+            "",
+            self.interjections_checkbox,
+            helper=self.tr(
+                "Interjections the dictionary lists become cards: えっと, ねえ, あっ, ははは. "
+                "Stammers and sounds with no dictionary entry never do."
+            ),
+        )
 
         # Option-driven script filters. The Korean pair binds to the SAME two
         # language-scoped booleans the Script Type combo above uses, and the
@@ -535,6 +546,7 @@ class FilteringSettingsPanel(FormPanel):
                 self.match_kana_variants_checkbox,
                 self.number_counters_checkbox,
                 self.grammar_points_checkbox,
+                self.interjections_checkbox,
             )
             for w in field_row_widgets(self, cb)
         )
@@ -883,6 +895,7 @@ class FilteringSettingsPanel(FormPanel):
         self.set_script_type(bool(config.exclude_hiragana_only_words), bool(config.exclude_katakana_only_words))
         self.number_counters_checkbox.setChecked(config.mine_number_counters)
         self.grammar_points_checkbox.setChecked(config.mine_grammar_points)
+        self.interjections_checkbox.setChecked(config.mine_interjections)
         # Same two booleans, read through whichever language's option named them.
         for option_id, checkbox in self.script_filter_checkboxes.items():
             checkbox.setChecked(bool(getattr(config, self._script_filter_fields[option_id])))
@@ -914,6 +927,7 @@ class FilteringSettingsPanel(FormPanel):
             exclude_katakana_only_words=self.get_exclude_katakana_only_words(),
             mine_number_counters=self.number_counters_checkbox.isChecked(),
             mine_grammar_points=self.grammar_points_checkbox.isChecked(),
+            mine_interjections=self.interjections_checkbox.isChecked(),
             reading_min_occurrence=self.get_reading_min_occurrence(),
         )
         # Language-scoped rows contribute only while their capability is present.

@@ -131,6 +131,24 @@ _COUNTERS: dict[str, _Counter] = {
     "秒": _Counter("びょう"),
     "倍": _Counter("ばい"),
     "号": _Counter("ごう"),
+    "体": _Counter("たい", _GEMINATE_ST),
+    "頭": _Counter("とう", _GEMINATE_ST),
+    "発": _Counter("はつ", _GEMINATE_HK, _TO_P, {"さん": _TO_P, "せん": _TO_P, "まん": _TO_P}),
+    "歩": _Counter("ほ", _GEMINATE_HK, _TO_P, {"さん": _TO_P, "せん": _TO_P, "まん": _TO_P}),
+    "曲": _Counter("きょく", _GEMINATE_HK),
+    "巻": _Counter("かん", _GEMINATE_HK),
+    "話": _Counter("わ"),
+    "段": _Counter("だん"),
+    "位": _Counter("い"),
+    "キロ": _Counter("きろ", frozenset({"ろく", "じゅう", "ひゃく"})),
+    "ドル": _Counter("どる"),
+    "世紀": _Counter("せいき", _GEMINATE_ST),
+    "勝": _Counter("しょう", _GEMINATE_ST),
+    "着": _Counter("ちゃく", _GEMINATE_ST),
+    "隻": _Counter("せき", _GEMINATE_ST),
+    "丁目": _Counter("ちょうめ", _GEMINATE_ST),
+    "代": _Counter("だい"),
+    "年生": _Counter("ねんせい", endings={"よん": "よ"}),
     "つ": _Counter(
         "",
         exact={
@@ -154,6 +172,36 @@ _COUNTER_POS3 = frozenset({"助数詞", "助数詞可能", "一般"})
 #: Before で (5分で着く) unidic tags the minute counter 分 副詞可能 read ブン; no
 #: other counter takes that tag after a numeral. 3分の1 stays a fraction.
 _MINUTE_POS3 = "副詞可能"
+#: Counters unidic tags as plain nouns of other kinds (話 is サ変可能, 巻 a noun read まき):
+#: right after a numeral they are the counter whatever the tag.
+_UNTAGGED_COUNTERS = frozenset(
+    {
+        "体",
+        "頭",
+        "発",
+        "歩",
+        "曲",
+        "巻",
+        "話",
+        "段",
+        "位",
+        "キロ",
+        "ドル",
+        "世紀",
+        "勝",
+        "着",
+        "隻",
+        "丁目",
+        "代",
+        "年生",
+    }
+)
+#: What the suffix pass joins onto a counter, with its reading (回目, 日後, 分間, 年前, 人中): after a
+#: number the counter belongs to the quantity and this tail is a token of its own (3回|目, 10人|中).
+_COUNTER_TAILS = {"目": "め", "後": "ご", "間": "かん", "前": "まえ", "中": "ちゅう"}
+#: Counter + tail spellings that are another word: 2人前 is ににんまえ 'two portions', 人間 is にんげん.
+_NOT_COUNTER_AND_TAIL = frozenset({"人前", "人間"})
+_COMMAS = frozenset({",", "，"})
 
 
 def parse_number(text: str) -> int | None:
@@ -236,11 +284,26 @@ def counter_reading(number: int, counter: str) -> str | None:
     return head + last + rule.reading
 
 
+def _number_value(text: str) -> int | None:
+    """``parse_number`` of a numeral as the line writes it: commas between its digits put aside (1,200)."""
+    return parse_number(text.replace(",", "").replace("，", ""))
+
+
 def counter_of(front: str) -> str | None:
     """The counter a number + counter card front ends in (4人 → 人), for its definition, else None."""
     for counter in sorted(_COUNTERS, key=len, reverse=True):
-        if front.endswith(counter) and parse_number(front[: -len(counter)]) is not None:
+        if front.endswith(counter) and _number_value(front[: -len(counter)]) is not None:
             return counter
+    return None
+
+
+def _counter_and_tail(surface: str) -> tuple[str, str] | None:
+    """A token the suffix pass built from a counter and what follows it (回目, 日後, 人中), cut in two, else None."""
+    if surface in _NOT_COUNTER_AND_TAIL or surface in _COUNTERS:
+        return None
+    for tail in _COUNTER_TAILS:
+        if surface.endswith(tail) and surface[: -len(tail)] in _COUNTERS:
+            return surface[: -len(tail)], tail
     return None
 
 
@@ -272,7 +335,11 @@ def _is_counter(token) -> bool:
     return (
         token.surface in _COUNTERS
         and getattr(feature, "pos1", None) in ("名詞", "接尾辞")
-        and (pos3 in _COUNTER_POS3 or (token.surface == "分" and pos3 == _MINUTE_POS3))
+        and (
+            pos3 in _COUNTER_POS3
+            or (token.surface == "分" and pos3 == _MINUTE_POS3)
+            or token.surface in _UNTAGGED_COUNTERS
+        )
     )
 
 
@@ -289,8 +356,11 @@ def merge_number_counters(text: str, tokens: list) -> list:
     across it. The merged token
     carries its reading locked, so the dictionary pass keeps the counter's sound
     changes, and ``number_counter`` on its feature, which the parser's
-    acceptance reads. A numeral right after 第 or after a digit separator
-    (1,|500, 1.|5) continues a number and starts no merge.
+    acceptance reads. A comma between digits stays inside the number (1,200円).
+    Where the suffix pass joined the counter and a 目, 後, 間, 前 or 中 after it
+    (3|回目, 3|日後, 10|人中), the counter goes to the number and the rest is a
+    token of its own. A numeral right after 第 or after a decimal point (1.|5)
+    continues a number and starts no merge.
     """
     spans: dict[int, tuple[int, int]] = {}
     index = 0
@@ -337,16 +407,23 @@ def merge_number_counters(text: str, tokens: list) -> list:
             continue
         end = i + 1
         # A piece already ending in its counter (the suffix pass's 一つ, 一個)
-        # closes the run: 一つ|百円 is two quantities, not the number 一つ百.
-        while (
-            end < len(tokens)
-            and not _ends_in_counter(tokens[end - 1])
-            and _is_numeral(tokens[end])
-            and touching(end - 1)
-        ):
-            end += 1
+        # closes the run: 一つ|百円 is two quantities, not the number 一つ百. A
+        # comma between digits stays inside the run (1|,|200).
+        while end < len(tokens) and not _ends_in_counter(tokens[end - 1]) and touching(end - 1):
+            if _is_numeral(tokens[end]):
+                end += 1
+            elif (
+                tokens[end].surface in _COMMAS
+                and end + 1 < len(tokens)
+                and _is_numeral(tokens[end + 1])
+                and touching(end)
+            ):
+                end += 2
+            else:
+                break
         numeral = "".join(t.surface for t in tokens[i:end])
         counter: str | None
+        tail = ""
         open_run = end < len(tokens) and touching(end - 1) and not _ends_in_counter(tokens[end - 1])
         if open_run and _is_counter(tokens[end]):
             counter, consumed = tokens[end].surface, end + 1
@@ -354,13 +431,17 @@ def merge_number_counters(text: str, tokens: list) -> list:
             # The matcher took the number's tail with its counter (3|千円, 10|万人).
             numeral += tokens[end].surface[: -len(counter)]
             consumed = end + 1
+        elif open_run and (cut := _counter_and_tail(tokens[end].surface)) is not None:
+            # The suffix pass joined the counter and what follows it (3|回目, 3|日後, 10|人中).
+            counter, tail = cut
+            consumed = end + 1
         else:
             # A pair the suffix pass merged keeps the numeral's tag (一個, 10|万人).
             counter = counter_of(numeral)
             if counter is not None:
                 numeral = numeral[: -len(counter)]
             consumed = end
-        number = parse_number(numeral) if counter is not None else None
+        number = _number_value(numeral) if counter is not None else None
         reading = counter_reading(number, counter) if number is not None and counter is not None else None
         if reading is None or counter is None or fraction(counter, consumed):
             out.extend(tokens[i:end])
@@ -381,5 +462,15 @@ def merge_number_counters(text: str, tokens: list) -> list:
         # it too (replace_overridden_spans), not unidic's per-token さん|ぽん.
         merged.feature.kana_attested = True
         out.append(merged)
+        if tail:
+            out.append(
+                SyntheticToken(
+                    surface=tail,
+                    pos1="接尾辞",
+                    pos2="名詞的",
+                    lemma=tail,
+                    kana=hiragana_to_katakana(_COUNTER_TAILS[tail]),
+                )
+            )
         i = consumed
     return out

@@ -219,8 +219,9 @@ class TestAuxiliaryCapableVerbClass:
     def test_a_voiced_tail_is_no_card(self):
         assert "つける" not in _fronts("元気づける言葉だ。")
 
-    def test_suru_after_a_class_verb_stays_grammar(self):
-        assert "する" not in _fronts("お手数をおかけします。")
+    def test_suru_after_a_prefixed_class_verb_is_the_humble_predicate(self):
+        # K1121 INTJ P-2 reversed this: お + a verb's continuative + する is the humble form, する its predicate.
+        assert "する" in _fronts("お手数をおかけします。")
 
 
 class TestKanaWindowChoice:

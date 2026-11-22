@@ -80,7 +80,7 @@ class TestSpokenIdioms:
     @pytest.mark.parametrize(
         ("text", "front"),
         [
-            ("腹減ったな", "腹が減る"),  # a bare noun + verb stays two words
+            ("雨降ったな", "雨が降る"),  # a bare noun + verb stays two words (腹減った is a listed idiom now)
             ("そんな事ないよ", "事がない"),  # a formal noun: そんな事ない is not 見た事がない
             ("アンタ達は帰れ", "貴方達"),  # アンタ does not read as its lemma 貴方 (あなた)
             ("かねを貸すな", "金を貸す"),  # the tagger's kanji for a hiragana word is a guess

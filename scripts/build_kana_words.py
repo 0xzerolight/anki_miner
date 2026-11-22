@@ -51,7 +51,7 @@ SHORT_NOUNS: frozenset[str] = frozenset(
 )
 
 #: The only two-kana spellings of kanji-written words listed outside the nouns.
-SHORT_READINGS: frozenset[str] = frozenset({"きみ", "ぼく", "おれ", "かれ", "だれ", "ぜひ", "われ"})
+SHORT_READINGS: frozenset[str] = frozenset({"きみ", "ぼく", "おれ", "かれ", "だれ", "ぜひ", "われ", "なん", "うぬ"})
 
 #: The only kanji-written nouns of three morae listed by their kana spelling: those
 #: commonly written in kana. A three-mora kana noun is otherwise as often the tail
@@ -66,6 +66,8 @@ SHORT_SPELLED_NOUNS: frozenset[str] = frozenset(
     | {"ちから", "いのち", "かたち", "ふたり", "せがれ", "じじい", "ばばあ", "おかみ"}
     | {"とどめ", "せりふ", "あるじ", "おなご", "だんご", "ささい", "うかつ"}
     | {"きのう", "しだい", "もよう"}
+    # Archaic first- and second-person pronouns of period drama (わらわ is 妾; the tagger files it as a noun).
+    | {"わらわ"}
 )
 
 #: Spoken kana spellings JMdict gives no priority tag (やっぱ for 矢っ張り, the
@@ -606,6 +608,147 @@ JOINS: tuple[tuple[str, str, str, str] | tuple[str, str, str, str, str], ...] = 
     ("おはようございます", "感動詞", "おはよう|ござい|ます", ""),
     ("よろしくお願いします", "副詞", "よろしく|お願い|し|ます", ""),
     ("ご覧ください", "副詞", "ご覧|ください", ""),
+    # K1121 LIST: grammar points of one or two tokens. らしい and やろ are the row only as the tagger's
+    # auxiliary (the suffix of 春らしい and the volitional やろ of やる are other tokens:
+    # lexical_joiner._not_the_auxiliary); じゃ|ね only after a noun and before a pause (学生じゃね？; the
+    # leave-taking じゃね opens its line); うる only after a verb (起こりうる; 本をうる is 売る). The kanji
+    # 如き / 如く are 副詞 so that they pass the run's allowed_pos. しかる|べき is the entry しかるべき
+    # (no grammar point: under the べき row its しかる would be carded alone).
+    ("らしい", "形容詞", "=らしい", "", "grammar"),
+    ("ごとき", "感動詞", "ごとき", "", "grammar"),
+    ("ごとく", "感動詞", "ごとく", "", "grammar"),
+    ("如き", "副詞", "如き", "", "grammar"),
+    ("如く", "副詞", "如く", "", "grammar"),
+    ("べき", "感動詞", "べき", "", "grammar"),
+    ("すべき", "感動詞", "す|べき", "", "grammar"),
+    ("やろ", "感動詞", "やろ", "", "grammar"),
+    ("やない", "形容詞", "や|=ない", "copula", "grammar"),
+    ("じゃね", "感動詞", "じゃ|ね", "noun", "grammar"),
+    ("うる", "動詞", "うる", "verb", "grammar"),
+    ("しかるべき", "連体詞", "しかる|べき", ""),
+    # K1121 LIST: やらしい is one adjective (the tagger cuts や + the auxiliary らしい).
+    ("やらしい", "形容詞", "や|=らしい", ""),
+    # K1121 LIST: the entry どうした before the explanatory ん / の + a copula (どうした + んだ, どうした + のだ). The
+    # longer どうしたん / どうしたの are the card only where the clause ends on them: a row that does not fit gives
+    # its tokens to the next one down (LexicalJoiner._kana_row), and どう|し|た|の is passed over before だ / です
+    # (lexical_joiner._no_of_noda).
+    ("どうした", "感動詞", "どう|し|た", "start"),
+    # K1121 LIST: entries whose kana verb (する, くる, すぎる) was carded alone. ちょっと|し|た only before a noun
+    # (_adnominal_only); に|つれ|て not before くる / いく (家につれてくる: _verb_te_form); しだい|に only opening a
+    # clause (気持ちしだいになる is the suffix 次第 + に). No やってくる row: a third of its lines are やる + くる
+    # (昔からやってきた, 代わりにやってきました).
+    ("ちょっとした", "連体詞", "ちょっと|し|た", ""),
+    ("につれて", "副詞", "に|つれ|て", ""),
+    ("にすぎない", "形容詞", "に|すぎ|=ない", ""),
+    ("にすぎない", "形容詞", "に|すぎ|ませ|ん", ""),
+    ("ときたら", "副詞", "と|き|たら", "noun"),
+    ("しだいに", "副詞", "しだい|に", "start"),
+    ("さすれば", "接続詞", "さ|すれ|ば", "start"),
+    # K1121 LIST: expressions that were still missed. かい|が|ある and しか|ない only after a verb (待ったかいがあった,
+    # 行くしかない; 金しかない is 'only money'), まで|に after a noun, それ|と only opening a clause before a pause
+    # (それとこれ is それ + と), だっ|たり|し|て only where the sentence stops (lexical_joiner._runs_on). あり|えへん
+    # is the Kansai negative of ありえる, which the tagger cuts あり + an interjection.
+    ("かいがある", "動詞", "かい|が|=ある", "verb"),
+    ("それすら", "副詞", "それ|すら", ""),
+    ("しかない", "形容詞", "しか|=ない", "verb"),
+    ("しかない", "形容詞", "しか|あり|ませ|ん", "verb"),
+    ("までに", "副詞", "まで|に", "noun"),
+    ("おめでとうございます", "感動詞", "お|めでとう|ござい|ます", ""),
+    ("お誕生日おめでとうございます", "副詞", "お誕生日おめでとう|ござい|ます", ""),
+    ("そんなん", "代名詞", "そんな|ん", ""),
+    ("だったりして", "感動詞", "だっ|たり|し|て", ""),
+    ("やいなや", "副詞", "や|いな|や", "verb"),
+    ("ざるをえない", "形容詞", "ざる|を|え|=ない", ""),
+    ("ざるを得ない", "形容詞", "ざる|を|得|=ない", ""),
+    ("せざるをえない", "形容詞", "せ|ざる|を|え|=ない", ""),
+    ("せざるを得ない", "形容詞", "せ|ざる|を|得|=ない", ""),
+    ("それと", "接続詞", "それ|と", "alone"),
+    ("よって", "接続詞", "よっ|て", "start"),
+    ("ありえる", "動詞", "あり|えへん", ""),
+    # K1121 LIST: 役立た|ず is the noun 役立たず where a noun stands (この役立たずが, 役立たずだ:
+    # lexical_joiner._noun_place); before a clause it is the verb negated.
+    ("役立たず", "名詞", "役立た|ず", ""),
+    # K1121 LIST: words the tagger cuts after the kana なん. なん|と is the adverb before what it exclaims at or
+    # before a verb of saying (なんと美しい, なんと言えばいい); before another verb or a pronoun the と is 'with'
+    # (何と戦う, 何と何: lexical_joiner._with_what). なん|て is passed over before a kana いう: なんていうか is no
+    # entry of the dictionaries, and its いう would be carded alone.
+    ("なんと", "副詞", "なん|と", ""),
+    ("なんとも", "副詞", "なん|と|も", ""),
+    ("なんとしても", "副詞", "なん|と|し|て|も", ""),
+    ("なんという", "連体詞", "なん|と|いう", ""),
+    ("なんというか", "副詞", "なん|と|いう|か", ""),
+    ("なんて", "副詞", "なん|て", ""),
+    ("なんてこった", "感動詞", "なん|てこっ|た", ""),
+    # K1121 LIST: listed expressions on なる, so that the adjective + なる reading does not card their pieces:
+    # よく|なる is よくなる 'get better'; そう|に|なる right after a verb's stem is そうになる 'almost do' (泣きそうになった).
+    ("よくなる", "動詞", "よく|=なる", ""),
+    ("そうになる", "動詞", "そう|に|=なる", "verb"),
+    # K1121 LIST: 目|に|あっ where the tagger reads the kana verb as ある (ひどい目にあった): the entry 目にあう, only
+    # with a modifier before 目 (lexical_joiner._bare_me; 目にあるもの is 'what is in the eye').
+    ("目にあう", "動詞", "目|に|=ある", ""),
+    # K1121 LIST: more words on the kana なん, so that the word row なん does not card their first piece.
+    ("なんらか", "副詞", "なん|ら|か", ""),
+    ("なんにせよ", "副詞", "なん|に|せよ", ""),
+    ("なんだったら", "副詞", "なん|だっ|たら", "start"),
+    ("なんも", "副詞", "なん|も", ""),
+    # K1121 LIST: お / ご + a kana noun that the dictionary lists whole by its reading (ご|あいさつ is ご挨拶). The noun
+    # alone is turned away as a piece of that longer word, so without the row the line has no card. Each row was
+    # checked both ways: the tagger cuts it so, and the joined kana is an entry's reading.
+    ("おかね", "名詞", "お|かね", ""),
+    ("おみず", "名詞", "お|みず", ""),
+    ("おちゃ", "名詞", "お|ちゃ", ""),
+    ("おさけ", "名詞", "お|さけ", ""),
+    ("おふろ", "名詞", "お|ふろ", ""),
+    ("おはなし", "名詞", "お|はなし", ""),
+    ("おなまえ", "名詞", "お|なまえ", ""),
+    ("おからだ", "名詞", "お|からだ", ""),
+    ("おうち", "名詞", "お|うち", ""),
+    ("おしごと", "名詞", "お|しごと", ""),
+    ("おてつだい", "名詞", "お|てつだい", ""),
+    ("おべんとう", "名詞", "お|べんとう", ""),
+    ("おみやげ", "名詞", "お|みやげ", ""),
+    ("おまつり", "名詞", "お|まつり", ""),
+    ("おいのり", "名詞", "お|いのり", ""),
+    ("おとも", "名詞", "お|とも", ""),
+    ("おつかい", "名詞", "お|つかい", ""),
+    ("おひる", "名詞", "お|ひる", ""),
+    ("おしろ", "名詞", "お|しろ", ""),
+    ("おてら", "名詞", "お|てら", ""),
+    ("おまもり", "名詞", "お|まもり", ""),
+    ("おさら", "名詞", "お|さら", ""),
+    ("おにく", "名詞", "お|にく", ""),
+    ("おはな", "名詞", "お|はな", ""),
+    ("おつき", "名詞", "お|つき", ""),
+    ("おかお", "名詞", "お|かお", ""),
+    ("おくち", "名詞", "お|くち", ""),
+    ("おへそ", "名詞", "お|へそ", ""),
+    ("おへや", "名詞", "お|へや", ""),
+    ("おいえ", "名詞", "お|いえ", ""),
+    ("おくに", "名詞", "お|くに", ""),
+    ("おやま", "名詞", "お|やま", ""),
+    ("おそうじ", "名詞", "お|そうじ", ""),
+    ("おつとめ", "名詞", "お|つとめ", ""),
+    ("おやくそく", "名詞", "お|やくそく", ""),
+    ("おでんわ", "名詞", "お|でんわ", ""),
+    ("おことば", "名詞", "お|ことば", ""),
+    ("おしり", "名詞", "お|しり", ""),
+    ("ごあいさつ", "名詞", "ご|あいさつ", ""),
+    ("ごしゅじん", "名詞", "ご|しゅじん", ""),
+    ("ごめいわく", "名詞", "ご|めいわく", ""),
+    ("ごしんぱい", "名詞", "ご|しんぱい", ""),
+    ("ごあんない", "名詞", "ご|あんない", ""),
+    ("ごれんらく", "名詞", "ご|れんらく", ""),
+    ("ごきょうだい", "名詞", "ご|きょうだい", ""),
+    ("ごきょうりょく", "名詞", "ご|きょうりょく", ""),
+    ("ごせいこう", "名詞", "ご|せいこう", ""),
+    ("ごいっしょ", "名詞", "ご|いっしょ", ""),
+    ("ごぞんじ", "名詞", "ご|ぞんじ", ""),
+    ("ごじしん", "名詞", "ご|じしん", ""),
+    # K1121 INTJ: interjections the tagger cuts apart. An "interjection" row is joined only while the parser
+    # mines interjections (its switch, off by default): あの|ね opening a clause, しまっ|た and ん|ん alone.
+    ("あのね", "感動詞", "あの|ね", "start", "interjection"),
+    ("しまった", "感動詞", "しまっ|た", "alone", "interjection"),
+    ("んん", "感動詞", "ん|ん", "alone", "interjection"),
 )
 
 _HEADER = """\
@@ -620,6 +763,8 @@ _HEADER = """\
 # form<TAB>pos1<TAB>tokens<TAB>where<TAB>grammar
 #                                        a grammar point (where may be empty), joined only while
 #                                        Mine grammar points is on
+# form<TAB>pos1<TAB>tokens<TAB>where<TAB>interjection
+#                                        an interjection, joined only while the parser mines interjections
 """
 
 
