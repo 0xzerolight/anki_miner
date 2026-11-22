@@ -199,13 +199,40 @@ _KANA_RECOVER_POS1: frozenset[str] = frozenset({"動詞", "形容詞", "形状�
 _KANA_RECOVER_REJECT_POS2: frozenset[str] = frozenset({"助動詞語幹", "非自立可能"})
 
 # The auxiliary-capable kana words mined where the line uses them as its main
-# verb or adjective (猫がいる, 時間がない, 水がほしい). Left out: する, which after a
-# noun is that noun's verb (勉強する) and alone is mostly a mis-split's tail; the
-# honorific and dialect ones (なさる, くださる, いたす, まいる, おる); and the
+# verb or adjective (猫がいる, 時間がない, 水がほしい). する takes a second test,
+# as after a noun it is that noun's verb (勉強する): _is_not_main_suru. Left out:
+# the honorific and dialect ones (なさる, くださる, いたす, まいる, おる); and the
 # aspect auxiliaries (しまう, おく, みる), whose bare kana is the auxiliary.
 _KANA_AUX_WORDS: frozenset[str] = frozenset(
-    {"いる", "ある", "なる", "できる", "くる", "いく", "やる", "くれる", "もらう", "ない", "いい", "よい", "ほしい"}
+    {
+        "いる",
+        "ある",
+        "なる",
+        "できる",
+        "くる",
+        "いく",
+        "やる",
+        "くれる",
+        "もらう",
+        "ない",
+        "いい",
+        "よい",
+        "ほしい",
+        "する",
+    }
 )
+
+# Particles after which する belongs to the phrase before it and is no verb of
+# its own: the quoted try or thought (行こうとした, 帰るってした), the listed act
+# (見たりした, 掃除とかする) and the choice (行くかしないか).
+_SURU_AFTER_PARTICLES: frozenset[str] = frozenset({"と", "って", "たり", "だり", "か", "とか", "やら", "なり"})
+
+# Forms of する the tagger also gives to a piece of another word: しい is the tail
+# of an adjective it does not know (キビしい) far more often than the Kansai
+# imperative, せい the end of a shout (どっせい), しょう a Sino-Japanese reading.
+# Each is the verb only with its particle before it (いいかげんにせい, どれにしょうか).
+_SURU_PIECE_FORMS: frozenset[str] = frozenset({"しい", "せい", "せえ", "しょう"})
+_SURU_FRAME_PARTICLES: frozenset[str] = frozenset({"格助詞", "係助詞", "副助詞"})
 
 # What the token before an auxiliary-capable word is when the word is grammar:
 # a verb, an adjective or an auxiliary (よくない, 行かなくなる, 静かである), or a
@@ -1049,6 +1076,8 @@ class SubtitleParserService:
         # rejected in one line (すみません) and recovered in another (すみます). Same
         # clear-on-cap bounding as the caches above.
         self._kana_window_cache: dict[str, bool] = {}
+        # Whether a word before する takes it (_takes_suru), by that word's front.
+        self._takes_suru_memo: dict[str, bool | None] = {}
         # F-08 step 2: per-file cue spans to leave out, on the file's own
         # timeline (set_skip_ranges). Like _line_cache it survives parse_* calls;
         # unlike it, it is applied at yield, so the cached line states stay whole.
@@ -1082,6 +1111,7 @@ class SubtitleParserService:
         # parses, so EpisodeProcessor reads it straight after phase 1.
         self.last_parse_rejects: dict[str, NotMinedReason] = {}
         self._reset_perf_counters()
+        self._takes_suru_memo = {}
 
     def _reset_perf_counters(self) -> None:
         """Zero the per-parse probe/tokenize cumulative counters (Task 28)."""
@@ -3260,6 +3290,8 @@ class SubtitleParserService:
             after_conditional = how == _KANA_AUX and self._is_good_after_conditional(word_token, tokens)
             if how == _KANA_AUX and not after_conditional and self._used_as_auxiliary(word_token, tokens):
                 return False
+            if how == _KANA_AUX and self._is_not_main_suru(word_token, tokens):
+                return False
             if how in (_KANA_LISTED, _KANA_LISTED_SPELLING) and self._listed_word_is_out_of_place(word_token, tokens):
                 return False
             if (
@@ -3400,6 +3432,79 @@ class SubtitleParserService:
             ):
                 return True
         return False
+
+    def _is_not_main_suru(self, word_token, tokens: list) -> bool:
+        """Whether kana する is not the line's own verb where it stands (宿題をする is; 勉強する is not).
+
+        ``_used_as_auxiliary`` has already refused it after a verb, an adjective,
+        an auxiliary or a て. Left are the places where it is another word's
+        verb or a piece of grammar:
+
+        - after a quoting, listing or choosing particle (``_SURU_AFTER_PARTICLES``),
+          and after に when て + は / も follows (彼にしては, 子供にしても);
+        - after a noun or adverb that takes する: the tagger's サ変可能, a number,
+          a dictionary entry tagged ``vs`` (びっくりした), and a noun with no entry
+          at all, which is more often a name or a piece than an object;
+        - after a suffix, a prefix or an adjectival-noun stem;
+        - after a kana the tagger calls a symbol: 臭ぇ is cut 臭|ぇ, and the し
+          after it is the particle, not する.
+
+        And three forms are the verb only in their own frame, as the tagger
+        gives them to stray kana too: さ glued to its れる / せる (あのさ is the
+        particle), a bare し with a case, topic or adverbial particle before it
+        or an auxiliary or particle after it (よぉし 行くぞ, a garbled しかし),
+        and the forms of ``_SURU_PIECE_FORMS`` right after such a particle.
+        """
+        if getattr(word_token.feature, "orthBase", None) != "する":
+            return False
+        idx = next((i for i, tok in enumerate(tokens) if tok is word_token), None)
+        if idx is None:
+            return False
+        prev = tokens[idx - 1] if idx else None
+        after = tokens[idx + 1] if idx + 1 < len(tokens) else None
+        feature = getattr(prev, "feature", None)
+        pos1 = getattr(feature, "pos1", None)
+        surface = word_token.surface
+        framed = pos1 == "助詞" and getattr(feature, "pos2", None) in _SURU_FRAME_PARTICLES
+        glued = after is not None and not getattr(after, "white_space", "") and after.surface.startswith(("れ", "せ"))
+        after_pos1 = getattr(getattr(after, "feature", None), "pos1", None)
+        if (
+            (surface == "さ" and not glued)
+            or (surface in _SURU_PIECE_FORMS and not framed)
+            or (surface == "し" and not framed and after_pos1 not in ("助詞", "助動詞"))
+        ):
+            return True
+        if prev is None:
+            return False
+        if pos1 == "助詞":
+            if prev.surface in _SURU_AFTER_PARTICLES:
+                return True
+            after = [tok.surface for tok in tokens[idx + 1 : idx + 3]]
+            return prev.surface == "に" and len(after) == 2 and after[0] == "て" and after[1] in ("は", "も")
+        if pos1 in ("接尾辞", "接頭辞", "形状詞"):
+            return True
+        if pos1 == "補助記号":
+            return _is_kana_candidate(prev.surface)
+        if pos1 not in ("名詞", "副詞"):
+            return False
+        if getattr(feature, "pos3", None) == "サ変可能" or getattr(feature, "pos2", None) == "数詞":
+            return True
+        fronts = [prev.surface]
+        if not getattr(prev, "compound", False):
+            fronts.insert(0, getattr(feature, "orthBase", None) or prev.surface)
+        takes = self._takes_suru(fronts[0])
+        if takes is None and fronts[-1] != fronts[0]:
+            takes = self._takes_suru(fronts[-1])
+        return takes is not False
+
+    def _takes_suru(self, front: str) -> bool | None:
+        """Whether the dictionary tags ``front`` as a する word (``vs``); None when it has no entry."""
+        if front not in self._takes_suru_memo:
+            if len(self._takes_suru_memo) >= _FRONT_CACHE_CAP:
+                self._takes_suru_memo.clear()
+            tags = self._entry_tags([front]).get(front)
+            self._takes_suru_memo[front] = any(tag.startswith("vs") for tag in tags) if tags else None
+        return self._takes_suru_memo[front]
 
     @staticmethod
     def _is_good_after_conditional(word_token, tokens: list) -> bool:
@@ -4028,7 +4133,8 @@ class SubtitleParserService:
 
         The surface must start as the card front does: ねぇ is the spoken ない and
         づける the voiced tail of a compound (景気づける), neither the word on the
-        card. A カ変 verb is the exception, as くる's own stem changes (きた, こい).
+        card. A カ変 or サ変 verb is the exception, as its own stem changes
+        (きた, こい; した, せよ).
         くん is the honorific after a nickname the tagger does not know (あっくん)
         as often as it is a contracted くれ.
         """
@@ -4038,7 +4144,7 @@ class SubtitleParserService:
         if form not in _KANA_AUX_WORDS or surface == "くん" or not self._inclusion_rule.content_gate_ok(word_token):
             return False
         c_type = getattr(feature, "cType", None)
-        return surface[0] == form[0] or (isinstance(c_type, str) and c_type.startswith("カ行変格"))
+        return surface[0] == form[0] or (isinstance(c_type, str) and c_type.startswith(("カ行変格", "サ行変格")))
 
     def _probe_kana_recovery(self, word_token, pos1: str, surface: str, recoverable: bool, merged: bool) -> str | None:
         """The content gate (recovered) or list membership (listed), then attestation of the front.
