@@ -232,3 +232,122 @@ class TestParser:
         assert records
         for record in records:
             assert _words(record["sentence"]) == set(record["expected"]), record["id"]
+
+
+@needs_tagger
+class TestRecutUnlistedKanji:
+    """A kanji token no dictionary lists is cut into the listed words the line holds there."""
+
+    _LISTED = frozenset(
+        {
+            "首",
+            "落とす",
+            "敵",
+            "終わる",
+            "白い",
+            "尾",
+            "振る",
+            "犬",
+            "声",
+            "出す",
+            "大きな",
+            "叱る",
+            "先生",
+            "教室",
+            "来る",
+            "歌",
+            "最高",
+            "暇",
+            "今",
+            "彼",
+        }
+    )
+    _COMMON = frozenset({"首", "尾", "声", "歌", "今"})
+    _INFLECTING = frozenset(
+        {"落とす", "白い", "出す", "来る", "振る", "終わる", "叱る", "褒める", "合う", "倒す", "入れる"}
+    )
+
+    def _recut(self, tagger, text: str, listed=None) -> list:
+        listed = self._LISTED if listed is None else listed
+        tokens = morphology.retag_mistagged_tokens(list(tagger(text)), None, tagger)
+        return morphology.recut_unlisted_kanji_tokens(
+            text,
+            tokens,
+            tagger,
+            lambda words: {word for word in words if word in listed},
+            lambda words: {word: word in self._COMMON for word in words},
+            lambda candidates: {form for form, _conditions in candidates if form in self._INFLECTING},
+            lambda token, _text, _start, _end, _tokens: morphology.mining_base(token),
+            morphology.mining_base,
+        )
+
+    @staticmethod
+    def _bases(tokens: list) -> list[tuple[str, str]]:
+        return [
+            (token.surface, morphology.mining_base(token))
+            for token in tokens
+            if token.feature.pos1 in ("名詞", "動詞", "形容詞")
+        ]
+
+    def test_a_noun_glued_to_a_verb_is_cut_loose(self, tagger):
+        text = "敵の首落とさないと終わらない"
+        assert "首落" in [token.surface for token in tagger(text)]
+        bases = self._bases(self._recut(tagger, text))
+        assert ("首", "首") in bases
+        assert any(base == "落とす" for _surface, base in bases)
+
+    def test_a_noun_glued_before_its_verb_with_no_particle(self, tagger):
+        bases = self._bases(self._recut(tagger, "大きな声出したら叱られるよ"))
+        assert ("声", "声") in bases
+        assert any(base == "出す" for _surface, base in bases)
+
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "鷲尾先生が教室に来た",
+            "今暇？",
+            "彼の歌って最高だね",
+            "本字幕由某字幕組制作",
+        ],
+    )
+    def test_what_stays(self, tagger, text):
+        tokens = morphology.retag_mistagged_tokens(list(tagger(text)), None, tagger)
+        assert _tags(self._recut(tagger, text)) == _tags(tokens)
+
+    def test_an_unlisted_compound_verb_is_cut_before_au(self, tagger):
+        listed = self._LISTED | {"褒める", "合う", "二人"}
+        text = "二人は褒め合っていた"
+        assert "褒め合っ" in [token.surface for token in tagger(text)]
+        bases = [base for _surface, base in self._bases(self._recut(tagger, text, listed))]
+        assert "褒める" in bases and "合う" in bases
+
+    def test_another_unlisted_compound_verb_stays_whole(self, tagger):
+        listed = self._LISTED | {"褒める", "倒す", "二人"}
+        text = "二人は褒め倒していた"
+        tokens = morphology.retag_mistagged_tokens(list(tagger(text)), None, tagger)
+        assert _tags(self._recut(tagger, text, listed)) == _tags(tokens)
+
+    def test_a_noun_that_runs_into_an_unlisted_verb_is_cut_loose(self, tagger):
+        listed = self._LISTED | {"ご飯", "山盛り", "入れる"}
+        bases = self._bases(self._recut(tagger, "ご飯は山盛り入れてください", listed))
+        assert ("山盛り", "山盛り") in bases
+        assert any(base == "入れる" for _surface, base in bases)
+
+    def test_the_text_is_kept(self, tagger):
+        text = "ほら 敵の首落とさないと終わらない"
+        out = self._recut(tagger, text)
+        assert "".join(token.white_space + token.surface for token in out) == text
+
+    def test_no_dictionary_no_change(self, tagger):
+        tokens = list(tagger("敵の首落とさないと終わらない"))
+        same = morphology.recut_unlisted_kanji_tokens(
+            "敵の首落とさないと終わらない",
+            tokens,
+            tagger,
+            None,
+            lambda words: None,
+            None,
+            lambda *args: "",
+            morphology.mining_base,
+        )
+        assert same is tokens
