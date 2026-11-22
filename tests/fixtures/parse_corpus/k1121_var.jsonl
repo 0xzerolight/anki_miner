@@ -14,3 +14,8 @@
 {"id":"k21v14","sentence":"間違いねえ","expected":["間違いない"],"category":"k1121-var","note":"V-N: X + ねえ where X + ない is an entry"}
 {"id":"k21v15","sentence":"金がねえ","expected":["金がない"],"category":"k1121-var","note":"V-N"}
 {"id":"k21v16","sentence":"大変ねえ","expected":["大変"],"category":"k1121-var","note":"大変ない is no entry: ねえ stays the particle"}
+{"id":"k21v17","sentence":"こわーい","expected":["こわい"],"category":"k1121-var","note":"V-W: a shredded stretch re-read"}
+{"id":"k21v18","sentence":"聞こえなーい","expected":["聞こえる"],"category":"k1121-var","note":"V-W: the chain runs through the stretch"}
+{"id":"k21v19","sentence":"食べたーい","expected":["食べる"],"category":"k1121-var","note":"V-W"}
+{"id":"k21v20","sentence":"こーひーを飲む","expected":["飲む"],"category":"k1121-var","note":"no such word: left alone"}
+{"id":"k21v21","sentence":"わたしもーいく","expected":["わたし","いく"],"category":"k1121-var","note":"a clean reading is not replaced"}

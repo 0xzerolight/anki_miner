@@ -135,6 +135,9 @@ _ENTRIES = {
     "金がない": "exp adj-i",
     "違いない": "exp adj-i",
     "鼻持ちならない": "exp adj-i",
+    "こわい": "adj-i",
+    "ねむい": "adj-i",
+    "もっと": "adv",
 }
 _SEARCH_ONLY = frozenset({"すごーい", "ちがーう", "なーい"})
 _READINGS = frozenset({"ぜんぶ", "せんせい", "うそ", "やろう", "もんない"})
@@ -378,4 +381,75 @@ class TestNeeAsTheNaiOfAnEntry:
         text = "間違いねえ"
         word = next(word for word in _words(text) if word.mined_form == "間違いない")
         assert re.search(r"<b>(.*?)</b>", word.sentence_bolded).group(1) == "間違いねえ"
+        assert re.sub(r"\[[^\]]*\]|</?b>| ", "", word.sentence_furigana_bolded) == text
+
+
+class TestShreddedStretch:
+    """V-W: a stretch inside a word leaves the tagger with pieces; the line read without it gives the word back."""
+
+    @pytest.mark.parametrize(
+        ("text", "front", "written"),
+        [
+            ("こわーい", "こわい", "こわーい"),
+            ("ねむーい", "ねむい", "ねむーい"),
+            ("もーっと食べたい", "もっと", "もーっと"),
+            ("聞こえなーい", "聞こえる", "聞こえなーい"),  # the chain runs through the stretch
+            ("食べたーい", "食べる", "食べたーい"),
+        ],
+    )
+    def test_cards_the_word_over_the_text_as_written(self, text, front, written):
+        assert _cards(text).get(front) == written
+
+    def test_the_pieces_are_no_cards(self):
+        assert set(_cards("聞こえなーい")) == {"聞こえる"}
+
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "こーひーを飲む",  # no such word either way
+            "きーちゃんが来た",  # a nickname
+            "わたしもーいく",  # a clean reading is not replaced by another
+            "これがーいい",
+            "おばーさんが来た",
+            "めーるを送る",
+            "このやろー",
+        ],
+    )
+    def test_a_line_the_gate_refuses_is_read_as_before(self, text):
+        _text, raw_tokens, *_rest = _service()._build_line_state(text, 0.0, 1.0)
+        assert not any(isinstance(token, VariantToken) for token in raw_tokens)
+
+    @pytest.mark.parametrize(
+        ("text", "front"),
+        [
+            ("よぉ分かってるし", "分かる"),
+            ("もう客が来とるけぇね", "来る"),
+            ("水が飲みたーい", "飲む"),
+        ],
+    )
+    def test_a_word_beside_the_stretch_keeps_its_card(self, text, front):
+        assert front in _cards(text)
+
+    @pytest.mark.parametrize(
+        ("text", "front"),
+        [
+            ("おもーてなしだ", "おもう"),  # a vowel put in makes no verb
+            ("みーーんな平等だ", "みいる"),
+            ("ぬわーんだ", "ぬう"),  # nor does a run left out at a word's end
+            ("どうかなぁって思う", "かなう"),  # a particle drawn out is that particle
+            ("ぎいいー", "いい"),  # a stretch that ends its word shreds nothing
+            ("今日が最後だしーて思って", "しいて"),
+            ("まーつもーんかー", "つもる"),  # a verb stem at the stretch is a sound
+        ],
+    )
+    def test_a_stretch_makes_no_verb_of_sounds(self, text, front):
+        assert front not in _cards(text)
+
+    def test_the_sentence_and_its_furigana_bold_the_whole_stretched_chain(self):
+        text = "よく聞こえなーいよ"
+        word = next(word for word in _words(text) if word.mined_form == "聞こえる")
+        plain = re.search(r"<b>(.*?)</b>", word.sentence_bolded).group(1)
+        ruby = re.search(r"<b>(.*?)</b>", word.sentence_furigana_bolded).group(1)
+        assert plain == "聞こえなーい"
+        assert re.sub(r"\[[^\]]*\]| ", "", ruby) == "聞こえなーい"
         assert re.sub(r"\[[^\]]*\]|</?b>| ", "", word.sentence_furigana_bolded) == text

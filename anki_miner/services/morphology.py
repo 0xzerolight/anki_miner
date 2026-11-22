@@ -2164,11 +2164,11 @@ _VARIANT_SITE_RE = re.compile("[ぁ-ゖ][ー〜～ぁぃぅぇぉ]")
 _VARIANT_CONTENT_POS1 = frozenset({"名詞", "動詞", "形容詞", "副詞", "代名詞", "形状詞", "連体詞", "接続詞"})
 _VARIANT_INFLECTING_POS1 = frozenset({"形容詞", "動詞", "副詞", "助動詞"})
 #: The kinds of variant reading that are on: K, a stretched spelling the tagger
-#: resolves (``_variant_reading``); A, ねえ alone as the word ない
+#: resolves, and W, a stretch that shreds its word (``_variant_reading``); A, ねえ alone as the word ない
 #: (``_read_spoken_nai``); N, ねえ as the ない of an entry (``_read_particle_nai``).
 #: With none the pass and its readers are wired and the parser reads every line
 #: as before.
-_VARIANT_CLASSES: frozenset[str] = frozenset({"K", "A", "N"})
+_VARIANT_CLASSES: frozenset[str] = frozenset({"K", "W", "A", "N"})
 
 
 class VariantToken(RetaggedToken):
@@ -2584,13 +2584,16 @@ def _variant_reading(
     only between clean neighbours, and an interjection written with a small
     vowel is its own spelling.
 
-    Kind W, a shredded stretch: the new tokens hold nothing unknown, no symbol,
-    no proper noun, no one-kana content word and no new interjection, and are
-    never more than the old ones. There must be evidence (a flagged old token,
-    or fewer tokens with the edited word reaching past the run), a run left out
-    inside a word gives an inflecting word of three kana or たい / ない, a vowel
-    put in gives a word of three kana, and a known word of two or more kana
-    that the stretch sits in keeps its word unless a neighbour is garbage.
+    Kind W, a shredded stretch, only with the run left out: the new tokens hold
+    nothing unknown, no symbol, no proper noun, no one-kana content word and no
+    new interjection, and are never more than the old ones. There must be
+    evidence (a flagged old token, or fewer tokens), the edited word reaches
+    past the run (a stretch that ends its word shreds nothing) and is an
+    adjective or an adverb of three kana or たい / ない, never a verb; a known
+    word of two or more kana that the stretch sits in keeps its word unless a
+    neighbour is garbage, and every word the tagger read well beside the
+    stretch stays. A particle drawn out is read anew only where the pieces are
+    one word together (もー|っと) or the particle is たい or ない.
     """
     candidate = text[:start] + vowel + text[end:]
     read_tokens = list(tag(candidate))
@@ -2706,18 +2709,43 @@ def _variant_reading(
             beside = {_variant_flag(item[0], headword) for item in old if item[0] is not holder}
             if not kept and not beside & {"unknown", "symbol", "one-kana"}:
                 return None
+        # A word the tagger read well beside the stretch stays that word (よぉ|わかっ|て keeps わかる);
+        # only a stem it called a noun may become its verb (聞こえ|なーい, 待ち|なさーい).
+        for own in old:
+            token = own[0]
+            if own[1] < end and own[2] >= start:
+                continue  # the stretched word itself and its marks
+            if _field(token, "pos1") not in _VARIANT_CONTENT_POS1 or _variant_flag(token, headword):
+                continue
+            if not any(
+                (_field(other[0], "lemma"), _field(other[0], "pos1")) == (_field(token, "lemma"), _field(token, "pos1"))
+                or (_field(token, "pos1") == "名詞" and _field(other[0], "pos1") == "動詞" and other[1:3] == own[1:3])
+                for other in new
+            ):
+                return None
         fewer = len(new) < len(old)
-        if edit:
-            fits = len(word.surface) >= 3 and (
-                (pos1 in _VARIANT_INFLECTING_POS1 and pos1 != "助動詞" and (hard or fewer))
-                or (pos1 in _VARIANT_CONTENT_POS1 | {"感動詞"} and fewer)
-            )
-        else:
-            inside = star[2] > end
-            size = lemma in ("たい", "ない", "無い") if pos1 == "助動詞" else len(word.surface) >= 3
-            fits = ((pos1 in _VARIANT_INFLECTING_POS1 and size) if inside else pos1 in _VARIANT_CONTENT_POS1) and (
-                hard or (fewer and inside)
-            )
+        inside = star[2] > end
+        if not inside:
+            return None  # a stretch that ends its word shreds nothing (ぎいいー, うっそぉー)
+        if edit or pos1 == "動詞":
+            # W leaves the run out and never reads a verb at the stretch: a vowel put in and a
+            # verb stem make words of sounds (おもー|てなし is no 思う, だしー|て no 強いて, つもーん
+            # no 積もる). A verb comes back through its own たい / ない (聞こえ|なーい).
+            return None
+        holder_pos1 = _field(holder, "pos1")
+        if holder_pos1 == "感動詞" and all(ch in _SMALL_VOWELS for ch in text[start:end]):
+            return None  # a small vowel on an interjection is that spelling's own (さぁ|て)
+        if (
+            not hard
+            and holder_pos1 not in _VARIANT_CONTENT_POS1
+            and len(new) > 1
+            and lemma not in ("たい", "ない", "無い")
+        ):
+            # か|なぁ|って: a particle drawn out is that particle, unless the pieces are one
+            # word together (もー|っと) or the particle is たい or ない stretched (食べ|たー|い).
+            return None
+        size = lemma in ("たい", "ない", "無い") if pos1 == "助動詞" else len(word.surface) >= 3
+        fits = pos1 in _VARIANT_INFLECTING_POS1 and size and (hard or fewer)
         if not fits or (pos1 != "助動詞" and not headword(form)):
             return None
     return _VariantReading(
