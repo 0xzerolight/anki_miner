@@ -111,6 +111,8 @@ _NEGATIVE_NOUNS = frozenset({"役立たず"})
 _NOUN_FOLLOWERS = frozenset({"が", "の", "め", "だ", "な", "は", "を", "と", "ども", "です", "じゃ"})
 # Verbs of saying, by lemma: before one なん|と is 'what', before any other verb 'with what' (``_with_what``).
 _SAYING_VERBS = frozenset({"言う", "申す", "呼ぶ", "仰る"})
+# The reply rows that are also the hearsay そうだ after a plain form (``_hearsay``).
+_HEARSAY_ROWS = frozenset({"そうだ", "そうです"})
 # "noun" rows that also open a clause before the noun they name (``_opens_before_a_noun``).
 _NAMING_ROWS = frozenset({"という"})
 _GRAMMAR_POS1 = frozenset({"助詞", "助動詞"})
@@ -515,6 +517,20 @@ def _joined_pos1(previous: _Join | None) -> str | None:
     return "助動詞" if previous.headword in _PREDICATE_ROWS else previous.pos1
 
 
+def _hearsay(candidate: _Join, tokens: list) -> bool:
+    """Whether そう|だ / そう|です is the hearsay そうだ after a plain form (雨が降るそうだ 'they say it will rain').
+
+    The tagger files that そう apart (そう-伝聞) from the reply's adverb and from
+    the そう of 泣きそうだ. The same entry lists the reply and the hearsay; this
+    one is a grammar point, joined only while Mine grammar points is on.
+    """
+    return (
+        candidate.headword in _HEARSAY_ROWS
+        and candidate.start > 0
+        and extract_lemma(tokens[candidate.start]) == "そう-伝聞"
+    )
+
+
 def _opens_before_a_noun(candidate: _Join, tokens: list, spans: dict[int, tuple[int, int]]) -> bool:
     """Whether と|いう, after no noun, opens its clause right before the noun it names.
 
@@ -689,6 +705,9 @@ class LexicalJoiner:
                 spans.update(CompoundDictionaryMatcher._source_spans(text, tokens))
             if not _contiguous(spans, candidate.start, candidate.end):
                 return False
+            if self._grammar_points and _hearsay(candidate, tokens):
+                kept.append(candidate)
+                return True
             if candidate.line_start and not _opens_clause(tokens, spans, candidate.start):
                 return False
             if _quotes_what_precedes(candidate.headword, tokens, candidate.start):

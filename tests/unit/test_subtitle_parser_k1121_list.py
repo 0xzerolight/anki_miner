@@ -42,6 +42,9 @@ _ATTESTED = frozenset(
         "なん",
         "なんか",
         "なんなの",
+        "そうだ",
+        "そうです",
+        "そうですね",
         "わらわ",
         "うぬ",
         "私",
@@ -593,3 +596,25 @@ def test_nannano_before_a_copula_leaves_nan() -> None:
     assert "なんなの" not in fronts
     assert "なん" in fronts
     assert "なんなの" in _fronts("なんなの！")
+
+
+# --- L-8: the hearsay そうだ after a plain form ------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("sentence", "front"),
+    [
+        ("雨が降るそうだ", "そうだ"),
+        ("彼は来ないそうです", "そうです"),
+        ("明日は寒いそうですね", "そうです"),
+        ("もう行ったそうだよ", "そうだ"),
+    ],
+)
+def test_hearsay_souda_is_a_grammar_card(sentence: str, front: str) -> None:
+    assert front in _fronts(sentence)
+    assert front not in _fronts(sentence, grammar_points=False)
+
+
+@pytest.mark.parametrize("sentence", ["泣きそうだ", "おいしそうです"])
+def test_the_sou_of_appearance_is_no_card(sentence: str) -> None:
+    assert not {"そうだ", "そうです"} & set(_fronts(sentence))
