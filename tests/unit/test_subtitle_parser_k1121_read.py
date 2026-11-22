@@ -403,3 +403,23 @@ class TestSenseReadings:
         words = _words(sentence)
         assert words
         assert all(ruby in word.sentence_furigana for word in words.values())
+
+
+@needs_tagger
+class TestHumbleWatakushi:
+    """私 keeps わたくし in a humble or ladylike line."""
+
+    @pytest.mark.parametrize("sentence", ["私でございます", "私が参ります", "私ですわ", "私、田中と申します"])
+    def test_watakushi_on_the_card_and_in_the_sentence(self, sentence: str) -> None:
+        word = _words(sentence)["私"]
+        assert word.expression_reading == "わたくし"
+        assert "私[わたくし]" in word.sentence_furigana
+
+    @pytest.mark.parametrize(
+        "sentence",
+        ["私は学生だ", "私も行くよ", "私からは以上です ありがとうございました", "私に言ってくださいましたね"],
+    )
+    def test_watashi_elsewhere(self, sentence: str) -> None:
+        word = _words(sentence)["私"]
+        assert word.expression_reading == "わたし"
+        assert "私[わたし]" in word.sentence_furigana

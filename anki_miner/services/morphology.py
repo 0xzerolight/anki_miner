@@ -774,9 +774,19 @@ _READING_CONTEXT: tuple[_ReadingRow, ...] = (
     _reading_row("何", _WHAT_POS, "ナン", "ナン", nxt=("助数詞",)),
     _reading_row("何", _WHAT_POS, "ナン", "ナニ"),
     # 私: the tagger says わたくし wherever it stands; a card takes わたし, as the
-    # ワタシ fold in models/word.py does. The humble 私ども and 私め keep わたくし.
+    # ワタシ fold in models/word.py does. The humble 私ども and 私め keep わたくし,
+    # and so does a humble or ladylike line (ございます, 申します, 参ります, 存じます,
+    # …ですわ, ごきげんよう; the greetings ありがとうございます, おはようございます and
+    # おめでとうございます are everybody's).
     _reading_row("私", ("代名詞",), "ワタクシ", "ワタクシ", after="(?:ども|共)"),
     _reading_row("私", ("代名詞",), "ワタクシ", "ワタクシ", after="め", nxt=("接尾辞",)),
+    _reading_row(
+        "私",
+        ("代名詞",),
+        "ワタクシ",
+        "ワタクシ",
+        line="(?<!ありがとう)(?<!おはよう)(?<!めでとう)ございま|申しま|申し上げ|参りま|致しま|いたしま|存じま|ですわ|ますわ(?!け)|ませんわ|ましたわ|ましてよ|くださいまし(?!た)|あそばせ|ごきげんよう",
+    ),
     _reading_row("私", ("代名詞",), "ワタクシ", "ワタシ"),
     # 明日: the tagger says the formal あす; a card takes the everyday あした.
     _reading_row("明日", _NOUN_POS, "アス", "アシタ"),
