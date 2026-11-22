@@ -789,12 +789,19 @@ def wrap_target_furigana_from_tokens(text: str, tokens: Iterable[Any], start: in
         else:
             # Token overlaps the bold window. The window covers the mined
             # morpheme plus (for verbs/adjectives) its trailing auxiliary
-            # tokens — highlight_end is raw-token-boundary aligned, so
-            # every overlapping token is fully contained and the body may
-            # legitimately hold several tokens (蒔い + た). Partial overlap
-            # would only happen if offsets were assigned incorrectly —
-            # treat as containment to keep the output well-formed.
+            # tokens, so the body may legitimately hold several tokens
+            # (蒔い + た). A chain can end inside a kana token (やめ|とけよ
+            # ends before よ, 笑っ|たって before って): that token has no ruby,
+            # so its text is cut at ``end`` as the plain sentence is. Any
+            # other partial overlap is treated as containment, which keeps
+            # a ruby group whole and the output well-formed.
             bucket = body
+            if tok_start < end < tok_end and formatted == text[tok_start:tok_end]:
+                cut = end - tok_start
+                body.append(html.escape(formatted[:cut]))
+                post.append(html.escape(formatted[cut:]))
+                out_has_content = True
+                continue
 
         # Syntax delimiter is independent from any source gap. For a leading
         # bold ruby it must stay inside <b>, adjacent to the base, so Anki's

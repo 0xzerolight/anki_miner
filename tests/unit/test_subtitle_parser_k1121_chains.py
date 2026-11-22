@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+
 import pytest
 
 from anki_miner.config.config import AnkiMinerConfig
@@ -407,3 +409,29 @@ class TestPoliteExpressionPast:
         text = "すみませんでした"
         _stored, raw_tokens, merged_tokens, *_ = service._build_line_state(text, 0.0, 0.0)
         assert service._find_highlight_end(text, raw_tokens, 0, 5, merged_tokens[0]) == 5
+
+
+class TestSentenceBoldOnBothFields:
+    """A chain that ends inside a token bolds the same characters in the sentence and in its furigana."""
+
+    @pytest.mark.parametrize(
+        ("text", "front", "bolded"),
+        [
+            ("そこで止めとけよ", "止める", "止めとけ"),  # とけよ is one token
+            ("よく見とけよ", "見る", "見とけ"),
+            ("笑ったってことは嘘だ", "笑う", "笑った"),  # たって is one token
+            ("笑っちゃいやよ", "笑う", "笑っちゃ"),  # ちゃい is one token
+            ("みんなで食べてよ", "食べる", "食べて"),  # an end on a token boundary
+            ("本を読んだってことだ", "読む", "読んだ"),
+        ],
+    )
+    def test_the_furigana_bold_is_the_sentence_bold(self, text, front, bolded):
+        words, _index, _counts = _service().parse_text_units(
+            [ReadingUnit(text=text, index=0, location_label="t")], want_line_index=False
+        )
+        word = next(word for word in words if word.mined_form == front)
+        plain = re.search(r"<b>(.*?)</b>", word.sentence_bolded).group(1)
+        ruby = re.search(r"<b>(.*?)</b>", word.sentence_furigana_bolded).group(1)
+        assert plain == bolded
+        assert re.sub(r"\[[^\]]*\]| ", "", ruby) == bolded
+        assert re.sub(r"\[[^\]]*\]|</?b>| ", "", word.sentence_furigana_bolded) == text
