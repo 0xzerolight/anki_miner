@@ -226,3 +226,97 @@ def test_expression_takes_the_kana_verb_card(sentence: str, front: str) -> None:
 )
 def test_expression_row_needs_its_place(sentence: str, row: str) -> None:
     assert row not in _fronts(sentence, allowed=(*_DEFAULT_POS, "接続詞", "連体詞"))
+
+
+# --- L-3: expression rows for what was still missed ----------------------------------------
+
+_L3_ATTESTED = frozenset(
+    {
+        "かいがある",
+        "それすら",
+        "それ",
+        "しかない",
+        "までに",
+        "おめでとう",
+        "おめでとうございます",
+        "そんな",
+        "そんなん",
+        "だったりして",
+        "やいなや",
+        "ざるをえない",
+        "ざるを得ない",
+        "せざるをえない",
+        "せざるを得ない",
+        "それと",
+        "よって",
+        "によって",
+        "ありえない",
+        "ありえる",
+    }
+)
+
+
+def _l3_fronts(sentence: str) -> list[str]:
+    def lookup(terms: list[str]) -> dict[str, bool]:
+        return {term: term in _L3_ATTESTED for term in terms}
+
+    service = SubtitleParserService(
+        AnkiMinerConfig(allowed_pos=(*_DEFAULT_POS, "接続詞", "連体詞")), kana_attest_lookup=lookup
+    )
+    words, _index, _counts = service.parse_text_units(
+        [ReadingUnit(text=sentence, index=0, location_label="t")], want_line_index=False
+    )
+    return [word.mined_form for word in words]
+
+
+@pytest.mark.parametrize(
+    ("sentence", "front"),
+    [
+        ("頑張ったかいがあった", "かいがある"),
+        ("それすら知らない", "それすら"),
+        ("逃げるしかない", "しかない"),
+        ("逃げるしかなかった", "しかない"),
+        ("謝るしかありません", "しかない"),
+        ("来週までに返す", "までに"),
+        ("合格おめでとうございます", "おめでとうございます"),
+        ("そんなんじゃ勝てない", "そんなん"),
+        ("偽物だったりして", "だったりして"),
+        ("駅に着くやいなや走った", "やいなや"),
+        ("認めざるをえない", "ざるをえない"),
+        ("認めざるを得ない", "ざるを得ない"),
+        ("そうせざるをえない", "せざるをえない"),
+        ("それと、もう一つある", "それと"),
+        ("金がない。よって買えない", "よって"),
+        ("そんなのありえへん", "ありえる"),
+    ],
+)
+def test_missed_expression_is_one_entry(sentence: str, front: str) -> None:
+    assert front in _l3_fronts(sentence)
+
+
+@pytest.mark.parametrize(
+    ("sentence", "row"),
+    [
+        ("金しかない", "しかない"),  # after a noun: 'there is only money'
+        ("それとこれは別だ", "それと"),  # それ + と, no pause after it
+        ("休みだったりして忙しい", "だったりして"),  # the たり form of a list, the line goes on
+        ("雨によって中止だ", "よって"),  # the row によって
+    ],
+)
+def test_missed_expression_row_needs_its_place(sentence: str, row: str) -> None:
+    assert row not in _l3_fronts(sentence)
+
+
+def test_zaru_wo_enai_leaves_the_verb_its_own_span() -> None:
+    fronts = _l3_fronts("認めざるをえない")
+    assert fronts == ["認める", "ざるをえない"]
+
+
+def test_a_row_the_dictionary_lacks_leaves_the_shorter_row() -> None:
+    service = SubtitleParserService(
+        AnkiMinerConfig(), kana_attest_lookup=lambda terms: {term: term == "おめでとう" for term in terms}
+    )
+    words, _index, _counts = service.parse_text_units(
+        [ReadingUnit(text="合格おめでとうございます", index=0, location_label="t")], want_line_index=False
+    )
+    assert "おめでとう" in [word.mined_form for word in words]

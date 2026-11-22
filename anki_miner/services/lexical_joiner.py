@@ -99,7 +99,7 @@ _QUESTION_VERBS = frozenset(
 # One-token grammar rows that are the word only as the tagger's auxiliary (``_not_the_auxiliary``).
 _AUXILIARY_ROWS = frozenset({"らしい", "やろ"})
 # Rows that are the word only where the line or the sentence stops after them (``_runs_on``).
-_STOP_AFTER = frozenset({"じゃね"})
+_STOP_AFTER = frozenset({"じゃね", "だったりして"})
 # Joined rows that end a predicate: a row right after one still follows an auxiliary (``_joined_pos1``).
 _PREDICATE_ROWS = _AUXILIARY_ROWS | {"どうした"}
 # Pre-noun rows whose tokens are an adverb + a verb's past anywhere else (``_adnominal_only``).
@@ -690,11 +690,12 @@ class LexicalJoiner:
 
         A longer row that does not fit gives way to the next one down: どう|し|た|ん
         is the reply only before a pause, so before だ the row どう|し|た joins and
-        ん|だ stays for its own row (どうした + んだ).
+        ん|だ stays for its own row (どうした + んだ). So does a row the run's
+        dictionaries lack: without おめでとうございます the row お|めでとう still joins.
         """
         below: int | None = None
         while True:
             join = _kana_join(tokens, i, self._grammar_points, keys, self._written, below)
-            if join is None or fits(join):
+            if join is None or (self._written(join.headword) and fits(join)):
                 return join
             below = join.end - i + 1
