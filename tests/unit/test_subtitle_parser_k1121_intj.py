@@ -6,6 +6,7 @@ import pytest
 
 from anki_miner.config.config import AnkiMinerConfig
 from anki_miner.models.reading import ReadingUnit
+from anki_miner.services.kana_words import kana_words
 from anki_miner.services.subtitle_parser import SubtitleParserService
 
 
@@ -38,6 +39,9 @@ _TAGS = {
     "えへん": "int",
     "まー": "int",
     "鍵": "n",
+    "あのね": "int",
+    "しまった": "int",
+    "んん": "int",
 }
 
 
@@ -51,6 +55,8 @@ def _service(*, interjections: bool) -> SubtitleParserService:
     )
     if interjections:
         service._mine_interjections = True
+        assert service._lexical_joiner is not None
+        service._lexical_joiner._interjections = True
     return service
 
 
@@ -119,3 +125,33 @@ class TestInterjectionSwitch:
     @pytest.mark.parametrize("text", ["ああいう人だ。", "あの店に行く。"])
     def test_a_pre_noun_word_is_unchanged(self, text):
         assert _fronts(text) == _fronts(text, interjections=False)
+
+
+_ROWS = [
+    ("あのね、聞いて。", "あのね"),
+    ("しまった！鍵を忘れた。", "しまった"),
+    ("んん、違う。", "んん"),
+]
+
+
+class TestInterjectionRows:
+    def test_the_rows_are_marked_in_the_list(self):
+        joins = kana_words().joins
+        assert (
+            joins["あの", "ね"].interjection and joins["しまっ", "た"].interjection and joins["ん", "ん"].interjection
+        )
+        assert not any(row.interjection and row.grammar for row in joins.values())
+
+    @pytest.mark.parametrize(("text", "front"), _ROWS)
+    def test_an_interjection_row_is_joined_with_the_switch_on(self, text, front):
+        assert front in _fronts(text)
+
+    @pytest.mark.parametrize(("text", "front"), _ROWS)
+    def test_an_interjection_row_is_not_joined_with_the_switch_off(self, text, front):
+        assert front not in _fronts(text, interjections=False)
+
+    def test_the_verb_put_away_is_no_interjection(self):
+        assert "しまった" not in _fronts("箱にしまった。")
+
+    def test_a_pre_noun_ano_before_a_noun_is_no_row(self):
+        assert "あのね" not in _fronts("あの猫はどこ？")

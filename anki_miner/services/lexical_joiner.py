@@ -169,13 +169,15 @@ def _kana_join(
     grammar_points: bool,
     keys: list[str] | None = None,
     written_ok: Callable[[str], bool] | None = None,
+    interjections: bool = False,
 ) -> _Join | None:
     """The longest kana word list join starting at ``tokens[i]``: by surfaces, or ending on a dictionary form.
 
     A row of one token (だろう, ください) is no join but the same kind of word: a
     grammar expression the tagger files as an auxiliary, named by the list.
     Without ``grammar_points`` a grammar row is passed over as if unlisted, so a
-    shorter row under it still joins (っていう in っていうか).
+    shorter row under it still joins (っていう in っていうか). An interjection
+    row (あのね, しまった) is passed over the same way without ``interjections``.
 
     With ``keys`` (``_row_key`` of every token) and ``written_ok`` a row of two
     or more tokens also matches kanji-written tokens by their reading
@@ -198,6 +200,7 @@ def _kana_join(
         if (
             row is not None
             and (grammar_points or not row.grammar)
+            and (interjections or not row.interjection)
             and not _cut_from_negative(tokens, i + size - 1, row.line_start)
             and not _te_form_in_use(row.headword, tokens, i + size)
             and not _embedded_question(row.headword, tokens, i + size)
@@ -501,10 +504,20 @@ class LexicalJoiner:
     grammar rows (んだ, ください) are not joined.
     """
 
-    def __init__(self, attest_lookup: AttestLookup, allowed_pos: frozenset[str], *, grammar_points: bool) -> None:
+    def __init__(
+        self,
+        attest_lookup: AttestLookup,
+        allowed_pos: frozenset[str],
+        *,
+        grammar_points: bool,
+        interjections: bool = False,
+    ) -> None:
         self._lookup = attest_lookup
         self._allowed_pos = allowed_pos
         self._grammar_points = grammar_points
+        # The parser's interjection switch: on, the list's interjection rows are joined. Read at
+        # every line, so it can be set after construction.
+        self._interjections = interjections
         self._attested: dict[str, bool] = {}
 
     def join_line(self, text: str, tokens: list) -> list:
@@ -588,7 +601,7 @@ class LexicalJoiner:
         keys = [_row_key(token) for token in tokens]
         while i <= last:
             join = (i < last and (_fixed_join(tokens, i) or _negative_adjective(tokens, i))) or _kana_join(
-                tokens, i, self._grammar_points, keys, self._written
+                tokens, i, self._grammar_points, keys, self._written, self._interjections
             )
             if not join or not fits(join):
                 i += 1

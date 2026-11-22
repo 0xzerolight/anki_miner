@@ -606,6 +606,11 @@ JOINS: tuple[tuple[str, str, str, str] | tuple[str, str, str, str, str], ...] = 
     ("おはようございます", "感動詞", "おはよう|ござい|ます", ""),
     ("よろしくお願いします", "副詞", "よろしく|お願い|し|ます", ""),
     ("ご覧ください", "副詞", "ご覧|ください", ""),
+    # K1121 INTJ: interjections the tagger cuts apart. An "interjection" row is joined only while the parser
+    # mines interjections (its switch, off by default): あの|ね opening a clause, しまっ|た and ん|ん alone.
+    ("あのね", "感動詞", "あの|ね", "start", "interjection"),
+    ("しまった", "感動詞", "しまっ|た", "alone", "interjection"),
+    ("んん", "感動詞", "ん|ん", "alone", "interjection"),
 )
 
 _HEADER = """\
@@ -620,6 +625,8 @@ _HEADER = """\
 # form<TAB>pos1<TAB>tokens<TAB>where<TAB>grammar
 #                                        a grammar point (where may be empty), joined only while
 #                                        Mine grammar points is on
+# form<TAB>pos1<TAB>tokens<TAB>where<TAB>interjection
+#                                        an interjection, joined only while the parser mines interjections
 """
 
 

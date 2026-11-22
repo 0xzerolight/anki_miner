@@ -9,6 +9,8 @@
 # form<TAB>pos1<TAB>tokens<TAB>where<TAB>grammar
 #                                        a grammar point (where may be empty), joined only while
 #                                        Mine grammar points is on
+# form<TAB>pos1<TAB>tokens<TAB>where<TAB>interjection
+#                                        an interjection, joined only while the parser mines interjections
 ああ	副詞
 ああ	感動詞
 あいさつ	名詞	kanji
@@ -2725,3 +2727,6 @@
 おはようございます	感動詞	おはよう|ござい|ます
 よろしくお願いします	副詞	よろしく|お願い|し|ます
 ご覧ください	副詞	ご覧|ください
+あのね	感動詞	あの|ね	start	interjection
+しまった	感動詞	しまっ|た	alone	interjection
+んん	感動詞	ん|ん	alone	interjection
