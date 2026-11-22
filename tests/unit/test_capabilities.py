@@ -251,6 +251,7 @@ def test_chinese_hides_the_japanese_only_entries() -> None:
         "kana-only-exclude",
         "number-counters",
         "grammar-points",
+        "interjections",
         "kana-variant-known",
         "name-wordsets",
         "furigana",

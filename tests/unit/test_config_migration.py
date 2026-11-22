@@ -110,6 +110,15 @@ def test_old_config_without_mine_grammar_points_mines_them(tmp_config: Path):
     assert loaded.mine_grammar_points is True
 
 
+def test_old_config_without_mine_interjections_leaves_them_out(tmp_config: Path):
+    """A saved config predating mine_interjections loads with it off, the default."""
+    tmp_config.write_text(json.dumps({"anki_deck_name": "MyDeck", "mine_grammar_points": False}))
+
+    loaded = GUIConfigManager.load_config()
+    assert loaded.anki_deck_name == "MyDeck"
+    assert loaded.mine_interjections is False
+
+
 class TestFirstRunFlagSeed:
     """Existing configs predate the wizards; only absent keys are seeded."""
 

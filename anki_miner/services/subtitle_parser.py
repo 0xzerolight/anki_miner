@@ -150,6 +150,8 @@ PARSE_RELEVANT_CONFIG_FIELDS = (
     "mine_number_counters",
     # A grammar point joins into one cached token (行く|んだ).
     "mine_grammar_points",
+    # An interjection row joins into one cached token (あの|ね).
+    "mine_interjections",
 )
 
 # Dictionary-attested compound matching (Yomitan longest-match principle):
@@ -1036,11 +1038,15 @@ class SubtitleParserService:
         # Grammar-cut words (思わず, 実は, くだらない; see services/lexical_joiner.py).
         # Attested through the term-OR-reading probe because the kana adjectives
         # are JMdict readings; None without one keeps the no-dict output unchanged.
-        # Settings → Word Filters → Mine grammar points decides the list's grammar rows (んだ, ください).
+        # Settings → Word Filters → Mine grammar points decides the list's grammar rows (んだ, ください),
+        # Mine interjections its interjection rows (あのね, しまった).
         self._lexical_joiner: LexicalJoiner | None = None
         if kana_attest_lookup is not None:
             self._lexical_joiner = LexicalJoiner(
-                kana_attest_lookup, self._inclusion_rule.allowed_pos, grammar_points=config.mine_grammar_points
+                kana_attest_lookup,
+                self._inclusion_rule.allowed_pos,
+                grammar_points=config.mine_grammar_points,
+                interjections=config.mine_interjections,
             )
         # The same setting decides the kanji spelling of the ください row (下さい; see _kanji_request_front).
         self._grammar_points: bool = config.mine_grammar_points
@@ -1131,9 +1137,9 @@ class SubtitleParserService:
         # Whether the dictionary tags a surface as an interjection (_is_listed_interjection),
         # by surface and never by the switch; bounded like _front_cache.
         self._interjection_memo: dict[str, bool] = {}
-        # Mine the interjections the dictionary lists (_is_listed_interjection). A plain
-        # attribute read at every token, so it can be set after construction; no setting reads it.
-        self._mine_interjections: bool = False
+        # Mine the interjections the dictionary lists (_is_listed_interjection): Settings → Word
+        # Filters → Mine interjections. Read at every token, so it can be set after construction.
+        self._mine_interjections: bool = config.mine_interjections
 
     # ------------------------------------------------------------------
     # Per-parse memoization helpers

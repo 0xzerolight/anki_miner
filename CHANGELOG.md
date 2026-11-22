@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Added
 - **Mine grammar points (Settings → Word Filters, Japanese only).** On by default; turn it off to keep sentence grammar such as んだ, でしょう and ください out of mining.
+- **Mine interjections (Settings → Word Filters, Japanese only).** Off by default; turn it on to mine every interjection the dictionary lists: fillers and calls (えっと, ねえ, あのね), gasps (あっ, えっ, しまった) and laughs (ははは, フフッ). A stammer (あ、ありがとう) or a cry no dictionary lists is never mined.
 - **`--api assess` reports what the speech model hears in short clips, such as a card's audio.** Per clip: the transcript, the language Whisper detects on its own and its probability, each segment's numbers, where the voice detector hears speech, and the level inside and outside it. A line spoken in another language, music under a line or two voices at once show up in those numbers (API.md, "assess").
 - **A CC button on the Word Curator's video turns its subtitles off.** On videos with subtitles burned into the picture, the curator's own subtitles covered them. C does the same from the keyboard (Settings → Keyboard), and the curator remembers the choice for the next video.
 
