@@ -2699,6 +2699,14 @@ Aucun fichier d'index n'est supprimé.</translation>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Mine interjections</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Card the interjections the dictionary lists, such as えっと, ねえ, あっ and ははは. Off by default.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Blacklist / whitelist words</source>
         <translation>Liste noire / liste blanche de mots</translation>
     </message>
@@ -6062,6 +6070,14 @@ Aucun fichier sur le disque n'est supprimé.</translation>
     </message>
     <message>
         <source>Sentence grammar such as んだ, でしょう and ください becomes cards.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mine interjections</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Interjections the dictionary lists become cards: えっと, ねえ, あっ, ははは. Stammers and sounds with no dictionary entry never do.</source>
         <translation type="unfinished" />
     </message>
     <message>
