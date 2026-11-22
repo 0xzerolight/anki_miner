@@ -297,7 +297,7 @@ class _ChainEnd(NamedTuple):
     end: int
     # The text between the token and ``end`` as the table reads it.
     tail: str
-    # The last tail token is the sentence-final particle よ.
+    # The last tail token is the sentence-final particle よ, or an imperative that ends in it (とけよ).
     final_yo: bool = False
     # A tail token is the particle か.
     particle_ka: bool = False
@@ -730,8 +730,18 @@ def _chain_end_candidates(text: str, raw_tokens: list, tok_end: int) -> list[_Ch
             lengthened_ya = surface == "あ" and pos1 == "感動詞" and text[start - 2 : start] in ("りゃ", "きゃ")
             if pos1 not in _INFLECTIONAL_TAIL_POS1 and not lengthened_ya:
                 break
+            # An imperative in よ as ONE tail token (やめ|とけよ) may be the word and
+            # the particle: the end before よ is a candidate too, and the gate
+            # reads the whole token as it reads a separate よ.
+            token_yo = (
+                len(surface) > 1
+                and surface.endswith("よ")
+                and str(getattr(tail_feature, "cForm", None)).startswith("命令形")
+            )
+            if token_yo:
+                candidates.append(_ChainEnd(end - 1, tail + surface[:-1], False, particle_ka))
             tail += surface
-            final_yo = surface == "よ" and getattr(tail_feature, "pos2", None) == "終助詞"
+            final_yo = token_yo or (surface == "よ" and getattr(tail_feature, "pos2", None) == "終助詞")
             particle_ka = particle_ka or (surface == "か" and pos1 == "助詞")
             candidates.append(_ChainEnd(end, tail, final_yo, particle_ka))
             prev_end = end

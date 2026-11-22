@@ -200,3 +200,56 @@ class TestSpokenChainEnds:
             [ReadingUnit(text=text, index=0, location_label="t")], want_line_index=False
         )
         assert [(word.mined_form, text[word.surface_start : word.bold_end]) for word in words] == [("存じる", "存じ")]
+
+
+class TestPotentialImperativeYo:
+    """行けよ is 行け and the particle, though the tagger reads one word of the potential verb."""
+
+    @pytest.mark.parametrize(
+        ("text", "front", "highlighted"),
+        [
+            ("早く行けよ", "行く", "行け"),
+            ("ここで待てよ", "待つ", "待て"),
+            ("黙れよ", "黙る", "黙れ"),
+            ("だったら死ねよ", "死ぬ", "死ね"),
+            ("はっきり言えよ", "言う", "言え"),  # to the tagger a volitional of 言える
+        ],
+    )
+    def test_the_verb_ends_before_the_particle(self, text, front, highlighted):
+        assert _spans(text)[front] == highlighted
+
+    def test_the_token_is_cut_on_the_raw_stream(self):
+        _stored, raw_tokens, _merged, *_ = _service()._build_line_state("早く行けよ", 0.0, 0.0)
+        assert [token.surface for token in raw_tokens] == ["早く", "行け", "よ"]
+        verb, particle = raw_tokens[1].feature, raw_tokens[2].feature
+        assert (verb.cType, verb.cForm, verb.orthBase) == ("五段-カ行", "命令形", "行く")
+        assert (verb.kana, verb.kanaBase, verb.lemma) == ("イケ", "イク", "行く")
+        assert (particle.pos1, particle.pos2, particle.kana) == ("助詞", "終助詞", "ヨ")
+
+    def test_the_sentence_reads_as_before(self):
+        words, _index, _counts = _service().parse_text_units(
+            [ReadingUnit(text="早く行けよ", index=0, location_label="t")], want_line_index=False
+        )
+        word = next(word for word in words if word.mined_form == "行く")
+        assert (word.surface, word.sentence_furigana, word.sentence_reading) == (
+            "行け",
+            "早[はや]く 行[い]けよ",
+            "はやくいけよ",
+        )
+
+    @pytest.mark.parametrize(
+        ("text", "front", "highlighted"),
+        [
+            ("答えよ", "答える", "答えよ"),
+            ("見よ", "見る", "見よ"),
+            ("勉強を続けよ", "続ける", "続けよ"),
+            ("早く開けよ", "開ける", "開けよ"),  # to the tagger the ichidan 開ける, as 続けよ is
+            ("全部忘れよ", "忘れる", "忘れよ"),
+            ("今すぐ会わせよ", "会う", "会わせよ"),  # せよ: a tail token in 命令形, the causative's own form
+        ],
+    )
+    def test_an_ichidan_yo_form_stays_whole(self, text, front, highlighted):
+        assert _spans(text)[front] == highlighted
+
+    def test_a_tail_token_in_yo_is_read_as_the_particle_is(self):
+        assert _chain_text("もうやめとけよ", "やめ") == "やめとけ"

@@ -3,3 +3,4 @@
 {"id":"kch03","sentence":"先に行きゃがった","expected":["先","行く"],"category":"span-window","note":"行きゃがった is one chain of 行く (the END table's -ゃがる); the card is unchanged."}
 {"id":"kch04","sentence":"敵を恐れませぬ","expected":["敵","恐れる"],"category":"span-window","note":"恐れませぬ is one chain, as 恐れません is; the card is unchanged."}
 {"id":"kch05","sentence":"酒を飲んどる","expected":["酒","飲む"],"category":"span-window","note":"飲んどる is 飲んでる in Kansai speech: one chain of 飲む."}
+{"id":"kch06","sentence":"早く行けよ","expected":["早い","行く"],"category":"span-window","note":"行けよ is the godan imperative 行け and the particle; the card 行く is unchanged."}

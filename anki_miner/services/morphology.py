@@ -1326,6 +1326,8 @@ def retag_mistagged_tokens(tokens: list, form_lookup: FormLookup | None = None) 
       adjective 良い (``_clause_final_ii_fields``).
     - か + なっ glued into かなっ (適う) after なんと, 何と or どうに is cut in two
       (``_glued_ka_naru``).
+    - A godan imperative + よ read as one word, a form of the potential verb
+      (行けよ, 待てよ), is cut in two (``_potential_imperative_yo``).
     - A kana verb filed under a homophone's lemma (おごる under 驕る) takes
       the lemma of the verb it is (``_kana_homophone_fields``).
     - 若 read as the stem of 若い where a pause or a case particle follows is the
@@ -1366,7 +1368,7 @@ def retag_mistagged_tokens(tokens: list, form_lookup: FormLookup | None = None) 
             fields = _PREFIX_NOUNS.get(token.surface)
         elif token.surface in nouns and _unknown_katakana_noun(token):
             fields = dict.fromkeys(("lemma", "orthBase", "kana"), token.surface)
-        if fields is None and (pieces := _glued_ka_naru(tokens, i)) is not None:
+        if fields is None and (pieces := _glued_ka_naru(tokens, i) or _potential_imperative_yo(tokens, i)) is not None:
             out.extend(pieces)
             continue
         if fields is None:
@@ -1547,6 +1549,63 @@ def _glued_ka_naru(tokens: list, i: int) -> tuple[RetaggedToken, RetaggedToken] 
     stem = RetaggedToken(token, _NARU_STEM, "なっ")
     stem.white_space = ""
     return RetaggedToken(token, _KA_PARTICLE, "か"), stem
+
+
+#: The fields unidic-lite gives the sentence-final particle よ.
+_YO_PARTICLE: dict[str, str] = {
+    "pos1": "助詞",
+    "pos2": "終助詞",
+    "pos3": "*",
+    "pos4": "*",
+    "cType": "*",
+    "cForm": "*",
+    **dict.fromkeys(("lemma", "orth", "orthBase"), "よ"),
+    **dict.fromkeys(("lForm", "pron", "pronBase", "kana", "kanaBase", "form", "formBase"), "ヨ"),
+}
+#: The last kana of a godan verb's imperative (行け, 言え) with the one of the verb (行く, 言う).
+_GODAN_IMPERATIVE_ENDINGS: dict[str, str] = dict(zip("えけげせてねべめれ", "うくぐすつぬぶむる", strict=True))
+_GODAN_IMPERATIVE_ENDINGS_KATAKANA: dict[str, str] = dict(zip("エケゲセテネベメレ", "ウクグスツヌブムル", strict=True))
+
+
+def _potential_imperative_yo(tokens: list, i: int) -> tuple[RetaggedToken, RetaggedToken] | None:
+    """The imperative and the よ of a 行けよ the tagger read as one word, or None.
+
+    The tagger makes 行けよ, 待てよ and 言えよ a form in よ of the potential verb
+    (行ける), which nobody says: they are the godan imperative 行け and the
+    sentence-final よ. Such a token names the godan verb as its lemma and reads
+    its own base as that verb's potential (イク, イケル). An ichidan verb's own
+    よ form (答えよ, 続けよ, 忘れよ) has one reading for both and stays whole.
+    """
+    token = tokens[i]
+    feature = getattr(token, "feature", None)
+    surface = token.surface
+    if getattr(feature, "pos1", None) != "動詞" or not isinstance(surface, str) or len(surface) < 3:
+        return None
+    ctype = getattr(feature, "cType", None)
+    if not (isinstance(ctype, str) and ctype.startswith("下一段")) or not surface.endswith("よ"):
+        return None
+    if getattr(feature, "cForm", None) not in ("命令形", "意志推量形") or surface[-2] not in _GODAN_IMPERATIVE_ENDINGS:
+        return None
+    lemma_kana, base_kana = getattr(feature, "lForm", None), getattr(feature, "kanaBase", None)
+    if not (isinstance(lemma_kana, str) and isinstance(base_kana, str) and base_kana.endswith("ル")):
+        return None
+    if _GODAN_IMPERATIVE_ENDINGS_KATAKANA.get(base_kana[-2:-1]) != lemma_kana[-1:] or base_kana[:-2] != lemma_kana[:-1]:
+        return None
+    stem = surface[:-1]
+    fields = {
+        "cType": "五段-" + ("ワア行" if ctype.endswith("ア行") else ctype.partition("-")[2]),
+        "cForm": "命令形",
+        "orth": stem,
+        "orthBase": stem[:-1] + _GODAN_IMPERATIVE_ENDINGS[stem[-1]],
+        **dict.fromkeys(("pronBase", "kanaBase", "formBase"), lemma_kana),
+    }
+    for name in ("pron", "kana", "form"):
+        value = getattr(feature, name, None)
+        if isinstance(value, str) and value.endswith("ヨ"):
+            fields[name] = value[:-1]
+    particle = RetaggedToken(token, _YO_PARTICLE, "よ")
+    particle.white_space = ""
+    return RetaggedToken(token, fields, stem), particle
 
 
 #: The fields unidic-lite gives the adjective いい (良い 'good, fine').
