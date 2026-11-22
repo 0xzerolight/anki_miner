@@ -2059,6 +2059,11 @@ class SubtitleParserService:
         line = self._tokenizer_text(line_state[0])
         if self._ONE_KANJI_RUN_HINT_RE.search(line) is None:
             return []
+        # A run needs two one-kanji tokens in a row: most lines have none, and need no token spans.
+        kanji = self._FILE_NAME_KANJI_RE.match
+        single = [len(token.surface) == 1 and kanji(token.surface) is not None for token in line_state[2]]
+        if not any(left and right for left, right in zip(single, single[1:], strict=False)):
+            return []
         runs: list[str] = []
         run: list[str] = []
         closed = counter = False
