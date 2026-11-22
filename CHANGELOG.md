@@ -65,6 +65,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Japanese: わかんない is mined as the dictionary's contraction (わかんなかった mines わかんない).** A bare わかんない was left out, and an inflected one mined わかる.
 - **Japanese: いい after a conditional is mined (どうすればいい, 聞いたらいい, 行きゃいい).** After て it is still grammar (見ていい).
 - **Japanese: the period adverb ちと is mined (ちと尋ねたい),** except where it is a piece of the word before it (俺っちと).
+- **Japanese: する is mined where it is the line's own verb (勉強をする, わたしがします).** After a noun that takes する as a suffix it is still part of that word.
+- **Japanese: かける, つける, つく, かかる, あげる and すぎる in kana are mined where they are the line's own verb (お手数おかけします, 気をつけて).** After て they are still grammar.
+- **Japanese: a kana word wins over a dictionary word made of its pieces (という人 mines いう, 音がした mines する).** The pieces もし and がし had hidden the verb.
+- **Japanese: the kana nouns とき, きのう, しだい, もよう and われ are mined (大学生のとき).**
+- **Japanese: the humble kana verbs おる, いたす, いただく and まいる are mined (ここにおる, 失敗をいたした).**
+- **Japanese: a name the file's speaker labels give, or one called twice with さん, くん or 様, is one word (（巴衛）, 陣八さん).** Its kanji were mined one by one as words.
+- **Japanese: a katakana run of common words is mined as its words (サードインパクト mines サード and インパクト),** unless the file uses the run as a name.
+- **Japanese: pronouns written in katakana card as their kana word (コレ → これ, アンタ → あんた, アイツ → あいつ).**
+- **Japanese: kana join rows also match their kanji spelling (何となく, 勝手に, 何でも).** A kanji verb is never matched by its reading (と言う stays 言う).
+- **Japanese: a word and its function tail are mined as the listed entry (あとで, それだけ, おかげで, もうすぐ, いつものように).**
+- **Japanese: replies that stand alone are mined whole (そうか, そうですね, どうしたの, どうしよう, いいよ).**
+- **Japanese: expressions that open with a particle are mined after a noun (にとって, に対して, のせいで, といえば),** and ほうがいい after a verb.
+- **Japanese: clause openers and fixed adverbs are mined whole (それにしても, こうして, そうすると, なので, どう考えても).**
+- **Japanese: ありえない, ありえる and いなくなる are mined as their entry,** not as ある and いる.
+- **Japanese: みたい, じゃないか and でしょうか are mined as grammar points (雨みたい).** Mine grammar points turns them off.
+- **Japanese: polite greetings are mined as the dictionary's entry (ありがとうございます, おはようございます, よろしくお願いします).**
+- **Japanese: 過ぎる, 欲しい and 貰う written in kanji after a verb are part of its highlight (食べ過ぎた, 教えて欲しい, 信じて貰えなかった),** no longer cards of their own, as in kana.
+- **Japanese: a kana imperative before よ is mined (やれよ mines やる),** and 撮れよ mines 撮る, not 撮れる.
 ### Fixed
 - **Japanese verb cards show the verb the line uses.** An imperative (持て) mined 持てる, a passive (刺された) mined 刺さる, a potential (帰れない) mined 帰れる, a short causative (行かされた) mined 行かす and katakana フラれた mined the loanword フル; they now mine 持つ, 刺す, 帰る, 行く and ふる. The last three fronts had no dictionary entry, so the card was dropped.
 - **Kana fillers no longer become verb cards.** いえ ('no') mined いえる, a sound cut at っ (まっ, たっ) mined まつ and たつ, and the tagger's glues いたんだ, 違かった and ういっす mined 痛む, 買う and 逸する.
@@ -99,6 +117,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **抱く reads だく ('to hold') in 彼女を抱いた,** and いだく ('to harbour') only when what is held is a feeling (夢を抱く).
 - **A 表 that stands alone reads おもて ('outside': 表へ出ろ),** and still ひょう ('table') in 計画表.
 - **Caption marks that open a line (⚟, 📺, 🎤) and a lone ・ at the start of a line are removed from sentences.**
+- **何 reads なん before だ, です, の and て (何ですか), and なに elsewhere (何もない).** 今何時 reads なんじ, not なんどき.
+- **Corrected readings reach the whole sentence, not only the card:** 何と言う reads なんという, 日本中 にほんじゅう and 私自身 わたしじしん, and entries that need the right reading are mined whole (他に, 何もかも, 親の敵).
+- **他, 時 and 後 next to a subtitle space read ほか, とき and あと,** not the suffixes た, じ and ご.
+- **通り and 頃 after a noun read どおり and ごろ (指示通り, ３時頃), and 度 after a verb たび (見る度).**
+- **お家, 開く, 空く, 術, 敵, 宴 and 下 read by their sense (お家に帰る おうち, ドアが開く あく, お腹空いた すく, 知る術 すべ, 親の敵 かたき).**
+- **私 reads わたくし in a humble or ladylike line (私と申します),** わたし elsewhere.
+- **側, 主 and 留まる read そば, あるじ and とどまる where they mean beside, master and stay (俺の側にいろ, 店の主).**
+- **A verb's highlight stops before a final よ (食べてよ, 行けよ)** and reaches over spoken endings (あるん, 動いとん, 恐れませぬ, 見りゃあ, 笑ったってこと, 知ってねえ, ひやかしちゃいや).
+- **A verb's highlight crosses one subtitle space before its ending (帰り ましょう),** and すみませんでした is highlighted whole.
 - **A batch no longer lets one file decide how a kana verb is treated in the next.** The verdict for つかめ (つかむ or つかめる) was remembered by spelling alone, so the same episode could mine differently depending on what was mined before it.
 - **Folder pairing (Batch, Condense, Retime) no longer reads encode and broadcast tags as the episode number.** Ma10p, YUV420P10, 2flac, AACx2, HDR10, 60fps, MPEG2, `[v2]` and the BS11 channel tag left videos unpaired or paired with another episode's subtitle.
 - **Folder pairing keeps a .5 special (`Show - 12.5`) apart from episode 5.**
