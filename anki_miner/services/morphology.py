@@ -2163,9 +2163,10 @@ _LONG_VOWELS = {"a": "あ", "i": "い", "u": "う", "e": "いえ", "o": "うお"
 _VARIANT_SITE_RE = re.compile("[ぁ-ゖ][ー〜～ぁぃぅぇぉ]")
 _VARIANT_CONTENT_POS1 = frozenset({"名詞", "動詞", "形容詞", "副詞", "代名詞", "形状詞", "連体詞", "接続詞"})
 _VARIANT_INFLECTING_POS1 = frozenset({"形容詞", "動詞", "副詞", "助動詞"})
-#: The kinds of variant reading that are on. None: the pass and its readers are
-#: wired and the parser reads every line as before.
-_VARIANT_CLASSES: frozenset[str] = frozenset()
+#: The kinds of variant reading that are on (``_variant_reading``): K, a
+#: stretched spelling the tagger resolves. With none the pass and its readers
+#: are wired and the parser reads every line as before.
+_VARIANT_CLASSES: frozenset[str] = frozenset({"K"})
 
 
 class VariantToken(RetaggedToken):
@@ -2185,8 +2186,40 @@ class VariantToken(RetaggedToken):
 
 
 def word_surface(token) -> str:
-    """The spelling that names ``token``'s word: the standard one where the line stretches it (:class:`VariantToken`)."""
-    return token.shadow if isinstance(token, VariantToken) else token.surface
+    """The spelling that names ``token``'s word: the standard one where the line stretches it.
+
+    A :class:`VariantToken` carries it. A join made over one (どー|も, the entry
+    どうも) is spelled as the line is, and its headword is that spelling with
+    the stretch read: the headword names it.
+    """
+    if isinstance(token, VariantToken):
+        return token.shadow
+    surface: str = token.surface
+    if _VARIANT_CLASSES and getattr(token, "compound", False) is True and _VARIANT_SITE_RE.search(surface):
+        headword = _field(token, "lemma")
+        if headword != surface and _is_stretch_of(surface, headword):
+            return headword
+    return surface
+
+
+def _is_stretch_of(surface: str, standard: str, i: int = 0, j: int = 0) -> bool:
+    """Whether ``standard`` is ``surface`` with every stretch read as a long vowel or left out (どーも, どうも)."""
+    while i < len(surface):
+        vowel = _KANA_VOWELS.get(surface[i - 1]) if i else None
+        if vowel is not None and (surface[i] in _VARIANT_MARKS or _SMALL_VOWELS.get(surface[i]) == vowel):
+            end = i
+            while end < len(surface) and (surface[end] in _VARIANT_MARKS or _SMALL_VOWELS.get(surface[end]) == vowel):
+                end += 1
+            return (
+                j < len(standard)
+                and standard[j] in _LONG_VOWELS[vowel]
+                and _is_stretch_of(surface, standard, end, j + 1)
+            ) or _is_stretch_of(surface, standard, end, j)
+        if j >= len(standard) or surface[i] != standard[j]:
+            return False
+        i += 1
+        j += 1
+    return j == len(standard)
 
 
 class _VariantReading(NamedTuple):
@@ -2412,24 +2445,30 @@ def _variant_reading(
             return None  # the tagger's own reading is a listed form already (すげえ → すごい)
         if pos1 not in _VARIANT_CONTENT_POS1 | {"感動詞"} or not headword(form) or not _VARIANT_MARKS.isdisjoint(form):
             return None
-        if pos1 == "感動詞" and all(ch in _SMALL_VOWELS for ch in text[start:end]):
-            return None
+        if all(ch in _SMALL_VOWELS for ch in text[start:end]) and (pos1 == "感動詞" or end == old[0][2]):
+            return None  # a small vowel that ends the word is that spelling's own (あぁ, いやぁ)
         if sum(ch not in _VARIANT_MARKS and ch not in _SMALL_VOWELS for ch in old_token.surface) <= 1:
-            sides = []
-            if first > 0 and located[first - 1][2] == old[0][1]:
-                sides.append(located[first - 1][0])
-            if first + 1 < len(located) and located[first + 1][1] == old[0][2]:
-                following = located[first + 1][0]
-                sides.append(following)
-                if _field(following, "pos2") == "固有名詞" or _field(following, "pos1") not in (
-                    "助詞",
-                    "助動詞",
-                    "補助記号",
-                    "動詞",
-                    "形容詞",
-                ):
-                    return None
-            if any(_variant_flag(token, headword) for token in sides):
+            before = located[first - 1][0] if first > 0 and located[first - 1][2] == old[0][1] else None
+            following = (
+                located[first + 1][0] if first + 1 < len(located) and located[first + 1][1] == old[0][2] else None
+            )
+            following_pos1 = _field(following, "pos1") if following is not None else "補助記号"
+            if following is not None and (
+                _field(following, "pos2") == "固有名詞"
+                or following_pos1 not in ("助詞", "助動詞", "補助記号", "動詞", "形容詞")
+                # どー|こ, こー|い (来い), こー|の (この), こー|くん (a nickname): the stem is a piece of that word.
+                or (
+                    following_pos1 in ("動詞", "形容詞")
+                    and len(following.surface) == 1
+                    and _field(following, "lemma") != "為る"
+                )
+                or following.surface in ("い", "の", "くん")
+            ):
+                return None
+            # できたて|どー: a stem that ends its clause right after a word is a sentence-final sound.
+            if following_pos1 == "補助記号" and before is not None:
+                return None
+            if any(_variant_flag(token, headword) for token in (before, following) if token is not None):
                 return None
     else:
         kind = "W"

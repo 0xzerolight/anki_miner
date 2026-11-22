@@ -1,0 +1,8 @@
+{"id":"k21v01","sentence":"ぜーんぶ食べた","expected":["ぜんぶ","食べる"],"category":"k1121-var","note":"V-K: a stretched spelling the tagger resolves cards the standard word"}
+{"id":"k21v02","sentence":"みーんな来たよ","expected":["みんな","来る"],"category":"k1121-var","note":"V-K"}
+{"id":"k21v03","sentence":"すごーい","expected":["すごい"],"category":"k1121-var","note":"V-K: a search-only spelling is no front"}
+{"id":"k21v04","sentence":"それはちがーう","expected":["それ","ちがう"],"category":"k1121-var","note":"V-K: a verb"}
+{"id":"k21v05","sentence":"ずーっと待ってた","expected":["ずーっと","待つ"],"category":"k1121-var","note":"a real headword as written stays"}
+{"id":"k21v06","sentence":"このやろー","expected":["この"],"category":"k1121-var","note":"やろう is another word: left alone"}
+{"id":"k21v07","sentence":"どーこですか","expected":[],"category":"k1121-var","note":"a one-kana stem before a stray kana is no どう"}
+{"id":"k21v08","sentence":"カードを切る","expected":["カード","切る"],"category":"k1121-var","note":"katakana before the mark is no site"}

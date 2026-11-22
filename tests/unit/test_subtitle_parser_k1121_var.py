@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import re
+
 import pytest
 
 from anki_miner.config.config import AnkiMinerConfig
+from anki_miner.models.reading import ReadingUnit
 from anki_miner.services import morphology
 from anki_miner.services.deinflection import (
     find_highlight_end_with_trace,
@@ -105,3 +108,133 @@ class TestShadowLine:
         tokens = _tagged("ぜーんぶ食べた")
         service = SubtitleParserService(AnkiMinerConfig())
         assert read_variants("ぜーんぶ食べた", tokens, service._tagger(), lambda spelling: 1) is tokens
+
+
+# What the dictionary of these tests knows. A word with tags is a real entry, a
+# row without tags a search-only form that points at the standard word, and a
+# kana string may be listed only as the reading of a word written otherwise.
+_ENTRIES = {
+    "ずーっと": "adv",
+    "おーい": "int",
+    "すごい": "adj-i",
+    "ちがう": "v5u",
+    "ない": "adj-i",
+    "ゆっくり": "adv",
+    "ばか": "n adj-na",
+    "みんな": "n adv",
+    "どう": "adv",
+    "そう": "adv",
+    "くる": "vk",
+    "どうも": "int adv",
+    "こう": "adv",
+    "どうして": "adv",
+}
+_SEARCH_ONLY = frozenset({"すごーい", "ちがーう", "なーい"})
+_READINGS = frozenset({"ぜんぶ", "せんせい", "うそ", "やろう"})
+_LISTED = frozenset(_ENTRIES) | _SEARCH_ONLY | _READINGS
+
+
+def _service(*, entries: bool = True) -> SubtitleParserService:
+    return SubtitleParserService(
+        AnkiMinerConfig(),
+        term_lookup=lambda asked: {term for term in asked if term in _LISTED},
+        kana_attest_lookup=lambda forms: {form: form in _LISTED for form in forms},
+        form_lookup=(
+            (lambda asked: {term: [("", _ENTRIES.get(term, ""))] for term in asked if term in _LISTED - _READINGS})
+            if entries
+            else None
+        ),
+    )
+
+
+def _words(text: str, service: SubtitleParserService | None = None) -> list:
+    words, _index, _counts = (service or _service()).parse_text_units(
+        [ReadingUnit(text=text, index=0, location_label="t")], want_line_index=False
+    )
+    return words
+
+
+def _cards(text: str, service: SubtitleParserService | None = None) -> dict[str, str]:
+    """Each card front of the line with the text its highlight covers."""
+    return {word.mined_form: text[word.surface_start : word.bold_end] for word in _words(text, service)}
+
+
+class TestStretchedSpellingTheTaggerResolves:
+    """V-K: the tagger knows the word, only its spelling is the stretched one: the card is the standard word."""
+
+    @pytest.mark.parametrize(
+        ("text", "front", "written"),
+        [
+            ("ぜーんぶ食べた", "ぜんぶ", "ぜーんぶ"),
+            ("みーんな来たよ", "みんな", "みーんな"),
+            ("すごーい", "すごい", "すごーい"),  # listed, but only as a search-only form
+            ("それはちがーう", "ちがう", "ちがーう"),
+            ("ゆーっくり歩こう", "ゆっくり", "ゆーっくり"),
+            ("お金がなーい", "ない", "なーい"),
+            ("せんせー、おはよう", "せんせい", "せんせー"),
+        ],
+    )
+    def test_cards_the_standard_word_over_the_text_as_written(self, text, front, written):
+        cards = _cards(text)
+        assert cards.get(front) == written
+        assert written not in cards
+
+    @pytest.mark.parametrize(
+        ("text", "front"),
+        [
+            ("ずーっと待ってた", "ずーっと"),  # a real headword as written
+            ("おーい、こっちだ", "おーい"),
+        ],
+    )
+    def test_a_real_headword_as_written_stays(self, text, front):
+        assert front in _cards(text)
+
+    @pytest.mark.parametrize(
+        ("text", "front"),
+        [
+            ("どーこですか", "どう"),  # a one-kana stem before a stray kana
+            ("そーゆうことは言うな", "そう"),  # a one-kana stem before a name the tagger invents
+            ("このやろー", "やろう"),  # やろう is another word (やる)
+            ("できたてどー", "どう"),  # a stem that ends the clause right after a word
+            ("こーくんが来た", "こう"),  # a nickname
+            ("こーのー、待て", "こう"),  # この, stretched
+            ("カードを切る", "かど"),  # katakana before the mark is no site
+            ("もっと食べる", "もと"),
+        ],
+    )
+    def test_a_stretch_that_is_no_known_word_is_left_alone(self, text, front):
+        assert front not in _cards(text)
+
+    def test_a_join_over_a_stretched_stem_is_the_entry_as_the_dictionary_spells_it(self):
+        assert _cards("どーも") == {"どうも": "どーも"}
+        assert _cards("どーして来たの").get("どうして") == "どーして"
+
+    def test_a_small_vowel_that_ends_a_word_is_that_spelling(self):
+        _text, raw_tokens, *_rest = _service()._build_line_state("いやぁ、そうか", 0.0, 1.0)
+        assert not any(isinstance(token, VariantToken) for token in raw_tokens)
+
+    def test_the_raw_tokens_still_spell_the_line(self):
+        service = _service()
+        text, raw_tokens, *_rest = service._build_line_state("ぜーんぶ食べた", 0.0, 1.0)
+        assert "".join(token.surface for token in raw_tokens) == text
+        assert [word_surface(token) for token in raw_tokens][0] == "ぜんぶ"
+
+    def test_the_sentence_and_its_furigana_show_and_bold_the_text_as_written(self):
+        text = "それはちがーうよ"
+        word = next(word for word in _words(text) if word.mined_form == "ちがう")
+        assert word.surface == "ちがーう"
+        assert word.sentence == text
+        plain = re.search(r"<b>(.*?)</b>", word.sentence_bolded).group(1)
+        ruby = re.search(r"<b>(.*?)</b>", word.sentence_furigana_bolded).group(1)
+        assert plain == "ちがーう"
+        assert re.sub(r"\[[^\]]*\]| ", "", ruby) == "ちがーう"
+        assert re.sub(r"\[[^\]]*\]|</?b>| ", "", word.sentence_furigana_bolded) == text
+
+    def test_without_a_dictionary_the_line_is_read_as_before(self):
+        service = SubtitleParserService(AnkiMinerConfig())
+        _text, raw_tokens, *_rest = service._build_line_state("ぜーんぶ食べた", 0.0, 1.0)
+        assert not any(isinstance(token, VariantToken) for token in raw_tokens)
+
+    def test_without_entry_tags_a_listed_spelling_is_a_headword_as_written(self):
+        # Search-only rows cannot be told from real entries: nothing listed is re-read.
+        assert "すごーい" in _cards("すごーい", _service(entries=False))
