@@ -9,6 +9,7 @@ from pathlib import Path
 import pytest
 
 from anki_miner.config.config import AnkiMinerConfig
+from anki_miner.models.reading import ReadingUnit
 from anki_miner.services.subtitle_parser import SubtitleParserService
 
 
@@ -335,3 +336,114 @@ class TestCalledNames:
         path = _srt(tmp_path / "words.srt", lines)
         for config in (None, _NAMES_MINED):
             assert _line_cards(_service(config), path) == _line_cards(_switched_off(_service(config)), path)
+
+
+# Katakana words the dictionary lists; the last two are listed but not common.
+_KATAKANA_COMMON = (
+    "サード",
+    "インパクト",
+    "サービス",
+    "ドリンク",
+    "インターナショナル",
+    "コミュニケーション",
+    "ゲーム",
+    "やる",
+    "アイス",
+    "ベア",
+    "ペット",
+    "ボトル",
+    "ペットボトル",
+    "ベリー",
+    "スカイ",
+    "ハート",
+    "ミクロ",
+    "リサーチ",
+    "キャプテン",
+    "フック",
+)
+_KATAKANA_RARE = ("ライド", "ウォッチ")
+
+
+def _katakana_service() -> SubtitleParserService:
+    spelled = {
+        *_HEADWORDS,
+        *_KATAKANA_COMMON,
+        *_KATAKANA_RARE,
+        "剣",
+        "速い",
+        "船",
+        "話",
+        "社",
+        "勤める",
+        "起きる",
+        "頼む",
+    }
+    return SubtitleParserService(
+        AnkiMinerConfig(),
+        term_lookup=lambda terms: spelled.intersection(terms),
+        kana_attest_lookup=lambda forms: {form: form in spelled for form in forms},
+        term_common_lookup=lambda terms: {term: term in _KATAKANA_COMMON for term in terms},
+        name_piece_rejects=True,
+    )
+
+
+def _fronts(service: SubtitleParserService, text: str) -> list[str]:
+    words, _index, _counts = service.parse_text_units(
+        [ReadingUnit(text=text, index=0, location_label="t")], want_line_index=False
+    )
+    return [word.mined_form for word in words]
+
+
+class TestKatakanaRunsOfWords:
+    @pytest.mark.parametrize(
+        ("text", "words"),
+        [
+            ("サードインパクトが起きる", {"サード", "インパクト"}),
+            ("サービスドリンクを頼んだ", {"サービス", "ドリンク"}),
+            ("インターナショナルコミュニケーションを学ぶ", {"インターナショナル", "コミュニケーション"}),
+            ("ゲームヤラれた", {"ゲーム", "やる"}),
+        ],
+    )
+    def test_a_run_of_common_words_is_mined_as_its_words(self, text: str, words: set[str]) -> None:
+        assert words <= set(_fronts(_katakana_service(), text))
+
+    @pytest.mark.parametrize(
+        ("text", "pieces"),
+        [
+            ("アイスベアが好きだ", {"アイス", "ベア"}),  # a piece of two kana
+            ("ライドウォッチを使え", {"ライド", "ウォッチ"}),  # listed, not common
+            ("ペットボトルを捨てる", {"ペット", "ボトル"}),  # the whole is a headword
+            ("ベリーベリーうれしい", {"ベリー"}),  # one word said over
+            ("スカイハートさんが来た", {"スカイ", "ハート"}),  # an honorific follows
+            ("ミクロリサーチ社に勤める", {"ミクロ", "リサーチ"}),  # a one-kanji word follows
+            ("ミクロ・リサーチスカイの話", {"リサーチ", "スカイ"}),  # a ・ beside the run
+            ("キャプテンフックの船だ", {"キャプテン", "フック"}),  # a title before a name
+        ],
+    )
+    def test_a_run_that_may_be_a_name_stays_unmined(self, text: str, pieces: set[str]) -> None:
+        assert not pieces & set(_fronts(_katakana_service(), text))
+
+    def test_without_a_commonness_probe_nothing_changes(self) -> None:
+        assert not {"サード", "インパクト"} & set(_fronts(_service(), "サードインパクトが起きる"))
+
+    def test_a_run_the_file_uses_as_a_name_stays_unmined(self, tmp_path: Path) -> None:
+        body = ["スカイハートの剣は速い", "サービスドリンクを頼んだ"]
+        named = _srt(tmp_path / "named.srt", ["スカイハート！", "スカイハート！ 待って", *body])
+        plain = _srt(tmp_path / "plain.srt", body)
+        service = _katakana_service()
+        # One parser, both files, the named one first: its name does not reach the next file.
+        assert dict(_line_cards(service, named))["スカイハートの剣は速い"] == ["剣", "速い"]
+        assert dict(_line_cards(service, named))["サービスドリンクを頼んだ"][:2] == ["サービス", "ドリンク"]
+        assert dict(_line_cards(service, plain))["スカイハートの剣は速い"] == ["スカイ", "ハート", "剣", "速い"]
+        assert dict(_line_cards(service, named))["スカイハートの剣は速い"] == ["剣", "速い"]
+
+    def test_a_katakana_label_makes_a_name_run(self, tmp_path: Path) -> None:
+        path = _srt(tmp_path / "label.srt", ["（スカイハート）森へ行こう", "スカイハートの剣は速い"])
+        assert dict(_line_cards(_katakana_service(), path))["スカイハートの剣は速い"] == ["剣", "速い"]
+
+    def test_the_count_path_and_the_mining_path_agree(self, tmp_path: Path) -> None:
+        path = _srt(tmp_path / "count.srt", ["サードインパクトが起きる", "スカイハートさんが来た"])
+        service = _katakana_service()
+        counted = service.count_fronts(path)
+        assert set(counted) == {word.mined_form for word in service.parse_subtitle_file(path)}
+        assert counted["サード"] == 1 and "スカイ" not in counted

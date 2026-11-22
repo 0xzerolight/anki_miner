@@ -1061,6 +1061,9 @@ class SubtitleParserService:
         # ja factory passes name_piece_rejects. A plain attribute, so that a
         # measurement can switch the pass off; no setting reads it.
         self._file_name_list: bool = True
+        # Verdicts of _katakana_run_is_words, keyed by the run and the shape of its
+        # tokens and never by a file's names; bounded like _exist_memo.
+        self._katakana_run_memo: dict[tuple[Any, ...], bool] = {}
 
     # ------------------------------------------------------------------
     # Per-parse memoization helpers
@@ -1701,6 +1704,17 @@ class SubtitleParserService:
         r"(?<![ぁ-ゖァ-ヺー一-鿿々〆])[ァ-ヺー一-鿿々〆]{2,7}(?:さん|くん|ちゃん|さま)?(?![ぁ-ゖァ-ヺー一-鿿々〆])"
     )
     _NAME_PAUSE_POS1: frozenset[str] = frozenset({"補助記号", "記号", "空白"})
+    #: A katakana run as the fragment guard reads one (no ・, no ゠), and the honorific after a name.
+    _KATAKANA_RUN_RE = re.compile(r"[ァ-ヺー-ヿ]{2,}")
+    _NAME_HONORIFIC_RE = re.compile(
+        "|".join(sorted(_NAME_HONORIFIC_SUFFIXES | _NAME_HONORIFIC_NOUNS, key=len, reverse=True))
+    )
+
+    class _NameRunTokens(list[Any]):
+        """A line's merged tokens, with the katakana runs of that line which its file uses as names."""
+
+        name_runs: frozenset[str] = frozenset()
+
     #: One-kanji words that start a word, not a name that is only called (元|父, 新|店).
     _NAME_PREFIX_HEADS: frozenset[str] = frozenset("元新前現全各両副総大小旧故某同本当")
 
@@ -1728,6 +1742,7 @@ class SubtitleParserService:
         labels: collections.Counter[str] = collections.Counter()
         honorifics: collections.Counter[str] = collections.Counter()
         called: collections.Counter[str] = collections.Counter()
+        katakana: collections.Counter[str] = collections.Counter()
         for line in subs:
             if getattr(line, "is_comment", None) is True:
                 continue
@@ -1744,10 +1759,56 @@ class SubtitleParserService:
                 labels.update(self._speaker_label_names(line.text))
                 honorifics.update(self._names_before_honorifics(line_state))
                 called.update(self._names_called(line_state))
+                katakana.update(self._katakana_runs_named(self._tokenizer_text(text)))
         names = self._file_names(labels, honorifics, called)
-        if not names:
-            return line_states
-        return [self._merge_file_names(line_state, names) for line_state in line_states]
+        if names:
+            line_states = [self._merge_file_names(line_state, names) for line_state in line_states]
+        # A katakana name is known by the same evidence, whatever its length and its tokens:
+        # twice before an honorific or called, or once on a label.
+        runs = {run for run, count in katakana.items() if count >= 2}
+        runs.update(name for name in labels if self._KATAKANA_RUN_RE.fullmatch(name))
+        if runs:
+            line_states = [self._with_name_runs(line_state, runs) for line_state in line_states]
+        return line_states
+
+    def _katakana_runs_named(self, line: str) -> list[str]:
+        """Each katakana run of a line that is used as a name: once for an honorific after it, once for standing alone.
+
+        The run is the whole stretch of katakana, so the count is the same
+        evidence ``_names_before_honorifics`` and ``_names_called`` read for a
+        kanji name. A pause is the line's edge or anything that is no letter.
+        """
+        named: list[str] = []
+        for run in self._KATAKANA_RUN_RE.finditer(line):
+            honorific = self._NAME_HONORIFIC_RE.match(line, run.end())
+            if honorific is not None:
+                named.append(run.group())
+            end = run.end() if honorific is None else honorific.end()
+            if (run.start() == 0 or not line[run.start() - 1].isalnum()) and (
+                end == len(line) or not line[end].isalnum()
+            ):
+                named.append(run.group())
+        return named
+
+    def _with_name_runs(
+        self, line_state: tuple[str, list, list, float, float, float], runs: set[str]
+    ) -> tuple[str, list, list, float, float, float]:
+        """``line_state`` with the file's katakana name runs that stand in the line noted on its merged tokens.
+
+        A new state with a new list (``_NameRunTokens``) of the same tokens.
+        ``_katakana_run_is_words`` reads the note and leaves such a run in
+        pieces, so the file's verdict travels with the file's own states and is
+        never part of a memo key.
+        """
+        text, raw_tokens, merged_tokens, start, end, duration = line_state
+        present = frozenset(
+            run.group() for run in self._KATAKANA_RUN_RE.finditer(self._tokenizer_text(text)) if run.group() in runs
+        )
+        if not present or not merged_tokens:
+            return line_state
+        noted = self._NameRunTokens(merged_tokens)
+        noted.name_runs = present
+        return (text, raw_tokens, noted, start, end, duration)
 
     def _speaker_label_names(self, raw_text: str) -> list[str]:
         """What the speaker labels of one cue name (（凛堂）森へ行こう gives 凛堂).
@@ -3579,7 +3640,7 @@ class SubtitleParserService:
         if rejection == REJECT_SCRIPT and self._is_attested_acronym(word_token):
             rejection = None
         if rejection is None:
-            if self._is_katakana_run_fragment(word_token, text, tok_start, tok_end):
+            if self._is_katakana_run_fragment(word_token, text, tok_start, tok_end, tokens):
                 return False
             if self._name_piece_rejects and self._is_letter_run_fragment(word_token, text, tok_start, tok_end):
                 return False
@@ -3617,7 +3678,7 @@ class SubtitleParserService:
             if rejects is not None:
                 self._note_parse_reject(rejects, word_token, rejection)
             return False
-        if self._is_katakana_run_fragment(word_token, text, tok_start, tok_end):
+        if self._is_katakana_run_fragment(word_token, text, tok_start, tok_end, tokens):
             return False
         return not self._ellipsis_reject(word_token, text, tok_start, tok_end)
 
@@ -4143,7 +4204,9 @@ class SubtitleParserService:
         pos1 = getattr(getattr(token, "feature", None), "pos1", None)
         return pos1 in _KANA_RECOVER_WINDOW_FUNCTIONAL_POS1
 
-    def _is_katakana_run_fragment(self, word_token, text: str, tok_start: int, tok_end: int) -> bool:
+    def _is_katakana_run_fragment(
+        self, word_token, text: str, tok_start: int, tok_end: int, tokens: list | None = None
+    ) -> bool:
         """Whether an accepted all-katakana token is a fragment of a longer katakana run.
 
         Post-acceptance REJECT layer (runs AFTER ``_should_include_word`` accepts)
@@ -4177,8 +4240,10 @@ class SubtitleParserService:
         (ゲーム|ヤラれた → やる); a front that stays katakana gets no exemption.
         Deliberate precision-over-recall (plan-decided): an attested katakana word
         abutting an unbroken run (アイス|ベア) is rejected, and legit adjacent
-        loanword bigrams whose full run is no headword lose both halves — no
-        independent-attestation carve-out.
+        loanword bigrams whose full run is no headword lose both halves. One
+        gated carve-out: with the line's ``tokens``, a run that is a row of common
+        dictionary words as the tagger cut it is mined as those words
+        (``_katakana_run_is_words``: サード|インパクト).
         """
         if self._compound_matcher is None:
             return False
@@ -4197,7 +4262,138 @@ class SubtitleParserService:
             folded = self._fold_katakana_verb_front(orth_base)
             if folded != orth_base and not _is_all_katakana(folded):
                 return False
-        return True
+        return not self._katakana_run_is_words(text, tok_start, tok_end, tokens)
+
+    #: Katakana titles before a name (キャプテン|フック): such a run is a name, not two words.
+    _KATAKANA_TITLES: frozenset[str] = frozenset(
+        {
+            "キャプテン",
+            "プリンス",
+            "プリンセス",
+            "キング",
+            "クイーン",
+            "ドクター",
+            "ミスター",
+            "ミス",
+            "ミセス",
+            "マスター",
+            "レディ",
+            "サー",
+            "ロード",
+            "シスター",
+            "ブラザー",
+            "プロフェッサー",
+        }
+    )
+
+    def _katakana_run_is_words(self, text: str, tok_start: int, tok_end: int, tokens: list | None) -> bool:
+        """Whether the katakana run around a token is a row of common dictionary words, as the tagger cut it.
+
+        サードインパクト is no headword, and the fragment guard turns サード and
+        インパクト away with the pieces of every unknown name. The run is mined
+        as its words only when all of this holds; no boundary moves and the
+        tagger is not called:
+
+        * the whole run is exactly two or more tokens of the line;
+        * each is an all-katakana noun of three kana or more (no proper noun,
+          no numeral) that the dictionary lists by spelling AND tags common: a
+          rare short word inside an unknown name (ライド|ウォッチ) fails here. A
+          token the compound matcher made counts as listed, and a katakana verb
+          the front fold cards (ゲーム|ヤラれた) is covered;
+        * the pieces are not one word said over (ベリーベリー), and the first is
+          no title (``_KATAKANA_TITLES``);
+        * the run as a whole is listed neither by spelling nor as a reading;
+        * no ・ or ゠ stands beside the run, and no honorific, suffix or one-kanji
+          word follows it (スカイハートさん, ミクロリサーチ社);
+        * the file does not use the run as a name (``_with_name_runs``). That
+          check reads the line's own token list and stays outside the memo.
+
+        Without the commonness or the reading probe nothing is accepted.
+        """
+        if tokens is None or self._term_common_lookup is None or self._kana_attest_lookup is None:
+            return False
+        run_start, run_end = tok_start, tok_end
+        while run_start > 0 and _continues_katakana_run(text[run_start - 1]):
+            run_start -= 1
+        while run_end < len(text) and _continues_katakana_run(text[run_end]):
+            run_end += 1
+        run = text[run_start:run_end]
+        if run in getattr(tokens, "name_runs", ()):
+            return False
+        inside: list[Any] = []
+        following = None
+        covered = run_start
+        for token, start, end in self._iter_token_spans(text, tokens):
+            if end <= run_start:
+                continue
+            if start >= run_end:
+                following = token if start == run_end else None
+                break
+            if start != covered:
+                return False
+            covered = end
+            inside.append(token)
+        if len(inside) < 2 or covered != run_end:
+            return False
+        key = (
+            run,
+            tuple(self._katakana_run_token_shape(token) for token in inside),
+            None if following is None else self._katakana_run_token_shape(following),
+            text[run_start - 1 : run_start],
+            text[run_end : run_end + 1],
+        )
+        verdict = self._katakana_run_memo.get(key)
+        if verdict is None:
+            if len(self._katakana_run_memo) >= _FRONT_CACHE_CAP:
+                self._katakana_run_memo.clear()
+            verdict = self._katakana_run_memo[key] = self._katakana_run_words(run, inside, following, key[3], key[4])
+        return verdict
+
+    def _katakana_run_token_shape(self, token: Any) -> tuple[str, str | None, str | None, bool, str]:
+        """What ``_katakana_run_words`` reads of one token: the memo key's part for it."""
+        feature = getattr(token, "feature", None)
+        pos1 = getattr(feature, "pos1", None)
+        return (
+            token.surface,
+            pos1,
+            getattr(feature, "pos2", None),
+            getattr(token, "compound", False) is True,
+            self._mining_base(token) if pos1 == "動詞" else "",
+        )
+
+    def _katakana_run_words(self, run: str, inside: list, following: Any, before: str, after: str) -> bool:
+        """The verdict of ``_katakana_run_is_words`` for one run, from its tokens and the dictionary alone."""
+        reads = self._kana_attest_lookup
+        if reads is None or before in _KATAKANA_RUN_SEPARATORS or after in _KATAKANA_RUN_SEPARATORS:
+            return False
+        words: list[str] = []
+        for token in inside:
+            surface, pos1, pos2, compound, orth_base = self._katakana_run_token_shape(token)
+            if pos1 == "動詞":
+                folded = self._fold_katakana_verb_front(orth_base)
+                if folded == orth_base or _is_all_katakana(folded):
+                    return False
+                continue
+            if len(surface) < 3 or (not compound and (pos1 != "名詞" or pos2 in ("固有名詞", "数詞"))):
+                return False
+            words.append(surface)
+        if not words or (len(words) > 1 and len(set(words)) == 1) or words[0] in self._KATAKANA_TITLES:
+            return False
+        if following is not None:
+            surface, pos1 = following.surface, getattr(getattr(following, "feature", None), "pos1", None)
+            if (
+                pos1 == "接尾辞"
+                or surface in self._NAME_HONORIFIC_SUFFIXES
+                or surface in self._NAME_HONORIFIC_NOUNS
+                or (len(surface) == 1 and self._FILE_NAME_KANJI_RE.search(surface) is not None)
+            ):
+                return False
+        common = self._memoized_term_common(words)
+        if common is None or not all(common.get(word) for word in words):
+            return False
+        if len(self._memoized_attest(words)) != len(set(words)):
+            return False
+        return run not in self._memoized_attest([run]) and not reads([run]).get(run)
 
     @staticmethod
     def _is_letter_run_fragment(word_token, text: str, tok_start: int, tok_end: int) -> bool:
