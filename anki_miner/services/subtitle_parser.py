@@ -1,6 +1,7 @@
 """Service for parsing subtitles and extracting vocabulary."""
 
 import collections
+import html
 import logging
 import re
 import time
@@ -18,6 +19,7 @@ from anki_miner.models.reading import ReadingUnit
 from anki_miner.models.word import resolve_pronoun_fold_reading, select_mined_form
 from anki_miner.services.compound_matcher import (
     CompoundDictionaryMatcher,
+    CompoundSyntheticToken,
     NameLookup,
     NameSpanMatcher,
     TermLookup,
@@ -97,6 +99,8 @@ from anki_miner.utils.text_utils import (
     generate_furigana_from_tokens,
     generate_reading_from_tokens,
     is_kana_only,
+    strip_format_chars,
+    strip_subtitle_markup,
     wrap_target_furigana_from_tokens,
 )
 
@@ -1053,6 +1057,10 @@ class SubtitleParserService:
         # timeline (set_skip_ranges). Like _line_cache it survives parse_* calls;
         # unlike it, it is applied at yield, so the cached line states stay whole.
         self._skip_ranges: dict[Path, tuple[tuple[float, float], ...]] = {}
+        # The per-file name pass (_name_merged_line_states), which runs where the
+        # ja factory passes name_piece_rejects. A plain attribute, so that a
+        # measurement can switch the pass off; no setting reads it.
+        self._file_name_list: bool = True
 
     # ------------------------------------------------------------------
     # Per-parse memoization helpers
@@ -1616,6 +1624,15 @@ class SubtitleParserService:
         # committed once the generator is fully consumed, so a consumer that
         # abandons iteration early does not leave a truncated entry.
         line_states: list[tuple[str, list, list, float, float, float]] = []
+        if self._name_piece_rejects and self._file_name_list:
+            # The name pass reads the whole file before it gives out a line
+            # (_name_merged_line_states), so nothing is left for the lazy loop.
+            line_states = self._name_merged_line_states(subs, unmined)
+            for line_state in line_states:
+                if skip and midpoint_in_ranges(line_state[3], line_state[4], skip):
+                    continue
+                yield self._shifted_line_state(line_state, offset)
+            subs = ()
         for line in subs:
             # Skip ASS/SSA Comment events (karaoke, sign TL, staff credits…).
             # pysubs2 SSAEvent.is_comment is a bool; we check ``is True`` (strict
@@ -1654,6 +1671,196 @@ class SubtitleParserService:
             if len(self._line_cache) >= _LINE_CACHE_MAX_FILES:
                 self._line_cache.pop(next(iter(self._line_cache)))
             self._line_cache[key] = (fingerprint, line_states)
+
+    #: A speaker label at the start of a caption row that carries speech: （凛堂）…, (凛堂)…, 凛堂：…
+    _SPEAKER_LABEL_RE = re.compile(r"\s*(?:[（(]([^（）()]{1,14})[）)]|([^「『:：（()）\s]{1,10})[:：](?!\d))\s*\S")
+    #: Several speakers on one label (凛堂・瞳), and what a label adds to a name (凛堂の声, 凛堂Ｍ).
+    _SPEAKER_LABEL_SPLIT_RE = re.compile(r"[・／/＆&、,]")
+    _SPEAKER_LABEL_TAIL_RE = re.compile(r"(?:の声|の心の声|[ＭMＮN])$")
+    #: A label for several people names a kind of person far more often than a person (生徒たち).
+    _SPEAKER_LABEL_GROUP_RE = re.compile(r"(?:たち|達|ら)$")
+    #: One-kanji words for a rank, a kin, a house or a group that follow a name the tagger knows
+    #: (葛城|王, 倉本|組): the word stays a word.
+    _NAME_TITLE_TAILS: frozenset[str] = frozenset("兄姉父母爺婆姫嬢殿公卿妃帝君様氏王家屋店組隊団軍社会部")
+    #: What a name of the file's list is written with, and the kanji it must hold.
+    _FILE_NAME_RE = re.compile(r"[ぁ-ゖァ-ヺー一-鿿々〆]{2,6}")
+    _FILE_NAME_KANJI_RE = re.compile(r"[一-鿿々〆]")
+    #: Parts of speech no piece of a labelled name has.
+    _NAME_PIECE_EXCLUDED_POS1: frozenset[str] = frozenset({"助詞", "助動詞", "代名詞", "補助記号", "記号", "空白"})
+    #: Kana that link the parts of a name (一ノ瀬, 茅ヶ崎).
+    _NAME_CONNECTORS: frozenset[str] = frozenset("ノヶケ")
+
+    def _name_merged_line_states(
+        self, subs: Any, unmined: frozenset[int]
+    ) -> list[tuple[str, list, list, float, float, float]]:
+        """Every line state of a file, each name the file itself vouches for joined to one token.
+
+        A name UniDic does not know comes out in pieces (凛|堂), and each piece
+        is carded as a common noun. The file says who its people are (on its
+        speaker labels), so the evidence is collected over the whole file
+        before any line is given out, and a listed name becomes one proper noun
+        wherever it stands (``_merge_file_names``).
+
+        One parser serves a batch of files, so everything here is local to one
+        call: the list of names is never stored on the parser or under a memo
+        key, and a line state is replaced by a new one before it is yielded or
+        cached, never changed afterwards. The lines are read exactly as the
+        lazy loop of ``_iter_parsed_lines`` reads them; a line the style rule
+        skipped gives no evidence.
+        """
+        line_states: list[tuple[str, list, list, float, float, float]] = []
+        labels: collections.Counter[str] = collections.Counter()
+        for line in subs:
+            if getattr(line, "is_comment", None) is True:
+                continue
+            text = self._clean_line_text(line.text)
+            if not text:
+                continue
+            start, end = line.start / 1000.0, line.end / 1000.0
+            if id(line) in unmined:
+                line_states.append((text, [], [], start, end, end - start))
+                continue
+            line_state = self._build_line_state(text, start, end)
+            line_states.append(line_state)
+            if line_state[1]:
+                labels.update(self._speaker_label_names(line.text))
+        names = self._file_names(labels)
+        if not names:
+            return line_states
+        return [self._merge_file_names(line_state, names) for line_state in line_states]
+
+    def _speaker_label_names(self, raw_text: str) -> list[str]:
+        """What the speaker labels of one cue name (（凛堂）森へ行こう gives 凛堂).
+
+        Read from the cue as the label strip receives it (markup gone,
+        normalized, rows apart), because the cleanup pattern deletes a label
+        before the line is tokenized. A group alone on its row names a sound,
+        not a speaker.
+        """
+        if not any(mark in raw_text for mark in "（(：:"):
+            return []
+        text = html.unescape(strip_subtitle_markup(re.sub(r"\\[nN]|\r\n?", "\n", raw_text)))
+        text = standardize_kanji_variants(normalize_for_tokenization(strip_format_chars(text)))
+        names: list[str] = []
+        for row in text.split("\n"):
+            label = self._SPEAKER_LABEL_RE.match(row)
+            if label is None:
+                continue
+            for part in self._SPEAKER_LABEL_SPLIT_RE.split(label.group(1) or label.group(2)):
+                name = self._SPEAKER_LABEL_TAIL_RE.sub("", part.strip())
+                if not self._SPEAKER_LABEL_GROUP_RE.search(name):
+                    names.append(name)
+        return names
+
+    def _file_names(self, labels: collections.Counter[str]) -> dict[str, str]:
+        """The names one file vouches for, each with its kind of evidence (``L``: speaker labels).
+
+        A name stands on two labels or more, is 2 to 6 characters with a kanji,
+        and is no dictionary headword as written: a role (店員) and a word that
+        is also a name (森) stay words. Without a dictionary there is no list.
+        """
+        if self._term_lookup is None:
+            return {}
+        names = {
+            name: "L"
+            for name, count in labels.items()
+            if count >= 2 and self._FILE_NAME_RE.fullmatch(name) and self._FILE_NAME_KANJI_RE.search(name)
+        }
+        if not names:
+            return {}
+        listed = self._memoized_attest(sorted(names))
+        return {name: kind for name, kind in names.items() if name not in listed}
+
+    def _merge_file_names(
+        self, line_state: tuple[str, list, list, float, float, float], names: dict[str, str]
+    ) -> tuple[str, list, list, float, float, float]:
+        """``line_state`` with each listed name that the tagger cut into pieces as ONE proper-noun token.
+
+        A new state with a new merged list: the raw tokens are the same objects
+        (the sentence display is built from them), and a line that holds no
+        listed name comes back as it is. A name is joined only where it stands
+        on token boundaries, over two or more tokens that ``_is_name_span``
+        accepts; a name that is one token already is never touched.
+        """
+        text, raw_tokens, merged_tokens, start, end, duration = line_state
+        line = self._tokenizer_text(text)
+        present = sorted((name for name in names if name in line), key=len, reverse=True)
+        if not present:
+            return line_state
+        spans = list(self._iter_token_spans(line, merged_tokens))
+        if len(spans) != len(merged_tokens):
+            return line_state
+        joined: list[Any] = []
+        index = 0
+        while index < len(spans):
+            token, tok_start, _tok_end = spans[index]
+            stop = 0
+            for name in present:
+                if line.startswith(name, tok_start):
+                    stop = self._name_span_stop(spans, index, tok_start + len(name), names[name])
+                    if stop:
+                        break
+            if not stop:
+                joined.append(token)
+                index += 1
+                continue
+            kana = "".join(extract_reading(piece) for piece, _start, _end in spans[index:stop])
+            joined.append(CompoundSyntheticToken(surface=name, pos1="名詞", pos2="固有名詞", lemma=name, kana=kana))
+            index = stop
+        if len(joined) == len(merged_tokens):
+            return line_state
+        return (text, raw_tokens, joined, start, end, duration)
+
+    def _name_span_stop(self, spans: list[tuple[Any, int, int]], index: int, name_end: int, kind: str) -> int:
+        """The index after the tokens that spell a name from ``spans[index]`` to ``name_end``, or 0.
+
+        0 when the name ends inside a token, is one token, or its tokens are no
+        name's pieces (``_is_name_span``).
+        """
+        stop = index
+        while (
+            stop < len(spans) and spans[stop][2] <= name_end and (stop == index or spans[stop][1] == spans[stop - 1][2])
+        ):
+            stop += 1
+        if stop - index < 2 or spans[stop - 1][2] != name_end:
+            return 0
+        return stop if self._is_name_span([token for token, _start, _end in spans[index:stop]], kind) else 0
+
+    def _is_name_span(self, tokens: list, kind: str) -> bool:
+        """Whether ``tokens`` are the pieces of one name: what stops a word from being joined away.
+
+        * No piece is a word of its own: two characters or more (three in
+          katakana) that the tagger does not call a proper noun. A role label
+          of two words (店員|客) keeps both.
+        * A piece holds a kanji; the first piece is no numeral; a lone kana is
+          only a connector inside the name (一|ノ|瀬).
+        * Not every piece is a proper noun of two characters or more: a family
+          name and a given name the tagger knows need no repair.
+        * No particle, auxiliary, pronoun or symbol.
+        * Not a name the tagger knows and then a one-kanji rank, kin, house or
+          group word (``_NAME_TITLE_TAILS``): 王 stays a card in 葛城|王.
+        """
+        kanji = False
+        known = 0
+        for position, token in enumerate(tokens):
+            surface = token.surface
+            feature = getattr(token, "feature", None)
+            pos1, pos2 = getattr(feature, "pos1", None), getattr(feature, "pos2", None)
+            if surface in self._NAME_CONNECTORS and 0 < position < len(tokens) - 1:
+                continue
+            if pos1 in self._NAME_PIECE_EXCLUDED_POS1 or (position == 0 and pos2 == "数詞"):
+                return False
+            if pos2 == "固有名詞":
+                known += len(surface) >= 2
+            elif len(surface) >= (3 if _is_all_katakana(surface) else 2):
+                return False
+            holds_kanji = self._FILE_NAME_KANJI_RE.search(surface) is not None
+            if len(surface) == 1 and not holds_kanji:
+                return False
+            kanji = kanji or holds_kanji
+        if known == len(tokens) - 1 and tokens[-1].surface in self._NAME_TITLE_TAILS:
+            return False
+        return kanji and known < len(tokens)
 
     def _style_skipped_events(self, subs: Any) -> frozenset[int]:
         """The ``id`` of each cue of a loaded file that the injected ``skip_style_lines`` names.
