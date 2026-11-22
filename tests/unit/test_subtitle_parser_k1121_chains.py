@@ -6,6 +6,14 @@ import pytest
 
 from anki_miner.config.config import AnkiMinerConfig
 from anki_miner.models.reading import ReadingUnit
+from anki_miner.services.deinflection import (
+    condition_flags_from_rules,
+    conditions_match,
+    find_highlight_end_with_trace,
+    get_chain_end_deinflector,
+    get_highlight_deinflector,
+    resolve_dictionary_form,
+)
 from anki_miner.services.subtitle_parser import SubtitleParserService
 
 
@@ -38,6 +46,19 @@ def _spans(text: str, terms: frozenset[str] = frozenset()) -> dict[str, str]:
         [ReadingUnit(text=text, index=0, location_label="t")], want_line_index=False
     )
     return {word.mined_form: text[word.surface_start : word.bold_end] for word in words}
+
+
+def _chain_text(text: str, surface: str) -> str:
+    """The text the chain-end resolver covers for the raw token ``surface`` of the line."""
+    _stored, raw_tokens, _merged, *_ = _service()._build_line_state(text, 0.0, 0.0)
+    token = next(token for token in raw_tokens if token.surface == surface)
+    start = text.index(surface)
+    end, _chain = find_highlight_end_with_trace(text, raw_tokens, start, start + len(surface), token, chain_end=True)
+    return text[start:end]
+
+
+def _reaches(deinflector, inflected: str, base: str) -> bool:
+    return any(result.text == base for result in deinflector.transform(inflected))
 
 
 class TestSentenceFinalYo:
@@ -85,3 +106,48 @@ class TestSentenceFinalYo:
         start = text.index("食べ")
         assert service._find_highlight_end(text, raw_tokens, start, start + 2, token) == len(text)
         assert service._emission_highlight_end(text, raw_tokens, start, start + 2, token) == len(text) - 1
+
+
+class TestKansaiChainEnds:
+    """Forms the benchmark's own table puts inside the unit; ours knows them for the END only."""
+
+    @pytest.mark.parametrize(
+        ("text", "surface", "highlighted"),
+        [
+            ("あいつは動いとんのか", "動い", "動いとん"),
+            ("全然おもろない", "おもろ", "おもろない"),
+            ("先に行きゃがった", "行きゃ", "行きゃがった"),
+            ("取るんだ", "取る", "取る"),
+            ("銭の絡まん話だ", "絡ま", "絡まん"),
+        ],
+    )
+    def test_where_the_chain_ends(self, text, surface, highlighted):
+        assert _chain_text(text, surface) == highlighted
+
+    def test_the_card_highlight_follows(self):
+        assert _spans("あいつは動いとんのか")["動く"] == "動いとん"
+        assert _spans("銭の絡まん話だ")["絡む"] == "絡まん"
+
+    @pytest.mark.parametrize(
+        ("inflected", "base"),
+        [
+            ("おもろない", "おもろい"),
+            ("こよ", "くる"),
+            ("しよ", "する"),
+            ("行きゃがる", "行く"),
+        ],
+    )
+    def test_the_supplements_are_in_the_end_table_only(self, inflected, base):
+        assert _reaches(get_chain_end_deinflector(), inflected, base)
+        assert not _reaches(get_highlight_deinflector(), inflected, base)
+
+    @pytest.mark.parametrize(("surface", "base", "other"), [("絡まん", "絡む", "絡まる"), ("下さん", "下す", "下さる")])
+    def test_a_front_is_never_resolved_through_them(self, surface, base, other):
+        # Both verbs are godan entries; the front table reaches the other one
+        # only as an ichidan verb (its own negative ん), which the entry refuses.
+        godan = condition_flags_from_rules("v5")
+
+        def rules_lookup(candidates):
+            return {text for text, mask in candidates if text in (base, other) and conditions_match(mask, godan)}
+
+        assert resolve_dictionary_form(surface, base, rules_lookup) == base

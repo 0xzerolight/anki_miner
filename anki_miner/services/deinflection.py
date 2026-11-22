@@ -371,7 +371,7 @@ def find_highlight_end_with_trace(
     if not targets:
         return tok_end, ()
 
-    deinflector = get_highlight_deinflector()
+    deinflector = get_chain_end_deinflector() if chain_end else get_highlight_deinflector()
     mask = deinflector.mask_for_ctype(getattr(feature, "cType", None))
     additional_mask = mask
     if (
@@ -788,6 +788,56 @@ def get_highlight_deinflector() -> Deinflector:
     from anki_miner.services.japanese_transforms import CONDITIONS, TRANSFORMS
 
     return Deinflector(CONDITIONS, [*TRANSFORMS, *_te_auxiliary_transforms()])
+
+
+def _chain_end_supplements() -> list[dict[str, Any]]:
+    """Forms inside a word's chain that the highlight table has no transform for.
+
+    They serve the END of a highlight only and never a card front: with ん → る
+    in the table a front is resolved from, 絡まん (絡む + ん) became 絡まる.
+
+    Monosashi's deinflection supplements (its SPEC §4.1) that
+    ``_te_auxiliary_transforms`` does not carry: 動いとん, おもろない, こよ / しよ and
+    行きゃがる.
+    """
+    from anki_miner.services.japanese_transforms import suffix_inflection
+
+    yagaru = [("きゃがる", "く"), ("ぎゃがる", "ぐ"), ("しゃがる", "す"), ("ちゃがる", "つ")]
+    yagaru += [("にゃがる", "ぬ"), ("びゃがる", "ぶ"), ("みゃがる", "む"), ("りゃがる", "る")]
+    return [
+        {
+            "id": "-ん (kansai)",
+            "name": "-ん (kansai)",
+            "rules": [suffix_inflection("ん", "る", [], ["v5"]), suffix_inflection("すん", "する", [], ["vs"])],
+        },
+        {
+            "id": "-ない (kansai)",
+            "name": "-ない (kansai)",
+            "rules": [suffix_inflection("ろない", "ろい", ["adj-i"], ["adj-i"])],
+        },
+        {
+            "id": "volitional (short)",
+            "name": "volitional (short)",
+            "rules": [suffix_inflection("こよ", "くる", [], ["vk"]), suffix_inflection("しよ", "する", [], ["vs"])],
+        },
+        {
+            "id": "-ゃがる",
+            "name": "-ゃがる",
+            "rules": [
+                *(suffix_inflection(inflected, base, ["v5"], ["v5"]) for inflected, base in yagaru),
+                suffix_inflection("しゃがる", "する", ["v5"], ["vs"]),
+                suffix_inflection("きゃがる", "くる", ["v5"], ["vk"]),
+            ],
+        },
+    ]
+
+
+@lru_cache(maxsize=1)
+def get_chain_end_deinflector() -> Deinflector:
+    """The highlight table plus ``_chain_end_supplements``: where a mined word's highlight ends, nothing else."""
+    from anki_miner.services.japanese_transforms import CONDITIONS, TRANSFORMS
+
+    return Deinflector(CONDITIONS, [*TRANSFORMS, *_te_auxiliary_transforms(), *_chain_end_supplements()])
 
 
 # What the table reads as an imperative in よ only by first building a verb in
