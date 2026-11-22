@@ -1,0 +1,12 @@
+{"id":"k21tg01","sentence":"彼を利用し 周りをだました","expected":["彼","利用","周り"],"category":"k1121-tag","note":"a noun that opens a clause after a space (だます is not in the fixture dictionary)"}
+{"id":"k21tg02","sentence":"あの家 金に困っていない","expected":["あの","家","金","困る"],"category":"k1121-tag"}
+{"id":"k21tg03","sentence":"今後 君を呼ぶつもりだ","expected":["今後","君","呼ぶ"],"category":"k1121-tag","note":"君 the pronoun"}
+{"id":"k21tg04","sentence":"生徒 立って答えなさい","expected":["生徒","立つ","答える"],"category":"k1121-tag","note":"立|って after a space is the verb"}
+{"id":"k21tg05","sentence":"情報 流したのは誰だ","expected":["情報","流す","誰"],"category":"k1121-tag"}
+{"id":"k21tg06","sentence":"朝の祭り 人が多い","expected":["朝","祭り","人","多い"],"category":"k1121-tag"}
+{"id":"k21tg07","sentence":"山田 さんが来た","expected":["来る"],"category":"k1121-tag","note":"a spaced honorific stays a suffix"}
+{"id":"k21tg08","sentence":"山田 君が来た","expected":["来る"],"category":"k1121-tag"}
+{"id":"k21tg09","sentence":"３ 人で来た","expected":["来る"],"category":"k1121-tag","note":"a counter after a spaced number"}
+{"id":"k21tg10","sentence":"敵を押さえ 城へ入る","expected":["敵","押さえる","城","入る"],"category":"k1121-tag","note":"the stem after を stays the verb when the next word becomes a noun"}
+{"id":"k21tg11","sentence":"田中さん 体は大丈夫？","expected":["体","大丈夫"],"expected_readings":{"体":"からだ"},"category":"k1121-tag"}
+{"id":"k21tg12","sentence":"身分を偽り 町に入った","expected":["身分","偽る","町","入る"],"category":"k1121-tag"}

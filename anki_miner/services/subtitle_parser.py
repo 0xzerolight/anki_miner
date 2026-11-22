@@ -2176,7 +2176,7 @@ class SubtitleParserService:
         # Tagger corrections go on the raw stream: the sentence display is built
         # from it, and a correction that re-cuts two tokens (自|分ち) would
         # otherwise leave the raw and merged streams out of step for the line.
-        raw_tokens = retag_mistagged_tokens(raw_tokens, self._form_lookup)
+        raw_tokens = retag_mistagged_tokens(raw_tokens, self._form_lookup, self._tagger())
         raw_tokens = rejoin_contracted_adjectives(raw_tokens)
         raw_tokens = rejoin_adjective_stem_cries(raw_tokens, self._tagger(), self._form_lookup)
         raw_tokens = reread_daku_tokens(raw_tokens)

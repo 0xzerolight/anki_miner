@@ -91,7 +91,11 @@ class MasuStemNominalizer:
         fires, so the no-op path allocates nothing. One batched ``term_lookup``
         call per line covers every candidate.
         """
-        indexes = [i for i in range(len(tokens) - 1) if self._is_candidate(tokens[i], tokens[i + 1])]
+        indexes = [
+            i
+            for i in range(len(tokens) - 1)
+            if self._is_candidate(tokens[i], tokens[i + 1]) and not _takes_object(tokens, i)
+        ]
         if not indexes:
             return tokens
 
@@ -153,6 +157,13 @@ class MasuStemNominalizer:
             kana=extract_reading(token),
             kana_locked=True,
         )
+
+
+def _takes_object(tokens: list, i: int) -> bool:
+    """Whether を stands directly before the stem at ``i``: a noun takes no object, so the stem is the verb (計画を練り 準備した)."""
+    if i == 0 or bool(getattr(tokens[i], "white_space", "")):
+        return False
+    return getattr(tokens[i - 1], "surface", None) == "を"
 
 
 def _is_appearance_sou(token) -> bool:

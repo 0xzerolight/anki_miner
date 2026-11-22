@@ -945,6 +945,10 @@ _READING_CONTEXT: tuple[_ReadingRow, ...] = (
     _reading_row("言う", ("動詞",), "ユウ", "イウ", base=True),
     # 不味い: the tagger says まじい for the plain form.
     _reading_row("不味い", ("形容詞",), "マジイ", "マズイ", base=True),
+    # 体: the tagger says たい, the reading of the suffix (団体), for the noun that
+    # opens a clause after a spaced name (田中さん 体は大丈夫？). Standing free it is
+    # からだ; attached to the word before it the tagger's reading stays.
+    _reading_row("体", _NOUN_POS, "タイ", "カラダ", prev=("",)),
 )
 _READING_CONTEXT_BY_SURFACE: dict[str, tuple[_ReadingRow, ...]] = {
     word: tuple(row for row in _READING_CONTEXT if row.word == word)
@@ -1599,7 +1603,9 @@ def _dictionary_nouns(surfaces: set[str], form_lookup: FormLookup) -> set[str]:
     return nouns
 
 
-def retag_mistagged_tokens(tokens: list, form_lookup: FormLookup | None = None) -> list:
+def retag_mistagged_tokens(
+    tokens: list, form_lookup: FormLookup | None = None, tag: Callable[[str], Iterable[Any]] | None = None
+) -> list:
     """Correct a tagger part of speech the next token disproves, or fill in a lemma it lacks.
 
     Fugashi tokens carry the space before them as ``white_space``; a token
@@ -1633,13 +1639,23 @@ def retag_mistagged_tokens(tokens: list, form_lookup: FormLookup | None = None) 
       the lemma of the verb it is (``_kana_homophone_fields``).
     - 若 read as the stem of 若い where a pause or a case particle follows is the
       address 'young master', the noun 若 (``_address_waka_fields``).
+    - A suffix with a space before it is no suffix: its clause is tagged alone
+      (彼を利用し 周りをだました: 周り the noun; ``_spaced_suffix_recut``). Needs
+      ``tag``, the tagger.
+    - A noun right after を and before a space that is the continuative of a
+      listed verb is the verb (戦を嫌い 山に住む; ``_object_stem_verb``).
+      Needs ``tag`` and the dictionary.
     """
     unknown = {token.surface for token in tokens if _unknown_katakana_noun(token)}
     nouns = _dictionary_nouns(unknown, form_lookup) if unknown and form_lookup is not None else set()
     out: list = []
     resplit: tuple[tuple[str, dict[str, str]], ...] | None = None
     missplit_surfaces = _missplit_surfaces()
+    skip = 0
     for i, token in enumerate(tokens):
+        if skip:
+            skip -= 1
+            continue
         if resplit is not None:
             out.append(RetaggedToken(token, resplit[1][1], resplit[1][0]))
             resplit = None
@@ -1672,6 +1688,16 @@ def retag_mistagged_tokens(tokens: list, form_lookup: FormLookup | None = None) 
         if fields is None and (pieces := _glued_ka_naru(tokens, i) or _potential_imperative_yo(tokens, i)) is not None:
             out.extend(pieces)
             continue
+        if fields is None and tag is not None:
+            if pos1 == "接尾辞" and i and (recut := _spaced_suffix_recut(tokens, i, tag)) is not None:
+                out.extend(recut[0])
+                skip = recut[1] - 1
+                continue
+            if pos1 == "名詞" and spaced and form_lookup is not None:
+                verb = _object_stem_verb(tokens, i, tag, form_lookup)
+                if verb is not None:
+                    out.append(verb)
+                    continue
         if fields is None:
             fields = (
                 _spaced_interjection_fields(tokens, i)
@@ -1907,6 +1933,149 @@ def _potential_imperative_yo(tokens: list, i: int) -> tuple[RetaggedToken, Retag
     particle = RetaggedToken(token, _YO_PARTICLE, "よ")
     particle.white_space = ""
     return RetaggedToken(token, fields, stem), particle
+
+
+#: What a clause may open with in place of the tagger's suffix, and the ones of
+#: them that must stand free (a particle, the copula or the clause end after them).
+_CLAUSE_OPENERS = frozenset({"名詞", "代名詞", "動詞", "形容詞", "副詞"})
+_NOMINAL_OPENERS = frozenset({"名詞", "代名詞"})
+#: The verbs a continuative + に names the purpose of (書類 出しに行く).
+_PURPOSE_VERBS = frozenset({"行く", "来る"})
+
+
+def _stands_free(after: Any | None, may_end: bool) -> bool:
+    """Whether the word before ``after`` is a word of its own: a particle or the copula follows it.
+
+    With ``may_end`` it may also end the clause (nothing or a mark follows).
+    Not before な: a one-kanji stem there is a verb told what to do (それ 着な).
+    """
+    if after is None:
+        return may_end
+    if after.surface == "な":
+        return False
+    feature = after.feature
+    pos1 = getattr(feature, "pos1", None)
+    if pos1 == "補助記号":
+        return may_end
+    return pos1 in ("助詞", "助動詞") or getattr(feature, "pos2", None) == "助動詞語幹"
+
+
+def _purpose_stem(clause: list[RetaggedToken]) -> bool:
+    """Whether the clause opens with a stem + に + 行く / 来る (書類 出しに行く).
+
+    The stem names the purpose of the motion and is a verb, which the tagger
+    reads as the noun of the same spelling when the clause stands alone.
+    """
+    if len(clause) < 3 or clause[1].surface != "に" or not "ぁ" <= clause[0].surface[-1] <= "ん":
+        return False
+    return getattr(clause[2].feature, "lemma", None) in _PURPOSE_VERBS
+
+
+def _spaced_suffix_recut(
+    tokens: list, i: int, tag: Callable[[str], Iterable[Any]]
+) -> tuple[list[RetaggedToken], int] | None:
+    """What a suffix after a space is re-read into, with the count of tagger tokens it replaces, or None.
+
+    The tagger skips a subtitle space, so a word that opens a clause is to it a
+    suffix of the word before the space (彼を利用し 周りをだました: 周り 接尾辞),
+    which no inclusion check takes. A suffix is never spaced from its stem, so
+    the clause (the text up to the next space) is tagged alone, and that reading
+    replaces the tagger's up to the first cut both share: 周り the noun, 君 the
+    pronoun, ちゃん|と the adverb ちゃんと, 立|って the verb 立っ|て.
+
+    Left alone: a counter after a spaced number (３ 人); anything after a spaced
+    name (山田 君, 山田 尊: an honorific or the given name), after a word the
+    tagger does not know (most often a name) or after a word in Latin
+    letters; a clause that alone opens with a suffix too (田中 さん), with
+    a name, a number or a katakana word; and a noun that does not stand free
+    (待ってくれ 安さん, a name before its honorific; a piece of an unlisted
+    word). A noun of one character needs a particle or the copula
+    after it: alone between pauses it is as often a name. A stem before に +
+    行く / 来る is left too (``_purpose_stem``).
+    """
+    token = tokens[i]
+    white_space = getattr(token, "white_space", "")
+    if not (isinstance(white_space, str) and white_space):
+        return None
+    previous = tokens[i - 1]
+    before = getattr(previous, "feature", None)
+    if getattr(before, "pos2", None) in ("数詞", "固有名詞") or not getattr(before, "lemma", None):
+        return None
+    if isinstance(previous.surface, str) and previous.surface.isascii():
+        return None
+    end = i + 1
+    while end < len(tokens) and not getattr(tokens[end], "white_space", ""):
+        end += 1
+    for other in tokens:
+        # fugashi parses a feature on first use, from memory the next tagger call reuses.
+        getattr(other, "feature", None)
+    clause = [RetaggedToken(piece, {}) for piece in tag("".join(old.surface for old in tokens[i:end]))]
+    if not clause:
+        return None
+    opener = clause[0].feature
+    pos1 = getattr(opener, "pos1", None)
+    if pos1 not in _CLAUSE_OPENERS or getattr(opener, "pos2", None) in ("固有名詞", "数詞"):
+        return None
+    if any("ァ" <= char <= "ヺ" for char in clause[0].surface):
+        return None
+    cuts = set()
+    length = 0
+    for old in tokens[i:end]:
+        length += len(old.surface)
+        cuts.add(length)
+    length = 0
+    for count, piece in enumerate(clause, 1):
+        length += len(piece.surface)
+        if length in cuts:
+            if pos1 in _NOMINAL_OPENERS:
+                after = clause[1] if len(clause) > 1 else None
+                if count != 1 or not _stands_free(after, len(clause[0].surface) > 1) or _purpose_stem(clause):
+                    return None
+            clause[0].white_space = white_space
+            return clause[:count], sum(1 for cut in cuts if cut <= length)
+    return None
+
+
+#: The dictionary tags of a verb entry, by their first letters (v1, v5r, vk, vs-i, vz).
+_VERB_ENTRY_TAGS = ("v1", "v5", "vk", "vs", "vz")
+
+
+def _object_stem_verb(
+    tokens: list, i: int, tag: Callable[[str], Iterable[Any]], form_lookup: FormLookup
+) -> RetaggedToken | None:
+    """The verb token of a continuative the tagger read as a noun before a space (戦を嫌い 山に住む), or None.
+
+    A clause that ends on a verb's continuative, with a space and another clause
+    after it, is to the tagger the noun of the same spelling (嫌い, 祭り, 頼り).
+    Right after を it is the verb: a noun takes no object. The fields are the
+    ones the tagger gives the same surface before ます, and the dictionary must
+    list that verb. A stem the dictionary also lists as an adverb stays the
+    tagger's (歌を思いきり 歌う, 先生をはじめ 全員).
+    """
+    token = tokens[i]
+    surface = token.surface
+    if i == 0 or not isinstance(surface, str) or len(surface) < 2 or bool(getattr(token, "white_space", "")):
+        return None
+    if tokens[i - 1].surface != "を":
+        return None
+    for other in tokens:
+        # fugashi parses a feature on first use, from memory the next tagger call reuses.
+        getattr(other, "feature", None)
+    found = [RetaggedToken(piece, {}) for piece in tag(surface + "ます")]
+    if len(found) != 2 or found[0].surface != surface:
+        return None
+    feature = found[0].feature
+    c_form, base = getattr(feature, "cForm", None), getattr(feature, "orthBase", None)
+    if getattr(feature, "pos1", None) != "動詞" or not isinstance(base, str):
+        return None
+    if not (isinstance(c_form, str) and c_form.startswith("連用形")):
+        return None
+    rows = form_lookup([surface, base])
+    stem_tags = {name for _content, row_tags in rows.get(surface, ()) for name in row_tags.split()}
+    base_tags = {name for _content, row_tags in rows.get(base, ()) for name in row_tags.split()}
+    if "adv" in stem_tags or not any(name.startswith(_VERB_ENTRY_TAGS) for name in base_tags):
+        return None
+    return found[0]
 
 
 #: The fields unidic-lite gives the adjective いい (良い 'good, fine').
