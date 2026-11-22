@@ -33,6 +33,7 @@ from anki_miner.services.deinflection import (
     find_highlight_end_with_trace,
     get_highlight_deinflector,
     resolve_dictionary_form,
+    shadow_span,
     stretched_highlight_end,
 )
 from anki_miner.services.kana_words import is_kanji_spelled, is_listed
@@ -60,6 +61,7 @@ from anki_miner.services.morphology import (
     iter_token_spans,
     merge_compound_suffixes,
     mining_base,
+    read_variants,
     rejoin_adjective_stem_cries,
     rejoin_contracted_adjectives,
     replace_overridden_spans,
@@ -71,6 +73,7 @@ from anki_miner.services.morphology import (
     retag_mistagged_tokens,
     short_causative_bases,
     source_spelling_fold,
+    word_surface,
 )
 from anki_miner.services.number_counters import merge_number_counters
 from anki_miner.services.reading.ruby_hints import apply_author_ruby
@@ -1107,6 +1110,7 @@ class SubtitleParserService:
         self._kana_window_cache: dict[str, bool] = {}
         # Whether a word before する takes it (_takes_suru), by that word's front.
         self._takes_suru_memo: dict[str, bool | None] = {}
+        self._variant_headword_memo: dict[str, int] = {}
         # The line last asked for an emission highlight end, with the ends found on it:
         # (raw tokens, text, {(start, end): (token, highlight end)}). See _emission_highlight_end.
         self._emission_end_line: tuple[Any, str, dict[tuple[int, int], tuple[Any, int]]] = (None, "", {})
@@ -1152,6 +1156,7 @@ class SubtitleParserService:
         self.last_parse_rejects: dict[str, NotMinedReason] = {}
         self._reset_perf_counters()
         self._takes_suru_memo = {}
+        self._variant_headword_memo = {}
 
     def _reset_perf_counters(self) -> None:
         """Zero the per-parse probe/tokenize cumulative counters (Task 28)."""
@@ -2179,6 +2184,7 @@ class SubtitleParserService:
         raw_tokens = retag_mistagged_tokens(raw_tokens, self._form_lookup)
         raw_tokens = rejoin_contracted_adjectives(raw_tokens)
         raw_tokens = rejoin_adjective_stem_cries(raw_tokens, self._tagger(), self._form_lookup)
+        raw_tokens = self._read_variants(text, raw_tokens)
         raw_tokens = reread_daku_tokens(raw_tokens)
         raw_tokens = reread_omote_tokens(raw_tokens)
         raw_tokens = reread_in_context(raw_tokens)
@@ -2209,6 +2215,37 @@ class SubtitleParserService:
         # no reading_lookup is wired or the line produced no merges.
         merged_tokens = attest_merged_readings(merged_tokens, self._reading_lookup)
         return (stored_text, raw_tokens, merged_tokens, start, end, end - start)
+
+    def _read_variants(self, text: str, raw_tokens: list) -> list:
+        """``read_variants`` with this parser's dictionary; without one the line stays as the tagger read it."""
+        if self._kana_attest_lookup is None:
+            return raw_tokens
+        return read_variants(text, raw_tokens, self._tagger(), self._variant_headword)
+
+    def _variant_headword(self, spelling: str) -> int:
+        """What the dictionary says of ``spelling``: 2 a real headword as written, 1 listed, 0 unknown.
+
+        A real headword has an entry with tags, or readings of its own; a row
+        without either is a search-only form (すごーい points at すごい), and a
+        kana string may be listed only as the reading of another spelling.
+        Without the entry lookup the two cannot be told apart, and a listed
+        spelling counts as a real headword: nothing listed is then re-read.
+        """
+        known = self._variant_headword_memo.get(spelling)
+        if known is None:
+            lookup = self._kana_attest_lookup
+            attested = lookup is not None and bool(lookup([spelling]).get(spelling))
+            if self._form_lookup is None:
+                known = 2 if attested else 0
+            else:
+                rows = self._form_lookup([spelling]).get(spelling, ())
+                readings = self._reading_lookup([spelling]).get(spelling) if self._reading_lookup is not None else None
+                real = bool(readings) or any(tags.strip() for _content, tags in rows)
+                known = 2 if real else int(bool(rows) or attested)
+            if len(self._variant_headword_memo) >= _FRONT_CACHE_CAP:
+                self._variant_headword_memo.clear()
+            self._variant_headword_memo[spelling] = known
+        return known
 
     @staticmethod
     def _iter_token_spans(text: str, tokens: list) -> Iterator[tuple[Any, int, int]]:
@@ -2372,14 +2409,14 @@ class SubtitleParserService:
                 word_token.feature.pos1,
                 front,
                 lemma,
-                word_token.surface,
+                word_surface(word_token),
                 pronunciation=pronunciation,
             )
         return self._mined_form_policy.mined_form(
             word_token.feature.pos1,
             front,
             lemma,
-            word_token.surface,
+            word_surface(word_token),
             pronunciation,
         )
 
@@ -3500,7 +3537,9 @@ class SubtitleParserService:
         # rightward highlight extension (感じた), or the bare surface when it did
         # not extend (感じ before a noun) — run either way, else 感じ-before-a-noun
         # keeps the archaic 感ずる.
-        inflected_surface = chain_spelling(text[tok_start:highlight_end], len(word_token.surface))
+        inflected_surface = chain_spelling(
+            shadow_span(word_token, text, tok_start, highlight_end), len(word_surface(word_token))
+        )
         ctype = getattr(feature, "cType", None)
         # A godan imperative (持て, 従え) is never an -eru verb: its e-stem spelling
         # is also the stem of the attested ichidan 持てる/従える, which shares the
@@ -4764,7 +4803,7 @@ class SubtitleParserService:
             for end in range(idx, right + 1):
                 if start == idx and end == idx:
                     continue
-                windows.append("".join(tokens[i].surface for i in range(start, end + 1)))
+                windows.append("".join(word_surface(tokens[i]) for i in range(start, end + 1)))
         return list(dict.fromkeys(windows))
 
     @staticmethod
@@ -5069,7 +5108,7 @@ class SubtitleParserService:
         """
         if self._kana_attest_lookup is None:
             return None
-        surface = word_token.surface
+        surface = word_surface(word_token)
         if not _is_kana_candidate(surface):
             return _KANA_LISTED if self._is_katakana_to_adverb(word_token) else None
         feature = getattr(word_token, "feature", None)

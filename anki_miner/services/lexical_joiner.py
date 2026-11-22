@@ -25,7 +25,7 @@ from typing import Callable, NamedTuple
 
 from anki_miner.services.compound_matcher import CompoundDictionaryMatcher, CompoundSyntheticToken, _pos1, _pos2
 from anki_miner.services.kana_words import KanaJoin, kana_words
-from anki_miner.services.morphology import extract_lemma, extract_orth_base, extract_reading
+from anki_miner.services.morphology import extract_lemma, extract_orth_base, extract_reading, word_surface
 from anki_miner.utils.text_utils import is_kana_only, katakana_to_hiragana
 
 # Batch term-OR-reading probe (DefinitionService.has_offline_definitions).
@@ -220,7 +220,7 @@ def _kana_join(
 
 def _row_key(token) -> str:
     """What a join row's token is matched against: the surface, or the kana reading of a token not written in kana."""
-    surface = token.surface
+    surface = word_surface(token)
     return surface if is_kana_only(surface) else katakana_to_hiragana(extract_reading(token))
 
 
@@ -249,7 +249,7 @@ def _read_join(
         return None, ""
     listed = kana_words()
     row = listed.joins.get(keys)
-    written = "".join(surfaces)
+    written = "".join(word_surface(token) for token in span)
     if row is None:
         base = (*keys[:-1], extract_orth_base(span[-1]))
         row = listed.base_joins.get(base)
