@@ -1,0 +1,9 @@
+{"id":"k21rd01","sentence":"何だこれは","expected":["何","これ"],"expected_readings":{"何":"なん"},"category":"k1121-readings"}
+{"id":"k21rd02","sentence":"それは何ですか","expected":["何"],"expected_readings":{"何":"なん"},"category":"k1121-readings"}
+{"id":"k21rd03","sentence":"何の話だ","expected":["何","話"],"expected_readings":{"何":"なん","話":"はなし"},"category":"k1121-readings"}
+{"id":"k21rd04","sentence":"何て言ったの","expected":["何","言う"],"expected_readings":{"何":"なん","言う":"いう"},"category":"k1121-readings"}
+{"id":"k21rd05","sentence":"何なら手伝う","expected":["何","手伝う"],"expected_readings":{"何":"なん"},"category":"k1121-readings"}
+{"id":"k21rd06","sentence":"何を言ってるんだ","expected":["何","言う"],"expected_readings":{"何":"なに"},"category":"k1121-readings"}
+{"id":"k21rd07","sentence":"何が起きたの","expected":["何","起きる"],"expected_readings":{"何":"なに"},"category":"k1121-readings"}
+{"id":"k21rd08","sentence":"何に使うの","expected":["何","使う"],"expected_readings":{"何":"なに"},"category":"k1121-readings"}
+{"id":"k21rd09","sentence":"何と何を買うの","expected":["何","買う"],"expected_readings":{"何":"なに"},"category":"k1121-readings"}

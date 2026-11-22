@@ -16,7 +16,7 @@ from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from functools import lru_cache
 from types import SimpleNamespace
-from typing import Any, Iterator
+from typing import Any, Iterator, NamedTuple
 
 from anki_miner.languages.token import LanguageToken
 from anki_miner.utils.ja_normalize import is_cjk_ideograph
@@ -185,9 +185,9 @@ def resolve_special_reading(head_surface: str, next_surface: str | None) -> str 
 #   (明日, あす) → あした, (その後, そのご) → そのあと: UniDic emits the formal
 #       variant (アス always; ゴ before a comma); a card takes JMdict's first
 #       reading, and the formal-register loss is accepted as for 私.
-#   (何, なん) → なに, (何か, なんか) → なにか: UniDic emits ナン for 何 in every
-#       context, 何を and 何が included; the card shows the headword reading, and
-#       the なん of 何だ/何で is accepted as lost.
+#   (何か, なんか) → なにか: UniDic emits ナン for 何 in every context, 何を and
+#       何が included; the card shows the headword reading. The bare 何 has no
+#       row: ``reread_in_context`` reads it なん or なに by its line.
 #   (言う, ゆう) → いう, (そう言う, そうゆう) → そういう: UniDic reads 言う ユウ
 #       after そう; a kanji 言う never reads ゆう on a card.
 #   (蛙, かわず) → かえる: UniDic emits the poetic カワズ in every context.
@@ -206,7 +206,6 @@ _READING_OVERRIDES: dict[tuple[str, str], str] = {
     ("私達", "わたくしたち"): "わたしたち",
     ("明日", "あす"): "あした",
     ("その後", "そのご"): "そのあと",
-    ("何", "なん"): "なに",
     ("何か", "なんか"): "なにか",
     ("何も", "なんも"): "なにも",
     ("何もかも", "なんもかも"): "なにもかも",
@@ -738,6 +737,166 @@ def reread_omote_tokens(tokens: list) -> list:
             out.append(token)
             continue
         out.append(RetaggedToken(token, dict.fromkeys(_OMOTE_KANA_FIELDS, "オモテ")))
+    return out
+
+
+class _ReadingRow(NamedTuple):
+    """One row of ``_READING_CONTEXT``: a reading the tagger gave and what it becomes.
+
+    ``word`` is the token surface, ``pos1`` the part of speech the tagger must
+    have given, ``old`` the katakana it gave (a prefix of ``feature.kana``) and
+    ``new`` what replaces that prefix; a row whose ``new`` equals ``old`` keeps
+    the tagger's reading. Every test a row names must hold. ``before`` is
+    searched in the line up to the token, trailing spaces dropped; ``after`` is
+    matched at the start of the line after it, so a subtitle space there fails
+    it; ``prev`` and ``nxt`` name the class of the token attached directly
+    before and after (its part of speech; 数詞 for a numeral before, 助数詞 for a
+    counter after); ``line`` is searched anywhere in the line.
+    """
+
+    word: str
+    pos1: tuple[str, ...]
+    old: str
+    new: str
+    before: re.Pattern[str] | None
+    after: re.Pattern[str] | None
+    prev: tuple[str, ...]
+    nxt: tuple[str, ...]
+    line: re.Pattern[str] | None
+
+
+def _reading_row(
+    word: str,
+    pos1: tuple[str, ...],
+    old: str,
+    new: str,
+    *,
+    before: str = "",
+    after: str = "",
+    prev: tuple[str, ...] = (),
+    nxt: tuple[str, ...] = (),
+    line: str = "",
+) -> _ReadingRow:
+    """A ``_READING_CONTEXT`` row with its patterns compiled."""
+    return _ReadingRow(
+        word,
+        pos1,
+        old,
+        new,
+        re.compile(before) if before else None,
+        re.compile(after) if after else None,
+        prev,
+        nxt,
+        re.compile(line) if line else None,
+    )
+
+
+_WHAT_POS = ("代名詞", "名詞")
+_CONTEXT_KANA_FIELDS = ("kana", "kanaBase", "lForm", "pron", "pronBase", "form", "formBase")
+
+#: Readings the line decides. Rows of one word are tried in order and the first
+#: whose tests all hold decides. Every row is one hand-written statement about
+#: Japanese; none is computed from subtitle files.
+_READING_CONTEXT: tuple[_ReadingRow, ...] = (
+    # 何: the tagger says なん wherever it stands. It is なん before the copula and
+    # the particles で, と, の, て, って, じゃ, や (何だ, 何ですか, 何の話, 何て, 何なの,
+    # 何なら), before ら and before a counter (何回, 何人); なに everywhere else (何を,
+    # 何が, 何か, 何も, 何に, 何よ, a verb, the line end). の must be the next TOKEN,
+    # the particle: in 何のんきな it starts another word. The other kana are read
+    # off the text, because the tagger cuts 何やかんや and 何なりと in odd places.
+    # 何と with a second question word or a partner's verb is なにと (何と何, 何と戦う).
+    _reading_row(
+        "何", _WHAT_POS, "ナン", "ナニ", after="と(?:何|誰|だれ|どれ|どっち|どちら|戦|闘|比べ|一緒|交換|間違|勘違|関係)"
+    ),
+    _reading_row("何", _WHAT_POS, "ナン", "ナン", nxt=("助詞",), after="の"),
+    _reading_row(
+        "何",
+        _WHAT_POS,
+        "ナン",
+        "ナン",
+        after="(?:だ|で|と|て|って|な[のんらり]|じゃ|ら(?![しれ])|や(?![っりるれろら])|っ?[すス](?:か|よ|ね)|ちゅう|つう|っつ)",
+    ),
+    _reading_row(
+        "何",
+        _WHAT_POS,
+        "ナン",
+        "ナン",
+        after="(?:[度回時人日年月分秒歳才個本枚匹階番倍割件円曜十百千万億遍等]|べん|ぺん|どき|[かヶカヵ箇]月)",
+    ),
+    _reading_row("何", _WHAT_POS, "ナン", "ナン", nxt=("助数詞",)),
+    _reading_row("何", _WHAT_POS, "ナン", "ナニ"),
+)
+_READING_CONTEXT_BY_WORD: dict[str, tuple[_ReadingRow, ...]] = {
+    word: tuple(row for row in _READING_CONTEXT if row.word == word) for word in {row.word for row in _READING_CONTEXT}
+}
+
+
+def _context_class(token: Any, counter: bool) -> str:
+    """What a row's ``prev`` / ``nxt`` test calls *token*: 数詞, 助数詞, else its part of speech."""
+    feature = getattr(token, "feature", None)
+    pos2 = getattr(feature, "pos2", None)
+    if counter:
+        if any(isinstance(pos, str) and "助数詞" in pos for pos in (pos2, getattr(feature, "pos3", None))):
+            return "助数詞"
+    elif pos2 == "数詞":
+        return "数詞"
+    pos1 = getattr(feature, "pos1", None)
+    return pos1 if isinstance(pos1, str) else ""
+
+
+def reread_in_context(tokens: list) -> list:
+    """Read each token the way its line asks, by ``_READING_CONTEXT``.
+
+    unidic-lite reads some words one way wherever they stand (何 is ナン in 何を
+    and in 何だ alike). A row names the word, the reading the tagger gave and
+    the tests on the line under which that reading changes or stays. On the raw
+    stream and before the merges: a merge joins its tokens' kana, so the card,
+    a joined headword and the sentence ruby agree. Only the kana fields change,
+    on a ``RetaggedToken``; a token no row changes passes by identity, and a
+    line without a table word is returned as the same list.
+    """
+    if not any(isinstance(token.surface, str) and token.surface in _READING_CONTEXT_BY_WORD for token in tokens):
+        return tokens
+    spaces = [space if isinstance(space := getattr(token, "white_space", ""), str) else "" for token in tokens]
+    surfaces = [token.surface if isinstance(token.surface, str) else "" for token in tokens]
+    out: list = []
+    before = ""
+    for i, token in enumerate(tokens):
+        context = before + spaces[i]
+        before = context + surfaces[i]
+        rows = _READING_CONTEXT_BY_WORD.get(surfaces[i])
+        feature = getattr(token, "feature", None)
+        kana = getattr(feature, "kana", None)
+        if rows is None or not isinstance(kana, str) or not hasattr(feature, "_replace"):
+            out.append(token)
+            continue
+        pos1 = getattr(feature, "pos1", None)
+        after = "".join(space + surface for space, surface in zip(spaces[i + 1 :], surfaces[i + 1 :], strict=True))
+        prev = _context_class(tokens[i - 1], False) if i and not spaces[i] else ""
+        nxt = _context_class(tokens[i + 1], True) if i + 1 < len(tokens) and not spaces[i + 1] else ""
+        row = next(
+            (
+                candidate
+                for candidate in rows
+                if pos1 in candidate.pos1
+                and kana.startswith(candidate.old)
+                and (not candidate.prev or prev in candidate.prev)
+                and (not candidate.nxt or nxt in candidate.nxt)
+                and (candidate.before is None or candidate.before.search(context.rstrip()))
+                and (candidate.after is None or candidate.after.match(after))
+                and (candidate.line is None or candidate.line.search(before + after))
+            ),
+            None,
+        )
+        if row is None or row.new == row.old:
+            out.append(token)
+            continue
+        fields = {
+            name: row.new + value[len(row.old) :]
+            for name in _CONTEXT_KANA_FIELDS
+            if isinstance(value := getattr(feature, name, None), str) and value.startswith(row.old)
+        }
+        out.append(RetaggedToken(token, fields))
     return out
 
 
