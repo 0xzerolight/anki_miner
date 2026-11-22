@@ -200,9 +200,10 @@ _KANA_RECOVER_REJECT_POS2: frozenset[str] = frozenset({"助動詞語幹", "非�
 
 # The auxiliary-capable kana words mined where the line uses them as its main
 # verb or adjective (猫がいる, 時間がない, 水がほしい). する takes a second test,
-# as after a noun it is that noun's verb (勉強する): _is_not_main_suru. Left out:
-# the honorific and dialect ones (なさる, くださる, いたす, まいる, おる); and the
-# aspect auxiliaries (しまう, おく, みる), whose bare kana is the auxiliary.
+# as after a noun it is that noun's verb (勉強する), and so do the humble verbs
+# おる, いたす, いただく and まいる: _is_not_main_verb. Left out: the honorific
+# なさる and くださる; and the aspect auxiliaries (しまう, おく, みる), whose bare
+# kana is the auxiliary.
 _KANA_AUX_WORDS: frozenset[str] = frozenset(
     {
         "いる",
@@ -220,7 +221,13 @@ _KANA_AUX_WORDS: frozenset[str] = frozenset(
         "ほしい",
         "する",
     }
+    | {"おる", "いたす", "いただく", "まいる"}
 )
+
+# The only surfaces that are おる and いたす: おりゃ is a shout, and いた|い
+# ('ouch') and other stray いた are read as いたす.
+_ORU_FORMS: tuple[str, ...] = ("おら", "おり", "おる", "おれ", "おっ", "おろ")
+_ITASU_FORMS: tuple[str, ...] = ("いたし", "いたす", "いたせ", "いたさ", "いたそ")
 
 # The other auxiliary-capable kana verbs (あげる, かける, つく, すぎる, みせる) come
 # back as a class, under the same test and the full window check. Not these:
@@ -232,8 +239,8 @@ _KANA_AUX_WORDS: frozenset[str] = frozenset(
 # them or of a word above stays out too (なれる, いける, おれる: the card would
 # show 慣れる, 行ける, 折れる).
 _KANA_AUX_CLASS_DENY: frozenset[str] = frozenset(
-    {"される", "させる", "せる", "す", "したい", "さす", "ござる", "おる", "みる", "しまう", "なさる", "おく"}
-    | {"いたす", "いただく", "いただける", "くださる", "くだされる", "いらっしゃる", "らっしゃる", "まいる"}
+    {"される", "させる", "せる", "す", "したい", "さす", "ござる", "みる", "しまう", "なさる", "おく"}
+    | {"いただける", "くださる", "くだされる", "いらっしゃる", "らっしゃる"}
     | {"たまう", "あそばす", "やがる", "なはる", "おわす"}
     | {"あり", "だす", "きる", "える", "さる", "ぬく", "つくす", "ねがう"}
 )
@@ -3312,7 +3319,7 @@ class SubtitleParserService:
                 and self._used_as_auxiliary(word_token, tokens)
             ):
                 return False
-            if how == _KANA_AUX and self._is_not_main_suru(word_token, tokens):
+            if how == _KANA_AUX and self._is_not_main_verb(word_token, tokens):
                 return False
             if how == _KANA_AUX_CLASS and self._aux_class_word_is_out_of_place(word_token, tokens, text, tok_end):
                 return False
@@ -3457,8 +3464,15 @@ class SubtitleParserService:
                 return True
         return False
 
-    def _is_not_main_suru(self, word_token, tokens: list) -> bool:
+    def _is_not_main_verb(self, word_token, tokens: list) -> bool:
         """Whether kana する is not the line's own verb where it stands (宿題をする is; 勉強する is not).
+
+        The humble verbs take the same test: いたす in full, as it stands where
+        する does (失礼いたします); おる, いただく and まいる only the particle
+        and the suffix or prefix part, and おる and いたす only in their own
+        forms (``_ORU_FORMS``, ``_ITASU_FORMS``). おる and いただく after a
+        joined word that ends in て are that て's auxiliary (どうして|おられる,
+        について|おります), and いたし before かた is the noun 致し方.
 
         ``_used_as_auxiliary`` has already refused it after a verb, an adjective,
         an auxiliary or a て. Left are the places where it is another word's
@@ -3479,8 +3493,13 @@ class SubtitleParserService:
         or an auxiliary or particle after it (よぉし 行くぞ, a garbled しかし),
         and the forms of ``_SURU_PIECE_FORMS`` right after such a particle.
         """
-        if getattr(word_token.feature, "orthBase", None) != "する":
+        base = getattr(word_token.feature, "orthBase", None)
+        if base not in ("する", "おる", "いたす", "いただく", "まいる"):
             return False
+        if base == "おる" and (word_token.surface.startswith("おりゃ") or word_token.surface[:2] not in _ORU_FORMS):
+            return True
+        if base == "いたす" and word_token.surface[:3] not in _ITASU_FORMS:
+            return True
         idx = next((i for i, tok in enumerate(tokens) if tok is word_token), None)
         if idx is None:
             return False
@@ -3492,19 +3511,31 @@ class SubtitleParserService:
         framed = pos1 == "助詞" and getattr(feature, "pos2", None) in _SURU_FRAME_PARTICLES
         glued = after is not None and not getattr(after, "white_space", "") and after.surface.startswith(("れ", "せ"))
         after_pos1 = getattr(getattr(after, "feature", None), "pos1", None)
-        if (
+        if base == "する" and (
             (surface == "さ" and not glued)
             or (surface in _SURU_PIECE_FORMS and not framed)
             or (surface == "し" and not framed and after_pos1 not in ("助詞", "助動詞"))
         ):
             return True
+        if base == "いたす" and after is not None and after.surface.startswith(("かた", "方")):
+            return True
         if prev is None:
             return False
+        if base in ("おる", "いただく") and getattr(prev, "compound", False) and prev.surface.endswith(("て", "で")):
+            return True
         if pos1 == "助詞":
             if prev.surface in _SURU_AFTER_PARTICLES:
                 return True
             after = [tok.surface for tok in tokens[idx + 1 : idx + 3]]
-            return prev.surface == "に" and len(after) == 2 and after[0] == "て" and after[1] in ("は", "も")
+            return (
+                base == "する"
+                and prev.surface == "に"
+                and len(after) == 2
+                and after[0] == "て"
+                and after[1] in ("は", "も")
+            )
+        if base not in ("する", "いたす"):
+            return pos1 in ("接尾辞", "接頭辞")
         if pos1 in ("接尾辞", "接頭辞", "形状詞"):
             return True
         if pos1 == "補助記号":

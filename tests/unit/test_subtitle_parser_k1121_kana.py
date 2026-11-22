@@ -28,6 +28,7 @@ _ATTESTED = frozenset(
     | {"いう", "かわいそう", "やる", "とる", "すき", "かかわる", "ない"}
     | {"あり", "ある", "だす", "きる", "きれる", "つくす"}
     | {"とき", "きのう", "しだい", "もよう", "われ", "たとき", "ときどき", "その"}
+    | {"おる", "いたす", "いただく", "まいる"}
     # Windows a dictionary has as the reading of a word written otherwise.
     | {"という", "といい", "かわいそうに", "ですき", "とって", "にもかかわらず", "かかわらず"}
     | {"ぼける", "とぼけ", "とぼける"}
@@ -45,6 +46,8 @@ _TAGS = {
     "掃除": "n vs vt",
     "毎日": "n adv",
     "さっき": "n adv",
+    "失敗": "n vs vi",
+    "失礼": "n vs adj-na",
 }
 
 
@@ -261,3 +264,34 @@ class TestShortKanaNounRows:
     def test_toki_inside_a_longer_listed_word_is_no_second_card(self):
         fronts = _fronts("ときどき来る。")
         assert "とき" not in fronts and "ときどき" in fronts
+
+
+class TestHumbleVerbs:
+    @pytest.mark.parametrize(
+        ("text", "front"),
+        [
+            ("ここにおります。", "おる"),
+            ("まいったな。", "まいる"),
+            ("大変な失敗をいたした。", "いたす"),
+            ("これをいただく。", "いただく"),
+        ],
+    )
+    def test_mines_a_humble_verb_as_the_main_verb(self, text, front):
+        assert front in _fronts(text)
+
+    @pytest.mark.parametrize(
+        ("text", "front"),
+        [
+            ("おりゃ、どうだ。", "おる"),
+            ("いたい！", "いたす"),
+            ("お願いいたします。", "いたす"),
+            ("失礼いたします。", "いたす"),
+            ("お待ちいたしております。", "いたす"),
+            ("お待ちいたしております。", "おる"),
+            ("見ていただく。", "いただく"),
+            ("どうしておられますか。", "おる"),
+            ("それもいたしかたない。", "いたす"),
+        ],
+    )
+    def test_a_humble_auxiliary_or_a_stray_form_is_no_card(self, text, front):
+        assert front not in _fronts(text)
