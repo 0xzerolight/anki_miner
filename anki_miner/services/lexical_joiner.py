@@ -233,6 +233,7 @@ def _kana_join(
             and not _copula_de_negated(row.headword, tokens, i + size)
             and not _volitional_you(tokens, i)
             and not _with_what(row.headword, tokens, i + size)
+            and not _bare_me(row.headword, tokens, i)
         ):
             return _Join(
                 i,
@@ -402,6 +403,14 @@ def _with_what(headword: str, tokens: list, after: int) -> bool:
     if _pos1(following) == "代名詞":
         return True
     return _pos1(following) == "動詞" and extract_lemma(following) not in _SAYING_VERBS
+
+
+def _bare_me(headword: str, tokens: list, i: int) -> bool:
+    """Whether 目|に|ある has no modifier before 目, where it is 'in the eye' and not 目にあう 'go through'.
+
+    The entry is said of an experience: ひどい目にあった, こんな目にあうなんて.
+    """
+    return headword == "目にあう" and not (i > 0 and _pos1(tokens[i - 1]) in ("形容詞", "連体詞"))
 
 
 def _no_of_noda(headword: str, tokens: list, after: int) -> bool:

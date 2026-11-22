@@ -153,16 +153,41 @@ def _plain_spelling(token) -> str:
 # is as often そんな事ない or 心配する事ない as the 事がない of 見た事がない.
 _DROPPED_PARTICLE = "が"
 _DROPPED_PARTICLE_REJECT_HEADS = frozenset({"事"})
+# The few noun + verb idioms that are one word to the speaker, by the noun's plain
+# spelling and the verb's base, with the particle speech drops (腹減った, 喉渇いた,
+# 気いつけて). Every other bare noun + verb pair stays two words, as measured above.
+_DROPPED_PARTICLE_VERBS: dict[tuple[str, str], str] = {
+    ("腹", "減る"): "が",
+    ("お腹", "減る"): "が",
+    ("喉", "渇く"): "が",
+    ("気", "つける"): "を",
+}
 
 
 def _dropped_particle_candidates(head, tail, prefix: str) -> Alternatives:
-    """The kind-A candidate for a bare noun + adjective with が put back."""
-    if _pos1(head) != "名詞" or _pos2(head) != "普通名詞" or _pos1(tail) != "形容詞":
-        return ()
-    if head.surface in _DROPPED_PARTICLE_REJECT_HEADS:
+    """The kind-A candidate for a bare noun + adjective with が put back, or a listed noun + verb idiom."""
+    if _pos1(head) != "名詞" or _pos2(head) != "普通名詞":
         return ()
     base = extract_orth_base(tail)
+    if _pos1(tail) == "動詞":
+        particle = _DROPPED_PARTICLE_VERBS.get((prefix, base))
+        return ((prefix + particle + base, "A"),) if particle else ()
+    if _pos1(tail) != "形容詞" or head.surface in _DROPPED_PARTICLE_REJECT_HEADS:
+        return ()
     return ((prefix + _DROPPED_PARTICLE + base, "A"),) if base else ()
+
+
+def _voiced_base(token) -> str:
+    """A tail's base with the voiced first kana of its surface, or "" when they agree.
+
+    元気|づけよう: the tagger gives the volitional the orthBase つける, and the
+    entry is 元気づける.
+    """
+    surface = getattr(token, "surface", None) or ""
+    base = extract_orth_base(token)
+    if not surface or not base or surface[0] == base[0] or _unvoiced(surface[0]) != base[0]:
+        return ""
+    return surface[0] + base[1:]
 
 
 # A span must END on a content token. Without this rule, JMdict's thousands of
@@ -684,6 +709,9 @@ class CompoundDictionaryMatcher:
         folded = _potential_base(tail)
         if folded:
             alternatives += ((prefix + folded, "A"),)
+        voiced = _voiced_base(tail)
+        if voiced:
+            alternatives += ((prefix + voiced, "A"),)
         # A classical 連体形 (名|高き, orthBase 高し) is looked up by its modern base
         # too: the dictionary lists 名高い.
         modern = mining_base(tail)

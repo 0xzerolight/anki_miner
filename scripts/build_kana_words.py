@@ -681,6 +681,9 @@ JOINS: tuple[tuple[str, str, str, str] | tuple[str, str, str, str, str], ...] = 
     # よく|なる is よくなる 'get better'; そう|に|なる right after a verb's stem is そうになる 'almost do' (泣きそうになった).
     ("よくなる", "動詞", "よく|=なる", ""),
     ("そうになる", "動詞", "そう|に|=なる", "verb"),
+    # K1121 LIST: 目|に|あっ where the tagger reads the kana verb as ある (ひどい目にあった): the entry 目にあう, only
+    # with a modifier before 目 (lexical_joiner._bare_me; 目にあるもの is 'what is in the eye').
+    ("目にあう", "動詞", "目|に|=ある", ""),
 )
 
 _HEADER = """\

@@ -430,3 +430,47 @@ def test_listed_naru_expression_is_one_entry(sentence: str, front: str) -> None:
 )
 def test_other_naru_lines_have_no_row(sentence: str, row: str) -> None:
     assert row not in _l4_fronts(sentence)
+
+
+# --- L-5: joins the matcher missed --------------------------------------------------------
+
+_L5_TERMS = frozenset({"腹が減る", "喉が渇く", "気をつける", "元気づける", "雨が降る", "時間がある", "目にあう"})
+
+
+def _l5_fronts(sentence: str) -> list[str]:
+    service = SubtitleParserService(
+        AnkiMinerConfig(),
+        term_lookup=lambda terms: {term for term in terms if term in _L5_TERMS},
+        kana_attest_lookup=lambda forms: dict.fromkeys(forms, True),
+    )
+    words, _index, _counts = service.parse_text_units(
+        [ReadingUnit(text=sentence, index=0, location_label="t")], want_line_index=False
+    )
+    return [word.mined_form for word in words]
+
+
+@pytest.mark.parametrize(
+    ("sentence", "front"),
+    [
+        ("腹減って動けない", "腹が減る"),
+        ("喉渇いた", "喉が渇く"),
+        ("気いつけて帰れ", "気をつける"),
+        ("気つけて帰れ", "気をつける"),
+        ("元気づけようぜ", "元気づける"),
+        ("ひどい目にあったら逃げろ", "目にあう"),
+    ],
+)
+def test_idiom_with_a_dropped_particle_or_a_voiced_tail_is_one_entry(sentence: str, front: str) -> None:
+    assert front in _l5_fronts(sentence)
+
+
+@pytest.mark.parametrize(
+    ("sentence", "entry"),
+    [
+        ("雨降ってきた", "雨が降る"),  # a bare noun + verb outside the listed idioms stays two words
+        ("時間あるか", "時間がある"),
+        ("目にあるものすべて", "目にあう"),  # no modifier before 目: 'what is in the eye'
+    ],
+)
+def test_other_bare_noun_and_verb_pairs_stay_two_words(sentence: str, entry: str) -> None:
+    assert entry not in _l5_fronts(sentence)

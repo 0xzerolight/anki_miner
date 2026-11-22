@@ -712,6 +712,8 @@ _ANCHOR_HEADWORDS: tuple[str, ...] = (
     # k1121 LIST: listed expressions on なる (k21l04, k21l05)
     "よくなる",
     "そうになる",
+    # k1121 LIST: a listed noun + verb idiom with its particle dropped (mc05)
+    "腹が減る",
 )
 
 # Yomitan `ruleIdentifiers` per fixture headword. A real term bank ships these,
