@@ -10,3 +10,4 @@
 {"id":"kch10","sentence":"帰り ましょう","expected":["帰る"],"category":"span-window","note":"One space before the auxiliary: one chain of 帰る."}
 {"id":"kch11","sentence":"聞いてねえの","expected":["聞く"],"category":"span-window","note":"聞いてねえ is the negative of 聞いてる: one unit, no card for ねえ."}
 {"id":"kch12","sentence":"人を笑っちゃいやよ","expected":["人","笑う"],"category":"span-window","note":"笑っちゃ|いやよ: the chain of 笑う ends after ちゃ; the card is unchanged."}
+{"id":"kch13","sentence":"すみませんでした","expected":["すみません"],"category":"span-window","note":"The listed apology and its past are one unit; the card is unchanged."}

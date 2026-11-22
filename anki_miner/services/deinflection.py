@@ -360,7 +360,13 @@ def find_highlight_end_with_trace(
     table accepts, in which case the next shorter one is tried.
     """
     feature = getattr(token, "feature", None)
-    if getattr(feature, "pos1", None) not in _EXTENDABLE_POS1:
+    # すみません|でした: an apology the dictionary lists as an interjection has a
+    # past like the verb it once was. The resolver takes that でした and nothing
+    # else after such a word.
+    polite_expression = (
+        chain_end and getattr(feature, "pos1", None) == "感動詞" and text[tok_start:tok_end].endswith("ません")
+    )
+    if getattr(feature, "pos1", None) not in _EXTENDABLE_POS1 and not polite_expression:
         return tok_end, ()
     if not (0 <= tok_start < tok_end <= len(text)):
         return tok_end, ()
@@ -392,6 +398,8 @@ def find_highlight_end_with_trace(
         candidates = _chain_end_candidates(text, raw_tokens, tok_start, tok_end)
     else:
         candidates = [_ChainEnd(end, text[tok_end:end]) for end in _extension_candidate_ends(text, raw_tokens, tok_end)]
+    if polite_expression:
+        candidates = [end for end in candidates if end.tail == "でした" and end.end == tok_end + 3]
     # A stem written in katakana (ヤラ|れ|た, orthBase ヤル) inflects as its
     # hiragana spelling does, and the table's rules are hiragana.
     stem = text[tok_start:tok_end]

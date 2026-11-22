@@ -382,3 +382,28 @@ class TestChaiBeforeAParticle:
     )
     def test_where_the_chain_ends(self, text, surface, highlighted):
         assert _chain_text(text, surface) == highlighted
+
+
+class TestPoliteExpressionPast:
+    """すみませんでした is one unit: the listed apology with its past."""
+
+    _TERMS = frozenset({"すみません", "すいません"})
+
+    @pytest.mark.parametrize(
+        ("text", "spans"),
+        [
+            ("すみませんでした", {"すみません": "すみませんでした"}),
+            ("すいませんでした", {"すいません": "すいませんでした"}),
+            ("すみません でした", {"すみません": "すみません"}),  # no space is crossed
+            ("すみません、でした", {"すみません": "すみません"}),
+            ("すみませんね", {"すみません": "すみません"}),
+        ],
+    )
+    def test_where_the_expression_ends(self, text, spans):
+        assert _spans(text, self._TERMS) == spans
+
+    def test_the_end_the_front_is_resolved_from_is_the_expression(self):
+        service = _service(self._TERMS)
+        text = "すみませんでした"
+        _stored, raw_tokens, merged_tokens, *_ = service._build_line_state(text, 0.0, 0.0)
+        assert service._find_highlight_end(text, raw_tokens, 0, 5, merged_tokens[0]) == 5
