@@ -21,6 +21,7 @@ lookup and a cache.
 
 from __future__ import annotations
 
+from functools import lru_cache
 from typing import Callable, NamedTuple
 
 from anki_miner.services.compound_matcher import CompoundDictionaryMatcher, CompoundSyntheticToken, _pos1, _pos2
@@ -182,6 +183,19 @@ def _negative_adjective(tokens: list, i: int) -> _Join | None:
     return _Join(i, i + 1, headword, "形容詞")
 
 
+@lru_cache(maxsize=1)
+def _row_starts() -> tuple[frozenset[str], frozenset[str]]:
+    """What a list row can start on: the first surface of every row, and the dictionary form of a one-token base row.
+
+    A token that is neither starts no row, and ``_kana_join`` need not try any size on it.
+    """
+    listed = kana_words()
+    return (
+        frozenset(key[0] for key in listed.joins) | frozenset(key[0] for key in listed.base_joins if len(key) > 1),
+        frozenset(key[0] for key in listed.base_joins if len(key) == 1),
+    )
+
+
 def _kana_join(
     tokens: list,
     i: int,
@@ -211,6 +225,9 @@ def _kana_join(
     """
     listed = kana_words()
     read = keys is not None and written_ok is not None and keys[i] in listed.heads
+    surfaces_first, bases_alone = _row_starts()
+    if not read and tokens[i].surface not in surfaces_first and extract_orth_base(tokens[i]) not in bases_alone:
+        return None
     for size in range(min(_MAX_KANA_TOKENS, len(tokens) - i, (below or _MAX_KANA_TOKENS + 1) - 1), 0, -1):
         span = tokens[i : i + size]
         surfaces = tuple(token.surface for token in span)
