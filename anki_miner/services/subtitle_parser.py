@@ -1799,7 +1799,50 @@ class SubtitleParserService:
                 additional_target=resolved_front,
             )
             highlight_end = max(highlight_end, resolved_end)
-        return stretched_highlight_end(text, highlight_end)
+        return self._chain_highlight_end(
+            text,
+            raw_tokens,
+            tok_start,
+            tok_end,
+            word_token,
+            stretched_highlight_end(text, highlight_end),
+            resolved_front if resolved_front != orth_base else None,
+        )
+
+    def _chain_highlight_end(
+        self,
+        text: str,
+        raw_tokens: list,
+        tok_start: int,
+        tok_end: int,
+        word_token: Any,
+        front_end: int,
+        additional_target: str | None,
+    ) -> int:
+        """The end of the word's chain as a reader sees it, where it differs from ``front_end``.
+
+        ``front_end`` is the end the card front is resolved from (today's
+        window and table). The chain-end resolver
+        (``find_highlight_end_with_trace(chain_end=True)``) knows more about
+        where a chain stops: 食べて|よ ends before the particle. Every caller
+        resolves the front from the text up to the returned end, so an end
+        that would resolve another front is not taken: the resolver moves the
+        highlight and never the card.
+        """
+        if getattr(getattr(word_token, "feature", None), "written_base", None):
+            return front_end  # a spoken idiom's end is the one of its written base
+        end, _chain = find_highlight_end_with_trace(
+            text, raw_tokens, tok_start, tok_end, word_token, additional_target=additional_target, chain_end=True
+        )
+        end = stretched_highlight_end(text, end)
+        if end == front_end:
+            return front_end
+        orth_base = self._mining_base(word_token)
+        if self._resolve_front(word_token, orth_base, text, tok_start, end) != self._resolve_front(
+            word_token, orth_base, text, tok_start, front_end
+        ):
+            return front_end
+        return end
 
     def _card_front(self, word_token: Any, text: str, tok_start: int, tok_end: int, raw_tokens: list) -> str:
         """The ``mined_form`` emission gives an included token: its card front.

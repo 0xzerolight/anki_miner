@@ -46,7 +46,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from functools import lru_cache
-from typing import Any, Callable, Iterable, Iterator, Mapping, Sequence
+from typing import Any, Callable, Iterable, Iterator, Mapping, NamedTuple, Sequence
 
 from anki_miner.utils.text_utils import katakana_to_hiragana
 
@@ -291,6 +291,16 @@ def _str_or_none(value: object) -> str | None:
     return value if isinstance(value, str) and value else None
 
 
+class _ChainEnd(NamedTuple):
+    """One place the chain after a mined token may end."""
+
+    end: int
+    # The text between the token and ``end`` as the table reads it.
+    tail: str
+    # The last tail token is the sentence-final particle よ.
+    final_yo: bool = False
+
+
 def find_highlight_end(
     text: str,
     raw_tokens: list,
@@ -313,6 +323,7 @@ def find_highlight_end_with_trace(
     tok_end: int,
     token: Any,
     additional_target: str | None = None,
+    chain_end: bool = False,
 ) -> tuple[int, tuple[str, ...]]:
     """Full-inflected-form end offset plus the accepted deinflection chain.
 
@@ -338,6 +349,11 @@ def find_highlight_end_with_trace(
     following raw token must be adjacent in ``text``, pure hiragana,
     inflectional POS (助動詞/助詞/動詞/形容詞/形状詞/接尾辞 — a 名詞 like こと stops the
     window), and within ``tok_end + _WINDOW_CAP_CHARS`` chars.
+
+    That end is what the card front is resolved from. ``chain_end`` asks for
+    the end a reader sees instead (the highlight): the candidates come from
+    ``_chain_end_candidates``, and ``_chain_end_gate`` may refuse an end the
+    table accepts, in which case the next shorter one is tried.
     """
     feature = getattr(token, "feature", None)
     if getattr(feature, "pos1", None) not in _EXTENDABLE_POS1:
@@ -368,30 +384,49 @@ def find_highlight_end_with_trace(
         # じる identity validates against v1.
         additional_mask = deinflector.condition_flags("v1")
 
-    candidate_ends = _extension_candidate_ends(text, raw_tokens, tok_end)
+    if chain_end:
+        candidates = _chain_end_candidates(text, raw_tokens, tok_end)
+    else:
+        candidates = [_ChainEnd(end, text[tok_end:end]) for end in _extension_candidate_ends(text, raw_tokens, tok_end)]
     # A stem written in katakana (ヤラ|れ|た, orthBase ヤル) inflects as its
     # hiragana spelling does, and the table's rules are hiragana.
     stem = text[tok_start:tok_end]
     kana_stem = katakana_to_hiragana(stem)
     kana_targets = {katakana_to_hiragana(target) for target in targets} if kana_stem != stem else set()
-    for candidate_end in reversed(candidate_ends):  # longest-first
+    floor = tok_end - tok_start
+    for candidate in reversed(candidates):  # longest-first
         # A stretched tail (歩い|たぁ, 食べ|ねー) is the chain of its plain spelling.
-        for candidate in _unstretched_forms(text[tok_start:candidate_end], tok_end - tok_start):
-            for result in deinflector.transform(candidate):
-                base_matches = result.text in targets and conditions_match_mask(result.conditions, mask)
-                additional_matches = (
-                    additional_target is not None
-                    and result.text == additional_target
-                    and conditions_match_mask(result.conditions, additional_mask)
-                )
-                if base_matches or additional_matches:
-                    chain = tuple(frame[0] for frame in reversed(result.trace))
-                    return candidate_end, chain
-            if kana_targets:
-                for result in deinflector.transform(kana_stem + candidate[tok_end - tok_start :]):
-                    if result.text in kana_targets and conditions_match_mask(result.conditions, mask):
-                        return candidate_end, tuple(frame[0] for frame in reversed(result.trace))
+        for spelling in _unstretched_forms(stem + candidate.tail, floor):
+            chain = _reaching_chain(deinflector, spelling, targets, mask, additional_target, additional_mask)
+            if chain is None and kana_targets:
+                chain = _reaching_chain(deinflector, kana_stem + spelling[floor:], kana_targets, mask, None, 0)
+            if chain is None:
+                continue
+            if chain_end and _chain_end_gate(candidate, chain):
+                break  # refused: the next shorter end is tried
+            return candidate.end, chain
     return tok_end, ()
+
+
+def _reaching_chain(
+    deinflector: Deinflector,
+    spelling: str,
+    targets: set[str],
+    mask: int,
+    additional_target: str | None,
+    additional_mask: int,
+) -> tuple[str, ...] | None:
+    """The transform chain by which ``spelling`` deinflects to a target, ``None`` when it reaches none."""
+    for result in deinflector.transform(spelling):
+        base_matches = result.text in targets and conditions_match_mask(result.conditions, mask)
+        additional_matches = (
+            additional_target is not None
+            and result.text == additional_target
+            and conditions_match_mask(result.conditions, additional_mask)
+        )
+        if base_matches or additional_matches:
+            return tuple(frame[0] for frame in reversed(result.trace))
+    return None
 
 
 # Marks that lengthen the word written before them: a long mark, a small vowel
@@ -661,6 +696,43 @@ def _extension_candidate_ends(text: str, raw_tokens: list, tok_end: int) -> list
     return ends
 
 
+def _chain_end_candidates(text: str, raw_tokens: list, tok_end: int) -> list[_ChainEnd]:
+    """Ascending ends the chain-end resolver may take after ``tok_end``.
+
+    The window of ``_extension_candidate_ends``, with what ``_chain_end_gate``
+    needs to know about each end.
+    """
+    from anki_miner.services.morphology import iter_token_spans
+
+    candidates: list[_ChainEnd] = []
+    prev_end = tok_end
+    tail = ""
+    try:
+        for tail_token, start, end in iter_token_spans(text, raw_tokens):
+            if end <= tok_end:
+                continue
+            if start != prev_end:
+                if start > prev_end:
+                    break  # whitespace gap / non-adjacent tail
+                continue  # token overlapping the mined span; skip
+            if end - tok_end > _WINDOW_CAP_CHARS:
+                break
+            surface = text[start:end]
+            tail_feature = getattr(tail_token, "feature", None)
+            pos1 = getattr(tail_feature, "pos1", None)
+            if not _is_pure_hiragana(surface.rstrip("ー") if pos1 == "助動詞" else surface):
+                break
+            if pos1 not in _INFLECTIONAL_TAIL_POS1:
+                break
+            tail += surface
+            final_yo = surface == "よ" and getattr(tail_feature, "pos2", None) == "終助詞"
+            candidates.append(_ChainEnd(end, tail, final_yo))
+            prev_end = end
+    except (AttributeError, TypeError):
+        return []  # mock/duck-typed token stream: no extension
+    return candidates
+
+
 @lru_cache(maxsize=1)
 def get_japanese_deinflector() -> Deinflector:
     """Process-wide ``Deinflector`` over the ported Yomitan Japanese table.
@@ -716,3 +788,19 @@ def get_highlight_deinflector() -> Deinflector:
     from anki_miner.services.japanese_transforms import CONDITIONS, TRANSFORMS
 
     return Deinflector(CONDITIONS, [*TRANSFORMS, *_te_auxiliary_transforms()])
+
+
+# What the table reads as an imperative in よ only by first building a verb in
+# る that nobody said: 食べて|よ as 食べてる, 見とけ|よ and 言え|よ as a potential,
+# 教えてくれ|よ as 教えてくれる. A verb's own よ form (捕まえよ, 会わせよ) is none of these.
+_NO_YO_IMPERATIVE_AFTER = frozenset({"potential", "-いる", "-おく", "-くれる"})
+
+
+def _chain_end_gate(candidate: _ChainEnd, chain: tuple[str, ...]) -> bool:
+    """Whether the resolver refuses an end the table accepts with ``chain``.
+
+    The table says what can be a chain; this says what is not one here. A
+    sentence-final よ is the particle, not the ending of an imperative, where
+    that imperative would be the one of ``_NO_YO_IMPERATIVE_AFTER``.
+    """
+    return candidate.final_yo and len(chain) >= 2 and chain[-1] == "imperative" and chain[-2] in _NO_YO_IMPERATIVE_AFTER

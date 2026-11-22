@@ -1,0 +1,2 @@
+{"id":"kch01","sentence":"早く食べてよ","expected":["早い","食べる"],"category":"span-window","note":"The sentence-final よ is outside the chain (食べて); the card is unchanged."}
+{"id":"kch02","sentence":"教えてくれよ","expected":["教える"],"category":"span-window","note":"教えてくれ|よ: one unit 教える, くれる is a chain piece."}
