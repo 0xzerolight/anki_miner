@@ -426,8 +426,9 @@ def _no_of_noda(headword: str, tokens: list, after: int) -> bool:
     """Whether the の of どう|し|た|の opens のだ / のです: どうしたのだ is どうした + のだ, not the question どうしたの.
 
     The row is passed over, so the shorter どう|し|た joins and の|だ stays whole for its own row.
+    なん|な|の before a copula is the same: なんなのだ is 何 + なのだ, and なん keeps its own card.
     """
-    if headword != "どうしたの" or after >= len(tokens):
+    if headword not in ("どうしたの", "なんなの") or after >= len(tokens):
         return False
     following = tokens[after]
     return _pos1(following) == "助動詞" and extract_lemma(following) in ("だ", "です")

@@ -51,7 +51,7 @@ SHORT_NOUNS: frozenset[str] = frozenset(
 )
 
 #: The only two-kana spellings of kanji-written words listed outside the nouns.
-SHORT_READINGS: frozenset[str] = frozenset({"きみ", "ぼく", "おれ", "かれ", "だれ", "ぜひ", "われ", "なん"})
+SHORT_READINGS: frozenset[str] = frozenset({"きみ", "ぼく", "おれ", "かれ", "だれ", "ぜひ", "われ", "なん", "うぬ"})
 
 #: The only kanji-written nouns of three morae listed by their kana spelling: those
 #: commonly written in kana. A three-mora kana noun is otherwise as often the tail
@@ -66,6 +66,8 @@ SHORT_SPELLED_NOUNS: frozenset[str] = frozenset(
     | {"ちから", "いのち", "かたち", "ふたり", "せがれ", "じじい", "ばばあ", "おかみ"}
     | {"とどめ", "せりふ", "あるじ", "おなご", "だんご", "ささい", "うかつ"}
     | {"きのう", "しだい", "もよう"}
+    # Archaic first- and second-person pronouns of period drama (わらわ is 妾; the tagger files it as a noun).
+    | {"わらわ"}
 )
 
 #: Spoken kana spellings JMdict gives no priority tag (やっぱ for 矢っ張り, the
@@ -684,6 +686,11 @@ JOINS: tuple[tuple[str, str, str, str] | tuple[str, str, str, str, str], ...] = 
     # K1121 LIST: 目|に|あっ where the tagger reads the kana verb as ある (ひどい目にあった): the entry 目にあう, only
     # with a modifier before 目 (lexical_joiner._bare_me; 目にあるもの is 'what is in the eye').
     ("目にあう", "動詞", "目|に|=ある", ""),
+    # K1121 LIST: more words on the kana なん, so that the word row なん does not card their first piece.
+    ("なんらか", "副詞", "なん|ら|か", ""),
+    ("なんにせよ", "副詞", "なん|に|せよ", ""),
+    ("なんだったら", "副詞", "なん|だっ|たら", "start"),
+    ("なんも", "副詞", "なん|も", ""),
 )
 
 _HEADER = """\

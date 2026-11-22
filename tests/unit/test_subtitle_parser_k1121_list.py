@@ -41,6 +41,10 @@ _ATTESTED = frozenset(
         "しかるべき",
         "なん",
         "なんか",
+        "なんなの",
+        "わらわ",
+        "うぬ",
+        "私",
         "これ",
         "のです",
         "ことがある",
@@ -550,3 +554,42 @@ def test_counter_and_tail_cut() -> None:
     assert number_counters._counter_and_tail("人前") is None  # 2人前 is ににんまえ 'two portions'
     assert number_counters._counter_and_tail("代目") is None
     assert number_counters.counter_of("３回目") is None  # the tail is no part of a number + counter front
+
+
+@pytest.mark.parametrize(
+    ("sentence", "front"),
+    [
+        ("なんらかの形で会う", "なんらか"),
+        ("なんにせよ行く", "なんにせよ"),
+        ("なんだったら帰る", "なんだったら"),
+        ("なんもない", "なんも"),
+    ],
+)
+def test_expression_on_nan_is_one_entry(sentence: str, front: str) -> None:
+    fronts = _l4_fronts(sentence)
+    assert front in fronts
+    assert "なん" not in fronts
+
+
+@pytest.mark.parametrize("sentence", ["邪魔になんなよ", "かなんわ"])
+def test_nan_cut_from_a_contracted_verb_is_no_card(sentence: str) -> None:
+    assert "なん" not in _fronts(sentence)
+
+
+def test_nan_after_ni_before_no_is_the_word() -> None:
+    assert "なん" in _fronts("私になんの用")
+
+
+# --- L-8 leftovers: archaic pronouns, なんなの before a copula ------------------------------
+
+
+@pytest.mark.parametrize(("sentence", "front"), [("わらわは姫じゃ", "わらわ"), ("うぬは何者だ", "うぬ")])
+def test_archaic_pronoun_is_a_word(sentence: str, front: str) -> None:
+    assert front in _fronts(sentence)
+
+
+def test_nannano_before_a_copula_leaves_nan() -> None:
+    fronts = _fronts("なんなのだ")
+    assert "なんなの" not in fronts
+    assert "なん" in fronts
+    assert "なんなの" in _fronts("なんなの！")
