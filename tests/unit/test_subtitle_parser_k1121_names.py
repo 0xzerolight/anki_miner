@@ -49,12 +49,13 @@ _HEADWORDS = (
     "黒い",
     "王",
     "姉上",
+    "新店",
 )
 
 _LABELLED = [
     "（凛堂）森へ行こう",
     "（凛堂）瞳を閉じてくれ",
-    "（森）凛堂、待ってくれ",
+    "（森）凛堂も待ってくれ",
     "（瞳）凛堂さんは森の奥にいる",
     "森で凛とした堂々たる姿を見た",
     "凛堂は森で瞳に会った",
@@ -137,7 +138,7 @@ class TestSpeakerLabelNames:
 
     def test_the_whole_name_is_one_proper_noun(self, labelled: Path) -> None:
         cards = dict(_line_cards(_service(_NAMES_MINED), labelled))
-        assert cards["凛堂、待ってくれ"] == ["凛堂", "待つ"]
+        assert cards["凛堂も待ってくれ"] == ["凛堂", "待つ"]
         assert "凛堂" in cards["凛堂は森で瞳に会った"]
         assert not set(_PIECES) & {front for fronts in cards.values() for front in fronts}
 
@@ -209,8 +210,8 @@ class TestFileState:
     def test_the_sentence_furigana_of_a_merged_line_is_unchanged(self, labelled: Path, unlabelled: Path) -> None:
         merged = {sentence: furigana for sentence, _front, furigana in _mined(_service(), labelled)}
         plain = {sentence: furigana for sentence, _front, furigana in _mined(_service(), unlabelled)}
-        assert merged["凛堂、待ってくれ"] == plain["凛堂、待ってくれ"]
-        assert "凛" in merged["凛堂、待ってくれ"]
+        assert merged["凛堂も待ってくれ"] == plain["凛堂も待ってくれ"]
+        assert "凛" in merged["凛堂も待ってくれ"]
         assert all(plain[sentence] == furigana for sentence, furigana in merged.items())
 
     @pytest.mark.parametrize("switch", ["factory", "attribute"])
@@ -251,7 +252,7 @@ class TestHonorificNames:
         assert cards["水竜が竜の巣に帰った"] == ["水竜", "竜", "巣", "帰る"]
 
     def test_once_before_an_honorific_is_no_evidence(self, tmp_path: Path) -> None:
-        path = _srt(tmp_path / "once.srt", ["水竜さん、こっちです", "水竜が竜の巣に帰った"])
+        path = _srt(tmp_path / "once.srt", ["水竜さんは水を飲んだ", "水竜が竜の巣に帰った"])
         assert "水" in dict(_line_cards(_service(), path))["水竜が竜の巣に帰った"]
 
     def test_one_label_and_two_honorifics_make_a_labelled_name(self, tmp_path: Path) -> None:
@@ -275,6 +276,62 @@ class TestHonorificNames:
         ],
     )
     def test_a_word_before_an_honorific_is_no_name(self, lines: list[str], tmp_path: Path) -> None:
+        path = _srt(tmp_path / "words.srt", lines)
+        for config in (None, _NAMES_MINED):
+            assert _line_cards(_service(config), path) == _line_cards(_switched_off(_service(config)), path)
+
+
+class TestCalledNames:
+    _LINES = ["雷凰！", "雷凰さん！ 逃げるな", "雷凰の剣は雷のように速い", "鋼刃さん、こっちだ", "鋼刃が来た"]
+
+    def test_a_name_called_with_an_honorific_is_one_token(self, tmp_path: Path) -> None:
+        path = _srt(tmp_path / "called.srt", self._LINES)
+        cards = dict(_line_cards(_service(), path))
+        plain = dict(_line_cards(_switched_off(_service()), path))
+        assert plain["雷凰！"] == ["雷"] and cards["雷凰！"] == []
+        assert cards["雷凰さん！ 逃げるな"] == ["逃げる"]
+        # The word 雷 keeps its card; the piece of the name has none.
+        assert plain["雷凰の剣は雷のように速い"].count("雷") == 2
+        assert cards["雷凰の剣は雷のように速い"] == plain["雷凰の剣は雷のように速い"][1:]
+        assert cards["鋼刃が来た"] == ["来る"]
+
+    def test_the_whole_name_is_one_proper_noun(self, tmp_path: Path) -> None:
+        cards = dict(_line_cards(_service(_NAMES_MINED), _srt(tmp_path / "called.srt", self._LINES)))
+        assert cards["雷凰！"] == ["雷凰"]
+        assert cards["鋼刃が来た"] == ["鋼刃", "来る"]
+
+    def test_called_once_and_once_with_an_honorific_is_enough(self, tmp_path: Path) -> None:
+        lines = ["炎舞！", "炎舞さんが来た", "炎舞の威力は炎より強い"]
+        cards = dict(_line_cards(_service(), _srt(tmp_path / "both.srt", lines)))
+        assert cards["炎舞の威力は炎より強い"].count("炎") == 1
+        assert "舞" not in cards["炎舞の威力は炎より強い"]
+
+    def test_called_once_with_an_honorific_is_enough(self, tmp_path: Path) -> None:
+        path = _srt(tmp_path / "address.srt", ["水竜さん！", "水竜が竜の巣に帰った"])
+        assert dict(_line_cards(_service(), path))["水竜が竜の巣に帰った"] == ["竜", "巣", "帰る"]
+
+    def test_a_shout_without_an_honorific_is_no_evidence(self, tmp_path: Path) -> None:
+        # A move's name is shouted like a person's, and its pieces are words.
+        path = _srt(tmp_path / "shout.srt", ["雷凰！", "雷凰！ 逃げるな", "雷凰！", "雷凰の剣は速い"])
+        assert _line_cards(_service(), path) == _line_cards(_switched_off(_service()), path)
+        assert "雷" in dict(_line_cards(_service(), path))["雷凰の剣は速い"]
+
+    @pytest.mark.parametrize(
+        "lines",
+        [
+            # A title after a name.
+            ["柚葉姫！", "柚葉姫！ 待って", "姫は柚葉姫と呼ばれている"],
+            # A headword.
+            ["新店！", "新店！ 今日から営業だ", "駅前の新店に行った"],
+            # A prefix and a word.
+            ["元父！", "元父！ 待って", "元父が来た"],
+            # A group word.
+            ["桜組！", "桜組！ 集合だ", "桜組の先生は桜が好きだ"],
+            # Two words shouted together.
+            ["火炎剣！", "火炎剣！ くらえ", "火炎剣の炎は熱い"],
+        ],
+    )
+    def test_a_shouted_word_is_no_name(self, lines: list[str], tmp_path: Path) -> None:
         path = _srt(tmp_path / "words.srt", lines)
         for config in (None, _NAMES_MINED):
             assert _line_cards(_service(config), path) == _line_cards(_switched_off(_service(config)), path)

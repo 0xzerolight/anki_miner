@@ -1696,6 +1696,13 @@ class SubtitleParserService:
     _NAME_PIECE_RE = re.compile(r"[一-鿿々〆]+|[ァ-ヺー]+")
     #: Parts of speech of the pieces of a name that only an honorific vouches for.
     _NAME_HONORIFIC_PIECE_POS1: frozenset[str] = frozenset({"名詞", "接尾辞", "形状詞"})
+    #: A line that may call a name: kanji or katakana alone between pauses, with an honorific at most.
+    _CALLED_NAME_HINT_RE = re.compile(
+        r"(?<![ぁ-ゖァ-ヺー一-鿿々〆])[ァ-ヺー一-鿿々〆]{2,7}(?:さん|くん|ちゃん|さま)?(?![ぁ-ゖァ-ヺー一-鿿々〆])"
+    )
+    _NAME_PAUSE_POS1: frozenset[str] = frozenset({"補助記号", "記号", "空白"})
+    #: One-kanji words that start a word, not a name that is only called (元|父, 新|店).
+    _NAME_PREFIX_HEADS: frozenset[str] = frozenset("元新前現全各両副総大小旧故某同本当")
 
     def _name_merged_line_states(
         self, subs: Any, unmined: frozenset[int]
@@ -1704,7 +1711,8 @@ class SubtitleParserService:
 
         A name UniDic does not know comes out in pieces (凛|堂), and each piece
         is carded as a common noun. The file says who its people are (on its
-        speaker labels, and where it calls them さん or 先生), so the evidence
+        speaker labels, where it calls them さん or 先生, and where it calls
+        them by name and nothing else), so the evidence
         is collected over the whole file before any line is given out, and a
         listed name becomes one proper noun wherever it stands
         (``_merge_file_names``).
@@ -1719,6 +1727,7 @@ class SubtitleParserService:
         line_states: list[tuple[str, list, list, float, float, float]] = []
         labels: collections.Counter[str] = collections.Counter()
         honorifics: collections.Counter[str] = collections.Counter()
+        called: collections.Counter[str] = collections.Counter()
         for line in subs:
             if getattr(line, "is_comment", None) is True:
                 continue
@@ -1734,7 +1743,8 @@ class SubtitleParserService:
             if line_state[1]:
                 labels.update(self._speaker_label_names(line.text))
                 honorifics.update(self._names_before_honorifics(line_state))
-        names = self._file_names(labels, honorifics)
+                called.update(self._names_called(line_state))
+        names = self._file_names(labels, honorifics, called)
         if not names:
             return line_states
         return [self._merge_file_names(line_state, names) for line_state in line_states]
@@ -1792,6 +1802,39 @@ class SubtitleParserService:
                 names.append(name)
         return names
 
+    def _names_called(self, line_state: tuple[str, list, list, float, float, float]) -> list[str]:
+        """Each name of two raw tokens or more that stands alone between pauses (雷|凰 in 雷凰！ 逃げるな).
+
+        A pause is the line's start or end, a space or a punctuation mark. What
+        stands between two pauses is a called name when it is nothing but
+        kanji-only or katakana-only tokens (linked by ノ, 之, 乃 or ヶ at most),
+        with an honorific after them at most, and 7 characters or fewer.
+        """
+        line = self._tokenizer_text(line_state[0])
+        if self._CALLED_NAME_HINT_RE.search(line) is None:
+            return []
+        names: list[str] = []
+        between: list[Any] = []
+        previous_end = 0
+        for token, start, end in [*self._iter_token_spans(line, line_state[1]), (None, -1, -1)]:
+            pause = token is None or getattr(getattr(token, "feature", None), "pos1", None) in self._NAME_PAUSE_POS1
+            if pause or start != previous_end:
+                if between and self._is_name_honorific(between[-1]):
+                    between.pop()
+                name = "".join(piece.surface for piece in between)
+                if (
+                    len(between) >= 2
+                    and len(name) <= 7
+                    and not {between[0].surface, between[-1].surface} & self._NAME_CONNECTORS
+                    and all(self._is_name_piece(piece, linking=True) for piece in between)
+                ):
+                    names.append(name)
+                between = []
+            if not pause:
+                between.append(token)
+            previous_end = end
+        return names
+
     def _is_name_honorific(self, token: Any) -> bool:
         """Whether a raw token is what a name is called with: さん and its kin as a suffix, 先生, 先輩."""
         surface = token.surface
@@ -1813,11 +1856,16 @@ class SubtitleParserService:
             and getattr(getattr(token, "feature", None), "pos1", None) not in self._NAME_PIECE_EXCLUDED_POS1
         )
 
-    def _file_names(self, labels: collections.Counter[str], honorifics: collections.Counter[str]) -> dict[str, str]:
+    def _file_names(
+        self, labels: collections.Counter[str], honorifics: collections.Counter[str], called: collections.Counter[str]
+    ) -> dict[str, str]:
         """The names one file vouches for, each with its kind of evidence.
 
-        ``L``: two speaker labels, or one label and two honorifics. ``H``: the
-        name stands twice before an honorific. A name is 2 to 6 characters with
+        ``L``: two speaker labels, or one label and two of the others. ``H``:
+        the name stands twice before an honorific. ``V``: it is called by name
+        and stands before an honorific (水竜さん！ alone is both). A name that is
+        only shouted is not listed: a move's name is shouted the same way, and
+        its pieces are words. A name is 2 to 6 characters with
         a kanji and no dictionary headword as written: a role (店員) and a word
         that is also a name (森) stay words. Without a dictionary there is no
         list.
@@ -1825,13 +1873,15 @@ class SubtitleParserService:
         if self._term_lookup is None:
             return {}
         names: dict[str, str] = {}
-        for name in sorted({*labels, *honorifics}):
+        for name in sorted({*labels, *honorifics, *called}):
             if not (self._FILE_NAME_RE.fullmatch(name) and self._FILE_NAME_KANJI_RE.search(name)):
                 continue
-            if labels[name] >= 2 or (labels[name] and honorifics[name] >= 2):
+            if labels[name] >= 2 or (labels[name] and honorifics[name] + called[name] >= 2):
                 names[name] = "L"
             elif honorifics[name] >= 2:
                 names[name] = "H"
+            elif called[name] and honorifics[name]:
+                names[name] = "V"
         if not names:
             return {}
         listed = self._memoized_attest(sorted(names))
@@ -1909,6 +1959,8 @@ class SubtitleParserService:
           and adjectival nouns, holds no numeral, and never ends in such a rank
           or house word, whatever stands before it: a shop no dictionary lists
           (鯖|屋 in 鯖屋さん) keeps its noun.
+        * A name that is only called (``V``) is one kanji per piece and does not
+          start with a prefix word (元|父): a shouted compound keeps its words.
         """
         kanji = False
         known = 0
@@ -1927,10 +1979,12 @@ class SubtitleParserService:
             elif len(surface) >= (3 if _is_all_katakana(surface) else 2):
                 return False
             holds_kanji = self._FILE_NAME_KANJI_RE.search(surface) is not None
-            if len(surface) == 1 and not holds_kanji:
+            if (len(surface) == 1 or kind == "V") and not (len(surface) == 1 and holds_kanji):
                 return False
             kanji = kanji or holds_kanji
         if tokens[-1].surface in self._NAME_TITLE_TAILS and (kind != "L" or known == len(tokens) - 1):
+            return False
+        if kind == "V" and tokens[0].surface in self._NAME_PREFIX_HEADS:
             return False
         return kanji and known < len(tokens)
 
