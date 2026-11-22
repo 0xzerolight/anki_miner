@@ -1654,13 +1654,13 @@ class TestKanaRecoveryLexicalizedWindow:
     # --- 6. T-38 count==mine parity: the reject fires identically at all four sites. ---
 
     def test_count_equals_mine_all_sites_reject(self, test_config, tmp_path):
-        text = "彼にとって"
+        text = "彼をめぐって"  # にとって is a join row since K1121 EXPR; をめぐって has none
 
         def tokens():
             return [
                 _make_token("彼", "代名詞", "*", lemma="彼", kana="カレ", orth_base="彼"),
-                _make_token("に", "助詞", "格助詞", lemma="に", kana="ニ", orth_base="に"),
-                _make_token("とっ", "動詞", "一般", lemma="取る", kana="トッ", orth_base="とる"),
+                _make_token("を", "助詞", "格助詞", lemma="を", kana="ヲ", orth_base="を"),
+                _make_token("めぐっ", "動詞", "一般", lemma="巡る", kana="メグッ", orth_base="めぐる"),
                 _make_token("て", "助詞", "接続助詞", lemma="て", kana="テ", orth_base="て"),
             ]
 
@@ -1680,7 +1680,7 @@ class TestKanaRecoveryLexicalizedWindow:
                 patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
                 patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
             ):
-                service = SubtitleParserService(test_config, kana_attest_lookup=_attest_lookup("とる", "にとって"))
+                service = SubtitleParserService(test_config, kana_attest_lookup=_attest_lookup("めぐる", "をめぐって"))
                 return fn(service, sub_file)
 
         mine = invoke(lambda s, f: s.parse_subtitle_file(f))

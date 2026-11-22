@@ -76,6 +76,17 @@ _ATTESTED = frozenset(
         "どう",
         "どうしたの",
         "どうしよう",
+        # E-3
+        "にとって",
+        "に対して",
+        "とともに",
+        "といえば",
+        "のせいで",
+        "にしては",
+        "にしても",
+        "ほうがいい",
+        "方がいい",
+        "ほう",
     }
 )
 
@@ -245,3 +256,40 @@ def test_reply_words_inside_a_clause_stay(sentence: str, kept: str, reply: str) 
     fronts = _fronts(sentence)
     assert kept in fronts
     assert reply not in fronts
+
+
+# --- E-3: particle-headed expressions after a noun, ほうがいい after a verb -------------------
+
+
+@pytest.mark.parametrize(
+    ("sentence", "front"),
+    [
+        ("彼にとって大事だ", "にとって"),
+        ("私にとっては大きい", "にとって"),
+        ("友達に対して怒る", "に対して"),
+        ("彼とともに行く", "とともに"),
+        ("夏といえば海だ", "といえば"),
+        ("君のせいで負けた", "のせいで"),
+        ("子供にしては上手だ", "にしては"),
+        ("雨にしても行く", "にしても"),
+        ("買ったほうがいい", "ほうがいい"),
+        ("買った方がいい", "方がいい"),
+    ],
+)
+def test_particle_headed_expression_after_a_noun(sentence: str, front: str) -> None:
+    assert front in _fronts(sentence)
+
+
+@pytest.mark.parametrize(
+    ("sentence", "row"),
+    [
+        ("写真にとって送った", "にとって"),  # に + 撮って
+        ("鍵をここにとっておいた", "にとって"),  # に + 取っておく
+        ("こっちのほうがいい", "ほうがいい"),  # after の: the noun ほう
+        ("静かにしても起きる", "にしても"),  # 静かにする: no noun before に
+        ("早く行くとともに", "とともに"),  # after a verb
+        ("彼がノーと言えば終わりだ", "と言えば"),  # kanji 言えば is the verb: no row for that spelling
+    ],
+)
+def test_particle_headed_row_needs_its_place(sentence: str, row: str) -> None:
+    assert row not in _fronts(sentence)

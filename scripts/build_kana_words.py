@@ -556,6 +556,21 @@ JOINS: tuple[tuple[str, str, str, str] | tuple[str, str, str, str, str], ...] = 
     ("どうしたの", "感動詞", "どう|し|た|の", "start"),
     ("どうしたん", "感動詞", "どう|し|た|ん", "start"),
     ("どうしよう", "感動詞", "どう|しよう", ""),
+    # K1121 EXPR: particle-headed expressions after a noun, and ほうがいい after a verb. に|とっ|て is passed
+    # over before a verb, where it is the て-form of とる (lexical_joiner._verb_te_form).
+    ("にとって", "副詞", "に|とっ|て", "noun"),
+    ("に対する", "連体詞", "に|対する", "noun"),
+    ("に対して", "副詞", "に|対し|て", "noun"),
+    ("に対し", "副詞", "に|対し", "noun"),
+    ("と共に", "副詞", "と|共に", "noun"),
+    ("とともに", "副詞", "と|とも|に", "noun"),
+    ("といえば", "副詞", "と|いえ|ば", "noun"),
+    ("のせいで", "副詞", "の|せい|で", "noun"),
+    ("にしても", "副詞", "に|し|て|も", "noun"),
+    ("にしては", "副詞", "に|し|て|は", "noun"),
+    ("としたことが", "副詞", "と|し|た|こと|が", "noun"),
+    ("に限らず", "副詞", "に|限ら|ず", "noun"),
+    ("ほうがいい", "形容詞", "ほう|が|=いい", "verb"),
 )
 
 _HEADER = """\

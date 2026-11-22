@@ -202,8 +202,9 @@ def test_anchor_meets_lexicalized_window_floor() -> None:
     # apology, joined before any window is judged.
     assert mine_lite_anchor("すみます") == {"すむ"}
     assert mine_lite_anchor("すみません") == {"すみません"}
-    # とる and にとって are both attested, so the window alone keeps とる off.
-    assert mine_lite_anchor("彼にとって") == {"彼"}
+    # とる and にとって are both attested: にとって is the entry, joined by its list row
+    # (K1121 EXPR), and とる gets no card.
+    assert mine_lite_anchor("彼にとって") == {"彼", "にとって"}
     # No dictionary keeps the byte-identical safe-degrade baseline.
     assert mine_lite_orthbase("すみません") == set()
 

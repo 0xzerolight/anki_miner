@@ -198,6 +198,7 @@ def _kana_join(
             and not _cut_from_negative(tokens, i + size - 1, row.line_start)
             and not _te_form_in_use(row.headword, tokens, i + size)
             and not _embedded_question(row.headword, tokens, i + size)
+            and not _verb_te_form(row.headword, tokens, i + size)
             and not _auxiliary_after_te(row.headword, tokens, i)
         ):
             return _Join(
@@ -291,6 +292,16 @@ def _embedded_question(headword: str, tokens: list, after: int) -> bool:
     if after >= len(tokens):
         return True
     return _pos1(tokens[after]) in _CLAUSE_BREAK_POS1 or extract_lemma(tokens[after]) in _QUESTION_VERBS
+
+
+def _verb_te_form(headword: str, tokens: list, after: int) -> bool:
+    """Whether に|とっ|て is に + the て-form of とる (取って, 撮って), not にとって 'for; to'.
+
+    A verb right after it takes that て: 写真にとって送った 'took a photo and sent
+    it', ここにとっておいた 'kept it here'. The expression is followed by what it
+    qualifies (彼にとって大事だ) or by は / も.
+    """
+    return headword == "にとって" and after < len(tokens) and _pos1(tokens[after]) == "動詞"
 
 
 def _te_form_in_use(headword: str, tokens: list, after: int) -> bool:
