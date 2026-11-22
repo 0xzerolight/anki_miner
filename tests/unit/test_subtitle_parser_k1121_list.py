@@ -500,3 +500,53 @@ def test_kana_nan_inside_a_listed_word_is_no_card() -> None:
         [ReadingUnit(text="照れてなんかない", index=0, location_label="t")], want_line_index=False
     )
     assert "なん" not in [word.mined_form for word in words]
+
+
+# --- L-7: number + counter ---------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("number", "counter", "reading"),
+    [
+        (5, "体", "ごたい"),
+        (1, "体", "いったい"),
+        (8, "頭", "はっとう"),
+        (3, "発", "さんぱつ"),
+        (6, "発", "ろっぱつ"),
+        (1, "歩", "いっぽ"),
+        (3, "歩", "さんぽ"),
+        (4, "歩", "よんほ"),
+        (10, "曲", "じゅっきょく"),
+        (1, "巻", "いっかん"),
+        (2, "話", "にわ"),
+        (3, "段", "さんだん"),
+        (3, "位", "さんい"),
+        (6, "キロ", "ろっきろ"),
+        (1, "キロ", "いちきろ"),
+        (10, "ドル", "じゅうどる"),
+    ],
+)
+def test_added_counter_reads_with_its_sound_changes(number: int, counter: str, reading: str) -> None:
+    from anki_miner.services.number_counters import counter_reading
+
+    assert counter_reading(number, counter) == reading
+
+
+@pytest.mark.parametrize(
+    ("front", "counter"),
+    [("１，２００円", "円"), ("1,200円", "円"), ("3年間", "年間"), ("５体", "体")],
+)
+def test_counter_of_a_front_with_a_comma_or_a_new_counter(front: str, counter: str) -> None:
+    from anki_miner.services.number_counters import counter_of
+
+    assert counter_of(front) == counter
+
+
+def test_counter_and_tail_cut() -> None:
+    from anki_miner.services import number_counters
+
+    assert number_counters._counter_and_tail("回目") == ("回", "目")
+    assert number_counters._counter_and_tail("人中") == ("人", "中")
+    assert number_counters._counter_and_tail("人前") is None  # 2人前 is ににんまえ 'two portions'
+    assert number_counters._counter_and_tail("代目") is None
+    assert number_counters.counter_of("３回目") is None  # the tail is no part of a number + counter front
