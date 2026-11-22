@@ -301,6 +301,8 @@ class _ChainEnd(NamedTuple):
     final_yo: bool = False
     # A tail token is the particle か.
     particle_ka: bool = False
+    # The character right after ``end`` ("" at the end of the line).
+    following: str = ""
 
 
 def find_highlight_end(
@@ -404,7 +406,7 @@ def find_highlight_end_with_trace(
                 chain = _reaching_chain(deinflector, kana_stem + spelling[floor:], kana_targets, mask, None, 0)
             if chain is None:
                 continue
-            if chain_end and _chain_end_gate(candidate, chain):
+            if chain_end and _chain_end_gate(candidate, chain, getattr(feature, "pos1", None)):
                 break  # refused: the next shorter end is tried
             return candidate.end, chain
     return tok_end, ()
@@ -698,6 +700,24 @@ def _extension_candidate_ends(text: str, raw_tokens: list, tok_end: int) -> list
     return ends
 
 
+# Auxiliaries the table lists in kanji too (-ほしい, -もらう, -過ぎる), by the
+# kanji stem of their token: 教えて|欲しい, 信じて|貰え|なかった, 買い|過ぎ|た. Not
+# 来る and 行く: after て the kanji is as often the motion verb itself (歩いて行ける
+# 所), and three real words in forty were lost when they were let in. Not 上げる
+# and 呉れる: 旗を持って上げた raises the flag.
+_KANJI_AUXILIARY_STEMS = ("欲し", "貰", "過ぎ")
+
+
+def _is_kanji_auxiliary(surface: str, pos1: object) -> bool:
+    """Whether a tail token is one of ``_KANJI_AUXILIARY_STEMS`` with a kana ending."""
+    if pos1 not in _EXTENDABLE_POS1:
+        return False
+    for stem in _KANJI_AUXILIARY_STEMS:
+        if surface.startswith(stem):
+            return surface == stem or _is_pure_hiragana(surface[len(stem) :])
+    return False
+
+
 def _chain_end_candidates(text: str, raw_tokens: list, tok_end: int) -> list[_ChainEnd]:
     """Ascending ends the chain-end resolver may take after ``tok_end``.
 
@@ -723,7 +743,9 @@ def _chain_end_candidates(text: str, raw_tokens: list, tok_end: int) -> list[_Ch
             surface = text[start:end]
             tail_feature = getattr(tail_token, "feature", None)
             pos1 = getattr(tail_feature, "pos1", None)
-            if not _is_pure_hiragana(surface.rstrip("ー") if pos1 == "助動詞" else surface):
+            if not _is_pure_hiragana(surface.rstrip("ー") if pos1 == "助動詞" else surface) and not (
+                _is_kanji_auxiliary(surface, pos1)
+            ):
                 break
             # The あ that lengthens a contracted conditional (見てりゃ|あ, 見りゃ|あ)
             # is a filler to the tagger.
@@ -739,11 +761,11 @@ def _chain_end_candidates(text: str, raw_tokens: list, tok_end: int) -> list[_Ch
                 and str(getattr(tail_feature, "cForm", None)).startswith("命令形")
             )
             if token_yo:
-                candidates.append(_ChainEnd(end - 1, tail + surface[:-1], False, particle_ka))
+                candidates.append(_ChainEnd(end - 1, tail + surface[:-1], False, particle_ka, "よ"))
             tail += surface
             final_yo = token_yo or (surface == "よ" and getattr(tail_feature, "pos2", None) == "終助詞")
             particle_ka = particle_ka or (surface == "か" and pos1 == "助詞")
-            candidates.append(_ChainEnd(end, tail, final_yo, particle_ka))
+            candidates.append(_ChainEnd(end, tail, final_yo, particle_ka, text[end : end + 1]))
             prev_end = end
     except (AttributeError, TypeError):
         return []  # mock/duck-typed token stream: no extension
@@ -879,14 +901,21 @@ def get_chain_end_deinflector() -> Deinflector:
     return Deinflector(CONDITIONS, [*TRANSFORMS, *_te_auxiliary_transforms(), *_chain_end_supplements()])
 
 
+# 出|なさ|れ|た is 出る and 為さる, though the table reads 出なさ as 出ない + さ: the
+# next letter is the ending of なさる.
+_NASARU_ENDINGS = frozenset("れるらりっい")
+# After an ADJECTIVE's て the next verb is a word of its own (寒くて|いかん,
+# 寂しくて|来た), unless a verb was made of the adjective first (寒がってくる).
+_TE_AUXILIARY_IDS = frozenset({"-みる", "-くる", "-いく", "-ある", "-あげる", "-くれる", "-もらう", "-ほしい"})
+_ADJECTIVE_VERB_MAKERS = frozenset({"-がる", "-すぎる", "-過ぎる"})
 # What the table reads as an imperative in よ only by first building a verb in
 # る that nobody said: 食べて|よ as 食べてる, 見とけ|よ and 言え|よ as a potential,
 # 教えてくれ|よ as 教えてくれる. A verb's own よ form (捕まえよ, 会わせよ) is none of these.
 _NO_YO_IMPERATIVE_AFTER = frozenset({"potential", "-いる", "-おく", "-くれる"})
 
 
-def _chain_end_gate(candidate: _ChainEnd, chain: tuple[str, ...]) -> bool:
-    """Whether the resolver refuses an end the table accepts with ``chain``.
+def _chain_end_gate(candidate: _ChainEnd, chain: tuple[str, ...], pos1: object) -> bool:
+    """Whether the resolver refuses an end the table accepts with ``chain`` for a ``pos1`` token.
 
     The table says what can be a chain; this says what is not one here:
 
@@ -896,7 +925,15 @@ def _chain_end_gate(candidate: _ChainEnd, chain: tuple[str, ...]) -> bool:
       (言い|たか|ない, 悪|かない). Across the particle か the same letters are a
       past and a question (帰っ|た|か|ねえ), and for an ichidan verb only the
       tagger tells the two apart (食べ|た|か|ねえ): its reading stands.
+    - A negative + さ before an ending of なさる (``_NASARU_ENDINGS``).
+    - A て + auxiliary after an adjective's own て (``_TE_AUXILIARY_IDS``).
     """
     if candidate.particle_ka and "-かない" in chain:
         return True
+    if chain[-2:] == ("negative", "-さ") and candidate.following in _NASARU_ENDINGS:
+        return True
+    if pos1 == "形容詞" and "-て" in chain:
+        te = chain.index("-て")
+        if not _ADJECTIVE_VERB_MAKERS.intersection(chain[:te]) and _TE_AUXILIARY_IDS.intersection(chain[te + 1 :]):
+            return True
     return candidate.final_yo and len(chain) >= 2 and chain[-1] == "imperative" and chain[-2] in _NO_YO_IMPERATIVE_AFTER

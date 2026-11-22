@@ -253,3 +253,50 @@ class TestPotentialImperativeYo:
 
     def test_a_tail_token_in_yo_is_read_as_the_particle_is(self):
         assert _chain_text("もうやめとけよ", "やめ") == "やめとけ"
+
+
+class TestChainPieces:
+    """Kanji 欲しい, 貰う and 過ぎる inside a verb's chain: one highlight, and no card for the piece."""
+
+    @pytest.mark.parametrize(
+        ("text", "spans"),
+        [
+            ("信じて貰えなかった", {"信ずる": "信じて貰えなかった"}),
+            ("早く教えて欲しい", {"早い": "早く", "教える": "教えて欲しい"}),
+            ("怖くて見て欲しくない", {"怖い": "怖くて", "見る": "見て欲しくない"}),
+            ("買って貰って来た", {"買う": "買って貰って", "来る": "来た"}),  # 来る is not let into the chain
+            ("山を越えて行って欲しい", {"山": "山", "越える": "越えて", "行く": "行って欲しい"}),
+            ("買い過ぎた", {"買う": "買い過ぎた"}),
+            ("寒くていかん", {"寒い": "寒くて"}),  # an adjective's て is followed by a word of its own
+            ("会に出なされた", {"会": "会", "出る": "出"}),  # not 出ない + さ: the れ belongs to なさる
+        ],
+    )
+    def test_the_piece_is_inside_the_highlight_and_not_a_card(self, text, spans):
+        assert _spans(text) == spans
+
+    @pytest.mark.parametrize(
+        ("text", "spans"),
+        [
+            ("急に走り出した", {"急": "急", "走る": "走り", "出す": "出した"}),
+            ("本を読んで寝た", {"本": "本", "読む": "読んで", "寝る": "寝た"}),
+            ("歩いて帰った", {"歩く": "歩いて", "帰る": "帰った"}),
+            ("話があって来ました", {"話": "話", "来る": "来ました"}),
+            ("寒くて欲しくなる", {"寒い": "寒くて", "欲しい": "欲しく"}),
+            ("旗を持って上げた", {"旗": "旗", "持つ": "持って", "上げる": "上げた"}),
+        ],
+    )
+    def test_a_word_of_its_own_stays_a_card(self, text, spans):
+        assert _spans(text) == spans
+
+    def test_a_piece_mined_nowhere_is_counted_nowhere(self, tmp_path):
+        text = "信じて貰えなかった"
+        service = _service()
+        words, _index, counts = service.parse_text_units(
+            [ReadingUnit(text=text, index=0, location_label="t")], want_line_index=False
+        )
+        assert [word.mined_form for word in words] == ["信ずる"]
+        assert dict(counts) == {"信ずる": 1}
+        srt = tmp_path / "line.srt"
+        srt.write_text(f"1\n00:00:01,000 --> 00:00:02,000\n{text}\n", encoding="utf-8")
+        assert dict(service.count_fronts(srt)) == {"信ずる": 1}
+        assert dict(service.count_lemmas(srt)) == {"信ずる": 1}

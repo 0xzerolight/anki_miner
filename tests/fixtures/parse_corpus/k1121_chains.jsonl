@@ -4,3 +4,5 @@
 {"id":"kch04","sentence":"敵を恐れませぬ","expected":["敵","恐れる"],"category":"span-window","note":"恐れませぬ is one chain, as 恐れません is; the card is unchanged."}
 {"id":"kch05","sentence":"酒を飲んどる","expected":["酒","飲む"],"category":"span-window","note":"飲んどる is 飲んでる in Kansai speech: one chain of 飲む."}
 {"id":"kch06","sentence":"早く行けよ","expected":["早い","行く"],"category":"span-window","note":"行けよ is the godan imperative 行け and the particle; the card 行く is unchanged."}
+{"id":"kch07","sentence":"早く教えて欲しい","expected":["早い","教える"],"category":"span-window","note":"教えて欲しい is one unit; the 欲しい inside its highlight is a chain piece, not a card."}
+{"id":"kch08","sentence":"買い過ぎた","expected":["買う"],"category":"span-window","note":"買い過ぎた is one unit of 買う; 過ぎる is a chain piece here."}
