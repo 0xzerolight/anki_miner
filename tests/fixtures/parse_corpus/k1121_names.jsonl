@@ -1,0 +1,5 @@
+{"id":"k1n01","sentence":"サードインパクトが起きる","expected":["サード","インパクト","起きる"],"category":"k1121-katakana","note":"A katakana run of two common listed words is mined as its words."}
+{"id":"k1n02","sentence":"サードインパクトさんが来た","expected":["来る"],"category":"k1121-katakana","note":"An honorific after the run: a name, left in pieces and unmined."}
+{"id":"k1n03","sentence":"アンタの番だ","expected":["あんた","番"],"category":"k1121-katakana","note":"A pronoun written in katakana whose hiragana is listed cards the hiragana word."}
+{"id":"k1n04","sentence":"コレを見た","expected":["これ","見る"],"category":"k1121-katakana","note":"コレ folds by the pronoun table."}
+{"id":"k1n05","sentence":"ソノが来た","expected":["来る"],"category":"k1121-katakana","note":"Two kana outside the table are as often a name: no card."}

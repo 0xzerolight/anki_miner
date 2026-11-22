@@ -175,6 +175,7 @@ _EXPECTED_CATEGORIES = {
     "noun-tte",
     "k1120-kana-words",
     "k1121-readings",
+    "k1121-katakana",
 }
 
 

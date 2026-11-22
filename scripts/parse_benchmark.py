@@ -687,6 +687,10 @@ _ANCHOR_HEADWORDS: tuple[str, ...] = (
     "ちょちょ",
     # k1120 MC: the spoken contraction わかんない, listed (co04)
     "わかんない",
+    # k1121 NAMES: a katakana run of common listed words (k1n01), a pronoun written in katakana (k1n03)
+    "サード",
+    "インパクト",
+    "あんた",
 )
 
 # Yomitan `ruleIdentifiers` per fixture headword. A real term bank ships these,
@@ -763,6 +767,8 @@ _ANCHOR_READINGS: dict[str, str] = {
 }
 
 _ANCHOR_COMMON_HEADWORDS = frozenset({"やる", "北海道", "パリ"})
+# k1121 NAMES: the common words of a katakana run (k1n01).
+_ANCHOR_COMMON_HEADWORDS |= {"サード", "インパクト"}
 
 _ANCHOR_DICT_ID = "anchor-fixture"
 _anchor_service: SubtitleParserService | None = None
