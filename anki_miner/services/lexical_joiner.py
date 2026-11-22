@@ -106,6 +106,9 @@ _PREDICATE_ROWS = _AUXILIARY_ROWS | {"どうした"}
 _ADNOMINAL_ROWS = frozenset({"そういった", "ちょっとした"})
 # What makes に|つれ|て the verb 連れて: a verb of coming or going right after it (``_verb_te_form``).
 _MOTION_VERBS = frozenset({"くる", "来る", "いく", "行く", "帰る"})
+# Rows of a verb + ず that are a noun where a noun stands, and what follows that noun (``_noun_place``).
+_NEGATIVE_NOUNS = frozenset({"役立たず"})
+_NOUN_FOLLOWERS = frozenset({"が", "の", "め", "だ", "な", "は", "を", "と", "ども", "です", "じゃ"})
 # "noun" rows that also open a clause before the noun they name (``_opens_before_a_noun``).
 _NAMING_ROWS = frozenset({"という"})
 _GRAMMAR_POS1 = frozenset({"助詞", "助動詞"})
@@ -225,6 +228,8 @@ def _kana_join(
             and not _runs_on(row.headword, tokens, i + size)
             and not _misread_ja_nai(row.headword, tokens, i)
             and not _no_of_noda(row.headword, tokens, i + size)
+            and not _copula_de_negated(row.headword, tokens, i + size)
+            and not _volitional_you(tokens, i)
         ):
             return _Join(
                 i,
@@ -340,6 +345,41 @@ def _adnominal_only(headword: str, tokens: list, after: int) -> bool:
     ちょっとした問題 'a minor problem' against ちょっとしたんだ 'did a little'.
     """
     return headword in _ADNOMINAL_ROWS and not (after < len(tokens) and _pos1(tokens[after]) in _NOUN_POS1)
+
+
+def _copula_de_negated(headword: str, tokens: list, after: int) -> bool:
+    """Whether the で of の|せい|で is the copula before は / も: 誰のせいでもない, 君のせいではない, 僕のせいでもある.
+
+    The row is passed over: せい keeps its card and the negative its own.
+    """
+    if headword != "のせいで" or after + 1 >= len(tokens) or tokens[after].surface not in ("は", "も"):
+        return False
+    return extract_orth_base(tokens[after + 1]) in ("ない", "ある")
+
+
+def _volitional_you(tokens: list, i: int) -> bool:
+    """Whether a row opens on the よう of a volitional (考え|よう|に|も), which is the verb's own ending.
+
+    The noun よう of ように / ような follows a verb's dictionary form (考えるように).
+    Right after a 連用形 or 未然形 the tagger still files よう as that noun, but it
+    is the ichidan volitional, and the verb's highlight already covers it. Not
+    after いい: the tagger reads the adjective of いいように as 言い.
+    """
+    if tokens[i].surface != "よう" or i == 0 or _pos1(tokens[i - 1]) != "動詞" or tokens[i - 1].surface == "いい":
+        return False
+    c_form = getattr(getattr(tokens[i - 1], "feature", None), "cForm", None)
+    return isinstance(c_form, str) and c_form.startswith(("連用形", "未然形"))
+
+
+def _noun_place(candidate: _Join, tokens: list, spans: dict[int, tuple[int, int]]) -> bool:
+    """Whether 役立た|ず stands where a noun does, so it is 役立たず 'good-for-nothing' and not the verb negated.
+
+    After a pre-noun word (この役立たず), before a pause, or before a particle or
+    the copula (役立たずが, 役立たずだ). 何も役立たず終わった goes on as a clause.
+    """
+    if candidate.start > 0 and _pos1(tokens[candidate.start - 1]) == "連体詞":
+        return True
+    return _stands_alone(tokens, spans, candidate.end) or tokens[candidate.end + 1].surface in _NOUN_FOLLOWERS
 
 
 def _no_of_noda(headword: str, tokens: list, after: int) -> bool:
@@ -611,6 +651,8 @@ class LexicalJoiner:
             if candidate.line_start and not _opens_clause(tokens, spans, candidate.start):
                 return False
             if _quotes_what_precedes(candidate.headword, tokens, candidate.start):
+                return False
+            if candidate.headword in _NEGATIVE_NOUNS and not _noun_place(candidate, tokens, spans):
                 return False
             previous = kept[-1] if kept and kept[-1].end == candidate.start - 1 else None
             if candidate.after == "alone":

@@ -663,6 +663,9 @@ JOINS: tuple[tuple[str, str, str, str] | tuple[str, str, str, str, str], ...] = 
     ("それと", "接続詞", "それ|と", "alone"),
     ("よって", "接続詞", "よっ|て", "start"),
     ("ありえる", "動詞", "あり|えへん", ""),
+    # K1121 LIST: 役立た|ず is the noun 役立たず where a noun stands (この役立たずが, 役立たずだ:
+    # lexical_joiner._noun_place); before a clause it is the verb negated.
+    ("役立たず", "名詞", "役立た|ず", ""),
 )
 
 _HEADER = """\

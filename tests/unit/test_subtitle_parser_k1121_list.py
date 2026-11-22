@@ -320,3 +320,52 @@ def test_a_row_the_dictionary_lacks_leaves_the_shorter_row() -> None:
         [ReadingUnit(text="合格おめでとうございます", index=0, location_label="t")], want_line_index=False
     )
     assert "おめでとう" in [word.mined_form for word in words]
+
+
+# --- L-4: joins that fired where the words are something else -----------------------------
+
+_L4_TERMS = frozenset({"物がある", "役立つ", "役立たず"})
+
+
+def _l4_fronts(sentence: str) -> list[str]:
+    service = SubtitleParserService(
+        AnkiMinerConfig(),
+        term_lookup=lambda terms: {term for term in terms if term in _L4_TERMS},
+        kana_attest_lookup=lambda forms: dict.fromkeys(forms, True),
+    )
+    words, _index, _counts = service.parse_text_units(
+        [ReadingUnit(text=sentence, index=0, location_label="t")], want_line_index=False
+    )
+    return [word.mined_form for word in words]
+
+
+def test_mono_ga_aru_after_a_pre_noun_word_is_the_noun() -> None:
+    assert "物がある" in _l4_fronts("胸に迫る物がある")
+    assert "物がある" not in _l4_fronts("こんな物があるのか")
+    assert "物がある" not in _l4_fronts("彼の物がある")
+
+
+@pytest.mark.parametrize("sentence", ["誰のせいでもない", "君のせいではない", "僕のせいでもある"])
+def test_no_sei_de_before_the_copula_s_wa_or_mo_is_no_row(sentence: str) -> None:
+    assert "のせいで" not in _l4_fronts(sentence)
+
+
+def test_no_sei_de_before_a_clause_stays() -> None:
+    assert "のせいで" in _l4_fronts("雨のせいで遅れた")
+
+
+def test_a_volitional_s_you_opens_no_youni() -> None:
+    assert "ように" not in _l4_fronts("考えようにも考えられない")
+    assert "ように" in _l4_fronts("忘れないように書く")
+    assert "ように" in _l4_fronts("いいようにはさせない")
+
+
+@pytest.mark.parametrize("sentence", ["この役立たずが", "役立たずだな", "役立たず！", "役立たず 帰れ"])
+def test_yakutatazu_where_a_noun_stands_is_the_noun(sentence: str) -> None:
+    fronts = _l4_fronts(sentence)
+    assert "役立たず" in fronts
+    assert "役立つ" not in fronts
+
+
+def test_yakutatazu_before_a_clause_is_the_verb_negated() -> None:
+    assert "役立たず" not in _l4_fronts("何も役立たず終わった")

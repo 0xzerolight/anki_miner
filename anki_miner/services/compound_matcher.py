@@ -226,6 +226,8 @@ EntryTagsLookup = Callable[[list[str]], dict[str, set[str]]]
 # die on the end-on-content rule; everything else dies on attestation.
 # Exact name matching uses 24 chars, the longest current bundled name-wordset
 # entry; curated-resource membership is itself the boundary attestation.
+# Verbs whose と quotes the 何か before it (``_other_words_here``).
+_QUOTING_VERBS = frozenset({"思う", "言う", "聞く"})
 _MAX_SPAN_CHARS = 16
 _MAX_NAME_SPAN_CHARS = 24
 _MAX_SPAN_TOKENS = 5
@@ -379,6 +381,8 @@ class CompoundDictionaryMatcher:
                     for candidate, kind in alternatives:
                         if not self._exist_cache.get(candidate):
                             continue
+                        if self._other_words_here(tokens, i, j, candidate):
+                            continue
                         if kind == "A" and self._inflects_pre_noun_word(tokens[j], candidate):
                             continue
                         if kind == "A" and self._benefactive_after_te(tokens, i, j):
@@ -409,6 +413,22 @@ class CompoundDictionaryMatcher:
                 merged.append(token)
                 i += 1
         return merged
+
+    @staticmethod
+    def _other_words_here(tokens: list, i: int, j: int, headword: str) -> bool:
+        """Whether an attested span is other words where it stands, by headword.
+
+        こんな物がある 'there is such a thing': the entry 物がある 'to be (very) …'
+        closes a clause (胸に迫る物がある), so after a pre-noun word or の its 物 is
+        the plain noun. 何かと思えば, 何かと言うと: before a verb of thinking,
+        saying or asking the と quotes 何か, and 何かと 'in various ways' is no
+        word there.
+        """
+        if headword == "物がある":
+            return i > 0 and (_pos1(tokens[i - 1]) == "連体詞" or tokens[i - 1].surface == "の")
+        if headword == "何かと" and j + 1 < len(tokens):
+            return getattr(getattr(tokens[j + 1], "feature", None), "lemma", None) in _QUOTING_VERBS
+        return False
 
     def _inflects_pre_noun_word(self, tail, headword: str) -> bool:
         """Whether a deinflected span would inflect a word that only stands before a noun (そう言って).
