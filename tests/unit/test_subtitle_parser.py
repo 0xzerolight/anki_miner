@@ -6971,14 +6971,26 @@ class TestCuratedReadingOverride:
         assert w.expression_furigana == "仏[ほとけ]"  # pre-fix: 仏[ふつ]
         assert w.lemma_reading == "ほとけ"
 
-    def test_unique_dictionary_mismatch_cannot_override_hotoke(self, test_config):
+    def test_a_dictionary_with_one_other_reading_outranks_the_token_reading(self, test_config):
+        # ほとけ is the token's reading now (``reread_in_context``), not a card
+        # override, so a dictionary that lists ふつ alone decides, on the card
+        # and in the sentence alike.
         def lookup(terms):
             return {"仏": ["ふつ"]} if "仏" in terms else {}
 
         w = self._emit(test_config, "仏を見た", reading_lookup=lookup)["仏"]
 
+        assert w.expression_reading == "ふつ"
+        assert w.expression_furigana == "仏[ふつ]"
+        assert w.sentence_reading == "ふつをみた"
+
+    def test_a_dictionary_that_lists_the_token_reading_keeps_it(self, test_config):
+        def lookup(terms):
+            return {"仏": ["ふつ", "ほとけ"]} if "仏" in terms else {}
+
+        w = self._emit(test_config, "仏を見た", reading_lookup=lookup)["仏"]
+
         assert w.expression_reading == "ほとけ"
-        assert w.expression_furigana == "仏[ほとけ]"
         assert w.sentence_reading == "ほとけをみた"
         assert w.sentence_furigana == "仏[ほとけ]を 見[み]た"
 

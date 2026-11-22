@@ -62,10 +62,10 @@ from anki_miner.services.morphology import (
     rejoin_contracted_adjectives,
     replace_overridden_spans,
     reread_daku_tokens,
+    reread_in_context,
     reread_omote_tokens,
     resolve_attested_reading,
     resolve_reading_override,
-    resolve_reading_override_in_line,
     retag_mistagged_tokens,
     short_causative_bases,
     source_spelling_fold,
@@ -1249,8 +1249,18 @@ class SubtitleParserService:
         if s not in self._fg_cache:
             if len(self._fg_cache) >= _FRONT_CACHE_CAP:
                 self._fg_cache.clear()
-            self._fg_cache[s] = generate_furigana(s, self._tagger())
+            self._fg_cache[s] = generate_furigana(s, self._reread_tagger())
         return self._fg_cache[s]
+
+    def _reread_tagger(self) -> Callable[[str], list]:
+        """The tagger with ``reread_in_context`` applied to its tokens.
+
+        A headword read alone (``_furigana``, ``_reading``) takes the readings
+        a line's own tokens take, so a card whose reading is re-derived from
+        its headword agrees with the sentence.
+        """
+        tagger = self._tagger()
+        return lambda text: reread_in_context(list(tagger(text)))
 
     @staticmethod
     def _own_base_reading(word_token: Any, mined: str) -> str:
@@ -1286,7 +1296,7 @@ class SubtitleParserService:
         if s not in self._rd_cache:
             if len(self._rd_cache) >= _FRONT_CACHE_CAP:
                 self._rd_cache.clear()
-            self._rd_cache[s] = generate_reading(s, self._tagger())
+            self._rd_cache[s] = generate_reading(s, self._reread_tagger())
         return self._rd_cache[s]
 
     def _attested_headword_reading(self, headword: str) -> str | None:
@@ -1705,6 +1715,7 @@ class SubtitleParserService:
         raw_tokens = rejoin_adjective_stem_cries(raw_tokens, self._tagger(), self._form_lookup)
         raw_tokens = reread_daku_tokens(raw_tokens)
         raw_tokens = reread_omote_tokens(raw_tokens)
+        raw_tokens = reread_in_context(raw_tokens)
         merged_tokens = self._merge_compound_suffixes(raw_tokens)
         # Language-specific merge (ko: 공부 + 하 → 공부하다). Placed with the other
         # merge passes and gated on the same probe; no probe ⇒ no merge.
@@ -1890,7 +1901,7 @@ class SubtitleParserService:
             if mined is None or mined != token.surface:
                 continue
             derived = katakana_to_hiragana(self._extract_reading(token))
-            override = resolve_reading_override_in_line(mined, derived, text[:tok_start])
+            override = resolve_reading_override(mined, derived)
             if override is not None:
                 if override != derived:
                     corrections[(tok_start, tok_end)] = override
@@ -2050,7 +2061,7 @@ class SubtitleParserService:
                 # concatenated component kana, so they take the else branch and keep
                 # the headword-regenerated reading.
                 expression_reading = katakana_to_hiragana(reading)
-                override = resolve_reading_override_in_line(mined, expression_reading, text[:tok_start])
+                override = resolve_reading_override(mined, expression_reading)
                 if override is not None:
                     # unidic-lite misreads this spelling in every context (一日→ツイタチ,
                     # 仏→フツ, 不味い→マジイ, 込む→ゴム). Take the curated reading and
