@@ -87,6 +87,9 @@ _NEGATIVE_ADJECTIVES: dict[str, str] = {
 # What follows the て of どう|し|て when it is the て-form of する, by dictionary form
 # in kana: the past, the polite ending and the て-auxiliaries (``_te_form_in_use``).
 _TE_FOLLOWERS = frozenset({"た", "ます", "いる", "いい", "くれる", "ほしい", "もらう", "あげる", "おく", "みる"})
+# The same after こう|し|て, plus requests and favours (こうしてください 'do it like this', こうしてもらえると).
+_TE_ADVERBS = frozenset({"どうして", "こうして"})
+_TE_REQUESTS = frozenset({"ください", "くださる", "ちょうだい", "やる", "もらえる", "いただく", "いただける"})
 # What makes the で before it a copula: で|ある, で|ござい|ます (``_copula_after``).
 _COPULA_VERBS = frozenset({"ある", "ござる"})
 # Verbs that take an embedded question, by lemma (``_embedded_question``).
@@ -199,6 +202,7 @@ def _kana_join(
             and not _te_form_in_use(row.headword, tokens, i + size)
             and not _embedded_question(row.headword, tokens, i + size)
             and not _verb_te_form(row.headword, tokens, i + size)
+            and not _adnominal_only(row.headword, tokens, i + size)
             and not _auxiliary_after_te(row.headword, tokens, i)
         ):
             return _Join(
@@ -294,6 +298,15 @@ def _embedded_question(headword: str, tokens: list, after: int) -> bool:
     return _pos1(tokens[after]) in _CLAUSE_BREAK_POS1 or extract_lemma(tokens[after]) in _QUESTION_VERBS
 
 
+def _adnominal_only(headword: str, tokens: list, after: int) -> bool:
+    """Whether そう|いっ|た is 'said so' here, not the pre-noun そういった 'that kind of'.
+
+    The pre-noun word stands before its noun (そういった話); anywhere else the
+    same tokens are そう + 言った (彼がそういったんだ).
+    """
+    return headword == "そういった" and not (after < len(tokens) and _pos1(tokens[after]) in _NOUN_POS1)
+
+
 def _verb_te_form(headword: str, tokens: list, after: int) -> bool:
     """Whether に|とっ|て is に + the て-form of とる (取って, 撮って), not にとって 'for; to'.
 
@@ -310,9 +323,18 @@ def _te_form_in_use(headword: str, tokens: list, after: int) -> bool:
     A past, a polite ending or a て-auxiliary right after it inflects the verb:
     どうしてた 'how were you doing', どうしていいか 'what to do', どうしてくれる
     'what will you do about it'. The row is passed over and どう keeps its card.
-    やる is left out: どうしてやらないの is 'why' as often as not.
+    やる is left out: どうしてやらないの is 'why' as often as not. こう|し|て is the
+    same, and there やる and the requests count too: こうしている 'doing this',
+    こうしてください 'do it like this', against こうして出会った 'this is how we met'.
     """
-    return headword == "どうして" and after < len(tokens) and extract_orth_base(tokens[after]) in _TE_FOLLOWERS
+    if after >= len(tokens):
+        return False
+    follower = extract_orth_base(tokens[after])
+    if headword == "そうしたら":  # そうしたらいい 'you should do so', not the conjunction 'and then'
+        return follower in ("いい", "よい")
+    if headword not in _TE_ADVERBS:
+        return False
+    return follower in _TE_FOLLOWERS or (headword != "どうして" and follower in _TE_REQUESTS)
 
 
 def _auxiliary_after_te(headword: str, tokens: list, start: int) -> bool:
@@ -348,6 +370,16 @@ def _stands_alone(tokens: list, spans: dict[int, tuple[int, int]], end: int) -> 
         return True
     left, right = spans.get(end), spans.get(end + 1)
     return left is None or right is None or left[1] != right[0]
+
+
+def _quotes_what_precedes(headword: str, tokens: list, i: int) -> bool:
+    """Whether って|こと|は after a mere space still quotes the words before it, so it opens nothing.
+
+    …どれだけ大事か ってことは is 'the fact of how important …': the space is a
+    subtitle break inside one sentence. The conjunction ってことは 'which means'
+    heads its line or follows punctuation.
+    """
+    return headword == "ってことは" and i > 0 and _pos1(tokens[i - 1]) not in _CLAUSE_BREAK_POS1
 
 
 def _follows(tokens: list, i: int, after: str, joined_pos1: str | None = None) -> bool:
@@ -477,6 +509,8 @@ class LexicalJoiner:
             if not _contiguous(spans, candidate.start, candidate.end):
                 return False
             if candidate.line_start and not _opens_clause(tokens, spans, candidate.start):
+                return False
+            if _quotes_what_precedes(candidate.headword, tokens, candidate.start):
                 return False
             previous = kept[-1] if kept and kept[-1].end == candidate.start - 1 else None
             if candidate.after == "alone":

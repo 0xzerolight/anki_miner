@@ -571,6 +571,22 @@ JOINS: tuple[tuple[str, str, str, str] | tuple[str, str, str, str, str], ...] = 
     ("としたことが", "副詞", "と|し|た|こと|が", "noun"),
     ("に限らず", "副詞", "に|限ら|ず", "noun"),
     ("ほうがいい", "形容詞", "ほう|が|=いい", "verb"),
+    # K1121 EXPR: clause openers and fixed adverbs. こうして before a て-auxiliary and そうしたら before いい are
+    # the verb (lexical_joiner._te_form_in_use); そう|いっ|た joins only before a noun (_adnominal_only);
+    # って|こと|は only at the head of a line or after punctuation (_quotes_what_precedes). No そうして row:
+    # half of its lines are the request 'do so' (そうして。 そうしてやってください).
+    ("それにしても", "接続詞", "それ|に|し|て|も", "start"),
+    ("そうすると", "接続詞", "そう|する|と", "start"),
+    ("そうしたら", "接続詞", "そう|し|たら", "start"),
+    ("こうして", "副詞", "こう|し|て", "start"),
+    ("なので", "接続詞", "な|の|で", "start"),
+    ("そうでなければ", "接続詞", "そう|で|なけれ|ば", "start"),
+    ("ってことは", "接続詞", "って|こと|は", "start"),
+    ("そういった", "連体詞", "そう|いっ|た", ""),
+    ("どう考えても", "副詞", "どう|考え|て|も", ""),
+    ("それはそれで", "副詞", "それ|は|それ|で", ""),
+    ("どうだっていい", "形容詞", "どう|だっ|て|=いい", ""),
+    ("わけのわからない", "形容詞", "わけ|の|わから|=ない", ""),
 )
 
 _HEADER = """\

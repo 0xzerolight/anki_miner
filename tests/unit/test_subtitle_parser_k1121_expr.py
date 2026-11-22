@@ -87,6 +87,19 @@ _ATTESTED = frozenset(
         "ほうがいい",
         "方がいい",
         "ほう",
+        # E-4
+        "なので",
+        "それにしても",
+        "そうすると",
+        "そうしたら",
+        "こうして",
+        "そうして",
+        "ってことは",
+        "こう",
+        "そういった",
+        "どう考えても",
+        "それはそれで",
+        "わけのわからない",
     }
 )
 
@@ -293,3 +306,46 @@ def test_particle_headed_expression_after_a_noun(sentence: str, front: str) -> N
 )
 def test_particle_headed_row_needs_its_place(sentence: str, row: str) -> None:
     assert row not in _fronts(sentence)
+
+
+# --- E-4: clause openers and fixed adverbs -------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("sentence", "front"),
+    [
+        ("なので行かない", "なので"),
+        ("ってことは無理か", "ってことは"),
+        ("そうか、ってことは無理か", "ってことは"),
+        ("それにしても遅い", "それにしても"),
+        ("そうすると困る", "そうすると"),
+        ("こうして出会った", "こうして"),
+        ("そうしたら、彼が来た", "そうしたら"),
+        ("そういった話だ", "そういった"),
+        ("どう考えてもおかしい", "どう考えても"),
+        ("それはそれで困る", "それはそれで"),
+        ("わけのわからない話", "わけのわからない"),
+    ],
+)
+def test_clause_opener_or_fixed_adverb_is_one_entry(sentence: str, front: str) -> None:
+    assert front in _fronts(sentence, allowed=_WITH_CONJUNCTIONS)
+
+
+@pytest.mark.parametrize(
+    ("sentence", "row"),
+    [
+        ("静かなので寝た", "なので"),  # the adnominal な + ので
+        ("好きなので買った", "なので"),
+        ("こうしてください", "こうして"),  # こう + して + a request
+        ("そうしている", "そうして"),
+        ("そうして終わった", "そうして"),  # no row: そうして is as often the request 'do so'
+        ("こうしてもらえると助かる", "こうして"),  # こう + して + a favour
+        ("こうしてやってくれ", "こうして"),
+        ("どれだけ大事か ってことは分かる", "ってことは"),  # after a space it quotes what precedes
+        ("そうしたらいい", "そうしたら"),  # 'you should do so'
+        ("彼がそういったんだ", "そういった"),  # 'said so'
+        ("彼はこうして出会った", "こうして"),  # not clause-opening
+    ],
+)
+def test_clause_opener_words_inside_a_clause_stay(sentence: str, row: str) -> None:
+    assert row not in _fronts(sentence, allowed=_WITH_CONJUNCTIONS)
