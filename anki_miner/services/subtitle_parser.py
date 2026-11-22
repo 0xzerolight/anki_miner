@@ -1062,7 +1062,8 @@ class SubtitleParserService:
         # measurement can switch the pass off; no setting reads it.
         self._file_name_list: bool = True
         # Verdicts of _katakana_run_is_words, keyed by the run and the shape of its
-        # tokens and never by a file's names; bounded like _exist_memo.
+        # tokens and never by a file's names; bounded like _exist_memo. It also
+        # holds _fold_katakana_native_front's dictionary verdict, by surface.
         self._katakana_run_memo: dict[tuple[Any, ...], bool] = {}
 
     # ------------------------------------------------------------------
@@ -2217,6 +2218,7 @@ class SubtitleParserService:
         resolved_front = self._resolve_front(word_token, orth_base, text, tok_start, highlight_end)
         front_overridden = resolved_front != orth_base
         mined = self._front_for(word_token, resolved_front, lemma)
+        mined, front_overridden = self._fold_katakana_native_front(word_token, text, tok_start, mined, front_overridden)
         return lemma, resolved_front, mined, front_overridden
 
     def _front_for(self, word_token: Any, front: str, lemma: str) -> str:
@@ -3550,6 +3552,69 @@ class SubtitleParserService:
         if lemma and fold in (katakana_to_hiragana(reading) for reading in self._attested_readings(lemma)):
             return fold
         return orth_base
+
+    #: Closed word classes whose katakana spelling is the hiragana word in another dress (アンタ, ザックリ).
+    _KATAKANA_NATIVE_POS1: frozenset[str] = frozenset({"代名詞", "連体詞", "副詞", "接続詞", "形状詞"})
+    #: The origins (UniDic goshu) of a native word: Japanese, Sino-Japanese, mixed. Never a loanword.
+    _KATAKANA_NATIVE_GOSHU: frozenset[str] = frozenset({"和", "漢", "混"})
+
+    def _fold_katakana_native_front(
+        self, word_token: Any, text: str, tok_start: int, mined: str, front_overridden: bool
+    ) -> tuple[str, bool]:
+        """``(mined, front_overridden)``, a closed-class native word written in katakana folded to hiragana.
+
+        アンタ, アイツ and ザックリ are あんた, あいつ and ざっくり written for emphasis.
+        No dictionary lists the katakana, so the card missed its definition and
+        stood apart from the hiragana card. The front becomes the hiragana of
+        the surface (never the lemma: オマエ's is 御前) when all of this holds:
+
+        * the front is still the surface (the pronoun table did not take it),
+          and the token is one all-katakana tagger token of three kana or more
+          (コレ and ソレ fold by the table in ``models/word.py``; two kana are as
+          often a name: ソノ, ユキ);
+        * a pronoun, pre-noun adjective, adverb, conjunction or adjectival noun
+          that the tagger reads as a native word (``goshu``): a loanword
+          (コーヒー) and a noun (アリ, a name) never enter;
+        * the katakana is no listed spelling (サイコ stays) and the hiragana is
+          listed, as a spelling or as a reading;
+        * no katakana, ・, ゠ or ＝ stands beside it (a piece of a longer name),
+          and no honorific follows it.
+
+        The front is reported as overridden, as the verb fold's is, so the
+        lemma retries keep the front's own reading.
+        """
+        surface = word_token.surface
+        feature = getattr(word_token, "feature", None)
+        if (
+            mined != surface
+            or len(surface) < 3
+            or not _is_all_katakana(surface)
+            or getattr(word_token, "compound", False) is True
+            or getattr(feature, "pos1", None) not in self._KATAKANA_NATIVE_POS1
+            or getattr(feature, "goshu", None) not in self._KATAKANA_NATIVE_GOSHU
+        ):
+            return mined, front_overridden
+        end = tok_start + len(surface)
+        beside = text[max(tok_start - 1, 0) : tok_start] + text[end : end + 1]
+        if any(_is_katakana_surface_char(char) or char in "＝=" for char in beside):
+            return mined, front_overridden
+        if self._NAME_HONORIFIC_RE.match(text, end) is not None:
+            return mined, front_overridden
+        fold = katakana_to_hiragana(surface)
+        key = ("fold", surface)
+        listed = self._katakana_run_memo.get(key)
+        if listed is None:
+            reads = self._kana_attest_lookup
+            listed = (
+                reads is not None
+                and fold != surface
+                and surface not in self._memoized_attest([surface])
+                and bool(reads([fold]).get(fold))
+            )
+            if len(self._katakana_run_memo) >= _FRONT_CACHE_CAP:
+                self._katakana_run_memo.clear()
+            self._katakana_run_memo[key] = listed
+        return (fold, True) if listed else (mined, front_overridden)
 
     def _attested_as_verb(self, term: str) -> bool:
         """Whether a dictionary entry for ``term`` carries verb rules (True when no rules-aware probe is wired)."""

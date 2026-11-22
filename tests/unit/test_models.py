@@ -291,8 +291,6 @@ class TestKatakanaPronounFold:
         [
             ("アナタ", "貴方"),  # non-map katakana 代名詞 — stays surface
             ("オラ", "己"),
-            ("コレ", "此れ"),
-            ("ソレ", "其れ"),
             ("ワイ", "わし"),  # declared residual
         ],
     )

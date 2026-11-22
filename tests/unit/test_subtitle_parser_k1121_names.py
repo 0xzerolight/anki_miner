@@ -447,3 +447,62 @@ class TestKatakanaRunsOfWords:
         counted = service.count_fronts(path)
         assert set(counted) == {word.mined_form for word in service.parse_subtitle_file(path)}
         assert counted["サード"] == 1 and "スカイ" not in counted
+
+
+# Hiragana words the dictionary lists, and katakana spellings it lists as they are.
+_NATIVE_WORDS = ("あんた", "あなた", "ざっくり", "これ", "それ", "その", "ゆき", "あり", "サイコ", "アリ", "コーヒー")
+
+
+def _native_service() -> SubtitleParserService:
+    spelled = {*_HEADWORDS, *_NATIVE_WORDS}
+    return SubtitleParserService(
+        AnkiMinerConfig(),
+        term_lookup=lambda terms: spelled.intersection(terms),
+        kana_attest_lookup=lambda forms: {form: form in spelled for form in forms},
+        name_piece_rejects=True,
+    )
+
+
+class TestKatakanaNativeWords:
+    @pytest.mark.parametrize(
+        ("text", "katakana", "front"),
+        [
+            ("アンタの番だ", "アンタ", "あんた"),
+            ("アナタは優しい", "アナタ", "あなた"),
+            ("ザックリ言うと", "ザックリ", "ざっくり"),
+            ("コレはアレだ", "コレ", "これ"),
+            ("ソレは違う", "ソレ", "それ"),
+        ],
+    )
+    def test_a_closed_class_word_in_katakana_is_the_hiragana_word(self, text: str, katakana: str, front: str) -> None:
+        fronts = _fronts(_native_service(), text)
+        assert front in fronts and katakana not in fronts
+
+    def test_the_card_carries_the_hiragana_front_and_reading(self) -> None:
+        words, _index, _counts = _native_service().parse_text_units(
+            [ReadingUnit(text="アンタの番だ", index=0, location_label="t")], want_line_index=False
+        )
+        word = next(word for word in words if word.surface == "アンタ")
+        assert (word.mined_form, word.expression_reading, word.expression_furigana) == ("あんた", "あんた", "あんた")
+
+    @pytest.mark.parametrize(
+        ("text", "fold"),
+        [
+            ("ソノが来た", "その"),  # two kana: as often a name
+            ("ユキさんが来た", "ゆき"),  # a name
+            ("アリが歩く", "あり"),  # a noun, and a listed katakana spelling
+            ("サイコな男だ", "さいこ"),  # a listed katakana spelling
+            ("コーヒーを飲む", "こーひー"),  # a loanword
+            ("アナタ様の番だ", "あなた"),  # an honorific follows
+            ("アンタ・ガタの話", "あんた"),  # a ・ beside it
+        ],
+    )
+    def test_a_name_or_a_loanword_keeps_its_katakana(self, text: str, fold: str) -> None:
+        assert fold not in _fronts(_native_service(), text)
+
+    def test_the_count_path_and_the_mining_path_agree(self, tmp_path: Path) -> None:
+        path = _srt(tmp_path / "native.srt", ["アンタの番だ", "コレはアレだ"])
+        service = _native_service()
+        counted = service.count_fronts(path)
+        assert set(counted) == {word.mined_form for word in service.parse_subtitle_file(path)}
+        assert counted["あんた"] == 1 and counted["これ"] == 1
