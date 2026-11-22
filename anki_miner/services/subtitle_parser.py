@@ -1781,6 +1781,18 @@ class SubtitleParserService:
 
         name_runs: frozenset[str] = frozenset()
 
+    class _FileNameToken(CompoundSyntheticToken):
+        """A name its file vouches for, joined from the tagger's pieces (``_merge_file_names``).
+
+        It keeps the pieces from being carded and is never a card itself,
+        whatever the subtype settings (``_mine_token``): ``_file_names`` lists
+        only names no dictionary has, so there is no definition for it, and its
+        kana is the pieces' readings joined (雷|凰 gives かみなり凰), not the name's.
+        """
+
+        __slots__ = ()
+        file_name = True
+
     #: One-kanji words that start a word, not a name that is only called (元|父, 新|店).
     _NAME_PREFIX_HEADS: frozenset[str] = frozenset("元新前現全各両副総大小旧故某同本当")
 
@@ -2048,7 +2060,7 @@ class SubtitleParserService:
                 index += 1
                 continue
             kana = "".join(extract_reading(piece) for piece, _start, _end in spans[index:stop])
-            joined.append(CompoundSyntheticToken(surface=name, pos1="名詞", pos2="固有名詞", lemma=name, kana=kana))
+            joined.append(self._FileNameToken(surface=name, pos1="名詞", pos2="固有名詞", lemma=name, kana=kana))
             index = stop
         if len(joined) == len(merged_tokens):
             return line_state
@@ -3864,6 +3876,8 @@ class SubtitleParserService:
         if rejection == REJECT_SCRIPT and self._is_attested_acronym(word_token):
             rejection = None
         if rejection is None:
+            if getattr(word_token, "file_name", False) is True:
+                return False
             if self._is_katakana_run_fragment(word_token, text, tok_start, tok_end, tokens):
                 return False
             if self._name_piece_rejects and self._is_letter_run_fragment(word_token, text, tok_start, tok_end):

@@ -137,11 +137,19 @@ class TestSpeakerLabelNames:
         line = "森で凛とした堂々たる姿を見た"
         assert dict(_line_cards(_service(), labelled))[line] == dict(_line_cards(_service(), unlabelled))[line]
 
-    def test_the_whole_name_is_one_proper_noun(self, labelled: Path) -> None:
+    def test_the_whole_name_is_no_card_where_proper_nouns_are_mined(self, labelled: Path) -> None:
+        # The joined token has no dictionary entry and its reading is the pieces' (凛堂 as りんどう is a guess).
         cards = dict(_line_cards(_service(_NAMES_MINED), labelled))
-        assert cards["凛堂も待ってくれ"] == ["凛堂", "待つ"]
-        assert "凛堂" in cards["凛堂は森で瞳に会った"]
-        assert not set(_PIECES) & {front for fronts in cards.values() for front in fronts}
+        assert cards["凛堂も待ってくれ"] == ["待つ"]
+        assert cards == dict(_line_cards(_service(), labelled))
+        assert not {"凛堂", *_PIECES} & {front for fronts in cards.values() for front in fronts}
+
+    def test_the_whole_name_is_one_proper_noun_token(self, labelled: Path) -> None:
+        state = next(
+            state for state in _service(_NAMES_MINED)._iter_parsed_lines(labelled) if state[0] == "凛堂も待ってくれ"
+        )
+        name = state[2][0]
+        assert (name.surface, name.feature.pos1, name.feature.pos2) == ("凛堂", "名詞", "固有名詞")
 
     def test_labels_before_a_colon_and_shared_labels_count(self, tmp_path: Path) -> None:
         path = _srt(tmp_path / "colon.srt", ["凛堂：森へ行こう", "凛堂・瞳：瞳を閉じてくれ", "凛堂が森に来た"])
@@ -247,10 +255,10 @@ class TestHonorificNames:
         assert cards["水竜さんは水を飲んだ"] == ["水", "飲む"]
         assert cards["水竜が竜の巣に帰った"] == ["竜", "巣", "帰る"]
 
-    def test_the_whole_name_is_one_proper_noun(self, tmp_path: Path) -> None:
+    def test_the_whole_name_is_no_card_where_proper_nouns_are_mined(self, tmp_path: Path) -> None:
         cards = dict(_line_cards(_service(_NAMES_MINED), _srt(tmp_path / "honorific.srt", self._LINES)))
-        assert cards["瑠偉斗が火と丸を描いた"] == ["瑠偉斗", "火", "丸", "描く"]
-        assert cards["水竜が竜の巣に帰った"] == ["水竜", "竜", "巣", "帰る"]
+        assert cards["瑠偉斗が火と丸を描いた"] == ["火", "丸", "描く"]
+        assert cards["水竜が竜の巣に帰った"] == ["竜", "巣", "帰る"]
 
     def test_once_before_an_honorific_is_no_evidence(self, tmp_path: Path) -> None:
         path = _srt(tmp_path / "once.srt", ["水竜さんは水を飲んだ", "水竜が竜の巣に帰った"])
@@ -260,7 +268,7 @@ class TestHonorificNames:
         # 冥|殿 ends in a rank word: a name where a label gives it, a word where only an honorific does.
         lines = ["（冥殿）森へ行こう", "冥殿さん、待って", "冥殿さんが来た", "冥殿は森で待つ"]
         cards = dict(_line_cards(_service(_NAMES_MINED), _srt(tmp_path / "label.srt", lines)))
-        assert cards["冥殿は森で待つ"] == ["冥殿", "森", "待つ"]
+        assert cards["冥殿は森で待つ"] == ["森", "待つ"]
         body = _srt(tmp_path / "body.srt", lines[1:])
         assert _line_cards(_service(_NAMES_MINED), body) == _line_cards(_switched_off(_service(_NAMES_MINED)), body)
 
@@ -296,10 +304,10 @@ class TestCalledNames:
         assert cards["雷凰の剣は雷のように速い"] == plain["雷凰の剣は雷のように速い"][1:]
         assert cards["鋼刃が来た"] == ["来る"]
 
-    def test_the_whole_name_is_one_proper_noun(self, tmp_path: Path) -> None:
+    def test_the_whole_name_is_no_card_where_proper_nouns_are_mined(self, tmp_path: Path) -> None:
         cards = dict(_line_cards(_service(_NAMES_MINED), _srt(tmp_path / "called.srt", self._LINES)))
-        assert cards["雷凰！"] == ["雷凰"]
-        assert cards["鋼刃が来た"] == ["鋼刃", "来る"]
+        assert cards["雷凰！"] == []
+        assert cards["鋼刃が来た"] == ["来る"]
 
     def test_called_once_and_once_with_an_honorific_is_enough(self, tmp_path: Path) -> None:
         lines = ["炎舞！", "炎舞さんが来た", "炎舞の威力は炎より強い"]
