@@ -50,6 +50,10 @@ _TAGS = {
     "フフ": "int",
     "えっ": "int",
     "お願い": "n vs",
+    "あい": "n int",
+    "オラ": "int",
+    "ま": "int",
+    "え": "int",
 }
 
 # Headwords with no tags of their own: spelling rows of another entry.
@@ -249,3 +253,23 @@ class TestNaiAfterTheAuxiliaryNi:
     @pytest.mark.parametrize("text", ["学生ではない。", "まだ行かない。"])
     def test_nai_as_grammar_stays_out(self, text):
         assert "ない" not in _fronts(text, interjections=False)
+
+
+class TestGateRefusals:
+    @pytest.mark.parametrize(("text", "front"), [("あい、そこまで。", "あい"), ("オラ！", "オラ")])
+    def test_a_spelling_that_names_another_word_is_no_card(self, text, front):
+        assert front not in _fronts(text)
+
+    @pytest.mark.parametrize(
+        ("text", "front"),
+        [("い ま ご ろ！", "ま"), ("え ら い こ と だ", "え"), ("い ま す ぐ", "ま"), ("お ま え。", "え")],
+    )
+    def test_a_letter_of_a_spaced_word_is_no_card(self, text, front):
+        assert front not in _fronts(text)
+
+    @pytest.mark.parametrize(
+        ("text", "front"),
+        [("ま、いいか。", "ま"), ("え 本当に？", "え"), ("ま いいか。", "ま"), ("え あ 鍵を忘れた。", "え")],
+    )
+    def test_a_one_kana_interjection_beside_a_word_stays(self, text, front):
+        assert front in _fronts(text)

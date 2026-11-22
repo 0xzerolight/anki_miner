@@ -4217,6 +4217,8 @@ class SubtitleParserService:
           a name (うー|ちゃん);
         - it is no stammer: a token of one mora with no っ whose kana also opens
           the next word or closes the one before (あ、ありがとう).
+        - it is no letter of a word written with spaces (``_is_spaced_letter``),
+          and no spelling that names another word (``_INTERJECTION_HOMOGRAPHS``).
 
         It changes acceptance only; the caller still runs the ellipsis guard.
         """
@@ -4231,6 +4233,10 @@ class SubtitleParserService:
             return False
         is_word = self._is_word_character
         if is_word(text[tok_start - 1 : tok_start]) or is_word(text[tok_end : tok_end + 1]):
+            return False
+        if katakana_to_hiragana(surface) in self._INTERJECTION_HOMOGRAPHS:
+            return False
+        if self._is_spaced_letter(text, tok_start, tok_end):
             return False
         core = surface.rstrip("っッー")
         morae = sum(ch not in self._INTERJECTION_SMALL_KANA for ch in core)
@@ -4247,6 +4253,39 @@ class SubtitleParserService:
                 surface, ()
             ) or self._is_listed_interjection_variant(surface)
         return self._interjection_memo[surface]
+
+    #: Spellings the dictionary tags ``int`` for a sense the card would not show: the entry
+    #: a learner gets for あい is 愛, for オラ the Spanish greeting. The call and the shout stay out.
+    _INTERJECTION_HOMOGRAPHS: frozenset[str] = frozenset({"あい", "おら"})
+
+    @classmethod
+    def _is_spaced_letter(cls, text: str, tok_start: int, tok_end: int) -> bool:
+        """Whether a one-kana token is a letter of a word written with a space after every letter (い ま さ ら).
+
+        It stands in a run of three or more single kana, one space between each.
+        Two are as often two sounds (え あ ごちそうさま).
+        """
+        if tok_end - tok_start != 1:
+            return False
+
+        def lone(at: int) -> bool:
+            return (
+                0 <= at < len(text)
+                and "ぁ" <= text[at] <= "ヺ"
+                and not cls._is_word_character(text[max(at - 1, 0) : at])
+                and not cls._is_word_character(text[at + 1 : at + 2])
+            )
+
+        run = 1
+        at = tok_start - 2
+        while at >= 0 and text[at + 1].isspace() and lone(at):
+            run += 1
+            at -= 2
+        at = tok_end + 1
+        while at < len(text) and text[at - 1].isspace() and lone(at):
+            run += 1
+            at += 2
+        return run >= 3
 
     #: ッ and the small vowels of a variant spelling, with the plain kana each stands for (あぁ is ああ).
     _INTERJECTION_PLAIN_KANA = str.maketrans("ッぁぃぅぇぉァィゥェォ", "っあいうえおアイウエオ")
