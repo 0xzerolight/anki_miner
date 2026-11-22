@@ -62,6 +62,20 @@ _ATTESTED = frozenset(
         "そんな風に",
         "いつものように",
         "もうすぐ",
+        # E-2
+        "そう",
+        "そうか",
+        "そうです",
+        "そうですね",
+        "そうだ",
+        "そうだね",
+        "いい",
+        "いいよ",
+        "なんなの",
+        "何なの",
+        "どう",
+        "どうしたの",
+        "どうしよう",
     }
 )
 
@@ -187,3 +201,47 @@ def test_row_homophones_and_positions_stay() -> None:
     assert "跡" in fronts and "跡で" not in fronts and "あとで" not in fronts
     fronts = _fronts("彼はまずは寝た")  # まずは joins only where it opens a clause
     assert "まず" in fronts and "まずは" not in fronts
+
+
+# --- E-2: replies that stand alone -------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("sentence", "front"),
+    [
+        ("そうか", "そうか"),
+        ("そうか。", "そうか"),
+        ("そうです。", "そうです"),
+        ("そうですね", "そうですね"),
+        ("そうだ、思い出した", "そうだ"),
+        ("そうだね", "そうだね"),
+        ("いいよ。", "いいよ"),
+        ("何なの？", "何なの"),
+        ("なんなの？", "なんなの"),
+        ("どうしたの？", "どうしたの"),
+        ("どうしよう", "どうしよう"),
+    ],
+)
+def test_reply_between_pauses_is_one_entry(sentence: str, front: str) -> None:
+    assert front in _fronts(sentence)
+
+
+@pytest.mark.parametrize(
+    ("sentence", "kept", "reply"),
+    [
+        ("そうかもね", "そう", "そうか"),
+        ("そうかな、違うと思う", "そう", "そうか"),
+        ("そうだよ", "そう", "そうだ"),
+        ("そうですか、分かりました", "そう", "そうです"),
+        ("雨が降るそうです", "降る", "そうです"),
+        ("元気そうだ", "元気", "そうだ"),
+        ("これいいよね", "いい", "いいよ"),
+        ("もういいよ", "いい", "いいよ"),
+        ("いいよなあ、君は", "いい", "いいよ"),
+        ("それをどうしたのか聞く", "どう", "どうしたの"),
+    ],
+)
+def test_reply_words_inside_a_clause_stay(sentence: str, kept: str, reply: str) -> None:
+    fronts = _fronts(sentence)
+    assert kept in fronts
+    assert reply not in fronts

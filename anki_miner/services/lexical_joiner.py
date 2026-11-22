@@ -123,7 +123,7 @@ class _Join(NamedTuple):
     # open a line or clause.
     listed: bool = False
     line_start: bool = False
-    # A kana row's "noun" or "verb": joined only right after one.
+    # A kana row's "noun" or "verb": joined only right after one; "alone": only before a pause.
     after: str = ""
 
 
@@ -326,6 +326,19 @@ def _opens_clause(tokens: list, spans: dict[int, tuple[int, int]], i: int) -> bo
     return left is None or right is None or left[1] != right[0]
 
 
+def _stands_alone(tokens: list, spans: dict[int, tuple[int, int]], end: int) -> bool:
+    """Whether a pause follows ``tokens[end]``: the line end, punctuation, or a space.
+
+    With the clause opening before it, this is where an "alone" row is a reply
+    of its own (そうか。 そうですか、… いいよ！) and not the start of something
+    longer (そうかもね, そうだよ, いいよね).
+    """
+    if end + 1 >= len(tokens) or _pos1(tokens[end + 1]) in _CLAUSE_BREAK_POS1:
+        return True
+    left, right = spans.get(end), spans.get(end + 1)
+    return left is None or right is None or left[1] != right[0]
+
+
 def _follows(tokens: list, i: int, after: str, joined_pos1: str | None = None) -> bool:
     """Whether ``tokens[i]`` comes right after the kind of word a kana row asks for ("" asks for none).
 
@@ -455,7 +468,10 @@ class LexicalJoiner:
             if candidate.line_start and not _opens_clause(tokens, spans, candidate.start):
                 return False
             previous = kept[-1] if kept and kept[-1].end == candidate.start - 1 else None
-            if not _follows(tokens, candidate.start, candidate.after, previous.pos1 if previous else None):
+            if candidate.after == "alone":
+                if not _stands_alone(tokens, spans, candidate.end):
+                    return False
+            elif not _follows(tokens, candidate.start, candidate.after, previous.pos1 if previous else None):
                 return False
             kept.append(candidate)
             return True

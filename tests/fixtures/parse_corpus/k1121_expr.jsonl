@@ -8,3 +8,5 @@
 {"id":"k21e08","sentence":"どこかで会った","expected":["どこか","会う"],"category":"k1121-expr","note":"どこ|か is the word どこか 'somewhere'."}
 {"id":"k21e09","sentence":"場所はどこか分かる","expected":["場所","どこ","分かる"],"category":"k1121-expr","note":"Before a verb of knowing the か closes an embedded question: どこ keeps its card."}
 {"id":"k21e10","sentence":"もうすぐ着く","expected":["もうすぐ","着く"],"category":"k1121-expr","note":"もう|すぐ is the entry もうすぐ, one card and not two."}
+{"id":"k21e11","sentence":"そうか、分かった","expected":["そうか","分かる"],"category":"k1121-expr","note":"そう|か opens the line and a pause follows: the reply そうか."}
+{"id":"k21e12","sentence":"元気そうだ","expected":["元気"],"category":"k1121-expr","note":"そう|だ after a word is the auxiliary, not the reply; そうだ is attested, so the reject is the row's `alone`."}
