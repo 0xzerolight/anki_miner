@@ -47,10 +47,11 @@ SHORT_NOUNS: frozenset[str] = frozenset(
     | {"うそ", "ばか", "ただ", "ふう", "うえ", "いま", "けが", "むちゃ"}
     | {"くせ", "ほう", "まね", "ふり", "たび", "あと", "わけ", "とこ", "ころ"}
     | {"もん", "もと", "じき"}
+    | {"とき"}
 )
 
 #: The only two-kana spellings of kanji-written words listed outside the nouns.
-SHORT_READINGS: frozenset[str] = frozenset({"きみ", "ぼく", "おれ", "かれ", "だれ", "ぜひ"})
+SHORT_READINGS: frozenset[str] = frozenset({"きみ", "ぼく", "おれ", "かれ", "だれ", "ぜひ", "われ"})
 
 #: The only kanji-written nouns of three morae listed by their kana spelling: those
 #: commonly written in kana. A three-mora kana noun is otherwise as often the tail
@@ -64,6 +65,7 @@ SHORT_SPELLED_NOUNS: frozenset[str] = frozenset(
     # the dialect object こと|ば, 何でも|あり|か).
     | {"ちから", "いのち", "かたち", "ふたり", "せがれ", "じじい", "ばばあ", "おかみ"}
     | {"とどめ", "せりふ", "あるじ", "おなご", "だんご", "ささい", "うかつ"}
+    | {"きのう", "しだい", "もよう"}
 )
 
 #: Spoken kana spellings JMdict gives no priority tag (やっぱ for 矢っ張り, the

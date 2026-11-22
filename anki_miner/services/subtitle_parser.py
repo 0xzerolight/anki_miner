@@ -203,13 +203,64 @@ _KANA_RECOVER_POS1: frozenset[str] = frozenset({"動詞", "形容詞", "形状�
 _KANA_RECOVER_REJECT_POS2: frozenset[str] = frozenset({"助動詞語幹", "非自立可能"})
 
 # The auxiliary-capable kana words mined where the line uses them as its main
-# verb or adjective (猫がいる, 時間がない, 水がほしい). Left out: する, which after a
-# noun is that noun's verb (勉強する) and alone is mostly a mis-split's tail; the
-# honorific and dialect ones (なさる, くださる, いたす, まいる, おる); and the
-# aspect auxiliaries (しまう, おく, みる), whose bare kana is the auxiliary.
+# verb or adjective (猫がいる, 時間がない, 水がほしい). する takes a second test,
+# as after a noun it is that noun's verb (勉強する), and so do the humble verbs
+# おる, いたす, いただく and まいる: _is_not_main_verb. Left out: the honorific
+# なさる and くださる; and the aspect auxiliaries (しまう, おく, みる), whose bare
+# kana is the auxiliary.
 _KANA_AUX_WORDS: frozenset[str] = frozenset(
-    {"いる", "ある", "なる", "できる", "くる", "いく", "やる", "くれる", "もらう", "ない", "いい", "よい", "ほしい"}
+    {
+        "いる",
+        "ある",
+        "なる",
+        "できる",
+        "くる",
+        "いく",
+        "やる",
+        "くれる",
+        "もらう",
+        "ない",
+        "いい",
+        "よい",
+        "ほしい",
+        "する",
+    }
+    | {"おる", "いたす", "いただく", "まいる"}
 )
+
+# The only surfaces that are おる and いたす: おりゃ is a shout, and いた|い
+# ('ouch') and other stray いた are read as いたす.
+_ORU_FORMS: tuple[str, ...] = ("おら", "おり", "おる", "おれ", "おっ", "おろ")
+_ITASU_FORMS: tuple[str, ...] = ("いたし", "いたす", "いたせ", "いたさ", "いたそ")
+
+# The other auxiliary-capable kana verbs (あげる, かける, つく, すぎる, みせる) come
+# back as a class, under the same test and the full window check. Not these:
+# forms of する the tagger lemmatises apart (さす is its Kansai causative), the
+# honorific and aspect verbs whose bare kana is the auxiliary, the literary あり
+# (the word is ある, above), だす, which is the Kansai です as often as 出す, and
+# short verbs the tagger gives to name pieces and dialect endings (きっちゃん,
+# えるちゃん, さって, 行かぬか, つくしちゃん, いねがった). A potential of one of
+# them or of a word above stays out too (なれる, いける, おれる: the card would
+# show 慣れる, 行ける, 折れる).
+_KANA_AUX_CLASS_DENY: frozenset[str] = frozenset(
+    {"される", "させる", "せる", "す", "したい", "さす", "ござる", "みる", "しまう", "なさる", "おく"}
+    | {"いただける", "くださる", "くだされる", "いらっしゃる", "らっしゃる"}
+    | {"たまう", "あそばす", "やがる", "なはる", "おわす"}
+    | {"あり", "だす", "きる", "える", "さる", "ぬく", "つくす", "ねがう"}
+)
+_POTENTIAL_E_TO_U: dict[str, str] = dict(zip("えけげせてねべめれ", "うくぐすつぬぶむる", strict=True))
+
+# Particles after which する belongs to the phrase before it and is no verb of
+# its own: the quoted try or thought (行こうとした, 帰るってした), the listed act
+# (見たりした, 掃除とかする) and the choice (行くかしないか).
+_SURU_AFTER_PARTICLES: frozenset[str] = frozenset({"と", "って", "たり", "だり", "か", "とか", "やら", "なり"})
+
+# Forms of する the tagger also gives to a piece of another word: しい is the tail
+# of an adjective it does not know (キビしい) far more often than the Kansai
+# imperative, せい the end of a shout (どっせい), しょう a Sino-Japanese reading.
+# Each is the verb only with its particle before it (いいかげんにせい, どれにしょうか).
+_SURU_PIECE_FORMS: frozenset[str] = frozenset({"しい", "せい", "せえ", "しょう"})
+_SURU_FRAME_PARTICLES: frozenset[str] = frozenset({"格助詞", "係助詞", "副助詞"})
 
 # What the token before an auxiliary-capable word is when the word is grammar:
 # a verb, an adjective or an auxiliary (よくない, 行かなくなる, 静かである), or a
@@ -315,6 +366,7 @@ _SOKUON_CONTINUATIONS: frozenset[str] = frozenset("たてだでちじと")
 # longer expressions are listed spans, merged or joined before it is judged alone.
 _KANA_RECOVERED = "recovered"
 _KANA_AUX = "aux"
+_KANA_AUX_CLASS = "aux class"
 _KANA_LISTED = "listed"
 _KANA_LISTED_SPELLING = "listed spelling"
 
@@ -1053,6 +1105,8 @@ class SubtitleParserService:
         # rejected in one line (すみません) and recovered in another (すみます). Same
         # clear-on-cap bounding as the caches above.
         self._kana_window_cache: dict[str, bool] = {}
+        # Whether a word before する takes it (_takes_suru), by that word's front.
+        self._takes_suru_memo: dict[str, bool | None] = {}
         # F-08 step 2: per-file cue spans to leave out, on the file's own
         # timeline (set_skip_ranges). Like _line_cache it survives parse_* calls;
         # unlike it, it is applied at yield, so the cached line states stay whole.
@@ -1094,6 +1148,7 @@ class SubtitleParserService:
         # parses, so EpisodeProcessor reads it straight after phase 1.
         self.last_parse_rejects: dict[str, NotMinedReason] = {}
         self._reset_perf_counters()
+        self._takes_suru_memo = {}
 
     def _reset_perf_counters(self) -> None:
         """Zero the per-parse probe/tokenize cumulative counters (Task 28)."""
@@ -3821,7 +3876,15 @@ class SubtitleParserService:
         how = self._kana_recovery(word_token)
         if how is not None:
             after_conditional = how == _KANA_AUX and self._is_good_after_conditional(word_token, tokens)
-            if how == _KANA_AUX and not after_conditional and self._used_as_auxiliary(word_token, tokens):
+            if (
+                how in (_KANA_AUX, _KANA_AUX_CLASS)
+                and not after_conditional
+                and self._used_as_auxiliary(word_token, tokens)
+            ):
+                return False
+            if how == _KANA_AUX and self._is_not_main_verb(word_token, tokens):
+                return False
+            if how == _KANA_AUX_CLASS and self._aux_class_word_is_out_of_place(word_token, tokens, text, tok_end):
                 return False
             if how in (_KANA_LISTED, _KANA_LISTED_SPELLING) and self._listed_word_is_out_of_place(word_token, tokens):
                 return False
@@ -3964,6 +4027,134 @@ class SubtitleParserService:
                 return True
         return False
 
+    def _is_not_main_verb(self, word_token, tokens: list) -> bool:
+        """Whether kana する is not the line's own verb where it stands (宿題をする is; 勉強する is not).
+
+        The humble verbs take the same test: いたす in full, as it stands where
+        する does (失礼いたします); おる, いただく and まいる only the particle
+        and the suffix or prefix part, and おる and いたす only in their own
+        forms (``_ORU_FORMS``, ``_ITASU_FORMS``). おる and いただく after a
+        joined word that ends in て are that て's auxiliary (どうして|おられる,
+        について|おります), and いたし before かた is the noun 致し方.
+
+        ``_used_as_auxiliary`` has already refused it after a verb, an adjective,
+        an auxiliary or a て. Left are the places where it is another word's
+        verb or a piece of grammar:
+
+        - after a quoting, listing or choosing particle (``_SURU_AFTER_PARTICLES``),
+          and after に when て + は / も follows (彼にしては, 子供にしても);
+        - after a noun or adverb that takes する: the tagger's サ変可能, a number,
+          a dictionary entry tagged ``vs`` (びっくりした), and a noun with no entry
+          at all, which is more often a name or a piece than an object;
+        - after a suffix, a prefix or an adjectival-noun stem;
+        - after a kana the tagger calls a symbol: 臭ぇ is cut 臭|ぇ, and the し
+          after it is the particle, not する.
+
+        And three forms are the verb only in their own frame, as the tagger
+        gives them to stray kana too: さ glued to its れる / せる (あのさ is the
+        particle), a bare し with a case, topic or adverbial particle before it
+        or an auxiliary or particle after it (よぉし 行くぞ, a garbled しかし),
+        and the forms of ``_SURU_PIECE_FORMS`` right after such a particle.
+        """
+        base = getattr(word_token.feature, "orthBase", None)
+        if base not in ("する", "おる", "いたす", "いただく", "まいる"):
+            return False
+        if base == "おる" and (word_token.surface.startswith("おりゃ") or word_token.surface[:2] not in _ORU_FORMS):
+            return True
+        if base == "いたす" and word_token.surface[:3] not in _ITASU_FORMS:
+            return True
+        idx = next((i for i, tok in enumerate(tokens) if tok is word_token), None)
+        if idx is None:
+            return False
+        prev = tokens[idx - 1] if idx else None
+        after = tokens[idx + 1] if idx + 1 < len(tokens) else None
+        feature = getattr(prev, "feature", None)
+        pos1 = getattr(feature, "pos1", None)
+        surface = word_token.surface
+        framed = pos1 == "助詞" and getattr(feature, "pos2", None) in _SURU_FRAME_PARTICLES
+        glued = after is not None and not getattr(after, "white_space", "") and after.surface.startswith(("れ", "せ"))
+        after_pos1 = getattr(getattr(after, "feature", None), "pos1", None)
+        if base == "する" and (
+            (surface == "さ" and not glued)
+            or (surface in _SURU_PIECE_FORMS and not framed)
+            or (surface == "し" and not framed and after_pos1 not in ("助詞", "助動詞"))
+        ):
+            return True
+        if base == "いたす" and after is not None and after.surface.startswith(("かた", "方")):
+            return True
+        if prev is None:
+            return False
+        if base in ("おる", "いただく") and getattr(prev, "compound", False) and prev.surface.endswith(("て", "で")):
+            return True
+        if pos1 == "助詞":
+            if prev.surface in _SURU_AFTER_PARTICLES:
+                return True
+            after = [tok.surface for tok in tokens[idx + 1 : idx + 3]]
+            return (
+                base == "する"
+                and prev.surface == "に"
+                and len(after) == 2
+                and after[0] == "て"
+                and after[1] in ("は", "も")
+            )
+        if base not in ("する", "いたす"):
+            return pos1 in ("接尾辞", "接頭辞")
+        if pos1 in ("接尾辞", "接頭辞", "形状詞"):
+            return True
+        if pos1 == "補助記号":
+            return _is_kana_candidate(prev.surface)
+        if pos1 not in ("名詞", "副詞"):
+            return False
+        if getattr(feature, "pos3", None) == "サ変可能" or getattr(feature, "pos2", None) == "数詞":
+            return True
+        fronts = [prev.surface]
+        if not getattr(prev, "compound", False):
+            fronts.insert(0, getattr(feature, "orthBase", None) or prev.surface)
+        takes = self._takes_suru(fronts[0])
+        if takes is None and fronts[-1] != fronts[0]:
+            takes = self._takes_suru(fronts[-1])
+        return takes is not False
+
+    def _takes_suru(self, front: str) -> bool | None:
+        """Whether the dictionary tags ``front`` as a する word (``vs``); None when it has no entry."""
+        if front not in self._takes_suru_memo:
+            if len(self._takes_suru_memo) >= _FRONT_CACHE_CAP:
+                self._takes_suru_memo.clear()
+            tags = self._entry_tags([front]).get(front)
+            self._takes_suru_memo[front] = any(tag.startswith("vs") for tag in tags) if tags else None
+        return self._takes_suru_memo[front]
+
+    @staticmethod
+    def _aux_class_word_is_out_of_place(word_token, tokens: list, text: str, tok_end: int) -> bool:
+        """Whether an auxiliary-capable kana verb of the class (あげる, かける, つく) is no word of its own here.
+
+        ``_used_as_auxiliary`` has refused it after a verb, an adjective, an
+        auxiliary or a て. Left are a 撥音便 stem that nothing continues, as a
+        cut 促音便 stem; a bare 連用形 at the line end or before a shout, which
+        is another verb's imperative (ウソつけ！ is つく, read as つける); any
+        such verb right after an adjectival noun; and すぎる glued to the word
+        before it (静か|すぎる, バカ|すぎる, 突然|すぎて), that word's tail as
+        it is after a verb.
+        """
+        feature = word_token.feature
+        c_form = getattr(feature, "cForm", None) or ""
+        following = text[tok_end : tok_end + 1]
+        if c_form.startswith("連用形-撥音便") and following not in ("だ", "で", "じ"):
+            return True
+        if c_form.startswith("連用形") and following in ("", "！", "!"):
+            return True
+        idx = next((i for i, tok in enumerate(tokens) if tok is word_token), None)
+        if not idx:
+            return False
+        before = getattr(getattr(tokens[idx - 1], "feature", None), "pos1", None)
+        if before == "形状詞":
+            return True
+        return (
+            getattr(feature, "orthBase", None) == "すぎる"
+            and before in ("名詞", "代名詞", "副詞", "接尾辞")
+            and not getattr(word_token, "white_space", "")
+        )
+
     @staticmethod
     def _is_good_after_conditional(word_token, tokens: list) -> bool:
         """Whether いい / よい follows a conditional as the line's own predicate (読めばいい, 聞いたらいい, すりゃいい).
@@ -3996,16 +4187,24 @@ class SubtitleParserService:
         plural (おらは, おらの, おらたち): bare, or before よ, it is the shout
         (立てよ、おら！ おらよ). ちと glued to the word before it is cut from that
         word (俺っ|ちと, 俺ん|ちと); the adverb follows a space, a line start or a
-        particle.
+        particle. とき glued to a verb's 連用形 is the contracted ておき
+        (待っ|とき, やめ|とき); the noun follows a 連体形 (待つとき, 決めたとき).
         """
         surface = word_token.surface
         if surface == "ちょうだい":
             return SubtitleParserService._is_request_after_te(word_token, tokens)
-        if surface not in ("おら", "よろしゅう", "ちと"):
+        if surface not in ("おら", "よろしゅう", "ちと", "とき"):
             return False
         idx = next((i for i, tok in enumerate(tokens) if tok is word_token), None)
         if idx is None:
             return False
+        if surface == "とき":
+            stem = getattr(tokens[idx - 1], "feature", None) if idx else None
+            return (
+                getattr(stem, "pos1", None) == "動詞"
+                and str(getattr(stem, "cForm", "")).startswith("連用形")
+                and not getattr(word_token, "white_space", "")
+            )
         if surface == "ちと":
             if not idx:
                 return False
@@ -4224,6 +4423,7 @@ class SubtitleParserService:
         if idx is None:  # defensive: candidate not in the list ⇒ no context to judge
             return False
         windows = self._lexicalized_window_surfaces(tokens, idx, from_left=from_left)
+        windows = self._kana_window_choice(tokens, idx, windows, own_word=not (from_left or listed_spelling))
         if not windows:
             return False
         if from_left:
@@ -4248,6 +4448,127 @@ class SubtitleParserService:
             for w in uncached:
                 verdicts[w] = self._kana_window_cache[w] = bool(hits.get(w))
         return any(verdicts[w] for w in windows)
+
+    def _kana_window_choice(self, tokens: list, idx: int, windows: list[str], *, own_word: bool) -> list[str]:
+        """The windows that are still a candidate against the kana word at ``tokens[idx]``.
+
+        Two kinds of window are no expression around the word, whatever a
+        dictionary reads into them, and are left out for every recovered word:
+
+        - one that ends at the word while the word's own inflection goes on
+          (に|やっ|て reads にやっ, が|し|た the suffix がし): the string is cut
+          inside a word. A final form keeps its windows (そう|や|ない|です is
+          やない). So does the cut of a recovered word whose dictionary form is
+          a word too: と|ぼけ|ない is とぼける, a longer verb the tagger split.
+          Unless that word is this one with its particle (と|いい|ます: という
+          is と言う), by the test below;
+        - one that opens on the auxiliary tail of the word before it
+          (決め|た|とき reads たとき): that た belongs to the verb.
+
+        With ``own_word`` (a recovered word, not a listed spelling or an
+        auxiliary-capable one), a window that is only a reading also yields
+        when it is the word itself with one particle: re-spelled with the
+        word's own kanji it is a headword (と言う, って言う, 可哀想に), and it
+        takes in exactly one token that is neither a prefix nor the word's own
+        tail. The card is then the word. A window a dictionary spells in kana
+        still wins (しかない, について), and so does a homophone of another
+        word (で|すき is 出好き) or an expression of two or more other tokens
+        (か|も|しれ|ない, と|は|いえ).
+        """
+        token = tokens[idx]
+
+        def pos1(tok) -> str | None:
+            return getattr(getattr(tok, "feature", None), "pos1", None)
+
+        def is_tail(tok) -> bool:
+            return pos1(tok) == "助動詞" or (pos1(tok) == "助詞" and getattr(tok.feature, "pos2", None) == "接続助詞")
+
+        inflects = pos1(token) in ("動詞", "形容詞")
+        c_form = getattr(token.feature, "cForm", None)
+        goes_on = (
+            inflects
+            and idx + 1 < len(tokens)
+            and is_tail(tokens[idx + 1])
+            and not (isinstance(c_form, str) and c_form.startswith(("終止形", "連体形", "命令形")))
+        )
+        wanted = set(windows)
+        dropped: set[str] = set()
+        spans: list[tuple[int, int, str]] = []
+        base, lemma = extract_orth_base(token) or "", extract_lemma(token) or ""
+        in_kanji = lemma if any(is_cjk_ideograph(ch) for ch in lemma) else ""
+        cuts: dict[str, tuple[str, str]] = {}
+        for start in range(max(0, idx - _KANA_RECOVER_WINDOW_MAX_SIDE), idx + 1):
+            on_tail = (
+                0 < start < idx
+                and pos1(tokens[start]) == "助動詞"
+                and pos1(tokens[start - 1]) in _AUX_AFTER_POS1
+                and not getattr(tokens[start], "white_space", "")
+            )
+            for end in range(idx, min(len(tokens) - 1, idx + _KANA_RECOVER_WINDOW_MAX_SIDE) + 1):
+                window = "".join(tok.surface for tok in tokens[start : end + 1])
+                if window not in wanted:
+                    continue
+                if on_tail or end == idx and goes_on and not own_word:
+                    dropped.add(window)
+                elif end == idx and goes_on:
+                    left = window[: len(window) - len(token.surface)]
+                    particle = sum(1 for tok in tokens[start:idx] if pos1(tok) != "接頭辞") == 1
+                    cuts[window] = (left + base, left + in_kanji if particle and in_kanji else "")
+                elif own_word:
+                    spans.append((start, end, window))
+        if cuts:
+            # One probe for the cuts' dictionary forms and the windows the caller reads next.
+            words = self._kana_windows_attested([*windows, *(whole for whole, _ in cuts.values())])
+            own = [spelled for whole, spelled in cuts.values() if spelled and whole in words]
+            listed = self._attest([*own, *words]) if own and self._attest is not None else set()
+            for window, (whole, spelled) in cuts.items():
+                if whole not in words or (spelled in listed and whole not in listed):
+                    dropped.add(window)
+        kanji = self._kana_own_kanji(token) if spans and self._attest is not None else ""
+        respelled: dict[str, str] = {}
+        for start, end, window in spans if kanji else ():
+            if start < idx and pos1(tokens[start]) == "接頭辞":
+                continue
+            foreign = sum(1 for tok in tokens[start:idx] if pos1(tok) != "接頭辞")
+            own_tail = inflects
+            for tok in tokens[idx + 1 : end + 1]:
+                own_tail = own_tail and is_tail(tok)
+                foreign += not own_tail
+            if foreign == 1:
+                respelled[window] = (
+                    "".join(tok.surface for tok in tokens[start:idx])
+                    + kanji
+                    + "".join(tok.surface for tok in tokens[idx + 1 : end + 1])
+                )
+        if respelled and self._attest is not None:
+            listed = self._attest([*respelled, *respelled.values()])
+            dropped.update(w for w, spelled in respelled.items() if w not in listed and spelled in listed)
+        return [w for w in windows if w not in dropped]
+
+    def _kana_windows_attested(self, windows: list[str]) -> set[str]:
+        """The ``windows`` a dictionary has as a term or a reading, through the window memo."""
+        lookup = self._kana_attest_lookup
+        if lookup is None:
+            return set()
+        unknown = [w for w in dict.fromkeys(windows) if w not in self._kana_window_cache]
+        verdicts = {w: self._kana_window_cache[w] for w in windows if w not in unknown}
+        if unknown:
+            if len(self._kana_window_cache) + len(unknown) > _FRONT_CACHE_CAP:
+                self._kana_window_cache.clear()
+            hits = lookup(unknown)
+            for w in unknown:
+                verdicts[w] = self._kana_window_cache[w] = bool(hits.get(w))
+        return {w for w, attested in verdicts.items() if attested}
+
+    def _kana_own_kanji(self, token) -> str:
+        """The kana token as its lemma spells it (いい → 言い, かわいそう → 可哀想), "" when the lemma has no kanji."""
+        spelled = self._own_form_in_kanji(token, "")
+        if spelled:
+            return spelled
+        lemma = extract_lemma(token) or ""
+        if token.surface == (extract_orth_base(token) or "") and any(is_cjk_ideograph(ch) for ch in lemma):
+            return str(lemma)
+        return ""
 
     def _listed_spelling_windows(self, tokens: list, idx: int, windows: list[str]) -> list[str]:
         """The windows that can turn away a listed kana spelling of a kanji-written word (ほう, わけ, あと).
@@ -4643,7 +4964,7 @@ class SubtitleParserService:
         return self._kana_recovery(word_token) is not None
 
     def _kana_recovery(self, word_token) -> str | None:
-        """How an otherwise-rejected hiragana word comes back: ``_KANA_RECOVERED``, ``_KANA_AUX``, ``_KANA_LISTED``, ``_KANA_LISTED_SPELLING`` or None.
+        """How an otherwise-rejected hiragana word comes back: ``_KANA_RECOVERED``, ``_KANA_AUX``, ``_KANA_AUX_CLASS``, ``_KANA_LISTED``, ``_KANA_LISTED_SPELLING`` or None.
 
         Gate (ALL must hold; cheap checks first so the SQLite probe is the last
         resort and only distinct tokens ever reach it):
@@ -4726,17 +5047,37 @@ class SubtitleParserService:
 
         The surface must start as the card front does: ねぇ is the spoken ない and
         づける the voiced tail of a compound (景気づける), neither the word on the
-        card. A カ変 verb is the exception, as くる's own stem changes (きた, こい).
+        card. A カ変 or サ変 verb is the exception, as its own stem changes
+        (きた, こい; した, せよ).
         くん is the honorific after a nickname the tagger does not know (あっくん)
         as often as it is a contracted くれ.
         """
         feature = word_token.feature
         if merged or pos1 not in _KANA_RECOVER_POS1 or getattr(feature, "pos2", None) != "非自立可能":
             return False
-        if form not in _KANA_AUX_WORDS or surface == "くん" or not self._inclusion_rule.content_gate_ok(word_token):
+        if form not in _KANA_AUX_WORDS and not self._is_aux_class_word(feature, pos1, surface, form):
+            return False
+        if surface == "くん" or not self._inclusion_rule.content_gate_ok(word_token):
             return False
         c_type = getattr(feature, "cType", None)
-        return surface[0] == form[0] or (isinstance(c_type, str) and c_type.startswith("カ行変格"))
+        return surface[0] == form[0] or (isinstance(c_type, str) and c_type.startswith(("カ行変格", "サ行変格")))
+
+    @staticmethod
+    def _is_aux_class_word(feature, pos1: str, surface: str, form: str) -> bool:
+        """Whether a 非自立可能 kana verb outside ``_KANA_AUX_WORDS`` is mined as one of its class (あげる, かける, つく).
+
+        Not a word of ``_KANA_AUX_CLASS_DENY`` nor the potential of one or of a
+        listed word; at least two kana; and the surface starts as the lemma
+        reads, which a voiced tail does not (ぎる, づける).
+        """
+        if pos1 != "動詞" or form in _KANA_AUX_CLASS_DENY or len(surface) < 2:
+            return False
+        potential_of = ""
+        if len(form) >= 3 and form.endswith("る") and form[-2] in _POTENTIAL_E_TO_U:
+            potential_of = form[:-2] + _POTENTIAL_E_TO_U[form[-2]]
+        if potential_of in _KANA_AUX_WORDS or potential_of in _KANA_AUX_CLASS_DENY:
+            return False
+        return katakana_to_hiragana(str(getattr(feature, "lForm", "") or ""))[:1] == surface[:1]
 
     def _probe_kana_recovery(self, word_token, pos1: str, surface: str, recoverable: bool, merged: bool) -> str | None:
         """The content gate (recovered) or list membership (listed), then attestation of the front.
@@ -4783,7 +5124,7 @@ class SubtitleParserService:
         if recoverable and not (merged and is_listed(form, pos1, merged=True)):
             return _KANA_RECOVERED
         if aux:
-            return _KANA_AUX
+            return _KANA_AUX if form in _KANA_AUX_WORDS else _KANA_AUX_CLASS
         return _KANA_LISTED_SPELLING if spelled or (not merged and is_kanji_spelled(form, pos1)) else _KANA_LISTED
 
     #: Long kana nouns that are no word where the tagger finds them: the rows the
