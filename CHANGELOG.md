@@ -83,6 +83,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Japanese: polite greetings are mined as the dictionary's entry (ありがとうございます, おはようございます, よろしくお願いします).**
 - **Japanese: 過ぎる, 欲しい and 貰う written in kanji after a verb are part of its highlight (食べ過ぎた, 教えて欲しい, 信じて貰えなかった),** no longer cards of their own, as in kana.
 - **Japanese: a kana imperative before よ is mined (やれよ mines やる),** and 撮れよ mines 撮る, not 撮れる.
+- **Japanese: a word after a subtitle space that the tagger read as a suffix is mined (今日は 君が, 先生 体は reads からだ),** and a verb stem after を before a space is the verb (計画を練り 準備した mines 練る).
+- **Japanese: a kanji word no dictionary lists is cut into the listed words it holds (山盛り入れて mines 山盛り and 入れる).**
+- **Japanese: あの and その before an adjective and its noun are mined (あの有名な店).**
+- **Japanese: a katakana run with one long rare word is mined as its words (シールドタックル mines シールド and タックル).**
+- **Japanese: short grammar points are mined (らしい, べき, すべき, ごとき, やろ, やない, じゃね, うる).** Mine grammar points turns them off.
+- **Japanese: どうした is mined before んだ (どうしたんだ mines どうした and んだ),** and ちょっとした, につれて, にすぎない, ときたら, しだいに, さすれば and やらしい are mined whole.
+- **Japanese: more expressions are mined whole (しかない, までに, ざるを得ない, かいがある, それすら, そんなん, よって, おめでとうございます).**
+- **Japanese: idioms with a dropped particle join to their entry (腹減った mines 腹が減る, 気いつけて 気をつける, 元気づけよう 元気づける, ひどい目にあう).**
+- **Japanese: the kana なん is mined as 何, and its expressions whole (なんと, なんて, なんという, なんとしても, なんも, なんらか).**
+- **Japanese: more counters are mined with their number (５体, ３曲, 100キロ, 2世紀, 4年生, １，２００円),** and 3回目 or 5人中 card the number and counter, not 回目 or 人中.
+- **Japanese: the hearsay そうだ after a plain form is mined (雨が降るそうです).** Mine grammar points turns it off.
+- **Japanese: お and ご before a kana noun join when the dictionary lists the word (おうち, おかね, ごあいさつ, ごしゅじん),** and the old pronouns わらわ and うぬ are mined.
+- **Japanese: よくなる and そうになる are mined as their entry (泣きそうになった).**
+- **Japanese: なる after an adjective's く form or に is mined (忙しくなった, 静かになった),** and する after お + a verb stem (お持ちします), いい after から, けど or し (休むからいい), ない after そうに (降りそうにない).
+- **Japanese: a drawn-out spelling cards the standard word (ぜーんぶ mines ぜんぶ, はーい はい, 聞こえなーい 聞こえる, いただきまーす いただきます).**
+- **Japanese: ねえ where it means ない is mined as ねえ (才能ねえし),** and an entry ending in ない is mined through it (間違いねえ mines 間違いない).
 ### Fixed
 - **Japanese verb cards show the verb the line uses.** An imperative (持て) mined 持てる, a passive (刺された) mined 刺さる, a potential (帰れない) mined 帰れる, a short causative (行かされた) mined 行かす and katakana フラれた mined the loanword フル; they now mine 持つ, 刺す, 帰る, 行く and ふる. The last three fronts had no dictionary entry, so the card was dropped.
 - **Kana fillers no longer become verb cards.** いえ ('no') mined いえる, a sound cut at っ (まっ, たっ) mined まつ and たつ, and the tagger's glues いたんだ, 違かった and ういっす mined 痛む, 買う and 逸する.
@@ -126,6 +142,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **側, 主 and 留まる read そば, あるじ and とどまる where they mean beside, master and stay (俺の側にいろ, 店の主).**
 - **A verb's highlight stops before a final よ (食べてよ, 行けよ)** and reaches over spoken endings (あるん, 動いとん, 恐れませぬ, 見りゃあ, 笑ったってこと, 知ってねえ, ひやかしちゃいや).
 - **A verb's highlight crosses one subtitle space before its ending (帰り ましょう),** and すみませんでした is highlighted whole.
+- **A katakana word and a number word are no longer mined (チームセブン, ブラボーセブン).**
+- **A run of single kanji that a file repeats three times or more is read as a name, not as one card per kanji.**
+- **A character's katakana sentence-end tic (〜でゲソ, 〜ワン) is no longer mined in the file that uses it.**
+- **Joins no longer fire where the words are another phrase:** 何かと思えば mines 何か, こんな物がある mines 物 and ある, 役立たず is the noun, and のせいで before ではない keeps せい.
+- **A verb's highlight stops where the expression after it starts (泣き|そうになった, 選ば|ざるを得ない, 死んじゃ|やだ),** so two cards no longer bold the same kana.
 - **A batch no longer lets one file decide how a kana verb is treated in the next.** The verdict for つかめ (つかむ or つかめる) was remembered by spelling alone, so the same episode could mine differently depending on what was mined before it.
 - **Folder pairing (Batch, Condense, Retime) no longer reads encode and broadcast tags as the episode number.** Ma10p, YUV420P10, 2flac, AACx2, HDR10, 60fps, MPEG2, `[v2]` and the BS11 channel tag left videos unpaired or paired with another episode's subtitle.
 - **Folder pairing keeps a .5 special (`Show - 12.5`) apart from episode 5.**
