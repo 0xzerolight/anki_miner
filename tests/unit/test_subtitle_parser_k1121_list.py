@@ -631,6 +631,15 @@ def test_nan_cut_from_a_contracted_verb_is_no_card(sentence: str) -> None:
     assert "なん" not in _fronts(sentence)
 
 
+@pytest.mark.parametrize("sentence", ["なんやかんや言っても好きだ", "文句はなんやかんやある", "なんちって、冗談だよ"])
+def test_nan_cut_from_a_longer_word_is_no_card(sentence: str) -> None:
+    assert "なん" not in _fronts(sentence)
+
+
+def test_nan_before_the_kansai_copula_is_the_word() -> None:
+    assert "なん" in _fronts("それはなんやねん")
+
+
 def test_nan_after_ni_before_no_is_the_word() -> None:
     assert "なん" in _fronts("私になんの用")
 

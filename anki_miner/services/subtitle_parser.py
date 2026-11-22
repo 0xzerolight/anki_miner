@@ -4684,13 +4684,21 @@ class SubtitleParserService:
 
         迷惑になんなよ is になるな and 気になんない is にならない; the Kansai かなんわ is
         かなわんわ. The tagger cuts なん out of each as the pronoun. 私になんの用 and
-        これかなんの話 keep the word.
+        これかなんの話 keep the word. So is the なん of a longer word the tagger
+        shreds: なん|や|かん|や, なん|ちっ|て (なんちゃって said short).
         """
         idx = next((i for i, tok in enumerate(tokens) if tok is word_token), None)
+        if idx is None:
+            return False
+        after = tokens[idx + 1] if idx + 1 < len(tokens) else None
+        if after is not None and (
+            (after.surface == "や" and idx + 2 < len(tokens) and tokens[idx + 2].surface == "かん")
+            or (after.surface in ("ちっ", "ちゃっ") and getattr(after.feature, "pos1", None) == "助動詞")
+        ):
+            return True
         if not idx:
             return False
         before = tokens[idx - 1].surface
-        after = tokens[idx + 1] if idx + 1 < len(tokens) else None
         if before == "か":
             pos = getattr(after, "feature", None)
             return after is None or getattr(pos, "pos2", None) == "終助詞" or getattr(pos, "pos1", None) == "補助記号"
