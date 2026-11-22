@@ -66,7 +66,6 @@ from anki_miner.services.morphology import (
     reread_omote_tokens,
     resolve_attested_reading,
     resolve_reading_override,
-    resolve_reading_override_in_line,
     retag_mistagged_tokens,
     short_causative_bases,
     source_spelling_fold,
@@ -1902,7 +1901,7 @@ class SubtitleParserService:
             if mined is None or mined != token.surface:
                 continue
             derived = katakana_to_hiragana(self._extract_reading(token))
-            override = resolve_reading_override_in_line(mined, derived, text[:tok_start])
+            override = resolve_reading_override(mined, derived)
             if override is not None:
                 if override != derived:
                     corrections[(tok_start, tok_end)] = override
@@ -2062,7 +2061,7 @@ class SubtitleParserService:
                 # concatenated component kana, so they take the else branch and keep
                 # the headword-regenerated reading.
                 expression_reading = katakana_to_hiragana(reading)
-                override = resolve_reading_override_in_line(mined, expression_reading, text[:tok_start])
+                override = resolve_reading_override(mined, expression_reading)
                 if override is not None:
                     # unidic-lite misreads this spelling in every context (一日→ツイタチ,
                     # 仏→フツ, 不味い→マジイ, 込む→ゴム). Take the curated reading and

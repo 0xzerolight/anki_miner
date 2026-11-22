@@ -162,60 +162,15 @@ def resolve_special_reading(head_surface: str, next_surface: str | None) -> str 
 
 # Curated per-spelling reading corrections for unidic-lite misreadings. Keyed by
 # (card-front spelling, hiragana-folded UniDic reading) → corrected hiragana
-# reading. Unlike the context-licensed kinship table above, each listed spelling
-# reads its wrong value in EVERY context — no correct-reading token exists to
-# protect — so the remap is unconditional. Applied in ``_emit_word``'s Expression
-# fields (both the mined==surface branch and the headword-derived else-branch).
-# Evidence probed on the shipping unidic-lite dictionary (2026-07):
-#   (一日, ついたち) → いちにち: UniDic emits ツイタチ for the merged 一日 token in
-#       every context (incl. ２４時間の一日); the calendar-date sense loss is
-#       documented and accepted (standalone 一日 tokenizes as 一+日, unaffected).
-#   (仏, ふつ) → ほとけ: UniDic emits フツ (the 仏=France abbreviation reading)
-#       universally; no "leave ほとけ alone" token exists — France-sense loss accepted.
-#   (不味い, まじい) → まずい: UniDic reads 不味い マジイ in every context. Its
-#       kana spelling マズい needs no row (a kana surface is its own reading, see
-#       ``extract_reading``), but a マズい card's lemma_reading is 不味い's.
+# reading; unconditional, applied in ``_emit_word``'s Expression fields. One row
+# is left. Every other reading the tagger gets wrong on a token of its own (私,
+# 明日, 日本, 仏, 蛙, 一日, 言う, 不味い) is a row of ``_READING_CONTEXT``, corrected
+# on the raw stream, so a merged spelling (私たち, 日本語, そう言う) inherits it
+# and the sentence ruby agrees with the card.
 #   (込む, ごむ) → こむ: the isolated 込む verb misreads as the loanword ゴム
 #       (rubber); compounds (飲み込む→のみこむ) read correctly and are untouched.
-#   (私, わたくし) → わたし: UniDic emits ワタクシ for 私 in every context, so
-#       every 私 card read わたくし; the formal-speech sense loss is accepted, and
-#       わたし matches the ワタシ fold in models/word.py.
-#   (私たち/私達, わたくしたち) → わたしたち: the merged front carries the same
-#       ワタクシ head, which the 私 entry (keyed on the bare spelling) misses.
-#   (明日, あす) → あした, (その後, そのご) → そのあと: UniDic emits the formal
-#       variant (アス always; ゴ before a comma); a card takes JMdict's first
-#       reading, and the formal-register loss is accepted as for 私.
-#   (何か, なんか) → なにか: UniDic emits ナン for 何 in every context, 何を and
-#       何が included; the card shows the headword reading. The bare 何 has no
-#       row: ``reread_in_context`` reads it なん or なに by its line.
-#   (言う, ゆう) → いう, (そう言う, そうゆう) → そういう: UniDic reads 言う ユウ
-#       after そう; a kanji 言う never reads ゆう on a card.
-#   (蛙, かわず) → かえる: UniDic emits the poetic カワズ in every context.
-#   (日本語/日本人, にっぽん…) → にほん…: UniDic reads 日本 ニッポン, and the
-#       dictionary attests both readings, so the merge keeps the rarer one.
-#   (１日, ついたち) → いちにち: the digit spelling keeps its own front, so the
-#       一日 row misses it. The one row with a context: after a month it stays
-#       the date (``resolve_reading_override_in_line``).
 _READING_OVERRIDES: dict[tuple[str, str], str] = {
-    ("一日", "ついたち"): "いちにち",
-    ("仏", "ふつ"): "ほとけ",
-    ("不味い", "まじい"): "まずい",
     ("込む", "ごむ"): "こむ",
-    ("私", "わたくし"): "わたし",
-    ("私たち", "わたくしたち"): "わたしたち",
-    ("私達", "わたくしたち"): "わたしたち",
-    ("明日", "あす"): "あした",
-    ("その後", "そのご"): "そのあと",
-    ("何か", "なんか"): "なにか",
-    ("何も", "なんも"): "なにも",
-    ("何もかも", "なんもかも"): "なにもかも",
-    ("言う", "ゆう"): "いう",
-    ("そう言う", "そうゆう"): "そういう",
-    ("蛙", "かわず"): "かえる",
-    ("日本", "にっぽん"): "にほん",
-    ("日本語", "にっぽんご"): "にほんご",
-    ("日本人", "にっぽんじん"): "にほんじん",
-    ("１日", "ついたち"): "いちにち",
 }
 
 
@@ -232,20 +187,6 @@ def resolve_reading_override(spelling: str, derived_reading: str) -> str | None:
     this returns an unconditional hiragana correction.
     """
     return _READING_OVERRIDES.get((spelling, derived_reading))
-
-
-def resolve_reading_override_in_line(spelling: str, derived_reading: str, text_before: str) -> str | None:
-    """``resolve_reading_override`` for a token whose line is known.
-
-    ``text_before`` is the line up to the token. The digit spelling １日 is the
-    one row with a context where the tagger is right: directly after a month
-    (３月１日, 毎月１日) it is the date ついたち, so the row is skipped there and
-    'one day' (今日１日, あと１日) takes it everywhere else. The card and the
-    sentence ruby both ask here, so they agree.
-    """
-    if spelling == "１日" and text_before.endswith("月"):
-        return None
-    return resolve_reading_override(spelling, derived_reading)
 
 
 def apply_special_readings(tokens: list) -> list:
@@ -745,7 +686,10 @@ class _ReadingRow(NamedTuple):
 
     ``word`` is the token surface, ``pos1`` the part of speech the tagger must
     have given, ``old`` the katakana it gave (a prefix of ``feature.kana``) and
-    ``new`` what replaces that prefix; a row whose ``new`` equals ``old`` keeps
+    ``new`` what replaces that prefix; with ``base`` set, ``word`` is instead the
+    dictionary form of a verb or adjective (the tagger lemma, else the form as
+    written) and the token must start with its first character. A row whose
+    ``new`` equals ``old`` keeps
     the tagger's reading. Every test a row names must hold. ``before`` is
     searched in the line up to the token, trailing spaces dropped; ``after`` is
     matched at the start of the line after it, so a subtitle space there fails
@@ -763,6 +707,7 @@ class _ReadingRow(NamedTuple):
     prev: tuple[str, ...]
     nxt: tuple[str, ...]
     line: re.Pattern[str] | None
+    base: bool
 
 
 def _reading_row(
@@ -776,6 +721,7 @@ def _reading_row(
     prev: tuple[str, ...] = (),
     nxt: tuple[str, ...] = (),
     line: str = "",
+    base: bool = False,
 ) -> _ReadingRow:
     """A ``_READING_CONTEXT`` row with its patterns compiled."""
     return _ReadingRow(
@@ -788,10 +734,12 @@ def _reading_row(
         prev,
         nxt,
         re.compile(line) if line else None,
+        base,
     )
 
 
 _WHAT_POS = ("代名詞", "名詞")
+_NOUN_POS = ("名詞",)
 _CONTEXT_KANA_FIELDS = ("kana", "kanaBase", "lForm", "pron", "pronBase", "form", "formBase")
 
 #: Readings the line decides. Rows of one word are tried in order and the first
@@ -825,10 +773,56 @@ _READING_CONTEXT: tuple[_ReadingRow, ...] = (
     ),
     _reading_row("何", _WHAT_POS, "ナン", "ナン", nxt=("助数詞",)),
     _reading_row("何", _WHAT_POS, "ナン", "ナニ"),
+    # 私: the tagger says わたくし wherever it stands; a card takes わたし, as the
+    # ワタシ fold in models/word.py does. The humble 私ども and 私め keep わたくし.
+    _reading_row("私", ("代名詞",), "ワタクシ", "ワタクシ", after="(?:ども|共)"),
+    _reading_row("私", ("代名詞",), "ワタクシ", "ワタクシ", after="め", nxt=("接尾辞",)),
+    _reading_row("私", ("代名詞",), "ワタクシ", "ワタシ"),
+    # 明日: the tagger says the formal あす; a card takes the everyday あした.
+    _reading_row("明日", _NOUN_POS, "アス", "アシタ"),
+    # 日本: the tagger says にっぽん; 日本語, 日本人 and 日本一 follow the token.
+    # 大日本 keeps にっぽん.
+    _reading_row("日本", _NOUN_POS, "ニッポン", "ニッポン", before="大$"),
+    _reading_row("日本", _NOUN_POS, "ニッポン", "ニホン"),
+    # 仏: the tagger says ふつ (France) for the Buddha.
+    _reading_row("仏", _NOUN_POS, "フツ", "ホトケ"),
+    # 蛙: the tagger says the poetic かわず, which is right in the proverb 井の中の蛙.
+    _reading_row("蛙", _NOUN_POS, "カワズ", "カワズ", before="井の中の$"),
+    _reading_row("蛙", _NOUN_POS, "カワズ", "カエル"),
+    # その後: the tagger says そのご before a pause; a card takes そのあと.
+    _reading_row("後", _NOUN_POS, "ゴ", "アト", before="その$"),
+    # 一日, １日: the tagger says ついたち, the first of the month. That is right
+    # directly after a month (六月一日, 毎月１日); anywhere else it is one day.
+    _reading_row("一日", _NOUN_POS, "ツイタチ", "ツイタチ", before="月$"),
+    _reading_row("一日", _NOUN_POS, "ツイタチ", "イチニチ"),
+    _reading_row("１日", _NOUN_POS, "ツイタチ", "ツイタチ", before="月$"),
+    _reading_row("１日", _NOUN_POS, "ツイタチ", "イチニチ"),
+    # 言う: the tagger says ゆう after そう and for the headword read alone; a
+    # kanji 言う never reads ゆう on a card.
+    _reading_row("言う", ("動詞",), "ユウ", "イウ", base=True),
+    # 不味い: the tagger says まじい for the plain form.
+    _reading_row("不味い", ("形容詞",), "マジイ", "マズイ", base=True),
 )
-_READING_CONTEXT_BY_WORD: dict[str, tuple[_ReadingRow, ...]] = {
-    word: tuple(row for row in _READING_CONTEXT if row.word == word) for word in {row.word for row in _READING_CONTEXT}
+_READING_CONTEXT_BY_SURFACE: dict[str, tuple[_ReadingRow, ...]] = {
+    word: tuple(row for row in _READING_CONTEXT if row.word == word)
+    for word in {row.word for row in _READING_CONTEXT if not row.base}
 }
+_READING_CONTEXT_BY_BASE: dict[str, tuple[_ReadingRow, ...]] = {
+    word: tuple(row for row in _READING_CONTEXT if row.word == word)
+    for word in {row.word for row in _READING_CONTEXT if row.base}
+}
+_READING_CONTEXT_HEADS = frozenset(row.word[0] for row in _READING_CONTEXT)
+
+
+def _reading_rows(surface: str, feature: Any) -> tuple[_ReadingRow, ...] | None:
+    """The table rows of a token: by its surface, else by its dictionary form."""
+    rows = _READING_CONTEXT_BY_SURFACE.get(surface)
+    if rows is not None:
+        return rows
+    for base in (getattr(feature, "lemma", None), getattr(feature, "orthBase", None)):
+        if isinstance(base, str) and base[:1] == surface[:1] and base in _READING_CONTEXT_BY_BASE:
+            return _READING_CONTEXT_BY_BASE[base]
+    return None
 
 
 def _context_class(token: Any, counter: bool) -> str:
@@ -855,7 +849,7 @@ def reread_in_context(tokens: list) -> list:
     on a ``RetaggedToken``; a token no row changes passes by identity, and a
     line without a table word is returned as the same list.
     """
-    if not any(isinstance(token.surface, str) and token.surface in _READING_CONTEXT_BY_WORD for token in tokens):
+    if not any(isinstance(token.surface, str) and token.surface[:1] in _READING_CONTEXT_HEADS for token in tokens):
         return tokens
     spaces = [space if isinstance(space := getattr(token, "white_space", ""), str) else "" for token in tokens]
     surfaces = [token.surface if isinstance(token.surface, str) else "" for token in tokens]
@@ -864,9 +858,9 @@ def reread_in_context(tokens: list) -> list:
     for i, token in enumerate(tokens):
         context = before + spaces[i]
         before = context + surfaces[i]
-        rows = _READING_CONTEXT_BY_WORD.get(surfaces[i])
         feature = getattr(token, "feature", None)
         kana = getattr(feature, "kana", None)
+        rows = _reading_rows(surfaces[i], feature) if surfaces[i][:1] in _READING_CONTEXT_HEADS else None
         if rows is None or not isinstance(kana, str) or not hasattr(feature, "_replace"):
             out.append(token)
             continue

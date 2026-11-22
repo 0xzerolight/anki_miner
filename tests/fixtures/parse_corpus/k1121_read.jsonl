@@ -7,3 +7,5 @@
 {"id":"k21rd07","sentence":"何が起きたの","expected":["何","起きる"],"expected_readings":{"何":"なに"},"category":"k1121-readings"}
 {"id":"k21rd08","sentence":"何に使うの","expected":["何","使う"],"expected_readings":{"何":"なに"},"category":"k1121-readings"}
 {"id":"k21rd09","sentence":"何と何を買うの","expected":["何","買う"],"expected_readings":{"何":"なに"},"category":"k1121-readings"}
+{"id":"k21rd10","sentence":"明日は晴れだ","expected":["明日","晴れ"],"expected_readings":{"明日":"あした"},"category":"k1121-readings"}
+{"id":"k21rd11","sentence":"私は学生だ","expected":["私","学生"],"expected_readings":{"私":"わたし"},"category":"k1121-readings"}

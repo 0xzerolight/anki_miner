@@ -64,6 +64,16 @@ def _kana(sentence: str, surface: str) -> list[str]:
 #: Readings a dictionary lists for each word of the table (written by hand).
 _LISTED_READINGS: dict[str, set[str]] = {
     "何": {"なに", "なん"},
+    "私": {"わたし", "わたくし"},
+    "明日": {"あした", "あす", "みょうにち"},
+    "日本": {"にほん", "にっぽん"},
+    "仏": {"ほとけ", "ふつ"},
+    "蛙": {"かえる", "かわず"},
+    "一日": {"いちにち", "ついたち"},
+    "１日": {"いちにち", "ついたち"},
+    "言う": {"いう", "ゆう"},
+    "不味い": {"まずい"},
+    "後": {"あと", "ご", "のち", "うしろ"},
 }
 
 
@@ -95,7 +105,7 @@ class TestRereadInContext:
         assert all(a is b for a, b in zip(tokens, out, strict=True))
 
     def test_a_changed_token_keeps_its_cut_and_part_of_speech(self) -> None:
-        tokens, out = _reread("何を言う")
+        tokens, out = _reread("何を見る")
         assert [t.surface for t in out] == [t.surface for t in tokens]
         assert isinstance(out[0], morphology.RetaggedToken)
         assert out[0].feature.pos1 == tokens[0].feature.pos1
@@ -184,3 +194,61 @@ def test_fixture_readings() -> None:
         assert set(words) == set(record["expected"]), record["id"]
         for front, reading in record["expected_readings"].items():
             assert words[front].expression_reading == reading, record["id"]
+
+
+@needs_tagger
+class TestRowsThatWereCardOverrides:
+    """What the card-level override table patched is read on the token, so a merge inherits it."""
+
+    @pytest.mark.parametrize(
+        ("sentence", "surface", "kana"),
+        [
+            ("私は学生だ", "私", "ワタシ"),
+            ("明日は晴れだ", "明日", "アシタ"),
+            ("日本一の男だ", "日本", "ニホン"),
+            ("仏の顔も三度", "仏", "ホトケ"),
+            ("蛙が鳴く", "蛙", "カエル"),
+            ("井の中の蛙だ", "蛙", "カワズ"),
+            ("私どもの責任です", "私", "ワタクシ"),
+            ("私めにお任せを", "私", "ワタクシ"),
+            ("私自身の問題だ", "私", "ワタシ"),
+            ("大日本ホルモン焼き", "日本", "ニッポン"),
+            ("その後、彼は去った", "後", "アト"),
+            ("3日後に会おう", "後", "ゴ"),
+            ("兄ちゃん、一日、仏", "一日", "イチニチ"),
+            ("今日１日は休む", "１日", "イチニチ"),
+            ("６月１日だ", "１日", "ツイタチ"),
+            ("六月一日に会う", "一日", "ツイタチ"),
+            ("毎月 １日に会う", "１日", "ツイタチ"),
+            ("そう言うな", "言う", "イウ"),
+            ("不味い", "不味い", "マズイ"),
+        ],
+    )
+    def test_the_token_reading(self, sentence: str, surface: str, kana: str) -> None:
+        assert _kana(sentence, surface) == [kana]
+
+    def test_a_kana_token_is_never_reread(self) -> None:
+        for sentence in ("なんか変だ", "わたくしが行く", "あすは晴れる"):
+            tokens, out = _reread(sentence)
+            assert all(a is b for a, b in zip(tokens, out, strict=True))
+
+    def test_a_headword_read_alone(self) -> None:
+        service = _service()
+        assert service._reading("何と言う") == "なんという"
+        assert service._reading("そう言う") == "そういう"
+        assert service._reading("こう言う") == "こういう"
+        assert service._reading("私自身") == "わたしじしん"
+        assert service._reading("日本一") == "にほんいち"
+        assert service._reading("不味い") == "まずい"
+
+    @pytest.mark.parametrize(
+        ("sentence", "wrong", "right"),
+        [("私たちは行く", "わたくし", "わたし"), ("日本語を話す", "にっぽん", "にほん"), ("そう言うな", "ゆ", "い")],
+    )
+    def test_the_sentence_and_the_cards_agree(self, sentence: str, wrong: str, right: str) -> None:
+        words = _words(sentence)
+        assert words
+        for word in words.values():
+            assert wrong not in word.sentence_furigana
+            assert right in word.sentence_furigana
+            assert wrong not in word.expression_reading
