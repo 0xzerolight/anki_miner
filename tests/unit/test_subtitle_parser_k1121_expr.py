@@ -241,6 +241,13 @@ def test_dokoka_before_a_verb_of_knowing_is_the_question(sentence: str) -> None:
     assert "どこか" not in fronts
 
 
+@pytest.mark.parametrize("sentence", ["出口はどこかな", "どこかね", "トイレはどこかな？"])
+def test_dokoka_before_a_sentence_final_particle_is_the_question(sentence: str) -> None:
+    fronts = _fronts(sentence)
+    assert "どこ" in fronts
+    assert "どこか" not in fronts
+
+
 def test_row_homophones_and_positions_stay() -> None:
     fronts = _fronts("その跡で分かる")  # 跡|で reads あとで; 跡で is no entry
     assert "跡" in fronts and "跡で" not in fronts and "あとで" not in fronts

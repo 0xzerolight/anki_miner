@@ -290,13 +290,17 @@ def _embedded_question(headword: str, tokens: list, after: int) -> bool:
     Before a verb of knowing, asking or saying the か closes an embedded
     question: どこかわからない 'do not know where', どこか知らない？ 'do you know
     where?'. So it does where the line or sentence ends on it: 出口はどこか
-    'where is the exit?'. The row is passed over and どこ keeps its card.
+    'where is the exit?', and before a sentence-final particle: どこかな,
+    どこかね 'where, I wonder'. The row is passed over and どこ keeps its card.
     """
     if headword != "どこか":
         return False
     if after >= len(tokens):
         return True
-    return _pos1(tokens[after]) in _CLAUSE_BREAK_POS1 or extract_lemma(tokens[after]) in _QUESTION_VERBS
+    following = tokens[after]
+    if _pos1(following) in _CLAUSE_BREAK_POS1 or _pos2(following) == "終助詞":
+        return True
+    return extract_lemma(following) in _QUESTION_VERBS
 
 
 def _ka_of_kamo(last: str, tokens: list, after: int) -> bool:
