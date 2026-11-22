@@ -358,3 +358,14 @@ class TestKatakanaRunHoles:
     @pytest.mark.parametrize("text", ["チームセブンが来た", "ターゲットナインを見た"])
     def test_a_word_and_a_number_word_are_a_designation(self, text: str) -> None:
         assert not {"チーム", "セブン", "ターゲット", "ナイン"} & set(_fronts(_run_service(), text))
+
+    @pytest.mark.parametrize(
+        ("text", "words"),
+        [("サンダーキックだ", {"サンダー", "キック"}), ("メガトンパンチを見た", {"メガトン", "パンチ"})],
+    )
+    def test_a_long_rare_word_beside_a_common_word_is_a_word(self, text: str, words: set[str]) -> None:
+        assert words <= set(_fronts(_run_service(), text))
+
+    @pytest.mark.parametrize("text", ["アイスソードを使え", "ライドウォッチを使え", "サンダーメガトンを見た"])
+    def test_a_short_rare_piece_or_no_common_piece_stays_unmined(self, text: str) -> None:
+        assert not {*_RUN_COMMON, *_RUN_RARE} & set(_fronts(_run_service(), text))

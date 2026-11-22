@@ -5042,8 +5042,10 @@ class SubtitleParserService:
 
         * the whole run is exactly two or more tokens of the line;
         * each is an all-katakana noun of three kana or more (no proper noun,
-          no numeral) that the dictionary lists by spelling AND tags common: a
-          rare short word inside an unknown name (ライド|ウォッチ) fails here. A
+          no numeral) that the dictionary lists by spelling. One at least is
+          tagged common, and one that is not has four kana or more
+          (シールド|タックル): a rare short word inside an unknown name
+          (ライド|ウォッチ, アース|ガロン) fails here. A
           token the compound matcher made counts as listed, and a katakana verb
           the front fold cards (ゲーム|ヤラれた) is covered;
         * the pieces are not one word said over (ベリーベリー), the first is no
@@ -5138,7 +5140,9 @@ class SubtitleParserService:
             ):
                 return False
         common = self._memoized_term_common(words)
-        if common is None or not all(common.get(word) for word in words):
+        if common is None or not any(common.get(word) for word in words):
+            return False
+        if any(len(word) < 4 for word in words if not common.get(word)):
             return False
         if len(self._memoized_attest(words)) != len(set(words)):
             return False
