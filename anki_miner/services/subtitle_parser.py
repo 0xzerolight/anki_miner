@@ -1784,6 +1784,8 @@ class SubtitleParserService:
         """A line's merged tokens, with the katakana runs of that line which its file uses as names."""
 
         name_runs: frozenset[str] = frozenset()
+        #: Where the file's sentence-end tic starts in this line (``_with_line_end_tic``).
+        tic_starts: frozenset[int] = frozenset()
 
     class _FileNameToken(CompoundSyntheticToken):
         """A name its file vouches for, joined from the tagger's pieces (``_merge_file_names``).
@@ -1826,6 +1828,9 @@ class SubtitleParserService:
         called: collections.Counter[str] = collections.Counter()
         katakana: collections.Counter[str] = collections.Counter()
         repeated: collections.Counter[str] = collections.Counter()
+        endings: collections.Counter[str] = collections.Counter()
+        ending_lines: collections.defaultdict[str, set[str]] = collections.defaultdict(set)
+        shorts: collections.Counter[str] = collections.Counter()
         for line in subs:
             if getattr(line, "is_comment", None) is True:
                 continue
@@ -1844,6 +1849,14 @@ class SubtitleParserService:
                 called.update(self._names_called(line_state))
                 katakana.update(self._katakana_runs_named(self._tokenizer_text(text)))
                 repeated.update(self._one_kanji_runs(line_state))
+                for surface, _start in self._sentence_end_katakana(line_state):
+                    endings[surface] += 1
+                    ending_lines[surface].add(text)
+                shorts.update(
+                    run.group()
+                    for run in self._KATAKANA_RUN_RE.finditer(self._tokenizer_text(text))
+                    if len(run.group()) <= 4
+                )
         names = self._file_names(labels, honorifics, called, repeated)
         if names:
             line_states = [self._merge_file_names(line_state, names) for line_state in line_states]
@@ -1853,6 +1866,12 @@ class SubtitleParserService:
         runs.update(name for name in labels if self._KATAKANA_RUN_RE.fullmatch(name))
         if runs:
             line_states = [self._with_name_runs(line_state, runs) for line_state in line_states]
+        # A way of speaking: a short katakana word that ends eight different lines right after a
+        # predicate, and stands that way in three of five of its uses. A noun at the end of a
+        # relative clause does the same a few times in a file, and a sung line many times over.
+        tics = {word for word, count in endings.items() if len(ending_lines[word]) >= 8 and count >= 0.6 * shorts[word]}
+        if tics:
+            line_states = [self._with_line_end_tic(line_state, tics) for line_state in line_states]
         return line_states
 
     def _katakana_runs_named(self, line: str) -> list[str]:
@@ -1892,6 +1911,27 @@ class SubtitleParserService:
             return line_state
         noted = self._NameRunTokens(merged_tokens)
         noted.name_runs = present
+        return (text, raw_tokens, noted, start, end, duration)
+
+    def _with_line_end_tic(
+        self, line_state: tuple[str, list, list, float, float, float], tics: set[str]
+    ) -> tuple[str, list, list, float, float, float]:
+        """``line_state`` with the places of the file's sentence-end tics in this line noted on its merged tokens.
+
+        A new state with a new list of the same tokens, as in
+        ``_with_name_runs`` (whose note it keeps). ``_is_katakana_run_fragment``
+        turns the token at such a place away; the same word standing anywhere
+        else, in this file or another, is a word.
+        """
+        places = frozenset(
+            start for surface, start in self._sentence_end_katakana(line_state, known=True) if surface in tics
+        )
+        if not places:
+            return line_state
+        text, raw_tokens, merged_tokens, start, end, duration = line_state
+        noted = self._NameRunTokens(merged_tokens)
+        noted.name_runs = getattr(merged_tokens, "name_runs", noted.name_runs)
+        noted.tic_starts = places
         return (text, raw_tokens, noted, start, end, duration)
 
     def _speaker_label_names(self, raw_text: str) -> list[str]:
@@ -2024,6 +2064,59 @@ class SubtitleParserService:
             counter = numeral
             previous_end = end
         return runs
+
+    #: A line that may hold a way of speaking: a letter, two to four katakana, and no letter after them.
+    _SENTENCE_END_KATAKANA_RE = re.compile(
+        r"[ぁ-ゖ一-鿿々][ァ-ヺー]{2,4}(?![ぁ-ゖァ-ヺー一-鿿々〆0-9０-９A-Za-zＡ-Ｚａ-ｚ])"
+    )
+    #: What a sentence-end tic follows: a predicate, or the particle that closes or links one.
+    _TIC_AFTER_POS1: frozenset[str] = frozenset({"動詞", "形容詞", "助動詞"})
+    _TIC_AFTER_PARTICLES: frozenset[str] = frozenset({"終助詞", "接続助詞"})
+    #: What a word already known as the file's tic also follows (そうゲス, 元気ゲス).
+    _TIC_AFTER_LOOSE_POS1: frozenset[str] = frozenset({"副詞", "感動詞", "接続詞", "形状詞"})
+
+    def _sentence_end_katakana(
+        self, line_state: tuple[str, list, list, float, float, float], *, known: bool = False
+    ) -> list[tuple[str, int]]:
+        """Each katakana noun that ends a sentence right after a predicate, with its place (ゲス in 行くでゲス).
+
+        Some characters end their sentences with a word of their own, and the
+        tagger reads it as a noun (ゲス, ゾイ). It is one noun token of two to
+        four katakana with no space before it and a pause after it (the line's
+        end, a space, a punctuation mark), and what stands before it is a verb,
+        an adjective, an auxiliary, a sentence-final or conjunctive particle,
+        or か (the で of 見たでゲス is a conjunction to the tagger). A noun after
+        の, を, が or another noun is the sentence's own last word (私のパン) and
+        is not read. ``known``: the word is the file's tic already, and an
+        adverb, an interjection, a conjunction or an adjectival noun before it
+        will do.
+        """
+        line = self._tokenizer_text(line_state[0])
+        if self._SENTENCE_END_KATAKANA_RE.search(line) is None:
+            return []
+        found: list[tuple[str, int]] = []
+        spans = list(self._iter_token_spans(line, line_state[2]))
+        for index, (token, start, end) in enumerate(spans):
+            surface = token.surface
+            if not (index and 2 <= len(surface) <= 4 and spans[index - 1][2] == start and _is_all_katakana(surface)):
+                continue
+            if getattr(getattr(token, "feature", None), "pos1", None) != "名詞" or getattr(token, "compound", False):
+                continue
+            if index + 1 < len(spans) and spans[index + 1][1] == end:
+                after = getattr(getattr(spans[index + 1][0], "feature", None), "pos1", None)
+                if after not in self._NAME_PAUSE_POS1:
+                    continue
+            before = spans[index - 1][0]
+            feature = getattr(before, "feature", None)
+            pos1, pos2 = getattr(feature, "pos1", None), getattr(feature, "pos2", None)
+            if (
+                pos1 in self._TIC_AFTER_POS1
+                or (pos1 == "助詞" and (pos2 in self._TIC_AFTER_PARTICLES or before.surface == "か"))
+                or (pos1 == "接続詞" and before.surface == "で")
+                or (known and pos1 in self._TIC_AFTER_LOOSE_POS1)
+            ):
+                found.append((surface, start))
+        return found
 
     def _is_name_honorific(self, token: Any) -> bool:
         """Whether a raw token is what a name is called with: さん and its kin as a suffix, 先生, 先輩."""
@@ -4884,6 +4977,9 @@ class SubtitleParserService:
         surface = getattr(word_token, "surface", None)
         if not isinstance(surface, str) or not _is_all_katakana(surface):
             return False
+        # The file's way of ending a sentence (_with_line_end_tic), turned away where it stands so.
+        if tok_start in getattr(tokens, "tic_starts", ()):
+            return True
         left = text[tok_start - 1] if tok_start > 0 else ""
         right = text[tok_end] if tok_end < len(text) else ""
         if not (_continues_katakana_run(left) or _continues_katakana_run(right)):

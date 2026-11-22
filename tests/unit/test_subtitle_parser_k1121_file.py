@@ -234,3 +234,102 @@ class TestFileState:
         monkeypatch.setattr(service, "_tagger", lambda: lambda text: tokenized.append(text) or tagger(text))
         next(service._iter_parsed_lines(repeated))
         assert tokenized == ["嵐牙が森に来た"]
+
+
+# Katakana-written native nouns. The dictionary lists the hiragana and the kanji, never the katakana.
+_KANA_HEADWORDS = ("うわさ", "噂", "かすみ", "霞", "ひみつ", "秘密", "田字", "サクラ", "桜", "さくら", "パン", "ゲス")
+_KANA_COMMON = frozenset({"噂", "霞", "秘密", "桜", "パン"})
+_KANA_VERBS = ("確かめる", "笑う", "待つ", "来る", "守る", "走る", "咲く", "食べる", "行く", "見る", "強い", "買う")
+
+
+def _kana_service() -> SubtitleParserService:
+    spelled = {*_KANA_HEADWORDS, *_KANA_VERBS, "森", "男", "話", "朝", "私"}
+    return SubtitleParserService(
+        AnkiMinerConfig(),
+        term_lookup=lambda terms: spelled.intersection(terms),
+        kana_attest_lookup=lambda forms: {form: form in spelled for form in forms},
+        term_common_lookup=lambda terms: {term: term in _KANA_COMMON for term in terms},
+        name_piece_rejects=True,
+    )
+
+
+def _fronts(service: SubtitleParserService, text: str) -> list[str]:
+    state = service._build_line_state(text, 0.0, 1.0)
+    words, _index = service._emit_line_words_and_index(state, None, collect_index=False, rejects={})
+    return [word.mined_form for word in words]
+
+
+class TestLineEndTics:
+    """A katakana noun that a file puts at the end of its sentences, right after a predicate, is a way of speaking."""
+
+    _TIC = [
+        "森へ行くでゲス",
+        "朝に食べるでゲス",
+        "話を見たでゲス",
+        "男は強いゲス",
+        "私も行くでゲス",
+        "森を見るゲス",
+        "朝は来るでゲス",
+        "話は強いでゲス",
+    ]
+
+    def test_the_tic_is_no_card_where_it_ends_a_line_and_a_card_where_it_is_a_word(self, tmp_path: Path) -> None:
+        path = _srt(tmp_path / "tic.srt", [*self._TIC, "ゲスな男を見た", "ゲスが来た"])
+        service = _kana_service()
+        plain = dict(_line_cards(_switched_off(_kana_service()), path))
+        cards = dict(_line_cards(service, path))
+        assert all("ゲス" in plain[line] for line in [*self._TIC, "ゲスな男を見た"])
+        assert all(cards[line] == [front for front in plain[line] if front != "ゲス"] for line in self._TIC)
+        assert cards["ゲスな男を見た"] == plain["ゲスな男を見た"]
+        counted = service.count_fronts(path)
+        assert counted["ゲス"] == 2 and set(counted) == {front for _sentence, front, _furigana in _mined(service, path)}
+
+    @pytest.mark.parametrize(
+        "lines",
+        [
+            # Seven lines are no habit.
+            [*_TIC[:7], "男を見た"],
+            # One line said nine times is a song.
+            ["森へ行くでゲス"] * 9,
+            # As often a word as an ending.
+            [*_TIC, "ゲスな男を見た", "ゲスが来た", "ゲスを見た", "ゲスは強い", "森のゲス", "朝のゲス"],
+            # A noun that ends its lines after a particle or a noun is a word.
+            [
+                "森でパン",
+                "朝はパン",
+                "私のパン",
+                "男がパン",
+                "話はパン",
+                "森のパン",
+                "朝もパン",
+                "私がパン",
+                "男のパン",
+            ],
+        ],
+    )
+    def test_a_word_that_ends_some_lines_keeps_its_card(self, lines: list[str], tmp_path: Path) -> None:
+        path = _srt(tmp_path / "words.srt", lines)
+        assert _line_cards(_kana_service(), path) == _line_cards(_switched_off(_kana_service()), path)
+
+    @pytest.mark.parametrize(("line", "card"), [("そうゲス", False), ("男のゲス", True)])
+    def test_a_known_tic_is_no_card_after_an_adverb_and_a_card_after_a_noun(
+        self, line: str, card: bool, tmp_path: Path
+    ) -> None:
+        path = _srt(tmp_path / "known.srt", [*self._TIC, line])
+        plain = dict(_line_cards(_switched_off(_kana_service()), path))
+        cards = dict(_line_cards(_kana_service(), path))
+        assert "ゲス" in plain[line] and ("ゲス" in cards[line]) == card
+        assert "ゲス" not in cards["森へ行くでゲス"]
+
+    def test_a_tic_before_a_pause_inside_a_line_is_no_card(self, tmp_path: Path) -> None:
+        lines = [*self._TIC, "森へ行くでゲス 朝に食べるでゲス", "話を見たでゲス、男は強いゲス", "男は来るかゲス"]
+        cards = _line_cards(_kana_service(), _srt(tmp_path / "inside.srt", lines))
+        assert not any("ゲス" in fronts for _text, fronts in cards)
+
+    def test_the_tic_does_not_leak_into_the_next_file(self, tmp_path: Path) -> None:
+        tic = _srt(tmp_path / "tic.srt", self._TIC)
+        once = _srt(tmp_path / "once.srt", self._TIC[:2])
+        alone = (_mined(_kana_service(), tic), _mined(_kana_service(), once))
+        service = _kana_service()
+        assert (_mined(service, tic), _mined(service, once), _mined(service, tic)) == (*alone, alone[0])
+        assert "ゲス" in [front for _sentence, front, _furigana in alone[1]]
