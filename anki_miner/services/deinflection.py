@@ -299,6 +299,8 @@ class _ChainEnd(NamedTuple):
     tail: str
     # The last tail token is the sentence-final particle よ.
     final_yo: bool = False
+    # A tail token is the particle か.
+    particle_ka: bool = False
 
 
 def find_highlight_end(
@@ -707,6 +709,7 @@ def _chain_end_candidates(text: str, raw_tokens: list, tok_end: int) -> list[_Ch
     candidates: list[_ChainEnd] = []
     prev_end = tok_end
     tail = ""
+    particle_ka = False
     try:
         for tail_token, start, end in iter_token_spans(text, raw_tokens):
             if end <= tok_end:
@@ -722,11 +725,15 @@ def _chain_end_candidates(text: str, raw_tokens: list, tok_end: int) -> list[_Ch
             pos1 = getattr(tail_feature, "pos1", None)
             if not _is_pure_hiragana(surface.rstrip("ー") if pos1 == "助動詞" else surface):
                 break
-            if pos1 not in _INFLECTIONAL_TAIL_POS1:
+            # The あ that lengthens a contracted conditional (見てりゃ|あ, 見りゃ|あ)
+            # is a filler to the tagger.
+            lengthened_ya = surface == "あ" and pos1 == "感動詞" and text[start - 2 : start] in ("りゃ", "きゃ")
+            if pos1 not in _INFLECTIONAL_TAIL_POS1 and not lengthened_ya:
                 break
             tail += surface
             final_yo = surface == "よ" and getattr(tail_feature, "pos2", None) == "終助詞"
-            candidates.append(_ChainEnd(end, tail, final_yo))
+            particle_ka = particle_ka or (surface == "か" and pos1 == "助詞")
+            candidates.append(_ChainEnd(end, tail, final_yo, particle_ka))
             prev_end = end
     except (AttributeError, TypeError):
         return []  # mock/duck-typed token stream: no extension
@@ -799,6 +806,10 @@ def _chain_end_supplements() -> list[dict[str, Any]]:
     Monosashi's deinflection supplements (its SPEC §4.1) that
     ``_te_auxiliary_transforms`` does not carry: 動いとん, おもろない, こよ / しよ and
     行きゃがる.
+
+    Then forms of rough, Kansai and period speech the unit holds as well:
+    恐れませぬ and 知りまへん as 恐れません, 言いたかない and 悪かない for くはない,
+    住んどる as 住んでる, and the lengthened 見てりゃあ and なきゃあ.
     """
     from anki_miner.services.japanese_transforms import suffix_inflection
 
@@ -829,6 +840,24 @@ def _chain_end_supplements() -> list[dict[str, Any]]:
                 suffix_inflection("きゃがる", "くる", ["v5"], ["vk"]),
             ],
         },
+        {
+            "id": "-ませぬ",
+            "name": "-ませぬ",
+            "rules": [
+                suffix_inflection("ませぬ", "ます", ["-ません"], ["-ます"]),
+                suffix_inflection("まへん", "ます", ["-ません"], ["-ます"]),
+            ],
+        },
+        {"id": "-かない", "name": "-かない", "rules": [suffix_inflection("かない", "い", ["adj-i"], ["adj-i"])]},
+        {"id": "-どる", "name": "-どる", "rules": [suffix_inflection("どる", "で", ["v5"], ["-て"])]},
+        {
+            "id": "-りゃあ",
+            "name": "-りゃあ",
+            "rules": [
+                suffix_inflection("りゃあ", "れば", ["-ゃ"], ["-ば"]),
+                suffix_inflection("きゃあ", "ければ", ["-ゃ"], ["-ば"]),
+            ],
+        },
     ]
 
 
@@ -849,8 +878,15 @@ _NO_YO_IMPERATIVE_AFTER = frozenset({"potential", "-いる", "-おく", "-くれ
 def _chain_end_gate(candidate: _ChainEnd, chain: tuple[str, ...]) -> bool:
     """Whether the resolver refuses an end the table accepts with ``chain``.
 
-    The table says what can be a chain; this says what is not one here. A
-    sentence-final よ is the particle, not the ending of an imperative, where
-    that imperative would be the one of ``_NO_YO_IMPERATIVE_AFTER``.
+    The table says what can be a chain; this says what is not one here:
+
+    - A sentence-final よ is the particle, not the ending of an imperative,
+      where that imperative would be the one of ``_NO_YO_IMPERATIVE_AFTER``.
+    - かない for くはない has the tagger's たか or an adjective stem before it
+      (言い|たか|ない, 悪|かない). Across the particle か the same letters are a
+      past and a question (帰っ|た|か|ねえ), and for an ichidan verb only the
+      tagger tells the two apart (食べ|た|か|ねえ): its reading stands.
     """
+    if candidate.particle_ka and "-かない" in chain:
+        return True
     return candidate.final_yo and len(chain) >= 2 and chain[-1] == "imperative" and chain[-2] in _NO_YO_IMPERATIVE_AFTER

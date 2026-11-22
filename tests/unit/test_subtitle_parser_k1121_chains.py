@@ -151,3 +151,52 @@ class TestKansaiChainEnds:
             return {text for text, mask in candidates if text in (base, other) and conditions_match(mask, godan)}
 
         assert resolve_dictionary_form(surface, base, rules_lookup) == base
+
+
+class TestSpokenChainEnds:
+    """The END table's own rows: ませぬ / まへん, かない, どる, りゃあ / きゃあ."""
+
+    @pytest.mark.parametrize(
+        ("text", "front", "highlighted"),
+        [
+            ("敵を恐れませぬ", "恐れる", "恐れませぬ"),
+            ("言いたかないけど", "言う", "言いたかない"),
+            ("大阪に住んどった", "住む", "住んどった"),
+            ("酒を飲んどる", "飲む", "飲んどる"),
+            ("本を読んどるんや", "読む", "読んどる"),
+            ("見てりゃあいいんだ", "見る", "見てりゃあ"),
+            ("そりゃあ見りゃあわかる", "見る", "見りゃあ"),  # the あ follows the mined token itself
+            ("別に悪かない", "悪い", "悪かない"),
+        ],
+    )
+    def test_the_chain_runs_through_the_form(self, text, front, highlighted):
+        assert _spans(text)[front] == highlighted
+
+    @pytest.mark.parametrize(
+        ("text", "surface", "highlighted"),
+        [
+            ("行かないよ", "行か", "行かない"),
+            ("はかない夢だ", "はかない", "はかない"),
+            ("おっかない顔", "おっかない", "おっかない"),
+            ("あいつはもう帰ったかねえ", "帰っ", "帰った"),  # a past and a question
+            ("もう食べたかねえ", "食べ", "食べた"),  # the same particles to the tagger: its reading stands
+        ],
+    )
+    def test_where_other_chains_end(self, text, surface, highlighted):
+        assert _chain_text(text, surface) == highlighted
+
+    def test_an_end_that_would_change_the_front_is_not_taken(self):
+        # 存じ resolves the front 存じる. The front table cannot undo ませぬ, so
+        # from 存じませぬ it would fall back to 存ずる: the card keeps its front
+        # and, for that, its shorter highlight.
+        text = "存じませぬ"
+        assert _chain_text(text, "存じ") == text
+        service = SubtitleParserService(
+            AnkiMinerConfig(),
+            term_lookup=lambda forms: {form for form in forms if form == "存じる"},
+            term_rules_lookup=lambda candidates: {form for form, _mask in candidates if form == "存じる"},
+        )
+        words, _index, _counts = service.parse_text_units(
+            [ReadingUnit(text=text, index=0, location_label="t")], want_line_index=False
+        )
+        assert [(word.mined_form, text[word.surface_start : word.bold_end]) for word in words] == [("存じる", "存じ")]

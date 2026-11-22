@@ -1,3 +1,5 @@
 {"id":"kch01","sentence":"早く食べてよ","expected":["早い","食べる"],"category":"span-window","note":"The sentence-final よ is outside the chain (食べて); the card is unchanged."}
 {"id":"kch02","sentence":"教えてくれよ","expected":["教える"],"category":"span-window","note":"教えてくれ|よ: one unit 教える, くれる is a chain piece."}
 {"id":"kch03","sentence":"先に行きゃがった","expected":["先","行く"],"category":"span-window","note":"行きゃがった is one chain of 行く (the END table's -ゃがる); the card is unchanged."}
+{"id":"kch04","sentence":"敵を恐れませぬ","expected":["敵","恐れる"],"category":"span-window","note":"恐れませぬ is one chain, as 恐れません is; the card is unchanged."}
+{"id":"kch05","sentence":"酒を飲んどる","expected":["酒","飲む"],"category":"span-window","note":"飲んどる is 飲んでる in Kansai speech: one chain of 飲む."}
