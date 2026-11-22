@@ -1107,6 +1107,9 @@ class SubtitleParserService:
         self._kana_window_cache: dict[str, bool] = {}
         # Whether a word before する takes it (_takes_suru), by that word's front.
         self._takes_suru_memo: dict[str, bool | None] = {}
+        # The line last asked for an emission highlight end, with the ends found on it:
+        # (raw tokens, text, {(start, end): (token, highlight end)}). See _emission_highlight_end.
+        self._emission_end_line: tuple[Any, str, dict[tuple[int, int], tuple[Any, int]]] = (None, "", {})
         # F-08 step 2: per-file cue spans to leave out, on the file's own
         # timeline (set_skip_ranges). Like _line_cache it survives parse_* calls;
         # unlike it, it is applied at yield, so the cached line states stay whole.
@@ -1154,6 +1157,7 @@ class SubtitleParserService:
         """Zero the per-parse probe/tokenize cumulative counters (Task 28)."""
         self._probe_time_s = 0.0
         self._tokenize_time_s = 0.0
+        self._emission_end_line = (None, "", {})
 
     def _log_parse_probe_timing(self, subtitle_file: Path | None = None) -> None:
         """DEBUG receipt of this parse's probe-vs-tokenize cost breakdown.
@@ -2258,7 +2262,18 @@ class SubtitleParserService:
         that differs from the orthBase. Emission and the whitelist rescue both
         resolve ``mined_form`` through it, so a rescued word's front is the one
         it is emitted with (rescued ⇒ forced in phase 2).
+
+        One line asks for the same token's end up to three times (the count
+        loop's cover, its card front, then the mining pass), so the ends of the
+        line in hand are kept: by the line's own raw-token list and text, and
+        by the token object, never across lines or parses.
         """
+        line = self._emission_end_line
+        if line[0] is not raw_tokens or line[1] != text:
+            line = self._emission_end_line = (raw_tokens, text, {})
+        known = line[2].get((tok_start, tok_end))
+        if known is not None and known[0] is word_token:
+            return known[1]
         highlight_end = self._find_highlight_end(text, raw_tokens, tok_start, tok_end, word_token)
         orth_base = self._mining_base(word_token)
         resolved_front = self._resolve_front(word_token, orth_base, text, tok_start, highlight_end)
@@ -2272,7 +2287,7 @@ class SubtitleParserService:
                 additional_target=resolved_front,
             )
             highlight_end = max(highlight_end, resolved_end)
-        return self._chain_highlight_end(
+        highlight_end = self._chain_highlight_end(
             text,
             raw_tokens,
             tok_start,
@@ -2281,6 +2296,8 @@ class SubtitleParserService:
             stretched_highlight_end(text, highlight_end),
             resolved_front if resolved_front != orth_base else None,
         )
+        line[2][(tok_start, tok_end)] = (word_token, highlight_end)
+        return highlight_end
 
     def _chain_highlight_end(
         self,

@@ -779,6 +779,14 @@ def _chain_end_candidates(text: str, raw_tokens: list, tok_start: int, tok_end: 
     """
     from anki_miner.services.morphology import iter_token_spans
 
+    # A chain goes on in hiragana, in a kanji auxiliary, in a lengthening ー or
+    # after one space: before anything else (the line end, punctuation,
+    # katakana) there is no end to list, and the line is not walked.
+    after = text[tok_end : tok_end + 1]
+    if not (
+        _is_pure_hiragana(after) or after in (" ", "\u3000", "ー") or text.startswith(_KANJI_AUXILIARY_STEMS, tok_end)
+    ):
+        return []
     candidates: list[_ChainEnd] = []
     prev_end = tok_end
     tail = ""
@@ -786,8 +794,12 @@ def _chain_end_candidates(text: str, raw_tokens: list, tok_start: int, tok_end: 
     spaced = False
     before_feature: Any = None  # of the token that ends where the next one should start
     try:
-        spans = list(iter_token_spans(text, raw_tokens))
-        for index, (tail_token, start, end) in enumerate(spans):
+        # The spans are read one ahead and only as far as the chain goes.
+        spans = iter_token_spans(text, raw_tokens)
+        upcoming = next(spans, None)
+        while upcoming is not None:
+            tail_token, start, end = upcoming
+            upcoming = next(spans, None)
             if end <= tok_end:
                 before_feature = getattr(tail_token, "feature", None)
                 continue
@@ -814,7 +826,7 @@ def _chain_end_candidates(text: str, raw_tokens: list, tok_start: int, tok_end: 
             tail_feature = getattr(tail_token, "feature", None)
             pos1 = getattr(tail_feature, "pos1", None)
             # The token that touches this one on the right, if any.
-            following = spans[index + 1] if index + 1 < len(spans) and spans[index + 1][1] == end else None
+            following = upcoming if upcoming is not None and upcoming[1] == end else None
             if not _is_pure_hiragana(surface.rstrip("ー") if pos1 == "助動詞" else surface) and not (
                 _is_kanji_auxiliary(surface, pos1)
             ):
