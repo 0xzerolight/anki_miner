@@ -802,7 +802,15 @@ def _chain_end_candidates(text: str, raw_tokens: list, tok_start: int, tok_end: 
             # The あ that lengthens a contracted conditional (見てりゃ|あ, 見りゃ|あ)
             # is a filler to the tagger.
             lengthened_ya = surface == "あ" and pos1 == "感動詞" and text[start - 2 : start] in ("りゃ", "きゃ")
-            if pos1 not in _INFLECTIONAL_TAIL_POS1 and not lengthened_ya:
+            # ねえ after て / で with a particle or an auxiliary behind it is the
+            # negative (聞い|て|ねえ|の), though the tagger may call it a noun there.
+            negative_nee = (
+                surface in ("ねえ", "ねぇ")
+                and text[start - 1 : start] in ("て", "で")
+                and following is not None
+                and getattr(getattr(following[0], "feature", None), "pos1", None) in ("助詞", "助動詞")
+            )
+            if pos1 not in _INFLECTIONAL_TAIL_POS1 and not lengthened_ya and not negative_nee:
                 break
             # 笑っ|たって|こと is 笑った and the quoting って: before a word that takes a
             # quotation the chain may end after the particle's first letter.

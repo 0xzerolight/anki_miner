@@ -349,3 +349,18 @@ class TestSpaceBeforeAnAuxiliary:
         text = "帰り ましょう"
         _stored, raw_tokens, merged_tokens, *_ = service._build_line_state(text, 0.0, 0.0)
         assert service._find_highlight_end(text, raw_tokens, 0, 2, merged_tokens[0]) == 2
+
+
+class TestNegativeNeeAfterTe:
+    """ねえ after て with a particle behind it is the negative, whatever the tagger calls it."""
+
+    @pytest.mark.parametrize(
+        ("text", "spans"),
+        [
+            ("聞いてねえの", {"聞く": "聞いてねえ"}),  # the tagger: ねえ a noun
+            ("何も知ってねえのか", {"何": "何", "知る": "知ってねえ"}),
+            ("ちょっと待ってねぇ", {"待つ": "待ってねぇ"}),
+        ],
+    )
+    def test_the_negative_is_inside_the_chain(self, text, spans):
+        assert _spans(text) == spans
