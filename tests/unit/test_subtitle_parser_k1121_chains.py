@@ -300,3 +300,22 @@ class TestChainPieces:
         srt.write_text(f"1\n00:00:01,000 --> 00:00:02,000\n{text}\n", encoding="utf-8")
         assert dict(service.count_fronts(srt)) == {"信ずる": 1}
         assert dict(service.count_lemmas(srt)) == {"信ずる": 1}
+
+
+class TestQuotingTte:
+    """笑ったってこと is 笑った + って: the chain ends inside the tagger's concessive たって."""
+
+    @pytest.mark.parametrize(
+        ("text", "front", "highlighted"),
+        [
+            ("笑ったってことは", "笑う", "笑った"),
+            ("昨日言ったって話だ", "言う", "言った"),
+            ("もう帰ったって聞いた", "帰る", "帰った"),
+            ("笑ったって無駄だ", "笑う", "笑っ"),  # the concessive stays outside, as on main
+            ("行ったっていい", "行く", "行っ"),
+            ("泣いたって話にならない", "泣く", "泣い"),  # 話に: the idiom after a concessive
+            ("笑ったってのんびりしてる", "笑う", "笑っ"),  # a word that only starts with の
+        ],
+    )
+    def test_where_the_chain_ends(self, text, front, highlighted):
+        assert _spans(text)[front] == highlighted

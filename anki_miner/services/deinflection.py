@@ -718,6 +718,23 @@ def _is_kanji_auxiliary(surface: str, pos1: object) -> bool:
     return False
 
 
+# Words a quoting って leads to: 笑ったって|こと, 言ったって|話だ, 来たって|言う. The
+# concessive たって has none of them after it (笑ったって無駄だ, 行ったっていい).
+_QUOTATION_HEADS = frozenset({"こと", "事", "いう", "話", "わけ", "訳", "感じ", "の", "ん", "噂"})
+_QUOTATION_VERB_STEMS = ("言", "思", "聞")
+
+
+def _takes_quotation(text: str, following: tuple[Any, int, int] | None) -> bool:
+    """Whether the token after a たって / だって is a word that takes a quotation."""
+    if following is None:
+        return False
+    _token, start, end = following
+    head = text[start:end]
+    if head == "話" and text[end : end + 1] == "に":
+        return False  # 泣いたって話にならない: the concessive before 話にならない
+    return head in _QUOTATION_HEADS or head.startswith(_QUOTATION_VERB_STEMS)
+
+
 def _chain_end_candidates(text: str, raw_tokens: list, tok_end: int) -> list[_ChainEnd]:
     """Ascending ends the chain-end resolver may take after ``tok_end``.
 
@@ -731,7 +748,8 @@ def _chain_end_candidates(text: str, raw_tokens: list, tok_end: int) -> list[_Ch
     tail = ""
     particle_ka = False
     try:
-        for tail_token, start, end in iter_token_spans(text, raw_tokens):
+        spans = list(iter_token_spans(text, raw_tokens))
+        for index, (tail_token, start, end) in enumerate(spans):
             if end <= tok_end:
                 continue
             if start != prev_end:
@@ -743,6 +761,8 @@ def _chain_end_candidates(text: str, raw_tokens: list, tok_end: int) -> list[_Ch
             surface = text[start:end]
             tail_feature = getattr(tail_token, "feature", None)
             pos1 = getattr(tail_feature, "pos1", None)
+            # The token that touches this one on the right, if any.
+            following = spans[index + 1] if index + 1 < len(spans) and spans[index + 1][1] == end else None
             if not _is_pure_hiragana(surface.rstrip("ー") if pos1 == "助動詞" else surface) and not (
                 _is_kanji_auxiliary(surface, pos1)
             ):
@@ -752,6 +772,10 @@ def _chain_end_candidates(text: str, raw_tokens: list, tok_end: int) -> list[_Ch
             lengthened_ya = surface == "あ" and pos1 == "感動詞" and text[start - 2 : start] in ("りゃ", "きゃ")
             if pos1 not in _INFLECTIONAL_TAIL_POS1 and not lengthened_ya:
                 break
+            # 笑っ|たって|こと is 笑った and the quoting って: before a word that takes a
+            # quotation the chain may end after the particle's first letter.
+            if surface in ("たって", "だって") and pos1 == "助詞" and _takes_quotation(text, following):
+                candidates.append(_ChainEnd(start + 1, tail + surface[0], False, particle_ka, surface[1]))
             # An imperative in よ as ONE tail token (やめ|とけよ) may be the word and
             # the particle: the end before よ is a candidate too, and the gate
             # reads the whole token as it reads a separate よ.
