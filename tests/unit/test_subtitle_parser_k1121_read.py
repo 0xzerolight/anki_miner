@@ -79,6 +79,9 @@ _LISTED_READINGS: dict[str, set[str]] = {
     "通り": {"とおり", "どおり"},
     "頃": {"ころ", "ごろ"},
     "度": {"たび", "ど"},
+    "側": {"がわ", "そば", "かわ"},
+    "主": {"ぬし", "あるじ", "しゅ", "おも"},
+    "留まる": {"とどまる", "とまる"},
     "家": {"いえ", "うち", "け", "や"},
     "術": {"すべ", "じゅつ"},
     "敵": {"てき", "かたき"},
@@ -423,3 +426,27 @@ class TestHumbleWatakushi:
         word = _words(sentence)["私"]
         assert word.expression_reading == "わたし"
         assert "私[わたし]" in word.sentence_furigana
+
+
+@needs_tagger
+class TestBesideAndMaster:
+    """側 beside a person is そば, the 主 of a house is あるじ, and to stay is 留まる とどまる."""
+
+    @pytest.mark.parametrize(
+        ("sentence", "surface", "kana"),
+        [
+            ("ずっと側にいてくれ", "側", "ソバ"),
+            ("側を離れるな", "側", "ソバ"),
+            ("俺の側にいろ", "側", "ソバ"),
+            ("敵の側につく", "側", "ガワ"),
+            ("正義の側にいる", "側", "ガワ"),
+            ("知ってる側だ", "側", "ガワ"),
+            ("この家の主だ", "主", "アルジ"),
+            ("森の主が現れた", "主", "ヌシ"),
+            ("ここに留まる", "留まる", "トドマル"),
+            ("目に留まった", "留まっ", "トマッ"),
+            ("鳥が留まっている", "留まっ", "トマッ"),
+        ],
+    )
+    def test_the_token_reading(self, sentence: str, surface: str, kana: str) -> None:
+        assert _kana(sentence, surface) == [kana]

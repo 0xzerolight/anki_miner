@@ -887,6 +887,35 @@ _READING_CONTEXT: tuple[_ReadingRow, ...] = (
         before="(?:名|法|旗|指揮|指導|監督|管理|支配|庇護|保護|命令|許可|条件|名目|約束|契約|監視|体制|名義|合意|了解|旗印|大義|統治|指示|管轄|加護|導き)の$",
         after="(?:に|で|、|$)",
     ),
+    # 主: あるじ, the master of a house, after 家, 店, 城, 館, 屋敷, 宿 + の; ぬし
+    # elsewhere (森の主).
+    _reading_row("主", _NOUN_POS, "ヌシ", "アルジ", before="(?:家|店|城|館|屋敷|宿|一家)の$"),
+    # 側: そば, beside someone, before にいる, に置く, を離れる, から離れる when it
+    # opens the phrase or follows a person + の (側にいて, 俺の側を離れるな); がわ
+    # attached to the word before it (知ってる側, こちら側) and elsewhere (正義の側にいる).
+    _reading_row(
+        "側", _NOUN_POS, "ガワ", "ガワ", prev=("動詞", "助動詞", "代名詞", "名詞", "連体詞", "形容詞", "接尾辞")
+    ),
+    _reading_row(
+        "側",
+        _NOUN_POS,
+        "ガワ",
+        "ソバ",
+        before="(?:(?<!の)|(?:俺|私|僕|君|お前|あなた|あんた|彼|彼女|あいつ|こいつ|そいつ|誰か?|自分|様|さん|ちゃん|くん|たち|ら)の)$",
+        after="(?:にい|に居|に置|を離|から離)",
+    ),
+    # 留まる: とどまる, to stay; とまる where something catches the eye, perches or
+    # fastens (目に留まる, 木に留まる, ボタンが留まる).
+    _reading_row(
+        "留まる",
+        ("動詞",),
+        "トマ",
+        "トマ",
+        base=True,
+        before="(?:(?:目|耳|心|気|木|枝|肩|指|手|頭|腕|背|電線|花|葉|竿|柵)に(?:も)?"
+        "|(?:ボタン|ホック|ファスナー|ピン|クリップ|鳥|蝶|虫|蜂|蝉|ハエ)(?:が|は|も))$",
+    ),
+    _reading_row("留まる", ("動詞",), "トマ", "トドマ", base=True),
     # 空く: すく, to get empty, of the stomach (お腹が空いた); あく elsewhere (席が空いた).
     _reading_row("空く", ("動詞",), "ア", "ス", base=True, before="(?:お腹|腹|おなか|小腹)(?:が|も|を|は|の)?$"),
     # 開く: あく of what opens by itself (穴, ドア, 窓, 鍵, 店, with が or no
