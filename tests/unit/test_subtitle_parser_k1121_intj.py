@@ -23,7 +23,10 @@ def _fugashi_available() -> bool:
 pytestmark = pytest.mark.skipif(not _fugashi_available(), reason="fugashi/unidic-lite not installed")
 
 # Kana the dictionary has as a headword or a reading.
-_ATTESTED = frozenset({"いえ", "うん", "ねえさん", "ありがとう", "そんな", "ああいう", "あの", "いただく", "ある"})
+_ATTESTED = frozenset(
+    {"いえ", "うん", "ねえさん", "ありがとう", "そんな", "ああいう", "あの", "いただく", "ある"}
+    | {"なる", "いい", "ない", "する", "なくなる", "いなくなる"}
+)
 
 # Dictionary entry tags by headword: a word with no row here has no entry at all.
 _TAGS = {
@@ -49,7 +52,7 @@ _TAGS = {
 }
 
 # Headwords with no tags of their own: spelling rows of another entry.
-_SPELLINGS = frozenset({"あぁ", "いやぁ", "フフッ"})
+_SPELLINGS = frozenset({"あぁ", "いやぁ", "フフッ", "気になる"})
 
 
 def _service(*, interjections: bool) -> SubtitleParserService:
@@ -183,3 +186,26 @@ class TestListedVariantSpellings:
     def test_a_variant_the_dictionary_does_not_list_as_written_stays_out(self):
         fronts = _fronts("えッ、鍵を忘れた？")
         assert "えッ" not in fronts and "えっ" not in fronts
+
+
+class TestNaruAsThePredicate:
+    @pytest.mark.parametrize(
+        "text", ["部屋が暗くなった。", "夢中になってる。", "急にイヤになった。", "年をとるにつれて弱くなる。"]
+    )
+    def test_naru_after_a_ku_form_or_the_auxiliary_ni_is_the_predicate(self, text):
+        assert "なる" in _fronts(text, interjections=False)
+
+    @pytest.mark.parametrize("text", ["先生がお尋ねになった。", "先生がお帰りになる。"])
+    def test_naru_after_an_honorific_stem_stays_grammar(self, text):
+        assert "なる" not in _fronts(text, interjections=False)
+
+    @pytest.mark.parametrize("text", ["結果が気になる。", "財布がなくなった。", "猫がいなくなった。"])
+    def test_a_longer_listed_word_is_one_card(self, text):
+        assert "なる" not in _fronts(text, interjections=False)
+
+    def test_naru_after_a_negative_in_ku_form_stays_out(self):
+        assert "なる" not in _fronts("学校に行かなくなった。", interjections=False)
+
+    @pytest.mark.parametrize("text", ["病気がよくなった。", "鍵を忘れそうになった。"])
+    def test_naru_inside_a_longer_entry_nothing_joins_stays_out(self, text):
+        assert "なる" not in _fronts(text, interjections=False)

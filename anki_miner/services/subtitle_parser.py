@@ -4121,7 +4121,7 @@ class SubtitleParserService:
         prev = getattr(tokens[idx - 1], "feature", None) if idx else None
         pos1 = getattr(prev, "pos1", None)
         if pos1 in _AUX_AFTER_POS1 or (pos1 == "助詞" and getattr(prev, "pos2", None) == "接続助詞"):
-            return True
+            return not SubtitleParserService._is_own_predicate(word_token, tokens, idx)
         if idx >= 2 and tokens[idx - 1].surface in ("も", "は") and tokens[idx - 2].surface in ("て", "で"):
             return True
         if (
@@ -4145,6 +4145,33 @@ class SubtitleParserService:
                 end == len(tokens) or getattr(tokens[end].feature, "pos1", None) == "補助記号"
             ):
                 return True
+        return False
+
+    @staticmethod
+    def _is_own_predicate(word_token, tokens: list, idx: int) -> bool:
+        """Whether an auxiliary-capable word right after a verb, adjective, auxiliary or conjunctive particle is the line's own predicate.
+
+        ``_used_as_auxiliary`` takes every word in that place for grammar. One
+        frame each where it is the predicate, a card of its own:
+
+        - なる after an adjective's く form (暗くなる) and after the auxiliary に
+          of an adjectival noun (夢中になる), but not after an honorific stem +
+          に (お尋ねになる). A negative or たい in く form (行かなくなる) is an
+          auxiliary and stays grammar. Two longer entries nothing joins stay
+          out, as なる would be a piece of them: よく + なる (良くなる in kana)
+          and そう + に + なる (そうになる).
+        """
+        base = getattr(word_token.feature, "orthBase", None)
+        prev = tokens[idx - 1]
+        pos1 = getattr(getattr(prev, "feature", None), "pos1", None)
+        if base == "なる":
+            if pos1 == "形容詞":
+                return bool(prev.surface.endswith("く")) and prev.surface != "よく"
+            if pos1 == "助動詞" and prev.surface == "に":
+                return not (
+                    idx >= 2
+                    and (tokens[idx - 2].surface == "そう" or SubtitleParserService._is_honorific_stem(tokens, idx - 2))
+                )
         return False
 
     def _is_not_main_verb(self, word_token, tokens: list) -> bool:
