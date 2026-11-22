@@ -1785,6 +1785,8 @@ class SubtitleParserService:
         """A line's merged tokens, with the katakana runs of that line which its file uses as names."""
 
         name_runs: frozenset[str] = frozenset()
+        #: Where the file's sentence-end tic starts in this line (``_with_line_end_tic``).
+        tic_starts: frozenset[int] = frozenset()
 
     class _FileNameToken(CompoundSyntheticToken):
         """A name its file vouches for, joined from the tagger's pieces (``_merge_file_names``).
@@ -1826,6 +1828,10 @@ class SubtitleParserService:
         honorifics: collections.Counter[str] = collections.Counter()
         called: collections.Counter[str] = collections.Counter()
         katakana: collections.Counter[str] = collections.Counter()
+        repeated: collections.Counter[str] = collections.Counter()
+        endings: collections.Counter[str] = collections.Counter()
+        ending_lines: collections.defaultdict[str, set[str]] = collections.defaultdict(set)
+        shorts: collections.Counter[str] = collections.Counter()
         for line in subs:
             if getattr(line, "is_comment", None) is True:
                 continue
@@ -1843,7 +1849,16 @@ class SubtitleParserService:
                 honorifics.update(self._names_before_honorifics(line_state))
                 called.update(self._names_called(line_state))
                 katakana.update(self._katakana_runs_named(self._tokenizer_text(text)))
-        names = self._file_names(labels, honorifics, called)
+                repeated.update(self._one_kanji_runs(line_state))
+                for surface, _start in self._sentence_end_katakana(line_state):
+                    endings[surface] += 1
+                    ending_lines[surface].add(text)
+                shorts.update(
+                    run.group()
+                    for run in self._KATAKANA_RUN_RE.finditer(self._tokenizer_text(text))
+                    if len(run.group()) <= 4
+                )
+        names = self._file_names(labels, honorifics, called, repeated)
         if names:
             line_states = [self._merge_file_names(line_state, names) for line_state in line_states]
         # A katakana name is known by the same evidence, whatever its length and its tokens:
@@ -1852,6 +1867,12 @@ class SubtitleParserService:
         runs.update(name for name in labels if self._KATAKANA_RUN_RE.fullmatch(name))
         if runs:
             line_states = [self._with_name_runs(line_state, runs) for line_state in line_states]
+        # A way of speaking: a short katakana word that ends eight different lines right after a
+        # predicate, and stands that way in three of five of its uses. A noun at the end of a
+        # relative clause does the same a few times in a file, and a sung line many times over.
+        tics = {word for word, count in endings.items() if len(ending_lines[word]) >= 8 and count >= 0.6 * shorts[word]}
+        if tics:
+            line_states = [self._with_line_end_tic(line_state, tics) for line_state in line_states]
         return line_states
 
     def _katakana_runs_named(self, line: str) -> list[str]:
@@ -1891,6 +1912,27 @@ class SubtitleParserService:
             return line_state
         noted = self._NameRunTokens(merged_tokens)
         noted.name_runs = present
+        return (text, raw_tokens, noted, start, end, duration)
+
+    def _with_line_end_tic(
+        self, line_state: tuple[str, list, list, float, float, float], tics: set[str]
+    ) -> tuple[str, list, list, float, float, float]:
+        """``line_state`` with the places of the file's sentence-end tics in this line noted on its merged tokens.
+
+        A new state with a new list of the same tokens, as in
+        ``_with_name_runs`` (whose note it keeps). ``_is_katakana_run_fragment``
+        turns the token at such a place away; the same word standing anywhere
+        else, in this file or another, is a word.
+        """
+        places = frozenset(
+            start for surface, start in self._sentence_end_katakana(line_state, known=True) if surface in tics
+        )
+        if not places:
+            return line_state
+        text, raw_tokens, merged_tokens, start, end, duration = line_state
+        noted = self._NameRunTokens(merged_tokens)
+        noted.name_runs = getattr(merged_tokens, "name_runs", noted.name_runs)
+        noted.tic_starts = places
         return (text, raw_tokens, noted, start, end, duration)
 
     def _speaker_label_names(self, raw_text: str) -> list[str]:
@@ -1979,6 +2021,104 @@ class SubtitleParserService:
             previous_end = end
         return names
 
+    #: A line that can hold a run of one-kanji tokens: two kanji side by side.
+    _ONE_KANJI_RUN_HINT_RE = re.compile(r"[一-鿿々〆]{2}")
+
+    def _one_kanji_runs(self, line_state: tuple[str, list, list, float, float, float]) -> list[str]:
+        """Each unspaced run of two to four one-kanji nouns of a line (嵐|牙 in 嵐牙が来た).
+
+        A name no dictionary has, that no label and no honorific marks, still
+        comes out as a row of one-kanji nouns, each carded as a word. A file
+        that writes the same row three times uses it as one word
+        (``_file_names``, class ``R``). Read from the merged tokens, where a
+        compound the dictionary lists is one token already, and from the tokens
+        rather than the cards: every piece is ONE kanji and a noun that is no
+        numeral (a pronoun is no noun), and a suffix may close the run, as the
+        tagger files the last kanji of many names (蒼|刃). The run is the whole
+        row: a longer one is no name, and a part of one is not counted. What
+        follows a number is its counter and starts no run (３|年|前).
+        """
+        line = self._tokenizer_text(line_state[0])
+        if self._ONE_KANJI_RUN_HINT_RE.search(line) is None:
+            return []
+        runs: list[str] = []
+        run: list[str] = []
+        closed = counter = False
+        previous_end = -1
+        for token, start, end in [*self._iter_token_spans(line, line_state[2]), (None, -1, -1)]:
+            feature = getattr(token, "feature", None)
+            pos1, numeral = getattr(feature, "pos1", None), getattr(feature, "pos2", None) == "数詞"
+            noun = pos1 == "名詞" and not numeral
+            piece = (
+                token is not None
+                and (noun or pos1 == "接尾辞")
+                and len(token.surface) == 1
+                and self._FILE_NAME_KANJI_RE.match(token.surface) is not None
+            )
+            if run and (not piece or closed or start != previous_end):
+                if 2 <= len(run) <= 4:
+                    runs.append("".join(run))
+                run = []
+            if piece and (run or (noun and not counter)):
+                run.append(token.surface)
+                closed = not noun
+            counter = numeral
+            previous_end = end
+        return runs
+
+    #: A line that may hold a way of speaking: a letter, two to four katakana, and no letter after them.
+    _SENTENCE_END_KATAKANA_RE = re.compile(
+        r"[ぁ-ゖ一-鿿々][ァ-ヺー]{2,4}(?![ぁ-ゖァ-ヺー一-鿿々〆0-9０-９A-Za-zＡ-Ｚａ-ｚ])"
+    )
+    #: What a sentence-end tic follows: a predicate, or the particle that closes or links one.
+    _TIC_AFTER_POS1: frozenset[str] = frozenset({"動詞", "形容詞", "助動詞"})
+    _TIC_AFTER_PARTICLES: frozenset[str] = frozenset({"終助詞", "接続助詞"})
+    #: What a word already known as the file's tic also follows (そうゲス, 元気ゲス).
+    _TIC_AFTER_LOOSE_POS1: frozenset[str] = frozenset({"副詞", "感動詞", "接続詞", "形状詞"})
+
+    def _sentence_end_katakana(
+        self, line_state: tuple[str, list, list, float, float, float], *, known: bool = False
+    ) -> list[tuple[str, int]]:
+        """Each katakana noun that ends a sentence right after a predicate, with its place (ゲス in 行くでゲス).
+
+        Some characters end their sentences with a word of their own, and the
+        tagger reads it as a noun (ゲス, ゾイ). It is one noun token of two to
+        four katakana with no space before it and a pause after it (the line's
+        end, a space, a punctuation mark), and what stands before it is a verb,
+        an adjective, an auxiliary, a sentence-final or conjunctive particle,
+        or か (the で of 見たでゲス is a conjunction to the tagger). A noun after
+        の, を, が or another noun is the sentence's own last word (私のパン) and
+        is not read. ``known``: the word is the file's tic already, and an
+        adverb, an interjection, a conjunction or an adjectival noun before it
+        will do.
+        """
+        line = self._tokenizer_text(line_state[0])
+        if self._SENTENCE_END_KATAKANA_RE.search(line) is None:
+            return []
+        found: list[tuple[str, int]] = []
+        spans = list(self._iter_token_spans(line, line_state[2]))
+        for index, (token, start, end) in enumerate(spans):
+            surface = token.surface
+            if not (index and 2 <= len(surface) <= 4 and spans[index - 1][2] == start and _is_all_katakana(surface)):
+                continue
+            if getattr(getattr(token, "feature", None), "pos1", None) != "名詞" or getattr(token, "compound", False):
+                continue
+            if index + 1 < len(spans) and spans[index + 1][1] == end:
+                after = getattr(getattr(spans[index + 1][0], "feature", None), "pos1", None)
+                if after not in self._NAME_PAUSE_POS1:
+                    continue
+            before = spans[index - 1][0]
+            feature = getattr(before, "feature", None)
+            pos1, pos2 = getattr(feature, "pos1", None), getattr(feature, "pos2", None)
+            if (
+                pos1 in self._TIC_AFTER_POS1
+                or (pos1 == "助詞" and (pos2 in self._TIC_AFTER_PARTICLES or before.surface == "か"))
+                or (pos1 == "接続詞" and before.surface == "で")
+                or (known and pos1 in self._TIC_AFTER_LOOSE_POS1)
+            ):
+                found.append((surface, start))
+        return found
+
     def _is_name_honorific(self, token: Any) -> bool:
         """Whether a raw token is what a name is called with: さん and its kin as a suffix, 先生, 先輩."""
         surface = token.surface
@@ -2001,7 +2141,11 @@ class SubtitleParserService:
         )
 
     def _file_names(
-        self, labels: collections.Counter[str], honorifics: collections.Counter[str], called: collections.Counter[str]
+        self,
+        labels: collections.Counter[str],
+        honorifics: collections.Counter[str],
+        called: collections.Counter[str],
+        repeated: collections.Counter[str],
     ) -> dict[str, str]:
         """The names one file vouches for, each with its kind of evidence.
 
@@ -2009,7 +2153,8 @@ class SubtitleParserService:
         the name stands twice before an honorific. ``V``: it is called by name
         and stands before an honorific (水竜さん！ alone is both). A name that is
         only shouted is not listed: a move's name is shouted the same way, and
-        its pieces are words. A name is 2 to 6 characters with
+        its pieces are words. ``R``: a run of one-kanji nouns the file writes
+        three times (``_one_kanji_runs``). A name is 2 to 6 characters with
         a kanji and no dictionary headword as written: a role (店員) and a word
         that is also a name (森) stay words. Without a dictionary there is no
         list.
@@ -2017,7 +2162,7 @@ class SubtitleParserService:
         if self._term_lookup is None:
             return {}
         names: dict[str, str] = {}
-        for name in sorted({*labels, *honorifics, *called}):
+        for name in sorted({*labels, *honorifics, *called, *repeated}):
             if not (self._FILE_NAME_RE.fullmatch(name) and self._FILE_NAME_KANJI_RE.search(name)):
                 continue
             if labels[name] >= 2 or (labels[name] and honorifics[name] + called[name] >= 2):
@@ -2026,6 +2171,8 @@ class SubtitleParserService:
                 names[name] = "H"
             elif called[name] and honorifics[name]:
                 names[name] = "V"
+            elif repeated[name] >= 3:
+                names[name] = "R"
         if not names:
             return {}
         listed = self._memoized_attest(sorted(names))
@@ -2103,8 +2250,12 @@ class SubtitleParserService:
           and adjectival nouns, holds no numeral, and never ends in such a rank
           or house word, whatever stands before it: a shop no dictionary lists
           (鯖|屋 in 鯖屋さん) keeps its noun.
-        * A name that is only called (``V``) is one kanji per piece and does not
-          start with a prefix word (元|父): a shouted compound keeps its words.
+        * A name that is only called (``V``) or only repeated (``R``) is one
+          kanji per piece and does not start with a prefix word (元|父): a
+          shouted compound keeps its words.
+        * A repeated run that a suffix closes holds a noun that is no common
+          word: a common word and its suffix (娘|達, 時|用) are written three
+          times in any file. Without a commonness probe no such run is a name.
         """
         kanji = False
         known = 0
@@ -2123,13 +2274,18 @@ class SubtitleParserService:
             elif len(surface) >= (3 if _is_all_katakana(surface) else 2):
                 return False
             holds_kanji = self._FILE_NAME_KANJI_RE.search(surface) is not None
-            if (len(surface) == 1 or kind == "V") and not (len(surface) == 1 and holds_kanji):
+            if (len(surface) == 1 or kind in "VR") and not (len(surface) == 1 and holds_kanji):
                 return False
             kanji = kanji or holds_kanji
         if tokens[-1].surface in self._NAME_TITLE_TAILS and (kind != "L" or known == len(tokens) - 1):
             return False
-        if kind == "V" and tokens[0].surface in self._NAME_PREFIX_HEADS:
+        if kind in "VR" and tokens[0].surface in self._NAME_PREFIX_HEADS:
             return False
+        if kind == "R" and getattr(getattr(tokens[-1], "feature", None), "pos1", None) == "接尾辞":
+            heads = [token.surface for token in tokens[:-1]]
+            common = self._memoized_term_common(heads)
+            if common is None or all(common.get(head) for head in heads):
+                return False
         return kanji and known < len(tokens)
 
     def _style_skipped_events(self, subs: Any) -> frozenset[int]:
@@ -4832,6 +4988,9 @@ class SubtitleParserService:
         surface = getattr(word_token, "surface", None)
         if not isinstance(surface, str) or not _is_all_katakana(surface):
             return False
+        # The file's way of ending a sentence (_with_line_end_tic), turned away where it stands so.
+        if tok_start in getattr(tokens, "tic_starts", ()):
+            return True
         left = text[tok_start - 1] if tok_start > 0 else ""
         right = text[tok_end] if tok_end < len(text) else ""
         if not (_continues_katakana_run(left) or _continues_katakana_run(right)):
@@ -4866,6 +5025,24 @@ class SubtitleParserService:
         }
     )
 
+    #: Katakana number words: after a word they make a call sign or a model (チーム|セブン), not two words.
+    _KATAKANA_NUMBER_WORDS: frozenset[str] = frozenset(
+        {
+            "ゼロ",
+            "ワン",
+            "ツー",
+            "スリー",
+            "フォー",
+            "ファイブ",
+            "シックス",
+            "セブン",
+            "エイト",
+            "ナイン",
+            "テン",
+            "イレブン",
+        }
+    )
+
     def _katakana_run_is_words(self, text: str, tok_start: int, tok_end: int, tokens: list | None) -> bool:
         """Whether the katakana run around a token is a row of common dictionary words, as the tagger cut it.
 
@@ -4876,12 +5053,15 @@ class SubtitleParserService:
 
         * the whole run is exactly two or more tokens of the line;
         * each is an all-katakana noun of three kana or more (no proper noun,
-          no numeral) that the dictionary lists by spelling AND tags common: a
-          rare short word inside an unknown name (ライド|ウォッチ) fails here. A
+          no numeral) that the dictionary lists by spelling. One at least is
+          tagged common, and one that is not has four kana or more
+          (シールド|タックル): a rare short word inside an unknown name
+          (ライド|ウォッチ, アース|ガロン) fails here. A
           token the compound matcher made counts as listed, and a katakana verb
           the front fold cards (ゲーム|ヤラれた) is covered;
-        * the pieces are not one word said over (ベリーベリー), and the first is
-          no title (``_KATAKANA_TITLES``);
+        * the pieces are not one word said over (ベリーベリー), the first is no
+          title (``_KATAKANA_TITLES``), and none is a number word: a word and
+          a number are a call sign (チーム|セブン);
         * the run as a whole is listed neither by spelling nor as a reading;
         * no ・ or ゠ stands beside the run, and no honorific, suffix or one-kanji
           word follows it (スカイハートさん, ミクロリサーチ社);
@@ -4959,6 +5139,8 @@ class SubtitleParserService:
             words.append(surface)
         if not words or (len(words) > 1 and len(set(words)) == 1) or words[0] in self._KATAKANA_TITLES:
             return False
+        if self._KATAKANA_NUMBER_WORDS.intersection(words):
+            return False
         if following is not None:
             surface, pos1 = following.surface, getattr(getattr(following, "feature", None), "pos1", None)
             if (
@@ -4969,7 +5151,9 @@ class SubtitleParserService:
             ):
                 return False
         common = self._memoized_term_common(words)
-        if common is None or not all(common.get(word) for word in words):
+        if common is None or not any(common.get(word) for word in words):
+            return False
+        if any(len(word) < 4 for word in words if not common.get(word)):
             return False
         if len(self._memoized_attest(words)) != len(set(words)):
             return False
