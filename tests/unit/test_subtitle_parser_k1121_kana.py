@@ -33,7 +33,7 @@ _ATTESTED = frozenset(
     | {"という", "といい", "かわいそうに", "ですき", "とって", "にもかかわらず", "かかわらず"}
     | {"ぼける", "とぼけ", "とぼける"}
     # Longer words and expressions a class verb is a piece of.
-    | {"つけもの", "つけこむ", "しょくにつく", "うそをつく", "せきにつく"}
+    | {"つけもの", "つけこむ", "しょくにつく", "うそをつく", "せきにつく", "けっちゃくがつく"}
 )
 
 # Dictionary entry tags by headword: a word with no row here has no entry at all.
@@ -210,6 +210,7 @@ class TestAuxiliaryCapableVerbClass:
             "壁に絵をつけたり外したりする。",
             "クリームつけて食べる。",
             "薬をつけ 包帯を巻く。",
+            "これで決着がつけられる。",  # 決着がつく is an entry; after が the verb is つける, made potential
         ],
     )
     def test_the_verb_beside_a_word_it_makes_no_entry_with_keeps_its_card(self, text):

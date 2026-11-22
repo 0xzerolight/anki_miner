@@ -4196,10 +4196,12 @@ class SubtitleParserService:
 
         - a bare 連用形 glued to the noun or verb after it, where the two are
           one word: つけ|もの is 漬物, つけ|こん|で is 付け込む;
-        - the verb after a noun and its case particle, where the noun, the
-          particle and the godan verb this one is the potential of are one
-          expression: 職に|つけ|ない is 職に就く 'cannot find work', うそを|つけ
-          the imperative of 嘘をつく, both read as つける.
+        - the verb after a noun and を or に, where the noun, the particle and
+          the godan verb this one is the potential of are one expression:
+          職に|つけ|ない is 職に就く 'cannot find work', うそを|つけ the
+          imperative of 嘘をつく, both read as つける. Not after が: there the
+          verb is the transitive one made potential or passive
+          (決着が|つけ|られる is つける, though 決着がつく is an entry).
         """
         idx = next((i for i, tok in enumerate(tokens) if tok is word_token), None)
         if idx is None:
@@ -4223,7 +4225,7 @@ class SubtitleParserService:
             and len(form) >= 3
             and form.endswith("る")
             and form[-2] in _POTENTIAL_E_TO_U
-            and tokens[idx - 1].surface in ("を", "に", "が")
+            and tokens[idx - 1].surface in ("を", "に")
             and tag(tokens[idx - 1], "pos2") == "格助詞"
             and tag(tokens[idx - 2], "pos1") == "名詞"
         ):
