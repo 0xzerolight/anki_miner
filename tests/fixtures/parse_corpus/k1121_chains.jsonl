@@ -7,3 +7,4 @@
 {"id":"kch07","sentence":"早く教えて欲しい","expected":["早い","教える"],"category":"span-window","note":"教えて欲しい is one unit; the 欲しい inside its highlight is a chain piece, not a card."}
 {"id":"kch08","sentence":"買い過ぎた","expected":["買う"],"category":"span-window","note":"買い過ぎた is one unit of 買う; 過ぎる is a chain piece here."}
 {"id":"kch09","sentence":"昨日言ったって話だ","expected":["昨日","言う","話"],"category":"span-window","note":"言った|って話: the quoting って after a past; the card 言う is unchanged."}
+{"id":"kch10","sentence":"帰り ましょう","expected":["帰る"],"category":"span-window","note":"One space before the auxiliary: one chain of 帰る."}

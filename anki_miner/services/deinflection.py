@@ -389,7 +389,7 @@ def find_highlight_end_with_trace(
         additional_mask = deinflector.condition_flags("v1")
 
     if chain_end:
-        candidates = _chain_end_candidates(text, raw_tokens, tok_end)
+        candidates = _chain_end_candidates(text, raw_tokens, tok_start, tok_end)
     else:
         candidates = [_ChainEnd(end, text[tok_end:end]) for end in _extension_candidate_ends(text, raw_tokens, tok_end)]
     # A stem written in katakana (ヤラ|れ|た, orthBase ヤル) inflects as its
@@ -735,7 +735,23 @@ def _takes_quotation(text: str, following: tuple[Any, int, int] | None) -> bool:
     return head in _QUOTATION_HEADS or head.startswith(_QUOTATION_VERB_STEMS)
 
 
-def _chain_end_candidates(text: str, raw_tokens: list, tok_end: int) -> list[_ChainEnd]:
+_SENTENCE_END_FORMS = ("終止形", "連体形", "命令形")
+
+
+def _opens_the_next_phrase(text: str, tail_token: Any, prev_end: int, start: int) -> bool:
+    """Whether what the tagger calls an auxiliary after a space rather opens the next phrase.
+
+    After て / で a spaced ない is as often the adjective 無い of the next clause
+    (溶けて なくなる, 捜して なかった) as the negative of てる, and ます before
+    another ます is the adverb ますます.
+    """
+    lemma = getattr(getattr(tail_token, "feature", None), "lemma", None)
+    if lemma == "ない" and text[prev_end - 1 : prev_end] in ("て", "で"):
+        return True
+    return text[start : start + 4] == "ますます"
+
+
+def _chain_end_candidates(text: str, raw_tokens: list, tok_start: int, tok_end: int) -> list[_ChainEnd]:
     """Ascending ends the chain-end resolver may take after ``tok_end``.
 
     The window of ``_extension_candidate_ends``, with what ``_chain_end_gate``
@@ -747,15 +763,31 @@ def _chain_end_candidates(text: str, raw_tokens: list, tok_end: int) -> list[_Ch
     prev_end = tok_end
     tail = ""
     particle_ka = False
+    spaced = False
+    before_feature: Any = None  # of the token that ends where the next one should start
     try:
         spans = list(iter_token_spans(text, raw_tokens))
         for index, (tail_token, start, end) in enumerate(spans):
             if end <= tok_end:
+                before_feature = getattr(tail_token, "feature", None)
                 continue
             if start != prev_end:
-                if start > prev_end:
+                if start < prev_end:
+                    continue  # token overlapping the mined span; skip
+                # One space before an auxiliary is how the line was laid out, not
+                # the end of the word (帰り ましょう, 食べ ない); a stem in kana alone
+                # is too easily another word (いえ ない), and after a form that can
+                # end a sentence the space does end the word (違う とりゃあ！).
+                if (
+                    spaced
+                    or text[prev_end:start] not in (" ", "\u3000")
+                    or getattr(getattr(tail_token, "feature", None), "pos1", None) != "助動詞"
+                    or all(_is_kana(ch) for ch in text[tok_start:tok_end])
+                    or _opens_the_next_phrase(text, tail_token, prev_end, start)
+                    or str(getattr(before_feature, "cForm", None)).startswith(_SENTENCE_END_FORMS)
+                ):
                     break  # whitespace gap / non-adjacent tail
-                continue  # token overlapping the mined span; skip
+                spaced = True
             if end - tok_end > _WINDOW_CAP_CHARS:
                 break
             surface = text[start:end]
@@ -791,6 +823,7 @@ def _chain_end_candidates(text: str, raw_tokens: list, tok_end: int) -> list[_Ch
             particle_ka = particle_ka or (surface == "か" and pos1 == "助詞")
             candidates.append(_ChainEnd(end, tail, final_yo, particle_ka, text[end : end + 1]))
             prev_end = end
+            before_feature = tail_feature
     except (AttributeError, TypeError):
         return []  # mock/duck-typed token stream: no extension
     return candidates

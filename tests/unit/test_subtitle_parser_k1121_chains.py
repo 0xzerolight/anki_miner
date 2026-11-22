@@ -319,3 +319,33 @@ class TestQuotingTte:
     )
     def test_where_the_chain_ends(self, text, front, highlighted):
         assert _spans(text)[front] == highlighted
+
+
+class TestSpaceBeforeAnAuxiliary:
+    """One space between a stem and its auxiliary is layout: the chain goes on."""
+
+    @pytest.mark.parametrize(
+        ("text", "front", "highlighted"),
+        [
+            ("帰り ましょう", "帰る", "帰り ましょう"),
+            ("食べ ない", "食べる", "食べ ない"),
+            ("休み たいな", "休む", "休み たい"),
+            ("本を読み 映画を見た", "読む", "読み"),  # a noun after the space
+            ("今日は行く でしょう", "行く", "行く"),  # no chain of 行く
+            ("帰り です", "帰り", "帰り"),  # the noun
+            ("帰り  ましょう", "帰る", "帰り"),  # two spaces
+            ("氷が溶けて なくなる", "溶ける", "溶けて"),  # 無くなる opens the next phrase
+            ("ずっと捜して なかった", "捜す", "捜して"),
+            ("そう思い込み ますます怒った", "思い込む", "思い込み"),  # the adverb ますます
+            ("ずっと待って ました", "待つ", "待って ました"),
+            ("今はもう違う とりゃあ", "違う", "違う"),  # a finished form, then a shout
+        ],
+    )
+    def test_where_the_chain_ends(self, text, front, highlighted):
+        assert _spans(text)[front] == highlighted
+
+    def test_the_end_the_front_is_resolved_from_stops_at_the_space(self):
+        service = _service()
+        text = "帰り ましょう"
+        _stored, raw_tokens, merged_tokens, *_ = service._build_line_state(text, 0.0, 0.0)
+        assert service._find_highlight_end(text, raw_tokens, 0, 2, merged_tokens[0]) == 2
