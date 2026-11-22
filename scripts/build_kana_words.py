@@ -592,6 +592,11 @@ JOINS: tuple[tuple[str, str, str, str] | tuple[str, str, str, str, str], ...] = 
     ("ありえない", "形容詞", "あり|え|=ない", ""),
     ("ありえる", "動詞", "あり|=える", ""),
     ("いなくなる", "動詞", "い|なく|=なる", ""),
+    # K1121 EXPR: grammar points. みたい is one token the tagger files as an auxiliary stem (猫みたいだ); the verb
+    # 見たい is み|たい and never matches.
+    ("みたい", "形状詞", "みたい", "", "grammar"),
+    ("じゃないか", "感動詞", "じゃ|ない|か", "copula", "grammar"),
+    ("でしょうか", "感動詞", "でしょう|か", "", "grammar"),
 )
 
 _HEADER = """\

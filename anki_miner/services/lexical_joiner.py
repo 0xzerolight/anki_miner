@@ -203,6 +203,7 @@ def _kana_join(
             and not _embedded_question(row.headword, tokens, i + size)
             and not _verb_te_form(row.headword, tokens, i + size)
             and not _adnominal_only(row.headword, tokens, i + size)
+            and not (row.grammar and _ka_of_kamo(surfaces[-1], tokens, i + size))
             and not _auxiliary_after_te(row.headword, tokens, i)
         ):
             return _Join(
@@ -298,6 +299,15 @@ def _embedded_question(headword: str, tokens: list, after: int) -> bool:
     return _pos1(tokens[after]) in _CLAUSE_BREAK_POS1 or extract_lemma(tokens[after]) in _QUESTION_VERBS
 
 
+def _ka_of_kamo(last: str, tokens: list, after: int) -> bool:
+    """Whether the last か of a grammar row opens かも: じゃない|か|も|しれ|ない is じゃない + かもしれない.
+
+    The row is passed over, so the shorter じゃない under it joins and か|も|しれ
+    stays whole for its own row.
+    """
+    return last == "か" and after < len(tokens) and tokens[after].surface == "も"
+
+
 def _adnominal_only(headword: str, tokens: list, after: int) -> bool:
     """Whether そう|いっ|た is 'said so' here, not the pre-noun そういった 'that kind of'.
 
@@ -342,8 +352,10 @@ def _auxiliary_after_te(headword: str, tokens: list, start: int) -> bool:
 
     見ておいで 'go and look', 起きておいでですか 'are you up': after て it stands in for
     きなさい / いらっしゃる, as くる and いる do there, and the verb keeps the line's card.
+    The grammar row みたい is the same: after て it is みる + たい, which the tagger
+    now and then files as the auxiliary stem (なってみたい 'want to try being').
     """
-    if headword != "おいで" or start == 0:
+    if headword not in ("おいで", "みたい") or start == 0:
         return False
     before = tokens[start - 1]
     return _pos2(before) == "接続助詞" and before.surface in ("て", "で")

@@ -106,6 +106,14 @@ _ATTESTED = frozenset(
         "いなくなる",
         "ある",
         "いる",
+        # E-6
+        "みたい",
+        "みる",
+        "じゃない",
+        "じゃないか",
+        "でしょう",
+        "でしょうか",
+        "かもしれない",
     }
 )
 
@@ -381,3 +389,35 @@ def test_inaku_before_te_is_the_verb_iru() -> None:
     fronts = _fronts("ここにいなくてもいい")
     assert "いる" in fronts
     assert "いなくなる" not in fronts
+
+
+# --- E-6: grammar rows (only with Mine grammar points) ---------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("sentence", "front"),
+    [
+        ("猫みたいだ", "みたい"),
+        ("幽霊みたい", "みたい"),
+        ("いいじゃないか", "じゃないか"),
+        ("そうでしょうか", "でしょうか"),
+    ],
+)
+def test_grammar_row_is_carded_with_grammar_points(sentence: str, front: str) -> None:
+    assert front in _fronts(sentence)
+    assert front not in _fronts(sentence, grammar_points=False)
+
+
+def test_mitai_the_verb_is_no_grammar_row() -> None:
+    assert "みたい" not in _fronts("映画をみたい")  # み + たい: 'want to see'
+
+
+def test_mitai_after_te_is_miru_and_tai() -> None:
+    assert "みたい" not in _fronts("こんな風になってみたいだとか")
+
+
+def test_ka_before_mo_belongs_to_kamoshirenai() -> None:
+    fronts = _fronts("彼じゃないかもしれない")
+    assert "かもしれない" in fronts
+    assert "じゃない" in fronts
+    assert "じゃないか" not in fronts
