@@ -763,7 +763,11 @@ def _chain_end_candidates(text: str, raw_tokens: list, tok_start: int, tok_end: 
     """Ascending ends the chain-end resolver may take after ``tok_end``.
 
     The window of ``_extension_candidate_ends``, with what ``_chain_end_gate``
-    needs to know about each end.
+    needs to know about each end, and wider where the tagger's cut or the
+    line's layout hides a chain: an auxiliary written in kanji, one space
+    before an auxiliary, a lengthening あ, the negative ねえ after て, and an end
+    inside a token (たって before a quotation, ちゃい before a particle, an
+    imperative in よ). The table still has to accept every end.
     """
     from anki_miner.services.morphology import iter_token_spans
 
