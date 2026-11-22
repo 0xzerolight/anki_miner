@@ -444,6 +444,30 @@ def test_other_naru_lines_have_no_row(sentence: str, row: str) -> None:
     assert row not in _l4_fronts(sentence)
 
 
+@pytest.mark.parametrize(
+    ("sentence", "verb", "entry"),
+    [
+        ("泣きそうになった", "泣く", "そうになる"),
+        ("落ちそうになる", "落ちる", "そうになる"),
+        ("認めざるをえない", "認める", "ざるをえない"),
+    ],
+)
+def test_the_verb_highlight_stops_where_the_joined_entry_starts(sentence: str, verb: str, entry: str) -> None:
+    # Integration (wave 2): the そう / ざる the row starts on is not also the
+    # end of the verb's highlight: two cards never share a token.
+    service = SubtitleParserService(
+        AnkiMinerConfig(),
+        term_lookup=lambda terms: set(),
+        kana_attest_lookup=lambda forms: dict.fromkeys(forms, True),
+    )
+    words, _index, _counts = service.parse_text_units(
+        [ReadingUnit(text=sentence, index=0, location_label="t")], want_line_index=False
+    )
+    by_front = {word.mined_form: word for word in words}
+    assert by_front[verb].bold_end <= by_front[entry].surface_start
+    assert sentence[by_front[verb].surface_start : by_front[verb].bold_end] == sentence[: sentence.index(entry[:2])]
+
+
 # --- L-5: joins the matcher missed --------------------------------------------------------
 
 _L5_TERMS = frozenset({"腹が減る", "喉が渇く", "気をつける", "元気づける", "雨が降る", "時間がある", "目にあう"})

@@ -2990,9 +2990,30 @@ class SubtitleParserService:
             if cover is None:
                 continue
             covered_to = cover
+            self._stop_before_join(text, included_tokens, included_spans, word_token, tok_start)
             included_tokens.append(word_token)
             included_spans.append((tok_start, tok_end, highlight_end))
         return included_tokens, included_spans
+
+    def _stop_before_join(
+        self, text: str, included_tokens: list, included_spans: list[tuple[int, int, int]], word_token, tok_start: int
+    ) -> None:
+        """End the previous word's highlight where a joined entry mined after it starts.
+
+        A row that opens on a token of the verb's chain (泣き|そう|に|なっ|た →
+        泣く + そうになる, 認め|ざる|を|えない → 認める + ざるをえない) would
+        otherwise leave that token in two highlights. Only the highlight moves:
+        where the shorter end resolves another card front, the end stays.
+        """
+        if not included_spans or not getattr(word_token, "compound", False):
+            return
+        prev_start, prev_end, prev_highlight = included_spans[-1]
+        if not prev_end <= tok_start < prev_highlight:
+            return
+        prev_token = included_tokens[-1]
+        front = self._resolve_word_identity(prev_token, text, prev_start, prev_highlight)[2]
+        if self._resolve_word_identity(prev_token, text, prev_start, tok_start)[2] == front:
+            included_spans[-1] = (prev_start, prev_end, tok_start)
 
     def _chain_cover(
         self,
