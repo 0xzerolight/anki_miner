@@ -234,6 +234,7 @@ def _kana_join(
             and not _volitional_you(tokens, i)
             and not _with_what(row.headword, tokens, i + size)
             and not _bare_me(row.headword, tokens, i)
+            and not _allowed_now(row.headword, tokens, i)
         ):
             return _Join(
                 i,
@@ -403,6 +404,14 @@ def _with_what(headword: str, tokens: list, after: int) -> bool:
     if _pos1(following) == "代名詞":
         return True
     return _pos1(following) == "動詞" and extract_lemma(following) not in _SAYING_VERBS
+
+
+def _allowed_now(headword: str, tokens: list, i: int) -> bool:
+    """Whether よく|なる follows も, where it is 〜てもいい + なる and not よくなる 'get better'.
+
+    どうでもよくなった 'stopped caring', 出なくてもよくなる 'no longer have to go out'.
+    """
+    return headword == "よくなる" and i > 0 and tokens[i - 1].surface.endswith("も")
 
 
 def _bare_me(headword: str, tokens: list, i: int) -> bool:

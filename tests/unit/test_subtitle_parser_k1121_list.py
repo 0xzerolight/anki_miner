@@ -426,6 +426,8 @@ def test_listed_naru_expression_is_one_entry(sentence: str, front: str) -> None:
         ("おいしそうになった", "そうになる"),  # after an adjective's stem: 'came to look tasty'
         ("そうなるよ", "そうになる"),
         ("眠くなる", "よくなる"),
+        ("どうでもよくなった", "よくなる"),  # どうでもいい + なる
+        ("出なくてもよくなる", "よくなる"),  # 〜てもいい + なる
     ],
 )
 def test_other_naru_lines_have_no_row(sentence: str, row: str) -> None:
