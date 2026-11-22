@@ -49,6 +49,19 @@ _ATTESTED = frozenset(
         "分からん",
         "すまない",
         "済まない",
+        # E-1
+        "あとで",
+        "おかげで",
+        "それまで",
+        "あれだけ",
+        "どこか",
+        "どこ",
+        "まずは",
+        "まず",
+        "そんなふうに",
+        "そんな風に",
+        "いつものように",
+        "もうすぐ",
     }
 )
 
@@ -135,3 +148,42 @@ def test_kanji_spelling_of_a_row_obeys_allowed_pos() -> None:
     # a kanji-written conjunction is a word like any other, so 所|が joins only where conjunctions are mined.
     assert "ところが" in _fronts("ところが来ない")
     assert "所が" not in _fronts("所が来ない")
+
+
+# --- E-1: a word and its function tail, one entry ---------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("sentence", "front"),
+    [
+        ("あとで話そう", "あとで"),
+        ("母のおかげで助かった", "おかげで"),
+        ("それまで待って", "それまで"),
+        ("あれだけの巨体だ", "あれだけ"),
+        ("きっとどこかに落とした", "どこか"),
+        ("またどこかで会おう", "どこか"),
+        ("まずは落ち着け", "まずは"),
+        ("そんなふうに言うな", "そんなふうに"),
+        ("そんな風に言うな", "そんな風に"),
+        ("いつものように笑った", "いつものように"),
+        ("もうすぐ着く", "もうすぐ"),
+    ],
+)
+def test_word_and_function_tail_is_one_entry(sentence: str, front: str) -> None:
+    assert front in _fronts(sentence)
+
+
+@pytest.mark.parametrize(
+    "sentence", ["どこかわからない場所だ", "どこか知らない？", "どこか聞いてみる", "出口はどこか", "出口はどこか？"]
+)
+def test_dokoka_before_a_verb_of_knowing_is_the_question(sentence: str) -> None:
+    fronts = _fronts(sentence)
+    assert "どこ" in fronts
+    assert "どこか" not in fronts
+
+
+def test_row_homophones_and_positions_stay() -> None:
+    fronts = _fronts("その跡で分かる")  # 跡|で reads あとで; 跡で is no entry
+    assert "跡" in fronts and "跡で" not in fronts and "あとで" not in fronts
+    fronts = _fronts("彼はまずは寝た")  # まずは joins only where it opens a clause
+    assert "まず" in fronts and "まずは" not in fronts

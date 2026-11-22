@@ -693,6 +693,11 @@ _ANCHOR_HEADWORDS: tuple[str, ...] = (
     "勝手に",
     "と言う",
     "に就いて",
+    # k1121 EXPR: a word and its function tail, one entry (k21e07 to k21e10)
+    "おかげで",
+    "どこか",
+    "どこ",
+    "もうすぐ",
 )
 
 # Yomitan `ruleIdentifiers` per fixture headword. A real term bank ships these,

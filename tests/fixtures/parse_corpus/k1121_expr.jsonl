@@ -4,3 +4,7 @@
 {"id":"k21e04","sentence":"嘘と言う人","expected":["嘘","言う","人"],"category":"k1121-expr","note":"A verb written in kanji is the verb ('people who say'); と言う is attested, so the reject is the rule's."}
 {"id":"k21e05","sentence":"任務に就いていた","expected":["任務","就く"],"category":"k1121-expr","note":"に|就い|て reads について; the kanji verb is 就く 'be on duty'. に就いて is attested, so the reject is the rule's."}
 {"id":"k21e06","sentence":"まだ済まない","expected":["済む"],"category":"k1121-expr","note":"済ま|ない reads すまない, the apology's row; the kanji verb is 済む negated."}
+{"id":"k21e07","sentence":"母のおかげで助かった","expected":["母","おかげで","助かる"],"category":"k1121-expr","note":"おかげ|で is the entry おかげで."}
+{"id":"k21e08","sentence":"どこかで会った","expected":["どこか","会う"],"category":"k1121-expr","note":"どこ|か is the word どこか 'somewhere'."}
+{"id":"k21e09","sentence":"場所はどこか分かる","expected":["場所","どこ","分かる"],"category":"k1121-expr","note":"Before a verb of knowing the か closes an embedded question: どこ keeps its card."}
+{"id":"k21e10","sentence":"もうすぐ着く","expected":["もうすぐ","着く"],"category":"k1121-expr","note":"もう|すぐ is the entry もうすぐ, one card and not two."}

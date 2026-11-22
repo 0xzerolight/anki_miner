@@ -89,6 +89,10 @@ _NEGATIVE_ADJECTIVES: dict[str, str] = {
 _TE_FOLLOWERS = frozenset({"た", "ます", "いる", "いい", "くれる", "ほしい", "もらう", "あげる", "おく", "みる"})
 # What makes the で before it a copula: で|ある, で|ござい|ます (``_copula_after``).
 _COPULA_VERBS = frozenset({"ある", "ござる"})
+# Verbs that take an embedded question, by lemma (``_embedded_question``).
+_QUESTION_VERBS = frozenset(
+    {"分かる", "知る", "覚える", "忘れる", "聞く", "教える", "言う", "思う", "考える", "調べる"}
+)
 _GRAMMAR_POS1 = frozenset({"助詞", "助動詞"})
 _MAX_FIXED_TOKENS = max(len(key) for key in _FIXED_JOINS)
 _MAX_KANA_TOKENS = max(len(key) for key in (*kana_words().joins, *kana_words().base_joins))
@@ -193,6 +197,7 @@ def _kana_join(
             and (grammar_points or not row.grammar)
             and not _cut_from_negative(tokens, i + size - 1, row.line_start)
             and not _te_form_in_use(row.headword, tokens, i + size)
+            and not _embedded_question(row.headword, tokens, i + size)
             and not _auxiliary_after_te(row.headword, tokens, i)
         ):
             return _Join(
@@ -271,6 +276,21 @@ def _copula_after(last: str, tokens: list, after: int) -> bool:
     Kana rows are left alone: なんであるの is 'why is it here' as often as not.
     """
     return last == "で" and after < len(tokens) and extract_orth_base(tokens[after]) in _COPULA_VERBS
+
+
+def _embedded_question(headword: str, tokens: list, after: int) -> bool:
+    """Whether どこ|か is どこ + the question か, not the word どこか 'somewhere'.
+
+    Before a verb of knowing, asking or saying the か closes an embedded
+    question: どこかわからない 'do not know where', どこか知らない？ 'do you know
+    where?'. So it does where the line or sentence ends on it: 出口はどこか
+    'where is the exit?'. The row is passed over and どこ keeps its card.
+    """
+    if headword != "どこか":
+        return False
+    if after >= len(tokens):
+        return True
+    return _pos1(tokens[after]) in _CLAUSE_BREAK_POS1 or extract_lemma(tokens[after]) in _QUESTION_VERBS
 
 
 def _te_form_in_use(headword: str, tokens: list, after: int) -> bool:
