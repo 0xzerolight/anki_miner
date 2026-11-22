@@ -1810,7 +1810,53 @@ class SubtitleParserService:
                 additional_target=resolved_front,
             )
             highlight_end = max(highlight_end, resolved_end)
-        return stretched_highlight_end(text, highlight_end)
+        return self._chain_highlight_end(
+            text,
+            raw_tokens,
+            tok_start,
+            tok_end,
+            word_token,
+            stretched_highlight_end(text, highlight_end),
+            resolved_front if resolved_front != orth_base else None,
+        )
+
+    def _chain_highlight_end(
+        self,
+        text: str,
+        raw_tokens: list,
+        tok_start: int,
+        tok_end: int,
+        word_token: Any,
+        front_end: int,
+        additional_target: str | None,
+    ) -> int:
+        """The end of the word's chain as a reader sees it, where it differs from ``front_end``.
+
+        ``front_end`` is the end the card front is resolved from (today's
+        window and table). The chain-end resolver
+        (``find_highlight_end_with_trace(chain_end=True)``) knows more about
+        where a chain stops: 食べて|よ ends before the particle. Every caller
+        resolves the front from the text up to the returned end, so an end
+        that would resolve another front is not taken: the resolver moves the
+        highlight and never the card.
+        """
+        feature = getattr(word_token, "feature", None)
+        if getattr(feature, "pos1", None) not in ("動詞", "形容詞", "感動詞"):
+            return front_end  # nothing else has a chain
+        if getattr(feature, "written_base", None):
+            return front_end  # a spoken idiom's end is the one of its written base
+        end, _chain = find_highlight_end_with_trace(
+            text, raw_tokens, tok_start, tok_end, word_token, additional_target=additional_target, chain_end=True
+        )
+        end = stretched_highlight_end(text, end)
+        if end == front_end:
+            return front_end
+        orth_base = self._mining_base(word_token)
+        if self._resolve_front(word_token, orth_base, text, tok_start, end) != self._resolve_front(
+            word_token, orth_base, text, tok_start, front_end
+        ):
+            return front_end
+        return end
 
     def _card_front(self, word_token: Any, text: str, tok_start: int, tok_end: int, raw_tokens: list) -> str:
         """The ``mined_form`` emission gives an included token: its card front.
@@ -2238,17 +2284,54 @@ class SubtitleParserService:
         parse_subtitle_file (Issue #20 / T-38, see _iter_token_spans). The
         highlight end is computed once per token here and reused by the
         emission pass, so parse_subtitle_file and _with_index stay
-        output-identical.
+        output-identical. A token inside the previous mined word's highlight
+        is a piece of its chain and is not mined (``_chain_cover``).
         """
         included_tokens: list = []
         included_spans: list[tuple[int, int, int]] = []
+        covered_to = 0
         for word_token, tok_start, tok_end in self._iter_token_spans(text, merged_tokens):
             if not self._mine_token(word_token, text, tok_start, tok_end, merged_tokens, raw_tokens, rejects=rejects):
                 continue
-            included_tokens.append(word_token)
             highlight_end = self._emission_highlight_end(text, raw_tokens, tok_start, tok_end, word_token)
+            cover = self._chain_cover(covered_to, text, raw_tokens, tok_start, tok_end, word_token, highlight_end)
+            if cover is None:
+                continue
+            covered_to = cover
+            included_tokens.append(word_token)
             included_spans.append((tok_start, tok_end, highlight_end))
         return included_tokens, included_spans
+
+    def _chain_cover(
+        self,
+        covered_to: int,
+        text: str,
+        raw_tokens: list,
+        tok_start: int,
+        tok_end: int,
+        word_token: Any,
+        highlight_end: int | None = None,
+    ) -> int | None:
+        """How far the line's highlights reach once this mined token is taken, or ``None`` when it is no word here.
+
+        A token that lies wholly inside the previous mined word's highlight is
+        a piece of that word's chain: the 貰え of 信じて貰えなかった, the 過ぎ of
+        買い過ぎた, the 欲しい of 教えて欲しい. The reader sees one highlighted
+        word, so the piece is neither mined nor counted: all three loops over
+        ``_mine_token`` call this, with ``covered_to`` 0 at the start of a line
+        (T-38). A token that only starts inside (the やだ after 死んじゃや) stays
+        a word.
+
+        Only a verb or an adjective has a chain, so the count loops, which have
+        no highlight end at hand, compute it for those alone.
+        """
+        if tok_end <= covered_to:
+            return None
+        if getattr(getattr(word_token, "feature", None), "pos1", None) not in ("動詞", "形容詞"):
+            return max(covered_to, tok_end)
+        if highlight_end is None:
+            highlight_end = self._emission_highlight_end(text, raw_tokens, tok_start, tok_end, word_token)
+        return max(covered_to, highlight_end)
 
     def _line_display(
         self,
@@ -2710,8 +2793,13 @@ class SubtitleParserService:
             # count_fronts): a token mining drops (find == -1) is counted
             # nowhere it is not mined, or the preview over-promises (T-38 — see
             # _iter_token_spans for the drop-rule rationale).
+            covered_to = 0
             for token, tok_start, tok_end in self._iter_token_spans(text, merged_tokens):
                 if self._mine_token(token, text, tok_start, tok_end, merged_tokens, raw_tokens):
+                    cover = self._chain_cover(covered_to, text, raw_tokens, tok_start, tok_end, token)
+                    if cover is None:
+                        continue  # a piece of the previous word's chain: not mined, so not counted
+                    covered_to = cover
                     key = (
                         self._extract_lemma(token)
                         if count_by_lemma
@@ -2787,8 +2875,13 @@ class SubtitleParserService:
             # reported occurrence count over-promises (T-38). The cursor+find
             # and drop-rule rationale lives on _iter_token_spans; do not
             # inline a divergent copy here.
+            covered_to = 0
             for token, tok_start, tok_end in self._iter_token_spans(text, merged_tokens):
                 if self._mine_token(token, text, tok_start, tok_end, merged_tokens, raw_tokens):
+                    cover = self._chain_cover(covered_to, text, raw_tokens, tok_start, tok_end, token)
+                    if cover is None:
+                        continue  # a piece of the previous word's chain: not mined, so not counted
+                    covered_to = cover
                     key = (
                         self._card_front(token, text, tok_start, tok_end, raw_tokens)
                         if by_front
