@@ -4169,6 +4169,7 @@ class SubtitleParserService:
           grammar frame (食べていい) and stays out, and so it does after が:
           見るがいい is the pattern がいい, not a clause and its predicate.
           Before から it opens the listed いいから (いいから いいから).
+        - ない after the auxiliary に (降りそうにない).
         """
         base = getattr(word_token.feature, "orthBase", None)
         prev = tokens[idx - 1]
@@ -4194,6 +4195,8 @@ class SubtitleParserService:
             if idx + 1 < len(tokens) and tokens[idx + 1].surface == "から":
                 return False
             return prev.surface in ("から", "けど", "けれど", "けれども", "し", "ので", "のに")
+        if base in ("ない", "無い"):
+            return pos1 == "助動詞" and prev.surface == "に"
         return False
 
     def _is_not_main_verb(self, word_token, tokens: list) -> bool:

@@ -239,3 +239,13 @@ class TestIiAfterAClauseParticle:
 
     def test_ii_that_opens_ii_kara_stays_out(self):
         assert _fronts("寒いけどいいから早く。", interjections=False).count("いい") == 0
+
+
+class TestNaiAfterTheAuxiliaryNi:
+    @pytest.mark.parametrize("text", ["雨が降りそうにない。", "今日は終わりそうにないね。"])
+    def test_nai_after_the_auxiliary_ni_is_the_predicate(self, text):
+        assert "ない" in _fronts(text, interjections=False)
+
+    @pytest.mark.parametrize("text", ["学生ではない。", "まだ行かない。"])
+    def test_nai_as_grammar_stays_out(self, text):
+        assert "ない" not in _fronts(text, interjections=False)
