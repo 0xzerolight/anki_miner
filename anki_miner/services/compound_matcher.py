@@ -618,11 +618,12 @@ class CompoundDictionaryMatcher:
         out: dict[tuple[int, int], Alternatives] = {}
         self._fixed_heads = {}
         source_spans = self._source_spans(text, tokens)
+        surfaces = [word_surface(token) for token in tokens]
         for i in range(n - 1):
             start_span = source_spans.get(i)
             if start_span is None or not self._can_start_at(tokens, i):
                 continue
-            prefix = word_surface(tokens[i])
+            prefix = surfaces[i]
             plain = _plain_spelling(tokens[i]) if self._spoken_idioms else prefix
             source_end = start_span[1]
             for j in range(i + 1, min(i + self._max_span, n)):
@@ -633,7 +634,7 @@ class CompoundDictionaryMatcher:
                 # elsewhere in the line cannot license a merge here.
                 if tail_span is None or tail_span[0] != source_end:
                     break
-                joined = prefix + word_surface(tail)
+                joined = prefix + surfaces[j]
                 if len(joined) > self._max_span_chars:
                     break
                 # Span-end rule: non-content ends are not candidate endpoints,
