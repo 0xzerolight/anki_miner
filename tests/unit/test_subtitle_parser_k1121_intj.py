@@ -42,14 +42,21 @@ _TAGS = {
     "あのね": "int",
     "しまった": "int",
     "んん": "int",
+    "ああ": "int",
+    "いやあ": "int",
+    "フフ": "int",
+    "えっ": "int",
 }
+
+# Headwords with no tags of their own: spelling rows of another entry.
+_SPELLINGS = frozenset({"あぁ", "いやぁ", "フフッ"})
 
 
 def _service(*, interjections: bool) -> SubtitleParserService:
     """A parser with ``_ATTESTED`` as the kana dictionary and ``_TAGS`` as entry tags; the switch set as the kit sets it."""
     service = SubtitleParserService(
         AnkiMinerConfig(),
-        term_lookup=lambda asked: {term for term in asked if term in _TAGS},
+        term_lookup=lambda asked: {term for term in asked if term in _TAGS or term in _SPELLINGS},
         kana_attest_lookup=lambda forms: {form: form in _ATTESTED or form in _TAGS for form in forms},
         form_lookup=lambda asked: {term: [("", _TAGS[term])] for term in asked if term in _TAGS},
     )
@@ -155,3 +162,24 @@ class TestInterjectionRows:
 
     def test_a_pre_noun_ano_before_a_noun_is_no_row(self):
         assert "あのね" not in _fronts("あの猫はどこ？")
+
+
+_VARIANTS = [
+    ("あぁ、鍵を忘れた。", "あぁ"),
+    ("いやぁ、助かった。", "いやぁ"),
+    ("フフッ、秘密だよ。", "フフッ"),
+]
+
+
+class TestListedVariantSpellings:
+    @pytest.mark.parametrize(("text", "front"), _VARIANTS)
+    def test_a_listed_small_kana_spelling_is_mined_as_written(self, text, front):
+        assert front in _fronts(text)
+
+    @pytest.mark.parametrize(("text", "front"), _VARIANTS)
+    def test_it_is_no_card_with_the_switch_off(self, text, front):
+        assert front not in _fronts(text, interjections=False)
+
+    def test_a_variant_the_dictionary_does_not_list_as_written_stays_out(self):
+        fronts = _fronts("えッ、鍵を忘れた？")
+        assert "えッ" not in fronts and "えっ" not in fronts

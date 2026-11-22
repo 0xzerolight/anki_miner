@@ -4008,8 +4008,31 @@ class SubtitleParserService:
         if surface not in self._interjection_memo:
             if len(self._interjection_memo) >= _FRONT_CACHE_CAP:
                 self._interjection_memo.clear()
-            self._interjection_memo[surface] = "int" in self._entry_tags([surface]).get(surface, ())
+            self._interjection_memo[surface] = "int" in self._entry_tags([surface]).get(
+                surface, ()
+            ) or self._is_listed_interjection_variant(surface)
         return self._interjection_memo[surface]
+
+    #: ッ and the small vowels of a variant spelling, with the plain kana each stands for (あぁ is ああ).
+    _INTERJECTION_PLAIN_KANA = str.maketrans("ッぁぃぅぇぉァィゥェォ", "っあいうえおアイウエオ")
+
+    def _is_listed_interjection_variant(self, surface: str) -> bool:
+        """Whether ``surface`` is a small-vowel or ッ spelling of a listed interjection, itself a headword.
+
+        あぁ, いやぁ and フフッ are headwords with no tags of their own, spelling
+        rows of ああ, いやあ and フフ: the plain spelling carries ``int``, in
+        either script and with or without its final っ. The card front stays
+        the spelling as written. A variant that is no headword (えッ, うわぁ)
+        would need the listed spelling as its front, and stays out.
+        """
+        plain = surface.translate(self._INTERJECTION_PLAIN_KANA)
+        if plain == surface or self._term_lookup is None or surface not in self._memoized_attest([surface]):
+            return False
+        spellings = {plain, katakana_to_hiragana(plain)}
+        spellings |= {spelling.rstrip("っ") for spelling in spellings}
+        spellings.discard("")
+        tags = self._entry_tags(sorted(spellings))
+        return any("int" in tags.get(spelling, ()) for spelling in spellings)
 
     #: Kana that never make up a mimetic word's doubled half: the long mark, the small kana.
     _MIMETIC_EXCLUDED_KANA: frozenset[str] = frozenset("ーッァィゥェォャュョヮ")
