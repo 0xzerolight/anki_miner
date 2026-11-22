@@ -317,6 +317,16 @@ def test_missed_expression_row_needs_its_place(sentence: str, row: str) -> None:
     assert row not in _l3_fronts(sentence)
 
 
+@pytest.mark.parametrize("sentence", ["よってたかって責めるな", "よってくるなよ", "よっていこうか", "よってないってば"])
+def test_yotte_before_an_auxiliary_or_a_helper_verb_is_a_te_form(sentence: str) -> None:
+    assert "よって" not in _l3_fronts(sentence)
+
+
+@pytest.mark.parametrize("sentence", ["よって、被告人を無罪とする", "よって本日の会議は中止とする"])
+def test_yotte_that_opens_a_clause_is_the_conjunction(sentence: str) -> None:
+    assert "よって" in _l3_fronts(sentence)
+
+
 def test_zaru_wo_enai_leaves_the_verb_its_own_span() -> None:
     fronts = _l3_fronts("認めざるをえない")
     assert fronts == ["認める", "ざるをえない"]

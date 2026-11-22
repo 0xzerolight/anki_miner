@@ -226,6 +226,7 @@ def _kana_join(
             and (interjections or not row.interjection)
             and not _cut_from_negative(tokens, i + size - 1, row.line_start)
             and not _te_form_in_use(row.headword, tokens, i + size)
+            and not _te_form_goes_on(row.headword, tokens, i + size)
             and not _embedded_question(row.headword, tokens, i + size)
             and not _verb_te_form(row.headword, tokens, i + size)
             and not _adnominal_only(row.headword, tokens, i + size)
@@ -470,6 +471,19 @@ def _te_form_in_use(headword: str, tokens: list, after: int) -> bool:
     if headword not in _TE_ADVERBS:
         return False
     return follower in _TE_FOLLOWERS or (headword != "どうして" and follower in _TE_REQUESTS)
+
+
+def _te_form_goes_on(headword: str, tokens: list, after: int) -> bool:
+    """Whether よっ|て is the て-form of 寄る or 酔う here, not the conjunction よって 'therefore'.
+
+    An auxiliary, a て-auxiliary, a verb of coming or going or ない right after it
+    goes on from that て: よってくる 'come over', よってたかって, よってない 'not drunk'.
+    Any other verb is the clause the conjunction opens (よって買えない).
+    """
+    if headword != "よって" or after >= len(tokens):
+        return False
+    follower = extract_orth_base(tokens[after])
+    return _pos1(tokens[after]) == "助動詞" or follower == "ない" or follower in _TE_FOLLOWERS | _MOTION_VERBS
 
 
 def _auxiliary_after_te(headword: str, tokens: list, start: int) -> bool:
