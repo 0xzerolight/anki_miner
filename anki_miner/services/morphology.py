@@ -2165,9 +2165,10 @@ _VARIANT_CONTENT_POS1 = frozenset({"名詞", "動詞", "形容詞", "副詞", "�
 _VARIANT_INFLECTING_POS1 = frozenset({"形容詞", "動詞", "副詞", "助動詞"})
 #: The kinds of variant reading that are on: K, a stretched spelling the tagger
 #: resolves (``_variant_reading``); A, ねえ alone as the word ない
-#: (``_read_spoken_nai``). With none the pass and its readers are wired and the
-#: parser reads every line as before.
-_VARIANT_CLASSES: frozenset[str] = frozenset({"K", "A"})
+#: (``_read_spoken_nai``); N, ねえ as the ない of an entry (``_read_particle_nai``).
+#: With none the pass and its readers are wired and the parser reads every line
+#: as before.
+_VARIANT_CLASSES: frozenset[str] = frozenset({"K", "A", "N"})
 
 
 class VariantToken(RetaggedToken):
@@ -2299,6 +2300,8 @@ def read_variants(text: str, tokens: list, tag: Callable[[str], Iterable[Any]], 
         return tokens
     if "A" in _VARIANT_CLASSES and _SPOKEN_NAI_RE.search(text) is not None:
         tokens = _read_spoken_nai(text, tokens, headword)
+    if "N" in _VARIANT_CLASSES and _SPOKEN_NAI_RE.search(text) is not None:
+        tokens = _read_particle_nai(text, tokens, tag, headword)
     if _VARIANT_SITE_RE.search(text) is None:
         return tokens
     sites = _variant_sites(text)
@@ -2417,6 +2420,101 @@ def _spoken_nai_stands(located: list[tuple[Any, int, int]], i: int, headword: Ca
         if known == 2 or (known == 1 and len(joined) >= 4):
             return False
     return True
+
+
+def _read_particle_nai(
+    text: str, tokens: list, tag: Callable[[str], Iterable[Any]], headword: Callable[[str], int]
+) -> list:
+    """X + ねえ where X + ない is an entry of its own: that ねえ is the entry's ない (間違いねえ, 金がねえ).
+
+    Kind N. At a clause end the tagger calls ねえ the particle ね, and the
+    entry is lost (間違い is carded alone). Where the words right before it +
+    ない are a real headword (``_nai_entry_before``), the line is tagged again
+    with ない in its place; where that changes this one token alone, its new
+    reading comes back over the text as written, and the joins then make the
+    entry as they do for the standard spelling. またねー, もんねえ and それがねえ
+    name no entry and stay.
+    """
+    for _attempt in range(3):
+        located = list(iter_token_spans(text, tokens))
+        if len(located) != len(tokens):
+            return tokens
+        at = next(
+            (
+                i
+                for i, token in enumerate(tokens)
+                if token.surface in _SPOKEN_NAI
+                and _field(token, "pos1") == "助詞"
+                and _field(token, "lemma") == "ね"
+                and _nai_entry_before(located, i, headword)
+            ),
+            None,
+        )
+        if at is None:
+            return tokens
+        for token in tokens:
+            # fugashi parses a feature on first use, from memory the next tagger call reuses.
+            getattr(token, "feature", None)
+        start, end = located[at][1], located[at][2]
+        candidate = text[:start] + "ない" + text[end:]
+        read_tokens = list(tag(candidate))
+        for token in read_tokens:
+            getattr(token, "feature", None)
+        read = list(iter_token_spans(candidate, read_tokens))
+        if len(read) != len(read_tokens):
+            return tokens
+
+        def same(own: tuple[Any, int, int], other: tuple[Any, int, int]) -> bool:
+            return (
+                own[1:] == other[1:]
+                and own[0].surface == other[0].surface
+                and _field(own[0], "lemma") == _field(other[0], "lemma")
+                and _field(own[0], "pos1") == _field(other[0], "pos1")
+            )
+
+        first = 0
+        while first < min(at, len(read)) and same(located[first], read[first]):
+            first += 1
+        after = 0
+        while after < min(len(located) - at - 1, len(read) - first) and same(located[-1 - after], read[-1 - after]):
+            after += 1
+        old, new = located[first : len(located) - after], read[first : len(read) - after]
+        word = next((token for token, a, b in new if a == start and b == end), None)
+        if (
+            word is None
+            or _field(word, "lemma") not in ("無い", "ない")
+            or _field(word, "pos1") not in ("形容詞", "助動詞")
+            # Only the ねえ may change: where the words before it are read anew as well
+            # (鼻持ち|なら|ねえ), no join is sure to follow and a new word would be carded.
+            or len(old) != 1
+            or len(new) != 1
+        ):
+            return tokens
+        tokens = (
+            tokens[:first] + [VariantToken(token, text[a:b]) for token, a, b in new] + tokens[len(tokens) - after :]
+        )
+    return tokens
+
+
+def _nai_entry_before(located: list[tuple[Any, int, int]], i: int, headword: Callable[[str], int]) -> bool:
+    """Whether up to three words glued right before ``located[i]`` + ない are a real headword (間違いない, 金がない).
+
+    The run opens with a noun, a pronoun, a verb or an adjective; a single
+    auxiliary-capable word is no such opening (もん|ねえ).
+    """
+    joined = ""
+    for depth, back in enumerate(range(i - 1, max(i - 4, -1), -1), start=1):
+        if located[back][2] != located[back + 1][1]:
+            return False
+        head = located[back][0]
+        joined = head.surface + joined
+        if (
+            _field(head, "pos1") in ("名詞", "代名詞", "形状詞", "動詞", "形容詞")
+            and (depth > 1 or _field(head, "pos2") != "非自立可能")
+            and headword(joined + "ない") == 2
+        ):
+            return True
+    return False
 
 
 def _negated_by_nai(token) -> bool:

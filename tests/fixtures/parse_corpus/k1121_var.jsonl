@@ -11,3 +11,6 @@
 {"id":"k21v11","sentence":"ねえねえ、聞いてよ","expected":["聞く"],"category":"k1121-var","note":"the call ねえ is no card"}
 {"id":"k21v12","sentence":"やるしかねえ","expected":["やる"],"category":"k1121-var","note":"しかねえ is the expression しかない: no ねえ"}
 {"id":"k21v13","sentence":"信じらんねえ","expected":["信じる"],"category":"k1121-var","note":"ねえ after a contracted negative is a chain piece"}
+{"id":"k21v14","sentence":"間違いねえ","expected":["間違いない"],"category":"k1121-var","note":"V-N: X + ねえ where X + ない is an entry"}
+{"id":"k21v15","sentence":"金がねえ","expected":["金がない"],"category":"k1121-var","note":"V-N"}
+{"id":"k21v16","sentence":"大変ねえ","expected":["大変"],"category":"k1121-var","note":"大変ない is no entry: ねえ stays the particle"}

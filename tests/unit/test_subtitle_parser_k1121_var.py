@@ -131,9 +131,13 @@ _ENTRIES = {
     "どうして": "adv",
     "しかない": "exp adj-i",
     "みっともない": "adj-i",
+    "間違いない": "adj-i",
+    "金がない": "exp adj-i",
+    "違いない": "exp adj-i",
+    "鼻持ちならない": "exp adj-i",
 }
 _SEARCH_ONLY = frozenset({"すごーい", "ちがーう", "なーい"})
-_READINGS = frozenset({"ぜんぶ", "せんせい", "うそ", "やろう"})
+_READINGS = frozenset({"ぜんぶ", "せんせい", "うそ", "やろう", "もんない"})
 _LISTED = frozenset(_ENTRIES) | _SEARCH_ONLY | _READINGS
 
 
@@ -173,7 +177,7 @@ class TestStretchedSpellingTheTaggerResolves:
             ("すごーい", "すごい", "すごーい"),  # listed, but only as a search-only form
             ("それはちがーう", "ちがう", "ちがーう"),
             ("ゆーっくり歩こう", "ゆっくり", "ゆーっくり"),
-            ("お金がなーい", "ない", "なーい"),
+            ("時間がなーい", "ない", "なーい"),
             ("せんせー、おはよう", "せんせい", "せんせー"),
         ],
     )
@@ -298,7 +302,7 @@ class TestSpokenNaiAlone:
             ((("わけ", "名詞"), ("ねえ", "形容詞")), 1, True),
             ((("あんた", "代名詞"), ("達", "接尾辞"), ("ねぇ", "形容詞")), 2, False),
             ((("痛く", "形容詞"), ("なん", "代名詞"), ("か", "助詞"), ("ねえ", "形容詞"), ("ぞ", "助詞")), 3, False),
-            ((("金", "名詞"), ("が", "助詞"), ("ねえ", "形容詞")), 2, True),
+            ((("暇", "名詞"), ("が", "助詞"), ("ねえ", "形容詞")), 2, True),
             ((("ねえ", "形容詞"), ("の", "助詞")), 0, True),
             ((("ねえ", "形容詞"), ("、", "補助記号")), 0, False),  # the call
             ((("ねえ", "形容詞"), ("ねえ", "形容詞")), 1, False),
@@ -335,3 +339,43 @@ class TestSpokenNaiAlone:
         assert word.surface == "ねぇ"
         assert re.search(r"<b>(.*?)</b>", word.sentence_bolded).group(1) == "ねぇ"
         assert re.sub(r"\[[^\]]*\]| ", "", re.search(r"<b>(.*?)</b>", word.sentence_furigana_bolded).group(1)) == "ねぇ"
+
+
+class TestNeeAsTheNaiOfAnEntry:
+    """V-N: X + ねえ where X + ない is an entry of its own. The tagger calls that ねえ the particle ね."""
+
+    @pytest.mark.parametrize(
+        ("text", "front", "written"),
+        [
+            ("間違いねえ", "間違いない", "間違いねえ"),
+            ("金がねえ", "金がない", "金がねえ"),
+            ("違いねえ", "違いない", "違いねえ"),
+        ],
+    )
+    def test_cards_the_entry_over_the_text_as_written(self, text, front, written):
+        cards = _cards(text)
+        assert cards.get(front) == written
+        assert "ねえ" not in cards
+
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "じゃあ またねー",  # またない is no entry
+            "よくしてもらったもんねえ",  # もんない is only the reading of another word
+            "それがねえ、困ったんだよ",
+            "大変ねえ",
+        ],
+    )
+    def test_a_particle_that_names_no_entry_stays_a_particle(self, text):
+        _text, raw_tokens, *_rest = _service()._build_line_state(text, 0.0, 1.0)
+        assert not any(isinstance(token, VariantToken) for token in raw_tokens)
+
+    def test_an_entry_whose_other_words_would_be_read_anew_is_left(self):
+        # 鼻持ち|なら|ねえ: with ない the tagger also reads なら as the verb なる, which no join is sure to take.
+        assert "なる" not in _cards("鼻持ちならねえ")
+
+    def test_the_sentence_bolds_the_entry_as_written(self):
+        text = "間違いねえ"
+        word = next(word for word in _words(text) if word.mined_form == "間違いない")
+        assert re.search(r"<b>(.*?)</b>", word.sentence_bolded).group(1) == "間違いねえ"
+        assert re.sub(r"\[[^\]]*\]|</?b>| ", "", word.sentence_furigana_bolded) == text
