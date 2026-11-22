@@ -2665,8 +2665,8 @@ def recut_unlisted_kanji_tokens(
     nor is anything without a dictionary. At most three re-cuts a line. Tokens
     are never mutated; the first new token carries the old one's space.
     """
-    if exists is None or rules is None:
-        return tokens
+    if exists is None or rules is None or _RECUT_KANJI_RE.search(text) is None:
+        return tokens  # no dictionary, or a line with no kanji and so no kanji token
 
     def common(word: str) -> bool:
         found = common_lookup([word])
