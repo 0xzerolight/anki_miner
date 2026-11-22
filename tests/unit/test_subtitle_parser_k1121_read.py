@@ -74,6 +74,8 @@ _LISTED_READINGS: dict[str, set[str]] = {
     "言う": {"いう", "ゆう"},
     "不味い": {"まずい"},
     "後": {"あと", "ご", "のち", "うしろ"},
+    "他": {"ほか", "た"},
+    "時": {"とき", "じ"},
 }
 
 
@@ -252,3 +254,40 @@ class TestRowsThatWereCardOverrides:
             assert wrong not in word.sentence_furigana
             assert right in word.sentence_furigana
             assert wrong not in word.expression_reading
+
+
+@needs_tagger
+class TestPauseArtefacts:
+    """他, 時 and 後 that the tagger misreads at a subtitle space or a comma."""
+
+    @pytest.mark.parametrize(
+        ("sentence", "surface", "kana"),
+        [
+            ("それとも 他に誰かいる", "他", "ホカ"),
+            ("その他のこと", "他", "タ"),
+            ("他の人に聞いて", "他", "ホカ"),
+            ("他チームに負けた", "他", "タ"),
+            ("弾を込める時 気をつけろ", "時", "トキ"),
+            ("あの時 君はいなかった", "時", "トキ"),
+            ("3時に会おう", "時", "ジ"),
+            ("緊急時には逃げろ", "時", "ジ"),
+            ("この後、会議がある", "後", "アト"),
+            ("後三年かかる", "後", "アト"),
+            ("3日後に会おう", "後", "ゴ"),
+        ],
+    )
+    def test_the_token_reading(self, sentence: str, surface: str, kana: str) -> None:
+        assert _kana(sentence, surface) == [kana]
+
+    @pytest.mark.parametrize(
+        ("sentence", "ruby"),
+        [
+            ("この後、会議がある", "後[あと]"),
+            ("弾を込める時 気をつけろ", "時[とき]"),
+            ("それとも 他に誰かいる", "他[ほか]"),
+        ],
+    )
+    def test_the_sentence_ruby(self, sentence: str, ruby: str) -> None:
+        words = _words(sentence)
+        assert words
+        assert all(ruby in word.sentence_furigana for word in words.values())

@@ -789,8 +789,21 @@ _READING_CONTEXT: tuple[_ReadingRow, ...] = (
     # 蛙: the tagger says the poetic かわず, which is right in the proverb 井の中の蛙.
     _reading_row("蛙", _NOUN_POS, "カワズ", "カワズ", before="井の中の$"),
     _reading_row("蛙", _NOUN_POS, "カワズ", "カエル"),
-    # その後: the tagger says そのご before a pause; a card takes そのあと.
-    _reading_row("後", _NOUN_POS, "ゴ", "アト", before="その$"),
+    # 後 the noun is あと (この後、 その後、 後三年かかる). ご is the suffix of ３日後,
+    # which is no noun token; the tagger says ご for the noun before a pause.
+    _reading_row("後", _NOUN_POS, "ゴ", "アト"),
+    # 他: た in その他 and directly before a kanji or katakana noun (他チーム). The
+    # tagger also says た after a subtitle space (それとも 他に), where it is ほか.
+    _reading_row("他", _NOUN_POS, "タ", "タ", before="その$"),
+    _reading_row("他", _NOUN_POS, "タ", "タ", after="[一-鿿ァ-ヺ]"),
+    _reading_row("他", _NOUN_POS, "タ", "ホカ"),
+    # 時 the noun is とき; じ stands on a numeral or a noun (３時, 緊急時) and
+    # inside a longer word. The tagger also says じ before a subtitle space
+    # (込める時 気をつけろ).
+    _reading_row("時", _NOUN_POS, "ジ", "ジ", prev=("名詞", "数詞", "接尾辞", "接頭辞", "記号", "代名詞")),
+    _reading_row("時", _NOUN_POS, "ジ", "ジ", before="[0-9０-９〇一二三四五六七八九十]$"),
+    _reading_row("時", _NOUN_POS, "ジ", "ジ", after="[一-鿿]"),
+    _reading_row("時", _NOUN_POS, "ジ", "トキ"),
     # 一日, １日: the tagger says ついたち, the first of the month. That is right
     # directly after a month (六月一日, 毎月１日); anywhere else it is one day.
     _reading_row("一日", _NOUN_POS, "ツイタチ", "ツイタチ", before="月$"),
