@@ -100,6 +100,12 @@ _ATTESTED = frozenset(
         "どう考えても",
         "それはそれで",
         "わけのわからない",
+        # E-5
+        "ありえない",
+        "ありえる",
+        "いなくなる",
+        "ある",
+        "いる",
     }
 )
 
@@ -349,3 +355,29 @@ def test_clause_opener_or_fixed_adverb_is_one_entry(sentence: str, front: str) -
 )
 def test_clause_opener_words_inside_a_clause_stay(sentence: str, row: str) -> None:
     assert row not in _fronts(sentence, allowed=_WITH_CONJUNCTIONS)
+
+
+# --- E-5: verbs the tagger cuts into two verbs ----------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("sentence", "front", "fragment"),
+    [
+        ("そんなのありえないよ", "ありえない", "ある"),
+        ("金がありえないほど増えた", "ありえない", "ある"),
+        ("ありえるって事ですか", "ありえる", "ある"),
+        ("それはありえません", "ありえる", "ある"),
+        ("お前がいなくなれば困る", "いなくなる", "いる"),
+        ("猫がいなくなった", "いなくなる", "いる"),
+    ],
+)
+def test_two_verb_cut_is_one_entry(sentence: str, front: str, fragment: str) -> None:
+    fronts = _fronts(sentence)
+    assert front in fronts
+    assert fragment not in fronts
+
+
+def test_inaku_before_te_is_the_verb_iru() -> None:
+    fronts = _fronts("ここにいなくてもいい")
+    assert "いる" in fronts
+    assert "いなくなる" not in fronts
