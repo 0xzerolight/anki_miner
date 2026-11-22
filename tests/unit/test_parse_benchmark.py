@@ -174,6 +174,7 @@ _EXPECTED_CATEGORIES = {
     "kana-part-front",
     "noun-tte",
     "k1120-kana-words",
+    "k1121-expr",
 }
 
 

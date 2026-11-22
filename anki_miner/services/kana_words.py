@@ -22,6 +22,12 @@ written ``=X`` matches any token whose dictionary form is X, so a grammar
 expression joins in every inflection (こと|が|あっ|た is ことがある). A
 ``grammar`` row is a grammar point (んだ, ください), joined only while
 Settings → Word Filters → Mine grammar points is on.
+
+A join row is blind to the script: its tokens also match a kanji-written
+token by that token's kana reading, so なん|と|なく is 何|と|なく as well and
+そう|いえ|ば is そう|言え|ば. A reading fits homophones too (時期|に reads じきに),
+so such a match counts only when the dictionary lists the span as written
+(``LexicalJoiner``).
 """
 
 from __future__ import annotations
@@ -52,6 +58,8 @@ class KanaWords(NamedTuple):
     #: Joins whose last token matches by dictionary form, keyed on the surfaces
     #: before it plus that form (こと, が, ある).
     base_joins: dict[tuple[str, ...], KanaJoin]
+    #: The first token of every join of two or more tokens: where a match by reading can start.
+    heads: frozenset[str] = frozenset()
 
 
 @cache
@@ -79,7 +87,8 @@ def kana_words() -> KanaWords:
         if rest:
             kanji_spelled.add((form, pos1))
     joined = frozenset(row.headword for row in (*joins.values(), *base_joins.values()))
-    return KanaWords(frozenset(words), joins, joined, frozenset(kanji_spelled), base_joins)
+    heads = frozenset(key[0] for key in (*joins, *base_joins) if len(key) > 1)
+    return KanaWords(frozenset(words), joins, joined, frozenset(kanji_spelled), base_joins, heads)
 
 
 def is_listed(front: str, pos1: str, *, merged: bool) -> bool:

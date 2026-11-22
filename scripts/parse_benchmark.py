@@ -687,6 +687,12 @@ _ANCHOR_HEADWORDS: tuple[str, ...] = (
     "ちょちょ",
     # k1120 MC: the spoken contraction わかんない, listed (co04)
     "わかんない",
+    # k1121 EXPR: kanji spellings of kana join rows (k21e01, k21e02); と言う and に就いて are
+    # attested so that the reject is the rule's (k21e04, k21e05)
+    "何となく",
+    "勝手に",
+    "と言う",
+    "に就いて",
 )
 
 # Yomitan `ruleIdentifiers` per fixture headword. A real term bank ships these,
