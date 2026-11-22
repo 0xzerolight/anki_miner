@@ -816,6 +816,15 @@ def _chain_end_candidates(text: str, raw_tokens: list, tok_start: int, tok_end: 
             # quotation the chain may end after the particle's first letter.
             if surface in ("たって", "だって") and pos1 == "助詞" and _takes_quotation(text, following):
                 candidates.append(_ChainEnd(start + 1, tail + surface[0], False, particle_ka, surface[1]))
+            # ちゃい before the particle や, け or か is ちゃ and いや / いけ / いか
+            # (笑っちゃ|いやよ), not the stem of ちゃう: the chain ends after ちゃ.
+            if (
+                surface in ("ちゃい", "じゃい")
+                and following is not None
+                and text[following[1] : following[2]] in ("や", "け", "か")
+            ):
+                candidates.append(_ChainEnd(end - 1, tail + surface[:-1], False, particle_ka, "い"))
+                break
             # An imperative in よ as ONE tail token (やめ|とけよ) may be the word and
             # the particle: the end before よ is a candidate too, and the gate
             # reads the whole token as it reads a separate よ.

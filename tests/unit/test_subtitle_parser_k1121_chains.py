@@ -364,3 +364,21 @@ class TestNegativeNeeAfterTe:
     )
     def test_the_negative_is_inside_the_chain(self, text, spans):
         assert _spans(text) == spans
+
+
+class TestChaiBeforeAParticle:
+    """笑っちゃいやよ is 笑っちゃ + いや: the tagger's ちゃい is no stem of ちゃう there."""
+
+    @pytest.mark.parametrize(
+        ("text", "surface", "highlighted"),
+        [
+            ("人を笑っちゃいやよ", "笑っ", "笑っちゃ"),
+            ("人をからかっちゃいやよ", "からかっ", "からかっちゃ"),
+            ("食べちゃいなさい", "食べ", "食べちゃいなさい"),
+            ("もう行っちゃいます", "行っ", "行っちゃいます"),
+            ("見ちゃいけない", "見", "見ちゃ"),
+            ("負けちゃいかねない", "負け", "負けちゃい"),  # かね is no particle か
+        ],
+    )
+    def test_where_the_chain_ends(self, text, surface, highlighted):
+        assert _chain_text(text, surface) == highlighted
