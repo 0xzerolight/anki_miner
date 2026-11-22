@@ -1687,8 +1687,15 @@ class SubtitleParserService:
     _FILE_NAME_KANJI_RE = re.compile(r"[一-鿿々〆]")
     #: Parts of speech no piece of a labelled name has.
     _NAME_PIECE_EXCLUDED_POS1: frozenset[str] = frozenset({"助詞", "助動詞", "代名詞", "補助記号", "記号", "空白"})
-    #: Kana that link the parts of a name (一ノ瀬, 茅ヶ崎).
-    _NAME_CONNECTORS: frozenset[str] = frozenset("ノヶケ")
+    #: What links the parts of a name (一ノ瀬, 茅ヶ崎).
+    _NAME_CONNECTORS: frozenset[str] = frozenset("ノ之乃ヶケ")
+    #: What a name is called with: a suffix (水竜さん) or a title noun (瑠偉斗先生).
+    _NAME_HONORIFIC_SUFFIXES: frozenset[str] = frozenset({"さん", "くん", "君", "ちゃん", "様", "さま", "殿", "氏"})
+    _NAME_HONORIFIC_NOUNS: frozenset[str] = frozenset({"先生", "先輩"})
+    #: A raw token that can be a piece of a name: kanji only, or katakana only.
+    _NAME_PIECE_RE = re.compile(r"[一-鿿々〆]+|[ァ-ヺー]+")
+    #: Parts of speech of the pieces of a name that only an honorific vouches for.
+    _NAME_HONORIFIC_PIECE_POS1: frozenset[str] = frozenset({"名詞", "接尾辞", "形状詞"})
 
     def _name_merged_line_states(
         self, subs: Any, unmined: frozenset[int]
@@ -1697,9 +1704,10 @@ class SubtitleParserService:
 
         A name UniDic does not know comes out in pieces (凛|堂), and each piece
         is carded as a common noun. The file says who its people are (on its
-        speaker labels), so the evidence is collected over the whole file
-        before any line is given out, and a listed name becomes one proper noun
-        wherever it stands (``_merge_file_names``).
+        speaker labels, and where it calls them さん or 先生), so the evidence
+        is collected over the whole file before any line is given out, and a
+        listed name becomes one proper noun wherever it stands
+        (``_merge_file_names``).
 
         One parser serves a batch of files, so everything here is local to one
         call: the list of names is never stored on the parser or under a memo
@@ -1710,6 +1718,7 @@ class SubtitleParserService:
         """
         line_states: list[tuple[str, list, list, float, float, float]] = []
         labels: collections.Counter[str] = collections.Counter()
+        honorifics: collections.Counter[str] = collections.Counter()
         for line in subs:
             if getattr(line, "is_comment", None) is True:
                 continue
@@ -1724,7 +1733,8 @@ class SubtitleParserService:
             line_states.append(line_state)
             if line_state[1]:
                 labels.update(self._speaker_label_names(line.text))
-        names = self._file_names(labels)
+                honorifics.update(self._names_before_honorifics(line_state))
+        names = self._file_names(labels, honorifics)
         if not names:
             return line_states
         return [self._merge_file_names(line_state, names) for line_state in line_states]
@@ -1752,20 +1762,76 @@ class SubtitleParserService:
                     names.append(name)
         return names
 
-    def _file_names(self, labels: collections.Counter[str]) -> dict[str, str]:
-        """The names one file vouches for, each with its kind of evidence (``L``: speaker labels).
+    def _names_before_honorifics(self, line_state: tuple[str, list, list, float, float, float]) -> list[str]:
+        """Each name of two raw tokens or more that stands right before an honorific (瑠偉|斗 in 瑠偉斗先生).
 
-        A name stands on two labels or more, is 2 to 6 characters with a kanji,
-        and is no dictionary headword as written: a role (店員) and a word that
-        is also a name (森) stay words. Without a dictionary there is no list.
+        The name is the whole run of kanji-only or katakana-only tokens that
+        ends at the honorific, with no space inside and its parts linked by
+        ノ, 之, 乃 or ヶ at most. A run of more than 4 tokens or 7 characters is
+        no name, and one token before an honorific (社長さん) is a word.
+        """
+        raw_tokens = line_state[1]
+        if not any(self._is_name_honorific(token) for token in raw_tokens):
+            return []
+        spans = list(self._iter_token_spans(self._tokenizer_text(line_state[0]), raw_tokens))
+        names: list[str] = []
+        for index, (token, _start, _end) in enumerate(spans):
+            if not self._is_name_honorific(token):
+                continue
+            first = index
+            while (
+                first > 0
+                and spans[first - 1][2] == spans[first][1]
+                and self._is_name_piece(spans[first - 1][0], linking=first < index)
+            ):
+                first -= 1
+            while first < index and spans[first][0].surface in self._NAME_CONNECTORS:
+                first += 1
+            name = "".join(piece.surface for piece, _piece_start, _piece_end in spans[first:index])
+            if 2 <= index - first <= 4 and len(name) <= 7:
+                names.append(name)
+        return names
+
+    def _is_name_honorific(self, token: Any) -> bool:
+        """Whether a raw token is what a name is called with: さん and its kin as a suffix, 先生, 先輩."""
+        surface = token.surface
+        if surface in self._NAME_HONORIFIC_NOUNS:
+            return True
+        return (
+            surface in self._NAME_HONORIFIC_SUFFIXES
+            and getattr(getattr(token, "feature", None), "pos1", None) == "接尾辞"
+        )
+
+    def _is_name_piece(self, token: Any, *, linking: bool) -> bool:
+        """Whether a raw token can be part of a name: kanji only or katakana only, or (``linking``) a link."""
+        surface = token.surface
+        if linking and surface in self._NAME_CONNECTORS:
+            return True
+        return (
+            surface != "ー"
+            and self._NAME_PIECE_RE.fullmatch(surface) is not None
+            and getattr(getattr(token, "feature", None), "pos1", None) not in self._NAME_PIECE_EXCLUDED_POS1
+        )
+
+    def _file_names(self, labels: collections.Counter[str], honorifics: collections.Counter[str]) -> dict[str, str]:
+        """The names one file vouches for, each with its kind of evidence.
+
+        ``L``: two speaker labels, or one label and two honorifics. ``H``: the
+        name stands twice before an honorific. A name is 2 to 6 characters with
+        a kanji and no dictionary headword as written: a role (店員) and a word
+        that is also a name (森) stay words. Without a dictionary there is no
+        list.
         """
         if self._term_lookup is None:
             return {}
-        names = {
-            name: "L"
-            for name, count in labels.items()
-            if count >= 2 and self._FILE_NAME_RE.fullmatch(name) and self._FILE_NAME_KANJI_RE.search(name)
-        }
+        names: dict[str, str] = {}
+        for name in sorted({*labels, *honorifics}):
+            if not (self._FILE_NAME_RE.fullmatch(name) and self._FILE_NAME_KANJI_RE.search(name)):
+                continue
+            if labels[name] >= 2 or (labels[name] and honorifics[name] >= 2):
+                names[name] = "L"
+            elif honorifics[name] >= 2:
+                names[name] = "H"
         if not names:
             return {}
         listed = self._memoized_attest(sorted(names))
@@ -1839,6 +1905,10 @@ class SubtitleParserService:
         * No particle, auxiliary, pronoun or symbol.
         * Not a name the tagger knows and then a one-kanji rank, kin, house or
           group word (``_NAME_TITLE_TAILS``): 王 stays a card in 葛城|王.
+        * A name no label gives (``kind`` is not ``L``) is made of nouns, suffixes
+          and adjectival nouns, holds no numeral, and never ends in such a rank
+          or house word, whatever stands before it: a shop no dictionary lists
+          (鯖|屋 in 鯖屋さん) keeps its noun.
         """
         kanji = False
         known = 0
@@ -1850,6 +1920,8 @@ class SubtitleParserService:
                 continue
             if pos1 in self._NAME_PIECE_EXCLUDED_POS1 or (position == 0 and pos2 == "数詞"):
                 return False
+            if kind != "L" and (pos1 not in self._NAME_HONORIFIC_PIECE_POS1 or pos2 == "数詞"):
+                return False
             if pos2 == "固有名詞":
                 known += len(surface) >= 2
             elif len(surface) >= (3 if _is_all_katakana(surface) else 2):
@@ -1858,7 +1930,7 @@ class SubtitleParserService:
             if len(surface) == 1 and not holds_kanji:
                 return False
             kanji = kanji or holds_kanji
-        if known == len(tokens) - 1 and tokens[-1].surface in self._NAME_TITLE_TAILS:
+        if tokens[-1].surface in self._NAME_TITLE_TAILS and (kind != "L" or known == len(tokens) - 1):
             return False
         return kanji and known < len(tokens)
 

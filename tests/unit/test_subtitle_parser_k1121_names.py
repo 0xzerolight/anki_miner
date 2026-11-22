@@ -48,6 +48,7 @@ _HEADWORDS = (
     "乗る",
     "黒い",
     "王",
+    "姉上",
 )
 
 _LABELLED = [
@@ -225,3 +226,55 @@ class TestFileState:
         service._line_cache.clear()
         next(service._iter_parsed_lines(labelled))
         assert tokenized == ["森へ行こう"]
+
+
+class TestHonorificNames:
+    _LINES = [
+        "瑠偉斗先生は森さんと話した",
+        "瑠偉斗先生、瞳さんが呼んでいます",
+        "瑠偉斗が火と丸を描いた",
+        "水竜さん、こっちです",
+        "水竜さんは水を飲んだ",
+        "水竜が竜の巣に帰った",
+    ]
+
+    def test_a_name_twice_before_an_honorific_is_one_token(self, tmp_path: Path) -> None:
+        cards = dict(_line_cards(_service(), _srt(tmp_path / "honorific.srt", self._LINES)))
+        assert cards["瑠偉斗が火と丸を描いた"] == ["火", "丸", "描く"]
+        assert "水" not in cards["水竜さん、こっちです"]
+        assert cards["水竜さんは水を飲んだ"] == ["水", "飲む"]
+        assert cards["水竜が竜の巣に帰った"] == ["竜", "巣", "帰る"]
+
+    def test_the_whole_name_is_one_proper_noun(self, tmp_path: Path) -> None:
+        cards = dict(_line_cards(_service(_NAMES_MINED), _srt(tmp_path / "honorific.srt", self._LINES)))
+        assert cards["瑠偉斗が火と丸を描いた"] == ["瑠偉斗", "火", "丸", "描く"]
+        assert cards["水竜が竜の巣に帰った"] == ["水竜", "竜", "巣", "帰る"]
+
+    def test_once_before_an_honorific_is_no_evidence(self, tmp_path: Path) -> None:
+        path = _srt(tmp_path / "once.srt", ["水竜さん、こっちです", "水竜が竜の巣に帰った"])
+        assert "水" in dict(_line_cards(_service(), path))["水竜が竜の巣に帰った"]
+
+    def test_one_label_and_two_honorifics_make_a_labelled_name(self, tmp_path: Path) -> None:
+        # 冥|殿 ends in a rank word: a name where a label gives it, a word where only an honorific does.
+        lines = ["（冥殿）森へ行こう", "冥殿さん、待って", "冥殿さんが来た", "冥殿は森で待つ"]
+        cards = dict(_line_cards(_service(_NAMES_MINED), _srt(tmp_path / "label.srt", lines)))
+        assert cards["冥殿は森で待つ"] == ["冥殿", "森", "待つ"]
+        body = _srt(tmp_path / "body.srt", lines[1:])
+        assert _line_cards(_service(_NAMES_MINED), body) == _line_cards(_switched_off(_service(_NAMES_MINED)), body)
+
+    @pytest.mark.parametrize(
+        "lines",
+        [
+            ["お客様がお待ちです", "お客様は森にいる", "客が来た"],
+            ["社長さんが来た", "社長さんに会った", "社長は森にいる"],
+            ["姉上様がいらした", "姉上様に伝えて"],
+            # A shop word no dictionary lists: 鯖 keeps its card.
+            ["鯖屋さん、こんにちは", "鯖屋さんは優しい人だ", "鯖屋で鯖を買った"],
+            # A known name and a title: 王 keeps its card.
+            ["葛城王様が来た", "葛城王様に会った", "葛城王は森へ行く"],
+        ],
+    )
+    def test_a_word_before_an_honorific_is_no_name(self, lines: list[str], tmp_path: Path) -> None:
+        path = _srt(tmp_path / "words.srt", lines)
+        for config in (None, _NAMES_MINED):
+            assert _line_cards(_service(config), path) == _line_cards(_switched_off(_service(config)), path)
