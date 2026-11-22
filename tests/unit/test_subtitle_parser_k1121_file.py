@@ -333,3 +333,28 @@ class TestLineEndTics:
         service = _kana_service()
         assert (_mined(service, tic), _mined(service, once), _mined(service, tic)) == (*alone, alone[0])
         assert "ゲス" in [front for _sentence, front, _furigana in alone[1]]
+
+
+# Katakana words the dictionary lists; the second row is listed but not common.
+_RUN_COMMON = ("チーム", "セブン", "ターゲット", "ナイン", "サービス", "ドリンク", "キック", "アイス", "パンチ")
+_RUN_RARE = ("サンダー", "メガトン", "ソード", "ライド", "ウォッチ")
+
+
+def _run_service() -> SubtitleParserService:
+    spelled = {*_RUN_COMMON, *_RUN_RARE, *_KANA_VERBS, "頼む", "使う"}
+    return SubtitleParserService(
+        AnkiMinerConfig(),
+        term_lookup=lambda terms: spelled.intersection(terms),
+        kana_attest_lookup=lambda forms: {form: form in spelled for form in forms},
+        term_common_lookup=lambda terms: {term: term in _RUN_COMMON for term in terms},
+        name_piece_rejects=True,
+    )
+
+
+class TestKatakanaRunHoles:
+    def test_a_run_of_common_words_is_still_its_words(self) -> None:
+        assert {"サービス", "ドリンク"} <= set(_fronts(_run_service(), "サービスドリンクを頼んだ"))
+
+    @pytest.mark.parametrize("text", ["チームセブンが来た", "ターゲットナインを見た"])
+    def test_a_word_and_a_number_word_are_a_designation(self, text: str) -> None:
+        assert not {"チーム", "セブン", "ターゲット", "ナイン"} & set(_fronts(_run_service(), text))

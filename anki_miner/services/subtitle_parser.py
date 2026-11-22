@@ -5014,6 +5014,24 @@ class SubtitleParserService:
         }
     )
 
+    #: Katakana number words: after a word they make a call sign or a model (チーム|セブン), not two words.
+    _KATAKANA_NUMBER_WORDS: frozenset[str] = frozenset(
+        {
+            "ゼロ",
+            "ワン",
+            "ツー",
+            "スリー",
+            "フォー",
+            "ファイブ",
+            "シックス",
+            "セブン",
+            "エイト",
+            "ナイン",
+            "テン",
+            "イレブン",
+        }
+    )
+
     def _katakana_run_is_words(self, text: str, tok_start: int, tok_end: int, tokens: list | None) -> bool:
         """Whether the katakana run around a token is a row of common dictionary words, as the tagger cut it.
 
@@ -5028,8 +5046,9 @@ class SubtitleParserService:
           rare short word inside an unknown name (ライド|ウォッチ) fails here. A
           token the compound matcher made counts as listed, and a katakana verb
           the front fold cards (ゲーム|ヤラれた) is covered;
-        * the pieces are not one word said over (ベリーベリー), and the first is
-          no title (``_KATAKANA_TITLES``);
+        * the pieces are not one word said over (ベリーベリー), the first is no
+          title (``_KATAKANA_TITLES``), and none is a number word: a word and
+          a number are a call sign (チーム|セブン);
         * the run as a whole is listed neither by spelling nor as a reading;
         * no ・ or ゠ stands beside the run, and no honorific, suffix or one-kanji
           word follows it (スカイハートさん, ミクロリサーチ社);
@@ -5106,6 +5125,8 @@ class SubtitleParserService:
                 return False
             words.append(surface)
         if not words or (len(words) > 1 and len(set(words)) == 1) or words[0] in self._KATAKANA_TITLES:
+            return False
+        if self._KATAKANA_NUMBER_WORDS.intersection(words):
             return False
         if following is not None:
             surface, pos1 = following.surface, getattr(getattr(following, "feature", None), "pos1", None)
