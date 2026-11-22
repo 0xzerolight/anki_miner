@@ -76,6 +76,9 @@ _LISTED_READINGS: dict[str, set[str]] = {
     "後": {"あと", "ご", "のち", "うしろ"},
     "他": {"ほか", "た"},
     "時": {"とき", "じ"},
+    "通り": {"とおり", "どおり"},
+    "頃": {"ころ", "ごろ"},
+    "度": {"たび", "ど"},
 }
 
 
@@ -286,6 +289,48 @@ class TestPauseArtefacts:
             ("弾を込める時 気をつけろ", "時[とき]"),
             ("それとも 他に誰かいる", "他[ほか]"),
         ],
+    )
+    def test_the_sentence_ruby(self, sentence: str, ruby: str) -> None:
+        words = _words(sentence)
+        assert words
+        assert all(ruby in word.sentence_furigana for word in words.values())
+
+
+@needs_tagger
+class TestVoicedAfterANoun:
+    """通り and 頃 voice directly after a noun; 度 after a verb is たび."""
+
+    @pytest.mark.parametrize(
+        ("sentence", "surface", "kana"),
+        [
+            ("命令通りに動け", "通り", "ドオリ"),
+            ("銀座通りを歩く", "通り", "ドオリ"),
+            ("今まで通りに暮らす", "通り", "ドオリ"),
+            ("いつも通りだ", "通り", "ドオリ"),
+            ("思い通りになった", "通り", "ドオリ"),
+            ("言った通りにしろ", "通り", "トオリ"),
+            ("その通りだ", "通り", "トオリ"),
+            ("二通りある", "通り", "トオリ"),
+            ("通りを渡る", "通り", "トオリ"),
+            ("車の通りが多い", "通り", "トオリ"),
+            ("3時頃に来て", "頃", "ゴロ"),
+            ("来週頃に届く", "頃", "ゴロ"),
+            ("子供の頃の話", "頃", "コロ"),
+            ("若い頃は強かった", "頃", "コロ"),
+            ("描く度に人が変わる", "度", "タビ"),
+            ("3度目だ", "度", "ド"),
+        ],
+    )
+    def test_the_token_reading(self, sentence: str, surface: str, kana: str) -> None:
+        assert _kana(sentence, surface) == [kana]
+
+    def test_a_whole_word_takes_the_reading_in_every_kana_field(self) -> None:
+        token = next(t for t in _reread("命令通りに動け")[1] if t.surface == "通り")
+        assert {getattr(token.feature, name) for name in morphology._CONTEXT_KANA_FIELDS} == {"ドオリ"}
+
+    @pytest.mark.parametrize(
+        ("sentence", "ruby"),
+        [("命令通りに動け", "通[どお]り"), ("3時頃に来て", "頃[ごろ]"), ("描く度に人が変わる", "度[たび]")],
     )
     def test_the_sentence_ruby(self, sentence: str, ruby: str) -> None:
         words = _words(sentence)

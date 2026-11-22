@@ -804,6 +804,16 @@ _READING_CONTEXT: tuple[_ReadingRow, ...] = (
     _reading_row("時", _NOUN_POS, "ジ", "ジ", before="[0-9０-９〇一二三四五六七八九十]$"),
     _reading_row("時", _NOUN_POS, "ジ", "ジ", after="[一-鿿]"),
     _reading_row("時", _NOUN_POS, "ジ", "トキ"),
+    # 通り: どおり directly after a noun that is no numeral (命令通り, 銀座通り) and
+    # after いつも / まで; とおり after a verb, の and その (言った通り, その通り), after
+    # a numeral (二通り) and for the street by itself.
+    _reading_row("通り", _NOUN_POS, "トオリ", "ドオリ", prev=("名詞",)),
+    _reading_row("通り", _NOUN_POS, "トオリ", "ドオリ", before="(?:いつも|まで)$"),
+    # 頃: ごろ directly after a time word (３時頃, 来週頃); ころ after の, a verb, an
+    # adjective and あの.
+    _reading_row("頃", _NOUN_POS, "コロ", "ゴロ", prev=("名詞", "数詞", "接尾辞", "代名詞")),
+    # 度 directly after a verb is たび (描く度に).
+    _reading_row("度", _NOUN_POS, "ド", "タビ", prev=("動詞", "助動詞")),
     # 一日, １日: the tagger says ついたち, the first of the month. That is right
     # directly after a month (六月一日, 毎月１日); anywhere else it is one day.
     _reading_row("一日", _NOUN_POS, "ツイタチ", "ツイタチ", before="月$"),
@@ -898,11 +908,16 @@ def reread_in_context(tokens: list) -> list:
         if row is None or row.new == row.old:
             out.append(token)
             continue
-        fields = {
-            name: row.new + value[len(row.old) :]
-            for name in _CONTEXT_KANA_FIELDS
-            if isinstance(value := getattr(feature, name, None), str) and value.startswith(row.old)
-        }
+        if not row.base and kana == row.old:
+            # A whole word: every kana field takes the reading, as in
+            # ``reread_omote_tokens`` (``pron`` writes トオリ as トーリ, no prefix of it).
+            fields = {name: row.new for name in _CONTEXT_KANA_FIELDS if isinstance(getattr(feature, name, None), str)}
+        else:
+            fields = {
+                name: row.new + value[len(row.old) :]
+                for name in _CONTEXT_KANA_FIELDS
+                if isinstance(value := getattr(feature, name, None), str) and value.startswith(row.old)
+            }
         out.append(RetaggedToken(token, fields))
     return out
 
