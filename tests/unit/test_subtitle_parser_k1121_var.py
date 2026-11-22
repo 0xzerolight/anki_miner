@@ -363,8 +363,8 @@ class TestNeeAsTheNaiOfAnEntry:
     @pytest.mark.parametrize(
         "text",
         [
-            "じゃあ またねー",  # またない is no entry
-            "よくしてもらったもんねえ",  # もんない is only the reading of another word
+            "じゃあ みんな またねー",  # またない is no entry
+            "たくさん食べたもんねえ",  # もんない is only the reading of another word
             "それがねえ、困ったんだよ",
             "大変ねえ",
         ],
@@ -442,8 +442,8 @@ class TestShreddedStretch:
             ("ぬわーんだ", "ぬう"),  # nor does a run left out at a word's end
             ("どうかなぁって思う", "かなう"),  # a particle drawn out is that particle
             ("ぎいいー", "いい"),  # a stretch that ends its word shreds nothing
-            ("今日が最後だしーて思って", "しいて"),
-            ("まーつもーんかー", "つもる"),  # a verb stem at the stretch is a sound
+            ("明日は休みだしーて言った", "しいて"),
+            ("かーつもーんねー", "つもる"),  # a verb stem at the stretch is a sound
         ],
     )
     def test_a_stretch_makes_no_verb_of_sounds(self, text, front):

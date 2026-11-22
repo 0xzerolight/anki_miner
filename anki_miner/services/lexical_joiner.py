@@ -506,7 +506,7 @@ def _runs_on(headword: str, tokens: list, after: int) -> bool:
 
 
 def _misread_ja_nai(headword: str, tokens: list, start: int) -> bool:
-    """Whether や|ない is the tail of a じゃない written with a large や (いい頃じやない), not the Kansai やない."""
+    """Whether や|ない is the tail of a じゃない written with a large や (もう夏じやない), not the Kansai やない."""
     return headword == "やない" and start > 0 and tokens[start - 1].surface.endswith(("じ", "ゃ", "や"))
 
 

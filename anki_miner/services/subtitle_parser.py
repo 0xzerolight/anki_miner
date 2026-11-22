@@ -4682,7 +4682,7 @@ class SubtitleParserService:
     def _nan_is_cut_from_a_verb(word_token, tokens: list) -> bool:
         """Whether a kana なん is a piece of a contracted verb, not the word 何.
 
-        邪魔になんなよ is になるな and 気になんない is にならない; the Kansai かなんわ is
+        迷惑になんなよ is になるな and 気になんない is にならない; the Kansai かなんわ is
         かなわんわ. The tagger cuts なん out of each as the pronoun. 私になんの用 and
         これかなんの話 keep the word.
         """

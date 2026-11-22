@@ -127,7 +127,7 @@ def test_grammar_word_needs_mine_grammar_points(sentence: str, front: str) -> No
         ("本物じゃねえ", "じゃね"),
         ("本物じゃねとか言うな", "じゃね"),  # the line goes on
         ("そんな事じゃね 無理だ", "じゃね"),  # じゃ + ね before a mere space
-        ("いい頃じやない", "やない"),  # じゃない written with a large や
+        ("もう夏じやない", "やない"),  # じゃない written with a large や
         ("いいんじゃね？", "じゃね"),  # not after a noun
         ("本をうる", "うる"),  # 売る in kana, after を
     ],
@@ -607,7 +607,7 @@ def test_expression_on_nan_is_one_entry(sentence: str, front: str) -> None:
     assert "なん" not in fronts
 
 
-@pytest.mark.parametrize("sentence", ["邪魔になんなよ", "かなんわ"])
+@pytest.mark.parametrize("sentence", ["迷惑になんなよ", "かなんわ"])
 def test_nan_cut_from_a_contracted_verb_is_no_card(sentence: str) -> None:
     assert "なん" not in _fronts(sentence)
 
