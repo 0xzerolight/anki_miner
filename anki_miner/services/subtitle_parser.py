@@ -1829,7 +1829,10 @@ class SubtitleParserService:
         that would resolve another front is not taken: the resolver moves the
         highlight and never the card.
         """
-        if getattr(getattr(word_token, "feature", None), "written_base", None):
+        feature = getattr(word_token, "feature", None)
+        if getattr(feature, "pos1", None) not in ("動詞", "形容詞", "感動詞"):
+            return front_end  # nothing else has a chain
+        if getattr(feature, "written_base", None):
             return front_end  # a spoken idiom's end is the one of its written base
         end, _chain = find_highlight_end_with_trace(
             text, raw_tokens, tok_start, tok_end, word_token, additional_target=additional_target, chain_end=True

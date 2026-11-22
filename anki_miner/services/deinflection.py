@@ -381,7 +381,11 @@ def find_highlight_end_with_trace(
     if not targets:
         return tok_end, ()
 
-    deinflector = get_chain_end_deinflector() if chain_end else get_highlight_deinflector()
+    deinflector = get_highlight_deinflector()
+    # The resolver asks the highlight table first: what that accepts the END
+    # table accepts too, and the pass that found the front's end has memoized
+    # its results for these texts.
+    tables = (deinflector, get_chain_end_deinflector()) if chain_end else (deinflector,)
     mask = deinflector.mask_for_ctype(getattr(feature, "cType", None))
     additional_mask = mask
     if (
@@ -409,9 +413,13 @@ def find_highlight_end_with_trace(
     for candidate in reversed(candidates):  # longest-first
         # A stretched tail (歩い|たぁ, 食べ|ねー) is the chain of its plain spelling.
         for spelling in _unstretched_forms(stem + candidate.tail, floor):
-            chain = _reaching_chain(deinflector, spelling, targets, mask, additional_target, additional_mask)
-            if chain is None and kana_targets:
-                chain = _reaching_chain(deinflector, kana_stem + spelling[floor:], kana_targets, mask, None, 0)
+            chain = None
+            for table in tables:
+                chain = _reaching_chain(table, spelling, targets, mask, additional_target, additional_mask)
+                if chain is None and kana_targets:
+                    chain = _reaching_chain(table, kana_stem + spelling[floor:], kana_targets, mask, None, 0)
+                if chain is not None:
+                    break
             if chain is None:
                 continue
             if chain_end and _chain_end_gate(candidate, chain, getattr(feature, "pos1", None)):
