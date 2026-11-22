@@ -47,6 +47,9 @@ _GRAMMAR_LINES = (
     ("宿題をしなければならない", "ならない"),
     ("行かなきゃならん", "ならん"),
     ("書かなければなりません", "なりません"),
+    ("猫みたいだ", "みたい"),
+    ("いいじゃないか", "じゃないか"),
+    ("そうでしょうか", "でしょうか"),
 )
 
 #: Joined expressions and connectives that are no grammar points: always mined.

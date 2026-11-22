@@ -16,7 +16,7 @@ from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from functools import lru_cache
 from types import SimpleNamespace
-from typing import Any, Iterator
+from typing import Any, Iterator, NamedTuple
 
 from anki_miner.languages.token import LanguageToken
 from anki_miner.utils.ja_normalize import is_cjk_ideograph
@@ -162,61 +162,15 @@ def resolve_special_reading(head_surface: str, next_surface: str | None) -> str 
 
 # Curated per-spelling reading corrections for unidic-lite misreadings. Keyed by
 # (card-front spelling, hiragana-folded UniDic reading) → corrected hiragana
-# reading. Unlike the context-licensed kinship table above, each listed spelling
-# reads its wrong value in EVERY context — no correct-reading token exists to
-# protect — so the remap is unconditional. Applied in ``_emit_word``'s Expression
-# fields (both the mined==surface branch and the headword-derived else-branch).
-# Evidence probed on the shipping unidic-lite dictionary (2026-07):
-#   (一日, ついたち) → いちにち: UniDic emits ツイタチ for the merged 一日 token in
-#       every context (incl. ２４時間の一日); the calendar-date sense loss is
-#       documented and accepted (standalone 一日 tokenizes as 一+日, unaffected).
-#   (仏, ふつ) → ほとけ: UniDic emits フツ (the 仏=France abbreviation reading)
-#       universally; no "leave ほとけ alone" token exists — France-sense loss accepted.
-#   (不味い, まじい) → まずい: UniDic reads 不味い マジイ in every context. Its
-#       kana spelling マズい needs no row (a kana surface is its own reading, see
-#       ``extract_reading``), but a マズい card's lemma_reading is 不味い's.
+# reading; unconditional, applied in ``_emit_word``'s Expression fields. One row
+# is left. Every other reading the tagger gets wrong on a token of its own (私,
+# 明日, 日本, 仏, 蛙, 一日, 言う, 不味い) is a row of ``_READING_CONTEXT``, corrected
+# on the raw stream, so a merged spelling (私たち, 日本語, そう言う) inherits it
+# and the sentence ruby agrees with the card.
 #   (込む, ごむ) → こむ: the isolated 込む verb misreads as the loanword ゴム
 #       (rubber); compounds (飲み込む→のみこむ) read correctly and are untouched.
-#   (私, わたくし) → わたし: UniDic emits ワタクシ for 私 in every context, so
-#       every 私 card read わたくし; the formal-speech sense loss is accepted, and
-#       わたし matches the ワタシ fold in models/word.py.
-#   (私たち/私達, わたくしたち) → わたしたち: the merged front carries the same
-#       ワタクシ head, which the 私 entry (keyed on the bare spelling) misses.
-#   (明日, あす) → あした, (その後, そのご) → そのあと: UniDic emits the formal
-#       variant (アス always; ゴ before a comma); a card takes JMdict's first
-#       reading, and the formal-register loss is accepted as for 私.
-#   (何, なん) → なに, (何か, なんか) → なにか: UniDic emits ナン for 何 in every
-#       context, 何を and 何が included; the card shows the headword reading, and
-#       the なん of 何だ/何で is accepted as lost.
-#   (言う, ゆう) → いう, (そう言う, そうゆう) → そういう: UniDic reads 言う ユウ
-#       after そう; a kanji 言う never reads ゆう on a card.
-#   (蛙, かわず) → かえる: UniDic emits the poetic カワズ in every context.
-#   (日本語/日本人, にっぽん…) → にほん…: UniDic reads 日本 ニッポン, and the
-#       dictionary attests both readings, so the merge keeps the rarer one.
-#   (１日, ついたち) → いちにち: the digit spelling keeps its own front, so the
-#       一日 row misses it. The one row with a context: after a month it stays
-#       the date (``resolve_reading_override_in_line``).
 _READING_OVERRIDES: dict[tuple[str, str], str] = {
-    ("一日", "ついたち"): "いちにち",
-    ("仏", "ふつ"): "ほとけ",
-    ("不味い", "まじい"): "まずい",
     ("込む", "ごむ"): "こむ",
-    ("私", "わたくし"): "わたし",
-    ("私たち", "わたくしたち"): "わたしたち",
-    ("私達", "わたくしたち"): "わたしたち",
-    ("明日", "あす"): "あした",
-    ("その後", "そのご"): "そのあと",
-    ("何", "なん"): "なに",
-    ("何か", "なんか"): "なにか",
-    ("何も", "なんも"): "なにも",
-    ("何もかも", "なんもかも"): "なにもかも",
-    ("言う", "ゆう"): "いう",
-    ("そう言う", "そうゆう"): "そういう",
-    ("蛙", "かわず"): "かえる",
-    ("日本", "にっぽん"): "にほん",
-    ("日本語", "にっぽんご"): "にほんご",
-    ("日本人", "にっぽんじん"): "にほんじん",
-    ("１日", "ついたち"): "いちにち",
 }
 
 
@@ -233,20 +187,6 @@ def resolve_reading_override(spelling: str, derived_reading: str) -> str | None:
     this returns an unconditional hiragana correction.
     """
     return _READING_OVERRIDES.get((spelling, derived_reading))
-
-
-def resolve_reading_override_in_line(spelling: str, derived_reading: str, text_before: str) -> str | None:
-    """``resolve_reading_override`` for a token whose line is known.
-
-    ``text_before`` is the line up to the token. The digit spelling １日 is the
-    one row with a context where the tagger is right: directly after a month
-    (３月１日, 毎月１日) it is the date ついたち, so the row is skipped there and
-    'one day' (今日１日, あと１日) takes it everywhere else. The card and the
-    sentence ruby both ask here, so they agree.
-    """
-    if spelling == "１日" and text_before.endswith("月"):
-        return None
-    return resolve_reading_override(spelling, derived_reading)
 
 
 def apply_special_readings(tokens: list) -> list:
@@ -738,6 +678,367 @@ def reread_omote_tokens(tokens: list) -> list:
             out.append(token)
             continue
         out.append(RetaggedToken(token, dict.fromkeys(_OMOTE_KANA_FIELDS, "オモテ")))
+    return out
+
+
+class _ReadingRow(NamedTuple):
+    """One row of ``_READING_CONTEXT``: a reading the tagger gave and what it becomes.
+
+    ``word`` is the token surface, ``pos1`` the part of speech the tagger must
+    have given, ``old`` the katakana it gave (a prefix of ``feature.kana``) and
+    ``new`` what replaces that prefix; with ``base`` set, ``word`` is instead the
+    dictionary form of a verb or adjective (the tagger lemma, else the form as
+    written) and the token must start with its first character. A row whose
+    ``new`` equals ``old`` keeps
+    the tagger's reading. Every test a row names must hold. ``before`` is
+    searched in the line up to the token, trailing spaces dropped; ``after`` is
+    matched at the start of the line after it, so a subtitle space there fails
+    it; ``prev`` and ``nxt`` name the class of the token attached directly
+    before and after (its part of speech; 数詞 for a numeral before, 助数詞 for a
+    counter after); ``line`` is searched anywhere in the line.
+    """
+
+    word: str
+    pos1: tuple[str, ...]
+    old: str
+    new: str
+    before: re.Pattern[str] | None
+    after: re.Pattern[str] | None
+    prev: tuple[str, ...]
+    nxt: tuple[str, ...]
+    line: re.Pattern[str] | None
+    base: bool
+
+
+def _reading_row(
+    word: str,
+    pos1: tuple[str, ...],
+    old: str,
+    new: str,
+    *,
+    before: str = "",
+    after: str = "",
+    prev: tuple[str, ...] = (),
+    nxt: tuple[str, ...] = (),
+    line: str = "",
+    base: bool = False,
+) -> _ReadingRow:
+    """A ``_READING_CONTEXT`` row with its patterns compiled."""
+    return _ReadingRow(
+        word,
+        pos1,
+        old,
+        new,
+        re.compile(before) if before else None,
+        re.compile(after) if after else None,
+        prev,
+        nxt,
+        re.compile(line) if line else None,
+        base,
+    )
+
+
+_WHAT_POS = ("代名詞", "名詞")
+_NOUN_POS = ("名詞",)
+_CONTEXT_KANA_FIELDS = ("kana", "kanaBase", "lForm", "pron", "pronBase", "form", "formBase")
+
+#: Readings the line decides. Rows of one word are tried in order and the first
+#: whose tests all hold decides. Every row is one hand-written statement about
+#: Japanese; none is computed from subtitle files.
+_READING_CONTEXT: tuple[_ReadingRow, ...] = (
+    # 何: the tagger says なん wherever it stands. It is なん before the copula and
+    # the particles で, と, の, て, って, じゃ, や (何だ, 何ですか, 何の話, 何て, 何なの,
+    # 何なら), before ら and before a counter (何回, 何人); なに everywhere else (何を,
+    # 何が, 何か, 何も, 何に, 何よ, a verb, the line end). の must be the next TOKEN,
+    # the particle: in 何のんきな it starts another word. The other kana are read
+    # off the text, because the tagger cuts 何やかんや and 何なりと in odd places.
+    # 何と with a second question word or a partner's verb is なにと (何と何, 何と戦う).
+    _reading_row(
+        "何", _WHAT_POS, "ナン", "ナニ", after="と(?:何|誰|だれ|どれ|どっち|どちら|戦|闘|比べ|一緒|交換|間違|勘違|関係)"
+    ),
+    _reading_row("何", _WHAT_POS, "ナン", "ナン", nxt=("助詞",), after="の"),
+    _reading_row(
+        "何",
+        _WHAT_POS,
+        "ナン",
+        "ナン",
+        after="(?:だ|で|と|て|って|な[のんらり]|じゃ|ら(?![しれ])|や(?![っりるれろら])|っ?[すス](?:か|よ|ね)|ちゅう|つう|っつ)",
+    ),
+    _reading_row(
+        "何",
+        _WHAT_POS,
+        "ナン",
+        "ナン",
+        after="(?:[度回時人日年月分秒歳才個本枚匹階番倍割件円曜十百千万億遍等]|べん|ぺん|どき|[かヶカヵ箇]月)",
+    ),
+    _reading_row("何", _WHAT_POS, "ナン", "ナン", nxt=("助数詞",)),
+    _reading_row("何", _WHAT_POS, "ナン", "ナニ"),
+    # 何時 as one token: the tagger says なんどき, which lives on in いつ何時; asked
+    # of the clock it is なんじ (今何時ですか).
+    _reading_row("何時", _NOUN_POS, "ナンドキ", "ナンドキ", before="いつ$"),
+    _reading_row("何時", _NOUN_POS, "ナンドキ", "ナンジ"),
+    # 私: the tagger says わたくし wherever it stands; a card takes わたし, as the
+    # ワタシ fold in models/word.py does. The humble 私ども and 私め keep わたくし,
+    # and so does a humble or ladylike line (ございます, 申します, 参ります, 存じます,
+    # …ですわ, ごきげんよう; the greetings ありがとうございます, おはようございます and
+    # おめでとうございます are everybody's).
+    _reading_row("私", ("代名詞",), "ワタクシ", "ワタクシ", after="(?:ども|共)"),
+    _reading_row("私", ("代名詞",), "ワタクシ", "ワタクシ", after="め", nxt=("接尾辞",)),
+    _reading_row(
+        "私",
+        ("代名詞",),
+        "ワタクシ",
+        "ワタクシ",
+        line="(?<!ありがとう)(?<!おはよう)(?<!めでとう)ございま|申しま|申し上げ|参りま|致しま|いたしま|存じま|ですわ|ますわ(?!け)|ませんわ|ましたわ|ましてよ|くださいまし(?!た)|あそばせ|ごきげんよう",
+    ),
+    _reading_row("私", ("代名詞",), "ワタクシ", "ワタシ"),
+    # 明日: the tagger says the formal あす; a card takes the everyday あした.
+    _reading_row("明日", _NOUN_POS, "アス", "アシタ"),
+    # 日本: the tagger says にっぽん; 日本語, 日本人 and 日本一 follow the token.
+    # 大日本 keeps にっぽん.
+    _reading_row("日本", _NOUN_POS, "ニッポン", "ニッポン", before="大$"),
+    _reading_row("日本", _NOUN_POS, "ニッポン", "ニホン"),
+    # 仏: the tagger says ふつ (France) for the Buddha.
+    _reading_row("仏", _NOUN_POS, "フツ", "ホトケ"),
+    # 蛙: the tagger says the poetic かわず, which is right in the proverb 井の中の蛙.
+    _reading_row("蛙", _NOUN_POS, "カワズ", "カワズ", before="井の中の$"),
+    _reading_row("蛙", _NOUN_POS, "カワズ", "カエル"),
+    # 後 the noun is あと (この後、 その後、 後三年かかる). ご is the suffix of ３日後,
+    # which is no noun token; the tagger says ご for the noun before a pause.
+    _reading_row("後", _NOUN_POS, "ゴ", "アト"),
+    # 他: た in その他 and directly before a kanji or katakana noun (他チーム). The
+    # tagger also says た after a subtitle space (それとも 他に), where it is ほか.
+    _reading_row("他", _NOUN_POS, "タ", "タ", before="その$"),
+    _reading_row("他", _NOUN_POS, "タ", "タ", after="[一-鿿ァ-ヺ]"),
+    _reading_row("他", _NOUN_POS, "タ", "ホカ"),
+    # 時 the noun is とき; じ stands on a numeral or a noun (３時, 緊急時) and
+    # inside a longer word. The tagger also says じ before a subtitle space
+    # (込める時 気をつけろ).
+    _reading_row("時", _NOUN_POS, "ジ", "ジ", prev=("名詞", "数詞", "接尾辞", "接頭辞", "記号", "代名詞")),
+    _reading_row("時", _NOUN_POS, "ジ", "ジ", before="[0-9０-９〇一二三四五六七八九十]$"),
+    _reading_row("時", _NOUN_POS, "ジ", "ジ", after="[一-鿿]"),
+    _reading_row("時", _NOUN_POS, "ジ", "トキ"),
+    # 通り: どおり directly after a noun that is no numeral (命令通り, 銀座通り) and
+    # after いつも / まで; とおり after a verb, の and その (言った通り, その通り), after
+    # a numeral (二通り) and for the street by itself.
+    _reading_row("通り", _NOUN_POS, "トオリ", "ドオリ", prev=("名詞",)),
+    _reading_row("通り", _NOUN_POS, "トオリ", "ドオリ", before="(?:いつも|まで)$"),
+    # 頃: ごろ directly after a time word (３時頃, 来週頃); ころ after の, a verb, an
+    # adjective and あの.
+    _reading_row("頃", _NOUN_POS, "コロ", "ゴロ", prev=("名詞", "数詞", "接尾辞", "代名詞")),
+    # 度 directly after a verb is たび (描く度に).
+    _reading_row("度", _NOUN_POS, "ド", "タビ", prev=("動詞", "助動詞")),
+    # お家 is おうち, the home (お家に帰ろう); the clan of a period piece keeps おいえ
+    # (お家騒動, お家のため, お家を守る, お家断絶, and any line in a samurai's words).
+    _reading_row(
+        "家",
+        _NOUN_POS,
+        "イエ",
+        "イエ",
+        before="お$",
+        prev=("接頭辞",),
+        after="(?:の(?:ため|為|不為|一大事|大事|恥|名|名誉|存続|存亡|再興|安泰)|を(?:守|潰|継|絶や|再興)|が(?:潰|絶|滅)"
+        "|ご?(?:断絶|再興|取り潰し|騒動|存続|安泰|大事)|第一)",
+    ),
+    _reading_row(
+        "家",
+        _NOUN_POS,
+        "イエ",
+        "イエ",
+        before="お$",
+        prev=("接頭辞",),
+        line="わし|拙者|殿|藩|家老|家臣|ござ[るり]|奉公|主君",
+    ),
+    _reading_row("家", _NOUN_POS, "イエ", "ウチ", before="お$", prev=("接頭辞",)),
+    # 術: すべ, a way to do it, directly after a verb and before が, は, も, を or
+    # なし (知る術がない, 為す術もなく, 勝つ術を探す); it stays じゅつ, a technique,
+    # after a verb of casting one (使う術, かける術), after ある and before に
+    # (煽る術にはまる). After の the tagger says すべ, where it is じゅつ (忍びの術),
+    # but not after ための.
+    _reading_row(
+        "術",
+        _NOUN_POS,
+        "ジュツ",
+        "ジュツ",
+        before="(?:使|かけ|掛け|覚え|編み出|放|操|施|唱え|扱|封じ|破|解|習|会得|発動|仕掛け)[ぁ-ん]*$",
+    ),
+    _reading_row("術", _NOUN_POS, "ジュツ", "ジュツ", before="ある$"),
+    _reading_row(
+        "術", _NOUN_POS, "ジュツ", "スベ", prev=("動詞",), after="(?:が|は|も|すら|さえ|を|な[しいく]|無[しいく])"
+    ),
+    _reading_row("術", _NOUN_POS, "スベ", "ジュツ", before="(?<!ため)(?<!為)の$"),
+    # 敵: かたき, the one to take revenge on, after a family member or comrade + の
+    # (親の敵) and before を取る / を討つ; てき elsewhere (敵を取り囲む, 敵を討ち取る,
+    # and a kana うつ, which may be 撃つ).
+    _reading_row(
+        "敵",
+        _NOUN_POS,
+        "テキ",
+        "カタキ",
+        before="(?:親|父|母|兄|弟|姉|妹|夫|妻|友|仲間|師匠|主君|両親|家族|父上|母上|兄上|姉上|父さん|母さん|兄さん|姉さん|息子|娘)の$",
+    ),
+    _reading_row("敵", _NOUN_POS, "テキ", "カタキ", after="を(?:取[っるれろら]|討(?!ち取)|とっ|とる|とれ)"),
+    # 宴 alone is うたげ; えん in 宴もたけなわ.
+    _reading_row("宴", _NOUN_POS, "エン", "エン", after="も?\\s*(?:たけなわ|酣)"),
+    _reading_row("宴", _NOUN_POS, "エン", "ウタゲ"),
+    # 下: もと, under an authority or a condition, after such a noun + の and
+    # before に, で or a pause (法の下に, 指導の下で); した is the place below.
+    _reading_row(
+        "下",
+        _NOUN_POS,
+        "シタ",
+        "モト",
+        before="(?:名|法|旗|指揮|指導|監督|管理|支配|庇護|保護|命令|許可|条件|名目|約束|契約|監視|体制|名義|合意|了解|旗印|大義|統治|指示|管轄|加護|導き)の$",
+        after="(?:に|で|、|$)",
+    ),
+    # 主: あるじ, the master of a house, after 家, 店, 城, 館, 屋敷, 宿 + の; ぬし
+    # elsewhere (森の主).
+    _reading_row("主", _NOUN_POS, "ヌシ", "アルジ", before="(?:家|店|城|館|屋敷|宿|一家)の$"),
+    # 側: そば, beside someone, before にいる, に置く, を離れる, から離れる when it
+    # opens the phrase or follows a person + の (側にいて, 俺の側を離れるな); がわ
+    # attached to the word before it (知ってる側, こちら側) and elsewhere (正義の側にいる).
+    _reading_row(
+        "側", _NOUN_POS, "ガワ", "ガワ", prev=("動詞", "助動詞", "代名詞", "名詞", "連体詞", "形容詞", "接尾辞")
+    ),
+    _reading_row(
+        "側",
+        _NOUN_POS,
+        "ガワ",
+        "ソバ",
+        before="(?:(?<!の)|(?:俺|私|僕|君|お前|あなた|あんた|彼|彼女|あいつ|こいつ|そいつ|誰か?|自分|様|さん|ちゃん|くん|たち|ら)の)$",
+        after="(?:にい|に居|に置|を離|から離)",
+    ),
+    # 留まる: とどまる, to stay; とまる where something catches the eye, perches or
+    # fastens (目に留まる, 木に留まる, ボタンが留まる).
+    _reading_row(
+        "留まる",
+        ("動詞",),
+        "トマ",
+        "トマ",
+        base=True,
+        before="(?:(?:目|耳|心|気|木|枝|肩|指|手|頭|腕|背|電線|花|葉|竿|柵)に(?:も)?"
+        "|(?:ボタン|ホック|ファスナー|ピン|クリップ|鳥|蝶|虫|蜂|蝉|ハエ)(?:が|は|も))$",
+    ),
+    _reading_row("留まる", ("動詞",), "トマ", "トドマ", base=True),
+    # 空く: すく, to get empty, of the stomach (お腹が空いた); あく elsewhere (席が空いた).
+    _reading_row("空く", ("動詞",), "ア", "ス", base=True, before="(?:お腹|腹|おなか|小腹)(?:が|も|を|は|の)?$"),
+    # 開く: あく of what opens by itself (穴, ドア, 窓, 鍵, 店, with が or no
+    # particle; 目, 口, 幕 as words of their own with が); ひらく elsewhere (本を開いた,
+    # 口を開くな, 傷口が開いた) and always in the passive (開かれる).
+    _reading_row("開く", ("動詞",), "ヒラ", "ヒラ", base=True, after="れ"),
+    _reading_row(
+        "開く",
+        ("動詞",),
+        "ヒラ",
+        "ア",
+        base=True,
+        before="(?:(?:穴|ドア|戸|窓|鍵|蓋|ふた|フタ|店|瓶|ビン|襖|引き出し|シャッター|ロック|錠)(?:が|の|も|は)?|(?<![一-鿿])(?:目|口|幕)が)$",
+    ),
+    # 一日, １日: the tagger says ついたち, the first of the month. That is right
+    # directly after a month (六月一日, 毎月１日); anywhere else it is one day.
+    _reading_row("一日", _NOUN_POS, "ツイタチ", "ツイタチ", before="月$"),
+    _reading_row("一日", _NOUN_POS, "ツイタチ", "イチニチ"),
+    _reading_row("１日", _NOUN_POS, "ツイタチ", "ツイタチ", before="月$"),
+    _reading_row("１日", _NOUN_POS, "ツイタチ", "イチニチ"),
+    # 言う: the tagger says ゆう after そう and for the headword read alone; a
+    # kanji 言う never reads ゆう on a card.
+    _reading_row("言う", ("動詞",), "ユウ", "イウ", base=True),
+    # 不味い: the tagger says まじい for the plain form.
+    _reading_row("不味い", ("形容詞",), "マジイ", "マズイ", base=True),
+)
+_READING_CONTEXT_BY_SURFACE: dict[str, tuple[_ReadingRow, ...]] = {
+    word: tuple(row for row in _READING_CONTEXT if row.word == word)
+    for word in {row.word for row in _READING_CONTEXT if not row.base}
+}
+_READING_CONTEXT_BY_BASE: dict[str, tuple[_ReadingRow, ...]] = {
+    word: tuple(row for row in _READING_CONTEXT if row.word == word)
+    for word in {row.word for row in _READING_CONTEXT if row.base}
+}
+_READING_CONTEXT_HEADS = frozenset(row.word[0] for row in _READING_CONTEXT)
+
+
+def _reading_rows(surface: str, feature: Any) -> tuple[_ReadingRow, ...] | None:
+    """The table rows of a token: by its surface, else by its dictionary form."""
+    rows = _READING_CONTEXT_BY_SURFACE.get(surface)
+    if rows is not None:
+        return rows
+    for base in (getattr(feature, "lemma", None), getattr(feature, "orthBase", None)):
+        if isinstance(base, str) and base[:1] == surface[:1] and base in _READING_CONTEXT_BY_BASE:
+            return _READING_CONTEXT_BY_BASE[base]
+    return None
+
+
+def _context_class(token: Any, counter: bool) -> str:
+    """What a row's ``prev`` / ``nxt`` test calls *token*: 数詞, 助数詞, else its part of speech."""
+    feature = getattr(token, "feature", None)
+    pos2 = getattr(feature, "pos2", None)
+    if counter:
+        if any(isinstance(pos, str) and "助数詞" in pos for pos in (pos2, getattr(feature, "pos3", None))):
+            return "助数詞"
+    elif pos2 == "数詞":
+        return "数詞"
+    pos1 = getattr(feature, "pos1", None)
+    return pos1 if isinstance(pos1, str) else ""
+
+
+def reread_in_context(tokens: list) -> list:
+    """Read each token the way its line asks, by ``_READING_CONTEXT``.
+
+    unidic-lite reads some words one way wherever they stand (何 is ナン in 何を
+    and in 何だ alike). A row names the word, the reading the tagger gave and
+    the tests on the line under which that reading changes or stays. On the raw
+    stream and before the merges: a merge joins its tokens' kana, so the card,
+    a joined headword and the sentence ruby agree. Only the kana fields change,
+    on a ``RetaggedToken``; a token no row changes passes by identity, and a
+    line without a table word is returned as the same list.
+    """
+    if not any(isinstance(token.surface, str) and token.surface[:1] in _READING_CONTEXT_HEADS for token in tokens):
+        return tokens
+    spaces = [space if isinstance(space := getattr(token, "white_space", ""), str) else "" for token in tokens]
+    surfaces = [token.surface if isinstance(token.surface, str) else "" for token in tokens]
+    out: list = []
+    before = ""
+    for i, token in enumerate(tokens):
+        context = before + spaces[i]
+        before = context + surfaces[i]
+        feature = getattr(token, "feature", None)
+        kana = getattr(feature, "kana", None)
+        rows = _reading_rows(surfaces[i], feature) if surfaces[i][:1] in _READING_CONTEXT_HEADS else None
+        if rows is None or not isinstance(kana, str) or not hasattr(feature, "_replace"):
+            out.append(token)
+            continue
+        pos1 = getattr(feature, "pos1", None)
+        after = "".join(space + surface for space, surface in zip(spaces[i + 1 :], surfaces[i + 1 :], strict=True))
+        prev = _context_class(tokens[i - 1], False) if i and not spaces[i] else ""
+        nxt = _context_class(tokens[i + 1], True) if i + 1 < len(tokens) and not spaces[i + 1] else ""
+        row = next(
+            (
+                candidate
+                for candidate in rows
+                if pos1 in candidate.pos1
+                and kana.startswith(candidate.old)
+                and (not candidate.prev or prev in candidate.prev)
+                and (not candidate.nxt or nxt in candidate.nxt)
+                and (candidate.before is None or candidate.before.search(context.rstrip()))
+                and (candidate.after is None or candidate.after.match(after))
+                and (candidate.line is None or candidate.line.search(before + after))
+            ),
+            None,
+        )
+        if row is None or row.new == row.old:
+            out.append(token)
+            continue
+        if not row.base and kana == row.old:
+            # A whole word: every kana field takes the reading, as in
+            # ``reread_omote_tokens`` (``pron`` writes トオリ as トーリ, no prefix of it).
+            fields = {name: row.new for name in _CONTEXT_KANA_FIELDS if isinstance(getattr(feature, name, None), str)}
+        else:
+            fields = {
+                name: row.new + value[len(row.old) :]
+                for name in _CONTEXT_KANA_FIELDS
+                if isinstance(value := getattr(feature, name, None), str) and value.startswith(row.old)
+            }
+        out.append(RetaggedToken(token, fields))
     return out
 
 
@@ -1326,6 +1627,8 @@ def retag_mistagged_tokens(tokens: list, form_lookup: FormLookup | None = None) 
       adjective 良い (``_clause_final_ii_fields``).
     - か + なっ glued into かなっ (適う) after なんと, 何と or どうに is cut in two
       (``_glued_ka_naru``).
+    - A godan imperative + よ read as one word, a form of the potential verb
+      (行けよ, 待てよ), is cut in two (``_potential_imperative_yo``).
     - A kana verb filed under a homophone's lemma (おごる under 驕る) takes
       the lemma of the verb it is (``_kana_homophone_fields``).
     - 若 read as the stem of 若い where a pause or a case particle follows is the
@@ -1366,7 +1669,7 @@ def retag_mistagged_tokens(tokens: list, form_lookup: FormLookup | None = None) 
             fields = _PREFIX_NOUNS.get(token.surface)
         elif token.surface in nouns and _unknown_katakana_noun(token):
             fields = dict.fromkeys(("lemma", "orthBase", "kana"), token.surface)
-        if fields is None and (pieces := _glued_ka_naru(tokens, i)) is not None:
+        if fields is None and (pieces := _glued_ka_naru(tokens, i) or _potential_imperative_yo(tokens, i)) is not None:
             out.extend(pieces)
             continue
         if fields is None:
@@ -1547,6 +1850,63 @@ def _glued_ka_naru(tokens: list, i: int) -> tuple[RetaggedToken, RetaggedToken] 
     stem = RetaggedToken(token, _NARU_STEM, "なっ")
     stem.white_space = ""
     return RetaggedToken(token, _KA_PARTICLE, "か"), stem
+
+
+#: The fields unidic-lite gives the sentence-final particle よ.
+_YO_PARTICLE: dict[str, str] = {
+    "pos1": "助詞",
+    "pos2": "終助詞",
+    "pos3": "*",
+    "pos4": "*",
+    "cType": "*",
+    "cForm": "*",
+    **dict.fromkeys(("lemma", "orth", "orthBase"), "よ"),
+    **dict.fromkeys(("lForm", "pron", "pronBase", "kana", "kanaBase", "form", "formBase"), "ヨ"),
+}
+#: The last kana of a godan verb's imperative (行け, 言え) with the one of the verb (行く, 言う).
+_GODAN_IMPERATIVE_ENDINGS: dict[str, str] = dict(zip("えけげせてねべめれ", "うくぐすつぬぶむる", strict=True))
+_GODAN_IMPERATIVE_ENDINGS_KATAKANA: dict[str, str] = dict(zip("エケゲセテネベメレ", "ウクグスツヌブムル", strict=True))
+
+
+def _potential_imperative_yo(tokens: list, i: int) -> tuple[RetaggedToken, RetaggedToken] | None:
+    """The imperative and the よ of a 行けよ the tagger read as one word, or None.
+
+    The tagger makes 行けよ, 待てよ and 言えよ a form in よ of the potential verb
+    (行ける), which nobody says: they are the godan imperative 行け and the
+    sentence-final よ. Such a token names the godan verb as its lemma and reads
+    its own base as that verb's potential (イク, イケル). An ichidan verb's own
+    よ form (答えよ, 続けよ, 忘れよ) has one reading for both and stays whole.
+    """
+    token = tokens[i]
+    feature = getattr(token, "feature", None)
+    surface = token.surface
+    if getattr(feature, "pos1", None) != "動詞" or not isinstance(surface, str) or len(surface) < 3:
+        return None
+    ctype = getattr(feature, "cType", None)
+    if not (isinstance(ctype, str) and ctype.startswith("下一段")) or not surface.endswith("よ"):
+        return None
+    if getattr(feature, "cForm", None) not in ("命令形", "意志推量形") or surface[-2] not in _GODAN_IMPERATIVE_ENDINGS:
+        return None
+    lemma_kana, base_kana = getattr(feature, "lForm", None), getattr(feature, "kanaBase", None)
+    if not (isinstance(lemma_kana, str) and isinstance(base_kana, str) and base_kana.endswith("ル")):
+        return None
+    if _GODAN_IMPERATIVE_ENDINGS_KATAKANA.get(base_kana[-2:-1]) != lemma_kana[-1:] or base_kana[:-2] != lemma_kana[:-1]:
+        return None
+    stem = surface[:-1]
+    fields = {
+        "cType": "五段-" + ("ワア行" if ctype.endswith("ア行") else ctype.partition("-")[2]),
+        "cForm": "命令形",
+        "orth": stem,
+        "orthBase": stem[:-1] + _GODAN_IMPERATIVE_ENDINGS[stem[-1]],
+        **dict.fromkeys(("pronBase", "kanaBase", "formBase"), lemma_kana),
+    }
+    for name in ("pron", "kana", "form"):
+        value = getattr(feature, name, None)
+        if isinstance(value, str) and value.endswith("ヨ"):
+            fields[name] = value[:-1]
+    particle = RetaggedToken(token, _YO_PARTICLE, "よ")
+    particle.white_space = ""
+    return RetaggedToken(token, fields, stem), particle
 
 
 #: The fields unidic-lite gives the adjective いい (良い 'good, fine').

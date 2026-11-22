@@ -46,7 +46,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from functools import lru_cache
-from typing import Any, Callable, Iterable, Iterator, Mapping, Sequence
+from typing import Any, Callable, Iterable, Iterator, Mapping, NamedTuple, Sequence
 
 from anki_miner.utils.text_utils import katakana_to_hiragana
 
@@ -291,6 +291,20 @@ def _str_or_none(value: object) -> str | None:
     return value if isinstance(value, str) and value else None
 
 
+class _ChainEnd(NamedTuple):
+    """One place the chain after a mined token may end."""
+
+    end: int
+    # The text between the token and ``end`` as the table reads it.
+    tail: str
+    # The last tail token is the sentence-final particle よ, or an imperative that ends in it (とけよ).
+    final_yo: bool = False
+    # A tail token is the particle か.
+    particle_ka: bool = False
+    # The character right after ``end`` ("" at the end of the line).
+    following: str = ""
+
+
 def find_highlight_end(
     text: str,
     raw_tokens: list,
@@ -313,6 +327,7 @@ def find_highlight_end_with_trace(
     tok_end: int,
     token: Any,
     additional_target: str | None = None,
+    chain_end: bool = False,
 ) -> tuple[int, tuple[str, ...]]:
     """Full-inflected-form end offset plus the accepted deinflection chain.
 
@@ -338,9 +353,20 @@ def find_highlight_end_with_trace(
     following raw token must be adjacent in ``text``, pure hiragana,
     inflectional POS (助動詞/助詞/動詞/形容詞/形状詞/接尾辞 — a 名詞 like こと stops the
     window), and within ``tok_end + _WINDOW_CAP_CHARS`` chars.
+
+    That end is what the card front is resolved from. ``chain_end`` asks for
+    the end a reader sees instead (the highlight): the candidates come from
+    ``_chain_end_candidates``, and ``_chain_end_gate`` may refuse an end the
+    table accepts, in which case the next shorter one is tried.
     """
     feature = getattr(token, "feature", None)
-    if getattr(feature, "pos1", None) not in _EXTENDABLE_POS1:
+    # すみません|でした: an apology the dictionary lists as an interjection has a
+    # past like the verb it once was. The resolver takes that でした and nothing
+    # else after such a word.
+    polite_expression = (
+        chain_end and getattr(feature, "pos1", None) == "感動詞" and text[tok_start:tok_end].endswith("ません")
+    )
+    if getattr(feature, "pos1", None) not in _EXTENDABLE_POS1 and not polite_expression:
         return tok_end, ()
     if not (0 <= tok_start < tok_end <= len(text)):
         return tok_end, ()
@@ -356,6 +382,10 @@ def find_highlight_end_with_trace(
         return tok_end, ()
 
     deinflector = get_highlight_deinflector()
+    # The resolver asks the highlight table first: what that accepts the END
+    # table accepts too, and the pass that found the front's end has memoized
+    # its results for these texts.
+    tables = (deinflector, get_chain_end_deinflector()) if chain_end else (deinflector,)
     mask = deinflector.mask_for_ctype(getattr(feature, "cType", None))
     additional_mask = mask
     if (
@@ -368,30 +398,55 @@ def find_highlight_end_with_trace(
         # じる identity validates against v1.
         additional_mask = deinflector.condition_flags("v1")
 
-    candidate_ends = _extension_candidate_ends(text, raw_tokens, tok_end)
+    if chain_end:
+        candidates = _chain_end_candidates(text, raw_tokens, tok_start, tok_end)
+    else:
+        candidates = [_ChainEnd(end, text[tok_end:end]) for end in _extension_candidate_ends(text, raw_tokens, tok_end)]
+    if polite_expression:
+        candidates = [end for end in candidates if end.tail == "でした" and end.end == tok_end + 3]
     # A stem written in katakana (ヤラ|れ|た, orthBase ヤル) inflects as its
     # hiragana spelling does, and the table's rules are hiragana.
     stem = text[tok_start:tok_end]
     kana_stem = katakana_to_hiragana(stem)
     kana_targets = {katakana_to_hiragana(target) for target in targets} if kana_stem != stem else set()
-    for candidate_end in reversed(candidate_ends):  # longest-first
+    floor = tok_end - tok_start
+    for candidate in reversed(candidates):  # longest-first
         # A stretched tail (歩い|たぁ, 食べ|ねー) is the chain of its plain spelling.
-        for candidate in _unstretched_forms(text[tok_start:candidate_end], tok_end - tok_start):
-            for result in deinflector.transform(candidate):
-                base_matches = result.text in targets and conditions_match_mask(result.conditions, mask)
-                additional_matches = (
-                    additional_target is not None
-                    and result.text == additional_target
-                    and conditions_match_mask(result.conditions, additional_mask)
-                )
-                if base_matches or additional_matches:
-                    chain = tuple(frame[0] for frame in reversed(result.trace))
-                    return candidate_end, chain
-            if kana_targets:
-                for result in deinflector.transform(kana_stem + candidate[tok_end - tok_start :]):
-                    if result.text in kana_targets and conditions_match_mask(result.conditions, mask):
-                        return candidate_end, tuple(frame[0] for frame in reversed(result.trace))
+        for spelling in _unstretched_forms(stem + candidate.tail, floor):
+            chain = None
+            for table in tables:
+                chain = _reaching_chain(table, spelling, targets, mask, additional_target, additional_mask)
+                if chain is None and kana_targets:
+                    chain = _reaching_chain(table, kana_stem + spelling[floor:], kana_targets, mask, None, 0)
+                if chain is not None:
+                    break
+            if chain is None:
+                continue
+            if chain_end and _chain_end_gate(candidate, chain, getattr(feature, "pos1", None)):
+                break  # refused: the next shorter end is tried
+            return candidate.end, chain
     return tok_end, ()
+
+
+def _reaching_chain(
+    deinflector: Deinflector,
+    spelling: str,
+    targets: set[str],
+    mask: int,
+    additional_target: str | None,
+    additional_mask: int,
+) -> tuple[str, ...] | None:
+    """The transform chain by which ``spelling`` deinflects to a target, ``None`` when it reaches none."""
+    for result in deinflector.transform(spelling):
+        base_matches = result.text in targets and conditions_match_mask(result.conditions, mask)
+        additional_matches = (
+            additional_target is not None
+            and result.text == additional_target
+            and conditions_match_mask(result.conditions, additional_mask)
+        )
+        if base_matches or additional_matches:
+            return tuple(frame[0] for frame in reversed(result.trace))
+    return None
 
 
 # Marks that lengthen the word written before them: a long mark, a small vowel
@@ -661,6 +716,168 @@ def _extension_candidate_ends(text: str, raw_tokens: list, tok_end: int) -> list
     return ends
 
 
+# Auxiliaries the table lists in kanji too (-ほしい, -もらう, -過ぎる), by the
+# kanji stem of their token: 教えて|欲しい, 信じて|貰え|なかった, 買い|過ぎ|た. Not
+# 来る and 行く: after て the kanji is as often the motion verb itself (歩いて行ける
+# 所), and three real words in forty were lost when they were let in. Not 上げる
+# and 呉れる: 旗を持って上げた raises the flag.
+_KANJI_AUXILIARY_STEMS = ("欲し", "貰", "過ぎ")
+
+
+def _is_kanji_auxiliary(surface: str, pos1: object) -> bool:
+    """Whether a tail token is one of ``_KANJI_AUXILIARY_STEMS`` with a kana ending."""
+    if pos1 not in _EXTENDABLE_POS1:
+        return False
+    for stem in _KANJI_AUXILIARY_STEMS:
+        if surface.startswith(stem):
+            return surface == stem or _is_pure_hiragana(surface[len(stem) :])
+    return False
+
+
+# Words a quoting って leads to: 笑ったって|こと, 言ったって|話だ, 来たって|言う. The
+# concessive たって has none of them after it (笑ったって無駄だ, 行ったっていい).
+_QUOTATION_HEADS = frozenset({"こと", "事", "いう", "話", "わけ", "訳", "感じ", "の", "ん", "噂"})
+_QUOTATION_VERB_STEMS = ("言", "思", "聞")
+
+
+def _takes_quotation(text: str, following: tuple[Any, int, int] | None) -> bool:
+    """Whether the token after a たって / だって is a word that takes a quotation."""
+    if following is None:
+        return False
+    _token, start, end = following
+    head = text[start:end]
+    if head == "話" and text[end : end + 1] == "に":
+        return False  # 泣いたって話にならない: the concessive before 話にならない
+    return head in _QUOTATION_HEADS or head.startswith(_QUOTATION_VERB_STEMS)
+
+
+_SENTENCE_END_FORMS = ("終止形", "連体形", "命令形")
+
+
+def _opens_the_next_phrase(text: str, tail_token: Any, prev_end: int, start: int) -> bool:
+    """Whether what the tagger calls an auxiliary after a space rather opens the next phrase.
+
+    After て / で a spaced ない is as often the adjective 無い of the next clause
+    (溶けて なくなる, 捜して なかった) as the negative of てる, and ます before
+    another ます is the adverb ますます.
+    """
+    lemma = getattr(getattr(tail_token, "feature", None), "lemma", None)
+    if lemma == "ない" and text[prev_end - 1 : prev_end] in ("て", "で"):
+        return True
+    return text[start : start + 4] == "ますます"
+
+
+def _chain_end_candidates(text: str, raw_tokens: list, tok_start: int, tok_end: int) -> list[_ChainEnd]:
+    """Ascending ends the chain-end resolver may take after ``tok_end``.
+
+    The window of ``_extension_candidate_ends``, with what ``_chain_end_gate``
+    needs to know about each end, and wider where the tagger's cut or the
+    line's layout hides a chain: an auxiliary written in kanji, one space
+    before an auxiliary, a lengthening あ, the negative ねえ after て, and an end
+    inside a token (たって before a quotation, ちゃい before a particle, an
+    imperative in よ). The table still has to accept every end.
+    """
+    from anki_miner.services.morphology import iter_token_spans
+
+    # A chain goes on in hiragana, in a kanji auxiliary, in a lengthening ー or
+    # after one space: before anything else (the line end, punctuation,
+    # katakana) there is no end to list, and the line is not walked.
+    after = text[tok_end : tok_end + 1]
+    if not (
+        _is_pure_hiragana(after) or after in (" ", "\u3000", "ー") or text.startswith(_KANJI_AUXILIARY_STEMS, tok_end)
+    ):
+        return []
+    candidates: list[_ChainEnd] = []
+    prev_end = tok_end
+    tail = ""
+    particle_ka = False
+    spaced = False
+    before_feature: Any = None  # of the token that ends where the next one should start
+    try:
+        # The spans are read one ahead and only as far as the chain goes.
+        spans = iter_token_spans(text, raw_tokens)
+        upcoming = next(spans, None)
+        while upcoming is not None:
+            tail_token, start, end = upcoming
+            upcoming = next(spans, None)
+            if end <= tok_end:
+                before_feature = getattr(tail_token, "feature", None)
+                continue
+            if start != prev_end:
+                if start < prev_end:
+                    continue  # token overlapping the mined span; skip
+                # One space before an auxiliary is how the line was laid out, not
+                # the end of the word (帰り ましょう, 食べ ない); a stem in kana alone
+                # is too easily another word (いえ ない), and after a form that can
+                # end a sentence the space does end the word (違う とりゃあ！).
+                if (
+                    spaced
+                    or text[prev_end:start] not in (" ", "\u3000")
+                    or getattr(getattr(tail_token, "feature", None), "pos1", None) != "助動詞"
+                    or all(_is_kana(ch) for ch in text[tok_start:tok_end])
+                    or _opens_the_next_phrase(text, tail_token, prev_end, start)
+                    or str(getattr(before_feature, "cForm", None)).startswith(_SENTENCE_END_FORMS)
+                ):
+                    break  # whitespace gap / non-adjacent tail
+                spaced = True
+            if end - tok_end > _WINDOW_CAP_CHARS:
+                break
+            surface = text[start:end]
+            tail_feature = getattr(tail_token, "feature", None)
+            pos1 = getattr(tail_feature, "pos1", None)
+            # The token that touches this one on the right, if any.
+            following = upcoming if upcoming is not None and upcoming[1] == end else None
+            if not _is_pure_hiragana(surface.rstrip("ー") if pos1 == "助動詞" else surface) and not (
+                _is_kanji_auxiliary(surface, pos1)
+            ):
+                break
+            # The あ that lengthens a contracted conditional (見てりゃ|あ, 見りゃ|あ)
+            # is a filler to the tagger.
+            lengthened_ya = surface == "あ" and pos1 == "感動詞" and text[start - 2 : start] in ("りゃ", "きゃ")
+            # ねえ after て / で with a particle or an auxiliary behind it is the
+            # negative (聞い|て|ねえ|の), though the tagger may call it a noun there.
+            negative_nee = (
+                surface in ("ねえ", "ねぇ")
+                and text[start - 1 : start] in ("て", "で")
+                and following is not None
+                and getattr(getattr(following[0], "feature", None), "pos1", None) in ("助詞", "助動詞")
+            )
+            if pos1 not in _INFLECTIONAL_TAIL_POS1 and not lengthened_ya and not negative_nee:
+                break
+            # 笑っ|たって|こと is 笑った and the quoting って: before a word that takes a
+            # quotation the chain may end after the particle's first letter.
+            if surface in ("たって", "だって") and pos1 == "助詞" and _takes_quotation(text, following):
+                candidates.append(_ChainEnd(start + 1, tail + surface[0], False, particle_ka, surface[1]))
+            # ちゃい before the particle や, け or か is ちゃ and いや / いけ / いか
+            # (笑っちゃ|いやよ), not the stem of ちゃう: the chain ends after ちゃ.
+            if (
+                surface in ("ちゃい", "じゃい")
+                and following is not None
+                and text[following[1] : following[2]] in ("や", "け", "か")
+            ):
+                candidates.append(_ChainEnd(end - 1, tail + surface[:-1], False, particle_ka, "い"))
+                break
+            # An imperative in よ as ONE tail token (やめ|とけよ) may be the word and
+            # the particle: the end before よ is a candidate too, and the gate
+            # reads the whole token as it reads a separate よ.
+            token_yo = (
+                len(surface) > 1
+                and surface.endswith("よ")
+                and str(getattr(tail_feature, "cForm", None)).startswith("命令形")
+            )
+            if token_yo:
+                candidates.append(_ChainEnd(end - 1, tail + surface[:-1], False, particle_ka, "よ"))
+            tail += surface
+            final_yo = token_yo or (surface == "よ" and getattr(tail_feature, "pos2", None) == "終助詞")
+            particle_ka = particle_ka or (surface == "か" and pos1 == "助詞")
+            candidates.append(_ChainEnd(end, tail, final_yo, particle_ka, text[end : end + 1]))
+            prev_end = end
+            before_feature = tail_feature
+    except (AttributeError, TypeError):
+        return []  # mock/duck-typed token stream: no extension
+    return candidates
+
+
 @lru_cache(maxsize=1)
 def get_japanese_deinflector() -> Deinflector:
     """Process-wide ``Deinflector`` over the ported Yomitan Japanese table.
@@ -716,3 +933,113 @@ def get_highlight_deinflector() -> Deinflector:
     from anki_miner.services.japanese_transforms import CONDITIONS, TRANSFORMS
 
     return Deinflector(CONDITIONS, [*TRANSFORMS, *_te_auxiliary_transforms()])
+
+
+def _chain_end_supplements() -> list[dict[str, Any]]:
+    """Forms inside a word's chain that the highlight table has no transform for.
+
+    They serve the END of a highlight only and never a card front: with ん → る
+    in the table a front is resolved from, 絡まん (絡む + ん) became 絡まる.
+
+    Monosashi's deinflection supplements (its SPEC §4.1) that
+    ``_te_auxiliary_transforms`` does not carry: 動いとん, おもろない, こよ / しよ and
+    行きゃがる.
+
+    Then forms of rough, Kansai and period speech the unit holds as well:
+    恐れませぬ and 知りまへん as 恐れません, 言いたかない and 悪かない for くはない,
+    住んどる as 住んでる, and the lengthened 見てりゃあ and なきゃあ.
+    """
+    from anki_miner.services.japanese_transforms import suffix_inflection
+
+    yagaru = [("きゃがる", "く"), ("ぎゃがる", "ぐ"), ("しゃがる", "す"), ("ちゃがる", "つ")]
+    yagaru += [("にゃがる", "ぬ"), ("びゃがる", "ぶ"), ("みゃがる", "む"), ("りゃがる", "る")]
+    return [
+        {
+            "id": "-ん (kansai)",
+            "name": "-ん (kansai)",
+            "rules": [suffix_inflection("ん", "る", [], ["v5"]), suffix_inflection("すん", "する", [], ["vs"])],
+        },
+        {
+            "id": "-ない (kansai)",
+            "name": "-ない (kansai)",
+            "rules": [suffix_inflection("ろない", "ろい", ["adj-i"], ["adj-i"])],
+        },
+        {
+            "id": "volitional (short)",
+            "name": "volitional (short)",
+            "rules": [suffix_inflection("こよ", "くる", [], ["vk"]), suffix_inflection("しよ", "する", [], ["vs"])],
+        },
+        {
+            "id": "-ゃがる",
+            "name": "-ゃがる",
+            "rules": [
+                *(suffix_inflection(inflected, base, ["v5"], ["v5"]) for inflected, base in yagaru),
+                suffix_inflection("しゃがる", "する", ["v5"], ["vs"]),
+                suffix_inflection("きゃがる", "くる", ["v5"], ["vk"]),
+            ],
+        },
+        {
+            "id": "-ませぬ",
+            "name": "-ませぬ",
+            "rules": [
+                suffix_inflection("ませぬ", "ます", ["-ません"], ["-ます"]),
+                suffix_inflection("まへん", "ます", ["-ません"], ["-ます"]),
+            ],
+        },
+        {"id": "-かない", "name": "-かない", "rules": [suffix_inflection("かない", "い", ["adj-i"], ["adj-i"])]},
+        {"id": "-どる", "name": "-どる", "rules": [suffix_inflection("どる", "で", ["v5"], ["-て"])]},
+        {
+            "id": "-りゃあ",
+            "name": "-りゃあ",
+            "rules": [
+                suffix_inflection("りゃあ", "れば", ["-ゃ"], ["-ば"]),
+                suffix_inflection("きゃあ", "ければ", ["-ゃ"], ["-ば"]),
+            ],
+        },
+    ]
+
+
+@lru_cache(maxsize=1)
+def get_chain_end_deinflector() -> Deinflector:
+    """The highlight table plus ``_chain_end_supplements``: where a mined word's highlight ends, nothing else."""
+    from anki_miner.services.japanese_transforms import CONDITIONS, TRANSFORMS
+
+    return Deinflector(CONDITIONS, [*TRANSFORMS, *_te_auxiliary_transforms(), *_chain_end_supplements()])
+
+
+# 出|なさ|れ|た is 出る and 為さる, though the table reads 出なさ as 出ない + さ: the
+# next letter is the ending of なさる.
+_NASARU_ENDINGS = frozenset("れるらりっい")
+# After an ADJECTIVE's て the next verb is a word of its own (寒くて|いかん,
+# 寂しくて|来た), unless a verb was made of the adjective first (寒がってくる).
+_TE_AUXILIARY_IDS = frozenset({"-みる", "-くる", "-いく", "-ある", "-あげる", "-くれる", "-もらう", "-ほしい"})
+_ADJECTIVE_VERB_MAKERS = frozenset({"-がる", "-すぎる", "-過ぎる"})
+# What the table reads as an imperative in よ only by first building a verb in
+# る that nobody said: 食べて|よ as 食べてる, 見とけ|よ and 言え|よ as a potential,
+# 教えてくれ|よ as 教えてくれる. A verb's own よ form (捕まえよ, 会わせよ) is none of these.
+_NO_YO_IMPERATIVE_AFTER = frozenset({"potential", "-いる", "-おく", "-くれる"})
+
+
+def _chain_end_gate(candidate: _ChainEnd, chain: tuple[str, ...], pos1: object) -> bool:
+    """Whether the resolver refuses an end the table accepts with ``chain`` for a ``pos1`` token.
+
+    The table says what can be a chain; this says what is not one here:
+
+    - A sentence-final よ is the particle, not the ending of an imperative,
+      where that imperative would be the one of ``_NO_YO_IMPERATIVE_AFTER``.
+    - かない for くはない has the tagger's たか or an adjective stem before it
+      (言い|たか|ない, 悪|かない). Across the particle か the same letters are a
+      past and a question (帰っ|た|か|ねえ), and for an ichidan verb only the
+      tagger tells the two apart (食べ|た|か|ねえ): its reading stands.
+    - A negative + さ before an ending of なさる (``_NASARU_ENDINGS``).
+    - A て + auxiliary after an adjective's own て (``_TE_AUXILIARY_IDS``).
+    """
+    if candidate.particle_ka and "-かない" in chain:
+        return True
+    if chain[-2:] == ("negative", "-さ") and candidate.following in _NASARU_ENDINGS:
+        return True
+    if pos1 == "形容詞" and "-て" in chain:
+        te = chain.index("-て")
+        if not _ADJECTIVE_VERB_MAKERS.intersection(chain[:te]) and _TE_AUXILIARY_IDS.intersection(chain[te + 1 :]):
+            return True
+    return candidate.final_yo and len(chain) >= 2 and chain[-1] == "imperative" and chain[-2] in _NO_YO_IMPERATIVE_AFTER

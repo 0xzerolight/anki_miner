@@ -12,7 +12,7 @@ from pathlib import Path
 import pytest
 
 from anki_miner.services.deinflection import resolve_dictionary_form
-from anki_miner.services.morphology import rejoin_adjective_stem_cries, resolve_reading_override_in_line
+from anki_miner.services.morphology import rejoin_adjective_stem_cries
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
@@ -44,19 +44,6 @@ def _words(sentence: str) -> dict:
 
 class TestDigitFirstDayReading:
     """１日 reads いちにち unless a month stands directly before it."""
-
-    def test_the_row_applies_away_from_a_month(self) -> None:
-        assert resolve_reading_override_in_line("１日", "ついたち", "今日も") == "いちにち"
-        assert resolve_reading_override_in_line("１日", "ついたち", "") == "いちにち"
-
-    def test_the_row_is_skipped_after_a_month(self) -> None:
-        assert resolve_reading_override_in_line("１日", "ついたち", "３月") is None
-        assert resolve_reading_override_in_line("１日", "ついたち", "毎月") is None
-
-    def test_other_rows_ignore_the_line(self) -> None:
-        assert resolve_reading_override_in_line("一日", "ついたち", "三月") == "いちにち"
-        assert resolve_reading_override_in_line("仏", "ふつ", "月") == "ほとけ"
-        assert resolve_reading_override_in_line("猫", "ねこ", "") is None
 
     @needs_tagger
     @pytest.mark.parametrize("sentence", ["今日も１日 頑張ろう", "あと１日しかない", "１日２回飲む"])

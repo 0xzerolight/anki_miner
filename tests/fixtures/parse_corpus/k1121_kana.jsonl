@@ -1,0 +1,4 @@
+{"id":"k21k01","sentence":"勉強する","expected":["勉強"],"category":"k1121-kana","note":"する after a noun that takes it is that noun's verb"}
+{"id":"k21k02","sentence":"行こうとした","expected":["行く"],"category":"k1121-kana","note":"する after the quoting と is grammar"}
+{"id":"k21k03","sentence":"彼にしては上出来だ","expected":["彼","上出来"],"category":"k1121-kana","note":"にしては"}
+{"id":"k21k04","sentence":"若すぎるのう","expected":["若い"],"category":"k1121-kana","note":"すぎる after an adjective stem is that adjective's tail"}

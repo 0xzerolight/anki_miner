@@ -47,10 +47,11 @@ SHORT_NOUNS: frozenset[str] = frozenset(
     | {"うそ", "ばか", "ただ", "ふう", "うえ", "いま", "けが", "むちゃ"}
     | {"くせ", "ほう", "まね", "ふり", "たび", "あと", "わけ", "とこ", "ころ"}
     | {"もん", "もと", "じき"}
+    | {"とき"}
 )
 
 #: The only two-kana spellings of kanji-written words listed outside the nouns.
-SHORT_READINGS: frozenset[str] = frozenset({"きみ", "ぼく", "おれ", "かれ", "だれ", "ぜひ"})
+SHORT_READINGS: frozenset[str] = frozenset({"きみ", "ぼく", "おれ", "かれ", "だれ", "ぜひ", "われ"})
 
 #: The only kanji-written nouns of three morae listed by their kana spelling: those
 #: commonly written in kana. A three-mora kana noun is otherwise as often the tail
@@ -64,6 +65,7 @@ SHORT_SPELLED_NOUNS: frozenset[str] = frozenset(
     # the dialect object こと|ば, 何でも|あり|か).
     | {"ちから", "いのち", "かたち", "ふたり", "せがれ", "じじい", "ばばあ", "おかみ"}
     | {"とどめ", "せりふ", "あるじ", "おなご", "だんご", "ささい", "うかつ"}
+    | {"きのう", "しだい", "もよう"}
 )
 
 #: Spoken kana spellings JMdict gives no priority tag (やっぱ for 矢っ張り, the
@@ -201,7 +203,8 @@ EXCLUDED: dict[tuple[str, str], str] = {
 #: reading (どういう, そのうち). The pos1 is the joined token's, so it decides the
 #: card front like any token's. ``where`` is "" (anywhere), "start" (opening a line or
 #: clause: a conjunction there, で|も inside one is the particles, 学校でも), "noun"
-#: (after a noun) or "verb" (after a verb or an auxiliary). A "grammar" row is a
+#: (after a noun), "verb" (after a verb or an auxiliary) or "alone" (opening a clause and
+#: followed by a pause: そう|か is the reply そうか。 and the adverb in そうかもね). A "grammar" row is a
 #: grammar point (んだ, ください), joined only while the user's Settings → Word
 #: Filters → Mine grammar points is on. Left out: それ|に,
 #: as a subtitle space before それに伴う reads as a clause break, and その|うち,
@@ -519,6 +522,90 @@ JOINS: tuple[tuple[str, str, str, str] | tuple[str, str, str, str, str], ...] = 
     ("おもわぬ", "連体詞", "おもわ|ぬ", ""),
     # K1120: the spoken contraction わかん|ない is the listed わかんない, not わかる.
     ("わかんない", "形容詞", "わかん|=ない", ""),
+    # K1121 EXPR: a word and its function tail that JMdict lists as one entry (あと|で, それ|まで). どこ|か is
+    # passed over before a verb of knowing or asking (lexical_joiner._embedded_question).
+    ("あとで", "副詞", "あと|で", ""),
+    ("おかげで", "副詞", "おかげ|で", ""),
+    ("それまで", "副詞", "それ|まで", ""),
+    ("これまで", "副詞", "これ|まで", ""),
+    ("あれだけ", "副詞", "あれ|だけ", ""),
+    ("これだけ", "副詞", "これ|だけ", ""),
+    ("それだけ", "副詞", "それ|だけ", ""),
+    ("どれだけ", "副詞", "どれ|だけ", ""),
+    ("どれほど", "副詞", "どれ|ほど", ""),
+    ("これほど", "副詞", "これ|ほど", ""),
+    ("それほど", "副詞", "それ|ほど", ""),
+    ("あれほど", "副詞", "あれ|ほど", ""),
+    ("いつだって", "副詞", "いつ|だ|って", ""),
+    ("まずは", "副詞", "まず|は", "start"),
+    ("そのとおり", "名詞", "その|とおり", ""),
+    ("もうすぐ", "副詞", "もう|すぐ", ""),
+    ("もうちょっと", "副詞", "もう|ちょっと", ""),
+    ("うまいこと", "副詞", "うまい|こと", ""),
+    ("そんなふうに", "副詞", "そんな|ふう|に", ""),
+    ("こんなふうに", "副詞", "こんな|ふう|に", ""),
+    ("いつものように", "副詞", "いつ|も|の|よう|に", ""),
+    ("どこか", "代名詞", "どこ|か", ""),
+    # K1121 EXPR: replies that stand alone between pauses (そうか。 そうです、… いいよ。) and questions that
+    # open a clause. なんなの is 副詞 so that its kanji spelling 何なの passes the run's allowed_pos.
+    ("そうか", "感動詞", "そう|か", "alone"),
+    ("そうです", "感動詞", "そう|です", "alone"),
+    ("そうですね", "感動詞", "そう|です|ね", "alone"),
+    ("そうだ", "感動詞", "そう|だ", "alone"),
+    ("そうだね", "感動詞", "そう|だ|ね", "alone"),
+    ("いいよ", "感動詞", "いい|よ", "alone"),
+    ("なんなの", "副詞", "なん|な|の", "start"),
+    ("どうしたの", "感動詞", "どう|し|た|の", "start"),
+    ("どうしたん", "感動詞", "どう|し|た|ん", "alone"),
+    ("どうしよう", "感動詞", "どう|しよう", ""),
+    # K1121 EXPR: particle-headed expressions after a noun, and ほうがいい after a verb. に|とっ|て is passed
+    # over before a verb, where it is the て-form of とる (lexical_joiner._verb_te_form).
+    ("にとって", "副詞", "に|とっ|て", "noun"),
+    ("に対する", "連体詞", "に|対する", "noun"),
+    ("に対して", "副詞", "に|対し|て", "noun"),
+    ("に対し", "副詞", "に|対し", "noun"),
+    ("と共に", "副詞", "と|共に", "noun"),
+    ("とともに", "副詞", "と|とも|に", "noun"),
+    ("といえば", "副詞", "と|いえ|ば", "noun"),
+    ("のせいで", "副詞", "の|せい|で", "noun"),
+    ("にしても", "副詞", "に|し|て|も", "noun"),
+    ("にしては", "副詞", "に|し|て|は", "noun"),
+    ("としたことが", "副詞", "と|し|た|こと|が", "noun"),
+    ("に限らず", "副詞", "に|限ら|ず", "noun"),
+    ("ほうがいい", "形容詞", "ほう|が|=いい", "verb"),
+    # K1121 EXPR: clause openers and fixed adverbs. こうして before a て-auxiliary and そうしたら before いい are
+    # the verb (lexical_joiner._te_form_in_use); そう|いっ|た joins only before a noun (_adnominal_only);
+    # って|こと|は only at the head of a line or after punctuation (_quotes_what_precedes). No そうして row:
+    # half of its lines are the request 'do so' (そうして。 そうしてやってください).
+    ("それにしても", "接続詞", "それ|に|し|て|も", "start"),
+    ("そうすると", "接続詞", "そう|する|と", "start"),
+    ("そうしたら", "接続詞", "そう|し|たら", "start"),
+    ("こうして", "副詞", "こう|し|て", "start"),
+    ("なので", "接続詞", "な|の|で", "start"),
+    ("そうでなければ", "接続詞", "そう|で|なけれ|ば", "start"),
+    ("ってことは", "接続詞", "って|こと|は", "start"),
+    ("そういった", "連体詞", "そう|いっ|た", ""),
+    ("どう考えても", "副詞", "どう|考え|て|も", ""),
+    ("それはそれで", "副詞", "それ|は|それ|で", ""),
+    ("どうだっていい", "形容詞", "どう|だっ|て|=いい", ""),
+    ("わけのわからない", "形容詞", "わけ|の|わから|=ない", ""),
+    # K1121 EXPR: verbs the tagger cuts into two verbs: あり|え is ありえる (never ある + える), い|なく|なる is
+    # いなくなる 'disappear'.
+    ("ありえない", "形容詞", "あり|え|=ない", ""),
+    ("ありえる", "動詞", "あり|=える", ""),
+    ("いなくなる", "動詞", "い|なく|=なる", ""),
+    # K1121 EXPR: grammar points. みたい is one token the tagger files as an auxiliary stem (猫みたいだ); the verb
+    # 見たい is み|たい and never matches.
+    ("みたい", "形状詞", "みたい", "", "grammar"),
+    ("じゃないか", "感動詞", "じゃ|ない|か", "copula", "grammar"),
+    ("でしょうか", "感動詞", "でしょう|か", "", "grammar"),
+    # K1121 EXPR: greetings JMdict lists whole. The two with a kanji token are 副詞 so that they pass the run's
+    # allowed_pos (a join that is not pure kana is no list word).
+    ("ありがとうございます", "感動詞", "ありがとう|ござい|ます", ""),
+    ("ありがとうございました", "感動詞", "ありがとう|ござい|まし|た", ""),
+    ("おはようございます", "感動詞", "おはよう|ござい|ます", ""),
+    ("よろしくお願いします", "副詞", "よろしく|お願い|し|ます", ""),
+    ("ご覧ください", "副詞", "ご覧|ください", ""),
 )
 
 _HEADER = """\
@@ -526,8 +613,10 @@ _HEADER = """\
 # Generated by scripts/build_kana_words.py from JMdict_e (EDRDG, CC BY-SA 4.0); do not edit.
 # form<TAB>pos1[<TAB>kanji]              one token with this unidic pos1 (kanji: a kanji-written word's kana spelling)
 # form<TAB>pos1<TAB>tokens[<TAB>where]   tokens LexicalJoiner joins (where: start, only opening a line or
-#                                        clause; noun or verb, only after one; a last token =X: any
-#                                        token whose dictionary form is X)
+#                                        clause; noun or verb, only after one; alone, only opening a
+#                                        clause and before a pause; a last token =X: any token whose
+#                                        dictionary form is X). A token also matches a kanji-written
+#                                        token by its reading when the dictionary lists that spelling.
 # form<TAB>pos1<TAB>tokens<TAB>where<TAB>grammar
 #                                        a grammar point (where may be empty), joined only while
 #                                        Mine grammar points is on

@@ -19,13 +19,17 @@ _WRITTEN_VOWEL_ELONGATION = frozenset("ぁぃぅぇぉー")
 # generate_reading re-derives 私→わたくし, so neither the lemma nor a regenerated
 # reading is safe. The parser's _emit_word threads the paired reading from this
 # table (see resolve_pronoun_fold_reading). Other katakana 代名詞 in the corpus
-# (アナタ/オラ/コレ/ソレ/ワイ) are deliberately absent and never fold.
+# (オラ/ワイ) are deliberately absent and never fold. One of three kana or more
+# whose katakana no dictionary lists (アナタ, アンタ) folds to hiragana in the
+# parser instead (SubtitleParserService._fold_katakana_native_front).
 _KATAKANA_PRONOUN_FOLDS: dict[str, tuple[str, str]] = {
     "ワタシ": ("私", "わたし"),
     "ボク": ("僕", "ぼく"),
     "キサマ": ("貴様", "きさま"),
     "ワレ": ("我", "われ"),
     "オマエ": ("お前", "おまえ"),
+    "コレ": ("これ", "これ"),
+    "ソレ": ("それ", "それ"),
 }
 
 

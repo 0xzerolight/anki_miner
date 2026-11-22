@@ -687,6 +687,24 @@ _ANCHOR_HEADWORDS: tuple[str, ...] = (
     "ちょちょ",
     # k1120 MC: the spoken contraction わかんない, listed (co04)
     "わかんない",
+    # k1121 NAMES: a katakana run of common listed words (k1n01), a pronoun written in katakana (k1n03)
+    "サード",
+    "インパクト",
+    "あんた",
+    # k1121 EXPR: kanji spellings of kana join rows (k21e01, k21e02); と言う and に就いて are
+    # attested so that the reject is the rule's (k21e04, k21e05)
+    "何となく",
+    "勝手に",
+    "と言う",
+    "に就いて",
+    # k1121 EXPR: a word and its function tail, one entry (k21e07 to k21e10)
+    "おかげで",
+    "どこか",
+    "どこ",
+    "もうすぐ",
+    # k1121 EXPR: replies that stand alone (k21e11); そうだ is attested so that the reject is the rule's (k21e12)
+    "そうか",
+    "そうだ",
 )
 
 # Yomitan `ruleIdentifiers` per fixture headword. A real term bank ships these,
@@ -763,6 +781,8 @@ _ANCHOR_READINGS: dict[str, str] = {
 }
 
 _ANCHOR_COMMON_HEADWORDS = frozenset({"やる", "北海道", "パリ"})
+# k1121 NAMES: the common words of a katakana run (k1n01).
+_ANCHOR_COMMON_HEADWORDS |= {"サード", "インパクト"}
 
 _ANCHOR_DICT_ID = "anchor-fixture"
 _anchor_service: SubtitleParserService | None = None

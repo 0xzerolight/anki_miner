@@ -174,6 +174,10 @@ _EXPECTED_CATEGORIES = {
     "kana-part-front",
     "noun-tte",
     "k1120-kana-words",
+    "k1121-readings",
+    "k1121-katakana",
+    "k1121-kana",
+    "k1121-expr",
 }
 
 

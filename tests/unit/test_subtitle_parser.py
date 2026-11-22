@@ -1654,13 +1654,13 @@ class TestKanaRecoveryLexicalizedWindow:
     # --- 6. T-38 count==mine parity: the reject fires identically at all four sites. ---
 
     def test_count_equals_mine_all_sites_reject(self, test_config, tmp_path):
-        text = "彼にとって"
+        text = "彼をめぐって"  # にとって is a join row since K1121 EXPR; をめぐって has none
 
         def tokens():
             return [
                 _make_token("彼", "代名詞", "*", lemma="彼", kana="カレ", orth_base="彼"),
-                _make_token("に", "助詞", "格助詞", lemma="に", kana="ニ", orth_base="に"),
-                _make_token("とっ", "動詞", "一般", lemma="取る", kana="トッ", orth_base="とる"),
+                _make_token("を", "助詞", "格助詞", lemma="を", kana="ヲ", orth_base="を"),
+                _make_token("めぐっ", "動詞", "一般", lemma="巡る", kana="メグッ", orth_base="めぐる"),
                 _make_token("て", "助詞", "接続助詞", lemma="て", kana="テ", orth_base="て"),
             ]
 
@@ -1680,7 +1680,7 @@ class TestKanaRecoveryLexicalizedWindow:
                 patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
                 patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
             ):
-                service = SubtitleParserService(test_config, kana_attest_lookup=_attest_lookup("とる", "にとって"))
+                service = SubtitleParserService(test_config, kana_attest_lookup=_attest_lookup("めぐる", "をめぐって"))
                 return fn(service, sub_file)
 
         mine = invoke(lambda s, f: s.parse_subtitle_file(f))
@@ -6971,14 +6971,26 @@ class TestCuratedReadingOverride:
         assert w.expression_furigana == "仏[ほとけ]"  # pre-fix: 仏[ふつ]
         assert w.lemma_reading == "ほとけ"
 
-    def test_unique_dictionary_mismatch_cannot_override_hotoke(self, test_config):
+    def test_a_dictionary_with_one_other_reading_outranks_the_token_reading(self, test_config):
+        # ほとけ is the token's reading now (``reread_in_context``), not a card
+        # override, so a dictionary that lists ふつ alone decides, on the card
+        # and in the sentence alike.
         def lookup(terms):
             return {"仏": ["ふつ"]} if "仏" in terms else {}
 
         w = self._emit(test_config, "仏を見た", reading_lookup=lookup)["仏"]
 
+        assert w.expression_reading == "ふつ"
+        assert w.expression_furigana == "仏[ふつ]"
+        assert w.sentence_reading == "ふつをみた"
+
+    def test_a_dictionary_that_lists_the_token_reading_keeps_it(self, test_config):
+        def lookup(terms):
+            return {"仏": ["ふつ", "ほとけ"]} if "仏" in terms else {}
+
+        w = self._emit(test_config, "仏を見た", reading_lookup=lookup)["仏"]
+
         assert w.expression_reading == "ほとけ"
-        assert w.expression_furigana == "仏[ほとけ]"
         assert w.sentence_reading == "ほとけをみた"
         assert w.sentence_furigana == "仏[ほとけ]を 見[み]た"
 
