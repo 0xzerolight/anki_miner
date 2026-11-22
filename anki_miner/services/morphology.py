@@ -814,6 +814,83 @@ _READING_CONTEXT: tuple[_ReadingRow, ...] = (
     _reading_row("頃", _NOUN_POS, "コロ", "ゴロ", prev=("名詞", "数詞", "接尾辞", "代名詞")),
     # 度 directly after a verb is たび (描く度に).
     _reading_row("度", _NOUN_POS, "ド", "タビ", prev=("動詞", "助動詞")),
+    # お家 is おうち, the home (お家に帰ろう); the clan of a period piece keeps おいえ
+    # (お家騒動, お家のため, お家を守る, お家断絶, and any line in a samurai's words).
+    _reading_row(
+        "家",
+        _NOUN_POS,
+        "イエ",
+        "イエ",
+        before="お$",
+        prev=("接頭辞",),
+        after="(?:の(?:ため|為|不為|一大事|大事|恥|名|名誉|存続|存亡|再興|安泰)|を(?:守|潰|継|絶や|再興)|が(?:潰|絶|滅)"
+        "|ご?(?:断絶|再興|取り潰し|騒動|存続|安泰|大事)|第一)",
+    ),
+    _reading_row(
+        "家",
+        _NOUN_POS,
+        "イエ",
+        "イエ",
+        before="お$",
+        prev=("接頭辞",),
+        line="わし|拙者|殿|藩|家老|家臣|ござ[るり]|奉公|主君",
+    ),
+    _reading_row("家", _NOUN_POS, "イエ", "ウチ", before="お$", prev=("接頭辞",)),
+    # 術: すべ, a way to do it, directly after a verb and before が, は, も, を or
+    # なし (知る術がない, 為す術もなく, 勝つ術を探す); it stays じゅつ, a technique,
+    # after a verb of casting one (使う術, かける術), after ある and before に
+    # (煽る術にはまる). After の the tagger says すべ, where it is じゅつ (忍びの術),
+    # but not after ための.
+    _reading_row(
+        "術",
+        _NOUN_POS,
+        "ジュツ",
+        "ジュツ",
+        before="(?:使|かけ|掛け|覚え|編み出|放|操|施|唱え|扱|封じ|破|解|習|会得|発動|仕掛け)[ぁ-ん]*$",
+    ),
+    _reading_row("術", _NOUN_POS, "ジュツ", "ジュツ", before="ある$"),
+    _reading_row(
+        "術", _NOUN_POS, "ジュツ", "スベ", prev=("動詞",), after="(?:が|は|も|すら|さえ|を|な[しいく]|無[しいく])"
+    ),
+    _reading_row("術", _NOUN_POS, "スベ", "ジュツ", before="(?<!ため)(?<!為)の$"),
+    # 敵: かたき, the one to take revenge on, after a family member or comrade + の
+    # (親の敵) and before を取る / を討つ; てき elsewhere (敵を取り囲む, 敵を討ち取る,
+    # and a kana うつ, which may be 撃つ).
+    _reading_row(
+        "敵",
+        _NOUN_POS,
+        "テキ",
+        "カタキ",
+        before="(?:親|父|母|兄|弟|姉|妹|夫|妻|友|仲間|師匠|主君|両親|家族|父上|母上|兄上|姉上|父さん|母さん|兄さん|姉さん|息子|娘)の$",
+    ),
+    _reading_row("敵", _NOUN_POS, "テキ", "カタキ", after="を(?:取[っるれろら]|討(?!ち取)|とっ|とる|とれ)"),
+    # 宴 alone is うたげ; えん in 宴もたけなわ.
+    _reading_row("宴", _NOUN_POS, "エン", "エン", after="も?\\s*(?:たけなわ|酣)"),
+    _reading_row("宴", _NOUN_POS, "エン", "ウタゲ"),
+    # 下: もと, under an authority or a condition, after such a noun + の and
+    # before に, で or a pause (法の下に, 指導の下で); した is the place below.
+    _reading_row(
+        "下",
+        _NOUN_POS,
+        "シタ",
+        "モト",
+        before="(?:名|法|旗|指揮|指導|監督|管理|支配|庇護|保護|命令|許可|条件|名目|約束|契約|監視|体制|名義|合意|了解|旗印|大義|統治|指示|管轄|加護|導き)の$",
+        after="(?:に|で|、|$)",
+    ),
+    # 空く: すく, to get empty, of the stomach (お腹が空いた); あく elsewhere (席が空いた).
+    _reading_row("空く", ("動詞",), "ア", "ス", base=True, before="(?:お腹|腹|おなか|小腹)(?:が|も|を|は|の)?$"),
+    # 開く: あく of what opens by itself (穴, ドア, 窓, 鍵, 店, with が or no
+    # particle; 目, 口, 幕 as words of their own with が); ひらく elsewhere (本を開いた,
+    # 口を開くな, 傷口が開いた) and always in the passive (開かれる).
+    _reading_row("開く", ("動詞",), "ヒラ", "ヒラ", base=True, after="れ"),
+    _reading_row(
+        "開く",
+        ("動詞",),
+        "ヒラ",
+        "ア",
+        base=True,
+        before="(?:(?:穴|ドア|戸|窓|鍵|蓋|ふた|フタ|店|瓶|ビン|襖|引き出し|シャッター|ロック|錠)(?:が|の|も|は)?|(?<![一-鿿])(?:目|口|幕)が)$",
+    ),
     # 一日, １日: the tagger says ついたち, the first of the month. That is right
     # directly after a month (六月一日, 毎月１日); anywhere else it is one day.
     _reading_row("一日", _NOUN_POS, "ツイタチ", "ツイタチ", before="月$"),
