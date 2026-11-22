@@ -96,6 +96,10 @@ _COPULA_VERBS = frozenset({"ある", "ござる"})
 _QUESTION_VERBS = frozenset(
     {"分かる", "知る", "覚える", "忘れる", "聞く", "教える", "言う", "思う", "考える", "調べる"}
 )
+# One-token grammar rows that are the word only as the tagger's auxiliary (``_not_the_auxiliary``).
+_AUXILIARY_ROWS = frozenset({"らしい", "やろ"})
+# Rows that are the word only where the line or the sentence stops after them (``_runs_on``).
+_STOP_AFTER = frozenset({"じゃね"})
 _GRAMMAR_POS1 = frozenset({"助詞", "助動詞"})
 _MAX_FIXED_TOKENS = max(len(key) for key in _FIXED_JOINS)
 _MAX_KANA_TOKENS = max(len(key) for key in (*kana_words().joins, *kana_words().base_joins))
@@ -205,6 +209,9 @@ def _kana_join(
             and not _adnominal_only(row.headword, tokens, i + size)
             and not (row.grammar and _ka_of_kamo(surfaces[-1], tokens, i + size))
             and not _auxiliary_after_te(row.headword, tokens, i)
+            and not _not_the_auxiliary(row.headword, span)
+            and not _runs_on(row.headword, tokens, i + size)
+            and not _misread_ja_nai(row.headword, tokens, i)
         ):
             return _Join(
                 i,
@@ -363,6 +370,37 @@ def _auxiliary_after_te(headword: str, tokens: list, start: int) -> bool:
         return False
     before = tokens[start - 1]
     return _pos2(before) == "接続助詞" and before.surface in ("て", "で")
+
+
+def _not_the_auxiliary(headword: str, span: list) -> bool:
+    """Whether a one-token row of ``_AUXILIARY_ROWS`` met another token with its kana.
+
+    雨らしい is the auxiliary 'it seems'; 春らしい is the suffix '-like', which the
+    compound matcher joins where the dictionary lists the word (男らしい). 知らんやろ
+    is the Kansai だろう; the verb やろ is やる's clipped volitional.
+    """
+    return headword in _AUXILIARY_ROWS and _pos1(span[0]) != "助動詞"
+
+
+def _runs_on(headword: str, tokens: list, after: int) -> bool:
+    """Whether a word follows じゃ|ね, where it is じゃ + the particle ね and not じゃね 'isn't it'.
+
+    学生じゃね？ and 終了じゃね stop there. そんなことじゃね 無理だ goes on after a
+    mere space ('with that, you know, …'), as does じゃねとか.
+    """
+    return headword in _STOP_AFTER and after < len(tokens) and _pos1(tokens[after]) not in _CLAUSE_BREAK_POS1
+
+
+def _misread_ja_nai(headword: str, tokens: list, start: int) -> bool:
+    """Whether や|ない is the tail of a じゃない written with a large や (いい頃じやない), not the Kansai やない."""
+    return headword == "やない" and start > 0 and tokens[start - 1].surface.endswith(("じ", "ゃ", "や"))
+
+
+def _joined_pos1(previous: _Join | None) -> str | None:
+    """The POS a row sees in the join right before it: a joined auxiliary is still one (らしい|のです)."""
+    if previous is None:
+        return None
+    return "助動詞" if previous.headword in _AUXILIARY_ROWS else previous.pos1
 
 
 def _opens_clause(tokens: list, spans: dict[int, tuple[int, int]], i: int) -> bool:
@@ -532,7 +570,7 @@ class LexicalJoiner:
             if candidate.after == "alone":
                 if not _stands_alone(tokens, spans, candidate.end):
                     return False
-            elif not _follows(tokens, candidate.start, candidate.after, previous.pos1 if previous else None):
+            elif not _follows(tokens, candidate.start, candidate.after, _joined_pos1(previous)):
                 return False
             kept.append(candidate)
             return True

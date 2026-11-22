@@ -178,6 +178,7 @@ _EXPECTED_CATEGORIES = {
     "k1121-katakana",
     "k1121-kana",
     "k1121-expr",
+    "k1121-list",
 }
 
 

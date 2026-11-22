@@ -606,6 +606,24 @@ JOINS: tuple[tuple[str, str, str, str] | tuple[str, str, str, str, str], ...] = 
     ("おはようございます", "感動詞", "おはよう|ござい|ます", ""),
     ("よろしくお願いします", "副詞", "よろしく|お願い|し|ます", ""),
     ("ご覧ください", "副詞", "ご覧|ください", ""),
+    # K1121 LIST: grammar points of one or two tokens. らしい and やろ are the row only as the tagger's
+    # auxiliary (the suffix of 春らしい and the volitional やろ of やる are other tokens:
+    # lexical_joiner._not_the_auxiliary); じゃ|ね only after a noun and before a pause (学生じゃね？; the
+    # leave-taking じゃね opens its line); うる only after a verb (起こりうる; 本をうる is 売る). The kanji
+    # 如き / 如く are 副詞 so that they pass the run's allowed_pos. しかる|べき is the entry しかるべき
+    # (no grammar point: under the べき row its しかる would be carded alone).
+    ("らしい", "形容詞", "=らしい", "", "grammar"),
+    ("ごとき", "感動詞", "ごとき", "", "grammar"),
+    ("ごとく", "感動詞", "ごとく", "", "grammar"),
+    ("如き", "副詞", "如き", "", "grammar"),
+    ("如く", "副詞", "如く", "", "grammar"),
+    ("べき", "感動詞", "べき", "", "grammar"),
+    ("すべき", "感動詞", "す|べき", "", "grammar"),
+    ("やろ", "感動詞", "やろ", "", "grammar"),
+    ("やない", "形容詞", "や|=ない", "copula", "grammar"),
+    ("じゃね", "感動詞", "じゃ|ね", "noun", "grammar"),
+    ("うる", "動詞", "うる", "verb", "grammar"),
+    ("しかるべき", "連体詞", "しかる|べき", ""),
 )
 
 _HEADER = """\
