@@ -3593,16 +3593,24 @@ class SubtitleParserService:
         plural (おらは, おらの, おらたち): bare, or before よ, it is the shout
         (立てよ、おら！ おらよ). ちと glued to the word before it is cut from that
         word (俺っ|ちと, 俺ん|ちと); the adverb follows a space, a line start or a
-        particle.
+        particle. とき glued to a verb's 連用形 is the contracted ておき
+        (待っ|とき, やめ|とき); the noun follows a 連体形 (待つとき, 決めたとき).
         """
         surface = word_token.surface
         if surface == "ちょうだい":
             return SubtitleParserService._is_request_after_te(word_token, tokens)
-        if surface not in ("おら", "よろしゅう", "ちと"):
+        if surface not in ("おら", "よろしゅう", "ちと", "とき"):
             return False
         idx = next((i for i, tok in enumerate(tokens) if tok is word_token), None)
         if idx is None:
             return False
+        if surface == "とき":
+            stem = getattr(tokens[idx - 1], "feature", None) if idx else None
+            return (
+                getattr(stem, "pos1", None) == "動詞"
+                and str(getattr(stem, "cForm", "")).startswith("連用形")
+                and not getattr(word_token, "white_space", "")
+            )
         if surface == "ちと":
             if not idx:
                 return False

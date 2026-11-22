@@ -6,6 +6,7 @@ import pytest
 
 from anki_miner.config.config import AnkiMinerConfig
 from anki_miner.models.reading import ReadingUnit
+from anki_miner.services.kana_words import is_kanji_spelled, is_listed
 from anki_miner.services.subtitle_parser import SubtitleParserService
 
 
@@ -26,6 +27,7 @@ _ATTESTED = frozenset(
     | {"あげる", "すぎる", "かける", "みせる", "つける", "つく", "なれる", "おれる", "いける", "もらえる", "つづく"}
     | {"いう", "かわいそう", "やる", "とる", "すき", "かかわる", "ない"}
     | {"あり", "ある", "だす", "きる", "きれる", "つくす"}
+    | {"とき", "きのう", "しだい", "もよう", "われ", "たとき", "ときどき", "その"}
     # Windows a dictionary has as the reading of a word written otherwise.
     | {"という", "といい", "かわいそうに", "ですき", "とって", "にもかかわらず", "かかわらず"}
     | {"ぼける", "とぼけ", "とぼける"}
@@ -224,3 +226,38 @@ class TestKanaWindowChoice:
     @pytest.mark.parametrize(("text", "window"), [("行くしかない。", "しかない"), ("そうやないですよ。", "やない")])
     def test_a_window_spelled_in_kana_still_wins(self, text, window):
         assert "ない" not in _fronts(text, frozenset({window}))
+
+
+class TestShortKanaNounRows:
+    @pytest.mark.parametrize(
+        ("text", "front"),
+        [
+            ("そのときは笑った。", "とき"),
+            ("雨がやんだときに出かけた。", "とき"),
+            ("きのうは使えた。", "きのう"),
+            ("捜査を開始したもようです。", "もよう"),
+            ("天気しだいで決める。", "しだい"),
+            ("われは王なり。", "われ"),
+        ],
+    )
+    def test_mines_a_short_kana_noun_by_its_list_row(self, text, front):
+        assert front in _fronts(text)
+
+    @pytest.mark.parametrize(
+        ("form", "pos1"),
+        [("とき", "名詞"), ("きのう", "名詞"), ("しだい", "名詞"), ("もよう", "名詞"), ("われ", "代名詞")],
+    )
+    def test_the_rows_are_kanji_spellings_so_they_take_the_window_check(self, form, pos1):
+        assert is_listed(form, pos1, merged=False) and is_kanji_spelled(form, pos1)
+
+    def test_toki_after_a_verbs_ta_is_not_hidden_by_a_window_on_that_ta(self):
+        # たとき is a kana headword in some dictionaries; the た is the verb's own tail.
+        assert "とき" in _fronts("決めたときのことを話す。", frozenset({"たとき"}))
+
+    @pytest.mark.parametrize("text", ["もう少し待っときや。", "それはやめときな。"])
+    def test_toki_glued_to_a_verb_stem_is_the_contracted_te_oki(self, text):
+        assert "とき" not in _fronts(text)
+
+    def test_toki_inside_a_longer_listed_word_is_no_second_card(self):
+        fronts = _fronts("ときどき来る。")
+        assert "とき" not in fronts and "ときどき" in fronts
