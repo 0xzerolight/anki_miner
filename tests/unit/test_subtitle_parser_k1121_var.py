@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from types import SimpleNamespace
 
 import pytest
 
@@ -15,7 +16,7 @@ from anki_miner.services.deinflection import (
     shadow_offset,
     shadow_span,
 )
-from anki_miner.services.morphology import VariantToken, read_variants, word_surface
+from anki_miner.services.morphology import VariantToken, _spoken_nai_stands, read_variants, word_surface
 from anki_miner.services.subtitle_parser import SubtitleParserService
 
 
@@ -128,6 +129,8 @@ _ENTRIES = {
     "どうも": "int adv",
     "こう": "adv",
     "どうして": "adv",
+    "しかない": "exp adj-i",
+    "みっともない": "adj-i",
 }
 _SEARCH_ONLY = frozenset({"すごーい", "ちがーう", "なーい"})
 _READINGS = frozenset({"ぜんぶ", "せんせい", "うそ", "やろう"})
@@ -238,3 +241,97 @@ class TestStretchedSpellingTheTaggerResolves:
     def test_without_entry_tags_a_listed_spelling_is_a_headword_as_written(self):
         # Search-only rows cannot be told from real entries: nothing listed is re-read.
         assert "すごーい" in _cards("すごーい", _service(entries=False))
+
+
+def _located(*tokens: tuple[str, str]) -> list:
+    """Hand-made tokens (surface, pos1) glued one after the other, as ``iter_token_spans`` gives them."""
+    located, cursor = [], 0
+    for surface, pos1 in tokens:
+        token = SimpleNamespace(surface=surface, feature=SimpleNamespace(pos1=pos1, lemma=surface))
+        located.append((token, cursor, cursor + len(surface)))
+        cursor += len(surface)
+    return located
+
+
+class TestSpokenNaiAlone:
+    """V-NAI: ねえ the tagger itself reads as 無い, where it stands in a clause, is the word ない, carded ねえ."""
+
+    @pytest.mark.parametrize(
+        ("text", "written"),
+        [
+            ("ここにもねえのかよ", "ねえ"),
+            ("才能ねえし", "ねえ"),
+            ("そんなもんねぇよ", "ねぇ"),
+            ("時間がねーんだ", "ねー"),
+            ("用はねえよ", "ねえ"),
+        ],
+    )
+    def test_cards_the_word_as_said(self, text, written):
+        cards = _cards(text)
+        assert cards.get("ねえ") == written
+        assert "ない" not in cards
+
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "ねえ、ちょっと聞いて",  # the call
+            "ねえねえ、聞いてよ",
+            "そうだねえ",  # the particle
+            "それはねえ、困ったんだよ",
+            "やるしかねえ",  # しかない is the expression
+            "信じらんねえ",  # a piece of the chain
+            "見てねえよ",
+            "よくねえよ",
+            "みっともねえな",  # one word
+        ],
+    )
+    def test_the_call_the_particle_and_a_chain_piece_are_no_card(self, text):
+        cards = _cards(text)
+        assert "ねえ" not in cards
+        assert "ない" not in cards
+
+    @pytest.mark.parametrize(
+        ("tokens", "at", "stands"),
+        [
+            ((("才能", "名詞"), ("ねえ", "形容詞"), ("し", "助詞")), 1, True),
+            ((("ケンカ", "名詞"), ("ねえ", "形容詞")), 1, False),  # before a pause: as often the particle
+            ((("わけ", "名詞"), ("ねえ", "形容詞")), 1, True),
+            ((("あんた", "代名詞"), ("達", "接尾辞"), ("ねぇ", "形容詞")), 2, False),
+            ((("痛く", "形容詞"), ("なん", "代名詞"), ("か", "助詞"), ("ねえ", "形容詞"), ("ぞ", "助詞")), 3, False),
+            ((("金", "名詞"), ("が", "助詞"), ("ねえ", "形容詞")), 2, True),
+            ((("ねえ", "形容詞"), ("の", "助詞")), 0, True),
+            ((("ねえ", "形容詞"), ("、", "補助記号")), 0, False),  # the call
+            ((("ねえ", "形容詞"), ("ねえ", "形容詞")), 1, False),
+            ((("そう", "副詞"), ("ねえ", "形容詞")), 1, False),  # そうねえ
+            ((("それ", "代名詞"), ("は", "助詞"), ("ねえ", "形容詞"), ("、", "補助記号")), 2, False),
+            ((("ここ", "代名詞"), ("に", "助詞"), ("は", "助詞"), ("ねえ", "形容詞"), ("な", "助詞")), 3, True),
+            ((("信じ", "動詞"), ("らん", "助動詞"), ("ねえ", "形容詞")), 2, False),
+            ((("見", "動詞"), ("て", "助詞"), ("ねえ", "形容詞")), 2, False),
+            ((("みっとも", "名詞"), ("ねえ", "形容詞")), 1, False),  # みっともない is an entry
+            ((("キー", "名詞"), ("ねー", "形容詞"), ("ねー", "形容詞")), 1, False),  # a doubled call
+            ((("ごめん", "名詞"), ("ねー", "形容詞"), ("とか", "助詞")), 1, False),
+            ((("甘く", "形容詞"), ("なんか", "助詞"), ("ねえ", "形容詞"), ("よ", "助詞")), 2, False),
+            ((("見", "動詞"), ("たく", "助動詞"), ("も", "助詞"), ("ねえ", "形容詞"), ("や", "助詞")), 3, False),
+            ((("見", "動詞"), ("づらく", "接尾辞"), ("ねー", "形容詞"), ("か", "助詞")), 2, False),
+            ((("意味", "名詞"), ("なんか", "助詞"), ("ねえ", "形容詞"), ("よ", "助詞")), 2, True),
+            ((("全く", "副詞"), ("ねえ", "形容詞"), ("や", "助詞")), 1, True),
+        ],
+    )
+    def test_where_the_word_stands(self, tokens, at, stands):
+        assert _spoken_nai_stands(_located(*tokens), at, lambda spelling: 2 if spelling in _ENTRIES else 0) is stands
+
+    def test_a_long_kana_run_listed_as_a_reading_is_that_entry(self):
+        def listed_as_a_reading(spelling: str) -> int:
+            return 1 if spelling in ("おとなげない", "もんない") else 0
+
+        grown_up = _located(("おとな", "名詞"), ("げ", "接尾辞"), ("ねえ", "形容詞"), ("よ", "助詞"))
+        assert _spoken_nai_stands(grown_up, 2, listed_as_a_reading) is False
+        thing = _located(("もん", "名詞"), ("ねえ", "形容詞"), ("よ", "助詞"))
+        assert _spoken_nai_stands(thing, 1, listed_as_a_reading) is True
+
+    def test_the_sentence_shows_and_bolds_the_word_as_written(self):
+        text = "そんなもんねぇよ"
+        word = next(word for word in _words(text) if word.mined_form == "ねえ")
+        assert word.surface == "ねぇ"
+        assert re.search(r"<b>(.*?)</b>", word.sentence_bolded).group(1) == "ねぇ"
+        assert re.sub(r"\[[^\]]*\]| ", "", re.search(r"<b>(.*?)</b>", word.sentence_furigana_bolded).group(1)) == "ねぇ"

@@ -2163,10 +2163,11 @@ _LONG_VOWELS = {"a": "あ", "i": "い", "u": "う", "e": "いえ", "o": "うお"
 _VARIANT_SITE_RE = re.compile("[ぁ-ゖ][ー〜～ぁぃぅぇぉ]")
 _VARIANT_CONTENT_POS1 = frozenset({"名詞", "動詞", "形容詞", "副詞", "代名詞", "形状詞", "連体詞", "接続詞"})
 _VARIANT_INFLECTING_POS1 = frozenset({"形容詞", "動詞", "副詞", "助動詞"})
-#: The kinds of variant reading that are on (``_variant_reading``): K, a
-#: stretched spelling the tagger resolves. With none the pass and its readers
-#: are wired and the parser reads every line as before.
-_VARIANT_CLASSES: frozenset[str] = frozenset({"K"})
+#: The kinds of variant reading that are on: K, a stretched spelling the tagger
+#: resolves (``_variant_reading``); A, ねえ alone as the word ない
+#: (``_read_spoken_nai``). With none the pass and its readers are wired and the
+#: parser reads every line as before.
+_VARIANT_CLASSES: frozenset[str] = frozenset({"K", "A"})
 
 
 class VariantToken(RetaggedToken):
@@ -2180,9 +2181,9 @@ class VariantToken(RetaggedToken):
 
     __slots__ = ("shadow",)
 
-    def __init__(self, token, surface: str):
+    def __init__(self, token, surface: str, shadow: str | None = None):
         super().__init__(token, {"orth": surface}, surface)
-        self.shadow: str = token.surface
+        self.shadow: str = token.surface if shadow is None else shadow
 
 
 def word_surface(token) -> str:
@@ -2294,7 +2295,11 @@ def read_variants(text: str, tokens: list, tag: Callable[[str], Iterable[Any]], 
     headword as written, 1 listed (a search-only row, or a reading), 0 unknown.
     A spelling that is a real headword as written is no variant (ずーっと, おーい).
     """
-    if not _VARIANT_CLASSES or _VARIANT_SITE_RE.search(text) is None:
+    if not _VARIANT_CLASSES:
+        return tokens
+    if "A" in _VARIANT_CLASSES and _SPOKEN_NAI_RE.search(text) is not None:
+        tokens = _read_spoken_nai(text, tokens, headword)
+    if _VARIANT_SITE_RE.search(text) is None:
         return tokens
     sites = _variant_sites(text)
     if not sites:
@@ -2305,6 +2310,120 @@ def read_variants(text: str, tokens: list, tag: Callable[[str], Iterable[Any]], 
     for site in sites:
         tokens = _read_variant_site(text, tokens, site, tag, headword)
     return tokens
+
+
+#: The spoken ない as a subtitle writes it.
+_SPOKEN_NAI = frozenset({"ねえ", "ねぇ", "ねー"})
+_SPOKEN_NAI_RE = re.compile("ね[えぇー]")
+#: The nouns whose predicate ない is: before a pause their ねえ is the word (勝てるわけねえ).
+_NAI_NOUNS = frozenset({"わけ", "こと", "はず", "訳", "事", "筈"})
+
+
+def _read_spoken_nai(text: str, tokens: list, headword: Callable[[str], int]) -> list:
+    """ねえ the tagger itself reads as the adjective 無い is the word ない, carded ねえ (才能ねえし, ここにもねえのか).
+
+    Kind A. The token keeps its text and its tags and names ない to everything
+    that asks which word it is (the auxiliary-word test, the windows しかない
+    and でもない, the join keys); its card front is the word as said
+    (:func:`spoken_front`). Only where ``_spoken_nai_stands``.
+    """
+    located: list[tuple[Any, int, int]] | None = None
+    out: list | None = None
+    for i, token in enumerate(tokens):
+        if (
+            token.surface not in _SPOKEN_NAI
+            or _field(token, "pos1") != "形容詞"
+            or _field(token, "lemma") != "無い"
+            or not hasattr(getattr(token, "feature", None), "_replace")
+        ):
+            continue
+        if located is None:
+            located = list(iter_token_spans(text, tokens))
+            if len(located) != len(tokens):
+                return tokens
+        if not _spoken_nai_stands(located, i, headword):
+            continue
+        if out is None:
+            out = list(tokens)
+        out[i] = VariantToken(token, token.surface, "ない")
+    return tokens if out is None else out
+
+
+def spoken_front(token, front: str) -> str:
+    """The card front of a word said the spoken way: ねえ for the ない of ``_read_spoken_nai``, else ``front``."""
+    if isinstance(token, VariantToken) and front == "ない" and token.surface in _SPOKEN_NAI:
+        return "ねえ"
+    return front
+
+
+def _spoken_nai_stands(located: list[tuple[Any, int, int]], i: int, headword: Callable[[str], int]) -> bool:
+    """Whether a ねえ the tagger reads as 無い is the word ない where it stands, not the call or the particle ねえ.
+
+    The tagger gives the same tag to the interjection (ねえ、聞いて) and to the
+    sentence-final particle drawn out (そうねえ, ごめんねー). The word has a
+    word glued right before it (才能ねえ) or a particle or an auxiliary other
+    than ね glued right after it (ねえのか, ねえし). It is not the word: before
+    another ねえ; after そう or ごめん; after は or も when a pause follows
+    (それはねえ、…); after the ん of a contracted negative (信じらんねえ), after
+    て / で or a く form, also with a particle between (甘くなんかねえ), where it
+    is a piece of the chain; after a bare word when a pause follows (ケンカねえ…),
+    unless the word is one of ``_NAI_NOUNS``; and where the words before it +
+    ない are an entry of their own (みっともねえ, おとなげねえ), which is that
+    entry's ending.
+    """
+    start, end = located[i][1], located[i][2]
+    before = located[i - 1][0] if i and located[i - 1][2] == start else None
+    after = located[i + 1][0] if i + 1 < len(located) and located[i + 1][1] == end else None
+    before_pos1 = _field(before, "pos1") if before is not None else ""
+    after_pos1 = _field(after, "pos1") if after is not None else ""
+    word_before = (
+        before is not None
+        and before_pos1 not in ("補助記号", "感動詞", "記号", "空白")
+        and before.surface not in _SPOKEN_NAI
+    )
+    particle_after = after is not None and after_pos1 in ("助詞", "助動詞") and not after.surface.startswith("ね")
+    if (not word_before and not particle_after) or (after is not None and after.surface in _SPOKEN_NAI):
+        return False
+    if before is None or not word_before:
+        return True
+    if before.surface in ("そう", "そ", "て", "で", "じゃ", "ごめん", "死") or (
+        before.surface.endswith("ん") and before_pos1 in ("動詞", "助動詞", "助詞")
+    ):
+        return False
+    if before_pos1 == "助詞" and before.surface in ("は", "も") and not particle_after:
+        return False
+    # 甘く|なん|か|ねえ, 見たく|も|ねえ, 流されて|なんか|ねえ: the negative of the word before the particles.
+    back = i - 1
+    while (
+        back > i - 4
+        and back > 0
+        and located[back - 1][2] == located[back][1]
+        and (_field(located[back][0], "pos1") == "助詞" or located[back][0].surface == "なん")
+    ):
+        back -= 1
+    if _negated_by_nai(located[back][0]):
+        return False
+    # ケンカねえ…, あんた達ねぇ…: before a pause a bare word + ねえ is as often the particle; わけ, こと and はず take ない.
+    if not particle_after and before_pos1 != "助詞" and before.surface not in _NAI_NOUNS:
+        return False
+    joined = ""
+    for back in range(i - 1, max(i - 4, -1), -1):
+        if located[back][2] != (located[back + 1][1]):
+            break
+        joined = located[back][0].surface + joined
+        # A long kana run listed only as a reading is still that entry (おとなげない); a short one is
+        # another word's reading (もんない is 門内).
+        known = headword(joined + "ない")
+        if known == 2 or (known == 1 and len(joined) >= 4):
+            return False
+    return True
+
+
+def _negated_by_nai(token) -> bool:
+    """Whether ない right after ``token`` is its negative, not a word: a く form (甘く, 見たく, 見づらく) or て / で."""
+    if token.surface in ("て", "で"):
+        return True
+    return token.surface.endswith("く") and _field(token, "pos1") in ("形容詞", "接尾辞", "助動詞")
 
 
 def _read_variant_site(

@@ -73,6 +73,7 @@ from anki_miner.services.morphology import (
     retag_mistagged_tokens,
     short_causative_bases,
     source_spelling_fold,
+    spoken_front,
     word_surface,
 )
 from anki_miner.services.number_counters import merge_number_counters
@@ -2401,6 +2402,7 @@ class SubtitleParserService:
 
     def _front_for(self, word_token: Any, front: str, lemma: str) -> str:
         """The card front the mined-form policy picks for ``word_token`` given its dictionary form."""
+        front = spoken_front(word_token, front)
         pronunciation = getattr(word_token.feature, "pron", "")
         if not isinstance(pronunciation, str):
             pronunciation = ""

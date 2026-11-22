@@ -6,3 +6,8 @@
 {"id":"k21v06","sentence":"このやろー","expected":["この"],"category":"k1121-var","note":"やろう is another word: left alone"}
 {"id":"k21v07","sentence":"どーこですか","expected":[],"category":"k1121-var","note":"a one-kana stem before a stray kana is no どう"}
 {"id":"k21v08","sentence":"カードを切る","expected":["カード","切る"],"category":"k1121-var","note":"katakana before the mark is no site"}
+{"id":"k21v09","sentence":"ここにもねえのかよ","expected":["ここ","ねえ"],"category":"k1121-var","note":"V-NAI: ねえ alone is the word ない, carded ねえ"}
+{"id":"k21v10","sentence":"才能ねえし","expected":["才能","ねえ"],"category":"k1121-var","note":"V-NAI"}
+{"id":"k21v11","sentence":"ねえねえ、聞いてよ","expected":["聞く"],"category":"k1121-var","note":"the call ねえ is no card"}
+{"id":"k21v12","sentence":"やるしかねえ","expected":["やる"],"category":"k1121-var","note":"しかねえ is the expression しかない: no ねえ"}
+{"id":"k21v13","sentence":"信じらんねえ","expected":["信じる"],"category":"k1121-var","note":"ねえ after a contracted negative is a chain piece"}
