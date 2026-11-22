@@ -1,0 +1,4 @@
+{"id":"k21i01","sentence":"えっと、鍵を忘れた","expected":["鍵","忘れる"],"category":"k1121-intj","note":"an interjection is no card at the default settings (the switch is off)"}
+{"id":"k21i02","sentence":"あ、鍵を忘れた","expected":["鍵","忘れる"],"category":"k1121-intj","note":"a one-mora gasp is no card at the default settings"}
+{"id":"k21i03","sentence":"部屋が暗くなった","expected":["部屋","暗い","なる"],"category":"k1121-intj","note":"なる after an adjective's く form is the line's own predicate"}
+{"id":"k21i04","sentence":"夢中になっている","expected":["夢中","なる"],"category":"k1121-intj","note":"なる after the auxiliary に is the line's own predicate"}

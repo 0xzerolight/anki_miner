@@ -1123,6 +1123,12 @@ class SubtitleParserService:
         # tokens and never by a file's names; bounded like _exist_memo. It also
         # holds _fold_katakana_native_front's dictionary verdict, by surface.
         self._katakana_run_memo: dict[tuple[Any, ...], bool] = {}
+        # Whether the dictionary tags a surface as an interjection (_is_listed_interjection),
+        # by surface and never by the switch; bounded like _front_cache.
+        self._interjection_memo: dict[str, bool] = {}
+        # Mine the interjections the dictionary lists (_is_listed_interjection). A plain
+        # attribute read at every token, so it can be set after construction; no setting reads it.
+        self._mine_interjections: bool = False
 
     # ------------------------------------------------------------------
     # Per-parse memoization helpers
@@ -4101,10 +4107,13 @@ class SubtitleParserService:
             if (
                 word_token.surface in _KANA_BARE_INTERJECTIONS
                 and self._find_highlight_end(text, raw_tokens, tok_start, tok_end, word_token) == tok_end
+                and not self._is_listed_interjection(word_token, text, tok_start, tok_end)
             ):
                 return False
             if self._is_cut_sokuon_stem(word_token, text, tok_end):
                 return False
+            return not self._ellipsis_reject(word_token, text, tok_start, tok_end)
+        if self._is_listed_interjection(word_token, text, tok_start, tok_end):
             return not self._ellipsis_reject(word_token, text, tok_start, tok_end)
         if not self._whitelist_rescues(word_token, text, tok_start, tok_end, tokens, raw_tokens):
             if rejects is not None:
@@ -4113,6 +4122,84 @@ class SubtitleParserService:
         if self._is_katakana_run_fragment(word_token, text, tok_start, tok_end, tokens):
             return False
         return not self._ellipsis_reject(word_token, text, tok_start, tok_end)
+
+    #: Small kana add no mora of their own (あぁ and きゃ are one mora).
+    _INTERJECTION_SMALL_KANA: frozenset[str] = frozenset("ぁぃぅぇぉゃゅょゎァィゥェォャュョヮ")
+
+    @staticmethod
+    def _is_word_character(ch: str) -> bool:
+        """Whether ``ch`` belongs to a word: kana, kanji, a letter, a digit, the long mark or a wave dash.
+
+        The empty string (a line edge) is none.
+        """
+        return ch.isalnum() or ch in ("〜", "～")
+
+    def _is_listed_interjection(self, word_token, text: str, tok_start: int, tok_end: int) -> bool:
+        """Whether the interjection switch mines this token (``_mine_interjections``, off by default).
+
+        Every interjection the dictionary lists is a card with the switch on:
+        fillers and calls (えっと, ねえ), gasps down to one mora (あっ, あ) and
+        laughs (ははは), whatever the inclusion rule said about the token. What
+        keeps the garbage out:
+
+        - the tagger calls the token an interjection, and the dictionary tags
+          the surface ``int``: a shout with no entry is no card;
+        - it stands alone: the line edge, a space or punctuation on both sides.
+          Glued to a word it is a piece of it (あり|えへん, いただき|まー|す) or of
+          a name (うー|ちゃん);
+        - it is no stammer: a token of one mora with no っ whose kana also opens
+          the next word or closes the one before (あ、ありがとう).
+
+        It changes acceptance only; the caller still runs the ellipsis guard.
+        """
+        if not self._mine_interjections:
+            return False
+        surface = word_token.surface
+        if (
+            getattr(getattr(word_token, "feature", None), "pos1", None) != "感動詞"
+            or getattr(word_token, "compound", False) is True
+            or text[tok_start:tok_end] != surface
+        ):
+            return False
+        is_word = self._is_word_character
+        if is_word(text[tok_start - 1 : tok_start]) or is_word(text[tok_end : tok_end + 1]):
+            return False
+        core = surface.rstrip("っッー")
+        morae = sum(ch not in self._INTERJECTION_SMALL_KANA for ch in core)
+        if core and morae <= 1 and not surface.endswith(("っ", "ッ")):
+            kana = katakana_to_hiragana(core)
+            following = "".join(ch for ch in text[tok_end:] if is_word(ch))[: len(core)]
+            preceding = "".join(ch for ch in text[:tok_start] if is_word(ch))[-len(core) :]
+            if kana in (katakana_to_hiragana(following), katakana_to_hiragana(preceding)):
+                return False
+        if surface not in self._interjection_memo:
+            if len(self._interjection_memo) >= _FRONT_CACHE_CAP:
+                self._interjection_memo.clear()
+            self._interjection_memo[surface] = "int" in self._entry_tags([surface]).get(
+                surface, ()
+            ) or self._is_listed_interjection_variant(surface)
+        return self._interjection_memo[surface]
+
+    #: ッ and the small vowels of a variant spelling, with the plain kana each stands for (あぁ is ああ).
+    _INTERJECTION_PLAIN_KANA = str.maketrans("ッぁぃぅぇぉァィゥェォ", "っあいうえおアイウエオ")
+
+    def _is_listed_interjection_variant(self, surface: str) -> bool:
+        """Whether ``surface`` is a small-vowel or ッ spelling of a listed interjection, itself a headword.
+
+        あぁ, いやぁ and フフッ are headwords with no tags of their own, spelling
+        rows of ああ, いやあ and フフ: the plain spelling carries ``int``, in
+        either script and with or without its final っ. The card front stays
+        the spelling as written. A variant that is no headword (えッ, うわぁ)
+        would need the listed spelling as its front, and stays out.
+        """
+        plain = surface.translate(self._INTERJECTION_PLAIN_KANA)
+        if plain == surface or self._term_lookup is None or surface not in self._memoized_attest([surface]):
+            return False
+        spellings = {plain, katakana_to_hiragana(plain)}
+        spellings |= {spelling.rstrip("っ") for spelling in spellings}
+        spellings.discard("")
+        tags = self._entry_tags(sorted(spellings))
+        return any("int" in tags.get(spelling, ()) for spelling in spellings)
 
     #: Kana that never make up a mimetic word's doubled half: the long mark, the small kana.
     _MIMETIC_EXCLUDED_KANA: frozenset[str] = frozenset("ーッァィゥェォャュョヮ")
@@ -4201,7 +4288,7 @@ class SubtitleParserService:
         prev = getattr(tokens[idx - 1], "feature", None) if idx else None
         pos1 = getattr(prev, "pos1", None)
         if pos1 in _AUX_AFTER_POS1 or (pos1 == "助詞" and getattr(prev, "pos2", None) == "接続助詞"):
-            return True
+            return not SubtitleParserService._is_own_predicate(word_token, tokens, idx)
         if idx >= 2 and tokens[idx - 1].surface in ("も", "は") and tokens[idx - 2].surface in ("て", "で"):
             return True
         if (
@@ -4225,6 +4312,58 @@ class SubtitleParserService:
                 end == len(tokens) or getattr(tokens[end].feature, "pos1", None) == "補助記号"
             ):
                 return True
+        return False
+
+    @staticmethod
+    def _is_own_predicate(word_token, tokens: list, idx: int) -> bool:
+        """Whether an auxiliary-capable word right after a verb, adjective, auxiliary or conjunctive particle is the line's own predicate.
+
+        ``_used_as_auxiliary`` takes every word in that place for grammar. One
+        frame each where it is the predicate, a card of its own:
+
+        - なる after an adjective's く form (暗くなる) and after the auxiliary に
+          of an adjectival noun (夢中になる), but not after an honorific stem +
+          に (お尋ねになる). A negative or たい in く form (行かなくなる) is an
+          auxiliary and stays grammar. Two longer entries nothing joins stay
+          out, as なる would be a piece of them: よく + なる (良くなる in kana)
+          and そう + に + なる (そうになる).
+        - する after お / ご + a verb's continuative, the humble form
+          (お持ちします, and お待たせしました over the causative せ). Not before
+          たい: し + たい takes the front したい, which the dictionary has only
+          as the reading of other words (死体).
+        - いい after a particle that closes a clause of its own (寒いけどいい,
+          休むからいい, 安いしいい). After て, で, ば, と and ても it is the
+          grammar frame (食べていい) and stays out, and so it does after が:
+          見るがいい is the pattern がいい, not a clause and its predicate.
+          Before から it opens the listed いいから (いいから いいから).
+        - ない after the auxiliary に (降りそうにない).
+        """
+        base = getattr(word_token.feature, "orthBase", None)
+        prev = tokens[idx - 1]
+        pos1 = getattr(getattr(prev, "feature", None), "pos1", None)
+        if base == "なる":
+            if pos1 == "形容詞":
+                return bool(prev.surface.endswith("く")) and prev.surface != "よく"
+            if pos1 == "助動詞" and prev.surface == "に":
+                return not (
+                    idx >= 2
+                    and (tokens[idx - 2].surface == "そう" or SubtitleParserService._is_honorific_stem(tokens, idx - 2))
+                )
+        if base == "する":
+            stem = idx - 2 if pos1 == "助動詞" and prev.surface in ("せ", "させ") else idx - 1
+            if stem < 1 or getattr(getattr(tokens[stem], "feature", None), "pos1", None) != "動詞":
+                return False
+            following = tokens[idx + 1] if idx + 1 < len(tokens) else None
+            if getattr(getattr(following, "feature", None), "lemma", None) == "たい":
+                return False
+            head = tokens[stem - 1]
+            return head.surface in ("お", "ご") and getattr(getattr(head, "feature", None), "pos1", None) == "接頭辞"
+        if base in ("いい", "良い", "よい") and pos1 == "助詞":
+            if idx + 1 < len(tokens) and tokens[idx + 1].surface == "から":
+                return False
+            return prev.surface in ("から", "けど", "けれど", "けれども", "し", "ので", "のに")
+        if base in ("ない", "無い"):
+            return pos1 == "助動詞" and prev.surface == "に"
         return False
 
     def _is_not_main_verb(self, word_token, tokens: list) -> bool:
