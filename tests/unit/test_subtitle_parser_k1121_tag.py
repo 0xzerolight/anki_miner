@@ -351,3 +351,34 @@ class TestRecutUnlistedKanji:
             morphology.mining_base,
         )
         assert same is tokens
+
+
+@needs_tagger
+class TestFillerBeforeAnAdjectiveAndItsNoun:
+    """あの directly before an adjective and its noun is the pre-noun word, not the filler."""
+
+    @pytest.mark.parametrize(
+        "text", ["あの有名な店だ。", "あの大きな犬だ。", "あの美しい花を見て。", "あの有名な 店だ。"]
+    )
+    def test_it_is_the_prenoun_word(self, tagger, text):
+        assert _tags(list(tagger(text)))[0] == ("あの", "感動詞")
+        first = _retag(tagger, text)[0]
+        assert (first.feature.pos1, first.feature.lemma) == ("連体詞", "彼の")
+
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "あの、すみません。",
+            "あの 山田さん。",
+            "あのね、聞いて。",
+            "あの私 帰ります。",
+            "あの静かにして。",
+            "あの 有名な店だ。",
+        ],
+    )
+    def test_the_filler_stays(self, tagger, text):
+        assert _tags(_retag(tagger, text))[0] == _tags(list(tagger(text)))[0]
+
+    def test_the_card(self):
+        assert "あの" in _words("あの有名な店だ。")
+        assert "あの" not in _words("あの、すみません。")

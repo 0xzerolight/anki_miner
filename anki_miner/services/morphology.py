@@ -1614,7 +1614,8 @@ def retag_mistagged_tokens(
     - あの/その tagged as the filler directly before a noun, with no space or
       mark between, are the pre-noun adjective (あの女, あの橋): a filler is
       followed by a pause or a particle (あの…, あの 山田さん, あのね). A pronoun
-      is left out on purpose: あの私 is "um, I".
+      is left out on purpose: あの私 is "um, I". An adjective and its noun
+      count as the noun (あの有名な店, あの大きな犬; ``_noun_phrase_follows``).
     - 今/次 tagged as a prefix with a space after them are the nouns 'now' and
       'next' (今 駅にいる): the tagger skips the subtitle space and reads 今 駅
       as it reads 今大会. A prefix is never spaced from its noun, so the
@@ -1678,9 +1679,9 @@ def retag_mistagged_tokens(
                 out.append(RetaggedToken(token, resplit[0][1], resplit[0][0]))
                 continue
         fields: dict[str, str] | None = None
-        if pos1 == "感動詞" and nxt is not None and not spaced:
-            if getattr(getattr(nxt, "feature", None), "pos1", None) == "名詞":
-                fields = _FILLER_PRENOUNS.get(token.surface)
+        if pos1 == "感動詞" and nxt is not None and not spaced and token.surface in _FILLER_PRENOUNS:
+            if getattr(getattr(nxt, "feature", None), "pos1", None) == "名詞" or _noun_phrase_follows(tokens, i + 1):
+                fields = _FILLER_PRENOUNS[token.surface]
         elif pos1 == "接頭辞" and spaced:
             fields = _PREFIX_NOUNS.get(token.surface)
         elif token.surface in nouns and _unknown_katakana_noun(token):
@@ -2034,6 +2035,26 @@ def _spaced_suffix_recut(
             clause[0].white_space = white_space
             return clause[:count], sum(1 for cut in cuts if cut <= length)
     return None
+
+
+def _noun_phrase_follows(tokens: list, i: int) -> bool:
+    """Whether ``tokens[i]`` opens an adjective and its noun: 有名|な|店, 大きな|犬, 美しい|花.
+
+    Nothing is spaced up to the adjective's end. The noun may stand after a
+    subtitle space where the adjective cannot end a clause (有名な 店, 大きな 犬);
+    after 美しい, which can, it must be attached.
+    """
+    pos1 = getattr(getattr(tokens[i], "feature", None), "pos1", None)
+    if pos1 == "形状詞":
+        i += 1
+        if i >= len(tokens) or tokens[i].surface != "な" or bool(getattr(tokens[i], "white_space", "")):
+            return False
+    elif pos1 not in ("形容詞", "連体詞"):
+        return False
+    noun = tokens[i + 1] if i + 1 < len(tokens) else None
+    if noun is None or (pos1 == "形容詞" and bool(getattr(noun, "white_space", ""))):
+        return False
+    return getattr(getattr(noun, "feature", None), "pos1", None) == "名詞"
 
 
 #: The dictionary tags of a verb entry, by their first letters (v1, v5r, vk, vs-i, vz).
