@@ -52,7 +52,7 @@ class TestListedSpellingWindow:
         [
             ("行ったわけじゃない", "わけ"),  # た|わけ reads 戯け
             ("こっちのほうがいい", "ほう"),  # ほう|が reads 邦画
-            ("あとで帰る", "あと"),  # あと|で is the reading of 後で
+            ("あとで帰る", "あとで"),  # あと|で is the reading of 後で: its list row joins the entry (K1121 EXPR)
             ("考えたうえで決める", "うえ"),  # た|うえ reads 田植え
             ("それは見たもんだ", "もん"),  # た|もん reads 多聞
         ],

@@ -691,6 +691,20 @@ _ANCHOR_HEADWORDS: tuple[str, ...] = (
     "サード",
     "インパクト",
     "あんた",
+    # k1121 EXPR: kanji spellings of kana join rows (k21e01, k21e02); と言う and に就いて are
+    # attested so that the reject is the rule's (k21e04, k21e05)
+    "何となく",
+    "勝手に",
+    "と言う",
+    "に就いて",
+    # k1121 EXPR: a word and its function tail, one entry (k21e07 to k21e10)
+    "おかげで",
+    "どこか",
+    "どこ",
+    "もうすぐ",
+    # k1121 EXPR: replies that stand alone (k21e11); そうだ is attested so that the reject is the rule's (k21e12)
+    "そうか",
+    "そうだ",
 )
 
 # Yomitan `ruleIdentifiers` per fixture headword. A real term bank ships these,

@@ -17,11 +17,19 @@ A join row names a word the tagger cuts apart (いつ|も, どう|いう), which
 ``LexicalJoiner`` joins back; the merged token then matches on its front alone.
 A ``start`` row joins only where it opens a line or clause, as there it is a
 conjunction (でも, だから) and elsewhere the particles (学校でも); a ``noun`` or
-``verb`` row only right after one (猫という, 会ったことがある). A last token
+``verb`` row only right after one (猫という, 会ったことがある); an ``alone`` row
+only where it opens a clause and a pause follows, as there it is a reply
+(そうか。 いいよ。) and elsewhere its words (そうかもね, これいいよね). A last token
 written ``=X`` matches any token whose dictionary form is X, so a grammar
 expression joins in every inflection (こと|が|あっ|た is ことがある). A
 ``grammar`` row is a grammar point (んだ, ください), joined only while
 Settings → Word Filters → Mine grammar points is on.
+
+A join row is blind to the script: its tokens also match a kanji-written
+token by that token's kana reading, so なん|と|なく is 何|と|なく as well and
+そう|いえ|ば is そう|言え|ば. A reading fits homophones too (時期|に reads じきに),
+so such a match counts only when the dictionary lists the span as written
+(``LexicalJoiner``).
 """
 
 from __future__ import annotations
@@ -37,7 +45,8 @@ class KanaJoin(NamedTuple):
     headword: str
     pos1: str
     line_start: bool
-    #: "noun" or "verb": joined only right after one; "conditional": after one (ば, ては, ないと); "" anywhere.
+    #: "noun" or "verb": joined only right after one; "conditional": after one (ば, ては, ないと);
+    #: "alone": opening a clause (``line_start`` is set) and before a pause; "" anywhere.
     after: str = ""
     #: A grammar point (んだ, ください): joined only with ``mine_grammar_points`` on.
     grammar: bool = False
@@ -52,6 +61,8 @@ class KanaWords(NamedTuple):
     #: Joins whose last token matches by dictionary form, keyed on the surfaces
     #: before it plus that form (こと, が, ある).
     base_joins: dict[tuple[str, ...], KanaJoin]
+    #: The first token of every join of two or more tokens: where a match by reading can start.
+    heads: frozenset[str] = frozenset()
 
 
 @cache
@@ -69,7 +80,8 @@ def kana_words() -> KanaWords:
         if rest and rest[0] != "kanji":
             *head, last = rest[0].split("|")
             where = rest[1] if len(rest) > 1 else ""
-            join = KanaJoin(form, pos1, where == "start", "" if where == "start" else where, rest[2:] == ["grammar"])
+            opens = where in ("start", "alone")
+            join = KanaJoin(form, pos1, opens, "" if where == "start" else where, rest[2:] == ["grammar"])
             if last.startswith("="):
                 base_joins[(*head, last[1:])] = join
             else:
@@ -79,7 +91,8 @@ def kana_words() -> KanaWords:
         if rest:
             kanji_spelled.add((form, pos1))
     joined = frozenset(row.headword for row in (*joins.values(), *base_joins.values()))
-    return KanaWords(frozenset(words), joins, joined, frozenset(kanji_spelled), base_joins)
+    heads = frozenset(key[0] for key in (*joins, *base_joins) if len(key) > 1)
+    return KanaWords(frozenset(words), joins, joined, frozenset(kanji_spelled), base_joins, heads)
 
 
 def is_listed(front: str, pos1: str, *, merged: bool) -> bool:
