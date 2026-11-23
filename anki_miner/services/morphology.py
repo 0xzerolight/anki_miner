@@ -501,7 +501,30 @@ def iter_token_spans(text: str, tokens: list) -> Iterator[tuple[Any, int, int]]:
     ``parse_subtitle_file``, ``parse_subtitle_file_with_index`` AND
     ``count_lemmas`` must all route through it, or the count-vs-mine
     sets diverge and a reported occurrence count over-promises (T-38).
+
+    The spans of one text and one sequence of token objects are walked once
+    (``_TOKEN_SPANS``): a line's tokens are located by many callers.
     """
+    key = (text, tuple(map(id, tokens)))
+    known = _TOKEN_SPANS.get(key)
+    if known is None:
+        held = tuple(tokens)
+        known = (held, tuple(_walk_token_spans(text, held)))
+        if len(_TOKEN_SPANS) >= _TOKEN_SPANS_CAP:
+            _TOKEN_SPANS.clear()
+        _TOKEN_SPANS[key] = known
+    return iter(known[1])
+
+
+#: (text, the ids of the token objects) -> (those objects, their spans), for ``iter_token_spans``.
+#: The entry holds the objects, so no other object can take one of their ids while it lives:
+#: an id match is the same objects, and a token's surface never changes once it is made.
+_TOKEN_SPANS: dict[tuple[str, tuple[int, ...]], tuple[tuple[Any, ...], tuple[tuple[Any, int, int], ...]]] = {}
+_TOKEN_SPANS_CAP = 512
+
+
+def _walk_token_spans(text: str, tokens: tuple[Any, ...]) -> Iterator[tuple[Any, int, int]]:
+    """The walk of ``iter_token_spans``: each token found from a running cursor."""
     cursor = 0
     for token in tokens:
         surface = token.surface
@@ -546,6 +569,11 @@ def iter_token_spans(text: str, tokens: list) -> Iterator[tuple[Any, int, int]]:
         if stitched:
             continue
         yield token, idx, tok_end
+
+
+def clear_token_spans() -> None:
+    """Forget the walked spans (``_TOKEN_SPANS``): the parser's memo reset."""
+    _TOKEN_SPANS.clear()
 
 
 def merge_compound_suffixes(

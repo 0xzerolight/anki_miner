@@ -54,6 +54,7 @@ from anki_miner.services.morphology import (
     _edit_distance,
     apply_special_readings,
     attest_merged_readings,
+    clear_token_spans,
     drain_attribute_guard_counts,
     extract_lemma,
     extract_orth_base,
@@ -1186,6 +1187,7 @@ class SubtitleParserService:
         self._reset_perf_counters()
         self._takes_suru_memo = {}
         self._variant_headword_memo = {}
+        clear_token_spans()
 
     def _reset_perf_counters(self) -> None:
         """Zero the per-parse probe/tokenize cumulative counters (Task 28)."""
