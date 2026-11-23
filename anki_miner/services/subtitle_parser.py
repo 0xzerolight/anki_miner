@@ -4398,13 +4398,18 @@ class SubtitleParserService:
 
         A proper noun of another kind is a person where it is called like one:
         a place or a firm right before a name honorific (奈良ちゃん, 松下君).
+        And a span the matcher joined is a person where every token under it
+        is a tagged name (``_is_joined_person_name``).
         """
         if self._mine_person_names:
             return False
         feature = getattr(word_token, "feature", None)
-        if getattr(feature, "pos2", None) != "固有名詞":
+        if getattr(word_token, "compound", False) is True:
+            if not self._is_joined_person_name(word_token, text, tok_start, tok_end, raw_tokens):
+                return False
+        elif getattr(feature, "pos2", None) != "固有名詞":
             return False
-        if getattr(feature, "pos3", None) != "人名":
+        elif getattr(feature, "pos3", None) != "人名":
             if not self._name_honorific_follows(text, tok_end, raw_tokens):
                 return False
         else:
@@ -4420,6 +4425,26 @@ class SubtitleParserService:
         return not (
             self._force_include is not None
             and self._force_include(self._card_front(word_token, text, tok_start, tok_end, raw_tokens))
+        )
+
+    def _is_joined_person_name(self, word_token, text: str, tok_start: int, tok_end: int, raw_tokens: list) -> bool:
+        """Whether a joined span is a person's full name: two raw tokens or more, each tagged 固有名詞-人名 (山田|太郎).
+
+        The synthetic token carries no such tag, so the raw tokens under the
+        span are read. One piece that is no tagged name keeps the card (神|様),
+        and so does a span with no kanji: a katakana word the dictionary lists
+        is a word the tagger cut into name-like pieces (ハック|ション).
+        """
+        surface = word_token.surface
+        if self._NAME_PIECE_RE.fullmatch(surface) is None or _is_all_katakana(surface):
+            return False
+        pieces = [
+            getattr(token, "feature", None)
+            for token, start, end in self._iter_token_spans(text, raw_tokens)
+            if tok_start <= start and end <= tok_end
+        ]
+        return len(pieces) >= 2 and all(
+            getattr(piece, "pos2", None) == "固有名詞" and getattr(piece, "pos3", None) == "人名" for piece in pieces
         )
 
     def _name_honorific_follows(self, text: str, tok_end: int, raw_tokens: list) -> bool:

@@ -52,6 +52,12 @@ _HEADWORDS = (
     "お客様",
     "先生",
     "先輩",
+    "山田太郎",
+    "弁慶の泣き所",
+    "見る",
+    "ハックション",
+    "声",
+    "言う",
 )
 _COMMON = frozenset(_HEADWORDS)
 # Proper nouns allowed, as the measuring settings have them.
@@ -219,3 +225,45 @@ class TestProperNounBeforeHonorific:
         for line in ("奈良ちゃんは元気だ", "松下君は元気だ"):
             off = _fronts(_service(AnkiMinerConfig()), tmp_path, line)
             assert off == _fronts(_names_mined(_service(AnkiMinerConfig())), tmp_path, line)
+
+
+class TestJoinedPersonName:
+    """W-3: a span joined from tokens the tagger all tags as a person's name is a person."""
+
+    def test_a_full_name_the_dictionary_lists_is_no_card(self, tmp_path: Path) -> None:
+        assert _fronts(_service(), tmp_path, "山田太郎が歩いた") == ["歩く"]
+        assert _fronts(_names_mined(_service()), tmp_path, "山田太郎が歩いた") == ["山田太郎", "歩く"]
+
+    def test_no_piece_of_the_name_is_a_card_where_proper_nouns_are_excluded(self, tmp_path: Path) -> None:
+        for service in (_service(AnkiMinerConfig()), _names_mined(_service(AnkiMinerConfig()))):
+            fronts = _fronts(service, tmp_path, "山田太郎が歩いた")
+            assert "山田" not in fronts and "太郎" not in fronts
+        assert _fronts(_service(AnkiMinerConfig()), tmp_path, "山田太郎が歩いた") == ["歩く"]
+
+    def test_a_whitelisted_full_name_is_mined(self, tmp_path: Path) -> None:
+        service = _service(whitelist=frozenset({"山田太郎"}))
+        assert _fronts(service, tmp_path, "山田太郎が歩いた") == ["山田太郎", "歩く"]
+
+    @pytest.mark.parametrize(
+        ("line", "fronts"),
+        [
+            ("神様に会った", ["神様", "会う"]),
+            ("弁慶の泣き所を見た", ["弁慶の泣き所", "見る"]),
+        ],
+    )
+    def test_a_joined_word_with_a_piece_that_is_no_name_stays(
+        self, tmp_path: Path, line: str, fronts: list[str]
+    ) -> None:
+        assert _fronts(_service(), tmp_path, line) == fronts
+
+    def test_text_units_get_the_rule(self) -> None:
+        units = [ReadingUnit(index=0, text="山田太郎が歩いた", location_label="p.1")]
+        words, _index, counts = _service().parse_text_units(units, want_line_index=False)
+        assert [word.mined_form for word in words] == ["歩く"]
+        assert "山田太郎" not in counts
+
+    def test_a_katakana_word_the_tagger_cuts_into_name_like_pieces_stays(self, tmp_path: Path) -> None:
+        line = "大きな声でハックションと言った"
+        fronts = _fronts(_service(), tmp_path, line)
+        assert "ハックション" in fronts
+        assert fronts == _fronts(_names_mined(_service()), tmp_path, line)
