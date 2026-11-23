@@ -35,6 +35,7 @@ _SPELLINGS = frozenset(
     {"をして", "にして", "となる", "やしない", "となく", "てもいい", "しかない", "大事にする"}
     | {"うまくやる", "若くして"}
     | {"にしろ", "にせよ", "となったら", "となると", "いいかげんにする", "いずれにせよ", "何にせよ", "いざとなったら"}
+    | {"となれば", "雨が降る", "仕方がない"}
 )
 
 # Dictionary entry tags by headword: a word with no row here has no entry at all.
@@ -132,6 +133,36 @@ class TestVerbInsideAnEntryThatGoesOnPastItsParticle:
     )
     def test_the_verb_after_a_plain_noun_and_its_particle_stays(self, text, front):
         assert front in _fronts(text)
+
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "となると合鍵を持っていたのは管理人だ。",
+            "となれば今夜のうちに峠を越えるしかない。",
+            "となったら今夜のうちに荷物をまとめる。",
+            "そうか、となると合鍵を持っていたのは管理人だ。",
+            "なるほど となると合鍵を持っていたのは管理人だ",
+            "「合鍵は一本きり」となると管理人が怪しい。",
+        ],
+    )
+    def test_the_conditional_after_a_particle_with_no_word_before_it_is_no_card(self, text):
+        assert "なる" not in _fronts(text)
+
+    def test_a_plain_verb_after_a_particle_that_opens_the_line_stays(self):
+        # The line before began the sentence: と marks its noun.
+        assert "なる" in _fronts("となるのは早くても来年の春だろう。")
+
+    @pytest.mark.parametrize(
+        ("text", "joined"),
+        [
+            ("明日も雨が降るとなると渡し船は出せない。", "雨が降る"),
+            ("それも仕方がないとなれば諦めもつく。", "仕方がない"),
+        ],
+    )
+    def test_the_verb_after_a_joined_predicate_and_a_particle_is_no_card(self, text, joined):
+        fronts = _fronts(text)
+        assert joined in fronts
+        assert "なる" not in fronts
 
     def test_a_particle_before_the_particle_opens_no_entry(self):
         # から|に|しろ reads like 空にする 'to empty': a homophone across the word boundary.

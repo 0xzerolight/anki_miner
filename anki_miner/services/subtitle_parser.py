@@ -5348,7 +5348,15 @@ class SubtitleParserService:
 
         Another particle before this one opens no entry: 洗って|から|に|しろ
         only reads like 空にする.
+
+        A joined entry carries no inflection: it is a predicate in its final
+        form where the line ends it as its headword ends (雨が降る|と|なる|と).
+
+        And と with no word before it marks no noun, so with the verb as a
+        condition it is the entry (``_takes_up_the_line_before``).
         """
+        if self._takes_up_the_line_before(tokens, start, idx):
+            return True
         if not start:
             return False
         before = tokens[start - 1]
@@ -5356,6 +5364,9 @@ class SubtitleParserService:
         if pos1 == "助詞":
             return False
         if pos1 in ("動詞", "形容詞", "助動詞"):
+            if getattr(before, "compound", False):
+                headword = getattr(before.feature, "lemma", None) or ""
+                return bool(headword) and word_surface(before)[-1:] == headword[-1:]
             c_form = getattr(before.feature, "cForm", None)
             return isinstance(c_form, str) and c_form.startswith(("終止形", "連体形"))
         head = word_surface(before)
@@ -5363,6 +5374,29 @@ class SubtitleParserService:
         wider = [head + window for window in windows]
         wider.append(head + "".join(word_surface(tok) for tok in tokens[start:idx]) + base)
         return bool(self._kana_windows_attested(wider))
+
+    #: What makes a condition of the verb before it: なる|と, なれ|ば, なっ|たら.
+    _CONDITION_ENDINGS: frozenset[str] = frozenset({"と", "ば", "たら"})
+
+    @staticmethod
+    def _takes_up_the_line_before(tokens: list, start: int, idx: int) -> bool:
+        """Whether と at ``tokens[start]`` has no word to mark and the verb at ``tokens[idx]`` right after it is a condition.
+
+        と that opens the line or follows a pause (a space, a comma, a bracket)
+        takes up what was said before, and the verb as a condition after it is
+        the listed phrase, not the line's own verb: と|なる|と 鍵は…,
+        、と|なれ|ば, 」と|なっ|たら. A plain と|なる there stays the verb of a
+        sentence the line before began, and so does the verb after any other
+        particle (を|し|て, に|し|て).
+        """
+        if tokens[start].surface != "と" or start + 1 != idx or idx + 1 >= len(tokens):
+            return False
+        ending = tokens[idx + 1]
+        if ending.surface not in SubtitleParserService._CONDITION_ENDINGS or bool(getattr(ending, "white_space", "")):
+            return False
+        if not start or bool(getattr(tokens[start], "white_space", "")):
+            return True
+        return getattr(getattr(tokens[start - 1], "feature", None), "pos1", None) in ("補助記号", "記号", "空白")
 
     def _kana_window_choice(self, tokens: list, idx: int, windows: list[str], *, own_word: bool) -> list[str]:
         """The windows that are still a candidate against the kana word at ``tokens[idx]``.
