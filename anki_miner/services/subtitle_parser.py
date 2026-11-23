@@ -4133,6 +4133,9 @@ class SubtitleParserService:
         # subtype and ３つ has no kanji, so it is taken before the gate.
         if getattr(getattr(word_token, "feature", None), "number_counter", False) is True:
             return not self._ellipsis_reject(word_token, text, tok_start, tok_end)
+        # An all-kana entry of content words the dictionary matcher joined (うまくいく): taken by name.
+        if getattr(getattr(word_token, "feature", None), "kana_entry", False) is True:
+            return not self._ellipsis_reject(word_token, text, tok_start, tok_end)
         rejection = self._inclusion_rule.rejection(word_token)
         if rejection is not None and self._is_attested_mimetic(word_token):
             rejection = None
