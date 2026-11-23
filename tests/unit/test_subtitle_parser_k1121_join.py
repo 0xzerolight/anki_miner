@@ -80,6 +80,7 @@ _ENTRIES: dict[str, tuple[str, tuple[str, ...]]] = {
     "気を使わせる": ("exp v1", ("きをつかわせる",)),
     "話にならない": ("exp adj-i", ("はなしにならない",)),
     "訳にはいかない": ("exp", ("わけにはいかない",)),
+    "いいって言う": ("exp v5u", ("いいっていう",)),
     "そうは行かない": ("exp", ("そうはいかない",)),
     "間に合う": ("exp v5u", ("まにあう",)),
     "間に合わない": ("exp adj-i", ("まにあわない",)),
@@ -163,6 +164,8 @@ def test_a_katakana_noun_idiom_joins_under_its_plain_spelling(sentence: str, ent
         ("荷物が届きそうにない。", "そうにない"),
         # する and what follows it is grammar.
         ("こうしてもいいですか。", "してもいい"),
+        # A quote and the verb that quotes it are two words, whatever a dictionary lists.
+        ("その値段でいいっていうなら買おう。", "いいっていう"),
         # An interjection entry is the interjection switch's.
         ("もういいよ。", "もういい"),
         # After a predicate, なく|なる is the negative and なる.

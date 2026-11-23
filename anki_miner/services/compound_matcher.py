@@ -354,6 +354,9 @@ def _kana_entry_shape(tokens: list, i: int, j: int) -> bool:
         return False
     if head.surface in _DEMONSTRATIVES and tail_base == "いい":
         return False
+    # A quote and the verb that quotes it are no entry (いい|って|いう is いい and と言う).
+    if tail_base in ("いう", "言う") and tokens[j - 1].surface in ("って", "と"):
+        return False
     if head.surface == "なく" and tail_base == "なる" and j == i + 1:
         return i == 0 or tokens[i - 1].surface in _NAKUNARU_BEFORE or _pos1(tokens[i - 1]) in ("補助記号", "空白")
     return True
