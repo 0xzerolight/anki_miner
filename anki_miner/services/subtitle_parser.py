@@ -4701,7 +4701,7 @@ class SubtitleParserService:
 
     @staticmethod
     def _is_stammered_cry(tokens: list, idx: int) -> bool:
-        """Whether a kana いる after a subtitle space is 痛い being stammered (いっ いたたたた, いてっ いて いててて).
+        """Whether a kana いる after a subtitle space is 痛い being stammered (荷物が重い いっ いたたたた 腰が).
 
         The tagger reads the い of the cry as the verb. Two shapes give it
         away: the phrase before the space opens on the same い (いっ, いてっ),
