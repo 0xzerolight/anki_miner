@@ -24,7 +24,7 @@ pytestmark = pytest.mark.skipif(not _fugashi_available(), reason="fugashi/unidic
 # Kana the dictionary has as a headword or a reading.
 _ATTESTED = frozenset(
     {"する", "やる", "なる", "ある", "いる", "ない", "いい", "できる", "もらう", "いただく", "くれる", "くださる"}
-    | {"いらっしゃる", "いらっしゃい", "まあ", "みる", "しまう", "おく", "について", "として"}
+    | {"いらっしゃる", "いらっしゃい", "まあ", "みる", "しまう", "おく", "について", "として", "なくなる"}
 )
 
 # Headwords a dictionary spells this way: the entries a window can be.
@@ -174,6 +174,7 @@ class TestPredicateAfterASubtitleSpace:
             ("試合に勝った やった！", "やる"),
             ("もう帰ろう いいから早く", "いい"),
             ("どう考えても変だ あれは嘘だ", "ある"),
+            ("本当だ なくなってる", "ない"),
         ],
     )
     def test_an_auxiliary_frame_holds_across_the_space(self, text, front):
@@ -181,4 +182,31 @@ class TestPredicateAfterASubtitleSpace:
 
     @pytest.mark.parametrize(("text", "front"), [("それならいいよ", "いい"), ("先生は教室で待っている", "いる")])
     def test_without_a_space_nothing_changes(self, text, front):
+        assert front not in _fronts(text)
+
+
+class TestNaruAndIruAfterAnAuxiliary:
+    """V-3: なる after a verb's negative or たい in く form; いる after the copula で."""
+
+    @pytest.mark.parametrize(
+        ("text", "front"),
+        [
+            ("もう画面から目が離せなくなってた。", "なる"),
+            ("急に実家に帰りたくなった。", "なる"),
+            ("ずっとこのままでいたい。", "いる"),
+            ("これからも友達でいよう。", "いる"),
+        ],
+    )
+    def test_the_verb_after_the_auxiliary_is_the_predicate(self, text, front):
+        assert front in _fronts(text)
+
+    def test_the_listed_nakunaru_is_one_card(self):
+        fronts = _fronts("財布のお金がなくなった。")
+        assert "なくなる" in fronts
+        assert "なる" not in fronts
+
+    @pytest.mark.parametrize(
+        ("text", "front"), [("先生は教室で待っている。", "いる"), ("彼はまだ学生である。", "ある")]
+    )
+    def test_an_auxiliary_stays_grammar(self, text, front):
         assert front not in _fronts(text)

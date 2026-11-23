@@ -4442,10 +4442,11 @@ class SubtitleParserService:
 
         - なる after an adjective's く form (暗くなる) and after the auxiliary に
           of an adjectival noun (夢中になる), but not after an honorific stem +
-          に (お尋ねになる). A negative or たい in く form (行かなくなる) is an
-          auxiliary and stays grammar. Two longer entries nothing joins stay
-          out, as なる would be a piece of them: よく + なる (良くなる in kana)
-          and そう + に + なる (そうになる).
+          に (お尋ねになる). So it is after a verb's negative or たい in く form
+          (行かなくなる, 帰りたくなった): the listed なくなる 'to be lost' is the
+          adjective ない + なる, which the matcher joins. Two longer entries
+          nothing joins stay out, as なる would be a piece of them: よく + なる
+          (良くなる in kana) and そう + に + なる (そうになる).
         - する after お / ご + a verb's continuative, the humble form
           (お持ちします, and お待たせしました over the causative せ). Not before
           たい: し + たい takes the front したい, which the dictionary has only
@@ -4456,6 +4457,8 @@ class SubtitleParserService:
           見るがいい is the pattern がいい, not a clause and its predicate.
           Before から it opens the listed いいから (いいから いいから).
         - ない after the auxiliary に (降りそうにない).
+        - いる after the copula's で (このままでいたい, 友達でいよう): 'to stay',
+          where the で of a verb's て-form is a particle (読んでいる).
         - する and やる after an adjective's く form (早くしろ, 楽しくやろう) and
           after the copula's に (きれいにする, 元気にやってる): the adverbial
           says how, the verb is what the line says. Not after よく, and not
@@ -4488,6 +4491,10 @@ class SubtitleParserService:
                     idx >= 2
                     and (tokens[idx - 2].surface == "そう" or SubtitleParserService._is_honorific_stem(tokens, idx - 2))
                 )
+            if pos1 == "助動詞" and prev.surface in ("なく", "たく"):
+                return True
+        if base == "いる":
+            return pos1 == "助動詞" and prev.surface == "で"
         if base == "する":
             stem = idx - 2 if pos1 == "助動詞" and prev.surface in ("せ", "させ") else idx - 1
             if stem < 1 or getattr(getattr(tokens[stem], "feature", None), "pos1", None) != "動詞":
@@ -4520,7 +4527,8 @@ class SubtitleParserService:
           ないよ);
         - ない after the copula's じゃ / で and after a く form: the negative
           (学生じゃ ない, 寒く ない, 行きたく ない);
-        - いい / よい before から: it opens the listed いいから;
+        - いい / よい before から: it opens the listed いいから; and なく before
+          なる, the listed なくなる 'to be lost' (あっ なくなってる);
         - a cry (``_AUX_CRIES``: 勝った やった！).
 
         ある, くる, おる and なる keep the old test. After a pause the tagger
@@ -4544,6 +4552,8 @@ class SubtitleParserService:
         if pos1 == "助詞" and prev.surface in ("て", "で", "って", "ちゃ", "じゃ"):
             return base == "できる"
         if base in ("ない", "無い"):
+            if word_token.surface == "なく" and idx + 1 < len(tokens) and tokens[idx + 1].surface.startswith("な"):
+                return getattr(tokens[idx + 1].feature, "orthBase", None) != "なる"
             return not ((pos1 == "助動詞" and prev.surface in ("じゃ", "で")) or prev.surface.endswith("く"))
         return not (base in ("いい", "よい") and idx + 1 < len(tokens) and tokens[idx + 1].surface == "から")
 
