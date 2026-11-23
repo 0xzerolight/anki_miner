@@ -208,8 +208,8 @@ class TestNaruAsThePredicate:
     def test_a_longer_listed_word_is_one_card(self, text):
         assert "なる" not in _fronts(text, interjections=False)
 
-    def test_naru_after_a_negative_in_ku_form_stays_out(self):
-        assert "なる" not in _fronts("学校に行かなくなった。", interjections=False)
+    def test_naru_after_a_negative_in_ku_form_is_the_predicate(self):
+        assert "なる" in _fronts("学校に行かなくなった。", interjections=False)
 
     @pytest.mark.parametrize("text", ["病気がよくなった。", "鍵を忘れそうになった。"])
     def test_naru_inside_a_longer_entry_nothing_joins_stays_out(self, text):

@@ -714,6 +714,8 @@ _ANCHOR_HEADWORDS: tuple[str, ...] = (
     "そうになる",
     # k1121 LIST: a listed noun + verb idiom with its particle dropped (mc05)
     "腹が減る",
+    # k1121 VERB: となる is attested so that the card is the rule's (k21vb01)
+    "となる",
 )
 
 # Yomitan `ruleIdentifiers` per fixture headword. A real term bank ships these,
