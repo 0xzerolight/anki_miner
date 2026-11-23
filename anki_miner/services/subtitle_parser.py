@@ -255,7 +255,7 @@ _ITASU_FORMS: tuple[str, ...] = ("いたし", "いたす", "いたせ", "いた�
 # show 慣れる, 行ける, 折れる). くださる is not named here: _used_as_auxiliary
 # refuses it wherever it stands, and only the て-auxiliary switch mines it
 # (_is_te_auxiliary_card). いらっしゃる is a word of the class: the honorific
-# 'to be, to come, to go' where it is the line's own verb (先生がいらっしゃる),
+# 'to be, to come, to go' where it is the line's own verb (校長先生がいらっしゃる),
 # grammar after て / で as the others are.
 _KANA_AUX_CLASS_DENY: frozenset[str] = frozenset(
     {"される", "させる", "せる", "す", "したい", "さす", "ござる", "みる", "しまう", "なさる", "おく"}
@@ -1149,7 +1149,7 @@ class SubtitleParserService:
         # Filters → Mine interjections. Read at every token, so it can be set after construction.
         self._mine_interjections: bool = config.mine_interjections
         # Mine the words after a て-form that the verb's chain does not take in (_is_te_auxiliary_card:
-        # 混ぜてやれ, 渡ってもいい, 教えてくださった): Settings → Word Filters → Mine words after a て-form.
+        # 混ぜてやれ, 渡ってもいい, 研いでくださった): Settings → Word Filters → Mine words after a て-form.
         # Read at every token, so it can be set after construction.
         self._mine_te_auxiliaries: bool = config.mine_te_auxiliaries
         # A person's name as a card (_is_person_name): Settings → Word Filters → Mine person names. Off:
@@ -4588,9 +4588,9 @@ class SubtitleParserService:
           休むからいい, 安いしいい). After て, で, ば, と and ても it is the
           grammar frame (食べていい) and stays out, and so it does after が:
           見るがいい is the pattern がいい, not a clause and its predicate.
-          Before から it opens the listed いいから (いいから いいから).
+          Before から it opens the listed いいから (いいから いいから こっちに来て).
         - ない after the auxiliary に (降りそうにない).
-        - いる after the copula's で (このままでいたい, 友達でいよう): 'to stay',
+        - いる after the copula's で (学生のままでいたい, 友達でいよう): 'to stay',
           where the で of a verb's て-form is a particle (読んでいる).
         - する and やる after an adjective's く form (早くしろ, 楽しくやろう) and
           after the copula's に (きれいにする, 元気にやってる): the adverbial
@@ -4598,7 +4598,7 @@ class SubtitleParserService:
           after an honorific stem + に. Not after なく: なく|し|た is 無くす
           'to lose'. Nor a す before ん + だ: 無事に|す|ん|だ is 済んだ as often
           as するんだ. After a noun or adverb that takes する (何とかする,
-          ちゃんとしなさい) nothing changes: ``_is_not_main_verb``. A verb that
+          ちゃんとしろ) nothing changes: ``_is_not_main_verb``. A verb that
           is a piece of an entry listed with its adverbial is turned away
           next (``_is_piece_of_adverbial_entry``).
         """
@@ -4650,20 +4650,20 @@ class SubtitleParserService:
         """Whether an auxiliary-capable word that opens a phrase after a subtitle space is the line's own predicate.
 
         A space in a subtitle is a pause or a row break, and what follows it
-        opens a phrase of its own (それなら いいよ, 練習すれば できる, 見習って
+        opens a phrase of its own (半額なら いいよ, 練習すれば できる, 見習って
         できる範囲で). ``_used_as_auxiliary`` reads the word before the space
         as if nothing stood between. Across the space the word stays grammar
         only in a frame that is one unit however it is spaced:
 
         - after a verb's て-form (て, で, って and the contracted ちゃ / じゃ):
-          every auxiliary-capable word but できる (手伝って もらいたい, 聞いて
+          every auxiliary-capable word but できる (磨いて もらいたい, 聞いて
           ないよ);
         - ない after the copula's じゃ / で and after a く form: the negative
           (学生じゃ ない, 寒く ない, 行きたく ない);
         - いらっしゃる after the copula's で, the honorific copula (先生で
           いらっしゃいます);
         - いい / よい before から: it opens the listed いいから; and なく before
-          なる, the listed なくなる 'to be lost' (あっ なくなってる);
+          なる, the listed なくなる 'to be lost' (本当だ なくなってる);
         - a cry (``_AUX_CRIES``: 勝った やった！).
 
         ある, くる, おる and なる keep the old test. After a pause the tagger

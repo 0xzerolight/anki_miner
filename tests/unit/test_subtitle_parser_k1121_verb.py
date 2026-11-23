@@ -154,7 +154,7 @@ class TestSuruAndYaruAfterAnAdverbial:
         assert front in _fronts(text)
 
     @pytest.mark.parametrize(
-        "text", ["私が何とかする。", "もっとちゃんとしなさい。", "本当にびっくりした。", "それはよくするよ。"]
+        "text", ["残りは私が何とかする。", "もっとちゃんとしなさい。", "本当にびっくりした。", "それはよくするよ。"]
     )
     def test_suru_after_a_word_that_takes_it_stays_out(self, text):
         assert "する" not in _fronts(text)
@@ -169,7 +169,7 @@ class TestSuruAndYaruAfterAnAdverbial:
         [
             ("急に部屋が暗くなる。", "なる", True),
             ("雨は降りそうにない。", "ない", True),
-            ("もう何も食べたくない。", "ない", False),
+            ("今夜はもう何も食べたくない。", "ない", False),
         ],
     )
     def test_the_other_frames_are_unchanged(self, text, front, there):
@@ -189,11 +189,11 @@ class TestPredicateAfterASubtitleSpace:
     @pytest.mark.parametrize(
         ("text", "front"),
         [
-            ("それなら いいよ", "いい"),
+            ("半額なら いいよ", "いい"),
             ("毎日練習すれば できる", "できる"),
             ("先輩を真似て できる範囲でやる", "できる"),
             ("お借りします いいですか", "いい"),
-            ("欲しいなら やるよ", "やる"),
+            ("そんなに欲しいなら やるよ", "やる"),
         ],
     )
     def test_the_word_after_a_space_is_the_predicate(self, text, front):
@@ -202,7 +202,7 @@ class TestPredicateAfterASubtitleSpace:
     @pytest.mark.parametrize(
         ("text", "front"),
         [
-            ("荷物を運ぶのを手伝って もらいたい", "もらう"),
+            ("荷物を二階まで運んで もらいたい", "もらう"),
             ("先生は教室で待って いる", "いる"),
             ("彼はまだ学生じゃ ない", "ない"),
             ("今日はそんなに寒く ない", "ない"),

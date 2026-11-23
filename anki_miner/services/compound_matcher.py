@@ -516,7 +516,7 @@ def _modifies(token) -> bool:
 
 
 def _after_pause(tokens: list, start: int) -> bool:
-    """Whether a subtitle space parts ``tokens[start]`` from a noun or suffix before it (山城さん 本当に).
+    """Whether a subtitle space parts ``tokens[start]`` from a noun or suffix before it (板前さん 本当に).
 
     A noun runs on into the word after it (30分|後) only when nothing parts
     them. A true modifier (の, その, 行く) still modifies across a line break,

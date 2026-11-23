@@ -751,7 +751,7 @@ JOINS: tuple[tuple[str, str, str, str] | tuple[str, str, str, str, str], ...] = 
     ("んん", "感動詞", "ん|ん", "alone", "interjection"),
     # K1121 ROWS: a word + a particle that is another word where it stands. それ|に, そこ|で and それ|も are the
     # conjunction opening a clause before a pause (それに、…); a space is enough for それ|に unless a verb follows
-    # it (それに 気づいた), never for そこ|で and それ|も (そこで 待ってて, それも いい: lexical_joiner._needs_a_comma).
+    # it (それに 気づいた), never for そこ|で and それ|も (そこで 着替えてて, それも いい: lexical_joiner._needs_a_comma).
     # よく|も not before ない / 悪く (_good_too), どちら|か not before an embedded question (_embedded_question),
     # なに|かしら not where its clause ends (あれは何かしら: _wonders_what), いい|から opening a line or after
     # punctuation (_quotes_what_precedes), もの|か where the sentence stops after a verb that is no past (_thing_done).

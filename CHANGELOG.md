@@ -105,17 +105,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Japanese: kana expressions are mined whole when a dictionary lists them in kanji (うまくいく, どうでもいい, わけじゃない, かっこいい).**
 - **Japanese: expressions that end in a causative, a negative or an adverb's く are mined whole (気を利かせる, 話にならない, 遠慮なく),** and わけにはいかん mines わけにはいかない.
 - **Japanese: 本当に and 絶対に after a word and a subtitle space, いつの間にか, 他愛のない, どう見ても and 何があっても are mined whole.**
-- **Japanese: それに, いいから, よくも, どこでも, 先ほど and ものか are mined as one word where they stand (いいから 早く来い).**
-- **Japanese: という before a noun (優勝したという話), とする after a volitional (出かけようとする) and といっても are mined.**
+- **Japanese: それに, いいから, よくも, どこでも, 先ほど and ものか are mined as one word where they stand (いいから 窓を閉めろ).**
+- **Japanese: という before a noun (優勝したという話), とする after a volitional (折り紙を折ろうとする) and といっても are mined.**
 - **Japanese: ようだ and ようです after a verb or an adjective are mined (雨が降るようだ).** Mine grammar points turns them off.
 - **Japanese: けど, じゃ, では, なら and なのに are mined where they open a clause (けど、行くよ),** when your filters mine conjunctions.
 - **Japanese: with Mine interjections on, two-word interjections are mined whole (もういい, いえいえ, あのさ, じゃあね).**
 - **Japanese: the spoken っちゅう and っつう are mined as grammar points (何だっちゅうの).** Mine grammar points turns them off.
 - **Japanese: 区 and 両 are counted with their number (７区, 五千両).**
 - **Japanese: する and なる after their own particle are mined (練習をしてた, 春になると),** and する and やる after an adverb (早くしろ, 元気にやってる).
-- **Japanese: a verb or adjective after a subtitle space is the line's own word (やれば できる, 分かった やるよ).**
+- **Japanese: a verb or adjective after a subtitle space is the line's own word (練習すれば できる, そんなに欲しいなら やるよ).**
 - **Japanese: なる after a negative or たい is mined (来れなくなった, 食べたくなった), and いる after で (友達でいたい).**
-- **Japanese: いらっしゃる is mined where it is the line's own verb (先生がいらっしゃる).**
+- **Japanese: いらっしゃる is mined where it is the line's own verb (校長先生がいらっしゃる).**
 ### Fixed
 - **Japanese verb cards show the verb the line uses.** An imperative (持て) mined 持てる, a passive (刺された) mined 刺さる, a potential (帰れない) mined 帰れる, a short causative (行かされた) mined 行かす and katakana フラれた mined the loanword フル; they now mine 持つ, 刺す, 帰る, 行く and ふる. The last three fronts had no dictionary entry, so the card was dropped.
 - **Kana fillers no longer become verb cards.** いえ ('no') mined いえる, a sound cut at っ (まっ, たっ) mined まつ and たつ, and the tagger's glues いたんだ, 違かった and ういっす mined 痛む, 買う and 逸する.

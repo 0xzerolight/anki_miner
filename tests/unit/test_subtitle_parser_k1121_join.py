@@ -128,7 +128,7 @@ _KANA_ENTRIES = [
     ("計画はうまくいかなかった。", "うまくいく", ("うまい", "いく")),
     ("勝ち負けはどうでもいいよ。", "どうでもいい", ("どう", "いい")),
     ("部長のおっしゃるとおりに直します。", "おっしゃるとおり", ("おっしゃる", "とおり")),
-    ("そんなわけないだろう。", "わけない", ("わけ", "ない")),
+    ("あの人に限ってそんなわけないだろう。", "わけない", ("わけ", "ない")),
     ("もうどうでもよくなった。", "どうでもよい", ("どう", "よい", "よくなる")),
     ("彼が負けるはずがない。", "はずがない", ("はず", "ない")),
     ("ろくでもない男だった。", "ろくでもない", ("ろく", "ない")),
@@ -168,7 +168,7 @@ def test_a_katakana_noun_idiom_joins_under_its_plain_spelling(sentence: str, ent
         # After a predicate, なく|なる is the negative and なる.
         ("楽しくなくなった。", "なくなる"),
         # それで has a row: what starts with a row's tokens is the row's.
-        ("それでいいと思う。", "それでいい"),
+        ("それでいいと思うけどな。", "それでいい"),
         # A pre-noun demonstrative and its noun are two words.
         ("あのころの写真を見つけた。", "あのころ"),
         ("そんなものはいらない。", "そんなもの"),
@@ -184,7 +184,7 @@ def test_a_katakana_noun_idiom_joins_under_its_plain_spelling(sentence: str, ent
         ("とてもおいしそうだ。", "おいしそう"),
         # A pronoun or an adverb of two kana tokens is no entry card.
         ("あんたらには関係ない。", "あんたら"),
-        ("すぐそこにある。", "すぐそこ"),
+        ("交番はすぐそこにある。", "すぐそこ"),
         # A する noun is no verb class.
         ("明日おさらいをする。", "おさらい"),
         # 方がいい reads ほうがいい: かた|が|いい is not that entry.
@@ -278,7 +278,7 @@ def test_a_tail_form_reaches_its_entry(sentence: str, entry: str, pieces: tuple[
         # The affirmative is no entry.
         ("大きな話になるかもしれない。", "話にならない"),
         # A pro-form and a negated verb are the line's own predicate.
-        ("そうはいかんぞ。", "そうはいかない"),
+        ("今度ばかりはそうはいかんぞ。", "そうはいかない"),
         # A listed base keeps its own card in the negative.
         ("電車に間に合わない。", "間に合わない"),
     ],

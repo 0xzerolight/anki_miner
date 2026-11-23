@@ -375,7 +375,7 @@ def _embedded_question(headword: str, tokens: list, after: int) -> bool:
     where?'. So it does where the line or sentence ends on it: 出口はどこか
     'where is the exit?', and before a sentence-final particle: どこかな,
     どこかね 'where, I wonder'. The row is passed over and どこ keeps its card.
-    どちら|か and どっち|か are the same (どちらか分からない 'do not know which').
+    どちら|か and どっち|か are the same (出口がどちらか分からない 'do not know which way the exit is').
     """
     if headword not in _QUESTION_ROWS:
         return False
@@ -481,8 +481,8 @@ def _thing_wanted(headword: str, tokens: list, i: int) -> bool:
     """Whether こと|が|ある follows たい, where it is こと + ある and not ことがある 'there are times when'.
 
     The entry follows a verb's dictionary form or its past (転ぶことがある,
-    行ったことがある). After たい / たかった the こと is the thing wanted
-    (伝えたいことがある 'there is something I want to tell you'): the row is
+    灯台に登ったことがある). After たい / たかった the こと is the thing wanted
+    (店長に伝えたいことがある 'there is something I want to tell the manager'): the row is
     passed over, and こと and ある keep their own cards.
     """
     if headword != "ことがある" or i == 0:
@@ -494,7 +494,7 @@ def _thing_wanted(headword: str, tokens: list, i: int) -> bool:
 def _good_too(headword: str, tokens: list, after: int) -> bool:
     """Whether よく|も is 良く + も before ない or 悪く (よくもない 'not good either', よくも悪くも).
 
-    The adverb よくも reproaches what follows it (よくもそんなことを 'how dare you').
+    The adverb よくも reproaches what follows it (よくも皿を割ったな 'how dare you break the plate').
     """
     return headword == "よくも" and after < len(tokens) and extract_orth_base(tokens[after]) in ("ない", "悪い")
 
@@ -755,7 +755,7 @@ def _quotes_what_precedes(headword: str, tokens: list, i: int) -> bool:
     subtitle break inside one sentence. The conjunction ってことは 'which means'
     heads its line or follows punctuation. いい|から is the same: after a space
     it is 'because it is good' (天気が いいから), and いいから 'never mind, just …'
-    heads its line, follows punctuation or is said twice (いいから いいから).
+    heads its line, follows punctuation or is said twice (いいから いいから こっちに来て).
     なら, な|の|に and で|は after a space are the copula and the particles
     (学生 なら, 東京 では); the conjunctions head a line or follow punctuation.
     """
@@ -765,7 +765,7 @@ def _quotes_what_precedes(headword: str, tokens: list, i: int) -> bool:
 def _needs_a_comma(candidate: _Join, tokens: list) -> bool:
     """Whether a pronoun + particle row has only a space after it where a space does not make it the conjunction.
 
-    そこで、… and それも、… are the conjunctions; そこで 待ってて 'wait there' and
+    そこで、… and それも、… are the conjunctions; そこで 着替えてて 'get changed there' and
     それも いい 'that is fine too' are the pronoun and its particle, as a subtitle
     space also falls inside a clause. それに after a space is 'besides' unless a
     verb comes right after it (それに 気づいた 'noticed that'). None of them opens
@@ -789,7 +789,7 @@ def _needs_a_comma(candidate: _Join, tokens: list) -> bool:
 def _wonders_what(candidate: _Join, tokens: list, spans: dict[int, tuple[int, int]]) -> bool:
     """Whether 何|かしら ends its clause, where it is 何 + the particle かしら ('I wonder what').
 
-    何かしら 'something or other' goes on into what it qualifies (何かしら理由がある).
+    何かしら 'something or other' goes on into what it qualifies (何かしら裏がある).
     """
     if candidate.headword not in _SOMETHING_ROWS:
         return False
