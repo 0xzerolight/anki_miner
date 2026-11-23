@@ -100,9 +100,12 @@ class TestSuruAsTheLinesOwnVerb:
     def test_ni_shite_wa_is_grammar(self, text):
         assert "する" not in _fronts(text)
 
-    @pytest.mark.parametrize("text", ["きれいにしておいて。", "早くしろ。", "食べてしまった。"])
-    def test_what_the_auxiliary_check_refuses_stays_refused(self, text):
-        assert "する" not in _fronts(text)
+    def test_what_the_auxiliary_check_refuses_stays_refused(self):
+        assert "する" not in _fronts("食べてしまった。")
+
+    @pytest.mark.parametrize("text", ["きれいにしておいて。", "早くしろ。"])
+    def test_suru_after_an_adverbial_is_the_predicate(self, text):
+        assert "する" in _fronts(text)
 
     def test_the_particle_shi_after_a_contracted_adjective_is_no_suru(self):
         # The tagger cuts くせぇ as くせ|ぇ and reads the し after it as する.

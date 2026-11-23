@@ -4161,6 +4161,8 @@ class SubtitleParserService:
                 return False
             if how == _KANA_AUX and self._is_not_main_verb(word_token, tokens):
                 return False
+            if how == _KANA_AUX and self._is_piece_of_adverbial_entry(word_token, tokens):
+                return False
             if how == _KANA_AUX_CLASS and self._aux_class_word_is_out_of_place(word_token, tokens, text, tok_end):
                 return False
             if how == _KANA_AUX_CLASS and self._aux_class_word_is_piece(word_token, tokens):
@@ -4449,10 +4451,30 @@ class SubtitleParserService:
           見るがいい is the pattern がいい, not a clause and its predicate.
           Before から it opens the listed いいから (いいから いいから).
         - ない after the auxiliary に (降りそうにない).
+        - する and やる after an adjective's く form (早くしろ, 楽しくやろう) and
+          after the copula's に (きれいにする, 元気にやってる): the adverbial
+          says how, the verb is what the line says. Not after よく, and not
+          after an honorific stem + に. Not after なく: なく|し|た is 無くす
+          'to lose'. Nor a す before ん + だ: 無事に|す|ん|だ is 済んだ as often
+          as するんだ. After a noun or adverb that takes する (何とかする,
+          ちゃんとしなさい) nothing changes: ``_is_not_main_verb``. A verb that
+          is a piece of an entry listed with its adverbial is turned away
+          next (``_is_piece_of_adverbial_entry``).
         """
         base = getattr(word_token.feature, "orthBase", None)
         prev = tokens[idx - 1]
         pos1 = getattr(getattr(prev, "feature", None), "pos1", None)
+        if base in ("する", "やる"):
+            if word_token.surface == "す" and [tok.surface for tok in tokens[idx + 1 : idx + 3]] == ["ん", "だ"]:
+                return False
+            if pos1 == "形容詞":
+                return (
+                    bool(prev.surface.endswith("く"))
+                    and prev.surface != "よく"
+                    and getattr(prev.feature, "lemma", None) != "無い"
+                )
+            if pos1 == "助動詞" and prev.surface == "に":
+                return not (idx >= 2 and SubtitleParserService._is_honorific_stem(tokens, idx - 2))
         if base == "なる":
             if pos1 == "形容詞":
                 return bool(prev.surface.endswith("く")) and prev.surface != "よく"
@@ -4477,6 +4499,35 @@ class SubtitleParserService:
         if base in ("ない", "無い"):
             return pos1 == "助動詞" and prev.surface == "に"
         return False
+
+    def _is_piece_of_adverbial_entry(self, word_token, tokens: list) -> bool:
+        """Whether する or やる after an adverbial is a piece of an entry the dictionary lists with that adverbial.
+
+        うまく|やる is 上手くやる, 若く|し|て the adverb 若くして and
+        ばか|に|する 馬鹿にする. The matcher joins such an entry where the line
+        writes its kanji; in kana nothing joins it, and the verb alone would
+        be a piece of it. Asked of the dictionary, as a term or a reading: the
+        adverbial as it stands with the verb's dictionary form, and with the
+        verb and its て.
+        """
+        base = getattr(word_token.feature, "orthBase", None)
+        if base not in ("する", "やる"):
+            return False
+        idx = next((i for i, tok in enumerate(tokens) if tok is word_token), None)
+        if not idx:
+            return False
+        prev = tokens[idx - 1]
+        pos1 = getattr(getattr(prev, "feature", None), "pos1", None)
+        if pos1 == "形容詞" and prev.surface.endswith("く"):
+            head = prev.surface
+        elif pos1 == "助動詞" and prev.surface == "に" and idx >= 2:
+            head = tokens[idx - 2].surface + "に"
+        else:
+            return False
+        windows = [head + base]
+        if idx + 1 < len(tokens) and tokens[idx + 1].surface == "て":
+            windows.append(head + word_token.surface + "て")
+        return bool(self._kana_windows_attested(windows))
 
     def _is_not_main_verb(self, word_token, tokens: list) -> bool:
         """Whether kana する is not the line's own verb where it stands (宿題をする is; 勉強する is not).
@@ -4504,7 +4555,7 @@ class SubtitleParserService:
         And three forms are the verb only in their own frame, as the tagger
         gives them to stray kana too: さ glued to its れる / せる (あのさ is the
         particle), a bare し with a case, topic or adverbial particle before it
-        or an auxiliary or particle after it (よぉし 行くぞ, a garbled しかし),
+        or an auxiliary, a particle or なさい after it (よぉし 行くぞ, a garbled しかし),
         and the forms of ``_SURU_PIECE_FORMS`` right after such a particle.
         """
         base = getattr(word_token.feature, "orthBase", None)
@@ -4525,10 +4576,11 @@ class SubtitleParserService:
         framed = pos1 == "助詞" and getattr(feature, "pos2", None) in _SURU_FRAME_PARTICLES
         glued = after is not None and not getattr(after, "white_space", "") and after.surface.startswith(("れ", "せ"))
         after_pos1 = getattr(getattr(after, "feature", None), "pos1", None)
+        polite = after is not None and after_pos1 == "動詞" and after.surface.startswith("なさ")
         if base == "する" and (
             (surface == "さ" and not glued)
             or (surface in _SURU_PIECE_FORMS and not framed)
-            or (surface == "し" and not framed and after_pos1 not in ("助詞", "助動詞"))
+            or (surface == "し" and not framed and after_pos1 not in ("助詞", "助動詞") and not polite)
         ):
             return True
         if base == "いたす" and after is not None and after.surface.startswith(("かた", "方")):
@@ -4993,8 +5045,9 @@ class SubtitleParserService:
         does not turn it away. An entry of that shape that is one word in the
         line was joined before this is asked (として, について, にしては), and a
         window that opens on any other particle still counts (しか|ない,
-        言え|や|し|ない). An adjective keeps every window: it takes no object,
-        and どこ|と|なく is no ない.
+        言え|や|し|ない). The copula's に before the verb is the same case:
+        きれいに|し|て is にする. An adjective keeps every window: it takes no
+        object, and どこ|と|なく is no ない.
         """
         if getattr(tokens[idx].feature, "pos1", None) != "動詞":
             return windows
@@ -5004,7 +5057,7 @@ class SubtitleParserService:
             if (
                 head.surface in SubtitleParserService._VERB_CASE_PARTICLES
                 and getattr(head.feature, "pos2", None) == "格助詞"
-            ):
+            ) or (head.surface == "に" and getattr(head.feature, "pos1", None) == "助動詞"):
                 opening = "".join(word_surface(tok) for tok in tokens[start : idx + 1])
                 headed.update(window for window in windows if window.startswith(opening))
         return [window for window in windows if window not in headed]

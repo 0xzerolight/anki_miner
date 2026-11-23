@@ -28,7 +28,10 @@ _ATTESTED = frozenset(
 )
 
 # Headwords a dictionary spells this way: the entries a window can be.
-_SPELLINGS = frozenset({"をして", "にして", "となる", "やしない", "となく", "てもいい", "しかない", "大事にする"})
+_SPELLINGS = frozenset(
+    {"をして", "にして", "となる", "やしない", "となく", "てもいい", "しかない", "大事にする"}
+    | {"うまくやる", "若くして"}
+)
 
 # Dictionary entry tags by headword: a word with no row here has no entry at all.
 _TAGS = {
@@ -93,3 +96,52 @@ class TestVerbAfterItsOwnCaseParticle:
         fronts = _fronts(text)
         assert joined in fronts
         assert verb not in fronts
+
+
+class TestSuruAndYaruAfterAnAdverbial:
+    """V-2: する / やる after an adjective's く form and after the copula's に."""
+
+    @pytest.mark.parametrize(
+        ("text", "front"),
+        [
+            ("ほら、早くしろ。", "する"),
+            ("しばらくおとなしくしてろ。", "する"),
+            ("ほら、早くしなさい。", "する"),
+            ("週末に部屋をきれいにする。", "する"),
+            ("机の上をきれいにして待つ。", "する"),
+            ("あの二人は楽しそうにやってるね。", "やる"),
+            ("田舎でみんな元気にやってる？", "やる"),
+            ("今夜は楽しくやろう。", "やる"),
+        ],
+    )
+    def test_the_verb_after_an_adverbial_is_the_predicate(self, text, front):
+        assert front in _fronts(text)
+
+    @pytest.mark.parametrize(
+        "text", ["私が何とかする。", "もっとちゃんとしなさい。", "本当にびっくりした。", "それはよくするよ。"]
+    )
+    def test_suru_after_a_word_that_takes_it_stays_out(self, text):
+        assert "する" not in _fronts(text)
+
+    def test_a_joined_entry_is_one_card(self):
+        fronts = _fronts("この本を大事にする。")
+        assert "大事にする" in fronts
+        assert "する" not in fronts
+
+    @pytest.mark.parametrize(
+        ("text", "front", "there"),
+        [
+            ("急に部屋が暗くなる。", "なる", True),
+            ("雨は降りそうにない。", "ない", True),
+            ("もう何も食べたくない。", "ない", False),
+        ],
+    )
+    def test_the_other_frames_are_unchanged(self, text, front, there):
+        assert (front in _fronts(text)) is there
+
+    @pytest.mark.parametrize(
+        ("text", "front"),
+        [("仕事はうまくやれよ。", "やる"), ("祖父は若くして亡くなった。", "する"), ("手術は無事にすんだ。", "する")],
+    )
+    def test_a_piece_of_a_listed_entry_or_of_another_verb_stays_out(self, text, front):
+        assert front not in _fronts(text)
