@@ -515,6 +515,21 @@ def _modifies(token) -> bool:
     return pos1 in ("動詞", "形容詞", "助動詞") and _c_form(token).startswith("連体形")
 
 
+def _after_pause(tokens: list, start: int) -> bool:
+    """Whether a subtitle space parts ``tokens[start]`` from a noun or suffix before it (山城さん 本当に).
+
+    A noun runs on into the word after it (30分|後) only when nothing parts
+    them. A true modifier (の, その, 行く) still modifies across a line break,
+    which a cue writes as a space.
+    """
+    return bool(getattr(tokens[start], "white_space", "")) and _pos1(tokens[start - 1]) in ("名詞", "接尾辞")
+
+
+def _concessive_end(tokens: list, end: int) -> bool:
+    """Whether a span ends on a verb's て / で + も (どう|見|て|も, 何|が|あっ|て|も)."""
+    return tokens[end].surface == "も" and _after_te(tokens, end)
+
+
 def _tail_reading(token, kind: str) -> str:
     """The span tail's reading: its base-form kana for a deinflected (kind A) span."""
     if kind == "A":
@@ -787,14 +802,19 @@ class CompoundDictionaryMatcher:
 
     def _adverbial_fits(self, tokens: list, start: int, end: int, headword: str) -> bool:
         """Whether a span ending on a particle is a word of its own here (本当に, not その時に)."""
-        if self._entry_tags is None or (start > 0 and _modifies(tokens[start - 1])):
+        if self._entry_tags is None or (start > 0 and _modifies(tokens[start - 1]) and not _after_pause(tokens, start)):
             return False
         # A verb's te-form is the verb (回収を急いでいます), a suffix or pre-noun
         # adjective heads a phrase, not a word (神様に, その下に), and so does a
         # nominalizing の (何なのか) or the grammar ように (毎日のように).
         if _pos1(tokens[start]) in ("接尾辞", "連体詞") or any(
-            _pos1(token) in _INFLECTABLE_POS1 or _pos2(token) in ("準体助詞", "助動詞語幹")
-            for token in tokens[start : end + 1]
+            _pos2(token) in ("準体助詞", "助動詞語幹") for token in tokens[start : end + 1]
+        ):
+            return False
+        # A verb's own te-form is the verb (急いで, 死んでも). A concessive that
+        # starts on another word is the listed idiom (どう見ても, 何があっても).
+        if any(_pos1(token) in _INFLECTABLE_POS1 for token in tokens[start : end + 1]) and (
+            _pos1(tokens[start]) in _INFLECTABLE_POS1 or not _concessive_end(tokens, end)
         ):
             return False
         if tokens[end].surface == "と" and (
@@ -839,7 +859,32 @@ class CompoundDictionaryMatcher:
         if not _HIRAGANA_RE.fullmatch(spoken):
             return True
         readings = self._readings(headword)
-        return not readings or _unvoiced(spoken) in {_unvoiced(katakana_to_hiragana(r)) for r in readings}
+        listed = {_unvoiced(katakana_to_hiragana(r)) for r in readings}
+        if not readings or _unvoiced(spoken) in listed:
+            return True
+        # Only across の: a bare word + particle in another reading is another word (外|に: ほかに 'besides').
+        crosses = any(_pos1(token) == "助詞" and token.surface == _READING_CHECKED_PARTICLE for token in span)
+        return crosses and self._reads_otherwise(span, kind, listed)
+
+    def _reads_otherwise(self, span: list, kind: str, listed: set[str]) -> bool:
+        """Whether the headword is read as the span with ONE of its kanji words in another of that word's readings.
+
+        The tagger picks one reading per token, and not always the idiom's
+        (いつ|の|間|に: あいだ for ま; 他愛|の|ない: たあい for たわい; 猫|の|額).
+        One word may take any reading the dictionary lists for it; a headword
+        that needs two (彼の方: あのかた against かれのほう) names another word.
+        """
+        if self._readings is None:
+            return False
+        parts = [extract_reading(token) for token in span[:-1]] + [_tail_reading(span[-1], kind)]
+        for k, token in enumerate(span):
+            if _pos1(token) in _INFLECTABLE_POS1 or not _KANJI_RE.search(token.surface):
+                continue
+            for reading in self._readings(token.surface):
+                spoken = katakana_to_hiragana("".join(parts[:k]) + reading + "".join(parts[k + 1 :]))
+                if _unvoiced(spoken) in listed:
+                    return True
+        return False
 
     def _can_start(self, token) -> bool:
         """Whether candidate spans may start at ``token``."""

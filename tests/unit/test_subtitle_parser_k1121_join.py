@@ -54,6 +54,20 @@ _ENTRIES: dict[str, tuple[str, tuple[str, ...]]] = {
     "あんたら": ("pn", ("あんたら",)),
     "すぐそこ": ("adv adj-no", ("すぐそこ",)),
     "お浚い": ("n vs", ("おさらい",)),
+    # J-3: guards that refused an entry that fits.
+    "本当に": ("adv", ("ほんとうに",)),
+    "時に": ("adv", ("ときに",)),
+    "いつの間に": ("exp adv", ("いつのまに",)),
+    "間": ("n", ("あいだ", "ま")),
+    "彼の方": ("pn", ("あのかた",)),
+    "彼": ("pn", ("かれ",)),
+    "方": ("n", ("ほう", "かた")),
+    "どう見ても": ("exp adv", ("どうみても",)),
+    "何があっても": ("exp", ("なにがあっても",)),
+    "急いで": ("exp adv", ("いそいで",)),
+    "急ぐ": ("v5g vi", ("いそぐ",)),
+    "死んでも": ("adv", ("しんでも",)),
+    "死ぬ": ("v5n vi", ("しぬ",)),
     # J-2: tail forms.
     "元気よく": ("adv", ("げんきよく",)),
     "遠慮なく": ("adv", ("えんりょなく",)),
@@ -292,3 +306,41 @@ def test_the_bold_runs_through_the_chain_after_a_negative_entry() -> None:
     )
     word = next(word for word in words if word.mined_form == "わけにはいかない")
     assert sentence[word.surface_start : word.highlight_end] == "わけにはいかなかった"
+
+
+# --- J-3: guards that refused an entry that fits -------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("sentence", "entry"),
+    [
+        # A space parts the adverb from the name before it.
+        ("山田さん 本当に助かりました。", "本当に"),
+        # One word of the span in another of its own readings (間: ま for あいだ).
+        ("いつの間に帰ったの。", "いつの間に"),
+        # A concessive that starts on another word.
+        ("これはどう見ても偽物だ。", "どう見ても"),
+        ("僕は何があっても行く。", "何があっても"),
+    ],
+)
+def test_a_guard_lets_a_fitting_entry_through(sentence: str, entry: str) -> None:
+    assert entry in _fronts(sentence)
+
+
+@pytest.mark.parametrize(
+    ("sentence", "entry"),
+    [
+        # A true modifier still modifies across a space.
+        ("食べたい 時に食べる。", "時に"),
+        ("その 時に会った。", "時に"),
+        # Without a space the noun runs on into the next word.
+        ("山田さん本当に助かりました。", "本当に"),
+        # A headword that needs two other readings names another word.
+        ("彼の方が背が高い。", "彼の方"),
+        # A verb's own te-form is the verb.
+        ("急いで帰ろう。", "急いで"),
+        ("死んでも嫌だ。", "死んでも"),
+    ],
+)
+def test_what_the_guards_still_refuse(sentence: str, entry: str) -> None:
+    assert entry not in _fronts(sentence)
