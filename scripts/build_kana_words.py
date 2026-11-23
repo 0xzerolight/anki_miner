@@ -817,10 +817,10 @@ JOINS: tuple[tuple[str, str, str, str] | tuple[str, str, str, str, str], ...] = 
     # 行くっつってた). A verb row, so that the card front is the dictionary form in every inflection.
     ("っちゅう", "動詞", "=っちゅう", "", "grammar"),
     ("っつう", "動詞", "=っつう", "", "grammar"),
-    # K1121 PHRASE: the polite negative of the copula row (先生じゃありません), as しか|あり|ませ|ん above. No row for
+    # K1121 PHRASE: the polite negative of the copula row (会計係じゃありません), as しか|あり|ませ|ん above. No row for
     # で|は|あり|ませ|ん: the dictionary also lists ではある, and the card front came out as that.
     ("じゃない", "形容詞", "じゃ|あり|ませ|ん", "copula", "grammar"),
-    # K1121 PHRASE: words that open a clause (それなら帰る; そのため 'therefore' also needs a pause after it: before に,
+    # K1121 PHRASE: words that open a clause (それなら歩いて行く; そのため 'therefore' also needs a pause after it: before に,
     # の or なら it is その + ため 'for that purpose'),
     # kana spellings of entries the kanji already joins (そのあと, みなさん), ついでに 'while at
     # it' opening a clause (after の it is the noun ついで), どうか 'please' opening a request

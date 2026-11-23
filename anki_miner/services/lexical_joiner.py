@@ -558,7 +558,7 @@ def _no_plain_form_before(headword: str, tokens: list, i: int) -> bool:
     """Whether a row that follows a plain form stands after something else, where it is not the entry.
 
     に|決まっ|て|いる is 'surely' after a plain predicate (降るに決まっている,
-    寒いに決まってる); after a noun it is as often 'has been set for'
+    渋いに決まってる); after a noun it is as often 'has been set for'
     (来月に決まっている), and the verb keeps the card. The rhetorical もの + か
     follows a dictionary form (二度と乗るもんか); after a 連用形 the もの is the tail
     of a noun (忘れものですか).
@@ -575,9 +575,9 @@ def _no_plain_form_before(headword: str, tokens: list, i: int) -> bool:
 def _asks_nothing(headword: str, tokens: list, i: int, after: int) -> bool:
     """Whether どう|か opens no request, where it is どう + か and not the adverb どうか 'please'.
 
-    The adverb heads a request: its sentence goes on to an imperative (許してくれ,
-    お待ちください), to お願い or 頼む, or stops on a て-form or on を (どうか見逃して,
-    どうかお慈悲を). どうかした, どうかなさった, どうかと思う and どうか知らない ask nothing,
+    The adverb heads a request: its sentence goes on to an imperative (納屋の鍵を返してくれ,
+    門の前でお待ちください), to お願い or 頼む, or stops on a て-form or on を (どうか鍵を預かって,
+    どうか一晩の宿を). どうかした, どうかなさった, どうかと思う and どうか知らない ask nothing,
     nor does どうか with a particle after it (どうかな, どうかね, どうかは): the adverb
     takes none. After a か the same tokens close かどうか over a subtitle space.
     """
@@ -922,7 +922,7 @@ def _more_than_anything(candidate: _Join, tokens: list, spans: dict[int, tuple[i
     """Whether 何|より goes on into what it is compared with, where it is 何 + より (何より眠りたい).
 
     The entry 何より 'best of all; wonderful' is a predicate: before the copula
-    or a pause (お元気そうで何よりです).
+    or a pause (畑が無事で何よりです).
     """
     if candidate.headword not in _BEST_ROWS or _stands_alone(tokens, spans, candidate.end):
         return False
