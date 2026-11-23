@@ -1188,6 +1188,7 @@ class SubtitleParserService:
         self._takes_suru_memo = {}
         self._variant_headword_memo = {}
         clear_token_spans()
+        self._handed_included: tuple[str, list, list, dict | None, tuple[list, list]] | None = None
 
     def _reset_perf_counters(self) -> None:
         """Zero the per-parse probe/tokenize cumulative counters (Task 28)."""
@@ -3006,7 +3007,20 @@ class SubtitleParserService:
         emission pass, so parse_subtitle_file and _with_index stay
         output-identical. A token inside the previous mined word's highlight
         is a piece of its chain and is not mined (``_chain_cover``).
+
+        ``parse_text_units`` computes it before the emission and hands it over
+        (``_handed_included``, the same line's lists and ``rejects``).
         """
+        handed = self._handed_included
+        if (
+            handed is not None
+            and handed[0] == text
+            and handed[1] is raw_tokens
+            and handed[2] is merged_tokens
+            and handed[3] is rejects
+        ):
+            self._handed_included = None
+            return handed[4]
         included_tokens: list = []
         included_spans: list[tuple[int, int, int]] = []
         covered_to = 0
@@ -3534,23 +3548,25 @@ class SubtitleParserService:
             # count_fronts): a token mining drops (find == -1) is counted
             # nowhere it is not mined, or the preview over-promises (T-38 — see
             # _iter_token_spans for the drop-rule rationale).
-            covered_to = 0
-            for token, tok_start, tok_end in self._iter_token_spans(text, merged_tokens):
-                if self._mine_token(token, text, tok_start, tok_end, merged_tokens, raw_tokens):
-                    cover = self._chain_cover(covered_to, text, raw_tokens, tok_start, tok_end, token)
-                    if cover is None:
-                        continue  # a piece of the previous word's chain: not mined, so not counted
-                    covered_to = cover
-                    key = (
-                        self._extract_lemma(token)
-                        if count_by_lemma
-                        else self._card_front(token, text, tok_start, tok_end, raw_tokens)
-                    )
-                    counts[key] += 1
+            # The emission mines the same tokens (a piece of the previous word's chain is
+            # neither mined nor counted): its _included_tokens is computed once, here, and
+            # handed to it (_handed_included).
+            included = self._included_tokens(text, raw_tokens, merged_tokens, rejects)
+            for token, (tok_start, tok_end, _highlight_end) in zip(*included, strict=True):
+                key = (
+                    self._extract_lemma(token)
+                    if count_by_lemma
+                    else self._card_front(token, text, tok_start, tok_end, raw_tokens)
+                )
+                counts[key] += 1
 
-            line_words, line_lemmas_entry = self._emit_line_words_and_index(
-                line_state, seen_mined_forms, collect_index=want_line_index, rejects=rejects
-            )
+            self._handed_included = (text, raw_tokens, merged_tokens, rejects, included)
+            try:
+                line_words, line_lemmas_entry = self._emit_line_words_and_index(
+                    line_state, seen_mined_forms, collect_index=want_line_index, rejects=rejects
+                )
+            finally:
+                self._handed_included = None
             unit_ruby = getattr(unit, "ruby", ())
             if author_ruby and unit_ruby:
                 # The author's reading settles a reading the dictionary left ambiguous.
