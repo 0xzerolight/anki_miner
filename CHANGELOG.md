@@ -116,6 +116,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Japanese: a verb or adjective after a subtitle space is the line's own word (練習すれば できる, そんなに欲しいなら やるよ).**
 - **Japanese: なる after a negative or たい is mined (来れなくなった, 食べたくなった), and いる after で (友達でいたい).**
 - **Japanese: いらっしゃる is mined where it is the line's own verb (校長先生がいらっしゃる).**
+- **Japanese parsing is a little faster: each line's words are found in its text once, not once per check.** No card changes.
+- **Japanese: the polite じゃありません is mined as じゃない (学生じゃありません).**
+- **Japanese: words that open a clause are mined whole (それなら, そのあと, みなさん, ついでに, ただでさえ, 今では),** and どうか before a request (どうか助けてください).
+- **Japanese: spoken sentence endings are mined as one word: からこそ, もんか, ものですか, ではないか, じゃろう, and に決まっている after a verb or an adjective (勝つに決まってる).**
+- **Japanese: with Mine interjections on, なんだ before よ, なんだい and もういい before から are mined (もういいから帰れ).**
 ### Fixed
 - **Japanese verb cards show the verb the line uses.** An imperative (持て) mined 持てる, a passive (刺された) mined 刺さる, a potential (帰れない) mined 帰れる, a short causative (行かされた) mined 行かす and katakana フラれた mined the loanword フル; they now mine 持つ, 刺す, 帰る, 行く and ふる. The last three fronts had no dictionary entry, so the card was dropped.
 - **Kana fillers no longer become verb cards.** いえ ('no') mined いえる, a sound cut at っ (まっ, たっ) mined まつ and たつ, and the tagger's glues いたんだ, 違かった and ういっす mined 痛む, 買う and 逸する.
