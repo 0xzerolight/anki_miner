@@ -817,6 +817,41 @@ JOINS: tuple[tuple[str, str, str, str] | tuple[str, str, str, str, str], ...] = 
     # 行くっつってた). A verb row, so that the card front is the dictionary form in every inflection.
     ("っちゅう", "動詞", "=っちゅう", "", "grammar"),
     ("っつう", "動詞", "=っつう", "", "grammar"),
+    # K1121 PHRASE: the polite negative of the copula row (会計係じゃありません), as しか|あり|ませ|ん above. No row for
+    # で|は|あり|ませ|ん: the dictionary also lists ではある, and the card front came out as that.
+    ("じゃない", "形容詞", "じゃ|あり|ませ|ん", "copula", "grammar"),
+    # K1121 PHRASE: words that open a clause (それなら歩いて行く; そのため 'therefore' also needs a pause after it: before に,
+    # の or なら it is その + ため 'for that purpose'),
+    # kana spellings of entries the kanji already joins (そのあと, みなさん), ついでに 'while at
+    # it' opening a clause (after の it is the noun ついで), どうか 'please' opening a request
+    # (lexical_joiner._asks_nothing), 今では 'nowadays' opening a clause, the Kansai ほんで, and 何より 'best of all'
+    # before the copula or a pause (lexical_joiner._more_than_anything).
+    ("それなら", "接続詞", "それ|なら", "start"),
+    ("そのため", "接続詞", "その|ため", "alone"),
+    ("そのあと", "副詞", "その|あと", "start"),
+    ("みなさん", "名詞", "みな|さん", ""),
+    ("ついでに", "副詞", "ついで|に", "start"),
+    ("どうか", "副詞", "どう|か", "start"),
+    ("ただでさえ", "副詞", "ただ|で|さえ", ""),
+    ("いまでは", "副詞", "いま|で|は", "start"),
+    ("ほんで", "接続詞", "ほん|で", "start"),
+    ("なにより", "副詞", "なに|より", ""),
+    # K1121 PHRASE: grammar entries that start on a particle or close a clause. に決まっている only after a plain
+    # predicate (lexical_joiner._no_plain_form_before); the rhetorical もんか / もんですか / ものですか as ものか
+    # above; ではないか as じゃないか, both also after a volitional (lexical_joiner._copula_after_a_verb);
+    # the western じゃろ / じゃろう as やろ.
+    ("からこそ", "副詞", "から|こそ", "", "grammar"),
+    ("に決まっている", "動詞", "に|決まっ|=てる", "", "grammar"),
+    ("に決まっている", "動詞", "に|決まっ|て|=いる", "", "grammar"),
+    ("もんか", "副詞", "もん|か", "verb", "grammar"),
+    ("もんですか", "副詞", "もん|です|か", "verb", "grammar"),
+    ("ものですか", "副詞", "もの|です|か", "verb", "grammar"),
+    ("ではないか", "感動詞", "で|は|ない|か", "copula", "grammar"),
+    ("じゃろ", "感動詞", "じゃろ", "", "grammar"),
+    ("じゃろう", "感動詞", "じゃろう", "", "grammar"),
+    # K1121 PHRASE: なんだい, the interjection なんだ with い, a reply of its own as なんだ above. なんだ before よ
+    # and もういい before から keep their cards through lexical_joiner._particle_then_pause.
+    ("なんだい", "感動詞", "なん|だ|い", "alone", "interjection"),
 )
 
 _HEADER = """\
