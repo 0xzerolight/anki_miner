@@ -842,19 +842,16 @@ def _particle_then_pause(candidate: _Join, tokens: list, spans: dict[int, tuple[
     return particle == "から" or _stands_alone(tokens, spans, after)
 
 
-def _copula_after_a_name(candidate: _Join, tokens: list) -> bool:
-    """Whether the interjection row なん|だ follows a noun or a na-adjective stem, over at most a space or a ….
+def _copula_after_a_name(candidate: _Join, tokens: list, spans: dict[int, tuple[int, int]]) -> bool:
+    """Whether the interjection row なん|だ stands right after a noun or a na-adjective stem, with no pause between.
 
-    There the なん is the copula な + the explanatory ん (鍵 …なんだよ 'it is the
-    key', 静か…なんだ): なんだ 'what the …' opens its clause, at the line start or
-    after an interjection or a sentence's end (おい なんだよ, えっ？ なんだよ).
+    There the なん is the copula な + the explanatory ん (相棒はロボットなんだ):
+    なんだ 'what the …' opens its clause, at the line start or after a pause or a
+    space (おい なんだよ, 何… なんだ…).
     """
-    if candidate.headword != "なんだ":
+    if candidate.headword != "なんだ" or _opens_clause(tokens, spans, candidate.start):
         return False
-    i = candidate.start - 1
-    while i >= 0 and _pos1(tokens[i]) in _CLAUSE_BREAK_POS1 and _pos2(tokens[i]) == "一般":
-        i -= 1
-    return i >= 0 and _pos1(tokens[i]) in _NAMED_POS1
+    return _pos1(tokens[candidate.start - 1]) in _NAMED_POS1
 
 
 def _permits_after_te(candidate: _Join, tokens: list) -> bool:
@@ -1099,7 +1096,7 @@ class LexicalJoiner:
             if candidate.after == "alone":
                 if (
                     _permits_after_te(candidate, tokens)
-                    or _copula_after_a_name(candidate, tokens)
+                    or _copula_after_a_name(candidate, tokens, spans)
                     or not (
                         _stands_alone(tokens, spans, candidate.end) or _particle_then_pause(candidate, tokens, spans)
                     )

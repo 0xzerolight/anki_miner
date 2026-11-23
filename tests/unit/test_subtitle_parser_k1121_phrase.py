@@ -245,8 +245,6 @@ def test_interjection_before_its_particle_is_left_split_with_the_switch_off(sent
     [
         ("あの箱の中身はなんだよ", "なんだ"),
         ("なんだよね、結局は好みの問題", "なんだ"),
-        ("ほら 鍵 …なんだよ", "なんだ"),
-        ("それも 鍵 …なんだ", "なんだ"),
         ("時間はもういいかい", "もういい"),
     ],
 )
