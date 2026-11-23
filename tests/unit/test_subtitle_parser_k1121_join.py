@@ -54,6 +54,21 @@ _ENTRIES: dict[str, tuple[str, tuple[str, ...]]] = {
     "あんたら": ("pn", ("あんたら",)),
     "すぐそこ": ("adv adj-no", ("すぐそこ",)),
     "お浚い": ("n vs", ("おさらい",)),
+    # J-2: tail forms.
+    "元気よく": ("adv", ("げんきよく",)),
+    "遠慮なく": ("adv", ("えんりょなく",)),
+    "遠慮": ("n vs", ("えんりょ",)),
+    "勢いよく": ("adv", ("いきおいよく",)),
+    "体調よく": ("n", ("たいちょうよく",)),
+    "気を利かせる": ("exp v1", ("きをきかせる",)),
+    "目を輝かせる": ("exp v1", ("めをかがやかせる",)),
+    "気を使う": ("exp v5u", ("きをつかう",)),
+    "気を使わせる": ("exp v1", ("きをつかわせる",)),
+    "話にならない": ("exp adj-i", ("はなしにならない",)),
+    "訳にはいかない": ("exp", ("わけにはいかない",)),
+    "そうは行かない": ("exp", ("そうはいかない",)),
+    "間に合う": ("exp v5u", ("まにあう",)),
+    "間に合わない": ("exp adj-i", ("まにあわない",)),
 }
 
 # What the kana probe (term or reading) answers yes to.
@@ -131,7 +146,7 @@ def test_a_katakana_noun_idiom_joins_under_its_plain_spelling(sentence: str, ent
         ("そうして暮らしてきた。", "そうする"),
         ("どうかしたの。", "どうかする"),
         # The auxiliary そう is no content word.
-        ("間に合いそうにない。", "そうにない"),
+        ("荷物が届きそうにない。", "そうにない"),
         # する and what follows it is grammar.
         ("こうしてもいいですか。", "してもいい"),
         # An interjection entry is the interjection switch's.
@@ -206,3 +221,74 @@ def test_a_grammar_row_still_follows_a_kana_entry() -> None:
         [ReadingUnit(text="勝ち負けはどうでもいいんだよ。", index=0, location_label="t")], want_line_index=False
     )
     assert {"どうでもいい", "んだ"} <= {word.mined_form for word in words}
+    words, _index, _counts = service.parse_text_units(
+        [ReadingUnit(text="今さら逃げるわけにはいかないんだ。", index=0, location_label="t")], want_line_index=False
+    )
+    assert {"わけにはいかない", "んだ"} <= {word.mined_form for word in words}
+
+
+# --- J-2: tail forms the candidate list lacked ---------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("sentence", "entry", "pieces"),
+    [
+        # (b) an adverb the dictionary lists in an adjective's く form
+        ("子供たちが元気よく走ってきた。", "元気よく", ("元気", "よい")),
+        ("では遠慮なく座ります。", "遠慮なく", ("遠慮", "ない")),
+        ("水が勢いよく流れた。", "勢いよく", ("勢い", "よい")),
+        # (a) a causative tail
+        ("彼は気を利かせて窓を開けた。", "気を利かせる", ("気", "利かせる", "利く")),
+        ("少年は目を輝かせて聞いた。", "目を輝かせる", ("目", "輝かす", "輝く")),
+        # (c) an entry listed only in the negative, across particles
+        ("この値段では話にならない。", "話にならない", ("話", "なる")),
+        ("今さら逃げるわけにはいかない。", "わけにはいかない", ("わけ", "いく")),
+        ("ここで諦めるわけにはいかん。", "わけにはいかない", ("わけ", "いく")),
+    ],
+)
+def test_a_tail_form_reaches_its_entry(sentence: str, entry: str, pieces: tuple[str, ...]) -> None:
+    fronts = _fronts(sentence)
+    assert entry in fronts
+    assert not set(pieces) & set(fronts)
+
+
+@pytest.mark.parametrize(
+    ("sentence", "entry"),
+    [
+        # The く form before なる is the adjective, with its particle.
+        ("元気がよくなった。", "元気よく"),
+        # A く join that is no adverb entry stays two words.
+        ("今日は体調よく過ごせた。", "体調よく"),
+        # The causative of a listed idiom is that idiom.
+        ("相手に気を使わせた。", "気を使わせる"),
+        # The affirmative is no entry.
+        ("大きな話になるかもしれない。", "話にならない"),
+        # A pro-form and a negated verb are the line's own predicate.
+        ("そうはいかんぞ。", "そうはいかない"),
+        # A listed base keeps its own card in the negative.
+        ("電車に間に合わない。", "間に合わない"),
+    ],
+)
+def test_what_the_tail_forms_leave_alone(sentence: str, entry: str) -> None:
+    assert entry not in _fronts(sentence)
+
+
+def test_a_listed_idiom_keeps_its_card_under_a_causative_and_a_negative() -> None:
+    assert "気を使う" in _fronts("相手に気を使わせた。")
+    assert "間に合う" in _fronts("電車に間に合わない。")
+
+
+def test_the_bold_runs_through_the_chain_after_a_negative_entry() -> None:
+    service = SubtitleParserService(
+        AnkiMinerConfig(),
+        term_lookup=lambda asked: {term for term in asked if term in _ENTRIES},
+        kana_attest_lookup=lambda forms: {form: form in _KANA or form in _ENTRIES for form in forms},
+        form_lookup=lambda asked: {term: [("", _ENTRIES[term][0])] for term in asked if term in _ENTRIES},
+        reading_lookup=lambda asked: {term: list(_ENTRIES[term][1]) for term in asked if term in _ENTRIES},
+    )
+    sentence = "昨日は休むわけにはいかなかった。"
+    words, _index, _counts = service.parse_text_units(
+        [ReadingUnit(text=sentence, index=0, location_label="t")], want_line_index=False
+    )
+    word = next(word for word in words if word.mined_form == "わけにはいかない")
+    assert sentence[word.surface_start : word.highlight_end] == "わけにはいかなかった"

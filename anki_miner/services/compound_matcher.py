@@ -95,6 +95,35 @@ def _contraction_tail(token) -> bool:
     return _pos1(token) == "助動詞" and extract_orth_base(token) in _CONTRACTION_TAILS
 
 
+# An idiom the dictionary lists in the causative (気を利かせる, 目を輝かせる): the
+# tagger cuts 利か|せ, so a span may end on the causative auxiliary and is looked
+# up with its base せる / させる. Only where the idiom without it is no entry:
+# 気を使わ|せ is 気を使う.
+_CAUSATIVE_TAILS = frozenset({"せる", "させる"})
+
+
+def _causative_tail(token) -> bool:
+    return _pos1(token) == "助動詞" and extract_orth_base(token) in _CAUSATIVE_TAILS
+
+
+# An entry listed only in the negative, across particles (話|に|なら|ない,
+# わけ|に|は|いか|ん): the span through the negative auxiliary is looked up as
+# its words + ない. Only where the same words without the negative are no entry
+# (間に合わ|ない is 間に合う), and never for a bare verb + ない.
+_NEGATIVE_LEMMAS = frozenset({"ない", "ず"})
+
+
+def _negative_after_verb(tokens: list, j: int) -> bool:
+    """Whether ``tokens[j]`` is the negative auxiliary right after a verb's 未然形 (なら|ない, いか|ん)."""
+    token = tokens[j]
+    return (
+        _pos1(token) == "助動詞"
+        and getattr(getattr(token, "feature", None), "lemma", None) in _NEGATIVE_LEMMAS
+        and _pos1(tokens[j - 1]) == "動詞"
+        and _c_form(tokens[j - 1]).startswith("未然形")
+    )
+
+
 def _potential_base(token) -> str:
     """A potential verb's base in its own spelling (おける → おく), or "".
 
@@ -320,7 +349,8 @@ def _kana_entry_shape(tokens: list, i: int, j: int) -> bool:
         tail_base in _TE_AUXILIARIES and _after_te(tokens, j)
     ):
         return False
-    if head.surface in _PRO_FORMS and tail_base in _LIGHT_VERBS:
+    # A pro-form and a verb are the line's own predicate (そうする, そうはいかん), whatever the verb.
+    if head.surface in _PRO_FORMS and (_pos1(tail) == "動詞" or tail_base in _LIGHT_VERBS):
         return False
     if head.surface in _DEMONSTRATIVES and tail_base == "いい":
         return False
@@ -577,12 +607,15 @@ class CompoundDictionaryMatcher:
                             continue
                         if kind == "A" and self._benefactive_after_te(tokens, i, j):
                             continue
+                        if self._tail_form_refused(candidates, tokens, i, j, entry, kind):
+                            continue
                         if kind == "F":
                             if self._exist_cache.get(self._fixed_heads[(i, j)]):
                                 continue
                         elif not self._reading_fits(tokens[i : j + 1], entry, kind) or (
                             not self._can_end(tokens[j])
-                            and not (kind == "A" and _contraction_tail(tokens[j]))
+                            and kind != "N"
+                            and not (kind == "A" and (_contraction_tail(tokens[j]) or _causative_tail(tokens[j])))
                             and not self._adverbial_fits(tokens, i, j, entry)
                         ):
                             continue
@@ -607,6 +640,26 @@ class CompoundDictionaryMatcher:
                 i += 1
         return merged
 
+    def _tail_form_refused(self, candidates: dict, tokens: list, i: int, j: int, entry: str, kind: str) -> bool:
+        """Whether a tail-form candidate is out of place where it stands.
+
+        The surface join of an adjective's く form (元気|よく) is an entry only
+        when the dictionary tags it an adverb. A causative (利か|せ) or negative
+        (なら|ない) tail names its own entry only over a particle or more, and
+        only when the words before it are no entry themselves.
+        """
+        if not self._fixed_forms:
+            return False
+        if kind == "B" and _pos1(tokens[j]) == "形容詞" and _pos1(tokens[i]) != "接頭辞":
+            return "adv" not in self._tags(entry)
+        if kind != "N" and not (kind == "A" and _causative_tail(tokens[j])):
+            return False
+        return j - i < 2 or any(
+            self._exist_cache.get(base) or self._kana_twin(i, j - 1, base)
+            for base, base_kind in candidates.get((i, j - 1), ())
+            if base_kind == "A"
+        )
+
     def _kana_twin(self, i: int, j: int, candidate: str) -> str:
         """The attested twin of an all-kana span's own candidate that the dictionary reads as the span, or ""."""
         twins = self._kana_twins.get((i, j), {}).get(candidate, ())
@@ -630,7 +683,9 @@ class CompoundDictionaryMatcher:
         """
         if self._entry_tags is None or kind == "F" or self._rule.rejection(synthetic) != REJECT_KANA_ONLY:
             return False
-        if not _kana_entry_shape(tokens, i, j):
+        # A negative-only entry ends on the auxiliary: its last content word is the verb before it.
+        last = j - 1 if kind == "N" else j
+        if not _kana_entry_shape(tokens, i, last):
             return False
         rows = kana_words().joined
         if synthetic.feature.lemma in rows or entry in rows:
@@ -755,7 +810,7 @@ class CompoundDictionaryMatcher:
 
     def _can_end_span(self, token) -> bool:
         """Whether a span may end at ``token``: a content token, or an adverbial particle when tags are wired."""
-        if self._can_end(token) or _contraction_tail(token):
+        if self._can_end(token) or _contraction_tail(token) or (self._fixed_forms and _causative_tail(token)):
             return True
         return self._entry_tags is not None and _adverbial_end(token)
 
@@ -879,6 +934,11 @@ class CompoundDictionaryMatcher:
                             written, written_twins = _kana_twins(tokens[i : j + 1], as_written=True)
                             self._kana_twins[(i, j)][written] = written_twins
                             out[(i, j)] = ((written, "B"),) + out[(i, j)]
+                if self._fixed_forms and j - i >= 2 and _negative_after_verb(tokens, j):
+                    out[(i, j)] = out.get((i, j), ()) + ((prefix + "ない", "N"),)
+                    if twins_wanted and _KANA_SPAN_RE.fullmatch(joined) and _kana_entry_shape(tokens, i, j - 1):
+                        written, written_twins = _kana_twins(tokens[i:j], as_written=True)
+                        self._kana_twins[(i, j)] = {written + "ない": tuple(twin + "ない" for twin in written_twins)}
                 head_base = self._fixed_form_head(tokens, i, j)
                 if head_base is not None:
                     out[(i, j)] = out.get((i, j), ()) + ((joined, "F"),)
@@ -938,7 +998,7 @@ class CompoundDictionaryMatcher:
         A potential tail also offers its folded base (放って|おけ: おける → 放っておく),
         and the ておく contraction とく its base (放っ|とい → 放っとく).
         """
-        if _contraction_tail(tail):
+        if _contraction_tail(tail) or _causative_tail(tail):
             return ((prefix + extract_orth_base(tail), "A"),)
         if _pos1(tail) not in _INFLECTABLE_POS1:
             return ((joined, "B"),)
@@ -954,7 +1014,7 @@ class CompoundDictionaryMatcher:
         modern = mining_base(tail)
         if _pos1(tail) == "形容詞" and modern != extract_orth_base(tail):
             alternatives += ((prefix + modern, "A"),)
-        if _pos1(head) == "接頭辞" and _c_form(tail).startswith("連用形"):
+        if _pos1(head) == "接頭辞" and _c_form(tail).startswith("連用形") or _ku_form(tail):
             alternatives += ((joined, "B"),)
         return alternatives
 
@@ -1004,7 +1064,12 @@ class CompoundDictionaryMatcher:
         kana = "".join(extract_reading(t) for t in span)
         if kind == "A":
             # A contraction tail (とく) is 助動詞; the attested headword is a verb.
-            pos1 = "動詞" if _contraction_tail(span[-1]) else (_pos1(span[-1]) or "動詞")
+            auxiliary_tail = _contraction_tail(span[-1]) or _causative_tail(span[-1])
+            pos1 = "動詞" if auxiliary_tail else (_pos1(span[-1]) or "動詞")
+            pos2 = "一般"
+        elif kind == "N":
+            # An entry listed in the negative is an adjective in ない (話にならない).
+            pos1 = "形容詞"
             pos2 = "一般"
         else:
             # Inherit the tail's POS only when the tail is itself a content
@@ -1023,13 +1088,18 @@ class CompoundDictionaryMatcher:
             else:
                 pos1 = "名詞"
                 pos2 = "普通名詞"
-        return CompoundSyntheticToken(
+        synthetic = CompoundSyntheticToken(
             surface=surface,
             pos1=pos1,
             pos2=pos2,
             lemma=headword,
             kana=kana,
         )
+        # What follows reads a negative entry as it read the negative (やりきれない|んです after a 終止形).
+        c_form = getattr(getattr(span[-1], "feature", None), "cForm", None)
+        if kind == "N" and isinstance(c_form, str):
+            synthetic.feature.cForm = c_form
+        return synthetic
 
 
 # A name span never starts on a hiragana particle, auxiliary, pre-noun
