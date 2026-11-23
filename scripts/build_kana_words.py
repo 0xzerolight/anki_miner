@@ -813,6 +813,10 @@ JOINS: tuple[tuple[str, str, str, str] | tuple[str, str, str, str, str], ...] = 
     ("はいよ", "感動詞", "はい|よ", "alone", "interjection"),
     ("じゃあね", "感動詞", "じゃあ|ね", "alone", "interjection"),
     ("あのさ", "感動詞", "あの|さ", "start", "interjection"),
+    # K1121 ROWS: the colloquial という / って言う, one token the tagger files as an auxiliary (何っちゅうことや,
+    # 行くっつってた). A verb row, so that the card front is the dictionary form in every inflection.
+    ("っちゅう", "動詞", "=っちゅう", "", "grammar"),
+    ("っつう", "動詞", "=っつう", "", "grammar"),
 )
 
 _HEADER = """\

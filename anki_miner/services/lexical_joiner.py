@@ -273,6 +273,7 @@ def _kana_join(
             and not _auxiliary_after_te(row.headword, tokens, i)
             and not _not_the_auxiliary(row.headword, span)
             and not _not_the_conjunction(row.headword, span)
+            and not _other_tte(row.headword, span)
             and not _runs_on(row.headword, tokens, i + size)
             and not _misread_ja_nai(row.headword, tokens, i)
             and not _no_of_noda(row.headword, tokens, i + size)
@@ -632,6 +633,15 @@ def _not_the_conjunction(headword: str, span: list) -> bool:
     (行きたい けど) the tagger says particle, and the row is passed over.
     """
     return headword in _CONJUNCTION_ROWS and _pos1(span[0]) != "接続詞"
+
+
+def _other_tte(headword: str, span: list) -> bool:
+    """Whether the tagger's っつう is written って or ってえ, where the card would not show the word.
+
+    行くっつってた and 何だっつんだ spell it; ぜってえ and 痛ってえ are 絶対 and 痛い
+    drawn out, and a plain って is the particle a learner already has.
+    """
+    return headword == "っつう" and not span[0].surface.startswith("っつ")
 
 
 def _runs_on(headword: str, tokens: list, after: int) -> bool:

@@ -100,6 +100,9 @@ _ATTESTED = frozenset(
         "あのさ",
         "何だか",
         "なんだか",
+        # R-7
+        "っちゅう",
+        "っつう",
     }
 )
 
@@ -421,3 +424,23 @@ _R6_SPLIT = [
 @pytest.mark.parametrize(("sentence", "front"), _R6_SPLIT)
 def test_the_same_tokens_inside_a_clause_stay_split(sentence: str, front: str) -> None:
     assert front not in _fronts(sentence, interjections=True)
+
+
+# --- R-7: the colloquial という ---------------------------------------------------------------------
+
+_R7_JOINED = [
+    ("何っちゅう寒さや", "っちゅう"),
+    ("あいつは来ないっつってた", "っつう"),
+    ("そういう話っつうかさ", "っつう"),
+]
+
+
+@pytest.mark.parametrize(("sentence", "front"), _R7_JOINED)
+def test_colloquial_to_iu_is_a_grammar_card(sentence: str, front: str) -> None:
+    assert front in _fronts(sentence)
+    assert front not in _fronts(sentence, grammar_points=False)
+
+
+@pytest.mark.parametrize("sentence", ["もっと盛り上がれよぜってえ", "この傷は痛ってえな", "ってか、どうやって帰るの"])
+def test_tte_spellings_are_not_the_colloquial_to_iu(sentence: str) -> None:
+    assert "っつう" not in _fronts(sentence)

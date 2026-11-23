@@ -65,6 +65,8 @@ _GRAMMAR_LINES = (
     ("犬が柵を越えようとした", "とする"),
     ("今夜は雪が止まないようだ", "ようだ"),
     ("どうやら鍵が壊れているようです", "ようです"),
+    ("何っちゅう寒さや", "っちゅう"),
+    ("あいつは来ないっつってた", "っつう"),
 )
 
 #: Joined expressions and connectives that are no grammar points: always mined.
