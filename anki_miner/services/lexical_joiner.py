@@ -748,6 +748,19 @@ def _stands_alone(tokens: list, spans: dict[int, tuple[int, int]], end: int) -> 
     return left is None or right is None or left[1] != right[0]
 
 
+def _permits_after_te(candidate: _Join, tokens: list) -> bool:
+    """Whether an "alone" row that opens on いい stands after a verb's て-form: 休んで いいよ is 〜ていい 'you may'.
+
+    The space is a subtitle break inside the frame, so いい is the predicate
+    and its particle no reply of its own: after て / で, and after ても / でも.
+    """
+    i = candidate.start
+    if tokens[i].surface != "いい" or i == 0:
+        return False
+    te = i - 2 if tokens[i - 1].surface == "も" and i >= 2 else i - 1
+    return tokens[te].surface in ("て", "で") and _pos1(tokens[te]) == "助詞"
+
+
 def _quotes_what_precedes(headword: str, tokens: list, i: int) -> bool:
     """Whether って|こと|は after a mere space still quotes the words before it, so it opens nothing.
 
@@ -948,7 +961,7 @@ class LexicalJoiner:
                 return False
             previous = kept[-1] if kept and kept[-1].end == candidate.start - 1 else None
             if candidate.after == "alone":
-                if not _stands_alone(tokens, spans, candidate.end):
+                if not _stands_alone(tokens, spans, candidate.end) or _permits_after_te(candidate, tokens):
                     return False
             elif not _follows(
                 tokens, candidate.start, candidate.after, _joined_pos1(previous)
