@@ -100,6 +100,8 @@ _QUESTION_ROWS = frozenset({"どこか", "どちらか", "どっちか"})
 _PRONOUN_CONJUNCTIONS = frozenset({"それに", "そこで", "それも"})
 # 何|かしら as written or read: 'something or other' only where its clause goes on (``_wonders_what``).
 _SOMETHING_ROWS = frozenset({"なにかしら", "何かしら"})
+# "alone" interjection rows and the one particle each keeps its card before (``_particle_then_pause``).
+_PARTICLE_AFTER = {"なんだ": "よ", "もういい": "から"}
 # 何|より as written or read: 'best of all' only as a predicate (``_more_than_anything``).
 _BEST_ROWS = frozenset({"なにより", "何より"})
 # What a sentence that opens on どうか 'please' asks with, by dictionary form; an imperative asks too (``_asks_nothing``).
@@ -822,6 +824,19 @@ def _stands_alone(tokens: list, spans: dict[int, tuple[int, int]], end: int) -> 
     return left is None or right is None or left[1] != right[0]
 
 
+def _particle_then_pause(candidate: _Join, tokens: list, spans: dict[int, tuple[int, int]]) -> bool:
+    """Whether an "alone" interjection row is followed by the one particle it is still the interjection before.
+
+    なんだよ、その態度 is なんだ 'what the …' with よ, where a pause follows the
+    particle; もういいから手を離せ is もういい 'that is enough' going on with から.
+    """
+    particle = _PARTICLE_AFTER.get(candidate.headword)
+    after = candidate.end + 1
+    if particle is None or after >= len(tokens) or tokens[after].surface != particle:
+        return False
+    return particle == "から" or _stands_alone(tokens, spans, after)
+
+
 def _permits_after_te(candidate: _Join, tokens: list) -> bool:
     """Whether an "alone" row that opens on いい stands after a verb's て-form: 休んで いいよ is 〜ていい 'you may'.
 
@@ -1062,7 +1077,9 @@ class LexicalJoiner:
                 return False
             previous = kept[-1] if kept and kept[-1].end == candidate.start - 1 else None
             if candidate.after == "alone":
-                if not _stands_alone(tokens, spans, candidate.end) or _permits_after_te(candidate, tokens):
+                if _permits_after_te(candidate, tokens) or not (
+                    _stands_alone(tokens, spans, candidate.end) or _particle_then_pause(candidate, tokens, spans)
+                ):
                     return False
             elif not _follows(
                 tokens, candidate.start, candidate.after, _joined_pos1(previous)

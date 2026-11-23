@@ -849,6 +849,9 @@ JOINS: tuple[tuple[str, str, str, str] | tuple[str, str, str, str, str], ...] = 
     ("ではないか", "感動詞", "で|は|ない|か", "copula", "grammar"),
     ("じゃろ", "感動詞", "じゃろ", "", "grammar"),
     ("じゃろう", "感動詞", "じゃろう", "", "grammar"),
+    # K1121 PHRASE: なんだい, the interjection なんだ with い, a reply of its own as なんだ above. なんだ before よ
+    # and もういい before から keep their cards through lexical_joiner._particle_then_pause.
+    ("なんだい", "感動詞", "なん|だ|い", "alone", "interjection"),
 )
 
 _HEADER = """\

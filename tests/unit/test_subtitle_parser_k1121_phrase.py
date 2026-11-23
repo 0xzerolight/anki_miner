@@ -54,6 +54,11 @@ _ATTESTED = frozenset(
         "じゃろ",
         "じゃろう",
         "ですか",
+        # P-4
+        "なんだ",
+        "なんだい",
+        "もういい",
+        "いいから",
     }
 )
 
@@ -202,3 +207,34 @@ def test_a_copula_row_still_follows_ni_kimatte_iru() -> None:
     fronts = _fronts("焼きたてのパンならおいしいに決まってるじゃない")
     assert "に決まっている" in fronts
     assert "じゃない" in fronts
+
+
+# --- P-4: interjection entries of two tokens before one more particle (only with the switch on) ---
+
+_P4_LINES = [
+    ("なんだよ、その態度は", "なんだ"),
+    ("なんだい、やけに早いな", "なんだい"),
+    ("もういいから手を離せ", "もういい"),
+]
+
+
+@pytest.mark.parametrize(("sentence", "front"), _P4_LINES)
+def test_interjection_before_its_particle_is_one_card_with_the_switch_on(sentence: str, front: str) -> None:
+    assert front in _fronts(sentence, interjections=True)
+
+
+@pytest.mark.parametrize(("sentence", "front"), _P4_LINES)
+def test_interjection_before_its_particle_is_left_split_with_the_switch_off(sentence: str, front: str) -> None:
+    assert front not in _fronts(sentence)
+
+
+@pytest.mark.parametrize(
+    ("sentence", "front"),
+    [
+        ("あの箱の中身はなんだよ", "なんだ"),
+        ("なんだよね、結局は好みの問題", "なんだ"),
+        ("時間はもういいかい", "もういい"),
+    ],
+)
+def test_the_same_tokens_elsewhere_are_no_interjection(sentence: str, front: str) -> None:
+    assert front not in _fronts(sentence, interjections=True)
