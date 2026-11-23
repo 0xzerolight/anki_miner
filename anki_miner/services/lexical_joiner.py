@@ -102,6 +102,9 @@ _PRONOUN_CONJUNCTIONS = frozenset({"それに", "そこで", "それも"})
 _SOMETHING_ROWS = frozenset({"なにかしら", "何かしら"})
 # "start" rows that a mere space does not open (``_quotes_what_precedes``).
 _AFTER_PUNCTUATION = frozenset({"ってことは", "いいから"})
+# The rows of よう + the copula, and what they follow as the grammar point 'it seems' (``_no_predicate_before``).
+_SEEMING_ROWS = frozenset({"ようだ", "ようです"})
+_PREDICATE_POS1 = frozenset({"動詞", "助動詞", "形容詞"})
 _QUESTION_VERBS = frozenset(
     {"分かる", "知る", "覚える", "忘れる", "聞く", "教える", "言う", "思う", "考える", "調べる"}
 )
@@ -275,6 +278,7 @@ def _kana_join(
             and not _good_too(row.headword, tokens, i + size)
             and not _thing_done(row.headword, tokens, i)
             and not _no_volitional_before(row.headword, tokens, i)
+            and not _no_predicate_before(row.headword, tokens, i)
         ):
             return _Join(
                 i,
@@ -509,6 +513,16 @@ def _no_volitional_before(headword: str, tokens: list, i: int) -> bool:
     if isinstance(c_form, str) and c_form.startswith("意志推量形"):
         return False
     return not (_pos1(before) == "助動詞" and extract_lemma(before) in ("う", "よう"))
+
+
+def _no_predicate_before(headword: str, tokens: list, i: int) -> bool:
+    """Whether よう|だ follows no predicate, where it is not the grammar point ようだ 'it seems'.
+
+    The grammar point follows a verb, an adjective, an auxiliary or the adnominal
+    な (降らないようだ, 寒いようだ, 元気なようで). After の it is 'like' (夢のようだ),
+    which stays out.
+    """
+    return headword in _SEEMING_ROWS and not (i > 0 and _pos1(tokens[i - 1]) in _PREDICATE_POS1)
 
 
 def _no_of_noda(headword: str, tokens: list, after: int) -> bool:

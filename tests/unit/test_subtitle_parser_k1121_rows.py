@@ -61,6 +61,13 @@ _ATTESTED = frozenset(
         "とする",
         "といっても",
         "いう",
+        # R-4
+        "ようだ",
+        "ようです",
+        "のように",
+        "ように",
+        "ような",
+        "ようになる",
     }
 )
 
@@ -242,3 +249,42 @@ def test_entry_that_starts_on_a_particle_stays_out_elsewhere(sentence: str, fron
 
 def test_to_suru_is_a_grammar_point() -> None:
     assert "とする" not in _fronts("泥棒は窓から逃げようとした", grammar_points=False)
+
+
+# --- R-4: ようだ after a predicate ---------------------------------------------------------------
+
+_R4_JOINED = [
+    ("今夜は雪が止まないようだ", "ようだ"),
+    ("どうやら鍵が壊れているようです", "ようです"),
+    ("祖母は元気なようで安心した", "ようだ"),
+    ("荷物はもう届いたようだった", "ようだ"),
+    ("この部屋は少し寒いようだね", "ようだ"),
+]
+
+
+@pytest.mark.parametrize(("sentence", "front"), _R4_JOINED)
+def test_you_da_after_a_predicate_is_the_grammar_point(sentence: str, front: str) -> None:
+    assert front in _fronts(sentence)
+
+
+_R4_SPLIT = [
+    ("猿のように木に登る", "のように"),
+    ("毎朝走るようにしている", "ように"),
+    ("やっと泳げるようになった", "ようになる"),
+    ("まるで夢のような話だ", "ような"),
+]
+
+
+@pytest.mark.parametrize(("sentence", "front"), _R4_SPLIT)
+def test_the_other_you_rows_keep_their_tokens(sentence: str, front: str) -> None:
+    fronts = _fronts(sentence)
+    assert front in fronts
+    assert "ようだ" not in fronts
+
+
+def test_you_da_after_no_is_left_out() -> None:
+    assert "ようだ" not in _fronts("まるで夢のようだ")
+
+
+def test_you_da_is_a_grammar_point() -> None:
+    assert "ようだ" not in _fronts("今夜は雪が止まないようだ", grammar_points=False)

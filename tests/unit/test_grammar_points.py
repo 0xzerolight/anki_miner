@@ -63,6 +63,8 @@ _GRAMMAR_LINES = (
     ("誰にでも起こりうる", "うる"),
     ("あんな所へ二度と行くものか", "ものか"),
     ("犬が柵を越えようとした", "とする"),
+    ("今夜は雪が止まないようだ", "ようだ"),
+    ("どうやら鍵が壊れているようです", "ようです"),
 )
 
 #: Joined expressions and connectives that are no grammar points: always mined.

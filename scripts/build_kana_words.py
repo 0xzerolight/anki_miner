@@ -777,6 +777,11 @@ JOINS: tuple[tuple[str, str, str, str] | tuple[str, str, str, str, str], ...] = 
     # opening a clause is the conjunction といっても.
     ("とする", "動詞", "と|=する", "verb", "grammar"),
     ("といっても", "接続詞", "と|いっ|て|も", "start"),
+    # K1121 ROWS: よう + the copula after a predicate is the grammar point ようだ 'it seems' (降らないようだ,
+    # 元気なようで); after の it is 'like' and stays out (lexical_joiner._no_predicate_before). よう|な and よう|に
+    # keep their own rows above.
+    ("ようだ", "形容詞", "よう|=だ", "", "grammar"),
+    ("ようです", "形容詞", "よう|=です", "", "grammar"),
 )
 
 _HEADER = """\
