@@ -749,6 +749,29 @@ JOINS: tuple[tuple[str, str, str, str] | tuple[str, str, str, str, str], ...] = 
     ("あのね", "感動詞", "あの|ね", "start", "interjection"),
     ("しまった", "感動詞", "しまっ|た", "alone", "interjection"),
     ("んん", "感動詞", "ん|ん", "alone", "interjection"),
+    # K1121 ROWS: a word + a particle that is another word where it stands. それ|に, そこ|で and それ|も are the
+    # conjunction opening a clause before a pause (それに、…); a space is enough for それ|に unless a verb follows
+    # it (それに 気づいた), never for そこ|で and それ|も (そこで 待ってて, それも いい: lexical_joiner._needs_a_comma).
+    # よく|も not before ない / 悪く (_good_too), どちら|か not before an embedded question (_embedded_question),
+    # なに|かしら not where its clause ends (あれは何かしら: _wonders_what), いい|から opening a line or after
+    # punctuation (_quotes_what_precedes), もの|か where the sentence stops after a verb that is no past (_thing_done).
+    ("それに", "接続詞", "それ|に", "alone"),
+    ("そこで", "接続詞", "そこ|で", "alone"),
+    ("それも", "接続詞", "それ|も", "alone"),
+    ("それなのに", "接続詞", "それ|な|の|に", "start"),
+    ("それどころか", "接続詞", "それ|どころ|か", "start"),
+    ("それどころ", "副詞", "それ|どころ", ""),
+    ("よくも", "副詞", "よく|も", ""),
+    ("よくぞ", "副詞", "よく|ぞ", ""),
+    ("どちらか", "名詞", "どちら|か", ""),
+    ("どっちか", "名詞", "どっち|か", ""),
+    ("どちらかというと", "副詞", "どちら|か|と|いう|と", ""),
+    ("どっちかというと", "副詞", "どっち|か|と|いう|と", ""),
+    ("なにかしら", "副詞", "なに|かしら", ""),
+    ("どこでも", "副詞", "どこ|で|も", ""),
+    ("さきほど", "名詞", "さき|ほど", ""),
+    ("いいから", "副詞", "いい|から", "start"),
+    ("ものか", "副詞", "もの|か", "verb", "grammar"),
 )
 
 _HEADER = """\

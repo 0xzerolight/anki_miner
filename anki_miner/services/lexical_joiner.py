@@ -94,13 +94,21 @@ _TE_REQUESTS = frozenset({"ください", "くださる", "ちょうだい", "�
 # What makes the で before it a copula: で|ある, で|ござい|ます (``_copula_after``).
 _COPULA_VERBS = frozenset({"ある", "ござる"})
 # Verbs that take an embedded question, by lemma (``_embedded_question``).
+# Rows of a question word + か that are the question itself before one of those verbs (``_embedded_question``).
+_QUESTION_ROWS = frozenset({"どこか", "どちらか", "どっちか"})
+# Conjunctions of a pronoun + a particle, and the ones a mere space after them does not make (``_needs_a_comma``).
+_PRONOUN_CONJUNCTIONS = frozenset({"それに", "そこで", "それも"})
+# 何|かしら as written or read: 'something or other' only where its clause goes on (``_wonders_what``).
+_SOMETHING_ROWS = frozenset({"なにかしら", "何かしら"})
+# "start" rows that a mere space does not open (``_quotes_what_precedes``).
+_AFTER_PUNCTUATION = frozenset({"ってことは", "いいから"})
 _QUESTION_VERBS = frozenset(
     {"分かる", "知る", "覚える", "忘れる", "聞く", "教える", "言う", "思う", "考える", "調べる"}
 )
 # One-token grammar rows that are the word only as the tagger's auxiliary (``_not_the_auxiliary``).
 _AUXILIARY_ROWS = frozenset({"らしい", "やろ"})
 # Rows that are the word only where the line or the sentence stops after them (``_runs_on``).
-_STOP_AFTER = frozenset({"じゃね", "だったりして"})
+_STOP_AFTER = frozenset({"じゃね", "だったりして", "ものか"})
 # Joined rows that end a predicate: a row right after one still follows an auxiliary (``_joined_pos1``).
 _PREDICATE_ROWS = _AUXILIARY_ROWS | {"どうした"}
 # Pre-noun rows whose tokens are an adverb + a verb's past anywhere else (``_adnominal_only``).
@@ -262,6 +270,8 @@ def _kana_join(
             and not _bare_me(row.headword, tokens, i)
             and not _allowed_now(row.headword, tokens, i)
             and not _thing_wanted(row.headword, tokens, i)
+            and not _good_too(row.headword, tokens, i + size)
+            and not _thing_done(row.headword, tokens, i)
         ):
             return _Join(
                 i,
@@ -349,8 +359,9 @@ def _embedded_question(headword: str, tokens: list, after: int) -> bool:
     where?'. So it does where the line or sentence ends on it: 出口はどこか
     'where is the exit?', and before a sentence-final particle: どこかな,
     どこかね 'where, I wonder'. The row is passed over and どこ keeps its card.
+    どちら|か and どっち|か are the same (どちらか分からない 'do not know which').
     """
-    if headword != "どこか":
+    if headword not in _QUESTION_ROWS:
         return False
     if after >= len(tokens):
         return True
@@ -462,6 +473,22 @@ def _thing_wanted(headword: str, tokens: list, i: int) -> bool:
         return False
     before = tokens[i - 2] if i > 1 and tokens[i - 1].surface == "た" else tokens[i - 1]
     return _pos1(before) == "助動詞" and extract_lemma(before) == "たい"
+
+
+def _good_too(headword: str, tokens: list, after: int) -> bool:
+    """Whether よく|も is 良く + も before ない or 悪く (よくもない 'not good either', よくも悪くも).
+
+    The adverb よくも reproaches what follows it (よくもそんなことを 'how dare you').
+    """
+    return headword == "よくも" and after < len(tokens) and extract_orth_base(tokens[after]) in ("ない", "悪い")
+
+
+def _thing_done(headword: str, tokens: list, i: int) -> bool:
+    """Whether もの|か follows a past, where もの is the thing done (誰が置いたものか 'who left this, I wonder').
+
+    The rhetorical ものか follows what will not happen (二度と行くものか 'as if I would go again').
+    """
+    return headword == "ものか" and i > 0 and extract_lemma(tokens[i - 1]) == "た"
 
 
 def _no_of_noda(headword: str, tokens: list, after: int) -> bool:
@@ -663,9 +690,44 @@ def _quotes_what_precedes(headword: str, tokens: list, i: int) -> bool:
 
     …どれだけ大事か ってことは is 'the fact of how important …': the space is a
     subtitle break inside one sentence. The conjunction ってことは 'which means'
-    heads its line or follows punctuation.
+    heads its line or follows punctuation. いい|から is the same: after a space
+    it is 'because it is good' (天気が いいから), and いいから 'never mind, just …'
+    heads its line, follows punctuation or is said twice (いいから いいから).
     """
-    return headword == "ってことは" and i > 0 and _pos1(tokens[i - 1]) not in _CLAUSE_BREAK_POS1
+    return headword in _AFTER_PUNCTUATION and i > 0 and _pos1(tokens[i - 1]) not in _CLAUSE_BREAK_POS1
+
+
+def _needs_a_comma(candidate: _Join, tokens: list) -> bool:
+    """Whether a pronoun + particle row has only a space after it where a space does not make it the conjunction.
+
+    そこで、… and それも、… are the conjunctions; そこで 待ってて 'wait there' and
+    それも いい 'that is fine too' are the pronoun and its particle, as a subtitle
+    space also falls inside a clause. それに after a space is 'besides' unless a
+    verb comes right after it (それに 気づいた 'noticed that'). None of them opens
+    a clause right after a topic or case particle (私は それに 触れた), and
+    そこで？ or そこで」 ends its sentence on 'there'.
+    """
+    if candidate.headword not in _PRONOUN_CONJUNCTIONS:
+        return False
+    if candidate.start > 0 and _pos2(tokens[candidate.start - 1]) in ("係助詞", "格助詞"):
+        return True
+    after = candidate.end + 1
+    if after >= len(tokens):
+        return candidate.headword != "それに"
+    following = tokens[after]
+    if _pos1(following) in _CLAUSE_BREAK_POS1:
+        return candidate.headword != "それに" and _pos2(following) in ("句点", "括弧閉")
+    return candidate.headword != "それに" or _pos1(following) == "動詞"
+
+
+def _wonders_what(candidate: _Join, tokens: list, spans: dict[int, tuple[int, int]]) -> bool:
+    """Whether 何|かしら ends its clause, where it is 何 + the particle かしら ('I wonder what').
+
+    何かしら 'something or other' goes on into what it qualifies (何かしら理由がある).
+    """
+    if candidate.headword not in _SOMETHING_ROWS:
+        return False
+    return _stands_alone(tokens, spans, candidate.end) or _pos2(tokens[candidate.end + 1]) == "終助詞"
 
 
 def _follows(tokens: list, i: int, after: str, joined_pos1: str | None = None) -> bool:
@@ -809,9 +871,12 @@ class LexicalJoiner:
                 return True
             if candidate.line_start and not _opens_clause(tokens, spans, candidate.start):
                 return False
-            if _quotes_what_precedes(candidate.headword, tokens, candidate.start):
+            repeated = bool(kept) and kept[-1].end == candidate.start - 1 and kept[-1].headword == candidate.headword
+            if _quotes_what_precedes(candidate.headword, tokens, candidate.start) and not repeated:
                 return False
             if candidate.headword in _NEGATIVE_NOUNS and not _noun_place(candidate, tokens, spans):
+                return False
+            if _wonders_what(candidate, tokens, spans) or _needs_a_comma(candidate, tokens):
                 return False
             previous = kept[-1] if kept and kept[-1].end == candidate.start - 1 else None
             if candidate.after == "alone":

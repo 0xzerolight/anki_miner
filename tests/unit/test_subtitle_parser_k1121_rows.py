@@ -34,6 +34,29 @@ _ATTESTED = frozenset(
         "ことがある",
         "そうだ",
         "そうです",
+        # R-2
+        "それに",
+        "そこで",
+        "それも",
+        "それなのに",
+        "それどころか",
+        "それどころ",
+        "よくも",
+        "よくぞ",
+        "どちらか",
+        "どっちか",
+        "どちらかというと",
+        "なにかしら",
+        "何かしら",
+        "どこでも",
+        "さきほど",
+        "先ほど",
+        "いいから",
+        "ものか",
+        "じゃない",
+        "という",
+        "どっちかというと",
+        "っていう",
     }
 )
 
@@ -113,3 +136,68 @@ def test_sou_da_after_the_stem_of_tai_is_no_hearsay(sentence: str) -> None:
 )
 def test_hearsay_after_a_plain_form_stays(sentence: str, front: str) -> None:
     assert front in _fronts(sentence)
+
+
+# --- R-2: a word + a particle that is another word where it stands ------------------------
+
+_R2_JOINED = [
+    ("それに、切符もまだ買っていない", "それに"),
+    ("それに 財布も置いてきた", "それに"),
+    ("そこで、班を二つに分けることにした", "そこで"),
+    ("それも、かなり錆びたやつだ", "それも"),
+    ("それなのに、弟は平気な顔をしている", "それなのに"),
+    ("それどころか、宿題まで増えた", "それどころか"),
+    ("今はそれどころじゃないんだ", "それどころ"),
+    ("よくもそんな出まかせが言えるな", "よくも"),
+    ("よくぞ無事に帰ってきた", "よくぞ"),
+    ("どちらかの引き出しに鍵がある", "どちらか"),
+    ("どっちか片方だけ貸して", "どっちか"),
+    ("どちらかというと猫派だ", "どちらかというと"),
+    ("何かしら手がかりが残っているはずだ", "何かしら"),
+    ("祖父はどこでも昼寝ができる", "どこでも"),
+    ("先ほど荷物が届きました", "先ほど"),
+    ("いいから早く靴を履け", "いいから"),
+    ("いいから、いいから、座ってて", "いいから"),
+    ("あんな店、二度と行くものか", "ものか"),
+]
+
+
+@pytest.mark.parametrize(("sentence", "front"), _R2_JOINED)
+def test_word_and_particle_is_its_own_entry_where_it_fits(sentence: str, front: str) -> None:
+    assert front in _fronts(sentence)
+
+
+_R2_SPLIT = [
+    ("それに気づいたのは弟だけだ", "それに"),
+    ("それに 乗って駅まで行った", "それに"),
+    ("そこで 弁当を食べよう", "そこで"),
+    ("そこで待っていてくれ", "そこで"),
+    ("それも 悪くないね", "それも"),
+    ("お前たちは何をしてるんだ そこで？", "そこで"),
+    ("私は それに 指先で触れた", "それに"),
+    ("それも食べてみたい", "それも"),
+    ("よくもないし悪くもない", "よくも"),
+    ("出口がどちらか分からない", "どちらか"),
+    ("あの音は何かしら", "何かしら"),
+    ("あら 何かしら あの光", "何かしら"),
+    ("眺めがいいから窓際に座った", "いいから"),
+    ("眺めが いいから 窓際に座った", "いいから"),
+    ("誰でもいいから手伝って", "いいから"),
+    ("誰が置いていったものか", "ものか"),
+    ("どれだけ貴重なものか分かってない", "ものか"),
+]
+
+
+@pytest.mark.parametrize(("sentence", "front"), _R2_SPLIT)
+def test_word_and_particle_stays_two_words_elsewhere(sentence: str, front: str) -> None:
+    assert front not in _fronts(sentence)
+
+
+def test_ii_kara_said_twice_leaves_no_bare_ii() -> None:
+    fronts = _fronts("いいから いいから こっちに来て")
+    assert "いいから" in fronts
+    assert "いい" not in fronts
+
+
+def test_mono_ka_is_a_grammar_point() -> None:
+    assert "ものか" not in _fronts("あんな店、二度と行くものか", grammar_points=False)
