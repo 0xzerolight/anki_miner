@@ -43,6 +43,17 @@ _ATTESTED = frozenset(
         "ほんで",
         "何より",
         "なにより",
+        # P-3
+        "からこそ",
+        "に決まっている",
+        "もんか",
+        "もんですか",
+        "ものですか",
+        "ものか",
+        "ではないか",
+        "じゃろ",
+        "じゃろう",
+        "ですか",
     }
 )
 
@@ -144,3 +155,50 @@ def test_clause_opening_word_is_one_card(sentence: str, front: str) -> None:
 )
 def test_the_same_tokens_elsewhere_stay_two_words(sentence: str, front: str) -> None:
     assert front not in _fronts(sentence)
+
+
+# --- P-3: grammar entries that start on a particle or close a clause ------------------------
+
+_P3_LINES = [
+    ("君だからこそ頼めるんだ", "からこそ"),
+    ("どうせ明日も負けるに決まってる", "に決まっている"),
+    ("あいつは遅れるに決まっている", "に決まっている"),
+    ("誰があんな店に通うもんですか", "もんですか"),
+    ("二度と手伝ってやるもんか", "もんか"),
+    ("あんな人に負けるものですか", "ものですか"),
+    ("共に戦おうではないか", "ではないか"),
+    ("あれは昨日の猫ではないか", "ではないか"),
+    ("登ってみようじゃないか", "じゃないか"),
+    ("わしの勝ちじゃろ", "じゃろ"),
+    ("それでええんじゃろう", "じゃろう"),
+]
+
+
+@pytest.mark.parametrize(("sentence", "front"), _P3_LINES)
+def test_grammar_entry_is_one_card_where_it_fits(sentence: str, front: str) -> None:
+    assert front in _fronts(sentence)
+
+
+@pytest.mark.parametrize(("sentence", "front"), _P3_LINES)
+def test_grammar_entry_needs_grammar_points(sentence: str, front: str) -> None:
+    assert front not in _fronts(sentence, grammar_points=False)
+
+
+@pytest.mark.parametrize(
+    ("sentence", "front"),
+    [
+        ("お探しはあつらえものですか", "ものですか"),
+        ("会議は来月に決まっている", "に決まっている"),
+        ("この傘は誰のものですか", "ものですか"),
+        ("どんなもんか試したい", "もんか"),
+        ("まだ薬を飲んじゃないよ", "じゃない"),
+    ],
+)
+def test_grammar_entry_stays_out_elsewhere(sentence: str, front: str) -> None:
+    assert front not in _fronts(sentence)
+
+
+def test_a_copula_row_still_follows_ni_kimatte_iru() -> None:
+    fronts = _fronts("焼きたてのパンならおいしいに決まってるじゃない")
+    assert "に決まっている" in fronts
+    assert "じゃない" in fronts

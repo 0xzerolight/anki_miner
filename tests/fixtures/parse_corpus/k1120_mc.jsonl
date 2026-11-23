@@ -1,5 +1,5 @@
 {"id":"kc01","sentence":"あとで帰る","expected":["あとで","帰る"],"category":"lexicalized-window","note":"あと|で is the entry あとで, joined by its list row (K1121 EXPR). Before that row, the homophone window across the particle left あと its card."}
-{"id":"kc02","sentence":"知るもんか","expected":["知る"],"category":"lexicalized-window","note":"Guard: もんか is spelled so in the dictionary, so もん stays out."}
+{"id":"kc02","sentence":"知るもんか","expected":["知る","もんか"],"category":"lexicalized-window","note":"Guard: もんか is spelled so in the dictionary, so もん stays out; the grammar row cards もんか after a verb."}
 {"id":"kc03","sentence":"もうやだ","expected":["もう","やだ"],"category":"lexical-join","note":"や|だ joined: the spoken いやだ is listed as やだ."}
 {"id":"kc04","sentence":"すんません","expected":["すんません"],"category":"lexical-join","note":"すん|ませ|ん joined, as すみません is."}
 {"id":"kc05","sentence":"かまわないよ","expected":["かまわない"],"category":"lexical-join","note":"かまわ|ない joined: 構わない is its own entry."}

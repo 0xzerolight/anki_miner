@@ -836,6 +836,19 @@ JOINS: tuple[tuple[str, str, str, str] | tuple[str, str, str, str, str], ...] = 
     ("いまでは", "副詞", "いま|で|は", "start"),
     ("ほんで", "接続詞", "ほん|で", "start"),
     ("なにより", "副詞", "なに|より", ""),
+    # K1121 PHRASE: grammar entries that start on a particle or close a clause. に決まっている only after a plain
+    # predicate (lexical_joiner._no_plain_form_before); the rhetorical もんか / もんですか / ものですか as ものか
+    # above; ではないか as じゃないか, both also after a volitional (lexical_joiner._copula_after_a_verb);
+    # the western じゃろ / じゃろう as やろ.
+    ("からこそ", "副詞", "から|こそ", "", "grammar"),
+    ("に決まっている", "動詞", "に|決まっ|=てる", "", "grammar"),
+    ("に決まっている", "動詞", "に|決まっ|て|=いる", "", "grammar"),
+    ("もんか", "副詞", "もん|か", "verb", "grammar"),
+    ("もんですか", "副詞", "もん|です|か", "verb", "grammar"),
+    ("ものですか", "副詞", "もの|です|か", "verb", "grammar"),
+    ("ではないか", "感動詞", "で|は|ない|か", "copula", "grammar"),
+    ("じゃろ", "感動詞", "じゃろ", "", "grammar"),
+    ("じゃろう", "感動詞", "じゃろう", "", "grammar"),
 )
 
 _HEADER = """\

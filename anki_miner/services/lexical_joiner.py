@@ -113,16 +113,23 @@ _QUESTION_VERBS = frozenset(
     {"分かる", "知る", "覚える", "忘れる", "聞く", "教える", "言う", "思う", "考える", "調べる"}
 )
 # One-token grammar rows that are the word only as the tagger's auxiliary (``_not_the_auxiliary``).
-_AUXILIARY_ROWS = frozenset({"らしい", "やろ"})
+_AUXILIARY_ROWS = frozenset({"らしい", "やろ", "じゃろ", "じゃろう"})
 # One-token rows that are the word only as the tagger's conjunction (``_not_the_conjunction``).
 _CONJUNCTION_ROWS = frozenset({"けど", "じゃ", "んで"})
 # Conjunctions that are a particle or the copula anywhere else: carded only while the run allows 接続詞,
 # as when the tagger's own tag decided (the other kana rows join whatever the run allows).
 _ALLOWED_POS_ROWS = _CONJUNCTION_ROWS | {"なら", "なのに", "では"}
 # Rows that are the word only where the line or the sentence stops after them (``_runs_on``).
-_STOP_AFTER = frozenset({"じゃね", "だったりして", "ものか"})
+# The rhetorical もの + か in its spellings: after what will not happen, never after a past (``_thing_done``).
+_RHETORICAL_ROWS = frozenset({"ものか", "もんか", "もんですか", "ものですか"})
+_STOP_AFTER = frozenset({"じゃね", "だったりして"}) | _RHETORICAL_ROWS
+# Grammar rows that follow a plain form, and what that form may be (``_no_plain_form_before``).
+_AFTER_PLAIN_FORM = {
+    "に決まっている": _PREDICATE_POS1,
+    **dict.fromkeys(_RHETORICAL_ROWS, frozenset({"動詞", "助動詞"})),
+}
 # Joined rows that end a predicate: a row right after one still follows an auxiliary (``_joined_pos1``).
-_PREDICATE_ROWS = _AUXILIARY_ROWS | {"どうした"}
+_PREDICATE_ROWS = _AUXILIARY_ROWS | {"どうした", "に決まっている"}
 # Pre-noun rows whose tokens are an adverb + a verb's past anywhere else (``_adnominal_only``).
 _ADNOMINAL_ROWS = frozenset({"そういった", "ちょっとした"})
 # What makes に|つれ|て the verb 連れて: a verb of coming or going right after it (``_verb_te_form``).
@@ -294,6 +301,7 @@ def _kana_join(
             and not _thing_done(row.headword, tokens, i)
             and not _no_volitional_before(row.headword, tokens, i)
             and not _no_predicate_before(row.headword, tokens, i)
+            and not _no_plain_form_before(row.headword, tokens, i)
             and not _asks_nothing(row.headword, tokens, i, i + size)
             and not _not_the_pronoun(row.headword, span)
         ):
@@ -512,7 +520,7 @@ def _thing_done(headword: str, tokens: list, i: int) -> bool:
 
     The rhetorical ものか follows what will not happen (二度と行くものか 'as if I would go again').
     """
-    return headword == "ものか" and i > 0 and extract_lemma(tokens[i - 1]) == "た"
+    return headword in _RHETORICAL_ROWS and i > 0 and extract_lemma(tokens[i - 1]) == "た"
 
 
 def _no_volitional_before(headword: str, tokens: list, i: int) -> bool:
@@ -540,6 +548,24 @@ def _no_predicate_before(headword: str, tokens: list, i: int) -> bool:
     which stays out.
     """
     return headword in _SEEMING_ROWS and not (i > 0 and _pos1(tokens[i - 1]) in _PREDICATE_POS1)
+
+
+def _no_plain_form_before(headword: str, tokens: list, i: int) -> bool:
+    """Whether a row that follows a plain form stands after something else, where it is not the entry.
+
+    に|決まっ|て|いる is 'surely' after a plain predicate (降るに決まっている,
+    寒いに決まってる); after a noun it is as often 'has been set for'
+    (来月に決まっている), and the verb keeps the card. The rhetorical もの + か
+    follows a dictionary form (二度と乗るもんか); after a 連用形 the もの is the tail
+    of a noun (忘れものですか).
+    """
+    allowed = _AFTER_PLAIN_FORM.get(headword)
+    if allowed is None:
+        return False
+    if i == 0 or _pos1(tokens[i - 1]) not in allowed:
+        return True
+    c_form = getattr(getattr(tokens[i - 1], "feature", None), "cForm", None)
+    return not (isinstance(c_form, str) and c_form.startswith(("終止形", "連体形")))
 
 
 def _asks_nothing(headword: str, tokens: list, i: int, after: int) -> bool:
@@ -888,7 +914,7 @@ def _follows(tokens: list, i: int, after: str, joined_pos1: str | None = None) -
     if after == "clause":
         return i == 0 or joined_pos1 is not None or _ends_clause(tokens[i - 1])
     if after == "copula":
-        return i == 0 or (joined_pos1 or _pos1(tokens[i - 1])) != "動詞"
+        return i == 0 or (joined_pos1 or _pos1(tokens[i - 1])) != "動詞" or _copula_after_a_verb(tokens, i)
     if after == "conditional":
         return _after_conditional(tokens, i)
     if i == 0:
@@ -900,6 +926,19 @@ def _follows(tokens: list, i: int, after: str, joined_pos1: str | None = None) -
     if joined_pos1 is None and pos1 == "助動詞" and extract_lemma(before) == "だ":
         return False
     return pos1 in _VERB_POS1
+
+
+def _copula_after_a_verb(tokens: list, i: int) -> bool:
+    """Whether the で / じゃ at ``tokens[i]`` is the copula although a verb stands before it.
+
+    After a volitional it is (登ってみようじゃないか 'let us try climbing'), and so is
+    a で the tagger files as the copula after a plain form (笑うではないか). After a
+    連用形 the same kana are the verb's て-form (読んではない, 飲んじゃない).
+    """
+    c_form = getattr(getattr(tokens[i - 1], "feature", None), "cForm", None)
+    if isinstance(c_form, str) and c_form.startswith("意志推量形"):
+        return True
+    return tokens[i].surface == "で" and _pos1(tokens[i]) == "助動詞"
 
 
 def _after_conditional(tokens: list, i: int) -> bool:
