@@ -4395,21 +4395,28 @@ class SubtitleParserService:
         ふん) the word stays, unless a name honorific follows it. A name on the
         user's whitelist is mined. A refused name is no preference reject: the
         caller records nothing.
+
+        A proper noun of another kind is a person where it is called like one:
+        a place or a firm right before a name honorific (奈良ちゃん, 松下君).
         """
         if self._mine_person_names:
             return False
         feature = getattr(word_token, "feature", None)
-        if getattr(feature, "pos2", None) != "固有名詞" or getattr(feature, "pos3", None) != "人名":
+        if getattr(feature, "pos2", None) != "固有名詞":
             return False
-        surface = word_token.surface
-        kana = katakana_to_hiragana(surface)
-        common = self._memoized_term_common([surface, kana])
-        if (
-            common
-            and (common.get(surface) or common.get(kana))
-            and not self._name_honorific_follows(text, tok_end, raw_tokens)
-        ):
-            return False
+        if getattr(feature, "pos3", None) != "人名":
+            if not self._name_honorific_follows(text, tok_end, raw_tokens):
+                return False
+        else:
+            surface = word_token.surface
+            kana = katakana_to_hiragana(surface)
+            common = self._memoized_term_common([surface, kana])
+            if (
+                common
+                and (common.get(surface) or common.get(kana))
+                and not self._name_honorific_follows(text, tok_end, raw_tokens)
+            ):
+                return False
         return not (
             self._force_include is not None
             and self._force_include(self._card_front(word_token, text, tok_start, tok_end, raw_tokens))

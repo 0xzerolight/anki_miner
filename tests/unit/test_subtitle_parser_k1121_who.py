@@ -48,6 +48,10 @@ _HEADWORDS = (
     "ふん",
     "よし",
     "知る",
+    "神様",
+    "お客様",
+    "先生",
+    "先輩",
 )
 _COMMON = frozenset(_HEADWORDS)
 # Proper nouns allowed, as the measuring settings have them.
@@ -170,3 +174,48 @@ class TestTaggedPersonName:
         fronts = _fronts(_service(), tmp_path, line)
         assert fronts == _fronts(_names_mined(_service()), tmp_path, line)
         assert fronts[0] == line[:2]
+
+
+class TestProperNounBeforeHonorific:
+    """W-2: a proper noun of any kind right before a name honorific is a person."""
+
+    @pytest.mark.parametrize(
+        ("line", "name", "rest"),
+        [
+            ("福岡先生が来た", "福岡", ["先生", "来る"]),
+            ("奈良ちゃんは元気だ", "奈良", ["元気"]),
+            ("宮崎くんが歩いた", "宮崎", ["歩く"]),
+            ("渋谷先輩に会った", "渋谷", ["先輩", "会う"]),
+            ("松下君は元気だ", "松下", ["元気"]),
+            ("トヨタさんに聞いた", "トヨタ", ["聞く"]),
+        ],
+    )
+    def test_a_place_or_a_firm_called_like_a_person_is_no_card(
+        self, tmp_path: Path, line: str, name: str, rest: list[str]
+    ) -> None:
+        assert _fronts(_service(), tmp_path, line) == rest
+        assert _fronts(_names_mined(_service()), tmp_path, line) == [name, *rest]
+
+    @pytest.mark.parametrize(
+        ("line", "fronts"),
+        [
+            ("奈良に行く", ["奈良", "行く"]),
+            ("福岡の歌を聞く", ["福岡", "歌", "聞く"]),
+            ("東京 先生に会った", ["東京", "先生", "会う"]),
+            ("神様に会った", ["神様", "会う"]),
+            ("お客様が来た", ["お客様", "来る"]),
+        ],
+    )
+    def test_a_place_with_no_honorific_and_a_listed_word_stay(
+        self, tmp_path: Path, line: str, fronts: list[str]
+    ) -> None:
+        assert _fronts(_service(), tmp_path, line) == fronts
+
+    def test_a_whitelisted_place_is_mined(self, tmp_path: Path) -> None:
+        service = _service(whitelist=frozenset({"奈良"}))
+        assert _fronts(service, tmp_path, "奈良ちゃんは元気だ") == ["奈良", "元気"]
+
+    def test_the_switch_changes_nothing_where_proper_nouns_are_excluded(self, tmp_path: Path) -> None:
+        for line in ("奈良ちゃんは元気だ", "松下君は元気だ"):
+            off = _fronts(_service(AnkiMinerConfig()), tmp_path, line)
+            assert off == _fronts(_names_mined(_service(AnkiMinerConfig())), tmp_path, line)
