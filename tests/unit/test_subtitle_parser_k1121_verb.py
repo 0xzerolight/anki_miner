@@ -247,3 +247,24 @@ class TestTeAuxiliarySwitch:
     )
     def test_a_chain_auxiliary_stays_out_whatever_the_switch_says(self, text, front):
         assert front not in _fronts(text, te_auxiliaries=True)
+
+
+class TestIrassharuAsThePredicate:
+    """V-5: いらっしゃる where it is the line's own verb."""
+
+    @pytest.mark.parametrize("text", ["校長先生がいらっしゃいました。", "お客様はどちらからいらっしゃるんですか。"])
+    def test_the_honorific_verb_is_mined(self, text):
+        assert "いらっしゃる" in _fronts(text)
+
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "先生が廊下で待っていらっしゃる。",
+            "お元気でいらっしゃいますか。",
+            "あら、いらっしゃい！",
+            "どうぞ、いらっしゃいまし。",
+            "有名な先生で いらっしゃいますね",
+        ],
+    )
+    def test_the_auxiliary_and_the_greeting_stay_out(self, text):
+        assert "いらっしゃる" not in _fronts(text)

@@ -250,10 +250,12 @@ _ITASU_FORMS: tuple[str, ...] = ("いたし", "いたす", "いたせ", "いた�
 # them or of a word above stays out too (なれる, いける, おれる: the card would
 # show 慣れる, 行ける, 折れる). くださる is not named here: _used_as_auxiliary
 # refuses it wherever it stands, and only the て-auxiliary switch mines it
-# (_is_te_auxiliary_card).
+# (_is_te_auxiliary_card). いらっしゃる is a word of the class: the honorific
+# 'to be, to come, to go' where it is the line's own verb (先生がいらっしゃる),
+# grammar after て / で as the others are.
 _KANA_AUX_CLASS_DENY: frozenset[str] = frozenset(
     {"される", "させる", "せる", "す", "したい", "さす", "ござる", "みる", "しまう", "なさる", "おく"}
-    | {"いただける", "くだされる", "いらっしゃる", "らっしゃる"}
+    | {"いただける", "くだされる", "らっしゃる"}
     | {"たまう", "あそばす", "やがる", "なはる", "おわす"}
     | {"あり", "だす", "きる", "える", "さる", "ぬく", "つくす", "ねがう"}
 )
@@ -4537,6 +4539,8 @@ class SubtitleParserService:
           ないよ);
         - ない after the copula's じゃ / で and after a く form: the negative
           (学生じゃ ない, 寒く ない, 行きたく ない);
+        - いらっしゃる after the copula's で, the honorific copula (先生で
+          いらっしゃいます);
         - いい / よい before から: it opens the listed いいから; and なく before
           なる, the listed なくなる 'to be lost' (あっ なくなってる);
         - a cry (``_AUX_CRIES``: 勝った やった！).
@@ -4561,6 +4565,8 @@ class SubtitleParserService:
         pos1 = getattr(getattr(prev, "feature", None), "pos1", None)
         if pos1 == "助詞" and prev.surface in ("て", "で", "って", "ちゃ", "じゃ"):
             return base == "できる"
+        if base == "いらっしゃる" and prev.surface == "で":
+            return False
         if base in ("ない", "無い"):
             if word_token.surface == "なく" and idx + 1 < len(tokens) and tokens[idx + 1].surface.startswith("な"):
                 return getattr(tokens[idx + 1].feature, "orthBase", None) != "なる"
@@ -4704,11 +4710,17 @@ class SubtitleParserService:
         is another verb's imperative (ウソつけ！ is つく, read as つける); any
         such verb right after an adjectival noun; and すぎる glued to the word
         before it (静か|すぎる, バカ|すぎる, 突然|すぎて), that word's tail as
-        it is after a verb.
+        it is after a verb. And いらっしゃい that no ます continues, or only
+        a bare まし, is the greeting 'welcome' (いらっしゃい, いらっしゃいまし),
+        an entry of its own, not いらっしゃる.
         """
         feature = word_token.feature
         c_form = getattr(feature, "cForm", None) or ""
         following = text[tok_end : tok_end + 1]
+        if word_token.surface == "いらっしゃい":
+            tail = text[tok_end : tok_end + 3]
+            if not tail.startswith("ま") or (tail.startswith("まし") and tail[2:] not in ("た", "て")):
+                return True
         if c_form.startswith("連用形-撥音便") and following not in ("だ", "で", "じ"):
             return True
         if c_form.startswith("連用形") and following in ("", "！", "!"):
