@@ -4393,6 +4393,8 @@ class SubtitleParserService:
         the line's own word (猫がいる, 問題ない, もういい). A cry the tagger reads
         as the word (``_AUX_CRIES``) is no word either, when it stands alone
         between pauses (やった！, いてっ！) and not after a word (上で やった).
+        After a subtitle space the word opens a phrase of its own
+        (``_is_predicate_after_space``).
         And なる after an honorific stem + に is that stem's honorific
         (お尋ねになる, ``_is_honorific_stem``).
         """
@@ -4402,7 +4404,10 @@ class SubtitleParserService:
         prev = getattr(tokens[idx - 1], "feature", None) if idx else None
         pos1 = getattr(prev, "pos1", None)
         if pos1 in _AUX_AFTER_POS1 or (pos1 == "助詞" and getattr(prev, "pos2", None) == "接続助詞"):
-            return not SubtitleParserService._is_own_predicate(word_token, tokens, idx)
+            return not (
+                SubtitleParserService._is_own_predicate(word_token, tokens, idx)
+                or SubtitleParserService._is_predicate_after_space(word_token, tokens, idx)
+            )
         if idx >= 2 and tokens[idx - 1].surface in ("も", "は") and tokens[idx - 2].surface in ("て", "で"):
             return True
         if (
@@ -4499,6 +4504,48 @@ class SubtitleParserService:
         if base in ("ない", "無い"):
             return pos1 == "助動詞" and prev.surface == "に"
         return False
+
+    @staticmethod
+    def _is_predicate_after_space(word_token, tokens: list, idx: int) -> bool:
+        """Whether an auxiliary-capable word that opens a phrase after a subtitle space is the line's own predicate.
+
+        A space in a subtitle is a pause or a row break, and what follows it
+        opens a phrase of its own (それなら いいよ, 練習すれば できる, 見習って
+        できる範囲で). ``_used_as_auxiliary`` reads the word before the space
+        as if nothing stood between. Across the space the word stays grammar
+        only in a frame that is one unit however it is spaced:
+
+        - after a verb's て-form (て, で, って and the contracted ちゃ / じゃ):
+          every auxiliary-capable word but できる (手伝って もらいたい, 聞いて
+          ないよ);
+        - ない after the copula's じゃ / で and after a く form: the negative
+          (学生じゃ ない, 寒く ない, 行きたく ない);
+        - いい / よい before から: it opens the listed いいから;
+        - a cry (``_AUX_CRIES``: 勝った やった！).
+
+        ある, くる, おる and なる keep the old test. After a pause the tagger
+        gives their short forms to other words as readily as to the verb: あれ
+        and ある to the pronoun and the pre-noun 或る, あら to the cry, き and
+        こ to a cut-off word, おら to the shout, な|なる to a stammered なるほど.
+        """
+        if not getattr(word_token, "white_space", ""):
+            return False
+        base = getattr(word_token.feature, "orthBase", None)
+        if base in ("ある", "くる", "おる", "なる"):
+            return False
+        for cry in _AUX_CRIES:
+            end = idx + len(cry)
+            if tuple(tok.surface for tok in tokens[idx:end]) == cry and (
+                end == len(tokens) or getattr(tokens[end].feature, "pos1", None) == "補助記号"
+            ):
+                return False
+        prev = tokens[idx - 1]
+        pos1 = getattr(getattr(prev, "feature", None), "pos1", None)
+        if pos1 == "助詞" and prev.surface in ("て", "で", "って", "ちゃ", "じゃ"):
+            return base == "できる"
+        if base in ("ない", "無い"):
+            return not ((pos1 == "助動詞" and prev.surface in ("じゃ", "で")) or prev.surface.endswith("く"))
+        return not (base in ("いい", "よい") and idx + 1 < len(tokens) and tokens[idx + 1].surface == "から")
 
     def _is_piece_of_adverbial_entry(self, word_token, tokens: list) -> bool:
         """Whether する or やる after an adverbial is a piece of an entry the dictionary lists with that adverbial.

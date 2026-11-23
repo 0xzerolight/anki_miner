@@ -145,3 +145,40 @@ class TestSuruAndYaruAfterAnAdverbial:
     )
     def test_a_piece_of_a_listed_entry_or_of_another_verb_stays_out(self, text, front):
         assert front not in _fronts(text)
+
+
+class TestPredicateAfterASubtitleSpace:
+    """V-0: a subtitle space ends the auxiliary relation."""
+
+    @pytest.mark.parametrize(
+        ("text", "front"),
+        [
+            ("それなら いいよ", "いい"),
+            ("毎日練習すれば できる", "できる"),
+            ("先輩を真似て できる範囲でやる", "できる"),
+            ("お借りします いいですか", "いい"),
+            ("欲しいなら やるよ", "やる"),
+        ],
+    )
+    def test_the_word_after_a_space_is_the_predicate(self, text, front):
+        assert front in _fronts(text)
+
+    @pytest.mark.parametrize(
+        ("text", "front"),
+        [
+            ("荷物を運ぶのを手伝って もらいたい", "もらう"),
+            ("先生は教室で待って いる", "いる"),
+            ("彼はまだ学生じゃ ない", "ない"),
+            ("今日はそんなに寒く ない", "ない"),
+            ("もう行かなければ ならない", "なる"),
+            ("試合に勝った やった！", "やる"),
+            ("もう帰ろう いいから早く", "いい"),
+            ("どう考えても変だ あれは嘘だ", "ある"),
+        ],
+    )
+    def test_an_auxiliary_frame_holds_across_the_space(self, text, front):
+        assert front not in _fronts(text)
+
+    @pytest.mark.parametrize(("text", "front"), [("それならいいよ", "いい"), ("先生は教室で待っている", "いる")])
+    def test_without_a_space_nothing_changes(self, text, front):
+        assert front not in _fronts(text)
