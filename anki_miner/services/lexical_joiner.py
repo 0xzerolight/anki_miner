@@ -638,10 +638,12 @@ def _not_the_conjunction(headword: str, span: list) -> bool:
 def _other_tte(headword: str, span: list) -> bool:
     """Whether the tagger's っつう is written って or ってえ, where the card would not show the word.
 
-    行くっつってた and 何だっつんだ spell it; ぜってえ and 痛ってえ are 絶対 and 痛い
-    drawn out, and a plain って is the particle a learner already has.
+    行くっつってた and そういう話っつうか spell it; ぜってえ and 痛ってえ are 絶対 and
+    痛い drawn out, and a plain って is the particle a learner already has. A bare
+    っつ is as often the middle of another word (ひとっつも, a nickname).
     """
-    return headword == "っつう" and not span[0].surface.startswith("っつ")
+    surface = span[0].surface
+    return headword == "っつう" and (not surface.startswith("っつ") or surface == "っつ")
 
 
 def _runs_on(headword: str, tokens: list, after: int) -> bool:

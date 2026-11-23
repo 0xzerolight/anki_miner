@@ -442,7 +442,16 @@ def test_colloquial_to_iu_is_a_grammar_card(sentence: str, front: str) -> None:
     assert front not in _fronts(sentence, grammar_points=False)
 
 
-@pytest.mark.parametrize("sentence", ["もっと盛り上がれよぜってえ", "この傷は痛ってえな", "ってか、どうやって帰るの"])
+@pytest.mark.parametrize(
+    "sentence",
+    [
+        "もっと盛り上がれよぜってえ",
+        "この傷は痛ってえな",
+        "ってか、どうやって帰るの",
+        "ひとっつも覚えてない",
+        "まっつん、行ってらっしゃい",
+    ],
+)
 def test_tte_spellings_are_not_the_colloquial_to_iu(sentence: str) -> None:
     assert "っつう" not in _fronts(sentence)
 
