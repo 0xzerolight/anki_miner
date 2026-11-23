@@ -817,6 +817,9 @@ JOINS: tuple[tuple[str, str, str, str] | tuple[str, str, str, str, str], ...] = 
     # 行くっつってた). A verb row, so that the card front is the dictionary form in every inflection.
     ("っちゅう", "動詞", "=っちゅう", "", "grammar"),
     ("っつう", "動詞", "=っつう", "", "grammar"),
+    # K1121 PHRASE: the polite negative of the copula row (先生じゃありません), as しか|あり|ませ|ん above. No row for
+    # で|は|あり|ませ|ん: the dictionary also lists ではある, and the card front came out as that.
+    ("じゃない", "形容詞", "じゃ|あり|ませ|ん", "copula", "grammar"),
 )
 
 _HEADER = """\

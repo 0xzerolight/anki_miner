@@ -185,6 +185,7 @@ _EXPECTED_CATEGORIES = {
     "k1121-join",
     "k1121-rows",
     "k1121-verb",
+    "k1121-phrase",
 }
 
 
