@@ -4400,14 +4400,21 @@ class SubtitleParserService:
         a place or a firm right before a name honorific (奈良ちゃん, 松下君).
         And a span the matcher joined is a person where every token under it
         is a tagged name (``_is_joined_person_name``).
+
+        The switch governs what rests on the tagger's tag. A noun the tagger
+        does not call a name is one by the line's own evidence, at every
+        setting (``_is_noun_called_by_name``).
         """
-        if self._mine_person_names:
-            return False
         feature = getattr(word_token, "feature", None)
         if getattr(word_token, "compound", False) is True:
-            if not self._is_joined_person_name(word_token, text, tok_start, tok_end, raw_tokens):
+            if self._mine_person_names or not self._is_joined_person_name(
+                word_token, text, tok_start, tok_end, raw_tokens
+            ):
                 return False
         elif getattr(feature, "pos2", None) != "固有名詞":
+            if not self._is_noun_called_by_name(word_token, text, tok_end, raw_tokens):
+                return False
+        elif self._mine_person_names:
             return False
         elif getattr(feature, "pos3", None) != "人名":
             if not self._name_honorific_follows(text, tok_end, raw_tokens):
@@ -4446,6 +4453,39 @@ class SubtitleParserService:
         return len(pieces) >= 2 and all(
             getattr(piece, "pos2", None) == "固有名詞" and getattr(piece, "pos3", None) == "人名" for piece in pieces
         )
+
+    #: The suffixes only a person's name takes. さん, 様 and 殿 also follow a role (社長さん, お客様).
+    _NAME_ONLY_SUFFIXES: tuple[str, ...] = ("ちゃん", "くん", "君")
+
+    def _is_noun_called_by_name(self, word_token, text: str, tok_end: int, raw_tokens: list) -> bool:
+        """Whether a noun that is no common word stands right before ちゃん / くん / 君: somebody's name (瀧くん).
+
+        The tagger calls a name it does not know a plain noun. The raw token
+        after it must be the suffix (君 after a word can be the pronoun), and
+        the word no numeral. A common dictionary word stays a card, as written
+        or in hiragana for a katakana spelling: a pet or a role is called the
+        same way (猫ちゃん, 新人くん), and the line alone cannot tell the name 心
+        from the word. Without a dictionary that knows common words, nothing is
+        refused.
+        """
+        if not text.startswith(self._NAME_ONLY_SUFFIXES, tok_end):
+            return False
+        feature = getattr(word_token, "feature", None)
+        if getattr(feature, "pos1", None) not in ("名詞", "形状詞") or getattr(feature, "pos2", None) == "数詞":
+            return False
+        suffix = next(
+            (token for token, start, _end in self._iter_token_spans(text, raw_tokens) if start == tok_end), None
+        )
+        if (
+            suffix is None
+            or suffix.surface not in self._NAME_ONLY_SUFFIXES
+            or getattr(getattr(suffix, "feature", None), "pos1", None) != "接尾辞"
+        ):
+            return False
+        surface = word_token.surface
+        kana = katakana_to_hiragana(surface)
+        common = self._memoized_term_common([surface, kana])
+        return common is not None and not (common.get(surface) or common.get(kana))
 
     def _name_honorific_follows(self, text: str, tok_end: int, raw_tokens: list) -> bool:
         """Whether the raw token that starts at ``tok_end`` is what a name is called with (``_is_name_honorific``)."""

@@ -58,6 +58,18 @@ _HEADWORDS = (
     "ハックション",
     "声",
     "言う",
+    "心",
+    "光",
+    "桜",
+    "翼",
+    "誠",
+    "猫",
+    "赤ちゃん",
+    "今",
+    "君",
+    "優しい",
+    "痛い",
+    "見える",
 )
 _COMMON = frozenset(_HEADWORDS)
 # Proper nouns allowed, as the measuring settings have them.
@@ -65,14 +77,18 @@ _NAMES_MINED = dataclasses.replace(AnkiMinerConfig(), excluded_subtypes=("非自
 
 
 def _service(
-    config: AnkiMinerConfig | None = None, *, whitelist: frozenset[str] | None = None
+    config: AnkiMinerConfig | None = None,
+    *,
+    whitelist: frozenset[str] | None = None,
+    rare: frozenset[str] = frozenset(),
 ) -> SubtitleParserService:
+    """A parser on the fake dictionary; ``rare`` words are listed without being common."""
     spelled = set(_HEADWORDS)
     return SubtitleParserService(
         config or _NAMES_MINED,
         term_lookup=lambda terms: spelled.intersection(terms),
         kana_attest_lookup=lambda forms: {form: form in spelled for form in forms},
-        term_common_lookup=lambda terms: {term: term in _COMMON for term in terms},
+        term_common_lookup=lambda terms: {term: term in _COMMON and term not in rare for term in terms},
         name_piece_rejects=True,
         force_include=None if whitelist is None else whitelist.__contains__,
     )
@@ -267,3 +283,50 @@ class TestJoinedPersonName:
         fronts = _fronts(_service(), tmp_path, line)
         assert "ハックション" in fronts
         assert fronts == _fronts(_names_mined(_service()), tmp_path, line)
+
+
+class TestNounCalledByName:
+    """W-4: a noun that is no common word, right before ちゃん / くん / 君, is somebody's name at every setting."""
+
+    _LINES = [
+        ("心ちゃんは優しい", "心", ["優しい"]),
+        ("光ちゃんが来た", "光", ["来る"]),
+        ("桜ちゃんと歩いた", "桜", ["歩く"]),
+        ("翼くんは早い", "翼", ["早い"]),
+        ("誠君に聞いた", "誠", ["聞く"]),
+    ]
+    #: The tagger calls each of them a plain noun; here the dictionary does not call them common.
+    _RARE = frozenset(name for _line, name, _rest in _LINES)
+
+    @pytest.mark.parametrize(("line", "name", "rest"), _LINES)
+    def test_the_noun_is_no_card(self, tmp_path: Path, line: str, name: str, rest: list[str]) -> None:
+        for config in (None, AnkiMinerConfig()):
+            assert _fronts(_service(config, rare=self._RARE), tmp_path, line) == rest
+        assert _fronts(_names_mined(_service(rare=self._RARE)), tmp_path, line) == rest
+
+    @pytest.mark.parametrize(("line", "name", "rest"), _LINES)
+    def test_a_common_word_stays(self, tmp_path: Path, line: str, name: str, rest: list[str]) -> None:
+        assert _fronts(_service(), tmp_path, line) == [name, *rest]
+
+    @pytest.mark.parametrize(
+        ("line", "fronts"),
+        [
+            ("赤ちゃんが来た", ["赤ちゃん", "来る"]),
+            ("心が痛い", ["心", "痛い"]),
+            ("光が見える", ["光", "見える"]),
+            ("心 ちゃんと見た", ["心", "見る"]),
+        ],
+    )
+    def test_a_listed_word_and_the_noun_with_no_suffix_after_it_stay(
+        self, tmp_path: Path, line: str, fronts: list[str]
+    ) -> None:
+        assert _fronts(_service(rare=self._RARE), tmp_path, line) == fronts
+
+    def test_a_whitelisted_noun_is_mined(self, tmp_path: Path) -> None:
+        service = _service(whitelist=frozenset({"心"}), rare=self._RARE)
+        assert _fronts(service, tmp_path, "心ちゃんは優しい") == ["心", "優しい"]
+
+    def test_nothing_is_refused_without_a_dictionary_that_knows_common_words(self, tmp_path: Path) -> None:
+        service = _service()
+        service._term_common_lookup = None
+        assert _fronts(service, tmp_path, "心ちゃんは優しい") == ["心", "優しい"]
