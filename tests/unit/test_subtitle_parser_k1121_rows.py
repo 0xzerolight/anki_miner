@@ -6,6 +6,7 @@ import pytest
 
 from anki_miner.config.config import AnkiMinerConfig
 from anki_miner.models.reading import ReadingUnit
+from anki_miner.services.number_counters import counter_reading
 from anki_miner.services.subtitle_parser import SubtitleParserService
 
 
@@ -444,3 +445,40 @@ def test_colloquial_to_iu_is_a_grammar_card(sentence: str, front: str) -> None:
 @pytest.mark.parametrize("sentence", ["もっと盛り上がれよぜってえ", "この傷は痛ってえな", "ってか、どうやって帰るの"])
 def test_tte_spellings_are_not_the_colloquial_to_iu(sentence: str) -> None:
     assert "っつう" not in _fronts(sentence)
+
+
+# --- R-8: numbers and counters ------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("number", "counter", "reading"),
+    [
+        (8, "区", "はっく"),
+        (7, "区", "ななく"),
+        (23, "区", "にじゅうさんく"),
+        (5000, "両", "ごせんりょう"),
+        (100, "両", "ひゃくりょう"),
+    ],
+)
+def test_ward_and_ryo_read_with_their_number(number: int, counter: str, reading: str) -> None:
+    assert counter_reading(number, counter) == reading
+
+
+def _counter_fronts(sentence: str) -> list[str]:
+    service = SubtitleParserService(
+        AnkiMinerConfig(allowed_pos=_BENCH_POS, mine_number_counters=True),
+        kana_attest_lookup=lambda terms: {term: term in _ATTESTED for term in terms},
+    )
+    words, _index, _counts = service.parse_text_units(
+        [ReadingUnit(text=sentence, index=0, location_label="t")], want_line_index=False
+    )
+    return [word.mined_form for word in words]
+
+
+@pytest.mark.parametrize(
+    ("sentence", "front", "piece"), [("叔父は７区に住んでいる", "７区", "区"), ("借金が五千両もある", "五千両", "両")]
+)
+def test_a_number_and_its_counter_is_one_card(sentence: str, front: str, piece: str) -> None:
+    fronts = _counter_fronts(sentence)
+    assert front in fronts
+    assert piece not in fronts

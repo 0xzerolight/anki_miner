@@ -165,6 +165,9 @@ _COUNTERS: dict[str, _Counter] = {
         },
         limit=10,
     ),
+    # K1121 ROWS: 区 after a number is the ward or district counted (８区), 両 the old coin (五千両).
+    "区": _Counter("く", _GEMINATE_HK),
+    "両": _Counter("りょう"),
 }
 
 #: unidic tags most counters 助数詞 or 助数詞可能; 人, 冊 and 軒 are 一般.
