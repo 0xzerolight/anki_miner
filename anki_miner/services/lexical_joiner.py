@@ -112,6 +112,8 @@ _NEGATIVE_NOUNS = frozenset({"役立たず"})
 _NOUN_FOLLOWERS = frozenset({"が", "の", "め", "だ", "な", "は", "を", "と", "ども", "です", "じゃ"})
 # Verbs of saying, by lemma: before one なん|と is 'what', before any other verb 'with what' (``_with_what``).
 _SAYING_VERBS = frozenset({"言う", "申す", "呼ぶ", "仰る"})
+# Verbs that take a quote, by lemma: before one なん|て is 何 + the quoting て, not the adverb (``_with_what``).
+_QUOTING_VERBS = _SAYING_VERBS | {"書く", "読む"}
 # The reply rows that are also the hearsay そうだ after a plain form (``_hearsay``).
 _HEARSAY_ROWS = frozenset({"そうだ", "そうです"})
 # "noun" rows that also open a clause before the noun they name (``_opens_before_a_noun``).
@@ -259,6 +261,7 @@ def _kana_join(
             and not _with_what(row.headword, tokens, i + size)
             and not _bare_me(row.headword, tokens, i)
             and not _allowed_now(row.headword, tokens, i)
+            and not _thing_wanted(row.headword, tokens, i)
         ):
             return _Join(
                 i,
@@ -416,15 +419,16 @@ def _with_what(headword: str, tokens: list, after: int) -> bool:
 
     The adverb stands before what it exclaims at (なんと美しい) or before a verb
     of saying (なんと言えばいい). The row is passed over before any other verb
-    and before a pronoun. なん|て is passed over before a kana いう: なんていうか
-    'how to put it' is one expression, and joining its なんて leaves いう a card.
+    and before a pronoun. なん|て is passed over before a verb that takes a quote:
+    there it is 何 + the quoting て (何て言った 'said what', 何て読むの 'how is it
+    read'), and なんていうか 'how to put it' is one expression. The adverb stands
+    before what it exclaims at (なんて寒い朝だ).
     """
     if headword not in ("なんと", "なんて") or after >= len(tokens):
         return False
     following = tokens[after]
     if headword == "なんて":
-        said = _pos1(following) == "動詞" and extract_lemma(following) == "言う"
-        return said and is_kana_only(following.surface)
+        return _pos1(following) == "動詞" and extract_lemma(following) in _QUOTING_VERBS
     if _pos1(following) == "代名詞":
         return True
     return _pos1(following) == "動詞" and extract_lemma(following) not in _SAYING_VERBS
@@ -444,6 +448,20 @@ def _bare_me(headword: str, tokens: list, i: int) -> bool:
     The entry is said of an experience: ひどい目にあった, こんな目にあうなんて.
     """
     return headword == "目にあう" and not (i > 0 and _pos1(tokens[i - 1]) in ("形容詞", "連体詞"))
+
+
+def _thing_wanted(headword: str, tokens: list, i: int) -> bool:
+    """Whether こと|が|ある follows たい, where it is こと + ある and not ことがある 'there are times when'.
+
+    The entry follows a verb's dictionary form or its past (転ぶことがある,
+    行ったことがある). After たい / たかった the こと is the thing wanted
+    (伝えたいことがある 'there is something I want to tell you'): the row is
+    passed over, and こと and ある keep their own cards.
+    """
+    if headword != "ことがある" or i == 0:
+        return False
+    before = tokens[i - 2] if i > 1 and tokens[i - 1].surface == "た" else tokens[i - 1]
+    return _pos1(before) == "助動詞" and extract_lemma(before) == "たい"
 
 
 def _no_of_noda(headword: str, tokens: list, after: int) -> bool:
@@ -573,6 +591,32 @@ def _hearsay(candidate: _Join, tokens: list) -> bool:
         candidate.headword in _HEARSAY_ROWS
         and candidate.start > 0
         and extract_lemma(tokens[candidate.start]) == "そう-伝聞"
+        and not _stem_before_sou(tokens, candidate.start)
+    )
+
+
+def _stem_before_sou(tokens: list, i: int) -> bool:
+    """Whether the そう at ``tokens[i]`` follows a stem, where it is 'looks like' and not the hearsay.
+
+    The hearsay follows a plain form (降るそうだ, 降ったそうだ, 会いたいそうだ).
+    After the stem of たい or of an adjective it is the そう of appearance
+    (帰りたそうだ 'looks like he wants to go home'). The tagger files that た as a
+    past now and then: after a godan 連用形 that has a sound change it is no past
+    (聞きた; the past is 聞いた), so it is the stem of たい.
+    """
+    before = tokens[i - 1]
+    c_form = getattr(getattr(before, "feature", None), "cForm", None)
+    if isinstance(c_form, str) and c_form.startswith("語幹"):
+        return True
+    if before.surface != "た" or i < 2 or _pos1(tokens[i - 2]) != "動詞":
+        return False
+    verb = getattr(tokens[i - 2], "feature", None)
+    c_type = getattr(verb, "cType", None)
+    return (
+        isinstance(c_type, str)
+        and c_type.startswith("五段")
+        and not c_type.startswith("五段-サ行")
+        and getattr(verb, "cForm", None) == "連用形-一般"
     )
 
 
