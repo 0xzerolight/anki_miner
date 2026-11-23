@@ -153,7 +153,9 @@ _PEOPLE = frozenset({"人", "者", "奴", "やつ", "方", "人間", "連中", "
 _JOINED_NOUN_HEADS = ("わけ", "はず", "こと", "もの")
 _GRAMMAR_POS1 = frozenset({"助詞", "助動詞"})
 _MAX_FIXED_TOKENS = max(len(key) for key in _FIXED_JOINS)
-_MAX_KANA_TOKENS = max(len(key) for key in (*kana_words().joins, *kana_words().base_joins))
+_MAX_KANA_TOKENS = max(len(key) for key in (*kana_words().joins, *kana_words().base_joins, *kana_words().form_joins))
+# What an ``=X`` before a row's last token may match: the adjective or auxiliary itself (``_form_join``).
+_INFLECTING_POS1 = frozenset({"形容詞", "助動詞"})
 _CLAUSE_BREAK_POS1 = frozenset({"補助記号", "記号"})
 _NOUN_POS1 = frozenset({"名詞", "代名詞", "接尾辞"})
 # What a copula な follows: a noun or a na-adjective stem (``_copula_after_a_name``).
@@ -221,15 +223,19 @@ def _negative_adjective(tokens: list, i: int) -> _Join | None:
 
 
 @lru_cache(maxsize=1)
-def _row_starts() -> tuple[frozenset[str], frozenset[str]]:
+def _row_starts() -> tuple[frozenset[str], frozenset[str], frozenset[str]]:
     """What a list row can start on: the first surface of every row, and the dictionary form of a one-token base row.
+
+    The third set is the first surface of the rows with an ``=X`` before their last token (``_form_join``).
 
     A token that is neither starts no row, and ``_kana_join`` need not try any size on it.
     """
     listed = kana_words()
     return (
-        frozenset(key[0] for key in listed.joins) | frozenset(key[0] for key in listed.base_joins if len(key) > 1),
+        frozenset(key[0] for key in (*listed.joins, *listed.form_joins))
+        | frozenset(key[0] for key in listed.base_joins if len(key) > 1),
         frozenset(key[0] for key in listed.base_joins if len(key) == 1),
+        frozenset(key[0] for key in listed.form_joins),
     )
 
 
@@ -262,13 +268,16 @@ def _kana_join(
     """
     listed = kana_words()
     read = keys is not None and written_ok is not None and keys[i] in listed.heads
-    surfaces_first, bases_alone = _row_starts()
+    surfaces_first, bases_alone, forms_first = _row_starts()
+    formed = tokens[i].surface in forms_first
     if not read and tokens[i].surface not in surfaces_first and extract_orth_base(tokens[i]) not in bases_alone:
         return None
     for size in range(min(_MAX_KANA_TOKENS, len(tokens) - i, (below or _MAX_KANA_TOKENS + 1) - 1), 0, -1):
         span = tokens[i : i + size]
         surfaces = tuple(token.surface for token in span)
         row = listed.joins.get(surfaces) or listed.base_joins.get((*surfaces[:-1], extract_orth_base(span[-1])))
+        if row is None and formed:
+            row = _form_join(span, surfaces)
         headword = row.headword if row is not None else ""
         if row is None and read and size > 1 and keys is not None and written_ok is not None:
             row, headword = _read_join(span, surfaces, tuple(keys[i : i + size]), written_ok)
@@ -319,6 +328,21 @@ def _kana_join(
                 after=row.after,
             )
     return None
+
+
+def _form_join(span: list, surfaces: tuple[str, ...]) -> KanaJoin | None:
+    """The row ``span`` matches through the dictionary form of a token before its last (じゃ|ねえ|か is じゃないか).
+
+    A row's ``=X`` at such a place stands for the adjective or auxiliary X in
+    whatever spelling the line has (ない said ねえ, ねー, ねぇ). Any other word
+    with that spelling is no match: the ねえ that calls someone is an interjection.
+    """
+    listed = kana_words()
+    key = [*surfaces]
+    for place, token in enumerate(span[:-1]):
+        if _pos1(token) in _INFLECTING_POS1 and extract_orth_base(token) in listed.form_bases:
+            key[place] = extract_orth_base(token)
+    return listed.form_joins.get(tuple(key))
 
 
 def _row_key(token) -> str:

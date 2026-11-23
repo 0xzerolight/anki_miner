@@ -6,6 +6,7 @@ import pytest
 
 from anki_miner.config.config import AnkiMinerConfig
 from anki_miner.models.reading import ReadingUnit
+from anki_miner.services.kana_words import kana_words
 from anki_miner.services.subtitle_parser import SubtitleParserService
 
 
@@ -81,7 +82,33 @@ def _fronts(
     return [word.mined_form for word in words]
 
 
-# --- P-1: the polite negative of the copula row ----------------------------------------------
+# --- P-1: the polite negative of the copula row, and じゃないか reached through ねえ ----------------
+
+
+def test_a_row_may_name_a_dictionary_form_before_its_last_token() -> None:
+    listed = kana_words()
+    assert listed.form_joins[("じゃ", "ない", "か")].headword == "じゃないか"
+    assert "ない" in listed.form_bases
+    assert "じゃないか" in listed.joined
+
+
+@pytest.mark.parametrize(
+    "sentence",
+    [
+        "あの古道具屋、案外安いじゃねえか",
+        "兄貴はもう出かけたんじゃねーか",
+        "この物置、思ったより広いじゃねぇか",
+        "この物置、思ったより広いじゃないか",
+    ],
+)
+def test_ja_nai_ka_is_one_card_in_every_spelling_of_nai(sentence: str) -> None:
+    fronts = _fronts(sentence)
+    assert "じゃないか" in fronts
+    assert "じゃない" not in fronts
+
+
+def test_ja_nai_ka_through_another_spelling_is_a_grammar_point() -> None:
+    assert "じゃないか" not in _fronts("あの古道具屋、案外安いじゃねえか", grammar_points=False)
 
 
 def test_ja_nai_without_ka_keeps_its_own_card() -> None:

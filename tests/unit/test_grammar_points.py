@@ -153,8 +153,11 @@ class TestMining:
         without = listed._replace(
             joins={key: row for key, row in listed.joins.items() if not row.grammar},
             base_joins={key: row for key, row in listed.base_joins.items() if not row.grammar},
+            form_joins={key: row for key, row in listed.form_joins.items() if not row.grammar},
             joined=frozenset(
-                row.headword for row in (*listed.joins.values(), *listed.base_joins.values()) if not row.grammar
+                row.headword
+                for row in (*listed.joins.values(), *listed.base_joins.values(), *listed.form_joins.values())
+                if not row.grammar
             ),
         )
         monkeypatch.setattr(kana_words, "kana_words", lambda: without)
@@ -164,5 +167,6 @@ class TestMining:
 
 def test_the_list_marks_exactly_the_grammar_points():
     listed = kana_words.kana_words()
-    marked = {row.headword for row in (*listed.joins.values(), *listed.base_joins.values()) if row.grammar}
+    rows = (*listed.joins.values(), *listed.base_joins.values(), *listed.form_joins.values())
+    marked = {row.headword for row in rows if row.grammar}
     assert marked == {front for _text, front in _GRAMMAR_LINES}
