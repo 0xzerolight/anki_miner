@@ -27,12 +27,14 @@ pytestmark = pytest.mark.skipif(not _fugashi_available(), reason="fugashi/unidic
 _ATTESTED = frozenset(
     {"する", "やる", "なる", "ある", "いる", "ない", "いい", "できる", "もらう", "いただく", "くれる", "くださる"}
     | {"いらっしゃる", "いらっしゃい", "まあ", "みる", "しまう", "おく", "について", "として", "なくなる"}
+    | {"いいかげん"}
 )
 
 # Headwords a dictionary spells this way: the entries a window can be.
 _SPELLINGS = frozenset(
     {"をして", "にして", "となる", "やしない", "となく", "てもいい", "しかない", "大事にする"}
     | {"うまくやる", "若くして"}
+    | {"にしろ", "にせよ", "となったら", "となると", "いいかげんにする", "いずれにせよ", "何にせよ", "いざとなったら"}
 )
 
 # Dictionary entry tags by headword: a word with no row here has no entry at all.
@@ -46,6 +48,7 @@ _TAGS = {
     "きれい": "adj-na",
     "元気": "adj-na n",
     "目標": "n",
+    "いいかげん": "adj-na adv",
 }
 
 
@@ -95,6 +98,40 @@ class TestVerbAfterItsOwnCaseParticle:
         fronts = _fronts(text)
         assert joined in fronts
         assert verb not in fronts
+
+
+class TestVerbInsideAnEntryThatGoesOnPastItsParticle:
+    """V-1's limit: the particle-headed window still counts where it continues a listed entry or follows a predicate."""
+
+    @pytest.mark.parametrize(
+        ("text", "verb"),
+        [
+            ("二人とも口げんかはいいかげんにしろ。", "する"),
+            ("いずれにせよ貨物船は明日出す。", "する"),
+            ("何にせよ貨物船は明日出す。", "する"),
+            ("いざとなったら勝手口から抜け出す。", "なる"),
+        ],
+    )
+    def test_the_verb_of_a_listed_entry_is_no_card(self, text, verb):
+        assert verb not in _fronts(text)
+
+    @pytest.mark.parametrize(
+        ("text", "verb"),
+        [
+            ("泳ぐにしろ泳がないにしろ水着は鞄に入れておけ。", "する"),
+            ("寒くないにせよ上着は鞄に入れておけ。", "する"),
+            ("引っ越すとなると荷造りが大変だ。", "なる"),
+        ],
+    )
+    def test_the_verb_after_a_predicate_and_a_particle_is_no_card(self, text, verb):
+        assert verb not in _fronts(text)
+
+    @pytest.mark.parametrize(
+        ("text", "front"),
+        [("あの部下を人質にしろ。", "する"), ("あの新人が班長となったら面倒だ。", "なる")],
+    )
+    def test_the_verb_after_a_plain_noun_and_its_particle_stays(self, text, front):
+        assert front in _fronts(text)
 
 
 class TestSuruAndYaruAfterAnAdverbial:

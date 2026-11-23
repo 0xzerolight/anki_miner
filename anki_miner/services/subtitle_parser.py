@@ -5270,8 +5270,7 @@ class SubtitleParserService:
     #: The case particles that mark a verb's own argument: its object, its result, its place, its subject.
     _VERB_CASE_PARTICLES: frozenset[str] = frozenset({"を", "に", "で", "と", "が"})
 
-    @staticmethod
-    def _windows_past_own_particle(tokens: list, idx: int, windows: list[str]) -> list[str]:
+    def _windows_past_own_particle(self, tokens: list, idx: int, windows: list[str]) -> list[str]:
         """The windows left against an auxiliary-capable kana verb once its own case particle is set aside.
 
         A window that opens on a case particle left of the verb is that particle
@@ -5283,7 +5282,9 @@ class SubtitleParserService:
         window that opens on any other particle still counts (しか|ない,
         言え|や|し|ない). The copula's に before the verb is the same case:
         きれいに|し|て is にする. An adjective keeps every window: it takes no
-        object, and どこ|と|なく is no ない.
+        object, and どこ|と|なく is no ない. And a window stays where the
+        entry goes on to the left of the particle
+        (``_entry_goes_on_before_particle``).
         """
         if getattr(tokens[idx].feature, "pos1", None) != "動詞":
             return windows
@@ -5295,8 +5296,34 @@ class SubtitleParserService:
                 and getattr(head.feature, "pos2", None) == "格助詞"
             ) or (head.surface == "に" and getattr(head.feature, "pos1", None) == "助動詞"):
                 opening = "".join(word_surface(tok) for tok in tokens[start : idx + 1])
-                headed.update(window for window in windows if window.startswith(opening))
+                own = [window for window in windows if window.startswith(opening)]
+                if own and not self._entry_goes_on_before_particle(tokens, start, idx, own):
+                    headed.update(own)
         return [window for window in windows if window not in headed]
+
+    def _entry_goes_on_before_particle(self, tokens: list, start: int, idx: int, windows: list[str]) -> bool:
+        """Whether the particle at ``tokens[start]`` and the verb at ``tokens[idx]`` are not a verb and its own argument.
+
+        Two cases where the particle-headed window is the entry after all:
+
+        - the word before the particle makes a listed entry with it, as the
+          line writes it or with the verb's dictionary form: いいかげん|に|しろ
+          is いい加減にする, いずれ|に|せよ and いざ|と|なっ|たら are entries.
+          部下を人質|に|しろ is none, and keeps its verb;
+        - a predicate stands before the particle: no verb, adjective or
+          auxiliary is a verb's argument, so 行く|に|しろ and 寒くない|に|せよ
+          are the concessive and 引っ越す|と|なる|と is となると.
+        """
+        if not start:
+            return False
+        before = tokens[start - 1]
+        if getattr(getattr(before, "feature", None), "pos1", None) in ("動詞", "形容詞", "助動詞"):
+            return True
+        head = word_surface(before)
+        base = getattr(tokens[idx].feature, "orthBase", None) or ""
+        wider = [head + window for window in windows]
+        wider.append(head + "".join(word_surface(tok) for tok in tokens[start:idx]) + base)
+        return bool(self._kana_windows_attested(wider))
 
     def _kana_window_choice(self, tokens: list, idx: int, windows: list[str], *, own_word: bool) -> list[str]:
         """The windows that are still a candidate against the kana word at ``tokens[idx]``.
