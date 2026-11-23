@@ -1140,6 +1140,9 @@ class SubtitleParserService:
         # Mine the interjections the dictionary lists (_is_listed_interjection): Settings → Word
         # Filters → Mine interjections. Read at every token, so it can be set after construction.
         self._mine_interjections: bool = config.mine_interjections
+        # A person's name as a card (_is_person_name). Off: a name is no card, even where the
+        # subtype settings mine proper nouns. Read at every token; no setting reads it yet.
+        self._mine_person_names: bool = False
 
     # ------------------------------------------------------------------
     # Per-parse memoization helpers
@@ -4141,6 +4144,8 @@ class SubtitleParserService:
         if rejection is None:
             if getattr(word_token, "file_name", False) is True:
                 return False
+            if self._is_person_name(word_token, text, tok_start, tok_end, raw_tokens):
+                return False
             if self._is_katakana_run_fragment(word_token, text, tok_start, tok_end, tokens):
                 return False
             if self._name_piece_rejects and self._is_letter_run_fragment(word_token, text, tok_start, tok_end):
@@ -4380,6 +4385,42 @@ class SubtitleParserService:
     def _is_name_honorific_tail(word_token, text: str, tok_start: int) -> bool:
         """Whether an honorific compound (``_NAME_HONORIFIC_TAILS``) ends a name: a kanji right before it."""
         return word_token.surface in _NAME_HONORIFIC_TAILS and tok_start > 0 and is_cjk_ideograph(text[tok_start - 1])
+
+    def _is_person_name(self, word_token, text: str, tok_start: int, tok_end: int, raw_tokens: list) -> bool:
+        """Whether an included token is a person's name, which is no card (``_mine_person_names``, off by default).
+
+        The tagger's own tag decides: 固有名詞-人名 (佐藤, 美咲, タケシ). It reads
+        the context, so 森 is a name in 森さん and a noun in 森の中. Where it calls
+        a common dictionary word a name (悪魔が来た, and フン… for the common
+        ふん) the word stays, unless a name honorific follows it. A name on the
+        user's whitelist is mined. A refused name is no preference reject: the
+        caller records nothing.
+        """
+        if self._mine_person_names:
+            return False
+        feature = getattr(word_token, "feature", None)
+        if getattr(feature, "pos2", None) != "固有名詞" or getattr(feature, "pos3", None) != "人名":
+            return False
+        surface = word_token.surface
+        kana = katakana_to_hiragana(surface)
+        common = self._memoized_term_common([surface, kana])
+        if (
+            common
+            and (common.get(surface) or common.get(kana))
+            and not self._name_honorific_follows(text, tok_end, raw_tokens)
+        ):
+            return False
+        return not (
+            self._force_include is not None
+            and self._force_include(self._card_front(word_token, text, tok_start, tok_end, raw_tokens))
+        )
+
+    def _name_honorific_follows(self, text: str, tok_end: int, raw_tokens: list) -> bool:
+        """Whether the raw token that starts at ``tok_end`` is what a name is called with (``_is_name_honorific``)."""
+        for token, start, _end in self._iter_token_spans(text, raw_tokens):
+            if start >= tok_end:
+                return start == tok_end and self._is_name_honorific(token)
+        return False
 
     @staticmethod
     def _used_as_auxiliary(word_token, tokens: list) -> bool:
