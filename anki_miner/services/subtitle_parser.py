@@ -278,6 +278,10 @@ _SURU_AFTER_PARTICLES: frozenset[str] = frozenset({"と", "って", "たり", "�
 _SURU_PIECE_FORMS: frozenset[str] = frozenset({"しい", "せい", "せえ", "しょう"})
 _SURU_FRAME_PARTICLES: frozenset[str] = frozenset({"格助詞", "係助詞", "副助詞"})
 
+# How a form of する (した, すれば, させ, せず) or its potential できる can start right
+# after a noun: where the bold of a する noun may run on (``_suru_noun_highlight_end``).
+_SURU_NOUN_TAIL_HEADS: tuple[str, ...] = ("し", "す", "さ", "せ", "でき", "出来")
+
 # What the token before an auxiliary-capable word is when the word is grammar:
 # a verb, an adjective or an auxiliary (よくない, 行かなくなる, 静かである), or a
 # conjunctive particle (見ている, 来てくれた, やればいい).
@@ -2561,7 +2565,7 @@ class SubtitleParserService:
         """
         feature = getattr(word_token, "feature", None)
         if getattr(feature, "pos1", None) not in ("動詞", "形容詞", "感動詞"):
-            return front_end  # nothing else has a chain
+            return self._suru_noun_highlight_end(text, raw_tokens, tok_start, tok_end, word_token, front_end)
         if getattr(feature, "written_base", None):
             return front_end  # a spoken idiom's end is the one of its written base
         end, _chain = find_highlight_end_with_trace(
@@ -2569,6 +2573,50 @@ class SubtitleParserService:
         )
         end = stretched_highlight_end(text, end)
         if end == front_end:
+            return front_end
+        orth_base = self._mining_base(word_token)
+        if self._resolve_front(word_token, orth_base, text, tok_start, end) != self._resolve_front(
+            word_token, orth_base, text, tok_start, front_end
+        ):
+            return front_end
+        return end
+
+    def _suru_noun_highlight_end(
+        self, text: str, raw_tokens: list, tok_start: int, tok_end: int, word_token: Any, front_end: int
+    ) -> int:
+        """The bold of a noun that takes する runs through the する right after it (勉強|している, 返事|しない).
+
+        The noun with its する and that verb's chain is one unit and the card
+        is the noun: the bold ends where a card for that する would end
+        (``_emission_highlight_end``), and ``できる`` there is its potential
+        (勉強|できる). A particle between them leaves the bold on the noun
+        (勉強をしている: there する is the line's own verb and its own card).
+        Only the bold moves, never the card front.
+
+        The bold stays on the noun where the noun and its する chain are an
+        entry of their own (お願いします: that text is the other entry's, not
+        this card's), and where an auxiliary follows the chain's end directly:
+        the tagger cut the chain short there (してく|だ|せえ), so its end is no
+        unit end.
+        """
+        feature = getattr(word_token, "feature", None)
+        if getattr(feature, "pos1", None) != "名詞" or not text.startswith(_SURU_NOUN_TAIL_HEADS, tok_end):
+            return front_end
+        spans = [span for span in iter_token_spans(text, raw_tokens) if span[1] >= tok_end]
+        if not spans or spans[0][1] != tok_end:
+            return front_end
+        suru_token, suru_start, suru_end = spans[0]
+        if getattr(getattr(suru_token, "feature", None), "orthBase", None) not in ("する", "出来る", "できる"):
+            return front_end
+        if not self._takes_suru_before(word_token):
+            return front_end
+        end = self._emission_highlight_end(text, raw_tokens, suru_start, suru_end, suru_token)
+        if end <= front_end:
+            return front_end
+        after = next((tok for tok, start, _end in spans if start == end), None)
+        if getattr(getattr(after, "feature", None), "pos1", None) == "助動詞":
+            return front_end
+        if text[tok_start:end] in self._memoized_attest([text[tok_start:end]]):
             return front_end
         orth_base = self._mining_base(word_token)
         if self._resolve_front(word_token, orth_base, text, tok_start, end) != self._resolve_front(
@@ -3077,12 +3125,14 @@ class SubtitleParserService:
         (T-38). A token that only starts inside (the やだ after 死んじゃや) stays
         a word.
 
-        Only a verb or an adjective has a chain, so the count loops, which have
-        no highlight end at hand, compute it for those alone.
+        Only a verb or an adjective has a chain, and a noun the する after it
+        (``_suru_noun_highlight_end``), so the count loops, which have no
+        highlight end at hand, compute it for those alone.
         """
         if tok_end <= covered_to:
             return None
-        if getattr(getattr(word_token, "feature", None), "pos1", None) not in ("動詞", "形容詞"):
+        pos1 = getattr(getattr(word_token, "feature", None), "pos1", None)
+        if pos1 not in ("動詞", "形容詞") and not (pos1 == "名詞" and text.startswith(_SURU_NOUN_TAIL_HEADS, tok_end)):
             return max(covered_to, tok_end)
         if highlight_end is None:
             highlight_end = self._emission_highlight_end(text, raw_tokens, tok_start, tok_end, word_token)
@@ -4849,7 +4899,21 @@ class SubtitleParserService:
             return True
         if pos1 == "補助記号":
             return _is_kana_candidate(prev.surface)
-        if pos1 not in ("名詞", "副詞"):
+        return self._takes_suru_before(prev)
+
+    def _takes_suru(self, front: str) -> bool | None:
+        """Whether the dictionary tags ``front`` as a する word (``vs``); None when it has no entry."""
+        if front not in self._takes_suru_memo:
+            if len(self._takes_suru_memo) >= _FRONT_CACHE_CAP:
+                self._takes_suru_memo.clear()
+            tags = self._entry_tags([front]).get(front)
+            self._takes_suru_memo[front] = any(tag.startswith("vs") for tag in tags) if tags else None
+        return self._takes_suru_memo[front]
+
+    def _takes_suru_before(self, prev: Any) -> bool:
+        """Whether the noun or adverb ``prev`` takes a する after it (the tagger's サ変可能, a number, a ``vs`` entry, no entry)."""
+        feature = getattr(prev, "feature", None)
+        if getattr(feature, "pos1", None) not in ("名詞", "副詞"):
             return False
         if getattr(feature, "pos3", None) == "サ変可能" or getattr(feature, "pos2", None) == "数詞":
             return True
@@ -4860,15 +4924,6 @@ class SubtitleParserService:
         if takes is None and fronts[-1] != fronts[0]:
             takes = self._takes_suru(fronts[-1])
         return takes is not False
-
-    def _takes_suru(self, front: str) -> bool | None:
-        """Whether the dictionary tags ``front`` as a する word (``vs``); None when it has no entry."""
-        if front not in self._takes_suru_memo:
-            if len(self._takes_suru_memo) >= _FRONT_CACHE_CAP:
-                self._takes_suru_memo.clear()
-            tags = self._entry_tags([front]).get(front)
-            self._takes_suru_memo[front] = any(tag.startswith("vs") for tag in tags) if tags else None
-        return self._takes_suru_memo[front]
 
     @staticmethod
     def _aux_class_word_is_out_of_place(word_token, tokens: list, text: str, tok_end: int) -> bool:
