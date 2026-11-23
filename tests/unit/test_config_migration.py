@@ -128,6 +128,15 @@ def test_old_config_without_mine_person_names_leaves_names_out(tmp_config: Path)
     assert loaded.mine_person_names is False
 
 
+def test_old_config_without_mine_te_auxiliaries_mines_them(tmp_config: Path):
+    """A saved config predating mine_te_auxiliaries loads with it on, the default."""
+    tmp_config.write_text(json.dumps({"anki_deck_name": "MyDeck", "mine_interjections": True}))
+
+    loaded = GUIConfigManager.load_config()
+    assert loaded.anki_deck_name == "MyDeck"
+    assert loaded.mine_te_auxiliaries is True
+
+
 class TestFirstRunFlagSeed:
     """Existing configs predate the wizards; only absent keys are seeded."""
 

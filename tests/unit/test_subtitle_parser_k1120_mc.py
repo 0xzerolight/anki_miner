@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 import pytest
 
 from anki_miner.config.config import AnkiMinerConfig
@@ -352,7 +354,8 @@ class TestDoushiteAsTheTeFormOfSuru:
         "text", ["どうしてたの", "どうしていいかわからない", "どうしてくれるんだ", "どうしてますか"]
     )
     def test_the_te_form_in_use_is_no_why(self, text):
-        fronts = _fronts(text, terms=_WHY, readings=frozenset())
+        te_off = replace(AnkiMinerConfig(), mine_te_auxiliaries=False)
+        fronts = _fronts(text, terms=_WHY, readings=frozenset(), config=te_off)
         assert "どう" in fronts
         assert not {"どうして", "いい", "くれる", "いる"} & set(fronts)
 

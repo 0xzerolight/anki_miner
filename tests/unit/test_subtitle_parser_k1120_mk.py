@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 import pytest
 
 from anki_miner.config.config import AnkiMinerConfig
@@ -92,10 +94,10 @@ _ATTESTED = frozenset(
 )
 
 
-def _fronts(text: str, terms: frozenset[str] = frozenset()) -> list[str]:
+def _fronts(text: str, terms: frozenset[str] = frozenset(), *, te_auxiliaries: bool = True) -> list[str]:
     """Card fronts of ``text`` with only ``_ATTESTED`` in the dictionary (``terms`` as headwords), so a window can miss."""
     service = SubtitleParserService(
-        AnkiMinerConfig(),
+        replace(AnkiMinerConfig(), mine_te_auxiliaries=te_auxiliaries),
         term_lookup=lambda asked: {term for term in asked if term in terms},
         kana_attest_lookup=lambda forms: {form: form in _ATTESTED for form in forms},
     )
@@ -391,4 +393,4 @@ class TestGoodAfterConditional:
 
     @pytest.mark.parametrize("text", ["食べてもいい", "見ていい", "帰っていいよ"])
     def test_ii_after_te_stays_grammar(self, text):
-        assert "いい" not in _fronts(text)
+        assert "いい" not in _fronts(text, te_auxiliaries=False)

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 import pytest
 
 from anki_miner.config.config import AnkiMinerConfig
@@ -38,12 +40,12 @@ _AUX_WORDS = (
 )
 
 
-def _service(attested, headwords=()) -> SubtitleParserService:
+def _service(attested, headwords=(), *, te_auxiliaries: bool = True) -> SubtitleParserService:
     """``attested`` answers the term-or-reading probe; ``headwords`` are also spelled that way in the dictionary."""
     spelled = set(headwords)
     wanted = set(attested) | spelled
     return SubtitleParserService(
-        AnkiMinerConfig(),
+        replace(AnkiMinerConfig(), mine_te_auxiliaries=te_auxiliaries),
         term_lookup=lambda terms: spelled.intersection(terms),
         kana_attest_lookup=lambda forms: {form: form in wanted for form in forms},
     )
@@ -95,7 +97,7 @@ class TestAuxCapableWordsAsMainWords:
         ],
     )
     def test_auxiliary_use_is_not(self, text, aux):
-        assert aux not in _fronts(_service(_AUX_WORDS), text)
+        assert aux not in _fronts(_service(_AUX_WORDS, te_auxiliaries=False), text)
 
     def test_its_own_inflection_is_no_longer_expression(self):
         # いた and きた are also readings (板, 北): the word plus its past tense is not an expression.

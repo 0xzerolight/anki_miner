@@ -620,6 +620,16 @@ class AnkiMinerConfig:
     # reads it, so it is in PARSE_RELEVANT_CONFIG_FIELDS.
     mine_person_names: bool = False
 
+    # Cards for the words after a て-form that the verb's chain leaves out: やる,
+    # いただく and くださる right after て (混ぜてやれ, 見ていただく), いい and
+    # よい after て, ても and でも (渡ってもいい)
+    # (SubtitleParserService._is_te_auxiliary_card). ている, てしまう and the
+    # other shading auxiliaries are never cards. On by default: on the
+    # benchmark it adds cards and no junk; some learners call them grammar.
+    # Japanese only (Word Filters shows it under the kana filters); the parser
+    # reads it, so it is in PARSE_RELEVANT_CONFIG_FIELDS.
+    mine_te_auxiliaries: bool = True
+
     # Language-scoped display/content preferences (multi-language transition).
     # Deliberately generic rather than zh-prefixed: they are carried per
     # language by LANGUAGE_SCOPED_FIELDS, so ja/ko keep "" / False and zh gets

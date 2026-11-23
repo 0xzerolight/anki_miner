@@ -505,6 +505,17 @@ class FilteringSettingsPanel(FormPanel):
                 "even when proper nouns are mined. Whitelisted names are mined either way."
             ),
         )
+        # Cards for the word after a て-form (SubtitleParserService._is_te_auxiliary_card).
+        # Japanese only: the て-form chain is Japanese.
+        self.te_auxiliaries_checkbox = QCheckBox(self.tr("Mine words after a て-form"))
+        self.add_field(
+            "",
+            self.te_auxiliaries_checkbox,
+            helper=self.tr(
+                "やる, いただく and くださる after て, and いい after て or ても, become cards: "
+                "見ていただく, 渡ってもいい. ている and てしまう never do."
+            ),
+        )
 
         # Option-driven script filters. The Korean pair binds to the SAME two
         # language-scoped booleans the Script Type combo above uses, and the
@@ -559,6 +570,7 @@ class FilteringSettingsPanel(FormPanel):
                 self.grammar_points_checkbox,
                 self.interjections_checkbox,
                 self.person_names_checkbox,
+                self.te_auxiliaries_checkbox,
             )
             for w in field_row_widgets(self, cb)
         )
@@ -909,6 +921,7 @@ class FilteringSettingsPanel(FormPanel):
         self.grammar_points_checkbox.setChecked(config.mine_grammar_points)
         self.interjections_checkbox.setChecked(config.mine_interjections)
         self.person_names_checkbox.setChecked(config.mine_person_names)
+        self.te_auxiliaries_checkbox.setChecked(config.mine_te_auxiliaries)
         # Same two booleans, read through whichever language's option named them.
         for option_id, checkbox in self.script_filter_checkboxes.items():
             checkbox.setChecked(bool(getattr(config, self._script_filter_fields[option_id])))
@@ -942,6 +955,7 @@ class FilteringSettingsPanel(FormPanel):
             mine_grammar_points=self.grammar_points_checkbox.isChecked(),
             mine_interjections=self.interjections_checkbox.isChecked(),
             mine_person_names=self.person_names_checkbox.isChecked(),
+            mine_te_auxiliaries=self.te_auxiliaries_checkbox.isChecked(),
             reading_min_occurrence=self.get_reading_min_occurrence(),
         )
         # Language-scoped rows contribute only while their capability is present.

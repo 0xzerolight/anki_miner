@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 import pytest
 
 from anki_miner.config.config import AnkiMinerConfig
@@ -49,15 +51,12 @@ _TAGS = {
 
 def _service(*, te_auxiliaries: bool = False) -> SubtitleParserService:
     """A parser with ``_ATTESTED`` as the kana dictionary and ``_SPELLINGS`` as its kana-spelled entries."""
-    service = SubtitleParserService(
-        AnkiMinerConfig(),
+    return SubtitleParserService(
+        replace(AnkiMinerConfig(), mine_te_auxiliaries=te_auxiliaries),
         term_lookup=lambda asked: {term for term in asked if term in _TAGS or term in _SPELLINGS},
         kana_attest_lookup=lambda forms: {form: form in _ATTESTED or form in _SPELLINGS for form in forms},
         form_lookup=lambda asked: {term: [("", _TAGS[term])] for term in asked if term in _TAGS},
     )
-    if te_auxiliaries:
-        service._mine_te_auxiliaries = True
-    return service
 
 
 def _fronts(text: str, *, te_auxiliaries: bool = False) -> list[str]:
@@ -223,8 +222,9 @@ _TE_AUXILIARIES = [
 class TestTeAuxiliarySwitch:
     """V-4: a verb or adjective after a て-form that the chain does not take, behind ``_mine_te_auxiliaries``."""
 
-    def test_the_switch_is_off_by_default(self):
-        assert _service()._mine_te_auxiliaries is False
+    @pytest.mark.parametrize("on", [True, False])
+    def test_the_switch_follows_the_setting(self, on):
+        assert _service(te_auxiliaries=on)._mine_te_auxiliaries is on
 
     @pytest.mark.parametrize(("text", "front"), _TE_AUXILIARIES)
     def test_the_word_after_te_is_mined_with_the_switch_on(self, text, front):

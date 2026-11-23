@@ -253,6 +253,7 @@ def test_chinese_hides_the_japanese_only_entries() -> None:
         "grammar-points",
         "interjections",
         "person-names",
+        "te-auxiliaries",
         "kana-variant-known",
         "name-wordsets",
         "furigana",

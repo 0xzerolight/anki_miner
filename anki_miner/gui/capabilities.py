@@ -952,6 +952,18 @@ CAPABILITIES: tuple[Capability, ...] = (
         requires="kana_filters",
     ),
     Capability(
+        id="te-auxiliaries",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Mine words after a て-form"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Card やる, いただく, くださる and いい after a て-form, such as 見ていただく and 渡ってもいい. On by default.",
+        ),
+        category=_CAT_FILTERING,
+        target=CapabilityTarget("settings", "filtering"),
+        keywords=("te-form", "auxiliary", "grammar", "て形", "補助動詞", "いただく", "くださる", "てもいい"),
+        requires="kana_filters",
+    ),
+    Capability(
         id="word-lists",
         title=QT_TRANSLATE_NOOP("Capabilities", "Blacklist / whitelist words"),
         description=QT_TRANSLATE_NOOP(

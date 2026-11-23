@@ -154,6 +154,8 @@ PARSE_RELEVANT_CONFIG_FIELDS = (
     "mine_interjections",
     # A person's name is a card or not (佐藤, 山田|太郎).
     "mine_person_names",
+    # The word after a て-form is a card or not (見て|いただく).
+    "mine_te_auxiliaries",
 )
 
 # Dictionary-attested compound matching (Yomitan longest-match principle):
@@ -1147,8 +1149,9 @@ class SubtitleParserService:
         # Filters → Mine interjections. Read at every token, so it can be set after construction.
         self._mine_interjections: bool = config.mine_interjections
         # Mine the words after a て-form that the verb's chain does not take in (_is_te_auxiliary_card:
-        # 混ぜてやれ, 渡ってもいい, 教えてくださった). Read at every token, so it can be set after construction.
-        self._mine_te_auxiliaries: bool = False
+        # 混ぜてやれ, 渡ってもいい, 教えてくださった): Settings → Word Filters → Mine words after a て-form.
+        # Read at every token, so it can be set after construction.
+        self._mine_te_auxiliaries: bool = config.mine_te_auxiliaries
         # A person's name as a card (_is_person_name): Settings → Word Filters → Mine person names. Off:
         # a name is no card, even where the subtype settings mine proper nouns. Read at every token.
         self._mine_person_names: bool = config.mine_person_names
@@ -4927,7 +4930,7 @@ class SubtitleParserService:
     _TE_AUXILIARY_CARDS: frozenset[str] = frozenset({"やる", "いただく", "くださる", "いい", "よい"})
 
     def _is_te_auxiliary_card(self, word_token, tokens: list) -> bool:
-        """Whether the て-auxiliary switch mines this word (``_mine_te_auxiliaries``, off by default).
+        """Whether the て-auxiliary switch mines this word (``_mine_te_auxiliaries``, on by default).
 
         A verb's chain takes in the auxiliaries that only shade it (ている,
         てしまう, ておく, てみる, てくる, てくれる, てもらう, てあげる, てほしい):
