@@ -81,6 +81,7 @@ _ENTRIES: dict[str, tuple[str, tuple[str, ...]]] = {
     "話にならない": ("exp adj-i", ("はなしにならない",)),
     "訳にはいかない": ("exp", ("わけにはいかない",)),
     "いいって言う": ("exp v5u", ("いいっていう",)),
+    "訳ではない": ("exp", ("わけではない",)),
     "そうは行かない": ("exp", ("そうはいかない",)),
     "間に合う": ("exp v5u", ("まにあう",)),
     "間に合わない": ("exp adj-i", ("まにあわない",)),
@@ -104,6 +105,7 @@ _KANA = frozenset(reading for _tags, readings in _ENTRIES.values() for reading i
     "すぐ",
     "そこ",
     "なる",
+    "という",
 }
 
 
@@ -198,6 +200,14 @@ def test_what_the_kana_gate_still_refuses(sentence: str, entry: str) -> None:
     fronts = _fronts(sentence)
     assert entry not in fronts
     assert not any(front in _ENTRIES for front in fronts)
+
+
+def test_to_iu_before_a_joined_entry_that_opens_on_a_noun_is_the_naming_row() -> None:
+    # わけ|で|は|ない is one token here, an adjective: という still stands before the noun わけ.
+    fronts = _fronts("絶対に泳げないというわけではないが苦手だ。")
+    assert "わけではない" in fronts
+    assert "という" in fronts
+    assert "いう" not in fronts
 
 
 def test_a_twin_needs_the_dictionary_reading() -> None:

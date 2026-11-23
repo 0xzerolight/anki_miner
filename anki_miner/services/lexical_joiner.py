@@ -136,6 +136,8 @@ _HEARSAY_ROWS = frozenset({"そうだ", "そうです"})
 _NAMING_ROWS = frozenset({"という"})
 # Nouns of people: after a clause, という before one is the verb, 'people who say …' (``_opens_before_a_noun``).
 _PEOPLE = frozenset({"人", "者", "奴", "やつ", "方", "人間", "連中", "人々", "人たち"})
+# The formal nouns a joined entry opens on (わけ|で|は|ない, はず|が|ない, こと|は|ない): ``_opens_before_a_noun``.
+_JOINED_NOUN_HEADS = ("わけ", "はず", "こと", "もの")
 _GRAMMAR_POS1 = frozenset({"助詞", "助動詞"})
 _MAX_FIXED_TOKENS = max(len(key) for key in _FIXED_JOINS)
 _MAX_KANA_TOKENS = max(len(key) for key in (*kana_words().joins, *kana_words().base_joins))
@@ -717,10 +719,16 @@ def _opens_before_a_noun(candidate: _Join, tokens: list, spans: dict[int, tuple[
     (…/という話だ): the same という 'called; that says', not the verb 言う.
     Before anything else the verb keeps the card (来ないという 'they say he will
     not come'), and so it does inside a line before a noun of people: 行くなという人
-    is 'people who say do not go'.
+    is 'people who say do not go'. An entry the matcher joined is no noun
+    token, but one that opens on a formal noun is named the same way
+    (できないという|わけではない).
     """
     after = candidate.end + 1
-    if candidate.headword not in _NAMING_ROWS or after >= len(tokens) or _pos1(tokens[after]) not in _NOUN_POS1:
+    if candidate.headword not in _NAMING_ROWS or after >= len(tokens):
+        return False
+    if _pos1(tokens[after]) not in _NOUN_POS1 and not (
+        getattr(tokens[after], "compound", False) is True and tokens[after].surface.startswith(_JOINED_NOUN_HEADS)
+    ):
         return False
     return _opens_clause(tokens, spans, candidate.start) or word_surface(tokens[after]) not in _PEOPLE
 
