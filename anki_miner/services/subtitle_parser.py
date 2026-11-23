@@ -36,7 +36,7 @@ from anki_miner.services.deinflection import (
     shadow_span,
     stretched_highlight_end,
 )
-from anki_miner.services.kana_words import is_kanji_spelled, is_listed
+from anki_miner.services.kana_words import is_interjection_or_adjective, is_kanji_spelled, is_listed
 from anki_miner.services.lexical_joiner import LexicalJoiner
 from anki_miner.services.lrc_format import register_lrc_format
 from anki_miner.services.masu_stem_nominalizer import MasuStemNominalizer
@@ -4410,8 +4410,10 @@ class SubtitleParserService:
         The tagger's own tag decides: 固有名詞-人名 (佐藤, 美咲, タケシ). It reads
         the context, so 森 is a name in 森さん and a noun in 森の中. Where it calls
         a common dictionary word a name (悪魔が来た, and フン… for the common
-        ふん) the word stays, unless a name honorific follows it. A name on the
-        user's whitelist is mined. A refused name is no preference reject: the
+        ふん) the word stays, unless a name honorific follows it. So does the
+        katakana spelling of an interjection or adjective on the kana word
+        list, common or not (ヤダ for やだ). A name on the user's whitelist is
+        mined. A refused name is no preference reject: the
         caller records nothing.
 
         A proper noun of another kind is a person where it is called like one:
@@ -4442,10 +4444,9 @@ class SubtitleParserService:
             kana = katakana_to_hiragana(surface)
             common = self._memoized_term_common([surface, kana])
             if (
-                common
-                and (common.get(surface) or common.get(kana))
-                and not self._name_honorific_follows(text, tok_end, raw_tokens)
-            ):
+                (common and (common.get(surface) or common.get(kana)))
+                or (kana != surface and is_interjection_or_adjective(kana))
+            ) and not self._name_honorific_follows(text, tok_end, raw_tokens):
                 return False
         return not (
             self._force_include is not None

@@ -113,3 +113,18 @@ def is_listed(front: str, pos1: str, *, merged: bool) -> bool:
 def is_kanji_spelled(front: str, pos1: str) -> bool:
     """Whether a listed word row spells a word JMdict writes in kanji (わたし, おなか)."""
     return (front, pos1) in kana_words().kanji_spelled
+
+
+@cache
+def _interjections_and_adjectives() -> frozenset[str]:
+    listed = kana_words()
+    kinds = ("感動詞", "形容詞", "形状詞")
+    rows = (*listed.joins.values(), *listed.base_joins.values())
+    return frozenset(form for form, pos1 in listed.words if pos1 in kinds) | frozenset(
+        row.headword for row in rows if row.pos1 in kinds
+    )
+
+
+def is_interjection_or_adjective(front: str) -> bool:
+    """Whether a kana form is on the list as an interjection or an adjective: a word row or a join's headword (やだ)."""
+    return front in _interjections_and_adjectives()

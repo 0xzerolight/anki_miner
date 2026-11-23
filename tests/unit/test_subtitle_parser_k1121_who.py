@@ -198,6 +198,22 @@ class TestTaggedPersonName:
         assert fronts[0] == line[:2]
 
 
+class TestKanaWordTheTaggerCallsAName:
+    """A katakana spelling of a listed kana interjection or adjective is that word, common or not."""
+
+    def test_a_listed_kana_interjection_written_in_katakana_stays(self, tmp_path: Path) -> None:
+        # The tagger reads ヤダ as a surname; やだ is on the kana word list and no common word here.
+        fronts = _fronts(_service(), tmp_path, "ヤダ、まだ帰りたくない")
+        assert fronts == _fronts(_names_mined(_service()), tmp_path, "ヤダ、まだ帰りたくない")
+        assert fronts[0] == "ヤダ"
+
+    def test_it_is_the_name_before_a_name_honorific(self, tmp_path: Path) -> None:
+        assert "ヤダ" not in _fronts(_service(), tmp_path, "ヤダさんが来た")
+
+    def test_a_katakana_name_that_is_no_kana_word_is_no_card(self, tmp_path: Path) -> None:
+        assert "タケシ" not in _fronts(_service(), tmp_path, "タケシ、まだ帰りたくない")
+
+
 class TestProperNounBeforeHonorific:
     """W-2: a proper noun of any kind right before a name honorific is a person."""
 
