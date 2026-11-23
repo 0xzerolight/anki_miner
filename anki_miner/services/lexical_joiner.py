@@ -101,7 +101,7 @@ _PRONOUN_CONJUNCTIONS = frozenset({"それに", "そこで", "それも"})
 # 何|かしら as written or read: 'something or other' only where its clause goes on (``_wonders_what``).
 _SOMETHING_ROWS = frozenset({"なにかしら", "何かしら"})
 # "start" rows that a mere space does not open (``_quotes_what_precedes``).
-_AFTER_PUNCTUATION = frozenset({"ってことは", "いいから"})
+_AFTER_PUNCTUATION = frozenset({"ってことは", "いいから", "なら", "なのに", "では"})
 # The rows of よう + the copula, and what they follow as the grammar point 'it seems' (``_no_predicate_before``).
 _SEEMING_ROWS = frozenset({"ようだ", "ようです"})
 _PREDICATE_POS1 = frozenset({"動詞", "助動詞", "形容詞"})
@@ -110,6 +110,11 @@ _QUESTION_VERBS = frozenset(
 )
 # One-token grammar rows that are the word only as the tagger's auxiliary (``_not_the_auxiliary``).
 _AUXILIARY_ROWS = frozenset({"らしい", "やろ"})
+# One-token rows that are the word only as the tagger's conjunction (``_not_the_conjunction``).
+_CONJUNCTION_ROWS = frozenset({"けど", "じゃ", "んで"})
+# Conjunctions that are a particle or the copula anywhere else: carded only while the run allows 接続詞,
+# as when the tagger's own tag decided (the other kana rows join whatever the run allows).
+_ALLOWED_POS_ROWS = _CONJUNCTION_ROWS | {"なら", "なのに", "では"}
 # Rows that are the word only where the line or the sentence stops after them (``_runs_on``).
 _STOP_AFTER = frozenset({"じゃね", "だったりして", "ものか"})
 # Joined rows that end a predicate: a row right after one still follows an auxiliary (``_joined_pos1``).
@@ -265,6 +270,7 @@ def _kana_join(
             and not (row.grammar and _ka_of_kamo(surfaces[-1], tokens, i + size))
             and not _auxiliary_after_te(row.headword, tokens, i)
             and not _not_the_auxiliary(row.headword, span)
+            and not _not_the_conjunction(row.headword, span)
             and not _runs_on(row.headword, tokens, i + size)
             and not _misread_ja_nai(row.headword, tokens, i)
             and not _no_of_noda(row.headword, tokens, i + size)
@@ -617,6 +623,15 @@ def _not_the_auxiliary(headword: str, span: list) -> bool:
     return headword in _AUXILIARY_ROWS and _pos1(span[0]) != "助動詞"
 
 
+def _not_the_conjunction(headword: str, span: list) -> bool:
+    """Whether a one-token row of ``_CONJUNCTION_ROWS`` met the particle with its kana.
+
+    けど、もう遅い opens on the conjunction; in 行くけど and after a subtitle space
+    (行きたい けど) the tagger says particle, and the row is passed over.
+    """
+    return headword in _CONJUNCTION_ROWS and _pos1(span[0]) != "接続詞"
+
+
 def _runs_on(headword: str, tokens: list, after: int) -> bool:
     """Whether a word follows じゃ|ね, where it is じゃ + the particle ね and not じゃね 'isn't it'.
 
@@ -727,6 +742,8 @@ def _quotes_what_precedes(headword: str, tokens: list, i: int) -> bool:
     heads its line or follows punctuation. いい|から is the same: after a space
     it is 'because it is good' (天気が いいから), and いいから 'never mind, just …'
     heads its line, follows punctuation or is said twice (いいから いいから).
+    なら, な|の|に and で|は after a space are the copula and the particles
+    (学生 なら, 東京 では); the conjunctions head a line or follow punctuation.
     """
     return headword in _AFTER_PUNCTUATION and i > 0 and _pos1(tokens[i - 1]) not in _CLAUSE_BREAK_POS1
 
@@ -896,6 +913,8 @@ class LexicalJoiner:
 
         def fits(candidate: _Join) -> bool:
             if not (candidate.listed or candidate.pos1 in self._allowed_pos):
+                return False
+            if candidate.headword in _ALLOWED_POS_ROWS and candidate.pos1 not in self._allowed_pos:
                 return False
             if not spans:
                 spans.update(CompoundDictionaryMatcher._source_spans(text, tokens))

@@ -68,6 +68,15 @@ _ATTESTED = frozenset(
         "ように",
         "ような",
         "ようになる",
+        # R-5
+        "けど",
+        "じゃ",
+        "んで",
+        "なら",
+        "なのに",
+        "では",
+        "ではない",
+        "ならない",
     }
 )
 
@@ -288,3 +297,49 @@ def test_you_da_after_no_is_left_out() -> None:
 
 def test_you_da_is_a_grammar_point() -> None:
     assert "ようだ" not in _fronts("今夜は雪が止まないようだ", grammar_points=False)
+
+
+# --- R-5: conjunctions that open a clause -------------------------------------------------------
+
+_R5_JOINED = [
+    ("けど、もう間に合わないよ", "けど"),
+    ("じゃ、先に風呂に入るね", "じゃ"),
+    ("んで、結局どっちにしたの", "んで"),
+    ("なら、僕も一緒に並ぶ", "なら"),
+    ("なのに、返事は一度も来ない", "なのに"),
+    ("では、次の議題に移ります", "では"),
+    ("では 出発しましょう", "では"),
+]
+
+
+@pytest.mark.parametrize(("sentence", "front"), _R5_JOINED)
+def test_conjunction_that_opens_a_clause_is_a_card(sentence: str, front: str) -> None:
+    assert front in _fronts(sentence)
+
+
+_R5_SPLIT = [
+    ("雪だけど出かける", "けど"),
+    ("会員なら半額になる", "なら"),
+    ("会員 なら 半額になる", "なら"),
+    ("こんなに静かなのに眠れない", "なのに"),
+    ("大阪では雪が降った", "では"),
+    ("大阪 では 雪が降った", "では"),
+    ("それは本物ではない", "では"),
+    ("医者にならない", "なら"),
+    ("直政たちが殴り込んで来たとじゃ", "じゃ"),
+    ("あだ名とかじゃ不便だから", "じゃ"),
+    ("じゃあさ、どっちが速いか勝負しよう", "じゃ"),
+    ("じゃなーい", "じゃ"),
+    ("っていうか なんで", "んで"),
+    ("行きたい けど 無理だ", "けど"),
+]
+
+
+@pytest.mark.parametrize(("sentence", "front"), _R5_SPLIT)
+def test_the_particle_inside_a_clause_is_no_conjunction_card(sentence: str, front: str) -> None:
+    assert front not in _fronts(sentence)
+
+
+@pytest.mark.parametrize(("sentence", "front"), _R5_JOINED)
+def test_conjunction_cards_need_the_part_of_speech_allowed(sentence: str, front: str) -> None:
+    assert front not in _fronts(sentence, allowed=AnkiMinerConfig().allowed_pos)

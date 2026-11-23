@@ -782,6 +782,17 @@ JOINS: tuple[tuple[str, str, str, str] | tuple[str, str, str, str, str], ...] = 
     # keep their own rows above.
     ("ようだ", "形容詞", "よう|=だ", "", "grammar"),
     ("ようです", "形容詞", "よう|=です", "", "grammar"),
+    # K1121 ROWS: conjunctions the tagger files as the copula or as particles: なら, な|の|に and で|は heading a line
+    # or following punctuation, before a pause (なら、私も行く; 学生 なら is the copula: lexical_joiner._quotes_what_precedes).
+    ("なら", "接続詞", "なら", "alone"),
+    ("なのに", "接続詞", "な|の|に", "alone"),
+    ("では", "接続詞", "で|は", "alone"),
+    # けど, じゃ and んで where the tagger says 接続詞 (lexical_joiner._not_the_conjunction) and they open a clause; じゃ
+    # also needs a pause after it (じゃなーい and じゃあさ are other words). As word rows they were carded inside a
+    # clause too (来たとじゃ, 君とかじゃ, な|んで), where the tagger's 接続詞 is wrong.
+    ("けど", "接続詞", "けど", "start"),
+    ("じゃ", "接続詞", "じゃ", "alone"),
+    ("んで", "接続詞", "んで", "start"),
 )
 
 _HEADER = """\
