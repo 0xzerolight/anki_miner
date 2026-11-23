@@ -223,6 +223,17 @@ class TestPredicateAfterASubtitleSpace:
     def test_an_auxiliary_frame_holds_across_the_space(self, text, front):
         assert front not in _fronts(text)
 
+    @pytest.mark.parametrize(
+        "text",
+        ["荷物が重い いっ いたたたた 腰が", "いっ いて いててて 足の指が", "階段で転んだ いたたたた 膝が"],
+    )
+    def test_a_stammered_cry_of_pain_is_no_iru(self, text):
+        assert "いる" not in _fronts(text)
+
+    @pytest.mark.parametrize("text", ["ずっと探してたんだ いたのか そこに", "頼むから静かで いてくれ"])
+    def test_iru_after_a_space_with_no_stammer_stays(self, text):
+        assert "いる" in _fronts(text)
+
     @pytest.mark.parametrize(("text", "front"), [("それならいいよ", "いい"), ("先生は教室で待っている", "いる")])
     def test_without_a_space_nothing_changes(self, text, front):
         assert front not in _fronts(text)

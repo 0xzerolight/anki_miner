@@ -4671,11 +4671,15 @@ class SubtitleParserService:
         gives their short forms to other words as readily as to the verb: あれ
         and ある to the pronoun and the pre-noun 或る, あら to the cry, き and
         こ to a cut-off word, おら to the shout, な|なる to a stammered なるほど.
+        So does an いる that is a cry of pain being stammered
+        (``_is_stammered_cry``).
         """
         if not getattr(word_token, "white_space", ""):
             return False
         base = getattr(word_token.feature, "orthBase", None)
         if base in ("ある", "くる", "おる", "なる"):
+            return False
+        if base == "いる" and SubtitleParserService._is_stammered_cry(tokens, idx):
             return False
         for cry in _AUX_CRIES:
             end = idx + len(cry)
@@ -4694,6 +4698,32 @@ class SubtitleParserService:
                 return getattr(tokens[idx + 1].feature, "orthBase", None) != "なる"
             return not ((pos1 == "助動詞" and prev.surface in ("じゃ", "で")) or prev.surface.endswith("く"))
         return not (base in ("いい", "よい") and idx + 1 < len(tokens) and tokens[idx + 1].surface == "から")
+
+    @staticmethod
+    def _is_stammered_cry(tokens: list, idx: int) -> bool:
+        """Whether a kana いる after a subtitle space is 痛い being stammered (いっ いたたたた, いてっ いて いててて).
+
+        The tagger reads the い of the cry as the verb. Two shapes give it
+        away: the phrase before the space opens on the same い (いっ, いてっ),
+        or the い goes on in a run of its own た / て that no inflection makes
+        (い|た|たたた, い|て|て|て).
+        """
+        start = idx - 1
+        while (
+            start > 0
+            and not getattr(tokens[start], "white_space", "")
+            and getattr(getattr(tokens[start - 1], "feature", None), "pos1", None) != "補助記号"
+        ):
+            start -= 1
+        if tokens[start].surface.rstrip("っッ") == tokens[idx].surface:
+            return True
+        tail = tokens[idx + 1 : idx + 3]
+        return (
+            len(tail) == 2
+            and tail[0].surface in ("た", "て")
+            and not getattr(tail[1], "white_space", "")
+            and set(tail[1].surface) <= {tail[0].surface, "っ", "ー"}
+        )
 
     def _is_piece_of_adverbial_entry(self, word_token, tokens: list) -> bool:
         """Whether する or やる after an adverbial is a piece of an entry the dictionary lists with that adverbial.
