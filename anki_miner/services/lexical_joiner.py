@@ -255,7 +255,9 @@ def _kana_join(
         headword = row.headword if row is not None else ""
         if row is None and read and size > 1 and keys is not None and written_ok is not None:
             row, headword = _read_join(span, surfaces, tuple(keys[i : i + size]), written_ok)
-            if row is not None and _copula_after(surfaces[-1], tokens, i + size):
+            # An interjection row is kana only: a kanji-written 何だ is turned away as an interjection
+            # downstream, and the join would only take the card of 何.
+            if row is not None and (row.interjection or _copula_after(surfaces[-1], tokens, i + size)):
                 row = None
         if (
             row is not None

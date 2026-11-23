@@ -77,6 +77,29 @@ _ATTESTED = frozenset(
         "では",
         "ではない",
         "ならない",
+        # R-6
+        "何だ",
+        "なんだ",
+        "何だと",
+        "なんだと",
+        "もういい",
+        "いえいえ",
+        "そうね",
+        "うんうん",
+        "いいぞ",
+        "いいね",
+        "こちらこそ",
+        "まあね",
+        "よしよし",
+        "またね",
+        "おいおい",
+        "ねえねえ",
+        "やれやれ",
+        "はいよ",
+        "じゃあね",
+        "あのさ",
+        "何だか",
+        "なんだか",
     }
 )
 
@@ -343,3 +366,58 @@ def test_the_particle_inside_a_clause_is_no_conjunction_card(sentence: str, fron
 @pytest.mark.parametrize(("sentence", "front"), _R5_JOINED)
 def test_conjunction_cards_need_the_part_of_speech_allowed(sentence: str, front: str) -> None:
     assert front not in _fronts(sentence, allowed=AnkiMinerConfig().allowed_pos)
+
+
+# --- R-6: interjection entries of two tokens (only while the parser mines interjections) ------
+
+_R6_JOINED = [
+    ("なんだ、もう売り切れか", "なんだ"),
+    ("なんだと、もう一回言ってみろ", "なんだと"),
+    ("もういい、先に帰る", "もういい"),
+    ("いえいえ、お気になさらず", "いえいえ"),
+    ("そうね、週末にしましょう", "そうね"),
+    ("うんうん、それからどうしたの", "うんうん"),
+    ("いいぞ、その調子で走れ", "いいぞ"),
+    ("いいね、今度みんなで行こう", "いいね"),
+    ("こちらこそ、お世話になりました", "こちらこそ"),
+    ("まあね、昔から得意なんだ", "まあね"),
+    ("よしよし、もう泣かないの", "よしよし"),
+    ("またね、風邪ひかないでね", "またね"),
+    ("おいおい、鍵を忘れてるぞ", "おいおい"),
+    ("ねえねえ、この写真を見てよ", "ねえねえ"),
+    ("やれやれ、また雨漏りか", "やれやれ"),
+    ("はいよ、大盛り一丁", "はいよ"),
+    ("じゃあね、また来月", "じゃあね"),
+    ("あのさ、ひとつ頼みがあるんだ", "あのさ"),
+]
+
+
+@pytest.mark.parametrize(("sentence", "front"), _R6_JOINED)
+def test_two_token_interjection_is_one_card_with_the_switch_on(sentence: str, front: str) -> None:
+    assert front in _fronts(sentence, interjections=True)
+
+
+@pytest.mark.parametrize(("sentence", "front"), _R6_JOINED)
+def test_two_token_interjection_is_left_split_with_the_switch_off(sentence: str, front: str) -> None:
+    assert front not in _fronts(sentence)
+
+
+def test_kanji_written_nan_da_keeps_the_card_of_nani() -> None:
+    fronts = _fronts("何だ、もう売り切れか", interjections=True)
+    assert "何だ" not in fronts
+    assert "何" in fronts
+
+
+_R6_SPLIT = [
+    ("この箱の中身は何だ", "何だ"),
+    ("何だか眠くなってきた", "何だ"),
+    ("今日は天気がいいね", "いいね"),
+    ("もういいかい", "もういい"),
+    ("部屋はもういいから庭を掃いて", "もういい"),
+    ("来週またね", "またね"),
+]
+
+
+@pytest.mark.parametrize(("sentence", "front"), _R6_SPLIT)
+def test_the_same_tokens_inside_a_clause_stay_split(sentence: str, front: str) -> None:
+    assert front not in _fronts(sentence, interjections=True)
