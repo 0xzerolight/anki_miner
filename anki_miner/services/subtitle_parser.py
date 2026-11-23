@@ -248,10 +248,12 @@ _ITASU_FORMS: tuple[str, ...] = ("いたし", "いたす", "いたせ", "いた�
 # short verbs the tagger gives to name pieces and dialect endings (きっちゃん,
 # えるちゃん, さって, 行かぬか, つくしちゃん, いねがった). A potential of one of
 # them or of a word above stays out too (なれる, いける, おれる: the card would
-# show 慣れる, 行ける, 折れる).
+# show 慣れる, 行ける, 折れる). くださる is not named here: _used_as_auxiliary
+# refuses it wherever it stands, and only the て-auxiliary switch mines it
+# (_is_te_auxiliary_card).
 _KANA_AUX_CLASS_DENY: frozenset[str] = frozenset(
     {"される", "させる", "せる", "す", "したい", "さす", "ござる", "みる", "しまう", "なさる", "おく"}
-    | {"いただける", "くださる", "くだされる", "いらっしゃる", "らっしゃる"}
+    | {"いただける", "くだされる", "いらっしゃる", "らっしゃる"}
     | {"たまう", "あそばす", "やがる", "なはる", "おわす"}
     | {"あり", "だす", "きる", "える", "さる", "ぬく", "つくす", "ねがう"}
 )
@@ -1140,6 +1142,9 @@ class SubtitleParserService:
         # Mine the interjections the dictionary lists (_is_listed_interjection): Settings → Word
         # Filters → Mine interjections. Read at every token, so it can be set after construction.
         self._mine_interjections: bool = config.mine_interjections
+        # Mine the words after a て-form that the verb's chain does not take in (_is_te_auxiliary_card:
+        # 混ぜてやれ, 渡ってもいい, 教えてくださった). Read at every token, so it can be set after construction.
+        self._mine_te_auxiliaries: bool = False
 
     # ------------------------------------------------------------------
     # Per-parse memoization helpers
@@ -4153,6 +4158,7 @@ class SubtitleParserService:
         how = self._kana_recovery(word_token)
         if how is not None:
             after_conditional = how == _KANA_AUX and self._is_good_after_conditional(word_token, tokens)
+            after_conditional = after_conditional or self._is_te_auxiliary_card(word_token, tokens)
             if (
                 how in (_KANA_AUX, _KANA_AUX_CLASS)
                 and not after_conditional
@@ -4396,11 +4402,15 @@ class SubtitleParserService:
         After a subtitle space the word opens a phrase of its own
         (``_is_predicate_after_space``).
         And なる after an honorific stem + に is that stem's honorific
-        (お尋ねになる, ``_is_honorific_stem``).
+        (お尋ねになる, ``_is_honorific_stem``). くださる is the honorific
+        wherever it stands: only the て-auxiliary switch mines it
+        (``_is_te_auxiliary_card``), and then this test is not asked.
         """
         idx = next((i for i, tok in enumerate(tokens) if tok is word_token), None)
         if idx is None:
             return False
+        if getattr(word_token.feature, "orthBase", None) == "くださる":
+            return True
         prev = getattr(tokens[idx - 1], "feature", None) if idx else None
         pos1 = getattr(prev, "pos1", None)
         if pos1 in _AUX_AFTER_POS1 or (pos1 == "助詞" and getattr(prev, "pos2", None) == "接続助詞"):
@@ -4782,6 +4792,42 @@ class SubtitleParserService:
             return True
         c_form = getattr(prev.feature, "cForm", None)
         return isinstance(c_form, str) and c_form.startswith("仮定形-融合")
+
+    #: The words after a て-form that a verb's chain stops before, each with a dictionary entry of its own.
+    _TE_AUXILIARY_CARDS: frozenset[str] = frozenset({"やる", "いただく", "くださる", "いい", "よい"})
+
+    def _is_te_auxiliary_card(self, word_token, tokens: list) -> bool:
+        """Whether the て-auxiliary switch mines this word (``_mine_te_auxiliaries``, off by default).
+
+        A verb's chain takes in the auxiliaries that only shade it (ている,
+        てしまう, ておく, てみる, てくる, てくれる, てもらう, てあげる, てほしい):
+        those are no cards, whatever the switch says. The chain stops before
+        やる, いただく and くださる (混ぜて|やれ, 見て|いただく, 教えて|くださった)
+        and before いい / よい after て, ても and でも (少なくて|いい,
+        渡っても|いい, どこでも|いい). Each is a word with an entry of its
+        own that some learners want as a card and others call grammar, so the
+        switch decides. With it on the word is mined right after a て-form,
+        and いい / よい also after ても / でも; the auxiliary test and the
+        window test are skipped with it, as after a conditional (てもいい is a
+        listed expression that would take the word).
+        """
+        if not self._mine_te_auxiliaries:
+            return False
+        base = getattr(word_token.feature, "orthBase", None)
+        if base not in self._TE_AUXILIARY_CARDS:
+            return False
+        idx = next((i for i, tok in enumerate(tokens) if tok is word_token), None)
+        if not idx:
+            return False
+        prev = tokens[idx - 1]
+        if base in ("いい", "よい") and idx >= 2 and prev.surface == "も":
+            return tokens[idx - 2].surface in ("て", "で")
+        feature = getattr(prev, "feature", None)
+        return (
+            prev.surface in ("て", "で")
+            and getattr(feature, "pos1", None) == "助詞"
+            and getattr(feature, "pos2", None) == "接続助詞"
+        )
 
     @staticmethod
     def _listed_word_is_out_of_place(word_token, tokens: list) -> bool:

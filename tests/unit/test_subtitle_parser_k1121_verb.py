@@ -210,3 +210,40 @@ class TestNaruAndIruAfterAnAuxiliary:
     )
     def test_an_auxiliary_stays_grammar(self, text, front):
         assert front not in _fronts(text)
+
+
+_TE_AUXILIARIES = [
+    ("この橋は渡ってもいい。", "いい"),
+    ("荷物は少なくていい。", "いい"),
+    ("卵をよく混ぜてやれ。", "やる"),
+    ("先生が丁寧に教えてくださった。", "くださる"),
+]
+
+
+class TestTeAuxiliarySwitch:
+    """V-4: a verb or adjective after a て-form that the chain does not take, behind ``_mine_te_auxiliaries``."""
+
+    def test_the_switch_is_off_by_default(self):
+        assert _service()._mine_te_auxiliaries is False
+
+    @pytest.mark.parametrize(("text", "front"), _TE_AUXILIARIES)
+    def test_the_word_after_te_is_mined_with_the_switch_on(self, text, front):
+        assert front in _fronts(text, te_auxiliaries=True)
+
+    @pytest.mark.parametrize(("text", "front"), _TE_AUXILIARIES)
+    def test_it_is_no_card_with_the_switch_off(self, text, front):
+        assert front not in _fronts(text)
+
+    @pytest.mark.parametrize(
+        ("text", "front"),
+        [
+            ("ちょっと中を見てみる。", "みる"),
+            ("ケーキを全部食べてしまった。", "しまう"),
+            ("鍵は机に置いておく。", "おく"),
+            ("先生は教室で待っている。", "いる"),
+            ("友達が手伝ってくれた。", "くれる"),
+            ("嫌なら早く行くがいい。", "いい"),
+        ],
+    )
+    def test_a_chain_auxiliary_stays_out_whatever_the_switch_says(self, text, front):
+        assert front not in _fronts(text, te_auxiliaries=True)
