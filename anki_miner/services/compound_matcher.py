@@ -27,8 +27,10 @@ import re
 import unicodedata
 from typing import Callable
 
+from anki_miner.services.kana_words import kana_words
 from anki_miner.services.morphology import (
     _FOLD_SUFFIX_PAIRS,
+    REJECT_KANA_ONLY,
     SyntheticToken,
     TokenInclusionRule,
     extract_orth_base,
@@ -91,6 +93,35 @@ _CONTRACTION_TAILS = frozenset({"とく"})
 
 def _contraction_tail(token) -> bool:
     return _pos1(token) == "助動詞" and extract_orth_base(token) in _CONTRACTION_TAILS
+
+
+# An idiom the dictionary lists in the causative (気を利かせる, 目を輝かせる): the
+# tagger cuts 利か|せ, so a span may end on the causative auxiliary and is looked
+# up with its base せる / させる. Only where the idiom without it is no entry:
+# 気を使わ|せ is 気を使う.
+_CAUSATIVE_TAILS = frozenset({"せる", "させる"})
+
+
+def _causative_tail(token) -> bool:
+    return _pos1(token) == "助動詞" and extract_orth_base(token) in _CAUSATIVE_TAILS
+
+
+# An entry listed only in the negative, across particles (話|に|なら|ない,
+# わけ|に|は|いか|ん): the span through the negative auxiliary is looked up as
+# its words + ない. Only where the same words without the negative are no entry
+# (間に合わ|ない is 間に合う), and never for a bare verb + ない.
+_NEGATIVE_LEMMAS = frozenset({"ない", "ず"})
+
+
+def _negative_after_verb(tokens: list, j: int) -> bool:
+    """Whether ``tokens[j]`` is the negative auxiliary right after a verb's 未然形 (なら|ない, いか|ん)."""
+    token = tokens[j]
+    return (
+        _pos1(token) == "助動詞"
+        and getattr(getattr(token, "feature", None), "lemma", None) in _NEGATIVE_LEMMAS
+        and _pos1(tokens[j - 1]) == "動詞"
+        and _c_form(tokens[j - 1]).startswith("未然形")
+    )
 
 
 def _potential_base(token) -> str:
@@ -189,6 +220,168 @@ def _voiced_base(token) -> str:
     if not surface or not base or surface[0] == base[0] or _unvoiced(surface[0]) != base[0]:
         return ""
     return surface[0] + base[1:]
+
+
+# A span written all in kana whose first and last tokens are content words
+# (うまく|いか, あの|ころ, こと|は|ない) is one entry when the dictionary lists
+# it. The dictionary heads such an entry by its kanji spelling (旨く行く, あの頃,
+# 事はない) and gives the kana as its reading, so the span also asks for the
+# spellings the tagger's lemmas give its nouns, verbs and adjectives (its
+# twins), and a twin counts only when the dictionary reads it as the line is
+# written. A kana string that is merely some word's reading never joins: the
+# twin is built from this line's own tokens.
+_KANA_SPAN_RE = re.compile(r"[ぁ-ゖァ-ヺー]+")
+_TRAILING_HIRAGANA_RE = re.compile(r"[ぁ-ゖ]*$")
+_TWIN_POS1 = frozenset({"名詞", "動詞", "形容詞"})
+# A span with more lemma-spelled tokens than this offers no twin (2**n - 1 lookups).
+_MAX_TWIN_TOKENS = 3
+# A pro-form + a light verb is the line's own predicate (そうする, どうかする,
+# こうなる), and a demonstrative + で + いい is 'that will do': no entry card.
+# A light verb at the head is a predicate with what stands before it, not the
+# start of an entry (時間が|ある|とき is not あるとき 'once'; しようとする,
+# してもいい and しちゃダメ are grammar).
+_PRO_FORMS = frozenset({"そう", "こう", "どう", "ああ", "それ", "これ", "あれ"})
+_LIGHT_VERBS = frozenset({"する", "なる", "ある", "いる"})
+# A pre-noun demonstrative and its noun are two words (そんな|もの, この|うち 'this
+# house'), however many of the pairs the dictionary also lists as expressions.
+_PRE_NOUN_DEMONSTRATIVES = frozenset({"この", "その", "あの", "どの", "こんな", "そんな", "あんな", "どんな"})
+# The nominalizers: こと and もの belong to the clause before them, and what the
+# dictionary lists on them (ことはない, ものがある, ものになる, ことによる) is that
+# entry or plain grammar by that clause. Such an entry is a row with a context.
+_NOMINALIZERS = frozenset({"こと", "もの", "もん"})
+# After a verb's て these are the auxiliaries any verb takes (やって|みる,
+# 分別がついて|くる), as often as the listed やってみる or ついてくる; なさる is
+# the polite imperative of any noun (ごらん|なさい).
+_TE_AUXILIARIES = frozenset({"くる", "いく", "みる", "おく", "しまう", "ある", "いる"})
+_HONORIFIC_LIGHT_VERBS = frozenset({"なさる"})
+_KANA_HEAD_REJECT_POS1 = frozenset({"感動詞", "接続詞"})
+
+
+def _after_te(tokens: list, k: int) -> bool:
+    """Whether ``tokens[k]`` stands right after a verb's て / で."""
+    before = tokens[k - 1] if k > 0 else None
+    return before is not None and _pos2(before) == "接続助詞" and before.surface in ("て", "で")
+
+
+def _ku_form(token) -> bool:
+    """Whether ``token`` is an adjective in its く form (よく, なく)."""
+    return _pos1(token) == "形容詞" and token.surface.endswith("く") and _c_form(token).startswith("連用形")
+
+
+_DEMONSTRATIVES = frozenset({"それ", "これ", "あれ"})
+# What a kana entry must be: an expression, a verb or an adjective (an adverb
+# only over three tokens or more). A noun, pronoun or adverb of two kana tokens
+# (あんたら, すぐそこ) is as often two words, and an interjection is the
+# interjection switch's.
+_KANA_ENTRY_ADJECTIVE_TAGS = frozenset({"adj-i", "adj-ix", "adj-na"})
+# なく|なる is the listed 無くなる only where something is lost (金がなくなる);
+# after a predicate (楽しく|なく|なる) it is the negative and なる.
+_NAKUNARU_BEFORE = frozenset({"が", "は", "も"})
+
+
+def _lemma_spelling(token, as_base: bool) -> str:
+    """A hiragana word under the tagger's kanji lemma, or "" when it has none.
+
+    こと → 事 and うまく → 旨く (the lemma's kanji, the line's own ending); a
+    span's inflected tail gives the lemma itself (いか → 行く).
+    """
+    surface = getattr(token, "surface", None) or ""
+    feature = getattr(token, "feature", None)
+    lemma = getattr(feature, "lemma", None)
+    pos1 = _pos1(token)
+    if pos1 not in _TWIN_POS1 or not isinstance(lemma, str) or "-" in lemma:
+        return ""
+    if not _KANJI_RE.search(lemma) or not _HIRAGANA_RE.fullmatch(surface):
+        return ""
+    if pos1 == "名詞" or as_base:
+        return lemma
+    ending = len(_TRAILING_HIRAGANA_RE.search(lemma).group())  # type: ignore[union-attr]
+    if not ending:
+        return ""
+    for reading in (getattr(feature, "lForm", None), getattr(feature, "kanaBase", None)):
+        if not isinstance(reading, str) or len(reading) <= ending:
+            continue
+        stem_reading = katakana_to_hiragana(reading)[:-ending]
+        if surface.startswith(stem_reading):
+            return lemma[:-ending] + surface[len(stem_reading) :]
+    return ""
+
+
+def _kana_twins(span: list, as_written: bool = False) -> tuple[str, tuple[str, ...]]:
+    """An all-kana span's own candidate and its twins: every mix of its tokens' own and lemma spellings.
+
+    ``as_written`` keeps an inflected tail as the line has it (ま|も|なく, the
+    adverb 間もなく) where the candidate otherwise ends on its base.
+    """
+    tail = span[-1]
+    inflects = not as_written and _pos1(tail) in _INFLECTABLE_POS1
+    own = [word_surface(token) for token in span[:-1]]
+    own.append(extract_orth_base(tail) if inflects else word_surface(tail))
+    lemma_spelled = [_lemma_spelling(token, inflects and token is tail) for token in span]
+    varying = [k for k, spelling in enumerate(lemma_spelled) if spelling and spelling != own[k]]
+    if not varying or len(varying) > _MAX_TWIN_TOKENS:
+        return "".join(own), ()
+    twins = []
+    for mask in range(1, 1 << len(varying)):
+        parts = list(own)
+        for bit, k in enumerate(varying):
+            if mask >> bit & 1:
+                parts[k] = lemma_spelled[k]
+        twins.append("".join(parts))
+    return "".join(own), tuple(twins)
+
+
+def _kana_entry_shape(tokens: list, i: int, j: int) -> bool:
+    """Whether ``tokens[i..j]`` has the shape of a kana entry: content words at both ends, no grammar frame."""
+    head, tail = tokens[i], tokens[j]
+    if _pos1(tail) in _NON_CONTENT_POS1 or _pos1(tail) == "感動詞" or _pos1(head) in _KANA_HEAD_REJECT_POS1:
+        return False
+    # The auxiliaries そう and みたい are no content word at either end (おいし|そう is おいしい).
+    if "助動詞語幹" in (_pos2(head), _pos2(tail)) or (j == i + 1 and head.surface == tail.surface):
+        return False
+    head_base, tail_base = extract_orth_base(head), extract_orth_base(tail)
+    if (_pos1(head) == "動詞" and head_base in _LIGHT_VERBS) or head.surface in _PRE_NOUN_DEMONSTRATIVES:
+        return False
+    if head.surface in _NOMINALIZERS or tail_base in _HONORIFIC_LIGHT_VERBS:
+        return False
+    # A te-auxiliary starts no entry (調べて|み|た|ところ) and ends none after て.
+    if (_pos2(head) == "非自立可能" and _after_te(tokens, i)) or (
+        tail_base in _TE_AUXILIARIES and _after_te(tokens, j)
+    ):
+        return False
+    # A pro-form and a verb are the line's own predicate (そうする, そうはいかん), whatever the verb.
+    if head.surface in _PRO_FORMS and (_pos1(tail) == "動詞" or tail_base in _LIGHT_VERBS):
+        return False
+    if head.surface in _DEMONSTRATIVES and tail_base == "いい":
+        return False
+    # A quote and the verb that quotes it are no entry (いい|って|いう is いい and と言う).
+    if tail_base in ("いう", "言う") and tokens[j - 1].surface in ("って", "と"):
+        return False
+    if head.surface == "なく" and tail_base == "なる" and j == i + 1:
+        return i == 0 or tokens[i - 1].surface in _NAKUNARU_BEFORE or _pos1(tokens[i - 1]) in ("補助記号", "空白")
+    return True
+
+
+# The longest key of the kana join table, in tokens (``_row_claims`` scans no further).
+_MAX_ROW_TOKENS = 5
+
+
+def _row_claims(tokens: list, i: int, j: int) -> bool:
+    """Whether a row of the kana join table matches tokens that the span ``tokens[i..j]`` would take from it.
+
+    A row that starts on or before the span's first token keeps its tokens
+    whatever its own context decides (それ|で in それ|で|いい; どう|しよう|も|ない
+    over しよう|も|ない). A row that starts later is a piece of the longer
+    entry, or stands after it (じゃ|ない in わけ|じゃ|ない): the matcher reads
+    left to right.
+    """
+    listed = kana_words()
+    for start in range(max(0, i - _MAX_ROW_TOKENS + 1), i + 1):
+        for end in range(max(start + 1, i), min(start + _MAX_ROW_TOKENS, len(tokens))):
+            key = tuple(token.surface for token in tokens[start : end + 1])
+            if key in listed.joins or (*key[:-1], extract_orth_base(tokens[end])) in listed.base_joins:
+                return True
+    return False
 
 
 # A span must END on a content token. Without this rule, JMdict's thousands of
@@ -325,6 +518,21 @@ def _modifies(token) -> bool:
     return pos1 in ("動詞", "形容詞", "助動詞") and _c_form(token).startswith("連体形")
 
 
+def _after_pause(tokens: list, start: int) -> bool:
+    """Whether a subtitle space parts ``tokens[start]`` from a noun or suffix before it (板前さん 本当に).
+
+    A noun runs on into the word after it (30分|後) only when nothing parts
+    them. A true modifier (の, その, 行く) still modifies across a line break,
+    which a cue writes as a space.
+    """
+    return bool(getattr(tokens[start], "white_space", "")) and _pos1(tokens[start - 1]) in ("名詞", "接尾辞")
+
+
+def _concessive_end(tokens: list, end: int) -> bool:
+    """Whether a span ends on a verb's て / で + も (どう|見|て|も, 何|が|あっ|て|も)."""
+    return tokens[end].surface == "も" and _after_te(tokens, end)
+
+
 def _tail_reading(token, kind: str) -> str:
     """The span tail's reading: its base-form kana for a deinflected (kind A) span."""
     if kind == "A":
@@ -375,6 +583,8 @@ class CompoundDictionaryMatcher:
         self._exist_cache: dict[str, bool] = {}
         # This line's fixed-form spans -> their head's own base (_FIXED_FORM_TAILS).
         self._fixed_heads: dict[tuple[int, int], str] = {}
+        # This line's all-kana spans -> their own candidates, each with its twins (_kana_twins).
+        self._kana_twins: dict[tuple[int, int], dict[str, tuple[str, ...]]] = {}
 
     def merge_line(self, text: str, tokens: list) -> list:
         """Return a new token list with dictionary-attested spans merged.
@@ -405,28 +615,36 @@ class CompoundDictionaryMatcher:
                     if not alternatives:
                         continue
                     for candidate, kind in alternatives:
-                        if not self._exist_cache.get(candidate):
+                        # The dictionary's own spelling of the span: the candidate, or its attested twin.
+                        entry = candidate if self._exist_cache.get(candidate) else self._kana_twin(i, j, candidate)
+                        if not entry:
                             continue
-                        if self._other_words_here(tokens, i, j, candidate):
+                        if self._other_words_here(tokens, i, j, entry):
                             continue
-                        if kind == "A" and self._inflects_pre_noun_word(tokens[j], candidate):
+                        if kind == "A" and self._inflects_pre_noun_word(tokens[j], entry):
                             continue
                         if kind == "A" and self._benefactive_after_te(tokens, i, j):
+                            continue
+                        if self._tail_form_refused(candidates, tokens, i, j, entry, kind):
                             continue
                         if kind == "F":
                             if self._exist_cache.get(self._fixed_heads[(i, j)]):
                                 continue
-                        elif not self._reading_fits(tokens[i : j + 1], candidate, kind) or (
+                        elif not self._reading_fits(tokens[i : j + 1], entry, kind) or (
                             not self._can_end(tokens[j])
-                            and not (kind == "A" and _contraction_tail(tokens[j]))
-                            and not self._adverbial_fits(tokens, i, j, candidate)
+                            and kind != "N"
+                            and not (kind == "A" and (_contraction_tail(tokens[j]) or _causative_tail(tokens[j])))
+                            and not self._adverbial_fits(tokens, i, j, entry)
                         ):
                             continue
                         synthetic = self._build_synthetic(tokens[i : j + 1], candidate, kind)
                         if self._spoken_idioms and kind == "A":
                             self._keep_written_base(synthetic, tokens[i : j + 1], candidate)
                         # Never consume tokens for a word the gate would then drop.
-                        if self._rule.should_include(synthetic) or self._whitelisted(synthetic, candidate):
+                        if (
+                            entry == candidate
+                            and (self._rule.should_include(synthetic) or self._whitelisted(synthetic, candidate))
+                        ) or self._kana_entry(tokens, i, j, synthetic, entry, kind):
                             replacement = synthetic
                             consumed_end = j
                             break
@@ -439,6 +657,86 @@ class CompoundDictionaryMatcher:
                 merged.append(token)
                 i += 1
         return merged
+
+    def _tail_form_refused(self, candidates: dict, tokens: list, i: int, j: int, entry: str, kind: str) -> bool:
+        """Whether a tail-form candidate is out of place where it stands.
+
+        The surface join of an adjective's く form (元気|よく) is an entry only
+        when the dictionary tags it an adverb. A causative (利か|せ) or negative
+        (なら|ない) tail names its own entry only over a particle or more, and
+        only when the words before it are no entry themselves.
+        """
+        if not self._fixed_forms:
+            return False
+        if kind == "B" and _pos1(tokens[j]) == "形容詞" and _pos1(tokens[i]) != "接頭辞":
+            return "adv" not in self._tags(entry)
+        if kind != "N" and not (kind == "A" and _causative_tail(tokens[j])):
+            return False
+        return j - i < 2 or any(
+            self._exist_cache.get(base) or self._kana_twin(i, j - 1, base)
+            for base, base_kind in candidates.get((i, j - 1), ())
+            if base_kind == "A"
+        )
+
+    def _kana_twin(self, i: int, j: int, candidate: str) -> str:
+        """The attested twin of an all-kana span's own candidate that the dictionary reads as the span, or ""."""
+        twins = self._kana_twins.get((i, j), {}).get(candidate, ())
+        if not twins or self._readings is None:
+            return ""
+        spoken = katakana_to_hiragana(candidate)
+        for twin in twins:
+            if self._exist_cache.get(twin) and spoken in {katakana_to_hiragana(r) for r in self._readings(twin)}:
+                return twin
+        return ""
+
+    def _kana_entry(self, tokens: list, i: int, j: int, synthetic, entry: str, kind: str) -> bool:
+        """Whether a merged token the gate refuses as kana-only is a listed entry of content words; marks it.
+
+        ``entry`` is the dictionary's spelling of the span. The span keeps the
+        shape of ``_kana_entry_shape``, its entry is an expression, a verb or an
+        adjective, and no row of the kana join table has its headword or claims
+        its tokens (``_row_claims``): a headword with a row is joined, or left
+        alone, by that row's own context. The parser takes the marked token by name
+        (``_mine_token``), as it takes a listed word.
+        """
+        if self._entry_tags is None or kind == "F" or self._rule.rejection(synthetic) != REJECT_KANA_ONLY:
+            return False
+        # A negative-only entry ends on the auxiliary: its last content word is the verb before it.
+        last = j - 1 if kind == "N" else j
+        if not _kana_entry_shape(tokens, i, last):
+            return False
+        rows = kana_words().joined
+        if synthetic.feature.lemma in rows or entry in rows:
+            return False
+        tags = self._tags(entry)
+        # The surface join of an inflected tail (ま|も|なく) is an entry only as an adverb.
+        if kind == "B" and _pos1(tokens[j]) in _INFLECTABLE_POS1 and "adv" not in tags:
+            return False
+        if "int" in tags or not (
+            "exp" in tags
+            or tags & _KANA_ENTRY_ADJECTIVE_TAGS
+            or any(tag != "vs" and tag.startswith(_VERB_CLASS_TAGS) for tag in tags)
+            or ("adv" in tags and j - i >= 2)
+        ):
+            return False
+        if _row_claims(tokens, i, j):
+            return False
+        synthetic.feature.kana_entry = True
+        # What follows reads the entry as it read its last word (どうでもいい|んだ after a 終止形).
+        c_form = getattr(getattr(tokens[j], "feature", None), "cForm", None)
+        if kind == "A" and isinstance(c_form, str):
+            synthetic.feature.cForm = c_form
+        return True
+
+    def _tags(self, headword: str) -> set[str]:
+        """``headword``'s entry tags, memoized (empty when no tag lookup is wired)."""
+        if self._entry_tags is None:
+            return set()
+        if headword not in self._tags_cache:
+            if len(self._tags_cache) >= _EXIST_CACHE_CAP:
+                self._tags_cache.clear()
+            self._tags_cache[headword] = self._entry_tags([headword]).get(headword, set())
+        return self._tags_cache[headword]
 
     @staticmethod
     def _other_words_here(tokens: list, i: int, j: int, headword: str) -> bool:
@@ -507,14 +805,19 @@ class CompoundDictionaryMatcher:
 
     def _adverbial_fits(self, tokens: list, start: int, end: int, headword: str) -> bool:
         """Whether a span ending on a particle is a word of its own here (本当に, not その時に)."""
-        if self._entry_tags is None or (start > 0 and _modifies(tokens[start - 1])):
+        if self._entry_tags is None or (start > 0 and _modifies(tokens[start - 1]) and not _after_pause(tokens, start)):
             return False
         # A verb's te-form is the verb (回収を急いでいます), a suffix or pre-noun
         # adjective heads a phrase, not a word (神様に, その下に), and so does a
         # nominalizing の (何なのか) or the grammar ように (毎日のように).
         if _pos1(tokens[start]) in ("接尾辞", "連体詞") or any(
-            _pos1(token) in _INFLECTABLE_POS1 or _pos2(token) in ("準体助詞", "助動詞語幹")
-            for token in tokens[start : end + 1]
+            _pos2(token) in ("準体助詞", "助動詞語幹") for token in tokens[start : end + 1]
+        ):
+            return False
+        # A verb's own te-form is the verb (急いで, 死んでも). A concessive that
+        # starts on another word is the listed idiom (どう見ても, 何があっても).
+        if any(_pos1(token) in _INFLECTABLE_POS1 for token in tokens[start : end + 1]) and (
+            _pos1(tokens[start]) in _INFLECTABLE_POS1 or not _concessive_end(tokens, end)
         ):
             return False
         if tokens[end].surface == "と" and (
@@ -530,7 +833,7 @@ class CompoundDictionaryMatcher:
 
     def _can_end_span(self, token) -> bool:
         """Whether a span may end at ``token``: a content token, or an adverbial particle when tags are wired."""
-        if self._can_end(token) or _contraction_tail(token):
+        if self._can_end(token) or _contraction_tail(token) or (self._fixed_forms and _causative_tail(token)):
             return True
         return self._entry_tags is not None and _adverbial_end(token)
 
@@ -559,7 +862,32 @@ class CompoundDictionaryMatcher:
         if not _HIRAGANA_RE.fullmatch(spoken):
             return True
         readings = self._readings(headword)
-        return not readings or _unvoiced(spoken) in {_unvoiced(katakana_to_hiragana(r)) for r in readings}
+        listed = {_unvoiced(katakana_to_hiragana(r)) for r in readings}
+        if not readings or _unvoiced(spoken) in listed:
+            return True
+        # Only across の: a bare word + particle in another reading is another word (外|に: ほかに 'besides').
+        crosses = any(_pos1(token) == "助詞" and token.surface == _READING_CHECKED_PARTICLE for token in span)
+        return crosses and self._reads_otherwise(span, kind, listed)
+
+    def _reads_otherwise(self, span: list, kind: str, listed: set[str]) -> bool:
+        """Whether the headword is read as the span with ONE of its kanji words in another of that word's readings.
+
+        The tagger picks one reading per token, and not always the idiom's
+        (いつ|の|間|に: あいだ for ま; 他愛|の|ない: たあい for たわい; 猫|の|額).
+        One word may take any reading the dictionary lists for it; a headword
+        that needs two (彼の方: あのかた against かれのほう) names another word.
+        """
+        if self._readings is None:
+            return False
+        parts = [extract_reading(token) for token in span[:-1]] + [_tail_reading(span[-1], kind)]
+        for k, token in enumerate(span):
+            if _pos1(token) in _INFLECTABLE_POS1 or not _KANJI_RE.search(token.surface):
+                continue
+            for reading in self._readings(token.surface):
+                spoken = katakana_to_hiragana("".join(parts[:k]) + reading + "".join(parts[k + 1 :]))
+                if _unvoiced(spoken) in listed:
+                    return True
+        return False
 
     def _can_start(self, token) -> bool:
         """Whether candidate spans may start at ``token``."""
@@ -617,6 +945,8 @@ class CompoundDictionaryMatcher:
         n = len(tokens)
         out: dict[tuple[int, int], Alternatives] = {}
         self._fixed_heads = {}
+        self._kana_twins = {}
+        twins_wanted = self._spoken_idioms and self._entry_tags is not None and self._readings is not None
         source_spans = self._source_spans(text, tokens)
         surfaces = [word_surface(token) for token in tokens]
         for i in range(n - 1):
@@ -644,6 +974,19 @@ class CompoundDictionaryMatcher:
                     out[(i, j)] = self._candidate_for_tail(prefix, tail, joined, tokens[i])
                     if self._spoken_idioms:
                         out[(i, j)] += self._spoken_idiom_candidates(plain, tokens, i, j, joined)
+                    if twins_wanted and _KANA_SPAN_RE.fullmatch(joined) and _kana_entry_shape(tokens, i, j):
+                        own, twins = _kana_twins(tokens[i : j + 1])
+                        self._kana_twins[(i, j)] = {own: twins}
+                        if _ku_form(tail):
+                            # An adverb listed in the く form is asked first (まもなく 'soon' is not まもない).
+                            written, written_twins = _kana_twins(tokens[i : j + 1], as_written=True)
+                            self._kana_twins[(i, j)][written] = written_twins
+                            out[(i, j)] = ((written, "B"),) + out[(i, j)]
+                if self._fixed_forms and j - i >= 2 and _negative_after_verb(tokens, j):
+                    out[(i, j)] = out.get((i, j), ()) + ((prefix + "ない", "N"),)
+                    if twins_wanted and _KANA_SPAN_RE.fullmatch(joined) and _kana_entry_shape(tokens, i, j - 1):
+                        written, written_twins = _kana_twins(tokens[i:j], as_written=True)
+                        self._kana_twins[(i, j)] = {written + "ない": tuple(twin + "ない" for twin in written_twins)}
                 head_base = self._fixed_form_head(tokens, i, j)
                 if head_base is not None:
                     out[(i, j)] = out.get((i, j), ()) + ((joined, "F"),)
@@ -703,7 +1046,7 @@ class CompoundDictionaryMatcher:
         A potential tail also offers its folded base (放って|おけ: おける → 放っておく),
         and the ておく contraction とく its base (放っ|とい → 放っとく).
         """
-        if _contraction_tail(tail):
+        if _contraction_tail(tail) or _causative_tail(tail):
             return ((prefix + extract_orth_base(tail), "A"),)
         if _pos1(tail) not in _INFLECTABLE_POS1:
             return ((joined, "B"),)
@@ -719,7 +1062,7 @@ class CompoundDictionaryMatcher:
         modern = mining_base(tail)
         if _pos1(tail) == "形容詞" and modern != extract_orth_base(tail):
             alternatives += ((prefix + modern, "A"),)
-        if _pos1(head) == "接頭辞" and _c_form(tail).startswith("連用形"):
+        if _pos1(head) == "接頭辞" and _c_form(tail).startswith("連用形") or _ku_form(tail):
             alternatives += ((joined, "B"),)
         return alternatives
 
@@ -731,6 +1074,7 @@ class CompoundDictionaryMatcher:
         """
         current = {c for alternatives in candidates.values() for c, _kind in alternatives}
         current.update(self._fixed_heads.values())
+        current.update(twin for owned in self._kana_twins.values() for twins in owned.values() for twin in twins)
         verdicts = {c: self._exist_cache[c] for c in current if c in self._exist_cache}
         unknown = {c for c in current if c not in verdicts}
         if not unknown:
@@ -768,7 +1112,12 @@ class CompoundDictionaryMatcher:
         kana = "".join(extract_reading(t) for t in span)
         if kind == "A":
             # A contraction tail (とく) is 助動詞; the attested headword is a verb.
-            pos1 = "動詞" if _contraction_tail(span[-1]) else (_pos1(span[-1]) or "動詞")
+            auxiliary_tail = _contraction_tail(span[-1]) or _causative_tail(span[-1])
+            pos1 = "動詞" if auxiliary_tail else (_pos1(span[-1]) or "動詞")
+            pos2 = "一般"
+        elif kind == "N":
+            # An entry listed in the negative is an adjective in ない (話にならない).
+            pos1 = "形容詞"
             pos2 = "一般"
         else:
             # Inherit the tail's POS only when the tail is itself a content
@@ -787,13 +1136,18 @@ class CompoundDictionaryMatcher:
             else:
                 pos1 = "名詞"
                 pos2 = "普通名詞"
-        return CompoundSyntheticToken(
+        synthetic = CompoundSyntheticToken(
             surface=surface,
             pos1=pos1,
             pos2=pos2,
             lemma=headword,
             kana=kana,
         )
+        # What follows reads a negative entry as it read the negative (やりきれない|んです after a 終止形).
+        c_form = getattr(getattr(span[-1], "feature", None), "cForm", None)
+        if kind == "N" and isinstance(c_form, str):
+            synthetic.feature.cForm = c_form
+        return synthetic
 
 
 # A name span never starts on a hiragana particle, auxiliary, pre-noun

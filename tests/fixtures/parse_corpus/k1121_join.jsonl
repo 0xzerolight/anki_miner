@@ -1,0 +1,3 @@
+{"id":"k21j01","sentence":"そうして暮らしてきた。","expected":["そう","暮らす"],"category":"k1121-join","note":"そう|し is the line's own predicate: a pro-form + a light verb is never the entry そうする, with or without entry tags."}
+{"id":"k21j02","sentence":"楽しくなくなった。","expected":["楽しい","なる"],"category":"k1121-join","note":"After a predicate, なく|なる is the negative and なる, not the listed 無くなる."}
+{"id":"k21j03","sentence":"それでいいと思うけどな。","expected":["思う"],"category":"k1121-join","note":"それ|で is a row of the kana join table: what starts on a row's tokens is never taken by the matcher's kana gate."}

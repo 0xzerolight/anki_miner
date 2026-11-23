@@ -36,7 +36,7 @@ from anki_miner.services.deinflection import (
     shadow_span,
     stretched_highlight_end,
 )
-from anki_miner.services.kana_words import is_kanji_spelled, is_listed
+from anki_miner.services.kana_words import is_interjection_or_adjective, is_kanji_spelled, is_listed
 from anki_miner.services.lexical_joiner import LexicalJoiner
 from anki_miner.services.lrc_format import register_lrc_format
 from anki_miner.services.masu_stem_nominalizer import MasuStemNominalizer
@@ -152,6 +152,10 @@ PARSE_RELEVANT_CONFIG_FIELDS = (
     "mine_grammar_points",
     # An interjection row joins into one cached token (あの|ね).
     "mine_interjections",
+    # A person's name is a card or not (佐藤, 山田|太郎).
+    "mine_person_names",
+    # The word after a て-form is a card or not (見て|いただく).
+    "mine_te_auxiliaries",
 )
 
 # Dictionary-attested compound matching (Yomitan longest-match principle):
@@ -248,10 +252,14 @@ _ITASU_FORMS: tuple[str, ...] = ("いたし", "いたす", "いたせ", "いた�
 # short verbs the tagger gives to name pieces and dialect endings (きっちゃん,
 # えるちゃん, さって, 行かぬか, つくしちゃん, いねがった). A potential of one of
 # them or of a word above stays out too (なれる, いける, おれる: the card would
-# show 慣れる, 行ける, 折れる).
+# show 慣れる, 行ける, 折れる). くださる is not named here: _used_as_auxiliary
+# refuses it wherever it stands, and only the て-auxiliary switch mines it
+# (_is_te_auxiliary_card). いらっしゃる is a word of the class: the honorific
+# 'to be, to come, to go' where it is the line's own verb (校長先生がいらっしゃる),
+# grammar after て / で as the others are.
 _KANA_AUX_CLASS_DENY: frozenset[str] = frozenset(
     {"される", "させる", "せる", "す", "したい", "さす", "ござる", "みる", "しまう", "なさる", "おく"}
-    | {"いただける", "くださる", "くだされる", "いらっしゃる", "らっしゃる"}
+    | {"いただける", "くだされる", "らっしゃる"}
     | {"たまう", "あそばす", "やがる", "なはる", "おわす"}
     | {"あり", "だす", "きる", "える", "さる", "ぬく", "つくす", "ねがう"}
 )
@@ -1140,6 +1148,13 @@ class SubtitleParserService:
         # Mine the interjections the dictionary lists (_is_listed_interjection): Settings → Word
         # Filters → Mine interjections. Read at every token, so it can be set after construction.
         self._mine_interjections: bool = config.mine_interjections
+        # Mine the words after a て-form that the verb's chain does not take in (_is_te_auxiliary_card:
+        # 混ぜてやれ, 渡ってもいい, 研いでくださった): Settings → Word Filters → Mine words after a て-form.
+        # Read at every token, so it can be set after construction.
+        self._mine_te_auxiliaries: bool = config.mine_te_auxiliaries
+        # A person's name as a card (_is_person_name): Settings → Word Filters → Mine person names. Off:
+        # a name is no card, even where the subtype settings mine proper nouns. Read at every token.
+        self._mine_person_names: bool = config.mine_person_names
 
     # ------------------------------------------------------------------
     # Per-parse memoization helpers
@@ -4133,6 +4148,9 @@ class SubtitleParserService:
         # subtype and ３つ has no kanji, so it is taken before the gate.
         if getattr(getattr(word_token, "feature", None), "number_counter", False) is True:
             return not self._ellipsis_reject(word_token, text, tok_start, tok_end)
+        # An all-kana entry of content words the dictionary matcher joined (うまくいく): taken by name.
+        if getattr(getattr(word_token, "feature", None), "kana_entry", False) is True:
+            return not self._ellipsis_reject(word_token, text, tok_start, tok_end)
         rejection = self._inclusion_rule.rejection(word_token)
         if rejection is not None and self._is_attested_mimetic(word_token):
             rejection = None
@@ -4140,6 +4158,8 @@ class SubtitleParserService:
             rejection = None
         if rejection is None:
             if getattr(word_token, "file_name", False) is True:
+                return False
+            if self._is_person_name(word_token, text, tok_start, tok_end, raw_tokens):
                 return False
             if self._is_katakana_run_fragment(word_token, text, tok_start, tok_end, tokens):
                 return False
@@ -4153,6 +4173,7 @@ class SubtitleParserService:
         how = self._kana_recovery(word_token)
         if how is not None:
             after_conditional = how == _KANA_AUX and self._is_good_after_conditional(word_token, tokens)
+            after_conditional = after_conditional or self._is_te_auxiliary_card(word_token, tokens)
             if (
                 how in (_KANA_AUX, _KANA_AUX_CLASS)
                 and not after_conditional
@@ -4160,6 +4181,8 @@ class SubtitleParserService:
             ):
                 return False
             if how == _KANA_AUX and self._is_not_main_verb(word_token, tokens):
+                return False
+            if how == _KANA_AUX and self._is_piece_of_adverbial_entry(word_token, tokens):
                 return False
             if how == _KANA_AUX_CLASS and self._aux_class_word_is_out_of_place(word_token, tokens, text, tok_end):
                 return False
@@ -4381,6 +4404,115 @@ class SubtitleParserService:
         """Whether an honorific compound (``_NAME_HONORIFIC_TAILS``) ends a name: a kanji right before it."""
         return word_token.surface in _NAME_HONORIFIC_TAILS and tok_start > 0 and is_cjk_ideograph(text[tok_start - 1])
 
+    def _is_person_name(self, word_token, text: str, tok_start: int, tok_end: int, raw_tokens: list) -> bool:
+        """Whether an included token is a person's name, which is no card (``_mine_person_names``, off by default).
+
+        The tagger's own tag decides: 固有名詞-人名 (佐藤, 美咲, タケシ). It reads
+        the context, so 森 is a name in 森さん and a noun in 森の中. Where it calls
+        a common dictionary word a name (悪魔が来た, and フン… for the common
+        ふん) the word stays, unless a name honorific follows it. So does the
+        katakana spelling of an interjection or adjective on the kana word
+        list, common or not (ヤダ for やだ). A name on the user's whitelist is
+        mined. A refused name is no preference reject: the
+        caller records nothing.
+
+        A proper noun of another kind is a person where it is called like one:
+        a place or a firm right before a name honorific (奈良ちゃん, 松下君).
+        And a span the matcher joined is a person where every token under it
+        is a tagged name (``_is_joined_person_name``).
+
+        The switch governs what rests on the tagger's tag. A noun the tagger
+        does not call a name is one by the line's own evidence, at every
+        setting (``_is_noun_called_by_name``).
+        """
+        feature = getattr(word_token, "feature", None)
+        if getattr(word_token, "compound", False) is True:
+            if self._mine_person_names or not self._is_joined_person_name(
+                word_token, text, tok_start, tok_end, raw_tokens
+            ):
+                return False
+        elif getattr(feature, "pos2", None) != "固有名詞":
+            if not self._is_noun_called_by_name(word_token, text, tok_end, raw_tokens):
+                return False
+        elif self._mine_person_names:
+            return False
+        elif getattr(feature, "pos3", None) != "人名":
+            if not self._name_honorific_follows(text, tok_end, raw_tokens):
+                return False
+        else:
+            surface = word_token.surface
+            kana = katakana_to_hiragana(surface)
+            common = self._memoized_term_common([surface, kana])
+            if (
+                (common and (common.get(surface) or common.get(kana)))
+                or (kana != surface and is_interjection_or_adjective(kana))
+            ) and not self._name_honorific_follows(text, tok_end, raw_tokens):
+                return False
+        return not (
+            self._force_include is not None
+            and self._force_include(self._card_front(word_token, text, tok_start, tok_end, raw_tokens))
+        )
+
+    def _is_joined_person_name(self, word_token, text: str, tok_start: int, tok_end: int, raw_tokens: list) -> bool:
+        """Whether a joined span is a person's full name: two raw tokens or more, each tagged 固有名詞-人名 (山田|太郎).
+
+        The synthetic token carries no such tag, so the raw tokens under the
+        span are read. One piece that is no tagged name keeps the card (神|様),
+        and so does a span with no kanji: a katakana word the dictionary lists
+        is a word the tagger cut into name-like pieces (ハック|ション).
+        """
+        surface = word_token.surface
+        if self._NAME_PIECE_RE.fullmatch(surface) is None or _is_all_katakana(surface):
+            return False
+        pieces = [
+            getattr(token, "feature", None)
+            for token, start, end in self._iter_token_spans(text, raw_tokens)
+            if tok_start <= start and end <= tok_end
+        ]
+        return len(pieces) >= 2 and all(
+            getattr(piece, "pos2", None) == "固有名詞" and getattr(piece, "pos3", None) == "人名" for piece in pieces
+        )
+
+    #: The suffixes only a person's name takes. さん, 様 and 殿 also follow a role (社長さん, お客様).
+    _NAME_ONLY_SUFFIXES: tuple[str, ...] = ("ちゃん", "くん", "君")
+
+    def _is_noun_called_by_name(self, word_token, text: str, tok_end: int, raw_tokens: list) -> bool:
+        """Whether a noun that is no common word stands right before ちゃん / くん / 君: somebody's name (瀧くん).
+
+        The tagger calls a name it does not know a plain noun. The raw token
+        after it must be the suffix (君 after a word can be the pronoun), and
+        the word no numeral. A common dictionary word stays a card, as written
+        or in hiragana for a katakana spelling: a pet or a role is called the
+        same way (猫ちゃん, 新人くん), and the line alone cannot tell the name 心
+        from the word. Without a dictionary that knows common words, nothing is
+        refused.
+        """
+        if not text.startswith(self._NAME_ONLY_SUFFIXES, tok_end):
+            return False
+        feature = getattr(word_token, "feature", None)
+        if getattr(feature, "pos1", None) not in ("名詞", "形状詞") or getattr(feature, "pos2", None) == "数詞":
+            return False
+        suffix = next(
+            (token for token, start, _end in self._iter_token_spans(text, raw_tokens) if start == tok_end), None
+        )
+        if (
+            suffix is None
+            or suffix.surface not in self._NAME_ONLY_SUFFIXES
+            or getattr(getattr(suffix, "feature", None), "pos1", None) != "接尾辞"
+        ):
+            return False
+        surface = word_token.surface
+        kana = katakana_to_hiragana(surface)
+        common = self._memoized_term_common([surface, kana])
+        return common is not None and not (common.get(surface) or common.get(kana))
+
+    def _name_honorific_follows(self, text: str, tok_end: int, raw_tokens: list) -> bool:
+        """Whether the raw token that starts at ``tok_end`` is what a name is called with (``_is_name_honorific``)."""
+        for token, start, _end in self._iter_token_spans(text, raw_tokens):
+            if start >= tok_end:
+                return start == tok_end and self._is_name_honorific(token)
+        return False
+
     @staticmethod
     def _used_as_auxiliary(word_token, tokens: list) -> bool:
         """Whether an auxiliary-capable kana word is grammar here, by the tokens around it.
@@ -4391,16 +4523,25 @@ class SubtitleParserService:
         the line's own word (猫がいる, 問題ない, もういい). A cry the tagger reads
         as the word (``_AUX_CRIES``) is no word either, when it stands alone
         between pauses (やった！, いてっ！) and not after a word (上で やった).
+        After a subtitle space the word opens a phrase of its own
+        (``_is_predicate_after_space``).
         And なる after an honorific stem + に is that stem's honorific
-        (お尋ねになる, ``_is_honorific_stem``).
+        (お尋ねになる, ``_is_honorific_stem``). くださる is the honorific
+        wherever it stands: only the て-auxiliary switch mines it
+        (``_is_te_auxiliary_card``), and then this test is not asked.
         """
         idx = next((i for i, tok in enumerate(tokens) if tok is word_token), None)
         if idx is None:
             return False
+        if getattr(word_token.feature, "orthBase", None) == "くださる":
+            return True
         prev = getattr(tokens[idx - 1], "feature", None) if idx else None
         pos1 = getattr(prev, "pos1", None)
         if pos1 in _AUX_AFTER_POS1 or (pos1 == "助詞" and getattr(prev, "pos2", None) == "接続助詞"):
-            return not SubtitleParserService._is_own_predicate(word_token, tokens, idx)
+            return not (
+                SubtitleParserService._is_own_predicate(word_token, tokens, idx)
+                or SubtitleParserService._is_predicate_after_space(word_token, tokens, idx)
+            )
         if idx >= 2 and tokens[idx - 1].surface in ("も", "は") and tokens[idx - 2].surface in ("て", "で"):
             return True
         if (
@@ -4435,10 +4576,11 @@ class SubtitleParserService:
 
         - なる after an adjective's く form (暗くなる) and after the auxiliary に
           of an adjectival noun (夢中になる), but not after an honorific stem +
-          に (お尋ねになる). A negative or たい in く form (行かなくなる) is an
-          auxiliary and stays grammar. Two longer entries nothing joins stay
-          out, as なる would be a piece of them: よく + なる (良くなる in kana)
-          and そう + に + なる (そうになる).
+          に (お尋ねになる). So it is after a verb's negative or たい in く form
+          (行かなくなる, 帰りたくなった): the listed なくなる 'to be lost' is the
+          adjective ない + なる, which the matcher joins. Two longer entries
+          nothing joins stay out, as なる would be a piece of them: よく + なる
+          (良くなる in kana) and そう + に + なる (そうになる).
         - する after お / ご + a verb's continuative, the humble form
           (お持ちします, and お待たせしました over the causative せ). Not before
           たい: し + たい takes the front したい, which the dictionary has only
@@ -4447,12 +4589,34 @@ class SubtitleParserService:
           休むからいい, 安いしいい). After て, で, ば, と and ても it is the
           grammar frame (食べていい) and stays out, and so it does after が:
           見るがいい is the pattern がいい, not a clause and its predicate.
-          Before から it opens the listed いいから (いいから いいから).
+          Before から it opens the listed いいから (いいから いいから こっちに来て).
         - ない after the auxiliary に (降りそうにない).
+        - いる after the copula's で (学生のままでいたい, 友達でいよう): 'to stay',
+          where the で of a verb's て-form is a particle (読んでいる).
+        - する and やる after an adjective's く form (早くしろ, 楽しくやろう) and
+          after the copula's に (きれいにする, 元気にやってる): the adverbial
+          says how, the verb is what the line says. Not after よく, and not
+          after an honorific stem + に. Not after なく: なく|し|た is 無くす
+          'to lose'. Nor a す before ん + だ: 無事に|す|ん|だ is 済んだ as often
+          as するんだ. After a noun or adverb that takes する (何とかする,
+          ちゃんとしろ) nothing changes: ``_is_not_main_verb``. A verb that
+          is a piece of an entry listed with its adverbial is turned away
+          next (``_is_piece_of_adverbial_entry``).
         """
         base = getattr(word_token.feature, "orthBase", None)
         prev = tokens[idx - 1]
         pos1 = getattr(getattr(prev, "feature", None), "pos1", None)
+        if base in ("する", "やる"):
+            if word_token.surface == "す" and [tok.surface for tok in tokens[idx + 1 : idx + 3]] == ["ん", "だ"]:
+                return False
+            if pos1 == "形容詞":
+                return (
+                    bool(prev.surface.endswith("く"))
+                    and prev.surface != "よく"
+                    and getattr(prev.feature, "lemma", None) != "無い"
+                )
+            if pos1 == "助動詞" and prev.surface == "に":
+                return not (idx >= 2 and SubtitleParserService._is_honorific_stem(tokens, idx - 2))
         if base == "なる":
             if pos1 == "形容詞":
                 return bool(prev.surface.endswith("く")) and prev.surface != "よく"
@@ -4461,6 +4625,10 @@ class SubtitleParserService:
                     idx >= 2
                     and (tokens[idx - 2].surface == "そう" or SubtitleParserService._is_honorific_stem(tokens, idx - 2))
                 )
+            if pos1 == "助動詞" and prev.surface in ("なく", "たく"):
+                return True
+        if base == "いる":
+            return pos1 == "助動詞" and prev.surface == "で"
         if base == "する":
             stem = idx - 2 if pos1 == "助動詞" and prev.surface in ("せ", "させ") else idx - 1
             if stem < 1 or getattr(getattr(tokens[stem], "feature", None), "pos1", None) != "動詞":
@@ -4477,6 +4645,114 @@ class SubtitleParserService:
         if base in ("ない", "無い"):
             return pos1 == "助動詞" and prev.surface == "に"
         return False
+
+    @staticmethod
+    def _is_predicate_after_space(word_token, tokens: list, idx: int) -> bool:
+        """Whether an auxiliary-capable word that opens a phrase after a subtitle space is the line's own predicate.
+
+        A space in a subtitle is a pause or a row break, and what follows it
+        opens a phrase of its own (半額なら いいよ, 練習すれば できる, 見習って
+        できる範囲で). ``_used_as_auxiliary`` reads the word before the space
+        as if nothing stood between. Across the space the word stays grammar
+        only in a frame that is one unit however it is spaced:
+
+        - after a verb's て-form (て, で, って and the contracted ちゃ / じゃ):
+          every auxiliary-capable word but できる (磨いて もらいたい, 聞いて
+          ないよ);
+        - ない after the copula's じゃ / で and after a く form: the negative
+          (学生じゃ ない, 寒く ない, 行きたく ない);
+        - いらっしゃる after the copula's で, the honorific copula (先生で
+          いらっしゃいます);
+        - いい / よい before から: it opens the listed いいから; and なく before
+          なる, the listed なくなる 'to be lost' (本当だ なくなってる);
+        - a cry (``_AUX_CRIES``: 勝った やった！).
+
+        ある, くる, おる and なる keep the old test. After a pause the tagger
+        gives their short forms to other words as readily as to the verb: あれ
+        and ある to the pronoun and the pre-noun 或る, あら to the cry, き and
+        こ to a cut-off word, おら to the shout, な|なる to a stammered なるほど.
+        So does an いる that is a cry of pain being stammered
+        (``_is_stammered_cry``).
+        """
+        if not getattr(word_token, "white_space", ""):
+            return False
+        base = getattr(word_token.feature, "orthBase", None)
+        if base in ("ある", "くる", "おる", "なる"):
+            return False
+        if base == "いる" and SubtitleParserService._is_stammered_cry(tokens, idx):
+            return False
+        for cry in _AUX_CRIES:
+            end = idx + len(cry)
+            if tuple(tok.surface for tok in tokens[idx:end]) == cry and (
+                end == len(tokens) or getattr(tokens[end].feature, "pos1", None) == "補助記号"
+            ):
+                return False
+        prev = tokens[idx - 1]
+        pos1 = getattr(getattr(prev, "feature", None), "pos1", None)
+        if pos1 == "助詞" and prev.surface in ("て", "で", "って", "ちゃ", "じゃ"):
+            return base == "できる"
+        if base == "いらっしゃる" and prev.surface == "で":
+            return False
+        if base in ("ない", "無い"):
+            if word_token.surface == "なく" and idx + 1 < len(tokens) and tokens[idx + 1].surface.startswith("な"):
+                return getattr(tokens[idx + 1].feature, "orthBase", None) != "なる"
+            return not ((pos1 == "助動詞" and prev.surface in ("じゃ", "で")) or prev.surface.endswith("く"))
+        return not (base in ("いい", "よい") and idx + 1 < len(tokens) and tokens[idx + 1].surface == "から")
+
+    @staticmethod
+    def _is_stammered_cry(tokens: list, idx: int) -> bool:
+        """Whether a kana いる after a subtitle space is 痛い being stammered (荷物が重い いっ いたたたた 腰が).
+
+        The tagger reads the い of the cry as the verb. Two shapes give it
+        away: the phrase before the space opens on the same い (いっ, いてっ),
+        or the い goes on in a run of its own た / て that no inflection makes
+        (い|た|たたた, い|て|て|て).
+        """
+        start = idx - 1
+        while (
+            start > 0
+            and not getattr(tokens[start], "white_space", "")
+            and getattr(getattr(tokens[start - 1], "feature", None), "pos1", None) != "補助記号"
+        ):
+            start -= 1
+        if tokens[start].surface.rstrip("っッ") == tokens[idx].surface:
+            return True
+        tail = tokens[idx + 1 : idx + 3]
+        return (
+            len(tail) == 2
+            and tail[0].surface in ("た", "て")
+            and not getattr(tail[1], "white_space", "")
+            and set(tail[1].surface) <= {tail[0].surface, "っ", "ー"}
+        )
+
+    def _is_piece_of_adverbial_entry(self, word_token, tokens: list) -> bool:
+        """Whether する or やる after an adverbial is a piece of an entry the dictionary lists with that adverbial.
+
+        うまく|やる is 上手くやる, 若く|し|て the adverb 若くして and
+        ばか|に|する 馬鹿にする. The matcher joins such an entry where the line
+        writes its kanji; in kana nothing joins it, and the verb alone would
+        be a piece of it. Asked of the dictionary, as a term or a reading: the
+        adverbial as it stands with the verb's dictionary form, and with the
+        verb and its て.
+        """
+        base = getattr(word_token.feature, "orthBase", None)
+        if base not in ("する", "やる"):
+            return False
+        idx = next((i for i, tok in enumerate(tokens) if tok is word_token), None)
+        if not idx:
+            return False
+        prev = tokens[idx - 1]
+        pos1 = getattr(getattr(prev, "feature", None), "pos1", None)
+        if pos1 == "形容詞" and prev.surface.endswith("く"):
+            head = prev.surface
+        elif pos1 == "助動詞" and prev.surface == "に" and idx >= 2:
+            head = tokens[idx - 2].surface + "に"
+        else:
+            return False
+        windows = [head + base]
+        if idx + 1 < len(tokens) and tokens[idx + 1].surface == "て":
+            windows.append(head + word_token.surface + "て")
+        return bool(self._kana_windows_attested(windows))
 
     def _is_not_main_verb(self, word_token, tokens: list) -> bool:
         """Whether kana する is not the line's own verb where it stands (宿題をする is; 勉強する is not).
@@ -4504,7 +4780,7 @@ class SubtitleParserService:
         And three forms are the verb only in their own frame, as the tagger
         gives them to stray kana too: さ glued to its れる / せる (あのさ is the
         particle), a bare し with a case, topic or adverbial particle before it
-        or an auxiliary or particle after it (よぉし 行くぞ, a garbled しかし),
+        or an auxiliary, a particle or なさい after it (よぉし 行くぞ, a garbled しかし),
         and the forms of ``_SURU_PIECE_FORMS`` right after such a particle.
         """
         base = getattr(word_token.feature, "orthBase", None)
@@ -4525,10 +4801,11 @@ class SubtitleParserService:
         framed = pos1 == "助詞" and getattr(feature, "pos2", None) in _SURU_FRAME_PARTICLES
         glued = after is not None and not getattr(after, "white_space", "") and after.surface.startswith(("れ", "せ"))
         after_pos1 = getattr(getattr(after, "feature", None), "pos1", None)
+        polite = after is not None and after_pos1 == "動詞" and after.surface.startswith("なさ")
         if base == "する" and (
             (surface == "さ" and not glued)
             or (surface in _SURU_PIECE_FORMS and not framed)
-            or (surface == "し" and not framed and after_pos1 not in ("助詞", "助動詞"))
+            or (surface == "し" and not framed and after_pos1 not in ("助詞", "助動詞") and not polite)
         ):
             return True
         if base == "いたす" and after is not None and after.surface.startswith(("かた", "方")):
@@ -4585,11 +4862,17 @@ class SubtitleParserService:
         is another verb's imperative (ウソつけ！ is つく, read as つける); any
         such verb right after an adjectival noun; and すぎる glued to the word
         before it (静か|すぎる, バカ|すぎる, 突然|すぎて), that word's tail as
-        it is after a verb.
+        it is after a verb. And いらっしゃい that no ます continues, or only
+        a bare まし, is the greeting 'welcome' (いらっしゃい, いらっしゃいまし),
+        an entry of its own, not いらっしゃる.
         """
         feature = word_token.feature
         c_form = getattr(feature, "cForm", None) or ""
         following = text[tok_end : tok_end + 1]
+        if word_token.surface == "いらっしゃい":
+            tail = text[tok_end : tok_end + 3]
+            if not tail.startswith("ま") or (tail.startswith("まし") and tail[2:] not in ("た", "て")):
+                return True
         if c_form.startswith("連用形-撥音便") and following not in ("だ", "で", "じ"):
             return True
         if c_form.startswith("連用形") and following in ("", "！", "!"):
@@ -4673,6 +4956,42 @@ class SubtitleParserService:
             return True
         c_form = getattr(prev.feature, "cForm", None)
         return isinstance(c_form, str) and c_form.startswith("仮定形-融合")
+
+    #: The words after a て-form that a verb's chain stops before, each with a dictionary entry of its own.
+    _TE_AUXILIARY_CARDS: frozenset[str] = frozenset({"やる", "いただく", "くださる", "いい", "よい"})
+
+    def _is_te_auxiliary_card(self, word_token, tokens: list) -> bool:
+        """Whether the て-auxiliary switch mines this word (``_mine_te_auxiliaries``, on by default).
+
+        A verb's chain takes in the auxiliaries that only shade it (ている,
+        てしまう, ておく, てみる, てくる, てくれる, てもらう, てあげる, てほしい):
+        those are no cards, whatever the switch says. The chain stops before
+        やる, いただく and くださる (混ぜて|やれ, 見て|いただく, 教えて|くださった)
+        and before いい / よい after て, ても and でも (少なくて|いい,
+        渡っても|いい, どこでも|いい). Each is a word with an entry of its
+        own that some learners want as a card and others call grammar, so the
+        switch decides. With it on the word is mined right after a て-form,
+        and いい / よい also after ても / でも; the auxiliary test and the
+        window test are skipped with it, as after a conditional (てもいい is a
+        listed expression that would take the word).
+        """
+        if not self._mine_te_auxiliaries:
+            return False
+        base = getattr(word_token.feature, "orthBase", None)
+        if base not in self._TE_AUXILIARY_CARDS:
+            return False
+        idx = next((i for i, tok in enumerate(tokens) if tok is word_token), None)
+        if not idx:
+            return False
+        prev = tokens[idx - 1]
+        if base in ("いい", "よい") and idx >= 2 and prev.surface == "も":
+            return tokens[idx - 2].surface in ("て", "で")
+        feature = getattr(prev, "feature", None)
+        return (
+            prev.surface in ("て", "で")
+            and getattr(feature, "pos1", None) == "助詞"
+            and getattr(feature, "pos2", None) == "接続助詞"
+        )
 
     @staticmethod
     def _listed_word_is_out_of_place(word_token, tokens: list) -> bool:
@@ -4953,6 +5272,7 @@ class SubtitleParserService:
             return False
         windows = self._lexicalized_window_surfaces(tokens, idx, from_left=from_left)
         windows = self._kana_window_choice(tokens, idx, windows, own_word=not (from_left or listed_spelling))
+        windows = self._windows_past_own_particle(tokens, idx, windows) if from_left else windows
         if not windows:
             return False
         if from_left:
@@ -4977,6 +5297,106 @@ class SubtitleParserService:
             for w in uncached:
                 verdicts[w] = self._kana_window_cache[w] = bool(hits.get(w))
         return any(verdicts[w] for w in windows)
+
+    #: The case particles that mark a verb's own argument: its object, its result, its place, its subject.
+    _VERB_CASE_PARTICLES: frozenset[str] = frozenset({"を", "に", "で", "と", "が"})
+
+    def _windows_past_own_particle(self, tokens: list, idx: int, windows: list[str]) -> list[str]:
+        """The windows left against an auxiliary-capable kana verb once its own case particle is set aside.
+
+        A window that opens on a case particle left of the verb is that particle
+        and the verb, not the entry a dictionary lists under the same kana:
+        練習を|し|て is 練習をする and no をして 'by the hand of', 婿に|し|て is
+        にする, 敵と|なる is なる. The verb is the line's own, so such a window
+        does not turn it away. An entry of that shape that is one word in the
+        line was joined before this is asked (として, について, にしては), and a
+        window that opens on any other particle still counts (しか|ない,
+        言え|や|し|ない). The copula's に before the verb is the same case:
+        きれいに|し|て is にする. An adjective keeps every window: it takes no
+        object, and どこ|と|なく is no ない. And a window stays where the
+        entry goes on to the left of the particle
+        (``_entry_goes_on_before_particle``).
+        """
+        if getattr(tokens[idx].feature, "pos1", None) != "動詞":
+            return windows
+        headed: set[str] = set()
+        for start in range(max(0, idx - _KANA_RECOVER_WINDOW_MAX_SIDE), idx):
+            head = tokens[start]
+            if (
+                head.surface in SubtitleParserService._VERB_CASE_PARTICLES
+                and getattr(head.feature, "pos2", None) == "格助詞"
+            ) or (head.surface == "に" and getattr(head.feature, "pos1", None) == "助動詞"):
+                opening = "".join(word_surface(tok) for tok in tokens[start : idx + 1])
+                own = [window for window in windows if window.startswith(opening)]
+                if own and not self._entry_goes_on_before_particle(tokens, start, idx, own):
+                    headed.update(own)
+        return [window for window in windows if window not in headed]
+
+    def _entry_goes_on_before_particle(self, tokens: list, start: int, idx: int, windows: list[str]) -> bool:
+        """Whether the particle at ``tokens[start]`` and the verb at ``tokens[idx]`` are not a verb and its own argument.
+
+        Two cases where the particle-headed window is the entry after all:
+
+        - the word before the particle makes a listed entry with it, as the
+          line writes it or with the verb's dictionary form: いいかげん|に|しろ
+          is いい加減にする, いずれ|に|せよ and いざ|と|なっ|たら are entries.
+          部下を人質|に|しろ is none, and keeps its verb;
+        - a predicate stands before the particle: no verb, adjective or
+          auxiliary in its final form is a verb's argument, so 行く|に|しろ and
+          寒くない|に|せよ are the concessive and 引っ越す|と|なる|と is となると.
+          A stem is a noun there (言い触らし|を|し|て).
+
+        Another particle before this one opens no entry: 洗って|から|に|しろ
+        only reads like 空にする.
+
+        A joined entry carries no inflection: it is a predicate in its final
+        form where the line ends it as its headword ends (雨が降る|と|なる|と).
+
+        And と with no word before it marks no noun, so with the verb as a
+        condition it is the entry (``_takes_up_the_line_before``).
+        """
+        if self._takes_up_the_line_before(tokens, start, idx):
+            return True
+        if not start:
+            return False
+        before = tokens[start - 1]
+        pos1 = getattr(getattr(before, "feature", None), "pos1", None)
+        if pos1 == "助詞":
+            return False
+        if pos1 in ("動詞", "形容詞", "助動詞"):
+            if getattr(before, "compound", False):
+                headword = getattr(before.feature, "lemma", None) or ""
+                return bool(headword) and word_surface(before)[-1:] == headword[-1:]
+            c_form = getattr(before.feature, "cForm", None)
+            return isinstance(c_form, str) and c_form.startswith(("終止形", "連体形"))
+        head = word_surface(before)
+        base = getattr(tokens[idx].feature, "orthBase", None) or ""
+        wider = [head + window for window in windows]
+        wider.append(head + "".join(word_surface(tok) for tok in tokens[start:idx]) + base)
+        return bool(self._kana_windows_attested(wider))
+
+    #: What makes a condition of the verb before it: なる|と, なれ|ば, なっ|たら.
+    _CONDITION_ENDINGS: frozenset[str] = frozenset({"と", "ば", "たら"})
+
+    @staticmethod
+    def _takes_up_the_line_before(tokens: list, start: int, idx: int) -> bool:
+        """Whether と at ``tokens[start]`` has no word to mark and the verb at ``tokens[idx]`` right after it is a condition.
+
+        と that opens the line or follows a pause (a space, a comma, a bracket)
+        takes up what was said before, and the verb as a condition after it is
+        the listed phrase, not the line's own verb: と|なる|と 鍵は…,
+        、と|なれ|ば, 」と|なっ|たら. A plain と|なる there stays the verb of a
+        sentence the line before began, and so does the verb after any other
+        particle (を|し|て, に|し|て).
+        """
+        if tokens[start].surface != "と" or start + 1 != idx or idx + 1 >= len(tokens):
+            return False
+        ending = tokens[idx + 1]
+        if ending.surface not in SubtitleParserService._CONDITION_ENDINGS or bool(getattr(ending, "white_space", "")):
+            return False
+        if not start or bool(getattr(tokens[start], "white_space", "")):
+            return True
+        return getattr(getattr(tokens[start - 1], "feature", None), "pos1", None) in ("補助記号", "記号", "空白")
 
     def _kana_window_choice(self, tokens: list, idx: int, windows: list[str], *, own_word: bool) -> list[str]:
         """The windows that are still a candidate against the kana word at ``tokens[idx]``.

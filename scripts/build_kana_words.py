@@ -749,6 +749,74 @@ JOINS: tuple[tuple[str, str, str, str] | tuple[str, str, str, str, str], ...] = 
     ("あのね", "感動詞", "あの|ね", "start", "interjection"),
     ("しまった", "感動詞", "しまっ|た", "alone", "interjection"),
     ("んん", "感動詞", "ん|ん", "alone", "interjection"),
+    # K1121 ROWS: a word + a particle that is another word where it stands. それ|に, そこ|で and それ|も are the
+    # conjunction opening a clause before a pause (それに、…); a space is enough for それ|に unless a verb follows
+    # it (それに 気づいた), never for そこ|で and それ|も (そこで 着替えてて, それも いい: lexical_joiner._needs_a_comma).
+    # よく|も not before ない / 悪く (_good_too), どちら|か not before an embedded question (_embedded_question),
+    # なに|かしら not where its clause ends (あれは何かしら: _wonders_what), いい|から opening a line or after
+    # punctuation (_quotes_what_precedes), もの|か where the sentence stops after a verb that is no past (_thing_done).
+    ("それに", "接続詞", "それ|に", "alone"),
+    ("そこで", "接続詞", "そこ|で", "alone"),
+    ("それも", "接続詞", "それ|も", "alone"),
+    ("それなのに", "接続詞", "それ|な|の|に", "start"),
+    ("それどころか", "接続詞", "それ|どころ|か", "start"),
+    ("それどころ", "副詞", "それ|どころ", ""),
+    ("よくも", "副詞", "よく|も", ""),
+    ("よくぞ", "副詞", "よく|ぞ", ""),
+    ("どちらか", "名詞", "どちら|か", ""),
+    ("どっちか", "名詞", "どっち|か", ""),
+    ("どちらかというと", "副詞", "どちら|か|と|いう|と", ""),
+    ("どっちかというと", "副詞", "どっち|か|と|いう|と", ""),
+    ("なにかしら", "副詞", "なに|かしら", ""),
+    ("どこでも", "副詞", "どこ|で|も", ""),
+    ("さきほど", "名詞", "さき|ほど", ""),
+    ("いいから", "副詞", "いい|から", "start"),
+    ("ものか", "副詞", "もの|か", "verb", "grammar"),
+    # K1121 ROWS: entries that start on a particle. と|する right after a volitional is とする 'try to; be about to'
+    # (逃げようとした; after a noun or a plain form it stays out: lexical_joiner._no_volitional_before); と|いっ|て|も
+    # opening a clause is the conjunction といっても.
+    ("とする", "動詞", "と|=する", "verb", "grammar"),
+    ("といっても", "接続詞", "と|いっ|て|も", "start"),
+    # K1121 ROWS: よう + the copula after a predicate is the grammar point ようだ 'it seems' (降らないようだ,
+    # 元気なようで); after の it is 'like' and stays out (lexical_joiner._no_predicate_before). よう|な and よう|に
+    # keep their own rows above.
+    ("ようだ", "形容詞", "よう|=だ", "", "grammar"),
+    ("ようです", "形容詞", "よう|=です", "", "grammar"),
+    # K1121 ROWS: conjunctions the tagger files as the copula or as particles: なら, な|の|に and で|は heading a line
+    # or following punctuation, before a pause (なら、私も行く; 学生 なら is the copula: lexical_joiner._quotes_what_precedes).
+    ("なら", "接続詞", "なら", "alone"),
+    ("なのに", "接続詞", "な|の|に", "alone"),
+    ("では", "接続詞", "で|は", "alone"),
+    # けど, じゃ and んで where the tagger says 接続詞 (lexical_joiner._not_the_conjunction) and they open a clause; じゃ
+    # also needs a pause after it (じゃなーい and じゃあさ are other words). As word rows they were carded inside a
+    # clause too (来たとじゃ, 君とかじゃ, な|んで), where the tagger's 接続詞 is wrong.
+    ("けど", "接続詞", "けど", "start"),
+    ("じゃ", "接続詞", "じゃ", "alone"),
+    ("んで", "接続詞", "んで", "start"),
+    # K1121 ROWS: more interjection entries of two tokens: a repeat (うん|うん) or a word + a final particle (いい|ね),
+    # each a reply of its own, opening a clause before a pause; あの|さ opens a clause as あの|ね does.
+    ("なんだ", "感動詞", "なん|だ", "alone", "interjection"),
+    ("なんだと", "感動詞", "なん|だ|と", "alone", "interjection"),
+    ("もういい", "感動詞", "もう|いい", "alone", "interjection"),
+    ("いえいえ", "感動詞", "いえ|いえ", "alone", "interjection"),
+    ("そうね", "感動詞", "そう|ね", "alone", "interjection"),
+    ("うんうん", "感動詞", "うん|うん", "alone", "interjection"),
+    ("いいぞ", "感動詞", "いい|ぞ", "alone", "interjection"),
+    ("いいね", "感動詞", "いい|ね", "alone", "interjection"),
+    ("こちらこそ", "感動詞", "こちら|こそ", "alone", "interjection"),
+    ("まあね", "感動詞", "まあ|ね", "alone", "interjection"),
+    ("よしよし", "感動詞", "よし|よし", "alone", "interjection"),
+    ("またね", "感動詞", "また|ね", "alone", "interjection"),
+    ("おいおい", "感動詞", "おい|おい", "alone", "interjection"),
+    ("ねえねえ", "感動詞", "ねえ|ねえ", "alone", "interjection"),
+    ("やれやれ", "感動詞", "やれ|やれ", "alone", "interjection"),
+    ("はいよ", "感動詞", "はい|よ", "alone", "interjection"),
+    ("じゃあね", "感動詞", "じゃあ|ね", "alone", "interjection"),
+    ("あのさ", "感動詞", "あの|さ", "start", "interjection"),
+    # K1121 ROWS: the colloquial という / って言う, one token the tagger files as an auxiliary (何っちゅうことや,
+    # 行くっつってた). A verb row, so that the card front is the dictionary form in every inflection.
+    ("っちゅう", "動詞", "=っちゅう", "", "grammar"),
+    ("っつう", "動詞", "=っつう", "", "grammar"),
 )
 
 _HEADER = """\

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 import pytest
 
 from anki_miner.config.config import AnkiMinerConfig
@@ -26,9 +28,9 @@ _ATTESTED = frozenset(
 )
 
 
-def _fronts(text: str) -> list[str]:
+def _fronts(text: str, *, te_auxiliaries: bool = True) -> list[str]:
     service = SubtitleParserService(
-        AnkiMinerConfig(),
+        replace(AnkiMinerConfig(), mine_te_auxiliaries=te_auxiliaries),
         term_lookup=lambda terms: _ATTESTED.intersection(terms),
         kana_attest_lookup=lambda forms: {form: form in _ATTESTED for form in forms},
     )
@@ -50,7 +52,7 @@ def _fronts(text: str) -> list[str]:
     ],
 )
 def test_auxiliary_after_a_te_final_join_is_not_mined(line: str, aux: str) -> None:
-    assert aux not in _fronts(line)
+    assert aux not in _fronts(line, te_auxiliaries=False)
 
 
 @pytest.mark.parametrize(

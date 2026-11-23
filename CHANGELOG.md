@@ -9,6 +9,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Added
 - **Mine grammar points (Settings → Word Filters, Japanese only).** On by default; turn it off to keep sentence grammar such as んだ, でしょう and ください out of mining.
 - **Mine interjections (Settings → Word Filters, Japanese only).** Off by default; turn it on to mine every interjection the dictionary lists: fillers and calls (えっと, ねえ, あのね), gasps (あっ, えっ, しまった) and laughs (ははは, フフッ). A stammer (あ、ありがとう) or a cry no dictionary lists is never mined.
+- **Mine person names (Settings → Word Filters, Japanese only).** Off by default: a person's name (佐藤, 美咲, 山田太郎) is never mined, even when your filters mine proper nouns. Turn it on to mine names again; a whitelisted name is mined either way.
+- **Mine words after a て-form (Settings → Word Filters, Japanese only).** On by default: やる, いただく and くださる after て, and いい after て or ても, are mined (混ぜてやれ, 見ていただく, 渡ってもいい). Turn it off to keep them out as grammar. ている, てしまう and the other helpers after て are never mined.
 - **`--api assess` reports what the speech model hears in short clips, such as a card's audio.** Per clip: the transcript, the language Whisper detects on its own and its probability, each segment's numbers, where the voice detector hears speech, and the level inside and outside it. A line spoken in another language, music under a line or two voices at once show up in those numbers (API.md, "assess").
 - **A CC button on the Word Curator's video turns its subtitles off.** On videos with subtitles burned into the picture, the curator's own subtitles covered them. C does the same from the keyboard (Settings → Keyboard), and the curator remembers the choice for the next video.
 
@@ -19,7 +21,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Japanese mines more everyday words written in kana.** あの and その before a noun, やっぱ, ぜひ, おかげ, あんな, わけ, とこ, ほう, and words the tagger cut apart (ちなみに, とっくに, もったいない, とんでもない). The tagger read a pre-noun あの as a filler, and the kana word list did not name the rest.
 - **Japanese grammar expressions are mined as one word, in every inflection.** という, として, について, によって, ように, ような, ことがある, ことができる, ことになる, ことにする and かもしれない (会ったことがあった mines ことがある). The tagger cuts them at their particles and every piece was dropped. という and として join only after a noun, ことがある only after a verb.
 - **Common Japanese interjections are mined:** はい, うん, いいえ, いや, ありがとう, おはよう, こんにちは, さようなら, もしもし, ほら, よし, and すみません or すいません as one word. Fillers and gasps (えっと, うーん, あっ) and ええ are still left out.
-- **ある, いる, なる, できる, くる, いく, やる, くれる, もらう, ない, いい, よい and ほしい are mined where they are the line's own word** (猫がいる, ここにいた, お金がない, もういい). After a verb, an adjective or て they are grammar (見ている, 食べてもいい) and are still skipped. The tagger marks all of them as possible helper words, so every use was dropped.
+- **ある, いる, なる, できる, くる, いく, やる, くれる, もらう, ない, いい, よい and ほしい are mined where they are the line's own word** (猫がいる, ここにいた, お金がない, もういい). After a verb, an adjective or て they are grammar (見ている, 食べてくれる) and are still skipped. The tagger marks all of them as possible helper words, so every use was dropped.
 - **Family words written in kana are mined whole (おばあちゃん, おじさん, おかあさん, にいちゃん).** The tagger cuts them into お, ばあ and ちゃん, and every piece was dropped.
 - **今 and 次 before a space are mined as いま and つぎ.** The tagger skips the subtitle space and reads them as the prefixes こん and じ, which were dropped.
 - **Katakana nouns the tagger does not know (スマホ, コスパ) are mined when a dictionary lists them as nouns.** They carry no lemma, so they were turned away before any dictionary was asked.
@@ -100,6 +102,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Japanese: なる after an adjective's く form or に is mined (忙しくなった, 静かになった),** and する after お + a verb stem (お持ちします), いい after から, けど or し (休むからいい), ない after そうに (降りそうにない).
 - **Japanese: a drawn-out spelling cards the standard word (ぜーんぶ mines ぜんぶ, はーい はい, 聞こえなーい 聞こえる, いただきまーす いただきます).**
 - **Japanese: ねえ where it means ない is mined as ねえ (才能ねえし),** and an entry ending in ない is mined through it (間違いねえ mines 間違いない).
+- **Japanese: kana expressions are mined whole when a dictionary lists them in kanji (うまくいく, どうでもいい, わけじゃない, かっこいい).**
+- **Japanese: expressions that end in a causative, a negative or an adverb's く are mined whole (気を利かせる, 話にならない, 遠慮なく),** and わけにはいかん mines わけにはいかない.
+- **Japanese: 本当に and 絶対に after a word and a subtitle space, いつの間にか, 他愛のない, どう見ても and 何があっても are mined whole.**
+- **Japanese: それに, いいから, よくも, どこでも, 先ほど and ものか are mined as one word where they stand (いいから 窓を閉めろ).**
+- **Japanese: という before a noun (優勝したという話), とする after a volitional (折り紙を折ろうとする) and といっても are mined.**
+- **Japanese: ようだ and ようです after a verb or an adjective are mined (雨が降るようだ).** Mine grammar points turns them off.
+- **Japanese: けど, じゃ, では, なら and なのに are mined where they open a clause (けど、行くよ),** when your filters mine conjunctions.
+- **Japanese: with Mine interjections on, two-word interjections are mined whole (もういい, いえいえ, あのさ, じゃあね).**
+- **Japanese: the spoken っちゅう and っつう are mined as grammar points (何だっちゅうの).** Mine grammar points turns them off.
+- **Japanese: 区 and 両 are counted with their number (７区, 五千両).**
+- **Japanese: する and なる after their own particle are mined (練習をしてた, 春になると),** and する and やる after an adverb (早くしろ, 元気にやってる).
+- **Japanese: a verb or adjective after a subtitle space is the line's own word (練習すれば できる, そんなに欲しいなら やるよ).**
+- **Japanese: なる after a negative or たい is mined (来れなくなった, 食べたくなった), and いる after で (友達でいたい).**
+- **Japanese: いらっしゃる is mined where it is the line's own verb (校長先生がいらっしゃる).**
 ### Fixed
 - **Japanese verb cards show the verb the line uses.** An imperative (持て) mined 持てる, a passive (刺された) mined 刺さる, a potential (帰れない) mined 帰れる, a short causative (行かされた) mined 行かす and katakana フラれた mined the loanword フル; they now mine 持つ, 刺す, 帰る, 行く and ふる. The last three fronts had no dictionary entry, so the card was dropped.
 - **Kana fillers no longer become verb cards.** いえ ('no') mined いえる, a sound cut at っ (まっ, たっ) mined まつ and たつ, and the tagger's glues いたんだ, 違かった and ういっす mined 痛む, 買う and 逸する.
@@ -148,6 +164,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **A character's katakana sentence-end tic (〜でゲソ, 〜ワン) is no longer mined in the file that uses it.**
 - **Joins no longer fire where the words are another phrase:** 何かと思えば mines 何か, こんな物がある mines 物 and ある, 役立たず is the noun, and のせいで before ではない keeps せい.
 - **A verb's highlight stops where the expression after it starts (泣き|そうになった, 選ば|ざるを得ない, 死んじゃ|やだ),** so two cards no longer bold the same kana.
+- **Japanese: 何て before 言う mines 何 (何て言ったの), ことがある after たい is こと and ある (行きたいことがある), and 聞きたそうだ is no hearsay そうだ.**
+- **A full name the tagger joins (山田太郎) and an unknown word before ちゃん, くん or 君 (ポチャちゃん) are no longer mined.**
 - **A batch no longer lets one file decide how a kana verb is treated in the next.** The verdict for つかめ (つかむ or つかめる) was remembered by spelling alone, so the same episode could mine differently depending on what was mined before it.
 - **Folder pairing (Batch, Condense, Retime) no longer reads encode and broadcast tags as the episode number.** Ma10p, YUV420P10, 2flac, AACx2, HDR10, 60fps, MPEG2, `[v2]` and the BS11 channel tag left videos unpaired or paired with another episode's subtitle.
 - **Folder pairing keeps a .5 special (`Show - 12.5`) apart from episode 5.**

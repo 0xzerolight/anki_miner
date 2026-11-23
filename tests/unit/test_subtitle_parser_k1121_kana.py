@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 import pytest
 
 from anki_miner.config.config import AnkiMinerConfig
@@ -53,10 +55,10 @@ _TAGS = {
 }
 
 
-def _fronts(text: str, terms: frozenset[str] = frozenset()) -> list[str]:
+def _fronts(text: str, terms: frozenset[str] = frozenset(), *, te_auxiliaries: bool = True) -> list[str]:
     """Card fronts of ``text`` with ``_ATTESTED`` as the kana dictionary, ``terms`` as headwords and ``_TAGS`` as entry tags."""
     service = SubtitleParserService(
-        AnkiMinerConfig(),
+        replace(AnkiMinerConfig(), mine_te_auxiliaries=te_auxiliaries),
         term_lookup=lambda asked: {term for term in asked if term in terms},
         kana_attest_lookup=lambda forms: {form: form in _ATTESTED for form in forms},
         form_lookup=lambda asked: {term: [("", _TAGS[term])] for term in asked if term in _TAGS},
@@ -100,9 +102,12 @@ class TestSuruAsTheLinesOwnVerb:
     def test_ni_shite_wa_is_grammar(self, text):
         assert "する" not in _fronts(text)
 
-    @pytest.mark.parametrize("text", ["きれいにしておいて。", "早くしろ。", "食べてしまった。"])
-    def test_what_the_auxiliary_check_refuses_stays_refused(self, text):
-        assert "する" not in _fronts(text)
+    def test_what_the_auxiliary_check_refuses_stays_refused(self):
+        assert "する" not in _fronts("食べてしまった。")
+
+    @pytest.mark.parametrize("text", ["きれいにしておいて。", "早くしろ。"])
+    def test_suru_after_an_adverbial_is_the_predicate(self, text):
+        assert "する" in _fronts(text)
 
     def test_the_particle_shi_after_a_contracted_adjective_is_no_suru(self):
         # The tagger cuts くせぇ as くせ|ぇ and reads the し after it as する.
@@ -325,4 +330,4 @@ class TestHumbleVerbs:
         ],
     )
     def test_a_humble_auxiliary_or_a_stray_form_is_no_card(self, text, front):
-        assert front not in _fronts(text)
+        assert front not in _fronts(text, te_auxiliaries=False)

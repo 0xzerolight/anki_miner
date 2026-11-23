@@ -182,6 +182,9 @@ _EXPECTED_CATEGORIES = {
     "k1121-list",
     "k1121-intj",
     "k1121-var",
+    "k1121-join",
+    "k1121-rows",
+    "k1121-verb",
 }
 
 

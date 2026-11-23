@@ -2707,6 +2707,22 @@ Nenhum ficheiro de índice é eliminado.</translation>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Mine person names</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Card people's names, such as 佐藤, 美咲 and 山田太郎. Off by default: a name is no card even when proper nouns are mined.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mine words after a て-form</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Card やる, いただく, くださる and いい after a て-form, such as 見ていただく and 渡ってもいい. On by default.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Blacklist / whitelist words</source>
         <translation>Lista negra / lista de permissões</translation>
     </message>
@@ -6078,6 +6094,22 @@ Nenhum ficheiro é eliminado do disco.</translation>
     </message>
     <message>
         <source>Interjections the dictionary lists become cards: えっと, ねえ, あっ, ははは. Stammers and sounds with no dictionary entry never do.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mine person names</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>People's names become cards: 佐藤, 美咲, 山田太郎. Off, a name is never a card, even when proper nouns are mined. Whitelisted names are mined either way.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mine words after a て-form</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>やる, いただく and くださる after て, and いい after て or ても, become cards: 見ていただく, 渡ってもいい. ている and てしまう never do.</source>
         <translation type="unfinished" />
     </message>
     <message>

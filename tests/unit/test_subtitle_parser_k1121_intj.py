@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 import pytest
 
 from anki_miner.config.config import AnkiMinerConfig
@@ -60,10 +62,10 @@ _TAGS = {
 _SPELLINGS = frozenset({"あぁ", "いやぁ", "フフッ", "気になる"})
 
 
-def _service(*, interjections: bool) -> SubtitleParserService:
+def _service(*, interjections: bool, te_auxiliaries: bool = True) -> SubtitleParserService:
     """A parser with ``_ATTESTED`` as the kana dictionary and ``_TAGS`` as entry tags; the switch set as the kit sets it."""
     service = SubtitleParserService(
-        AnkiMinerConfig(),
+        replace(AnkiMinerConfig(), mine_te_auxiliaries=te_auxiliaries),
         term_lookup=lambda asked: {term for term in asked if term in _TAGS or term in _SPELLINGS},
         kana_attest_lookup=lambda forms: {form: form in _ATTESTED or form in _TAGS for form in forms},
         form_lookup=lambda asked: {term: [("", _TAGS[term])] for term in asked if term in _TAGS},
@@ -75,8 +77,8 @@ def _service(*, interjections: bool) -> SubtitleParserService:
     return service
 
 
-def _fronts(text: str, *, interjections: bool = True) -> list[str]:
-    words, _index, _counts = _service(interjections=interjections).parse_text_units(
+def _fronts(text: str, *, interjections: bool = True, te_auxiliaries: bool = True) -> list[str]:
+    words, _index, _counts = _service(interjections=interjections, te_auxiliaries=te_auxiliaries).parse_text_units(
         [ReadingUnit(text=text, index=0, location_label="t")], want_line_index=False
     )
     return [word.mined_form for word in words]
@@ -208,8 +210,8 @@ class TestNaruAsThePredicate:
     def test_a_longer_listed_word_is_one_card(self, text):
         assert "なる" not in _fronts(text, interjections=False)
 
-    def test_naru_after_a_negative_in_ku_form_stays_out(self):
-        assert "なる" not in _fronts("学校に行かなくなった。", interjections=False)
+    def test_naru_after_a_negative_in_ku_form_is_the_predicate(self):
+        assert "なる" in _fronts("学校に行かなくなった。", interjections=False)
 
     @pytest.mark.parametrize("text", ["病気がよくなった。", "鍵を忘れそうになった。"])
     def test_naru_inside_a_longer_entry_nothing_joins_stays_out(self, text):
@@ -239,7 +241,7 @@ class TestIiAfterAClauseParticle:
 
     @pytest.mark.parametrize("text", ["食べていい？", "言ってもいい。", "早く行くといい。"])
     def test_ii_in_a_grammar_frame_stays_out(self, text):
-        assert "いい" not in _fronts(text, interjections=False)
+        assert "いい" not in _fronts(text, interjections=False, te_auxiliaries=False)
 
     def test_ii_that_opens_ii_kara_stays_out(self):
         assert _fronts("寒いけどいいから早く。", interjections=False).count("いい") == 0

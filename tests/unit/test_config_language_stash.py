@@ -176,6 +176,8 @@ def test_pre_change_config_loads_every_field_unchanged(isolated_config_file):
         "mine_number_counters",
         "mine_grammar_points",
         "mine_interjections",
+        "mine_person_names",
+        "mine_te_auxiliaries",
     }
     assert loaded.script_variant == "" and loaded.reading_tone_color is False
 
