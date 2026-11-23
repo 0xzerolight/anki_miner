@@ -575,15 +575,18 @@ def _asks_nothing(headword: str, tokens: list, i: int, after: int) -> bool:
 
     The adverb heads a request: its sentence goes on to an imperative (許してくれ,
     お待ちください), to お願い or 頼む, or stops on a て-form or on を (どうか見逃して,
-    どうかお慈悲を). どうかした, どうかな, どうかと思う and どうか知らない ask nothing, and
-    after a か the same tokens close かどうか over a subtitle space.
+    どうかお慈悲を). どうかした, どうかなさった, どうかと思う and どうか知らない ask nothing,
+    nor does どうか with a particle after it (どうかな, どうかね, どうかは): the adverb
+    takes none. After a か the same tokens close かどうか over a subtitle space.
     """
     if headword != "どうか":
         return False
     if i > 0 and tokens[i - 1].surface == "か":
         return True
     if after < len(tokens) and (
-        extract_orth_base(tokens[after]) in ("する", "なる") or extract_lemma(tokens[after]) in _QUESTION_VERBS
+        _pos1(tokens[after]) == "助詞"
+        or extract_orth_base(tokens[after]) in ("する", "なる", "なさる")
+        or extract_lemma(tokens[after]) in _QUESTION_VERBS
     ):
         return True
     last = None
