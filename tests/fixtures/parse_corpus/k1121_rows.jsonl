@@ -1,0 +1,3 @@
+{"id":"k21r01","sentence":"店長は電話で何て言ってた","expected":["店長","電話","何","言う"],"category":"k1121-rows","note":"何て before a verb that takes a quote is 何 + the quoting て: no 何て card."}
+{"id":"k21r02","sentence":"店長に伝えたいことがある","expected":["店長","伝える","こと","ある"],"category":"k1121-rows","note":"After たい, こと|が|ある is the thing wanted, not the entry ことがある."}
+{"id":"k21r03","sentence":"息子はもっと歩きたそうだ","expected":["息子","もっと","歩く"],"category":"k1121-rows","note":"そうだ after the stem of たい is the そう of appearance: no hearsay card."}

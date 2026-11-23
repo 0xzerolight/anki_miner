@@ -413,7 +413,7 @@ def test_word_after_the_kana_nan_is_one_entry(sentence: str, front: str) -> None
 
 def test_nante_before_a_kana_iu_is_left_alone() -> None:
     assert "なんて" not in _l4_fronts("なんていうか、変だ")
-    assert "何て" in _l4_fronts("何て言ったの")
+    assert "何て" in _l4_fronts("何て暑い夜だ")
 
 
 @pytest.mark.parametrize("sentence", ["なんと戦っているの", "なんとこれを比べる"])
