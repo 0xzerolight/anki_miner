@@ -29,6 +29,20 @@ _ATTESTED = frozenset(
         "じゃない",
         "ではない",
         "かもしれない",
+        # P-2
+        "それなら",
+        "そのため",
+        "そのあと",
+        "みなさん",
+        "ついでに",
+        "どうか",
+        "かどうか",
+        "ただでさえ",
+        "今では",
+        "いまでは",
+        "ほんで",
+        "何より",
+        "なにより",
     }
 )
 
@@ -82,3 +96,51 @@ def test_ja_nai_ka_before_mo_leaves_ka_to_kamoshirenai() -> None:
 def test_the_polite_negative_of_the_copula_is_the_rows_card(sentence: str, front: str) -> None:
     assert front in _fronts(sentence)
     assert front not in _fronts(sentence, grammar_points=False)
+
+
+# --- P-2: words that open a clause, kana and katakana spellings of entries ------------------
+
+
+@pytest.mark.parametrize(
+    ("sentence", "front"),
+    [
+        ("それなら電車で帰ろう", "それなら"),
+        ("そのため、大会は来月に延びた", "そのため"),
+        ("そのため 試合は翌週に回された", "そのため"),
+        ("そのあと二人で映画を見た", "そのあと"),
+        ("みなさん、席についてください", "みなさん"),
+        ("ついでに切手も買ってきて", "ついでに"),
+        ("どうか娘を助けてください", "どうか"),
+        ("どうか今回だけは見逃して", "どうか"),
+        ("どうかお慈悲を", "どうか"),
+        ("ただでさえ人手が足りないのに", "ただでさえ"),
+        ("今では誰も覚えていない", "今では"),
+        ("ほんで、店はどうなったん", "ほんで"),
+        ("お元気そうで何よりです", "何より"),
+        ("無事に着いて何より", "何より"),
+    ],
+)
+def test_clause_opening_word_is_one_card(sentence: str, front: str) -> None:
+    assert front in _fronts(sentence)
+
+
+@pytest.mark.parametrize(
+    ("sentence", "front"),
+    [
+        ("そのための工具を揃えた", "そのため"),
+        ("そのために毎朝走っている", "そのため"),
+        ("そのためなら何でも差し出す", "そのため"),
+        ("散歩のついでに本屋へ寄った", "ついでに"),
+        ("私はそれなら食べられる", "それなら"),
+        ("顔色が悪いけどどうかしたのか", "どうか"),
+        ("どうかしたのか", "どうか"),
+        ("どうかな、味は薄いかも", "どうか"),
+        ("どうかと思うよ、その言い方は", "どうか"),
+        ("どうかしてるぞ、今日のお前", "どうか"),
+        ("どうか知らないけど、鍵は返してください", "どうか"),
+        ("問題は今ではない", "今では"),
+        ("健康が何より大事だ", "何より"),
+    ],
+)
+def test_the_same_tokens_elsewhere_stay_two_words(sentence: str, front: str) -> None:
+    assert front not in _fronts(sentence)

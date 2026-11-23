@@ -820,6 +820,22 @@ JOINS: tuple[tuple[str, str, str, str] | tuple[str, str, str, str, str], ...] = 
     # K1121 PHRASE: the polite negative of the copula row (先生じゃありません), as しか|あり|ませ|ん above. No row for
     # で|は|あり|ませ|ん: the dictionary also lists ではある, and the card front came out as that.
     ("じゃない", "形容詞", "じゃ|あり|ませ|ん", "copula", "grammar"),
+    # K1121 PHRASE: words that open a clause (それなら帰る; そのため 'therefore' also needs a pause after it: before に,
+    # の or なら it is その + ため 'for that purpose'),
+    # kana spellings of entries the kanji already joins (そのあと, みなさん), ついでに 'while at
+    # it' opening a clause (after の it is the noun ついで), どうか 'please' opening a request
+    # (lexical_joiner._asks_nothing), 今では 'nowadays' opening a clause, the Kansai ほんで, and 何より 'best of all'
+    # before the copula or a pause (lexical_joiner._more_than_anything).
+    ("それなら", "接続詞", "それ|なら", "start"),
+    ("そのため", "接続詞", "その|ため", "alone"),
+    ("そのあと", "副詞", "その|あと", "start"),
+    ("みなさん", "名詞", "みな|さん", ""),
+    ("ついでに", "副詞", "ついで|に", "start"),
+    ("どうか", "副詞", "どう|か", "start"),
+    ("ただでさえ", "副詞", "ただ|で|さえ", ""),
+    ("いまでは", "副詞", "いま|で|は", "start"),
+    ("ほんで", "接続詞", "ほん|で", "start"),
+    ("なにより", "副詞", "なに|より", ""),
 )
 
 _HEADER = """\

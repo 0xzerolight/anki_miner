@@ -100,6 +100,10 @@ _QUESTION_ROWS = frozenset({"どこか", "どちらか", "どっちか"})
 _PRONOUN_CONJUNCTIONS = frozenset({"それに", "そこで", "それも"})
 # 何|かしら as written or read: 'something or other' only where its clause goes on (``_wonders_what``).
 _SOMETHING_ROWS = frozenset({"なにかしら", "何かしら"})
+# 何|より as written or read: 'best of all' only as a predicate (``_more_than_anything``).
+_BEST_ROWS = frozenset({"なにより", "何より"})
+# What a sentence that opens on どうか 'please' asks with, by dictionary form; an imperative asks too (``_asks_nothing``).
+_REQUEST_WORDS = frozenset({"お願い", "願う", "頼む", "ちょうだい"})
 # "start" rows that a mere space does not open (``_quotes_what_precedes``).
 _AFTER_PUNCTUATION = frozenset({"ってことは", "いいから", "なら", "なのに", "では"})
 # The rows of よう + the copula, and what they follow as the grammar point 'it seems' (``_no_predicate_before``).
@@ -290,6 +294,8 @@ def _kana_join(
             and not _thing_done(row.headword, tokens, i)
             and not _no_volitional_before(row.headword, tokens, i)
             and not _no_predicate_before(row.headword, tokens, i)
+            and not _asks_nothing(row.headword, tokens, i, i + size)
+            and not _not_the_pronoun(row.headword, span)
         ):
             return _Join(
                 i,
@@ -534,6 +540,40 @@ def _no_predicate_before(headword: str, tokens: list, i: int) -> bool:
     which stays out.
     """
     return headword in _SEEMING_ROWS and not (i > 0 and _pos1(tokens[i - 1]) in _PREDICATE_POS1)
+
+
+def _asks_nothing(headword: str, tokens: list, i: int, after: int) -> bool:
+    """Whether どう|か opens no request, where it is どう + か and not the adverb どうか 'please'.
+
+    The adverb heads a request: its sentence goes on to an imperative (許してくれ,
+    お待ちください), to お願い or 頼む, or stops on a て-form or on を (どうか見逃して,
+    どうかお慈悲を). どうかした, どうかな, どうかと思う and どうか知らない ask nothing, and
+    after a か the same tokens close かどうか over a subtitle space.
+    """
+    if headword != "どうか":
+        return False
+    if i > 0 and tokens[i - 1].surface == "か":
+        return True
+    if after < len(tokens) and (
+        extract_orth_base(tokens[after]) in ("する", "なる") or extract_lemma(tokens[after]) in _QUESTION_VERBS
+    ):
+        return True
+    last = None
+    for token in tokens[after:]:
+        if _pos2(token) == "句点":
+            break
+        if _pos1(token) in _CLAUSE_BREAK_POS1:
+            continue
+        c_form = getattr(getattr(token, "feature", None), "cForm", None)
+        if extract_orth_base(token) in _REQUEST_WORDS or (isinstance(c_form, str) and c_form.startswith("命令形")):
+            return False
+        last = token
+    return last is None or _pos1(last) != "助詞" or last.surface not in ("て", "で", "を")
+
+
+def _not_the_pronoun(headword: str, span: list) -> bool:
+    """Whether ほん|で opens on another word than the Kansai ほん 'that': a book written in kana (ほんでよんだ)."""
+    return headword == "ほんで" and _pos1(span[0]) != "代名詞"
 
 
 def _no_of_noda(headword: str, tokens: list, after: int) -> bool:
@@ -817,6 +857,18 @@ def _wonders_what(candidate: _Join, tokens: list, spans: dict[int, tuple[int, in
     return _stands_alone(tokens, spans, candidate.end) or _pos2(tokens[candidate.end + 1]) == "終助詞"
 
 
+def _more_than_anything(candidate: _Join, tokens: list, spans: dict[int, tuple[int, int]]) -> bool:
+    """Whether 何|より goes on into what it is compared with, where it is 何 + より (何より眠りたい).
+
+    The entry 何より 'best of all; wonderful' is a predicate: before the copula
+    or a pause (お元気そうで何よりです).
+    """
+    if candidate.headword not in _BEST_ROWS or _stands_alone(tokens, spans, candidate.end):
+        return False
+    following = tokens[candidate.end + 1]
+    return not (_pos1(following) == "助動詞" and extract_lemma(following) in ("だ", "です"))
+
+
 def _follows(tokens: list, i: int, after: str, joined_pos1: str | None = None) -> bool:
     """Whether ``tokens[i]`` comes right after the kind of word a kana row asks for ("" asks for none).
 
@@ -966,6 +1018,8 @@ class LexicalJoiner:
             if candidate.headword in _NEGATIVE_NOUNS and not _noun_place(candidate, tokens, spans):
                 return False
             if _wonders_what(candidate, tokens, spans) or _needs_a_comma(candidate, tokens):
+                return False
+            if _more_than_anything(candidate, tokens, spans):
                 return False
             previous = kept[-1] if kept and kept[-1].end == candidate.start - 1 else None
             if candidate.after == "alone":
