@@ -494,6 +494,17 @@ class FilteringSettingsPanel(FormPanel):
                 "Stammers and sounds with no dictionary entry never do."
             ),
         )
+        # Person name cards (SubtitleParserService._is_person_name). Japanese only: the
+        # tagger's name tags and the name honorifics are Japanese.
+        self.person_names_checkbox = QCheckBox(self.tr("Mine person names"))
+        self.add_field(
+            "",
+            self.person_names_checkbox,
+            helper=self.tr(
+                "People's names become cards: 佐藤, 美咲, 山田太郎. Off, a name is never a card, "
+                "even when proper nouns are mined. Whitelisted names are mined either way."
+            ),
+        )
 
         # Option-driven script filters. The Korean pair binds to the SAME two
         # language-scoped booleans the Script Type combo above uses, and the
@@ -547,6 +558,7 @@ class FilteringSettingsPanel(FormPanel):
                 self.number_counters_checkbox,
                 self.grammar_points_checkbox,
                 self.interjections_checkbox,
+                self.person_names_checkbox,
             )
             for w in field_row_widgets(self, cb)
         )
@@ -896,6 +908,7 @@ class FilteringSettingsPanel(FormPanel):
         self.number_counters_checkbox.setChecked(config.mine_number_counters)
         self.grammar_points_checkbox.setChecked(config.mine_grammar_points)
         self.interjections_checkbox.setChecked(config.mine_interjections)
+        self.person_names_checkbox.setChecked(config.mine_person_names)
         # Same two booleans, read through whichever language's option named them.
         for option_id, checkbox in self.script_filter_checkboxes.items():
             checkbox.setChecked(bool(getattr(config, self._script_filter_fields[option_id])))
@@ -928,6 +941,7 @@ class FilteringSettingsPanel(FormPanel):
             mine_number_counters=self.number_counters_checkbox.isChecked(),
             mine_grammar_points=self.grammar_points_checkbox.isChecked(),
             mine_interjections=self.interjections_checkbox.isChecked(),
+            mine_person_names=self.person_names_checkbox.isChecked(),
             reading_min_occurrence=self.get_reading_min_occurrence(),
         )
         # Language-scoped rows contribute only while their capability is present.

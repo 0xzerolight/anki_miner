@@ -610,6 +610,16 @@ class AnkiMinerConfig:
     # filters); the parser reads it, so it is in PARSE_RELEVANT_CONFIG_FIELDS.
     mine_interjections: bool = False
 
+    # Person name cards (佐藤, 美咲, 山田太郎): a word the tagger tags as a
+    # person's name, a place or firm name right before a name honorific (奈良
+    # ちゃん), and a full name the matcher joined from name tokens
+    # (SubtitleParserService._is_person_name). Off by default: a name is no card
+    # even where the proper-noun settings mine proper nouns, as most learners
+    # want no card for a character. A whitelisted name is mined either way.
+    # Japanese only (Word Filters shows it under the kana filters); the parser
+    # reads it, so it is in PARSE_RELEVANT_CONFIG_FIELDS.
+    mine_person_names: bool = False
+
     # Language-scoped display/content preferences (multi-language transition).
     # Deliberately generic rather than zh-prefixed: they are carried per
     # language by LANGUAGE_SCOPED_FIELDS, so ja/ko keep "" / False and zh gets

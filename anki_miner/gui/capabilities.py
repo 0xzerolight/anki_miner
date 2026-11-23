@@ -939,6 +939,19 @@ CAPABILITIES: tuple[Capability, ...] = (
         requires="kana_filters",
     ),
     Capability(
+        id="person-names",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Mine person names"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Card people's names, such as 佐藤, 美咲 and 山田太郎. Off by default: a name is no card even when "
+            "proper nouns are mined.",
+        ),
+        category=_CAT_FILTERING,
+        target=CapabilityTarget("settings", "filtering"),
+        keywords=("name", "person", "character", "proper noun", "人名", "名前", "固有名詞"),
+        requires="kana_filters",
+    ),
+    Capability(
         id="word-lists",
         title=QT_TRANSLATE_NOOP("Capabilities", "Blacklist / whitelist words"),
         description=QT_TRANSLATE_NOOP(
