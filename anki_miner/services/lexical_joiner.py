@@ -156,6 +156,8 @@ _MAX_FIXED_TOKENS = max(len(key) for key in _FIXED_JOINS)
 _MAX_KANA_TOKENS = max(len(key) for key in (*kana_words().joins, *kana_words().base_joins))
 _CLAUSE_BREAK_POS1 = frozenset({"補助記号", "記号"})
 _NOUN_POS1 = frozenset({"名詞", "代名詞", "接尾辞"})
+# What a copula な follows: a noun or a na-adjective stem (``_copula_after_a_name``).
+_NAMED_POS1 = _NOUN_POS1 | {"形状詞"}
 _VERB_POS1 = frozenset({"動詞", "助動詞"})
 # What ends a conditional before the obligation unit (行かなければ|ならない,
 # 見ちゃ|いけない, 行ったら|いけません, 行かなきゃ|いけない). ては and ないと take two
@@ -840,6 +842,21 @@ def _particle_then_pause(candidate: _Join, tokens: list, spans: dict[int, tuple[
     return particle == "から" or _stands_alone(tokens, spans, after)
 
 
+def _copula_after_a_name(candidate: _Join, tokens: list) -> bool:
+    """Whether the interjection row なん|だ follows a noun or a na-adjective stem, over at most a space or a ….
+
+    There the なん is the copula な + the explanatory ん (鍵 …なんだよ 'it is the
+    key', 静か…なんだ): なんだ 'what the …' opens its clause, at the line start or
+    after an interjection or a sentence's end (おい なんだよ, えっ？ なんだよ).
+    """
+    if candidate.headword != "なんだ":
+        return False
+    i = candidate.start - 1
+    while i >= 0 and _pos1(tokens[i]) in _CLAUSE_BREAK_POS1 and _pos2(tokens[i]) == "一般":
+        i -= 1
+    return i >= 0 and _pos1(tokens[i]) in _NAMED_POS1
+
+
 def _permits_after_te(candidate: _Join, tokens: list) -> bool:
     """Whether an "alone" row that opens on いい stands after a verb's て-form: 休んで いいよ is 〜ていい 'you may'.
 
@@ -1080,8 +1097,12 @@ class LexicalJoiner:
                 return False
             previous = kept[-1] if kept and kept[-1].end == candidate.start - 1 else None
             if candidate.after == "alone":
-                if _permits_after_te(candidate, tokens) or not (
-                    _stands_alone(tokens, spans, candidate.end) or _particle_then_pause(candidate, tokens, spans)
+                if (
+                    _permits_after_te(candidate, tokens)
+                    or _copula_after_a_name(candidate, tokens)
+                    or not (
+                        _stands_alone(tokens, spans, candidate.end) or _particle_then_pause(candidate, tokens, spans)
+                    )
                 ):
                     return False
             elif not _follows(
