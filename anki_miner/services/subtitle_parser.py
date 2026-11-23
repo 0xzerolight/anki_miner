@@ -5311,14 +5311,22 @@ class SubtitleParserService:
           is いい加減にする, いずれ|に|せよ and いざ|と|なっ|たら are entries.
           部下を人質|に|しろ is none, and keeps its verb;
         - a predicate stands before the particle: no verb, adjective or
-          auxiliary is a verb's argument, so 行く|に|しろ and 寒くない|に|せよ
-          are the concessive and 引っ越す|と|なる|と is となると.
+          auxiliary in its final form is a verb's argument, so 行く|に|しろ and
+          寒くない|に|せよ are the concessive and 引っ越す|と|なる|と is となると.
+          A stem is a noun there (言い触らし|を|し|て).
+
+        Another particle before this one opens no entry: 洗って|から|に|しろ
+        only reads like 空にする.
         """
         if not start:
             return False
         before = tokens[start - 1]
-        if getattr(getattr(before, "feature", None), "pos1", None) in ("動詞", "形容詞", "助動詞"):
-            return True
+        pos1 = getattr(getattr(before, "feature", None), "pos1", None)
+        if pos1 == "助詞":
+            return False
+        if pos1 in ("動詞", "形容詞", "助動詞"):
+            c_form = getattr(before.feature, "cForm", None)
+            return isinstance(c_form, str) and c_form.startswith(("終止形", "連体形"))
         head = word_surface(before)
         base = getattr(tokens[idx].feature, "orthBase", None) or ""
         wider = [head + window for window in windows]

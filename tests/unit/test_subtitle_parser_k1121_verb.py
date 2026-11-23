@@ -27,7 +27,7 @@ pytestmark = pytest.mark.skipif(not _fugashi_available(), reason="fugashi/unidic
 _ATTESTED = frozenset(
     {"する", "やる", "なる", "ある", "いる", "ない", "いい", "できる", "もらう", "いただく", "くれる", "くださる"}
     | {"いらっしゃる", "いらっしゃい", "まあ", "みる", "しまう", "おく", "について", "として", "なくなる"}
-    | {"いいかげん"}
+    | {"いいかげん", "からにする"}
 )
 
 # Headwords a dictionary spells this way: the entries a window can be.
@@ -132,6 +132,13 @@ class TestVerbInsideAnEntryThatGoesOnPastItsParticle:
     )
     def test_the_verb_after_a_plain_noun_and_its_particle_stays(self, text, front):
         assert front in _fronts(text)
+
+    def test_a_particle_before_the_particle_opens_no_entry(self):
+        # から|に|しろ reads like 空にする 'to empty': a homophone across the word boundary.
+        assert "する" in _fronts("出かけるのは皿を全部洗ってからにしろ。")
+
+    def test_a_verb_stem_used_as_a_noun_is_the_verbs_object(self):
+        assert "する" in _fronts("あの男は町じゅうで悪口の言い触らしをしている。")
 
 
 class TestSuruAndYaruAfterAnAdverbial:
