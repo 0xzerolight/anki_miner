@@ -4953,6 +4953,7 @@ class SubtitleParserService:
             return False
         windows = self._lexicalized_window_surfaces(tokens, idx, from_left=from_left)
         windows = self._kana_window_choice(tokens, idx, windows, own_word=not (from_left or listed_spelling))
+        windows = self._windows_past_own_particle(tokens, idx, windows) if from_left else windows
         if not windows:
             return False
         if from_left:
@@ -4977,6 +4978,36 @@ class SubtitleParserService:
             for w in uncached:
                 verdicts[w] = self._kana_window_cache[w] = bool(hits.get(w))
         return any(verdicts[w] for w in windows)
+
+    #: The case particles that mark a verb's own argument: its object, its result, its place, its subject.
+    _VERB_CASE_PARTICLES: frozenset[str] = frozenset({"を", "に", "で", "と", "が"})
+
+    @staticmethod
+    def _windows_past_own_particle(tokens: list, idx: int, windows: list[str]) -> list[str]:
+        """The windows left against an auxiliary-capable kana verb once its own case particle is set aside.
+
+        A window that opens on a case particle left of the verb is that particle
+        and the verb, not the entry a dictionary lists under the same kana:
+        練習を|し|て is 練習をする and no をして 'by the hand of', 婿に|し|て is
+        にする, 敵と|なる is なる. The verb is the line's own, so such a window
+        does not turn it away. An entry of that shape that is one word in the
+        line was joined before this is asked (として, について, にしては), and a
+        window that opens on any other particle still counts (しか|ない,
+        言え|や|し|ない). An adjective keeps every window: it takes no object,
+        and どこ|と|なく is no ない.
+        """
+        if getattr(tokens[idx].feature, "pos1", None) != "動詞":
+            return windows
+        headed: set[str] = set()
+        for start in range(max(0, idx - _KANA_RECOVER_WINDOW_MAX_SIDE), idx):
+            head = tokens[start]
+            if (
+                head.surface in SubtitleParserService._VERB_CASE_PARTICLES
+                and getattr(head.feature, "pos2", None) == "格助詞"
+            ):
+                opening = "".join(word_surface(tok) for tok in tokens[start : idx + 1])
+                headed.update(window for window in windows if window.startswith(opening))
+        return [window for window in windows if window not in headed]
 
     def _kana_window_choice(self, tokens: list, idx: int, windows: list[str], *, own_word: bool) -> list[str]:
         """The windows that are still a candidate against the kana word at ``tokens[idx]``.

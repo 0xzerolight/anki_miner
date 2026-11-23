@@ -1,0 +1,95 @@
+"""Session K1121 VERB: a kana する, やる, なる, ある, いる, ない or いい that is the line's own predicate."""
+
+from __future__ import annotations
+
+import pytest
+
+from anki_miner.config.config import AnkiMinerConfig
+from anki_miner.models.reading import ReadingUnit
+from anki_miner.services.subtitle_parser import SubtitleParserService
+
+
+def _fugashi_available() -> bool:
+    try:
+        import fugashi  # noqa: F401
+        import unidic_lite  # noqa: F401
+
+        return True
+    except ImportError:
+        return False
+
+
+pytestmark = pytest.mark.skipif(not _fugashi_available(), reason="fugashi/unidic-lite not installed")
+
+# Kana the dictionary has as a headword or a reading.
+_ATTESTED = frozenset(
+    {"する", "やる", "なる", "ある", "いる", "ない", "いい", "できる", "もらう", "いただく", "くれる", "くださる"}
+    | {"いらっしゃる", "いらっしゃい", "まあ", "みる", "しまう", "おく", "について", "として"}
+)
+
+# Headwords a dictionary spells this way: the entries a window can be.
+_SPELLINGS = frozenset({"をして", "にして", "となる", "やしない", "となく", "てもいい", "しかない", "大事にする"})
+
+# Dictionary entry tags by headword: a word with no row here has no entry at all.
+_TAGS = {
+    "練習": "n vs",
+    "掃除": "n vs",
+    "何とか": "adv n vs",
+    "ちゃんと": "adv vs",
+    "びっくり": "adv vs",
+    "静か": "adj-na",
+    "きれい": "adj-na",
+    "元気": "adj-na n",
+    "目標": "n",
+}
+
+
+def _service(*, te_auxiliaries: bool = False) -> SubtitleParserService:
+    """A parser with ``_ATTESTED`` as the kana dictionary and ``_SPELLINGS`` as its kana-spelled entries."""
+    service = SubtitleParserService(
+        AnkiMinerConfig(),
+        term_lookup=lambda asked: {term for term in asked if term in _TAGS or term in _SPELLINGS},
+        kana_attest_lookup=lambda forms: {form: form in _ATTESTED or form in _SPELLINGS for form in forms},
+        form_lookup=lambda asked: {term: [("", _TAGS[term])] for term in asked if term in _TAGS},
+    )
+    if te_auxiliaries:
+        service._mine_te_auxiliaries = True
+    return service
+
+
+def _fronts(text: str, *, te_auxiliaries: bool = False) -> list[str]:
+    words, _index, _counts = _service(te_auxiliaries=te_auxiliaries).parse_text_units(
+        [ReadingUnit(text=text, index=0, location_label="t")], want_line_index=False
+    )
+    return [word.mined_form for word in words]
+
+
+class TestVerbAfterItsOwnCaseParticle:
+    """V-1: a listed entry that begins with a case particle does not take the verb after it."""
+
+    @pytest.mark.parametrize(
+        ("text", "front"),
+        [
+            ("弟は毎晩ギターの練習をしてた。", "する"),
+            ("朝から台所の掃除をしている。", "する"),
+            ("今年は優勝を目標にしている。", "する"),
+            ("あいつはいつか手ごわい敵となる。", "なる"),
+        ],
+    )
+    def test_the_verb_after_its_case_particle_is_mined(self, text, front):
+        assert front in _fronts(text)
+
+    def test_a_window_that_opens_on_another_particle_still_refuses(self):
+        assert "する" not in _fronts("恥ずかしくて誰にも言えやしない。")
+
+    def test_an_adjective_keeps_every_window(self):
+        assert "ない" not in _fronts("あの家はどことなく寂しい。")
+
+    @pytest.mark.parametrize(
+        ("text", "joined", "verb"),
+        [("卒業後の進路について話した。", "について", "つく"), ("学校の代表として行く。", "として", "する")],
+    )
+    def test_a_joined_entry_is_untouched(self, text, joined, verb):
+        fronts = _fronts(text)
+        assert joined in fronts
+        assert verb not in fronts
