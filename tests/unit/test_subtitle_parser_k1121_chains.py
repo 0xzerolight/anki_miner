@@ -423,6 +423,8 @@ class TestSentenceBoldOnBothFields:
             ("笑っちゃいやよ", "笑う", "笑っちゃ"),  # ちゃい is one token
             ("みんなで食べてよ", "食べる", "食べて"),  # an end on a token boundary
             ("本を読んだってことだ", "読む", "読んだ"),
+            ("夜ごと物理を勉強している", "勉強", "勉強している"),  # a する noun bolds through its する
+            ("手紙に返事しないまま寝た", "返事", "返事しない"),
         ],
     )
     def test_the_furigana_bold_is_the_sentence_bold(self, text, front, bolded):
@@ -435,3 +437,48 @@ class TestSentenceBoldOnBothFields:
         assert plain == bolded
         assert re.sub(r"\[[^\]]*\]| ", "", ruby) == bolded
         assert re.sub(r"\[[^\]]*\]|</?b>| ", "", word.sentence_furigana_bolded) == text
+
+
+class TestSuruNounBold:
+    """A noun that takes する bolds through the する right after it and that verb's chain; the card stays the noun."""
+
+    @pytest.mark.parametrize(
+        ("text", "front", "bolded"),
+        [
+            ("夜ごと物理を勉強している", "勉強", "勉強している"),
+            ("最初から説明すればいいのに", "説明", "説明すれば"),
+            ("母を心配させたくないんだ", "心配", "心配させたくない"),
+            ("遠慮せずに食べなさい", "遠慮", "遠慮せず"),
+        ],
+    )
+    def test_the_bold_runs_through_suru_and_its_chain(self, text, front, bolded):
+        assert _spans(text)[front] == bolded
+
+    def test_a_particle_before_suru_leaves_the_bold_on_the_noun(self):
+        assert _spans("午後は数学の勉強をしていた")["勉強"] == "勉強"
+
+    def test_the_bold_stays_on_the_noun_where_noun_and_suru_are_an_entry(self):
+        terms = frozenset({"失礼します", "失礼", "俺", "それじゃ"})
+        assert _spans("それじゃ俺は失礼します", terms)["失礼"] == "失礼"
+        assert _spans("それじゃ俺は失礼します")["失礼"] == "失礼します"
+
+    def test_the_bold_stays_on_the_noun_where_an_auxiliary_follows_the_chain(self):
+        assert _spans("どうか堪忍してくだせえ")["堪忍"] == "堪忍"
+
+    def test_the_potential_dekiru_is_inside_the_nouns_bold(self):
+        def fronts(text: str) -> dict[str, str]:
+            terms = {"できる", "出来る", "練習", "逆立ち", "歩き", "素人", "簡単", "棚", "弟"}
+            service = SubtitleParserService(
+                AnkiMinerConfig(excluded_subtypes=()),
+                term_lookup=lambda forms: {form for form in forms if form in terms},
+                kana_attest_lookup=lambda forms: {form: form in terms for form in forms},
+            )
+            words, _index, _counts = service.parse_text_units(
+                [ReadingUnit(text=text, index=0, location_label="t")], want_line_index=False
+            )
+            return {word.mined_form: text[word.surface_start : word.bold_end] for word in words}
+
+        assert "できる" in fronts("弟はもう逆立ち歩きの練習ができるはずだ")  # after が it is its own card
+        spans = fronts("弟はもう逆立ち歩きを練習できるはずだ")
+        assert spans["練習"] == "練習できる"
+        assert "できる" not in spans

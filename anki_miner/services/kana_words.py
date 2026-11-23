@@ -21,7 +21,9 @@ conjunction (でも, だから) and elsewhere the particles (学校でも); a ``
 only where it opens a clause and a pause follows, as there it is a reply
 (そうか。 いいよ。) and elsewhere its words (そうかもね, これいいよね). A last token
 written ``=X`` matches any token whose dictionary form is X, so a grammar
-expression joins in every inflection (こと|が|あっ|た is ことがある). A
+expression joins in every inflection (こと|が|あっ|た is ことがある). An ``=X``
+before the last token matches the adjective or auxiliary X in whatever
+spelling the line has, so じゃ|=ない|か is also じゃ|ねえ|か. A
 ``grammar`` row is a grammar point (んだ, ください), joined only while
 Settings → Word Filters → Mine grammar points is on.
 
@@ -34,8 +36,10 @@ so such a match counts only when the dictionary lists the span as written
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from functools import cache
 from importlib.resources import files
+from types import MappingProxyType
 from typing import NamedTuple
 
 
@@ -65,6 +69,10 @@ class KanaWords(NamedTuple):
     base_joins: dict[tuple[str, ...], KanaJoin]
     #: The first token of every join of two or more tokens: where a match by reading can start.
     heads: frozenset[str] = frozenset()
+    #: Joins with an ``=X`` token before the last one (じゃ|=ない|か), keyed on the row with X at that place.
+    form_joins: Mapping[tuple[str, ...], KanaJoin] = MappingProxyType({})
+    #: Every X of those rows.
+    form_bases: frozenset[str] = frozenset()
 
 
 @cache
@@ -75,6 +83,8 @@ def kana_words() -> KanaWords:
     kanji_spelled: set[tuple[str, str]] = set()
     joins: dict[tuple[str, ...], KanaJoin] = {}
     base_joins: dict[tuple[str, ...], KanaJoin] = {}
+    form_joins: dict[tuple[str, ...], KanaJoin] = {}
+    form_bases: set[str] = set()
     for line in text.splitlines():
         if not line.strip() or line.startswith("#"):
             continue
@@ -91,7 +101,10 @@ def kana_words() -> KanaWords:
                 rest[2:] == ["grammar"],
                 rest[2:] == ["interjection"],
             )
-            if last.startswith("="):
+            if any(token.startswith("=") for token in head):
+                form_joins[(*(token.removeprefix("=") for token in head), last)] = join
+                form_bases.update(token[1:] for token in head if token.startswith("="))
+            elif last.startswith("="):
                 base_joins[(*head, last[1:])] = join
             else:
                 joins[(*head, last)] = join
@@ -99,9 +112,11 @@ def kana_words() -> KanaWords:
         words.add((form, pos1))
         if rest:
             kanji_spelled.add((form, pos1))
-    joined = frozenset(row.headword for row in (*joins.values(), *base_joins.values()))
-    heads = frozenset(key[0] for key in (*joins, *base_joins) if len(key) > 1)
-    return KanaWords(frozenset(words), joins, joined, frozenset(kanji_spelled), base_joins, heads)
+    joined = frozenset(row.headword for row in (*joins.values(), *base_joins.values(), *form_joins.values()))
+    heads = frozenset(key[0] for key in (*joins, *base_joins, *form_joins) if len(key) > 1)
+    return KanaWords(
+        frozenset(words), joins, joined, frozenset(kanji_spelled), base_joins, heads, form_joins, frozenset(form_bases)
+    )
 
 
 def is_listed(front: str, pos1: str, *, merged: bool) -> bool:
@@ -119,7 +134,7 @@ def is_kanji_spelled(front: str, pos1: str) -> bool:
 def _interjections_and_adjectives() -> frozenset[str]:
     listed = kana_words()
     kinds = ("感動詞", "形容詞", "形状詞")
-    rows = (*listed.joins.values(), *listed.base_joins.values())
+    rows = (*listed.joins.values(), *listed.base_joins.values(), *listed.form_joins.values())
     return frozenset(form for form, pos1 in listed.words if pos1 in kinds) | frozenset(
         row.headword for row in rows if row.pos1 in kinds
     )

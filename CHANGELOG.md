@@ -121,6 +121,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Japanese: words that open a clause are mined whole (それなら, そのあと, みなさん, ついでに, ただでさえ, 今では),** and どうか before a request (どうか井戸の水を分けてください).
 - **Japanese: spoken sentence endings are mined as one word: からこそ, もんか, ものですか, ではないか, じゃろう, and に決まっている after a verb or an adjective (伸びるに決まってる).**
 - **Japanese: with Mine interjections on, なんだ before よ, なんだい and もういい before から are mined (もういいから鍋を下ろせ).**
+- **Japanese: じゃねえか, じゃねぇか and じゃねーか are mined as じゃないか (案外安いじゃねえか),** not as じゃない.
+- **Japanese: a noun mined before する is bold through its する in the sentence (返事しないまま, 練習できる); the card is still the noun.** できる right after such a noun is its する's and is no longer a card of its own.
 ### Fixed
 - **Japanese verb cards show the verb the line uses.** An imperative (持て) mined 持てる, a passive (刺された) mined 刺さる, a potential (帰れない) mined 帰れる, a short causative (行かされた) mined 行かす and katakana フラれた mined the loanword フル; they now mine 持つ, 刺す, 帰る, 行く and ふる. The last three fronts had no dictionary entry, so the card was dropped.
 - **Kana fillers no longer become verb cards.** いえ ('no') mined いえる, a sound cut at っ (まっ, たっ) mined まつ and たつ, and the tagger's glues いたんだ, 違かった and ういっす mined 痛む, 買う and 逸する.
