@@ -772,6 +772,11 @@ JOINS: tuple[tuple[str, str, str, str] | tuple[str, str, str, str, str], ...] = 
     ("さきほど", "名詞", "さき|ほど", ""),
     ("いいから", "副詞", "いい|から", "start"),
     ("ものか", "副詞", "もの|か", "verb", "grammar"),
+    # K1121 ROWS: entries that start on a particle. と|する right after a volitional is とする 'try to; be about to'
+    # (逃げようとした; after a noun or a plain form it stays out: lexical_joiner._no_volitional_before); と|いっ|て|も
+    # opening a clause is the conjunction といっても.
+    ("とする", "動詞", "と|=する", "verb", "grammar"),
+    ("といっても", "接続詞", "と|いっ|て|も", "start"),
 )
 
 _HEADER = """\

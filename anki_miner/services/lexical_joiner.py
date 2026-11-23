@@ -126,6 +126,8 @@ _QUOTING_VERBS = _SAYING_VERBS | {"書く", "読む"}
 _HEARSAY_ROWS = frozenset({"そうだ", "そうです"})
 # "noun" rows that also open a clause before the noun they name (``_opens_before_a_noun``).
 _NAMING_ROWS = frozenset({"という"})
+# Nouns of people: after a clause, という before one is the verb, 'people who say …' (``_opens_before_a_noun``).
+_PEOPLE = frozenset({"人", "者", "奴", "やつ", "方", "人間", "連中", "人々", "人たち"})
 _GRAMMAR_POS1 = frozenset({"助詞", "助動詞"})
 _MAX_FIXED_TOKENS = max(len(key) for key in _FIXED_JOINS)
 _MAX_KANA_TOKENS = max(len(key) for key in (*kana_words().joins, *kana_words().base_joins))
@@ -272,6 +274,7 @@ def _kana_join(
             and not _thing_wanted(row.headword, tokens, i)
             and not _good_too(row.headword, tokens, i + size)
             and not _thing_done(row.headword, tokens, i)
+            and not _no_volitional_before(row.headword, tokens, i)
         ):
             return _Join(
                 i,
@@ -491,6 +494,23 @@ def _thing_done(headword: str, tokens: list, i: int) -> bool:
     return headword == "ものか" and i > 0 and extract_lemma(tokens[i - 1]) == "た"
 
 
+def _no_volitional_before(headword: str, tokens: list, i: int) -> bool:
+    """Whether と|する follows no volitional, where it is not とする 'try to; be about to' (逃げようとした).
+
+    After a noun it is 'make it; regard as' (目標とする) and after a plain form
+    'supposing' (行くとすると): the row is passed over.
+    """
+    if headword != "とする":
+        return False
+    if i == 0:
+        return True
+    before = tokens[i - 1]
+    c_form = getattr(getattr(before, "feature", None), "cForm", None)
+    if isinstance(c_form, str) and c_form.startswith("意志推量形"):
+        return False
+    return not (_pos1(before) == "助動詞" and extract_lemma(before) in ("う", "よう"))
+
+
 def _no_of_noda(headword: str, tokens: list, after: int) -> bool:
     """Whether the の of どう|し|た|の opens のだ / のです: どうしたのだ is どうした + のだ, not the question どうしたの.
 
@@ -648,18 +668,18 @@ def _stem_before_sou(tokens: list, i: int) -> bool:
 
 
 def _opens_before_a_noun(candidate: _Join, tokens: list, spans: dict[int, tuple[int, int]]) -> bool:
-    """Whether と|いう, after no noun, opens its clause right before the noun it names.
+    """Whether と|いう, after no noun, stands right before the noun it names.
 
-    A subtitle breaks a sentence there (…/という話だ): the line starts on the
-    same という 'called; that says', not on the verb 言う.
+    優勝したという知らせ, 彼などという人, and a line that a subtitle breaks there
+    (…/という話だ): the same という 'called; that says', not the verb 言う.
+    Before anything else the verb keeps the card (来ないという 'they say he will
+    not come'), and so it does inside a line before a noun of people: 行くなという人
+    is 'people who say do not go'.
     """
     after = candidate.end + 1
-    return (
-        candidate.headword in _NAMING_ROWS
-        and _opens_clause(tokens, spans, candidate.start)
-        and after < len(tokens)
-        and _pos1(tokens[after]) in _NOUN_POS1
-    )
+    if candidate.headword not in _NAMING_ROWS or after >= len(tokens) or _pos1(tokens[after]) not in _NOUN_POS1:
+        return False
+    return _opens_clause(tokens, spans, candidate.start) or word_surface(tokens[after]) not in _PEOPLE
 
 
 def _opens_clause(tokens: list, spans: dict[int, tuple[int, int]], i: int) -> bool:
@@ -704,12 +724,13 @@ def _needs_a_comma(candidate: _Join, tokens: list) -> bool:
     それも いい 'that is fine too' are the pronoun and its particle, as a subtitle
     space also falls inside a clause. それに after a space is 'besides' unless a
     verb comes right after it (それに 気づいた 'noticed that'). None of them opens
-    a clause right after a topic or case particle (私は それに 触れた), and
-    そこで？ or そこで」 ends its sentence on 'there'.
+    a clause right after は, が or を (私は それに 触れた), and そこで？ or そこで」
+    ends its sentence on 'there'.
     """
     if candidate.headword not in _PRONOUN_CONJUNCTIONS:
         return False
-    if candidate.start > 0 and _pos2(tokens[candidate.start - 1]) in ("係助詞", "格助詞"):
+    before = tokens[candidate.start - 1] if candidate.start else None
+    if before is not None and _pos1(before) == "助詞" and before.surface in ("は", "が", "を"):
         return True
     after = candidate.end + 1
     if after >= len(tokens):

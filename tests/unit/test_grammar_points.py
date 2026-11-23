@@ -62,6 +62,7 @@ _GRAMMAR_LINES = (
     ("これ本物じゃね？", "じゃね"),
     ("誰にでも起こりうる", "うる"),
     ("あんな所へ二度と行くものか", "ものか"),
+    ("犬が柵を越えようとした", "とする"),
 )
 
 #: Joined expressions and connectives that are no grammar points: always mined.

@@ -57,6 +57,10 @@ _ATTESTED = frozenset(
         "という",
         "どっちかというと",
         "っていう",
+        # R-3
+        "とする",
+        "といっても",
+        "いう",
     }
 )
 
@@ -175,6 +179,7 @@ _R2_SPLIT = [
     ("それも 悪くないね", "それも"),
     ("お前たちは何をしてるんだ そこで？", "そこで"),
     ("私は それに 指先で触れた", "それに"),
+    ("父も母も それに 弟も来た", "それ"),
     ("それも食べてみたい", "それも"),
     ("よくもないし悪くもない", "よくも"),
     ("出口がどちらか分からない", "どちらか"),
@@ -201,3 +206,39 @@ def test_ii_kara_said_twice_leaves_no_bare_ii() -> None:
 
 def test_mono_ka_is_a_grammar_point() -> None:
     assert "ものか" not in _fronts("あんな店、二度と行くものか", grammar_points=False)
+
+
+# --- R-3: entries that start on a particle ----------------------------------------------------
+
+_R3_JOINED = [
+    ("犯人などという呼び方はやめてくれ", "という"),
+    ("優勝したという知らせが入った", "という"),
+    ("来月引っ越すという手紙が届いた", "という"),
+    ("泥棒は窓から逃げようとした", "とする"),
+    ("弟は手紙を書こうとしている", "とする"),
+    ("誰も宿題をしようとしない", "とする"),
+    ("といっても、まだ試作品だ", "といっても"),
+]
+
+
+@pytest.mark.parametrize(("sentence", "front"), _R3_JOINED)
+def test_entry_that_starts_on_a_particle_is_joined_where_it_fits(sentence: str, front: str) -> None:
+    assert front in _fronts(sentence)
+
+
+_R3_SPLIT = [
+    ("あの人は二度と来ないという", "という"),
+    ("お参りするなという人もいる", "という"),
+    ("それを今年の目標とする", "とする"),
+    ("駅まで歩くとすると遠い", "とする"),
+    ("安いといっても五千円はする", "といっても"),
+]
+
+
+@pytest.mark.parametrize(("sentence", "front"), _R3_SPLIT)
+def test_entry_that_starts_on_a_particle_stays_out_elsewhere(sentence: str, front: str) -> None:
+    assert front not in _fronts(sentence)
+
+
+def test_to_suru_is_a_grammar_point() -> None:
+    assert "とする" not in _fronts("泥棒は窓から逃げようとした", grammar_points=False)
