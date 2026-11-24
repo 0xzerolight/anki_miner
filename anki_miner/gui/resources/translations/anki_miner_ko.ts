@@ -6750,8 +6750,8 @@ No index files are deleted.</source>
         <translation>사용자 목록 재설정</translation>
     </message>
     <message>
-        <source>User words: %1 · cached from Anki: %2</source>
-        <translation>사용자 단어: %1 · Anki에서 캐시됨: %2</translation>
+        <source>Added by you: %1 · Mined by Anki Miner: %2 · From Anki: %3</source>
+        <translation>직접 추가: %1 · Anki Miner로 마이닝: %2 · Anki에서: %3</translation>
     </message>
     <message>
         <source>jpdb review export</source>

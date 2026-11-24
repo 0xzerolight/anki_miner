@@ -6788,8 +6788,8 @@ Es werden keine Indexdateien gelöscht.</translation>
         <translation>Benutzerliste zurücksetzen</translation>
     </message>
     <message>
-        <source>User words: %1 · cached from Anki: %2</source>
-        <translation>Benutzerwörter: %1 · aus Anki zwischengespeichert: %2</translation>
+        <source>Added by you: %1 · Mined by Anki Miner: %2 · From Anki: %3</source>
+        <translation>Von Ihnen hinzugefügt: %1 · Von Anki Miner gesammelt: %2 · Aus Anki: %3</translation>
     </message>
     <message>
         <source>jpdb review export</source>

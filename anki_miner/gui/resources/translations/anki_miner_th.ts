@@ -6750,8 +6750,8 @@ No index files are deleted.</source>
         <translation>รีเซ็ตรายการผู้ใช้</translation>
     </message>
     <message>
-        <source>User words: %1 · cached from Anki: %2</source>
-        <translation>คำของผู้ใช้: %1 · แคชจาก Anki: %2</translation>
+        <source>Added by you: %1 · Mined by Anki Miner: %2 · From Anki: %3</source>
+        <translation>คุณเพิ่มเอง: %1 · ขุดโดย Anki Miner: %2 · จาก Anki: %3</translation>
     </message>
     <message>
         <source>jpdb review export</source>

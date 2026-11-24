@@ -6787,8 +6787,8 @@ Inga indexfiler raderas.</translation>
         <translation>Återställ användarlistan</translation>
     </message>
     <message>
-        <source>User words: %1 · cached from Anki: %2</source>
-        <translation>Användarord: %1 · cachade från Anki: %2</translation>
+        <source>Added by you: %1 · Mined by Anki Miner: %2 · From Anki: %3</source>
+        <translation>Tillagt av dig: %1 · Insamlat av Anki Miner: %2 · Från Anki: %3</translation>
     </message>
     <message>
         <source>jpdb review export</source>

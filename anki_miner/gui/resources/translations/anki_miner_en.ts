@@ -6765,7 +6765,7 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>User words: %1 · cached from Anki: %2</source>
+        <source>Added by you: %1 · Mined by Anki Miner: %2 · From Anki: %3</source>
         <translation type="unfinished" />
     </message>
     <message>

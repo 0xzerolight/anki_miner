@@ -259,7 +259,7 @@ class FilteringSettingsPanel(FormPanel):
 
         # Rebuild (clearing the additive local cache so deck exclusions take
         # effect, Issue #38) sits in the Manage Known Words dialog beside the
-        # "cached from Anki" count it clears (C13).
+        # mined and Anki counts it clears (C13).
         known_words_row = QHBoxLayout()
 
         # Manage the user-curated known/ignore list (Issue #42): view, remove,

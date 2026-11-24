@@ -6750,8 +6750,8 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Setel Ulang Daftar Pengguna</translation>
     </message>
     <message>
-        <source>User words: %1 · cached from Anki: %2</source>
-        <translation>Kata pengguna: %1 · disimpan dari Anki: %2</translation>
+        <source>Added by you: %1 · Mined by Anki Miner: %2 · From Anki: %3</source>
+        <translation>Ditambahkan oleh Anda: %1 · Di-mining oleh Anki Miner: %2 · Dari Anki: %3</translation>
     </message>
     <message>
         <source>jpdb review export</source>

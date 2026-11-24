@@ -6824,8 +6824,8 @@ No index files are deleted.</source>
         <translation>Скинути список користувача</translation>
     </message>
     <message>
-        <source>User words: %1 · cached from Anki: %2</source>
-        <translation>Слова користувача: %1 · кешовано з Anki: %2</translation>
+        <source>Added by you: %1 · Mined by Anki Miner: %2 · From Anki: %3</source>
+        <translation>Додано вами: %1 · Видобуто Anki Miner: %2 · З Anki: %3</translation>
     </message>
     <message>
         <source>jpdb review export</source>

@@ -6787,8 +6787,8 @@ Indeksitiedostoja ei poisteta.</translation>
         <translation>Nollaa käyttäjän lista</translation>
     </message>
     <message>
-        <source>User words: %1 · cached from Anki: %2</source>
-        <translation>Käyttäjän sanat: %1 · välimuistissa Ankista: %2</translation>
+        <source>Added by you: %1 · Mined by Anki Miner: %2 · From Anki: %3</source>
+        <translation>Sinun lisäämäsi: %1 · Anki Minerin louhima: %2 · Ankista: %3</translation>
     </message>
     <message>
         <source>jpdb review export</source>

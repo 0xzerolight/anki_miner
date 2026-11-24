@@ -6787,8 +6787,8 @@ Ingen indeksfiler slettes.</translation>
         <translation>Tilbakestill brukerlisten</translation>
     </message>
     <message>
-        <source>User words: %1 · cached from Anki: %2</source>
-        <translation>Brukerord: %1 · bufret fra Anki: %2</translation>
+        <source>Added by you: %1 · Mined by Anki Miner: %2 · From Anki: %3</source>
+        <translation>Lagt til av deg: %1 · Utvunnet av Anki Miner: %2 · Fra Anki: %3</translation>
     </message>
     <message>
         <source>jpdb review export</source>

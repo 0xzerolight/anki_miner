@@ -6824,8 +6824,8 @@ No index files are deleted.</source>
         <translation>Resetuj listę użytkownika</translation>
     </message>
     <message>
-        <source>User words: %1 · cached from Anki: %2</source>
-        <translation>Słowa użytkownika: %1 · z pamięci podręcznej Anki: %2</translation>
+        <source>Added by you: %1 · Mined by Anki Miner: %2 · From Anki: %3</source>
+        <translation>Dodane przez ciebie: %1 · Zebrane przez Anki Miner: %2 · Z Anki: %3</translation>
     </message>
     <message>
         <source>jpdb review export</source>

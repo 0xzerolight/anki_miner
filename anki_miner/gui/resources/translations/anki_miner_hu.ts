@@ -6750,8 +6750,8 @@ Indexfájl nem törlődik.</translation>
         <translation>Felhasználói lista visszaállítása</translation>
     </message>
     <message>
-        <source>User words: %1 · cached from Anki: %2</source>
-        <translation>Felhasználói szavak: %1 · Ankiból gyorsítótárazva: %2</translation>
+        <source>Added by you: %1 · Mined by Anki Miner: %2 · From Anki: %3</source>
+        <translation>Ön adta hozzá: %1 · Az Anki Miner gyűjtötte: %2 · Az Ankiból: %3</translation>
     </message>
     <message>
         <source>jpdb review export</source>

@@ -6750,8 +6750,8 @@ Hiçbir dizin dosyası silinmez.</translation>
         <translation>Kullanıcı listesini sıfırla</translation>
     </message>
     <message>
-        <source>User words: %1 · cached from Anki: %2</source>
-        <translation>Kullanıcı kelimeleri: %1 · Anki'den önbelleğe alınan: %2</translation>
+        <source>Added by you: %1 · Mined by Anki Miner: %2 · From Anki: %3</source>
+        <translation>Sizin eklediğiniz: %1 · Anki Miner'ın topladığı: %2 · Anki'den: %3</translation>
     </message>
     <message>
         <source>jpdb review export</source>

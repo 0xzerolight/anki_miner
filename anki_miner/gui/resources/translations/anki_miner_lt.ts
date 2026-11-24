@@ -6824,8 +6824,8 @@ Indekso failai neištrinami.</translation>
         <translation>Atstatyti naudotojo sąrašą</translation>
     </message>
     <message>
-        <source>User words: %1 · cached from Anki: %2</source>
-        <translation>Naudotojo žodžių: %1 · iš Anki talpykloje: %2</translation>
+        <source>Added by you: %1 · Mined by Anki Miner: %2 · From Anki: %3</source>
+        <translation>Pridėjote jūs: %1 · Surinko Anki Miner: %2 · Iš Anki: %3</translation>
     </message>
     <message>
         <source>jpdb review export</source>

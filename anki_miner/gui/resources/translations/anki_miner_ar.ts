@@ -6940,8 +6940,8 @@ No index files are deleted.</source>
         <translation>إعادة تعيين قائمة المستخدم</translation>
     </message>
     <message>
-        <source>User words: %1 · cached from Anki: %2</source>
-        <translation>كلمات المستخدم: %1 · مخزّنة مؤقتًا من Anki: %2</translation>
+        <source>Added by you: %1 · Mined by Anki Miner: %2 · From Anki: %3</source>
+        <translation>أضفتها أنت: %1 · استخرجها Anki Miner: %2 · من Anki: %3</translation>
     </message>
     <message>
         <source>jpdb review export</source>

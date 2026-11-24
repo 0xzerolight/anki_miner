@@ -6750,8 +6750,8 @@ No index files are deleted.</source>
         <translation>بازنشانی فهرست کاربر</translation>
     </message>
     <message>
-        <source>User words: %1 · cached from Anki: %2</source>
-        <translation>واژه‌های کاربر: %1 · ذخیره‌شده از Anki: %2</translation>
+        <source>Added by you: %1 · Mined by Anki Miner: %2 · From Anki: %3</source>
+        <translation>افزوده‌شده توسط شما: %1 · استخراج‌شده توسط Anki Miner: %2 · از Anki: %3</translation>
     </message>
     <message>
         <source>jpdb review export</source>

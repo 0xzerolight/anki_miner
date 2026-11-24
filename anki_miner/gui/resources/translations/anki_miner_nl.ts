@@ -6787,8 +6787,8 @@ Er worden geen indexbestanden verwijderd.</translation>
         <translation>Gebruikerslijst terugzetten</translation>
     </message>
     <message>
-        <source>User words: %1 · cached from Anki: %2</source>
-        <translation>Eigen woorden: %1 · in cache uit Anki: %2</translation>
+        <source>Added by you: %1 · Mined by Anki Miner: %2 · From Anki: %3</source>
+        <translation>Door jou toegevoegd: %1 · Gemined door Anki Miner: %2 · Uit Anki: %3</translation>
     </message>
     <message>
         <source>jpdb review export</source>

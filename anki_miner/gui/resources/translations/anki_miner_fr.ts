@@ -6787,8 +6787,8 @@ Aucun fichier d'index n'est supprimé.</translation>
         <translation>Réinitialiser la liste utilisateur</translation>
     </message>
     <message>
-        <source>User words: %1 · cached from Anki: %2</source>
-        <translation>Mots utilisateur : %1 · en cache depuis Anki : %2</translation>
+        <source>Added by you: %1 · Mined by Anki Miner: %2 · From Anki: %3</source>
+        <translation>Ajouté par vous : %1 · Extrait par Anki Miner : %2 · Depuis Anki : %3</translation>
     </message>
     <message>
         <source>jpdb review export</source>

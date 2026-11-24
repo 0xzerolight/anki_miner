@@ -6750,8 +6750,8 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Đặt lại danh sách người dùng</translation>
     </message>
     <message>
-        <source>User words: %1 · cached from Anki: %2</source>
-        <translation>Từ người dùng: %1 · đã lưu từ Anki: %2</translation>
+        <source>Added by you: %1 · Mined by Anki Miner: %2 · From Anki: %3</source>
+        <translation>Do bạn thêm: %1 · Do Anki Miner khai thác: %2 · Từ Anki: %3</translation>
     </message>
     <message>
         <source>jpdb review export</source>

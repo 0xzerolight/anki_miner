@@ -6787,8 +6787,8 @@ Nessun file indice viene eliminato.</translation>
         <translation>Reimposta elenco utente</translation>
     </message>
     <message>
-        <source>User words: %1 · cached from Anki: %2</source>
-        <translation>Parole utente: %1 · memorizzate nella cache da Anki: %2</translation>
+        <source>Added by you: %1 · Mined by Anki Miner: %2 · From Anki: %3</source>
+        <translation>Aggiunta da te: %1 · Estratta da Anki Miner: %2 · Da Anki: %3</translation>
     </message>
     <message>
         <source>jpdb review export</source>

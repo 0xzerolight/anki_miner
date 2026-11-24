@@ -6750,8 +6750,8 @@ No index files are deleted.</source>
         <translation>ユーザー単語リストをリセット</translation>
     </message>
     <message>
-        <source>User words: %1 · cached from Anki: %2</source>
-        <translation>ユーザー単語: %1 · Anki からキャッシュ: %2</translation>
+        <source>Added by you: %1 · Mined by Anki Miner: %2 · From Anki: %3</source>
+        <translation>自分で追加: %1 · Anki Miner でマイニング: %2 · Anki から: %3</translation>
     </message>
     <message>
         <source>jpdb review export</source>

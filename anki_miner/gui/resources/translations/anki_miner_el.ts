@@ -6787,8 +6787,8 @@ No index files are deleted.</source>
         <translation>Επαναφορά λίστας χρήστη</translation>
     </message>
     <message>
-        <source>User words: %1 · cached from Anki: %2</source>
-        <translation>Λέξεις χρήστη: %1 · στην κρυφή μνήμη από το Anki: %2</translation>
+        <source>Added by you: %1 · Mined by Anki Miner: %2 · From Anki: %3</source>
+        <translation>Προστέθηκε από εσάς: %1 · Εξόρυξη από το Anki Miner: %2 · Από το Anki: %3</translation>
     </message>
     <message>
         <source>jpdb review export</source>

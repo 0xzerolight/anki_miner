@@ -10,6 +10,7 @@ reads other tools' exports; Export writes the rows on screen.
 from __future__ import annotations
 
 import logging
+from collections import Counter
 from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
@@ -331,8 +332,8 @@ class KnownWordsManagerDialog(ScreenIssueHost, EnhancedDialog):
             selection.selectionChanged.connect(self._sync_remove_button)
         layout.addWidget(self.word_table)
 
-        # The count, and Rebuild beside the "cached from Anki" number it clears
-        # (C13; moved here from Word Filters). The label stays: D20 item 3 kept it.
+        # The per-source counts, and Rebuild beside the mined and Anki numbers it
+        # clears (C13; moved here from Word Filters). The label stays: D20 item 3 kept it.
         count_row = QHBoxLayout()
         self.count_label = QLabel()
         self.count_label.setObjectName("helper-text")
@@ -388,9 +389,17 @@ class KnownWordsManagerDialog(ScreenIssueHost, EnhancedDialog):
         """Reload every row from the DB and update the table and the count label."""
         rows = self._db.list_rows()
         self._model.set_rows(rows)
-        user_count = sum(1 for row in rows if row.source == "user")
+        # One count per source, the same three the Source filter names: lumping
+        # 'mined' rows into the Anki count read as a sync that missed most of
+        # the collection while the cache toggle was off.
+        counts = Counter(row.source for row in rows)
         self.count_label.setText(
-            tr_format(self.tr("User words: %1 · cached from Anki: %2"), user_count, len(rows) - user_count)
+            tr_format(
+                self.tr("Added by you: %1 · Mined by Anki Miner: %2 · From Anki: %3"),
+                counts["user"],
+                counts["mined"],
+                counts["anki"],
+            )
         )
         self._sync_remove_button()
 

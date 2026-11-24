@@ -6864,8 +6864,8 @@ Nobena datoteka indeksa ne bo izbrisana.</translation>
         <translation>Ponastavi uporabniški seznam</translation>
     </message>
     <message>
-        <source>User words: %1 · cached from Anki: %2</source>
-        <translation>Uporabniške besede: %1 · v predpomnilniku iz Anki: %2</translation>
+        <source>Added by you: %1 · Mined by Anki Miner: %2 · From Anki: %3</source>
+        <translation>Dodali ste vi: %1 · Zbral Anki Miner: %2 · Iz Anki: %3</translation>
     </message>
     <message>
         <source>jpdb review export</source>

@@ -52,13 +52,14 @@ class TestPopulation:
         shown = _shown(dlg)
         assert shown == sorted({"ラーメン", "カレー"})
 
-    def test_count_label_splits_user_and_cached(self, qtbot, tmp_path):
+    def test_count_label_counts_each_source(self, qtbot, tmp_path):
+        # A mined row is not an Anki-cached one: counting every non-user row as
+        # "from Anki" read as a sync that skipped most of the collection.
         db = _db_with_user_words(tmp_path)
+        db.add_words({"飲む", "寝る"}, source="mined")
         dlg = KnownWordsManagerDialog(db)
         qtbot.addWidget(dlg)
-        text = dlg.count_label.text()
-        assert "User words: 2" in text
-        assert "cached from Anki: 1" in text
+        assert dlg.count_label.text() == "Added by you: 2 · Mined by Anki Miner: 2 · From Anki: 1"
 
 
 class TestExport:
@@ -572,7 +573,7 @@ class TestRebuild:
         db.clear(preserve_user=True)
         calls[0]()  # the tab reports the rebuild finished
         assert dlg.rebuild_button.isEnabled()
-        assert "cached from Anki: 0" in dlg.count_label.text()
+        assert dlg.count_label.text() == "Added by you: 2 · Mined by Anki Miner: 0 · From Anki: 0"
 
     def test_rebuild_is_disabled_while_the_cache_is_off(self, qtbot, tmp_path):
         dlg = KnownWordsManagerDialog(_db_with_user_words(tmp_path), on_rebuild=lambda _done: None)

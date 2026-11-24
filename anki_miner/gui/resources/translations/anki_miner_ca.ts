@@ -6787,8 +6787,8 @@ No se suprimeix cap fitxer d'índex.</translation>
         <translation>Restableix la llista d'usuari</translation>
     </message>
     <message>
-        <source>User words: %1 · cached from Anki: %2</source>
-        <translation>Paraules d'usuari: %1 · a la memòria cau de l'Anki: %2</translation>
+        <source>Added by you: %1 · Mined by Anki Miner: %2 · From Anki: %3</source>
+        <translation>Afegida per vós: %1 · Extreta per l'Anki Miner: %2 · De l'Anki: %3</translation>
     </message>
     <message>
         <source>jpdb review export</source>

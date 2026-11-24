@@ -6750,8 +6750,8 @@ No index files are deleted.</source>
         <translation>重置用户列表</translation>
     </message>
     <message>
-        <source>User words: %1 · cached from Anki: %2</source>
-        <translation>用户单词：%1 · 缓存自 Anki：%2</translation>
+        <source>Added by you: %1 · Mined by Anki Miner: %2 · From Anki: %3</source>
+        <translation>由你添加：%1 · 由 Anki Miner 挖词：%2 · 来自 Anki：%3</translation>
     </message>
     <message>
         <source>jpdb review export</source>

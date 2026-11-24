@@ -6824,8 +6824,8 @@ Nu se șterge niciun fișier index.</translation>
         <translation>Resetează lista utilizatorului</translation>
     </message>
     <message>
-        <source>User words: %1 · cached from Anki: %2</source>
-        <translation>Cuvinte ale utilizatorului: %1 · din cache-ul Anki: %2</translation>
+        <source>Added by you: %1 · Mined by Anki Miner: %2 · From Anki: %3</source>
+        <translation>Adăugat de dumneavoastră: %1 · Extras de Anki Miner: %2 · Din Anki: %3</translation>
     </message>
     <message>
         <source>jpdb review export</source>

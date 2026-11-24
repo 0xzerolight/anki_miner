@@ -6787,8 +6787,8 @@ Nenhum arquivo de índice é excluído.</translation>
         <translation>Redefinir Lista do Usuário</translation>
     </message>
     <message>
-        <source>User words: %1 · cached from Anki: %2</source>
-        <translation>Palavras do usuário: %1 · em cache do Anki: %2</translation>
+        <source>Added by you: %1 · Mined by Anki Miner: %2 · From Anki: %3</source>
+        <translation>Adicionada por você: %1 · Minerada pelo Anki Miner: %2 · Do Anki: %3</translation>
     </message>
     <message>
         <source>jpdb review export</source>
