@@ -289,14 +289,15 @@ class KnownWordsManagerDialog(ScreenIssueHost, EnhancedDialog):
         self.search_input = QLineEdit()
         self.search_input.setPlaceholderText(self.tr("Filter…"))
         self.search_input.textChanged.connect(self._on_search_changed)
-        # WP-06: which source to show. It opens on the words you added, the list
-        # this dialog always showed, so the plain-list export round trip holds.
+        # WP-06: which source to show. It opens on every source (owner ruling,
+        # 2026-11-24), so the table matches the count line under it. Export
+        # follows this filter: pick "Added by you" to export only your words.
         self.source_filter = QComboBox()
         self.source_filter.addItem(self.tr("All sources"), "")
         self.source_filter.addItem(self._source_labels["user"], "user")
         self.source_filter.addItem(self._source_labels["mined"], "mined")
         self.source_filter.addItem(self._source_labels["anki"], "anki")
-        self.source_filter.setCurrentIndex(1)
+        self.source_filter.setCurrentIndex(0)
         self.source_filter.currentIndexChanged.connect(self._on_source_changed)
         filter_row = QHBoxLayout()
         filter_row.setSpacing(SPACING.sm)
@@ -307,7 +308,7 @@ class KnownWordsManagerDialog(ScreenIssueHost, EnhancedDialog):
         self._model = KnownWordsTableModel(self, style=lambda: self._content_style, source_label=self._source_label)
         self._proxy = KnownWordsFilter(self)
         self._proxy.setSourceModel(self._model)
-        self._proxy.set_source("user")
+        self._proxy.set_source("")
         self.word_table = QTableView()
         self.word_table.setModel(self._proxy)
         self.word_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)

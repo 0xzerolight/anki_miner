@@ -57,11 +57,11 @@ def test_it_is_a_model_backed_table(qtbot, tmp_path):
     assert not hasattr(dlg, "word_list")
 
 
-def test_it_opens_on_the_words_you_added(qtbot, tmp_path):
+def test_it_opens_on_every_source(qtbot, tmp_path):
     dlg = _dialog(qtbot, tmp_path)
 
-    assert dlg.source_filter.currentData() == "user"
-    assert [row.lemma for row in dlg.visible_rows()] == ["カレー", "ラーメン"]
+    assert dlg.source_filter.currentData() == ""
+    assert [row.lemma for row in dlg.visible_rows()] == sorted({"カレー", "ラーメン", "走る", "食べる", "飲む"})
 
 
 def test_all_sources_lists_every_row_with_its_source_and_date(qtbot, tmp_path):
@@ -203,6 +203,7 @@ def test_the_worker_writes_the_rows_that_were_on_screen_when_asked(qtbot, tmp_pa
         known_words_dialog_mod.file_dialogs, "pick_save_file", lambda *args, on_done, **kwargs: on_done(str(out))
     )
 
+    _show(dlg, "user")
     dlg._on_export()  # the browser shows "Added by you"
     _show(dlg, "anki")  # changed before the worker runs
     captured["work"]()

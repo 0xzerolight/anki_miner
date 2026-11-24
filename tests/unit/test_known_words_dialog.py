@@ -44,13 +44,17 @@ def _select(dlg, word: str) -> None:
     raise AssertionError(f"{word!r} is not shown")
 
 
+def _show_source(dlg, source: str) -> None:
+    """Pick ``source`` in the Source filter, as the user would."""
+    dlg.source_filter.setCurrentIndex(dlg.source_filter.findData(source))
+
+
 class TestPopulation:
-    def test_lists_only_user_words_sorted(self, qtbot, tmp_path):
+    def test_opens_on_every_source_sorted(self, qtbot, tmp_path):
         db = _db_with_user_words(tmp_path)
         dlg = KnownWordsManagerDialog(db)
         qtbot.addWidget(dlg)
-        shown = _shown(dlg)
-        assert shown == sorted({"ラーメン", "カレー"})
+        assert _shown(dlg) == sorted({"ラーメン", "カレー", "食べる"})
 
     def test_count_label_counts_each_source(self, qtbot, tmp_path):
         # A mined row is not an Anki-cached one: counting every non-user row as
@@ -67,6 +71,7 @@ class TestExport:
         db = _db_with_user_words(tmp_path, user=("寿司", "天ぷら"))
         dlg = KnownWordsManagerDialog(db)
         qtbot.addWidget(dlg)
+        _show_source(dlg, "user")
         out = tmp_path / "export.txt"
         count = dlg.export_to(out)
         assert count == 2
@@ -76,6 +81,7 @@ class TestExport:
         db = _db_with_user_words(tmp_path, user=("寿司",), anki=("食べる", "飲む"))
         dlg = KnownWordsManagerDialog(db)
         qtbot.addWidget(dlg)
+        _show_source(dlg, "user")
         out = tmp_path / "export.txt"
         dlg.export_to(out)
         assert out.read_text(encoding="utf-8").splitlines() == ["寿司"]
@@ -84,6 +90,7 @@ class TestExport:
         db = _db_with_user_words(tmp_path, user=())
         dlg = KnownWordsManagerDialog(db)
         qtbot.addWidget(dlg)
+        _show_source(dlg, "user")
         out = tmp_path / "export.txt"
         assert dlg.export_to(out) == 0
         assert out.read_text(encoding="utf-8") == ""
@@ -117,7 +124,7 @@ class TestReset:
         dlg._refresh()
         assert db.get_words_by_source("user") == set()
         assert db.get_known_words() == {"食べる"}
-        assert dlg.word_table.model().rowCount() == 0
+        assert _shown(dlg) == ["食べる"]
 
 
 class TestSearch:
