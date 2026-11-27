@@ -38,8 +38,8 @@ TH_CATALOG: tuple[ResourceSpec, ...] = (
     # Both frequency assets are BUILT by scripts/convert_tnc_thai_frequency.py out
     # of the lists inside the pythainlp wheel and published as release data. The
     # dated filename is never reused: a corrected list ships under a new date, so
-    # a URL that once resolved always returns the same bytes, which is what the
-    # network-marked test in test_th_frequency_asset.py re-checks.
+    # a URL that once resolved always returns the same bytes, so each row is
+    # sha256-pinned and the download worker refuses any other bytes.
     ResourceSpec(
         id="tnc-th",
         kind="freq",
@@ -51,6 +51,7 @@ TH_CATALOG: tuple[ResourceSpec, ...] = (
         license_note="Thai National Corpus word list via PyThaiNLP, CC0. Built by scripts/convert_tnc_thai_frequency.py.",
         index_title="TNC Thai frequency",
         index_revision="2026-09-20",
+        sha256="dc38af9e6c016b6ff165a863f969ec384bb5c05f9df98ee961b0eb870585756c",
     ),
     ResourceSpec(
         id="ttc-th",
@@ -63,5 +64,6 @@ TH_CATALOG: tuple[ResourceSpec, ...] = (
         license_note="Thai Textbook Corpus word list via PyThaiNLP, CC0. Built by scripts/convert_tnc_thai_frequency.py.",
         index_title="TTC Thai textbook frequency",
         index_revision="2026-09-20",
+        sha256="90a97a56f1b5375bb10b7fa9e36a79bd7fef2659d8525fa889a74e0a281e98ff",
     ),
 )

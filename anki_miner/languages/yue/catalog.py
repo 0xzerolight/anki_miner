@@ -67,8 +67,8 @@ YUE_CATALOG: tuple[ResourceSpec, ...] = (
     # size, where a summed count is not a count of anything while the merged
     # rank is exactly what max_frequency_rank reads. The dated filename is never
     # reused -- a corrected list ships under a new date, so a URL that once
-    # resolved always returns the same bytes, which is what the network-marked
-    # test in test_yue_frequency_asset.py re-checks.
+    # resolved always returns the same bytes, so the row is sha256-pinned and
+    # the download worker refuses any other bytes.
     ResourceSpec(
         id="hkcancor-yue",
         kind="freq",
@@ -83,6 +83,7 @@ YUE_CATALOG: tuple[ResourceSpec, ...] = (
         ),
         index_title="HKCanCor + CTCPC Cantonese frequency",
         index_revision="2026-09-20",
+        sha256="604ce69f9793f46f46c31d99ffa6913def344e3cac467d118ca04a94a09f7029",
     ),
     ResourceSpec(
         id="wty-yue-en",

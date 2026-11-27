@@ -35,7 +35,7 @@ from anki_miner.languages.profile import ResourceSpec
 
 #: The published asset, verbatim: a versioned filename on a pre-release that is never re-uploaded,
 #: so this URL always returns the same bytes. The release TAG is the upload date and the FILENAME
-#: the corpus build date; they differ on purpose. Pinned by digest in test_vi_frequency_asset.py.
+#: the corpus build date; they differ on purpose. Its row is sha256-pinned.
 OPENSUBTITLES_VI_WORD_URL = (
     "https://github.com/0xzerolight/anki_miner_assets/releases/download/"
     "resources-2026-09-20/opensubtitles-vi-word-2026.09.19.zip"
@@ -63,5 +63,6 @@ VI_CATALOG: tuple[ResourceSpec, ...] = (
         ),
         index_title="OpenSubtitles 2024 word frequency (Vietnamese)",
         index_revision="2026.09.19",
+        sha256="4475a9a3c9ee8247a60f11c9fe395f8212afa86296c296b24c452e111dd8d896",
     ),
 )

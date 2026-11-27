@@ -24,7 +24,7 @@ from anki_miner.services.resource_catalog import ResourceSpec
 
 #: The published asset, verbatim: a versioned filename on a pre-release that is never re-uploaded,
 #: so this URL always returns the same bytes. The release TAG is the upload date and the FILENAME
-#: the corpus build date; they differ on purpose. Pinned by digest in test_zh_frequency_asset.py.
+#: the corpus build date; they differ on purpose. Its row is sha256-pinned.
 OPENSUBTITLES_ZH_WORD_URL = (
     "https://github.com/0xzerolight/anki_miner_assets/releases/download/"
     "resources-2026-09-21/opensubtitles-zh-word-2026.09.20.zip"
@@ -49,5 +49,6 @@ ZH_CATALOG: tuple[ResourceSpec, ...] = (
         ),
         index_title="OpenSubtitles 2024 word frequency (Chinese)",
         index_revision="2026.09.20",
+        sha256="991da78003cf1b2c9da4022ed694b9394d6496e171f76b5c79abebd71c46ccbb",
     ),
 )
