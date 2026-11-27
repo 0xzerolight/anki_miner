@@ -139,6 +139,7 @@ def test_happy_path_all_three_kinds(tmp_path, monkeypatch):
         cancel_check=None,
         dict_id=None,
         before_promote=None,
+        workers=1,
     ):
         dict_calls.append({"zip_path": zip_path, "dest_root": dest_root, "overwrite": overwrite, "dict_id": dict_id})
         return _FakeYomitanResult()
@@ -386,6 +387,7 @@ def test_per_item_failure_isolation(tmp_path, monkeypatch):
         cancel_check=None,
         dict_id=None,
         before_promote=None,
+        workers=1,
     ):
         return _FakeYomitanResult()
 
@@ -611,6 +613,7 @@ def test_cancellation_stops_loop_early(tmp_path, monkeypatch):
         cancel_check=None,
         dict_id=None,
         before_promote=None,
+        workers=1,
     ):
         return _FakeYomitanResult()
 
@@ -666,6 +669,7 @@ def test_cancellation_after_completed_item_keeps_success_and_marks_rest_not_proc
         cancel_check=None,
         dict_id=None,
         before_promote=None,
+        workers=1,
     ):
         worker.cancel()
         return _FakeYomitanResult()
@@ -745,6 +749,7 @@ def test_leftover_temp_cleanup_when_importer_fails(tmp_path, monkeypatch):
         cancel_check=None,
         dict_id=None,
         before_promote=None,
+        workers=1,
     ):
         raise RuntimeError("import boom")
 
@@ -1022,6 +1027,7 @@ def _run_dict_download(tmp_path, monkeypatch, *, imported_source_name: str):
         cancel_check=None,
         dict_id=None,
         before_promote=None,
+        workers=1,
     ):
         # Land the pinned slot on disk so the sweep sees a keep_id dir.
         _seed_dict_dir(Path(dest_root), dict_id, imported_source_name)
@@ -1235,6 +1241,7 @@ def test_install_phase_opens_before_the_importer_and_keeps_the_transferred_size(
         cancel_check=None,
         dict_id=None,
         before_promote=None,
+        workers=1,
     ):
         order.append("import")
         return _FakeYomitanResult()
@@ -1281,6 +1288,7 @@ def test_entry_counts_promote_to_indexing_and_never_fall_back(tmp_path, monkeypa
         cancel_check=None,
         dict_id=None,
         before_promote=None,
+        workers=1,
     ):
         # cur/total during insert are a scaled files_done/bank fraction, not
         # entries — cur=4 here is deliberately a plausible-looking bank-count
@@ -1459,6 +1467,7 @@ def test_each_resource_starts_its_own_phase_sequence(tmp_path, monkeypatch):
         cancel_check=None,
         dict_id=None,
         before_promote=None,
+        workers=1,
     ):
         progress(99, 0, "Inserted 99 entries")
         return _FakeYomitanResult()

@@ -20,6 +20,8 @@
 #   2g. videoocr ANKI_MINER_SMOKE=videoocr                 -> BUNDLED_SMOKE_PASS
 #                 needs the onnxruntime pack + OCR models under
 #                 BUNDLE_SMOKE_PACK_SEEDS/videoocr; without them the leg skips.
+#   2b. dictimport ANKI_MINER_SMOKE=dictimport               -> BUNDLED_SMOKE_PASS
+#                 (a dictionary import's worker pool runs in the frozen app)
 #   2e. cli      "$APP" version (stdout captured)            -> "status": "success"
 #                 proves the windowed exe writes JSON to a caller's pipe (fd 1)
 #   2c. mpv      ANKI_MINER_MPV_PROBE=1                     -> MPV_PROBE_OK
@@ -126,6 +128,21 @@ if ANKI_MINER_SMOKE=asr-absent QT_QPA_PLATFORM=offscreen "$APP" 2>&1 | tee smoke
 else
   echo "FAIL asr-absent"
   FAILED+=("asr-absent")
+fi
+echo
+
+# --- 2b. Dictionary import worker pool -----------------------------------------
+# A desktop dictionary import renders term banks in spawned worker processes.
+# In a frozen bundle each worker re-runs this executable, and PyInstaller's
+# freeze_support (top of gui/launch.py) must turn it into a worker rather than a
+# second app. Needs no seed, so it runs on every leg and is never skipped.
+echo "=== smoke: dictimport ==="
+if ANKI_MINER_SMOKE=dictimport QT_QPA_PLATFORM=offscreen "$APP" 2>&1 | tee smoke_dictimport.log \
+  && grep -q "BUNDLED_SMOKE_PASS" smoke_dictimport.log; then
+  echo "PASS dictimport"
+else
+  echo "FAIL dictimport"
+  FAILED+=("dictimport")
 fi
 echo
 

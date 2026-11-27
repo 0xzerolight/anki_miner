@@ -1033,6 +1033,9 @@ jobs:
       #   - asr-absent : the BARE bundle reports every ASR pack package absent
       #               (find_spec None) — the guard against stripping that leaves
       #               pure-Python halves in the PYZ. Runs on every leg.
+      #   - dictimport : a dictionary import's spawned worker pool runs in the
+      #               frozen app (each child becomes a worker, not a second app).
+      #               Runs on every leg.
       #   - asr     : faster-whisper + ctranslate2 + av import FROM the seeded
       #               pack ($ANKI_MINER_HOME/asr_pack), no model download
       #               (HF_HUB_OFFLINE=1 set inside the script). This is the smoke

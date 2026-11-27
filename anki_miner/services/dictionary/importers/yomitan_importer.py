@@ -2,17 +2,21 @@
 
 from __future__ import annotations
 
+import html
 import json
 import logging
 import os
+import re
 import shutil
 import tempfile
 import time
 import zipfile
-from collections import Counter
+from collections import Counter, deque
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
+from dataclasses import field as dataclass_field
 from datetime import UTC, datetime
-from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any, Callable
 
@@ -99,26 +103,168 @@ def _record_skip(skipped: Counter[str], examples: list[str], kind: str, member: 
         examples.append(member)
 
 
-class _RenderedGlossaryProbe(HTMLParser):
-    def __init__(self) -> None:
-        super().__init__()
-        self.has_content = False
-
-    def handle_data(self, data: str) -> None:
-        if data.strip():
-            self.has_content = True
-
-    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
-        if tag == "img" and any(name == "src" and value and value.strip() for name, value in attrs):
-            self.has_content = True
+# The renderer escapes every attribute value (``>`` becomes ``&gt;``), so a
+# ``<`` … ``>`` run in its output is always exactly one tag. Over that markup the
+# two regexes give the verdict an HTML parse gives (checked on every row of
+# Jitendex, JMdict and a Wiktionary dictionary) at a twentieth of the cost; the
+# parse was half the import time.
+_TAG_RE = re.compile(r"<[^>]*>")
+_IMG_WITH_SRC_RE = re.compile(r'<img\b[^>]*\ssrc="(?!\s*")')
 
 
 def _has_rendered_glossary_content(content: str) -> bool:
+    """Whether rendered glossary HTML shows anything: visible text or an image."""
     if not content:
         return False
-    probe = _RenderedGlossaryProbe()
-    probe.feed(content)
-    return probe.has_content
+    if _IMG_WITH_SRC_RE.search(content):
+        return True
+    return bool(html.unescape(_TAG_RE.sub("", content)).strip())
+
+
+def desktop_import_workers() -> int:
+    """Worker processes a desktop import renders term banks with.
+
+    One core stays with the app and the SQLite writer. Four is the ceiling:
+    a worker peaks near 350 MB on the largest banks published (28 MB of JSON),
+    and four already take Jitendex from about a minute to about ten seconds.
+    """
+    return min(4, max(1, (os.cpu_count() or 1) - 1))
+
+
+@dataclass
+class _BankResult:
+    """One term bank, rendered: what ``rows()`` needs to replay it in order."""
+
+    rows: list[DictRow]
+    entry_count: int
+    malformed: int = 0
+    skipped: Counter[str] = dataclass_field(default_factory=Counter)
+    skip_examples: list[str] = dataclass_field(default_factory=list)
+    media_paths: set[str] = dataclass_field(default_factory=set)
+
+
+def _render_bank(term_file: Path, *, sequenced: bool, dict_id: str) -> _BankResult:
+    """Read, check and render one term bank. Module-level so a pool can run it."""
+    try:
+        entries = json.loads(term_file.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as e:
+        raise SetupError(f"Invalid {term_file.name}: {e}") from e
+    # A bank whose top-level JSON is not an array is wholly
+    # unreadable — raise instead of skipping every "entry".
+    ensure_bank_array(entries, term_file.name)
+    bank = _BankResult(rows=[], entry_count=len(entries))
+    for row_index, entry in enumerate(entries):
+        # Structural gate the loop below implicitly assumes (list of
+        # >= 6 positions, non-blank term). Count skips so a
+        # drastically-reduced import is surfaced, not silent.
+        member = f"{term_file.name}#{row_index}"
+        if not is_valid_term_bank_entry(entry):
+            bank.malformed += 1
+            _record_skip(bank.skipped, bank.skip_examples, "term_bank_arity", member)
+            continue
+        term = str(entry[0]).strip()
+        reading = str(entry[1]) if entry[1] else None
+        # score (col 5) and sequence (col 7) are arity-checked by
+        # is_valid_term_bank_entry but not type-checked: a present-but-
+        # non-numeric value (e.g. score:"high") would raise out of this
+        # bank and abort the whole import. Count+skip the entry
+        # instead, matching how malformed entries are handled above.
+        try:
+            score = int(entry[4]) if len(entry) > 4 and entry[4] is not None else 0
+            sequence = int(entry[6]) if sequenced and len(entry) > 6 and entry[6] is not None else None
+        except (TypeError, ValueError):
+            bank.malformed += 1
+            _record_skip(bank.skipped, bank.skip_examples, "term_bank_numeric", member)
+            continue
+        glossary = entry[5] if isinstance(entry[5], list) else [entry[5]]
+        # Yomitan term-bank tag columns: column 3 (entry[2]) is
+        # `definitionTags`; column 8 (entry[7]) is `termTags`. Distinct
+        # tags are separated by an ASCII space, but a multi-word tag
+        # NAME carries an internal non-breaking space (U+00A0) — e.g.
+        # Jitendex's "priority form", "rarely used form".
+        # Split on ASCII space ONLY (arg-less .split() also breaks on
+        # nbsp, shattering the name into fragments that never match the
+        # nbsp-keyed tags-table row, so the tag's grammar or commonness
+        # category is lost). The provider splits on " " too, so
+        # the stored string must use ASCII spaces BETWEEN tags and keep
+        # the nbsp WITHIN each name. We union both columns (definitionTags
+        # first, preserving order) and store on `DictRow.tags`.
+        definition_tags = [t for t in str(entry[2]).split(" ") if t] if len(entry) > 2 and entry[2] else []
+        extra_term_tags = [t for t in str(entry[7]).split(" ") if t] if len(entry) > 7 and entry[7] else []
+        all_tags = definition_tags + extra_term_tags
+        # Column 4 (entry[3]) is `ruleIdentifiers`: the space-separated
+        # deinflection condition flags. Stored raw on DictRow.rules for
+        # the schema-v3 deinflector-fallback consumer (plan item 5.2).
+        rules = str(entry[3]) if len(entry) > 3 and entry[3] else ""
+        content = render_glossary_entry(
+            glossary,
+            definition_tags=definition_tags,
+            dict_id=dict_id,
+            media_collector=bank.media_paths,
+        )
+        if not _has_rendered_glossary_content(content):
+            # Not counted into skipped_malformed (the row parsed
+            # fine, it just renders to nothing), but it is still a
+            # row the user paid for and did not get.
+            _record_skip(bank.skipped, bank.skip_examples, "empty_glossary", member)
+            continue
+        bank.rows.append(
+            DictRow(
+                term=term,
+                reading=reading,
+                content=content,
+                tags=" ".join(all_tags),
+                rules=rules,
+                score=score,
+                sequence=sequence,
+            )
+        )
+    return bank
+
+
+@contextmanager
+def _rendered_banks(
+    term_files: list[Path], *, workers: int, sequenced: bool, dict_id: str
+) -> Iterator[Iterator[_BankResult]]:
+    """Yield the term banks rendered, in ``term_files`` order.
+
+    With more than one worker the banks render in a process pool, at most
+    ``workers`` at a time, and are handed back in file order, so row ids,
+    progress and skip examples are those of the serial import. Leaving the
+    block stops the pool and waits for any bank still rendering, so nothing
+    reads the extracted files once the caller removes them.
+    """
+    if workers <= 1 or len(term_files) <= 1:
+        yield (_render_bank(path, sequenced=sequenced, dict_id=dict_id) for path in term_files)
+        return
+    # Imported here: Android's embedded Python has no working multiprocessing,
+    # and only desktop callers ask for workers. Spawn, not fork: the GUI calls
+    # this from a QThread, and forking a threaded process can deadlock the child.
+    import multiprocessing
+    from concurrent.futures import Future, ProcessPoolExecutor
+
+    executor = ProcessPoolExecutor(
+        max_workers=min(workers, len(term_files)), mp_context=multiprocessing.get_context("spawn")
+    )
+
+    def in_order() -> Iterator[_BankResult]:
+        queued = iter(term_files)
+        pending: deque[Future[_BankResult]] = deque()
+        for path in queued:
+            pending.append(executor.submit(_render_bank, path, sequenced=sequenced, dict_id=dict_id))
+            if len(pending) == workers:
+                break
+        while pending:
+            bank = pending.popleft().result()
+            following = next(queued, None)
+            if following is not None:
+                pending.append(executor.submit(_render_bank, following, sequenced=sequenced, dict_id=dict_id))
+            yield bank
+
+    try:
+        yield in_order()
+    finally:
+        executor.shutdown(wait=True, cancel_futures=True)
 
 
 @dataclass(frozen=True)
@@ -152,6 +298,7 @@ def import_yomitan_zip(
     dict_id: str | None = None,
     before_promote: Callable[[], None] | None = None,
     language: str = "ja",
+    workers: int = 1,
 ) -> YomitanImportResult:
     """Import a Yomitan zip into dest_root/<dict_id>/index.sqlite.
 
@@ -197,6 +344,10 @@ def import_yomitan_zip(
                         staged directory replaces the managed slot.
         language: Mining language stamped into the index meta. Defaults to
                   ``"ja"``, the pre-transition value for every existing caller.
+        workers: Processes that render term banks. 1 renders in this process,
+                 the only choice on Android, whose embedded Python cannot start
+                 a pool; desktop callers pass :func:`desktop_import_workers`.
+                 The index is the same either way.
 
     Raises:
         SetupError: On invalid input, format mismatch, or already-exists when
@@ -309,88 +460,28 @@ def import_yomitan_zip(
         bank_size = 1
         bank_yielded = 0
 
-        def rows() -> Any:
+        def rows(banks: Iterator[_BankResult]) -> Iterator[DictRow]:
             nonlocal total_entries, skipped_malformed, banks_done, files_done, bank_size, bank_yielded
-            for term_file in term_files:
+            while True:
                 raise_if_cancelled(cancel_check)
-                try:
-                    entries = json.loads(term_file.read_text(encoding="utf-8"))
-                except json.JSONDecodeError as e:
-                    raise SetupError(f"Invalid {term_file.name}: {e}") from e
-                # A bank whose top-level JSON is not an array is wholly
-                # unreadable — raise instead of skipping every "entry".
-                ensure_bank_array(entries, term_file.name)
-                bank_size = max(1, len(entries))
+                bank = next(banks, None)
+                if bank is None:
+                    return
+                bank_size = max(1, bank.entry_count)
                 bank_yielded = 0
                 banks_done += 1
                 if bank_progress is not None:
                     bank_progress(banks_done, bank_total)
-                for row_index, entry in enumerate(entries):
-                    # Structural gate the loop below implicitly assumes (list of
-                    # >= 6 positions, non-blank term). Count skips so a
-                    # drastically-reduced import is surfaced, not silent.
-                    member = f"{term_file.name}#{row_index}"
-                    if not is_valid_term_bank_entry(entry):
-                        skipped_malformed += 1
-                        _record_skip(skipped, skip_examples, "term_bank_arity", member)
-                        continue
-                    term = str(entry[0]).strip()
-                    reading = str(entry[1]) if entry[1] else None
-                    # score (col 5) and sequence (col 7) are arity-checked by
-                    # is_valid_term_bank_entry but not type-checked: a present-but-
-                    # non-numeric value (e.g. score:"high") would raise out of this
-                    # generator and abort the whole import. Count+skip the entry
-                    # instead, matching how malformed entries are handled above.
-                    try:
-                        score = int(entry[4]) if len(entry) > 4 and entry[4] is not None else 0
-                        sequence = int(entry[6]) if sequenced and len(entry) > 6 and entry[6] is not None else None
-                    except (TypeError, ValueError):
-                        skipped_malformed += 1
-                        _record_skip(skipped, skip_examples, "term_bank_numeric", member)
-                        continue
-                    glossary = entry[5] if isinstance(entry[5], list) else [entry[5]]
-                    # Yomitan term-bank tag columns: column 3 (entry[2]) is
-                    # `definitionTags`; column 8 (entry[7]) is `termTags`. Distinct
-                    # tags are separated by an ASCII space, but a multi-word tag
-                    # NAME carries an internal non-breaking space (U+00A0) — e.g.
-                    # Jitendex's "priority form", "rarely used form".
-                    # Split on ASCII space ONLY (arg-less .split() also breaks on
-                    # nbsp, shattering the name into fragments that never match the
-                    # nbsp-keyed tags-table row, so the tag's grammar or commonness
-                    # category is lost). The provider splits on " " too, so
-                    # the stored string must use ASCII spaces BETWEEN tags and keep
-                    # the nbsp WITHIN each name. We union both columns (definitionTags
-                    # first, preserving order) and store on `DictRow.tags`.
-                    definition_tags = [t for t in str(entry[2]).split(" ") if t] if len(entry) > 2 and entry[2] else []
-                    extra_term_tags = [t for t in str(entry[7]).split(" ") if t] if len(entry) > 7 and entry[7] else []
-                    all_tags = definition_tags + extra_term_tags
-                    # Column 4 (entry[3]) is `ruleIdentifiers`: the space-separated
-                    # deinflection condition flags. Stored raw on DictRow.rules for
-                    # the schema-v3 deinflector-fallback consumer (plan item 5.2).
-                    rules = str(entry[3]) if len(entry) > 3 and entry[3] else ""
-                    content = render_glossary_entry(
-                        glossary,
-                        definition_tags=definition_tags,
-                        dict_id=dict_id,
-                        media_collector=media_paths,
-                    )
-                    if not _has_rendered_glossary_content(content):
-                        # Not counted into skipped_malformed (the row parsed
-                        # fine, it just renders to nothing), but it is still a
-                        # row the user paid for and did not get.
-                        _record_skip(skipped, skip_examples, "empty_glossary", member)
-                        continue
+                skipped_malformed += bank.malformed
+                skipped.update(bank.skipped)
+                for member in bank.skip_examples:
+                    if len(skip_examples) < _SKIP_EXAMPLE_LIMIT:
+                        skip_examples.append(member)
+                media_paths.update(bank.media_paths)
+                for row in bank.rows:
                     total_entries += 1
                     bank_yielded += 1
-                    yield DictRow(
-                        term=term,
-                        reading=reading,
-                        content=content,
-                        tags=" ".join(all_tags),
-                        rules=rules,
-                        score=score,
-                        sequence=sequence,
-                    )
+                    yield row
                 files_done += 1
 
         if progress:
@@ -428,13 +519,14 @@ def import_yomitan_zip(
         from anki_miner.languages.registry import get_profile
 
         profile = get_profile(language)
-        bulk_insert(
-            db_path,
-            rows(),
-            progress=on_insert_progress if progress else None,
-            cancel_check=cancel_check,
-            keys=profile.dict_keys,
-        )
+        with _rendered_banks(term_files, workers=workers, sequenced=sequenced, dict_id=dict_id) as banks:
+            bulk_insert(
+                db_path,
+                rows(banks),
+                progress=on_insert_progress if progress else None,
+                cancel_check=cancel_check,
+                keys=profile.dict_keys,
+            )
 
         if progress:
             # NOTE: "Inserted {n:,} entries" is an internal English contract
@@ -572,6 +664,7 @@ def repair_yomitan_zip(
     dict_id: str,
     progress: ProgressFn | None = None,
     cancel_check: Callable[[], bool] | None = None,
+    workers: int = 1,
 ) -> YomitanImportResult:
     """Explicitly repair ``dict_id``, retaining an invalid prior slot as quarantine."""
     # Read the stamp before the rebuild: repair_managed_slot may quarantine the
@@ -590,6 +683,7 @@ def repair_yomitan_zip(
             cancel_check=cancel_check,
             dict_id=dict_id,
             language=language,
+            workers=workers,
         ),
     )
 

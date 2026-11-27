@@ -265,6 +265,7 @@ def test_first_install_journey(
         overwrite: bool = False,
         cancel_check: Callable[[], bool] | None = None,
         dict_id: str | None = None,
+        workers: int = 1,
     ) -> YomitanImportResult:
         if zip_path != cancelled_zip:
             return real_yomitan_import(
@@ -274,6 +275,7 @@ def test_first_install_journey(
                 overwrite=overwrite,
                 cancel_check=cancel_check,
                 dict_id=dict_id,
+                workers=workers,
             )
 
         def gated_progress(current: int, total: int, message: str) -> None:
@@ -298,6 +300,7 @@ def test_first_install_journey(
             overwrite=overwrite,
             cancel_check=gated_cancel_check,
             dict_id=dict_id,
+            workers=workers,
         )
 
     monkeypatch.setattr(import_worker_module, "import_yomitan_zip", import_with_pre_bank_cancel_barrier)

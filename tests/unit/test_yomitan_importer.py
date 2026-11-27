@@ -1596,3 +1596,145 @@ def test_read_yomitan_index_returns_the_update_fields(tmp_path):
         "https://x/d.zip",
     )
     assert read_yomitan_title_revision(zip_path) == ("T", "2")
+
+
+def _reference_has_content(content: str) -> bool:
+    """The HTML-parser check the importer used before the regex one: the oracle."""
+    from html.parser import HTMLParser
+
+    class Probe(HTMLParser):
+        found = False
+
+        def handle_data(self, data: str) -> None:
+            if data.strip():
+                self.found = True
+
+        def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+            if tag == "img" and any(name == "src" and value and value.strip() for name, value in attrs):
+                self.found = True
+
+    probe = Probe()
+    probe.feed(content)
+    return probe.found
+
+
+@pytest.mark.parametrize(
+    ("content", "expected"),
+    [
+        ("", False),
+        ('<li class="gloss-item"><div class="gloss-sc-div"></div></li>', False),
+        ("<li><br><br></li>", False),
+        ("<li>&nbsp; </li>", False),
+        ('<li><span class="gloss-sc-span" title="an attribute only"></span></li>', False),
+        ('<li><img style="width: 1em"></li>', False),
+        ("<li>&lt;</li>", True),
+        ("<li> to eat </li>", True),
+        (
+            '<li><a class="gloss-image-link" data-path="a.svg"><span class="gloss-image-container">'
+            '<img class="gloss-image" src="d__a.svg"></span></a></li>',
+            True,
+        ),
+    ],
+)
+def test_rendered_content_check_matches_an_html_parse(content: str, expected: bool) -> None:
+    from anki_miner.services.dictionary.importers.yomitan_importer import _has_rendered_glossary_content
+
+    assert _has_rendered_glossary_content(content) is expected
+    assert _reference_has_content(content) is expected
+
+
+@pytest.mark.parametrize(("cpus", "workers"), [(None, 1), (1, 1), (2, 1), (3, 2), (5, 4), (32, 4)])
+def test_desktop_import_workers_keeps_a_core_and_caps_at_four(
+    monkeypatch: pytest.MonkeyPatch, cpus: int | None, workers: int
+) -> None:
+    import os
+
+    from anki_miner.services.dictionary.importers.yomitan_importer import desktop_import_workers
+
+    monkeypatch.setattr(os, "cpu_count", lambda: cpus)
+    assert desktop_import_workers() == workers
+
+
+def _multi_bank_zip(path: Path) -> Path:
+    banks: list[list[object]] = []
+    for bank in range(4):
+        rows: list[object] = [
+            [f"語{bank}-{i}", f"ご{bank}-{i}", "n", "", i % 3, [f"sense {bank}-{i}"], bank * 100 + i, "common"]
+            for i in range(30)
+        ]
+        rows.insert(5, ["", "", "", "", 0, ["blank term"]])  # malformed
+        rows.insert(9, [f"空{bank}", "から", "", "", 0, [{"type": "structured-content", "content": ""}], 1, ""])
+        banks.append(rows)
+    return build_yomitan_zip(path, term_banks=banks)
+
+
+class TestParallelBanks:
+    def _dump(self, db_path: Path) -> tuple[list[tuple], list[tuple]]:
+        conn = open_readonly(db_path)
+        try:
+            entries = conn.execute(
+                "SELECT id, term, reading, content, tags, rules, score, sequence FROM entries ORDER BY id"
+            ).fetchall()
+            tags = conn.execute("SELECT * FROM tags ORDER BY name").fetchall()
+        finally:
+            conn.close()
+        return entries, tags
+
+    def test_a_pool_writes_the_index_the_serial_import_writes(self, tmp_path: Path, caplog) -> None:
+        zip_path = _multi_bank_zip(tmp_path / "src" / "multi.zip")
+        outcomes = []
+        for workers in (1, 2):
+            seen: list[tuple[int, int]] = []
+            with caplog.at_level(logging.WARNING):
+                caplog.clear()
+                result = import_yomitan_zip(
+                    zip_path,
+                    tmp_path / f"dicts-{workers}",
+                    workers=workers,
+                    bank_progress=lambda done, total, seen=seen: seen.append((done, total)),
+                )
+            warnings = [r.getMessage() for r in caplog.records if "skipped rows" in r.getMessage()]
+            outcomes.append(
+                (
+                    self._dump(tmp_path / f"dicts-{workers}" / result.dict_id / "index.sqlite"),
+                    result.entry_count,
+                    result.skipped_malformed,
+                    seen,
+                    warnings,
+                )
+            )
+        assert outcomes[0][1] == 120 and outcomes[0][2] == 4
+        assert outcomes[0] == outcomes[1]
+
+    def test_cancel_while_the_pool_renders_leaves_no_slot_and_no_temp_files(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import tempfile
+
+        zip_path = _multi_bank_zip(tmp_path / "src" / "multi.zip")
+        scratch = tmp_path / "scratch"
+        scratch.mkdir()
+        monkeypatch.setattr(tempfile, "tempdir", str(scratch))
+        banks_seen: list[int] = []
+
+        with pytest.raises(SetupError, match="cancelled"):
+            import_yomitan_zip(
+                zip_path,
+                tmp_path / "dicts",
+                workers=2,
+                bank_progress=lambda done, _total: banks_seen.append(done),
+                cancel_check=lambda: bool(banks_seen),
+            )
+
+        assert banks_seen == [1]
+        assert not (tmp_path / "dicts" / "test-dict-v1").exists()
+        assert list(scratch.iterdir()) == []
+
+    def test_a_bad_bank_fails_the_import_from_a_worker(self, tmp_path: Path) -> None:
+        zip_path = tmp_path / "bad.zip"
+        with zipfile.ZipFile(zip_path, "w") as zf:
+            zf.writestr("index.json", '{"title": "x", "revision": "v1", "format": 3}')
+            zf.writestr("term_bank_1.json", json.dumps([["食べる", "たべる", "", "", 0, ["to eat"], 1, ""]]))
+            zf.writestr("term_bank_2.json", '{"oops": "object not array"}')
+        with pytest.raises(SetupError, match="term_bank_2.json"):
+            import_yomitan_zip(zip_path, tmp_path / "dicts", workers=2)

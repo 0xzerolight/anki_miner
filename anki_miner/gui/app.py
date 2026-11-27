@@ -6,6 +6,8 @@ Hidden ``ANKI_MINER_SMOKE`` modes:
   validate frozen dependencies before Qt starts.
 * ``asr-absent`` asserts the opposite of ``asr``: the bare bundle reports every
   ASR pack package absent.
+* ``dictimport`` imports a generated Yomitan zip with a worker pool: the pool
+  re-runs this executable, and each child must become a worker, not an app.
 * ``installer`` runs full GUI composition while suppressing optional startup
   work, validates installed-runtime invariants, and writes an atomic result
   marker before exiting.
@@ -331,6 +333,45 @@ def _run_asr_pack_absent_bundled_smoke() -> int:
         print("BUNDLED_SMOKE_FAIL: _engine.available() is True in the bare bundle", file=sys.stderr)
         return 1
     print("BUNDLED_SMOKE_PASS: asr pack packages absent from the bare bundle")
+    return 0
+
+
+def _run_dictimport_bundled_smoke() -> int:
+    """ANKI_MINER_SMOKE=dictimport: a Yomitan import renders its banks in worker processes in the frozen app.
+
+    The pool spawns this executable again, so the proof is that each child
+    becomes a worker (PyInstaller's freeze_support at the top of gui/launch.py)
+    rather than a second app. Builds a four-bank zip in a temporary folder and
+    imports it there with two workers. Hidden, env-var-only, exits before Qt.
+    """
+    import json
+    import tempfile
+    import zipfile
+    from pathlib import Path
+
+    from anki_miner.services.dictionary.importers.yomitan_importer import import_yomitan_zip
+
+    banks, rows_per_bank = 4, 50
+    with tempfile.TemporaryDirectory(prefix="anki-miner-dictimport-smoke-") as tmp:
+        root = Path(tmp)
+        zip_path = root / "smoke.zip"
+        with zipfile.ZipFile(zip_path, "w") as zf:
+            zf.writestr("index.json", json.dumps({"title": "Smoke", "revision": "1", "format": 3}))
+            for bank in range(1, banks + 1):
+                rows = [[f"語{bank}-{i}", "ご", "", "", 0, [f"sense {i}"], i, ""] for i in range(rows_per_bank)]
+                zf.writestr(f"term_bank_{bank}.json", json.dumps(rows, ensure_ascii=False))
+        try:
+            result = import_yomitan_zip(zip_path, root / "dicts", workers=2)
+        except Exception as exc:  # noqa: BLE001 — bucket C: pre-Qt smoke reports terminal failure to stderr.
+            print(f"BUNDLED_SMOKE_FAIL: dictimport {type(exc).__name__}: {exc}", file=sys.stderr)
+            return 1
+    if result.entry_count != banks * rows_per_bank:
+        print(
+            f"BUNDLED_SMOKE_FAIL: dictimport stored {result.entry_count} of {banks * rows_per_bank} rows",
+            file=sys.stderr,
+        )
+        return 1
+    print(f"BUNDLED_SMOKE_PASS: dictimport rendered {banks} term banks in 2 worker processes")
     return 0
 
 
@@ -2482,6 +2523,9 @@ def main():
 
     if os.environ.get("ANKI_MINER_SMOKE") == "asr-absent":
         sys.exit(_run_asr_pack_absent_bundled_smoke())
+
+    if os.environ.get("ANKI_MINER_SMOKE") == "dictimport":
+        sys.exit(_run_dictimport_bundled_smoke())
 
     if os.environ.get("ANKI_MINER_SMOKE") == "whispercpp":
         sys.exit(_run_whispercpp_bundled_smoke())

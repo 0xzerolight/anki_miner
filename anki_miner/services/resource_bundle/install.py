@@ -21,7 +21,7 @@ from typing import Literal
 from anki_miner.config import AnkiMinerConfig, ChainEntry, FreqEntry, PitchSourceEntry
 from anki_miner.exceptions import OperationCancelled
 from anki_miner.services._sqlite_index import language_kwarg
-from anki_miner.services.dictionary.importers.yomitan_importer import import_yomitan_zip
+from anki_miner.services.dictionary.importers.yomitan_importer import desktop_import_workers, import_yomitan_zip
 from anki_miner.services.dictionary.zip_safety import MAX_UNCOMPRESSED_BYTES, read_member
 from anki_miner.services.frequency.lemmatize import build_frequency_lemmatizer, lemmatize_kwarg
 from anki_miner.services.frequency.source_importer import import_frequency_source
@@ -197,6 +197,7 @@ def _install_slot(
                 dict_id=item.item_id,
                 progress=forward,
                 cancel_check=cancel_check,
+                workers=desktop_import_workers(),
                 **language_kwarg(language),
             )
         elif item.kind == "frequency":

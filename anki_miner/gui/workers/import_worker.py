@@ -26,7 +26,11 @@ from anki_miner.services.dictionary.importers.csv_importer import import_csv_dic
 from anki_miner.services.dictionary.importers.jmdict_importer import import_jmdict_xml, repair_jmdict_xml
 from anki_miner.services.dictionary.importers.plain_index import plain_dict_kind
 from anki_miner.services.dictionary.importers.stardict_importer import import_stardict, repair_stardict
-from anki_miner.services.dictionary.importers.yomitan_importer import import_yomitan_zip, repair_yomitan_zip
+from anki_miner.services.dictionary.importers.yomitan_importer import (
+    desktop_import_workers,
+    import_yomitan_zip,
+    repair_yomitan_zip,
+)
 from anki_miner.services.frequency.lemmatize import Lemmatizer, lemmatize_kwarg
 from anki_miner.services.frequency.source_importer import import_frequency_source, repair_frequency_source
 from anki_miner.services.pitch_accent.source_importer import import_pitch_source, repair_pitch_source
@@ -55,6 +59,7 @@ def _yomitan_runner(zip_path: Path, dest_root: Path, overwrite: bool, dict_id: s
             cancel_check=cancel_fn,
             overwrite=overwrite,
             dict_id=dict_id,
+            workers=desktop_import_workers(),
             **language_kwarg(language),
         )
         meta: dict[str, Any] = {
@@ -238,6 +243,7 @@ class ImportWorker(CancellableWorker):
                 dict_id=dict_id,
                 progress=progress_fn,
                 cancel_check=cancel_fn,
+                workers=desktop_import_workers(),
             )
             meta: dict[str, Any] = {
                 "entry_count": result.entry_count,

@@ -200,7 +200,7 @@ def test_bundle_smoke_uses_one_temporary_anki_miner_home(tmp_path: Path) -> None
         "  echo MPV_PROBE_OK\n"
         "else\n"
         '  case "${ANKI_MINER_SMOKE:-}" in\n'
-        "    youtube|asr|asr-absent|whispercpp) echo BUNDLED_SMOKE_PASS ;;\n"
+        "    youtube|asr|asr-absent|dictimport|whispercpp) echo BUNDLED_SMOKE_PASS ;;\n"
         "    *) exit 3 ;;\n"
         "  esac\n"
         "fi\n",
@@ -251,8 +251,9 @@ def test_bundle_smoke_uses_one_temporary_anki_miner_home(tmp_path: Path) -> None
     )
 
     assert result.returncode == 0, result.stderr
+    assert "PASS dictimport" in result.stdout
     homes = record.read_text(encoding="utf-8").splitlines()
-    assert len(homes) == 6
+    assert len(homes) == 7
     assert len(set(homes)) == 1
     assert homes[0] != str(caller_home)
     assert not Path(homes[0]).exists()
@@ -280,7 +281,7 @@ def _write_smoke_dist(tmp_path: Path) -> Path:
         '      test -x "$ANKI_MINER_HOME/bin/yt-dlp"\n'
         '      test -f "$ANKI_MINER_HOME/bin/yt-dlp.verified"\n'
         "      echo BUNDLED_SMOKE_PASS ;;\n"
-        "    asr|asr-absent|whispercpp) echo BUNDLED_SMOKE_PASS ;;\n"
+        "    asr|asr-absent|dictimport|whispercpp) echo BUNDLED_SMOKE_PASS ;;\n"
         "    *) exit 3 ;;\n"
         "  esac\n"
         "fi\n",

@@ -39,8 +39,16 @@ from anki_miner.exceptions import SetupError
 from anki_miner.gui.workers.base_worker import CancellableWorker
 from anki_miner.services._install_common import verify_sha256
 from anki_miner.services._sqlite_index import language_kwarg
-from anki_miner.services.dictionary.importers.stardict_importer import import_stardict, is_stardict_source
-from anki_miner.services.dictionary.importers.yomitan_importer import import_yomitan_zip
+from anki_miner.services.dictionary.importers.stardict_importer import (
+    StarDictImportResult,
+    import_stardict,
+    is_stardict_source,
+)
+from anki_miner.services.dictionary.importers.yomitan_importer import (
+    YomitanImportResult,
+    desktop_import_workers,
+    import_yomitan_zip,
+)
 from anki_miner.services.dictionary.superseded import sweep_superseded_dicts
 from anki_miner.services.frequency import mode_probe
 from anki_miner.services.frequency.lemmatize import LemmatizeKwarg, build_frequency_lemmatizer
@@ -552,17 +560,30 @@ def install_resource(
             # place instead of forking a new dir every download. A FreeDict
             # row is a StarDict tarball; the staged ``.part`` name says
             # nothing, so the file itself picks the importer.
-            importer = import_stardict if is_stardict_source(temp) else import_yomitan_zip
-            result = importer(
-                temp,
-                dicts_root,
-                overwrite=True,
-                cancel_check=cancelled,
-                progress=reporter.importing,
-                dict_id=spec.id,
-                before_promote=before_promote,
-                **language_kwarg(language),
-            )
+            result: StarDictImportResult | YomitanImportResult
+            if is_stardict_source(temp):
+                result = import_stardict(
+                    temp,
+                    dicts_root,
+                    overwrite=True,
+                    cancel_check=cancelled,
+                    progress=reporter.importing,
+                    dict_id=spec.id,
+                    before_promote=before_promote,
+                    **language_kwarg(language),
+                )
+            else:
+                result = import_yomitan_zip(
+                    temp,
+                    dicts_root,
+                    overwrite=True,
+                    cancel_check=cancelled,
+                    progress=reporter.importing,
+                    dict_id=spec.id,
+                    before_promote=before_promote,
+                    workers=desktop_import_workers(),
+                    **language_kwarg(language),
+                )
             dict_id = result.dict_id
             detail = tr_format(
                 QCoreApplication.translate("ResourceDownloadDialog", "%1 entries"),
