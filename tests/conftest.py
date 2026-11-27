@@ -519,8 +519,9 @@ def pytest_configure(config):
     innocent files — most recently ``test_settings_tab_asr_wiring``, whose two
     Vulkan cases only ever ``pytest.skip``.
 
-    The ``pytest_runtest_teardown`` reaper below is the designed defence and it
-    works, but only for widgets that survive to teardown. Pinning restores that
+    The ``pytest_runtest_teardown`` reaper and the thread join in
+    ``_pin_qtbot_widgets`` below are the designed defence, and they work, but
+    only for widgets that survive to teardown. Pinning restores that
     precondition, so the reap always precedes destruction. Patching
     ``pytestqt.qtbot._add_widget`` rather than ``QtBot.addWidget`` also covers
     the ``add_widget`` pep-8 alias, which is bound at class creation.
@@ -537,14 +538,43 @@ def pytest_configure(config):
 
 
 @pytest.fixture(autouse=True)
-def _pin_qtbot_widgets():
-    """Drop the strong widget references taken by the ``pytest_configure`` patch.
+def _pin_qtbot_widgets(request):
+    """Join every thread still running inside a pinned widget, then drop the pins.
 
     A plain fixture finalizer, so it is ordered after the off-thread reaper (a
     ``pytest_runtest_teardown`` hookwrapper, whose pre-``yield`` body precedes
     every finalizer) and after ``qtbot``'s own close pass.
+
+    The off-thread reaper only knows ``run_off_thread`` workers. A widget that
+    starts its own worker (the setup wizard's live probes:
+    ``SingleCallWorker(parent=page)``) leaves it running when the test ends on
+    the line that started it. ``qtbot``'s close pass then calls ``deleteLater``
+    on the tree, and the ``_drain_qt_deletes`` flush destroys it with the thread
+    still running -> ``qFatal`` -> ``Fatal Python error: Aborted``, which killed
+    CI on ``test_resources_page_reports_imported_but_not_active`` and its
+    siblings. Joining here is late enough to catch a worker the close pass
+    itself started (a queued result delivered there) and early enough to
+    precede both the pin release (which can free a tree) and the drain.
     """
     yield
+    if _PINNED_QT_WIDGETS:
+        from PyQt6.QtCore import QThread
+
+        from anki_miner.gui.utils.run_off_thread import join_or_retain
+
+        laggards = []
+        for widget in _PINNED_QT_WIDGETS:
+            try:
+                threads = widget.findChildren(QThread)
+            except RuntimeError:  # already destroyed, so it owns no live thread
+                continue
+            laggards += [thread for thread in threads if join_or_retain(thread, 2000) is not None]
+        if laggards:
+            logging.getLogger("tests.conftest").warning(
+                "%s left %d thread(s) running inside a qtbot widget at teardown.",
+                request.node.nodeid,
+                len(laggards),
+            )
     _PINNED_QT_WIDGETS.clear()
 
 
