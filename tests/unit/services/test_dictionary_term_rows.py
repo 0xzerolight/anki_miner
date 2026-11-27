@@ -171,12 +171,12 @@ def test_a_corrupt_index_degrades_to_an_empty_map(tmp_path):
 def test_the_rows_come_back_in_storage_order(provider):
     """Best entry first: score DESC, then sequence, then id -- the order lookup itself uses."""
     word = _surface("he01", 2)
-    conn = sqlite3.connect(provider._db_path)
+    conn = storage.open_dictionary(provider._db_path)
     try:
         expected = [
             (content, tags or "")
             for content, tags in conn.execute(
-                "SELECT content, tags FROM entries WHERE term = ? ORDER BY score DESC, sequence, id",
+                "SELECT gloss(content), tags FROM entries WHERE term = ? ORDER BY score DESC, sequence, id",
                 (HE_KEYS.fold_term(word),),
             )
         ]

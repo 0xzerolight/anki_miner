@@ -26,7 +26,7 @@ from anki_miner.services.dictionary.storage import (
     lookup,
     lookup_many,
     lookup_with_rules,
-    open_readonly,
+    open_dictionary,
 )
 from anki_miner.services.dictionary.yomitan_renderer import render_glossary_entry
 
@@ -70,7 +70,7 @@ def conn(tmp_path: Path):
     db = tmp_path / "d.sqlite"
     create_index(db)
     bulk_insert(db, _ROWS, keys=keys)
-    connection = open_readonly(db)
+    connection = open_dictionary(db)
     yield connection
     connection.close()
 

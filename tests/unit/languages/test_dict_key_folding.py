@@ -133,17 +133,17 @@ def test_ja_keys_import_is_byte_equal_to_none(tmp_path: Path, ja_keys):
     assert hashlib.sha256(none_db.read_bytes()).hexdigest() == hashlib.sha256(ja_db.read_bytes()).hexdigest()
 
 
-def test_schema_version_stays_six_for_both(tmp_path: Path, ja_keys):
+def test_key_folding_leaves_the_schema_version_alone(tmp_path: Path, ja_keys):
     none_db = _build(tmp_path / "none" / "index.sqlite")
     ja_db = _build(tmp_path / "ja" / "index.sqlite", keys=ja_keys)
 
-    assert read_meta(none_db)["schema_version"] == "6"
-    assert read_meta(ja_db)["schema_version"] == "6"
+    assert read_meta(none_db)["schema_version"] == str(SCHEMA_VERSION)
+    assert read_meta(ja_db)["schema_version"] == str(SCHEMA_VERSION)
 
 
 def test_ja_keys_query_matches_none_branch(tmp_path: Path, ja_keys):
     db = _build(tmp_path / "d" / "index.sqlite")
-    conn = storage.open_readonly(db)
+    conn = storage.open_dictionary(db)
     try:
         for word in ("日本語", "にほんご", "レイド", "ニホンゴ"):
             assert storage.lookup(conn, word, keys=ja_keys) == storage.lookup(conn, word)
@@ -169,8 +169,8 @@ def test_provider_forwards_keys_to_storage(tmp_path: Path):
     db = _build(tmp_path / "upper" / "index.sqlite", rows=rows, keys=keys)
 
     # bulk_insert folded the stored term through the stub.
-    assert storage.read_meta(db)["schema_version"] == "6"
-    conn = storage.open_readonly(db)
+    assert storage.read_meta(db)["schema_version"] == str(SCHEMA_VERSION)
+    conn = storage.open_dictionary(db)
     try:
         assert {t for (t,) in conn.execute("SELECT term FROM entries")} == {"ABC"}
         assert {r for (r,) in conn.execute("SELECT reading FROM entries")} == {"DEE"}

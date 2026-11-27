@@ -18,7 +18,7 @@ from anki_miner.services.dictionary.storage import (
     SCHEMA_VERSION,
     TagMeta,
     ensure_sequence_index,
-    open_readonly,
+    open_dictionary,
     read_meta,
     read_tags,
     row_is_common,
@@ -155,7 +155,7 @@ class IndexedDictProvider:
                 return False
 
             try:
-                self._conn = open_readonly(self._db_path)
+                self._conn = open_dictionary(self._db_path)
             except sqlite3.DatabaseError as e:
                 logger.warning("Failed to open %s: %s", self._db_path, e)
                 return False
@@ -175,7 +175,7 @@ class IndexedDictProvider:
                 except Exception as e:  # noqa: BLE001 — backfill is best-effort; scan stays correct
                     logger.warning("idx_sequence backfill failed for %s: %s", self.dict_id, e)
                 try:
-                    self._conn = open_readonly(self._db_path)
+                    self._conn = open_dictionary(self._db_path)
                 except sqlite3.DatabaseError as e:
                     # This guard must not RAISE: service_factory.py calls p.load()
                     # unwrapped inside list comprehensions, so an exception here

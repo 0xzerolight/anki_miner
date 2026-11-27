@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import html
+import itertools
 import json
 import logging
 import os
@@ -18,7 +19,7 @@ from dataclasses import dataclass
 from dataclasses import field as dataclass_field
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Callable
+from typing import TYPE_CHECKING, Any, Callable, TypeVar
 
 from anki_miner.exceptions import SetupError, raise_if_cancelled
 from anki_miner.services._sqlite_index import (
@@ -34,8 +35,10 @@ from anki_miner.services.dictionary.schema_validation import (
 )
 from anki_miner.services.dictionary.storage import (
     SCHEMA_VERSION,
+    ContentCodec,
     DictRow,
     TagMeta,
+    build_content_dict,
     bulk_insert,
     create_index,
     create_lookup_indexes,
@@ -55,6 +58,9 @@ from anki_miner.services.dictionary.zip_safety import (
 from anki_miner.utils.logging_ext import capped, log_summary
 from anki_miner.utils.slug import slugify
 from anki_miner.utils.timing import timed_phase
+
+if TYPE_CHECKING:
+    from concurrent.futures import Executor, Future
 
 logger = logging.getLogger(__name__)
 
@@ -143,15 +149,55 @@ class _BankResult:
     media_paths: set[str] = dataclass_field(default_factory=set)
 
 
-def _render_bank(term_file: Path, *, sequenced: bool, dict_id: str) -> _BankResult:
-    """Read, check and render one term bank. Module-level so a pool can run it."""
+def _read_bank(term_file: Path) -> list[Any]:
     try:
         entries = json.loads(term_file.read_text(encoding="utf-8"))
     except json.JSONDecodeError as e:
         raise SetupError(f"Invalid {term_file.name}: {e}") from e
     # A bank whose top-level JSON is not an array is wholly
     # unreadable — raise instead of skipping every "entry".
-    ensure_bank_array(entries, term_file.name)
+    return ensure_bank_array(entries, term_file.name)
+
+
+def _definition_tags(entry: list[Any]) -> list[str]:
+    return [t for t in str(entry[2]).split(" ") if t] if len(entry) > 2 and entry[2] else []
+
+
+# Rows from four evenly spaced banks make a preset dictionary as good as one
+# drawn from the whole dictionary (measured on Jitendex, JMdict and a
+# Wiktionary dictionary). The first bank alone is not: a dictionary that
+# groups one kind of row first compressed less than half as well from it.
+_SAMPLE_BANKS = 4
+_SAMPLE_ROWS_PER_BANK = 128
+
+
+def _sample_files(term_files: list[Path]) -> list[Path]:
+    """Up to ``_SAMPLE_BANKS`` banks, evenly spaced from the first to the last."""
+    last = len(term_files) - 1
+    picks = sorted({round(i * last / (_SAMPLE_BANKS - 1)) for i in range(_SAMPLE_BANKS)})
+    return [term_files[i] for i in picks]
+
+
+def _sample_bank(term_file: Path, *, dict_id: str) -> list[str]:
+    """Rendered glossaries of evenly spaced rows of one bank, for the preset dictionary."""
+    entries = _read_bank(term_file)
+    samples: list[str] = []
+    for entry in entries[:: max(1, len(entries) // _SAMPLE_ROWS_PER_BANK)][:_SAMPLE_ROWS_PER_BANK]:
+        if not is_valid_term_bank_entry(entry):
+            continue
+        glossary = entry[5] if isinstance(entry[5], list) else [entry[5]]
+        content = render_glossary_entry(
+            glossary, definition_tags=_definition_tags(entry), dict_id=dict_id, media_collector=set()
+        )
+        if _has_rendered_glossary_content(content):
+            samples.append(content)
+    return samples
+
+
+def _render_bank(term_file: Path, *, sequenced: bool, dict_id: str, content_dict: bytes) -> _BankResult:
+    """Read, check, render and encode one term bank. Module-level so a pool can run it."""
+    entries = _read_bank(term_file)
+    codec = ContentCodec(content_dict)
     bank = _BankResult(rows=[], entry_count=len(entries))
     for row_index, entry in enumerate(entries):
         # Structural gate the loop below implicitly assumes (list of
@@ -189,7 +235,7 @@ def _render_bank(term_file: Path, *, sequenced: bool, dict_id: str) -> _BankResu
         # the stored string must use ASCII spaces BETWEEN tags and keep
         # the nbsp WITHIN each name. We union both columns (definitionTags
         # first, preserving order) and store on `DictRow.tags`.
-        definition_tags = [t for t in str(entry[2]).split(" ") if t] if len(entry) > 2 and entry[2] else []
+        definition_tags = _definition_tags(entry)
         extra_term_tags = [t for t in str(entry[7]).split(" ") if t] if len(entry) > 7 and entry[7] else []
         all_tags = definition_tags + extra_term_tags
         # Column 4 (entry[3]) is `ruleIdentifiers`: the space-separated
@@ -212,7 +258,7 @@ def _render_bank(term_file: Path, *, sequenced: bool, dict_id: str) -> _BankResu
             DictRow(
                 term=term,
                 reading=reading,
-                content=content,
+                content=codec.encode(content),
                 tags=" ".join(all_tags),
                 rules=rules,
                 score=score,
@@ -222,49 +268,51 @@ def _render_bank(term_file: Path, *, sequenced: bool, dict_id: str) -> _BankResu
     return bank
 
 
-@contextmanager
-def _rendered_banks(
-    term_files: list[Path], *, workers: int, sequenced: bool, dict_id: str
-) -> Iterator[Iterator[_BankResult]]:
-    """Yield the term banks rendered, in ``term_files`` order.
+_T = TypeVar("_T")
 
-    With more than one worker the banks render in a process pool, at most
-    ``workers`` at a time, and are handed back in file order, so row ids,
-    progress and skip examples are those of the serial import. Leaving the
-    block stops the pool and waits for any bank still rendering, so nothing
-    reads the extracted files once the caller removes them.
+
+@contextmanager
+def _bank_pool(workers: int, banks: int) -> Iterator[Executor | None]:
+    """A process pool for rendering banks, or ``None`` to render them here.
+
+    Leaving the block stops the pool and waits for any bank still being read,
+    so nothing touches the extracted files once the caller removes them.
     """
-    if workers <= 1 or len(term_files) <= 1:
-        yield (_render_bank(path, sequenced=sequenced, dict_id=dict_id) for path in term_files)
+    if workers <= 1 or banks <= 1:
+        yield None
         return
     # Imported here: Android's embedded Python has no working multiprocessing,
     # and only desktop callers ask for workers. Spawn, not fork: the GUI calls
     # this from a QThread, and forking a threaded process can deadlock the child.
     import multiprocessing
-    from concurrent.futures import Future, ProcessPoolExecutor
+    from concurrent.futures import ProcessPoolExecutor
 
-    executor = ProcessPoolExecutor(
-        max_workers=min(workers, len(term_files)), mp_context=multiprocessing.get_context("spawn")
-    )
-
-    def in_order() -> Iterator[_BankResult]:
-        queued = iter(term_files)
-        pending: deque[Future[_BankResult]] = deque()
-        for path in queued:
-            pending.append(executor.submit(_render_bank, path, sequenced=sequenced, dict_id=dict_id))
-            if len(pending) == workers:
-                break
-        while pending:
-            bank = pending.popleft().result()
-            following = next(queued, None)
-            if following is not None:
-                pending.append(executor.submit(_render_bank, following, sequenced=sequenced, dict_id=dict_id))
-            yield bank
-
+    executor = ProcessPoolExecutor(max_workers=min(workers, banks), mp_context=multiprocessing.get_context("spawn"))
     try:
-        yield in_order()
+        yield executor
     finally:
         executor.shutdown(wait=True, cancel_futures=True)
+
+
+def _in_file_order(
+    pool: Executor | None, task: Callable[..., _T], paths: list[Path], window: int, **kwargs: Any
+) -> Iterator[_T]:
+    """``task(path, **kwargs)`` for each path, results in path order.
+
+    With a pool at most ``window`` paths are in flight, so row ids, progress
+    and skip examples come out as the serial import's do.
+    """
+    if pool is None:
+        yield from (task(path, **kwargs) for path in paths)
+        return
+    queued = iter(paths)
+    pending: deque[Future[_T]] = deque(pool.submit(task, path, **kwargs) for path in itertools.islice(queued, window))
+    while pending:
+        result = pending.popleft().result()
+        following = next(queued, None)
+        if following is not None:
+            pending.append(pool.submit(task, following, **kwargs))
+        yield result
 
 
 @dataclass(frozen=True)
@@ -519,13 +567,25 @@ def import_yomitan_zip(
         from anki_miner.languages.registry import get_profile
 
         profile = get_profile(language)
-        with _rendered_banks(term_files, workers=workers, sequenced=sequenced, dict_id=dict_id) as banks:
+        with _bank_pool(workers, len(term_files)) as pool:
+            samples = _in_file_order(pool, _sample_bank, _sample_files(term_files), workers, dict_id=dict_id)
+            content_dict = build_content_dict([sample for bank_samples in samples for sample in bank_samples])
+            banks = _in_file_order(
+                pool,
+                _render_bank,
+                term_files,
+                workers,
+                sequenced=sequenced,
+                dict_id=dict_id,
+                content_dict=content_dict,
+            )
             bulk_insert(
                 db_path,
                 rows(banks),
                 progress=on_insert_progress if progress else None,
                 cancel_check=cancel_check,
                 keys=profile.dict_keys,
+                content_dict=content_dict,
             )
 
         if progress:

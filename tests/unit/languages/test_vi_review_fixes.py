@@ -23,7 +23,7 @@ from anki_miner.services.dictionary.storage import (
     create_index,
     lookup,
     lookup_many,
-    open_readonly,
+    open_dictionary,
     write_meta,
 )
 
@@ -131,7 +131,7 @@ def provider(wty_db) -> IndexedDictProvider:
 
 
 def _rows(db: Path, word: str, pos: str | None) -> list[tuple[str, str, int | None]]:
-    conn = open_readonly(db)
+    conn = open_dictionary(db)
     try:
         rows = lookup(conn, word, None, pos=pos, keys=KEYS)
         assert rows == lookup_many(conn, [(word, None)], pos={word: pos} if pos else None, keys=KEYS)[word]

@@ -18,7 +18,7 @@ from anki_miner.services.dictionary.storage import (
     create_index,
     lookup,
     lookup_many,
-    open_readonly,
+    open_dictionary,
 )
 
 KEYS = CasefoldDictKeys()
@@ -140,7 +140,7 @@ def wty_db(tmp_path_factory) -> Path:
     ],
 )
 def test_the_card_opens_on_the_right_row(wty_db, word, pos, lead):
-    conn = open_readonly(wty_db)
+    conn = open_dictionary(wty_db)
     try:
         rows = lookup_many(conn, [(word, word)], pos={word: pos} if pos else None, keys=KEYS)[word]
         assert rows == lookup(conn, word, word, pos=pos, keys=KEYS)
@@ -181,7 +181,7 @@ def de_db(tmp_path_factory) -> Path:
     ],
 )
 def test_a_german_language_noun_opens_on_the_language(de_db, word, pos, lead):
-    conn = open_readonly(de_db)
+    conn = open_dictionary(de_db)
     try:
         rows = lookup_many(conn, [(word, None)], pos={word: pos}, keys=DE_KEYS)[word]
         assert rows == lookup(conn, word, None, pos=pos, keys=DE_KEYS)
@@ -195,7 +195,7 @@ def test_a_german_language_noun_opens_on_the_language(de_db, word, pos, lead):
 
 def test_rows_are_only_reordered_never_dropped(wty_db):
     """The rank drops nothing: both paths lose only the form row, which a lemma row shadows (storage)."""
-    conn = open_readonly(wty_db)
+    conn = open_dictionary(wty_db)
     try:
         ranked = lookup(conn, "pick", None, pos="VERB", keys=KEYS)
         plain = lookup(conn, "pick", None)  # no rank: the import order

@@ -223,7 +223,7 @@ class TestIndexedDictProvider:
 
         from anki_miner.services.dictionary.providers import indexed_provider as provider_mod
 
-        real_open_readonly = provider_mod.open_readonly
+        real_open_readonly = provider_mod.open_dictionary
         opened: list[sqlite3.Connection] = []
 
         def _slow_open(path):
@@ -238,7 +238,7 @@ class TestIndexedDictProvider:
             start_barrier.wait(timeout=5)
             provider.load()
 
-        with patch.object(provider_mod, "open_readonly", _slow_open):
+        with patch.object(provider_mod, "open_dictionary", _slow_open):
             threads = [threading.Thread(target=_run) for _ in range(2)]
             for t in threads:
                 t.start()
@@ -1602,7 +1602,7 @@ class TestSequenceIndexBackfill:
 
         from anki_miner.services.dictionary.providers import indexed_provider as mod
 
-        real_open_readonly = mod.open_readonly
+        real_open_readonly = mod.open_dictionary
         calls = {"n": 0}
 
         def flaky_open_readonly(path):
@@ -1611,7 +1611,7 @@ class TestSequenceIndexBackfill:
                 return real_open_readonly(path)
             raise sqlite3.OperationalError("database is locked")
 
-        monkeypatch.setattr(mod, "open_readonly", flaky_open_readonly)
+        monkeypatch.setattr(mod, "open_dictionary", flaky_open_readonly)
         provider = IndexedDictProvider("test-dict", db)
         assert provider.load() is False
         assert calls["n"] == 2  # initial open, then the post-backfill reopen

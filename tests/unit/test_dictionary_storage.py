@@ -29,7 +29,7 @@ from anki_miner.services.dictionary.storage import (
     lookup,
     lookup_many,
     lookup_with_rules,
-    open_readonly,
+    open_dictionary,
     read_meta,
     read_meta_cached,
     read_tags,
@@ -121,7 +121,7 @@ class TestCreateIndex:
         )
         create_lookup_indexes(db_path)
 
-        conn = open_readonly(db_path)
+        conn = open_dictionary(db_path)
         try:
             assert lookup(conn, "猫")[0][0] == "cat"
             # Reading lookups go through idx_reading, built after the rows.
@@ -129,8 +129,8 @@ class TestCreateIndex:
         finally:
             conn.close()
 
-    def test_schema_version_is_6(self):
-        assert SCHEMA_VERSION == 6
+    def test_schema_version_is_7(self):
+        assert SCHEMA_VERSION == 7
 
     def test_entries_table_has_tags_column(self, tmp_path: Path):
         db_path = tmp_path / "test.sqlite"
@@ -179,7 +179,7 @@ class TestRulesColumn:
             db_path,
             [DictRow(term="走る", reading="はしる", content="<div>run</div>", rules="v5r vi", sequence=1)],
         )
-        conn = open_readonly(db_path)
+        conn = open_dictionary(db_path)
         try:
             got = conn.execute("SELECT rules FROM entries WHERE term = ?", ("走る",)).fetchone()[0]
             assert got == "v5r vi"
@@ -190,7 +190,7 @@ class TestRulesColumn:
         db_path = tmp_path / "test.sqlite"
         create_index(db_path)
         bulk_insert(db_path, [DictRow(term="空", reading="そら", content="<div>sky</div>", sequence=1)])
-        conn = open_readonly(db_path)
+        conn = open_dictionary(db_path)
         try:
             assert conn.execute("SELECT rules FROM entries WHERE term = ?", ("空",)).fetchone()[0] == ""
         finally:
@@ -208,7 +208,7 @@ class TestTags:
                 TagMeta(name="n", category="partOfSpeech", ord=0, notes="noun", score=1.0),
             ],
         )
-        conn = open_readonly(db_path)
+        conn = open_dictionary(db_path)
         try:
             tags = read_tags(conn)
         finally:
@@ -223,7 +223,7 @@ class TestTags:
         create_index(db_path)
         write_tags(db_path, [TagMeta("x", "a", 0, "first", 0.0)])
         write_tags(db_path, [TagMeta("x", "b", 1, "second", 2.0)])
-        conn = open_readonly(db_path)
+        conn = open_dictionary(db_path)
         try:
             tags = read_tags(conn)
         finally:
@@ -233,7 +233,7 @@ class TestTags:
     def test_read_tags_empty_when_none_written(self, tmp_path: Path):
         db_path = tmp_path / "test.sqlite"
         create_index(db_path)
-        conn = open_readonly(db_path)
+        conn = open_dictionary(db_path)
         try:
             assert read_tags(conn) == {}
         finally:
@@ -249,7 +249,7 @@ class TestReadingNormalization:
         create_index(db_path)
         # Kanji headword with a katakana reading (硝子 / ガラス, "glass").
         bulk_insert(db_path, [DictRow(term="硝子", reading="ガラス", content="<div>glass</div>", sequence=1)])
-        conn = open_readonly(db_path)
+        conn = open_dictionary(db_path)
         try:
             stored = conn.execute("SELECT reading FROM entries WHERE term = ?", ("硝子",)).fetchone()[0]
             assert stored == "がらす"  # folded at write
@@ -265,7 +265,7 @@ class TestReadingNormalization:
             db_path,
             [DictRow(term=decomposed, reading=decomposed, content="<div>learning</div>", sequence=1)],
         )
-        conn = open_readonly(db_path)
+        conn = open_dictionary(db_path)
         try:
             assert conn.execute("SELECT term, reading FROM entries").fetchone() == (composed, composed)
             assert lookup(conn, composed) == [("<div>learning</div>", "", 1)]
@@ -283,7 +283,7 @@ class TestReadingNormalization:
         db_path = tmp_path / "test.sqlite"
         create_index(db_path)
         bulk_insert(db_path, [DictRow(term="硝子", reading="ガラス", content="<div>glass</div>", sequence=1)])
-        conn = open_readonly(db_path)
+        conn = open_dictionary(db_path)
         try:
             # Query with katakana AND hiragana — both fold to がらす and hit.
             assert lookup(conn, "ガラス") == [("<div>glass</div>", "", 1)]
@@ -309,7 +309,7 @@ class TestReadingNormalization:
             ],
         )
         words = ["ガラス", "がらす", "リンゴ", "りんご", "硝子", "missing"]
-        conn = open_readonly(db_path)
+        conn = open_dictionary(db_path)
         try:
             batch = lookup_many(conn, [(w, None) for w in words])
             for w in words:
@@ -364,7 +364,7 @@ class TestBulkInsertAndLookup:
             ],
         )
 
-        conn = open_readonly(db_path)
+        conn = open_dictionary(db_path)
         try:
             results = lookup(conn, "食べる")
             assert results == [("<div>to eat</div>", "", 1)]
@@ -379,7 +379,7 @@ class TestBulkInsertAndLookup:
             [DictRow(term="食べる", reading="たべる", content="<div>to eat</div>", sequence=1)],
         )
 
-        conn = open_readonly(db_path)
+        conn = open_dictionary(db_path)
         try:
             results = lookup(conn, "たべる")
             assert results == [("<div>to eat</div>", "", 1)]
@@ -397,7 +397,7 @@ class TestBulkInsertAndLookup:
             ],
         )
 
-        conn = open_readonly(db_path)
+        conn = open_dictionary(db_path)
         try:
             results = lookup(conn, "はし")
             contents = [content for content, _tags, _seq in results]
@@ -418,7 +418,7 @@ class TestBulkInsertAndLookup:
             ],
         )
 
-        conn = open_readonly(db_path)
+        conn = open_dictionary(db_path)
         try:
             results = lookup(conn, "はし")
             assert results[0] == ("<div>term-match</div>", "", 2)
@@ -429,7 +429,7 @@ class TestBulkInsertAndLookup:
         db_path = tmp_path / "test.sqlite"
         create_index(db_path)
 
-        conn = open_readonly(db_path)
+        conn = open_dictionary(db_path)
         try:
             assert lookup(conn, "ない言葉") == []
         finally:
@@ -446,7 +446,7 @@ class TestBulkInsertAndLookup:
             ],
         )
 
-        conn = open_readonly(db_path)
+        conn = open_dictionary(db_path)
         try:
             results = lookup(conn, "水")
             assert isinstance(results, list)
@@ -480,7 +480,7 @@ class TestBulkInsertAndLookup:
             ],
         )
 
-        conn = open_readonly(db_path)
+        conn = open_dictionary(db_path)
         try:
             results = lookup(conn, "走る")
             assert results == [("<div>to run</div>", "v5r vi", 1)]
@@ -498,7 +498,7 @@ class TestBulkInsertAndLookup:
             ],
         )
 
-        conn = open_readonly(db_path)
+        conn = open_dictionary(db_path)
         try:
             results = lookup(conn, "空")
             assert len(results) == 1
@@ -508,7 +508,7 @@ class TestBulkInsertAndLookup:
 
 
 class TestOpenReadonly:
-    """open_readonly must build the sqlite ``file:`` URI safely (T-42)."""
+    """open_dictionary must build the sqlite ``file:`` URI safely (T-42)."""
 
     def test_opens_dict_under_path_with_hash(self, tmp_path: Path):
         """A dicts_root path containing ``#`` (URI fragment delimiter) must still
@@ -520,7 +520,7 @@ class TestOpenReadonly:
         create_index(db_path)
         bulk_insert(db_path, [DictRow(term="犬", reading="いぬ", content="<div>dog</div>", sequence=1)])
 
-        conn = open_readonly(db_path)
+        conn = open_dictionary(db_path)
         try:
             assert lookup(conn, "犬") == [("<div>dog</div>", "", 1)]
         finally:
@@ -535,7 +535,7 @@ class TestOpenReadonly:
         create_index(db_path)
         bulk_insert(db_path, [DictRow(term="猫", reading="ねこ", content="<div>cat</div>", sequence=1)])
 
-        conn = open_readonly(db_path)
+        conn = open_dictionary(db_path)
         try:
             assert lookup(conn, "猫") == [("<div>cat</div>", "", 1)]
         finally:
@@ -547,7 +547,7 @@ class TestOpenReadonly:
         db_path = tmp_path / "ro.sqlite"
         create_index(db_path)
 
-        conn = open_readonly(db_path)
+        conn = open_dictionary(db_path)
         try:
             with pytest.raises(sqlite3.OperationalError):
                 conn.execute("INSERT INTO entries (term, content) VALUES ('x', 'y')")
@@ -580,7 +580,7 @@ class TestLookupMany:
         self._seed(db_path)
         words = ["食べる", "たべる", "飲む", "はし", "ほし", "多", "missing"]
 
-        conn = open_readonly(db_path)
+        conn = open_dictionary(db_path)
         try:
             batch = lookup_many(conn, [(w, None) for w in words])
             for w in words:
@@ -598,7 +598,7 @@ class TestLookupMany:
             db_path,
             [DictRow(term="多", reading="おおい", content=f"<div>m{i}</div>", sequence=i) for i in range(30)],
         )
-        conn = open_readonly(db_path)
+        conn = open_dictionary(db_path)
         try:
             assert len(lookup(conn, "多")) == _LOOKUP_LIMIT
             assert len(lookup_many(conn, [("多", None)])["多"]) == _LOOKUP_LIMIT
@@ -608,7 +608,7 @@ class TestLookupMany:
     def test_term_priority_over_reading(self, tmp_path: Path):
         db_path = tmp_path / "test.sqlite"
         self._seed(db_path)
-        conn = open_readonly(db_path)
+        conn = open_dictionary(db_path)
         try:
             assert lookup_many(conn, [("ほし", None)])["ほし"][0] == ("<div>term-match</div>", "", 6)
         finally:
@@ -617,7 +617,7 @@ class TestLookupMany:
     def test_every_requested_word_present(self, tmp_path: Path):
         db_path = tmp_path / "test.sqlite"
         self._seed(db_path)
-        conn = open_readonly(db_path)
+        conn = open_dictionary(db_path)
         try:
             res = lookup_many(conn, [("食べる", None), ("missing", None), ("飲む", None)])
             assert set(res.keys()) == {"食べる", "missing", "飲む"}
@@ -628,7 +628,7 @@ class TestLookupMany:
     def test_empty_word_list(self, tmp_path: Path):
         db_path = tmp_path / "test.sqlite"
         self._seed(db_path)
-        conn = open_readonly(db_path)
+        conn = open_dictionary(db_path)
         try:
             assert lookup_many(conn, []) == {}
         finally:
@@ -642,7 +642,7 @@ class TestLookupMany:
         bulk_insert(db_path, rows)
         words = [f"w{i}" for i in range(600)] + ["nope"]
 
-        conn = open_readonly(db_path)
+        conn = open_dictionary(db_path)
         try:
             batch = lookup_many(conn, [(w, None) for w in words])
             for w in words:
@@ -653,7 +653,7 @@ class TestLookupMany:
     def test_duplicate_words_in_request(self, tmp_path: Path):
         db_path = tmp_path / "test.sqlite"
         self._seed(db_path)
-        conn = open_readonly(db_path)
+        conn = open_dictionary(db_path)
         try:
             res = lookup_many(conn, [("飲む", None), ("飲む", None)])
             assert res["飲む"] == lookup(conn, "飲む")
@@ -666,7 +666,7 @@ class TestLookupMany:
         db_path = tmp_path / "test.sqlite"
         create_index(db_path)
         bulk_insert(db_path, [DictRow(term="はし", reading="はし", content="<div>x</div>", sequence=1)])
-        conn = open_readonly(db_path)
+        conn = open_dictionary(db_path)
         try:
             assert lookup_many(conn, [("はし", None)])["はし"] == lookup(conn, "はし")
             assert len(lookup_many(conn, [("はし", None)])["はし"]) == 1
@@ -703,7 +703,7 @@ class TestLookupMany:
                 )
             random.shuffle(rows)
             bulk_insert(db_path, rows)
-            conn = open_readonly(db_path)
+            conn = open_dictionary(db_path)
             try:
                 # Unique words so each carries one boost reading (lookup_many
                 # dedups words, first reading wins — a duplicate word with a
@@ -737,7 +737,7 @@ class TestScoreOrdering:
         ]
         bulk_insert(db_path, rows)
 
-        conn = open_readonly(db_path)
+        conn = open_dictionary(db_path)
         try:
             results = lookup(conn, "テスト")
             contents = [c for c, _, _ in results]
@@ -757,7 +757,7 @@ class TestScoreOrdering:
         ]
         bulk_insert(db_path, rows)
 
-        conn = open_readonly(db_path)
+        conn = open_dictionary(db_path)
         try:
             results = lookup(conn, "テスト")
             contents = [c for c, _, _ in results]
@@ -778,7 +778,7 @@ class TestScoreOrdering:
         ]
         bulk_insert(db_path, rows)
 
-        conn = open_readonly(db_path)
+        conn = open_dictionary(db_path)
         try:
             single = lookup(conn, "テスト")
             batch = lookup_many(conn, [("テスト", None)])["テスト"]
@@ -796,7 +796,7 @@ class TestScoreOrdering:
         ]
         bulk_insert(db_path, rows)
 
-        conn = open_readonly(db_path)
+        conn = open_dictionary(db_path)
         try:
             results = lookup(conn, "水")
             contents = [c for c, _, _ in results]
@@ -834,7 +834,7 @@ class TestReadingBoost:
     def test_matching_reading_leads_others_survive(self, tmp_path: Path):
         db_path = tmp_path / "t.sqlite"
         self._seed_utsu(db_path)
-        conn = open_readonly(db_path)
+        conn = open_dictionary(db_path)
         try:
             results = lookup(conn, "打つ", "うつ")
             contents = [c for c, _, _ in results]
@@ -851,7 +851,7 @@ class TestReadingBoost:
     def test_opposite_boost_flips_lead(self, tmp_path: Path):
         db_path = tmp_path / "t.sqlite"
         self._seed_utsu(db_path)
-        conn = open_readonly(db_path)
+        conn = open_dictionary(db_path)
         try:
             contents = [c for c, _, _ in lookup(conn, "打つ", "ぶつ")]
         finally:
@@ -863,7 +863,7 @@ class TestReadingBoost:
         """reading=None ⇒ no boost ⇒ pre-5.1 (score DESC, sequence, id) order."""
         db_path = tmp_path / "t.sqlite"
         self._seed_utsu(db_path)
-        conn = open_readonly(db_path)
+        conn = open_dictionary(db_path)
         try:
             contents = [c for c, _, _ in lookup(conn, "打つ", None)]
         finally:
@@ -887,7 +887,7 @@ class TestReadingBoost:
                 DictRow(term="辛い", reading="つらい", content="<div>painful</div>", score=5, sequence=2),
             ],
         )
-        conn = open_readonly(db_path)
+        conn = open_dictionary(db_path)
         try:
             contents = [c for c, _, _ in lookup(conn, "辛い", "からい")]
         finally:
@@ -901,7 +901,7 @@ class TestReadingBoost:
         db_path = tmp_path / "t.sqlite"
         create_index(db_path)
         bulk_insert(db_path, [DictRow(term="猫", reading=None, content="<div>cat</div>", sequence=1)])
-        conn = open_readonly(db_path)
+        conn = open_dictionary(db_path)
         try:
             assert lookup(conn, "猫", "ねこ") == [("<div>cat</div>", "", 1)]
         finally:
@@ -911,7 +911,7 @@ class TestReadingBoost:
         """lookup_many reproduces lookup(word, reading) with the boost applied."""
         db_path = tmp_path / "t.sqlite"
         self._seed_utsu(db_path)
-        conn = open_readonly(db_path)
+        conn = open_dictionary(db_path)
         try:
             batch = lookup_many(conn, [("打つ", "うつ")])
             assert batch["打つ"] == lookup(conn, "打つ", "うつ")
@@ -940,7 +940,7 @@ class TestReadingBoost:
         ranks like a differing one, not after it."""
         db_path = tmp_path / "t.sqlite"
         self._seed_mai(db_path)
-        conn = open_readonly(db_path)
+        conn = open_dictionary(db_path)
         try:
             boosted = [c for c, _, _ in lookup(conn, "mai", "mai")]
             wildcard = [c for c, _, _ in lookup(conn, "mai", None)]
@@ -954,7 +954,7 @@ class TestReadingBoost:
     def test_a_matching_reading_still_outranks_a_missing_one(self, tmp_path: Path):
         db_path = tmp_path / "t.sqlite"
         self._seed_mai(db_path)
-        conn = open_readonly(db_path)
+        conn = open_dictionary(db_path)
         try:
             contents = [c for c, _, _ in lookup(conn, "mai", "mâi")]
             assert lookup_many(conn, [("mai", "mâi")])["mai"] == lookup(conn, "mai", "mâi")
@@ -979,7 +979,7 @@ class TestPerfGuards:
             db_path,
             [DictRow(term=f"w{i}", reading=None, content=f"<div>{i}</div>", sequence=i) for i in range(5)],
         )
-        conn = open_readonly(db_path)
+        conn = open_dictionary(db_path)
         try:
             spy = _ExecSpy(conn)
             lookup_many(spy, [(f"w{i}", None) for i in range(5)])
@@ -996,7 +996,7 @@ class TestPerfGuards:
             db_path,
             [DictRow(term=f"w{i}", reading=None, content=f"<div>{i}</div>", sequence=i) for i in range(n)],
         )
-        conn = open_readonly(db_path)
+        conn = open_dictionary(db_path)
         try:
             spy = _ExecSpy(conn)
             lookup_many(spy, [(f"w{i}", None) for i in range(n)])
@@ -1014,7 +1014,7 @@ class TestPerfGuards:
             db_path,
             [DictRow(term="同", reading="どう", content=f"<div>{i}</div>", sequence=i) for i in range(100)],
         )
-        conn = open_readonly(db_path)
+        conn = open_dictionary(db_path)
         try:
             assert len(lookup(conn, "同")) <= _LOOKUP_LIMIT
             assert len(lookup_many(conn, [("同", None)])["同"]) <= _LOOKUP_LIMIT
@@ -1036,7 +1036,7 @@ class TestPerfGuards:
         rows = [DictRow(term=f"漢字{i}", reading="する", content=f"<div>c{i}</div>", sequence=i) for i in range(n)]
         rows.append(DictRow(term="食べる", reading="たべる", content="<div>eat</div>", sequence=n))
         bulk_insert(db_path, rows)
-        conn = open_readonly(db_path)
+        conn = open_dictionary(db_path)
         try:
             spy = _ExecSpy(conn)
             result = lookup_many(spy, [("する", None), ("食べる", None)])
@@ -1175,7 +1175,7 @@ class TestSurrogateScrubbing:
         )
         assert count == 1
 
-        conn = open_readonly(db_path)
+        conn = open_dictionary(db_path)
         try:
             results = lookup(conn, "食べる")
             assert results == [("<div>to e�at</div>", "", 1)]
@@ -1192,7 +1192,7 @@ class TestSurrogateScrubbing:
         )
         assert count == 1
 
-        conn = open_readonly(db_path)
+        conn = open_dictionary(db_path)
         try:
             results = lookup(conn, "a�b")
             assert results == [("<div>x</div>", "", 1)]
@@ -1208,7 +1208,7 @@ class TestSurrogateScrubbing:
             [DictRow(term=self.VALID_EXT_B, reading=None, content=f"<div>{self.VALID_EXT_B}</div>", sequence=1)],
         )
 
-        conn = open_readonly(db_path)
+        conn = open_dictionary(db_path)
         try:
             results = lookup(conn, self.VALID_EXT_B)
             assert results == [(f"<div>{self.VALID_EXT_B}</div>", "", 1)]
@@ -1240,7 +1240,7 @@ class TestTermsExist:
         return db_path
 
     def test_exact_term_matches_only(self, tmp_path: Path):
-        conn = open_readonly(self._seed(tmp_path))
+        conn = open_dictionary(self._seed(tmp_path))
         try:
             found = terms_exist(conn, ["走り出す", "気がする", "存在しない語"])
             assert found == {"走り出す", "気がする"}
@@ -1248,7 +1248,7 @@ class TestTermsExist:
             conn.close()
 
     def test_reading_only_match_does_not_count(self, tmp_path: Path):
-        conn = open_readonly(self._seed(tmp_path))
+        conn = open_dictionary(self._seed(tmp_path))
         try:
             # はしりだす is a reading, not a headword — must NOT be attested.
             assert terms_exist(conn, ["はしりだす"]) == set()
@@ -1256,7 +1256,7 @@ class TestTermsExist:
             conn.close()
 
     def test_empty_and_duplicate_input(self, tmp_path: Path):
-        conn = open_readonly(self._seed(tmp_path))
+        conn = open_dictionary(self._seed(tmp_path))
         try:
             assert terms_exist(conn, []) == set()
             assert terms_exist(conn, ["応急処置", "応急処置", "応急処置"]) == {"応急処置"}
@@ -1270,7 +1270,7 @@ class TestTermsExist:
             db_path,
             [DictRow(term=f"語{i}", reading=None, content="<div>x</div>", sequence=i) for i in range(1000)],
         )
-        conn = open_readonly(db_path)
+        conn = open_dictionary(db_path)
         try:
             queries = [f"語{i}" for i in range(1500)]  # 1000 hits + 500 misses, spans 2 chunks
             found = terms_exist(conn, queries)
@@ -1294,7 +1294,7 @@ class TestExactTermSequences:
                 DictRow(term="名無し", reading="ななし", content="<div>nameless</div>", sequence=None),
             ],
         )
-        conn = open_readonly(db_path)
+        conn = open_dictionary(db_path)
         try:
             found = exact_term_sequences(
                 conn,
@@ -1327,7 +1327,7 @@ class TestLookupWithRules:
         db_path = tmp_path / "d.sqlite"
         create_index(db_path)
         bulk_insert(db_path, [DictRow(term="食べる", reading="たべる", content="<li>eat</li>", rules="v1", sequence=1)])
-        conn = open_readonly(db_path)
+        conn = open_dictionary(db_path)
         try:
             rows = lookup_with_rules(conn, "食べる")
             assert rows == [("<li>eat</li>", "", 1, "v1")]
@@ -1341,7 +1341,7 @@ class TestLookupWithRules:
         create_index(db_path)
         # A row inserted without rules gets the schema DEFAULT '' (older-import shape).
         bulk_insert(db_path, [DictRow(term="犬", reading="いぬ", content="<li>dog</li>", sequence=1)])
-        conn = open_readonly(db_path)
+        conn = open_dictionary(db_path)
         try:
             rows = lookup_with_rules(conn, "犬")
             assert rows == [("<li>dog</li>", "", 1, "")]
@@ -1354,7 +1354,7 @@ class TestLookupWithRules:
         db_path = tmp_path / "d.sqlite"
         create_index(db_path)
         bulk_insert(db_path, [DictRow(term="猫", reading="ネコ", content="<li>cat</li>", rules="", sequence=1)])
-        conn = open_readonly(db_path)
+        conn = open_dictionary(db_path)
         try:
             # Reading stored folded to ねこ; a katakana query folds too and matches.
             rows = lookup_with_rules(conn, "ネコ")
@@ -1381,7 +1381,7 @@ class TestTermsReadings:
         return db_path
 
     def test_readings_best_first_and_deduped(self, tmp_path: Path):
-        conn = open_readonly(self._seed(tmp_path))
+        conn = open_dictionary(self._seed(tmp_path))
         try:
             found = terms_readings(conn, ["バカ力", "兄ちゃん", "存在しない語"])
             assert found["バカ力"] == ["ばかぢから"]
@@ -1395,7 +1395,7 @@ class TestTermsReadings:
     def test_null_and_empty_readings_attest_nothing(self, tmp_path: Path):
         # JMdict variant-form rows (mazegaki せん越, katakana ケガ人) ship no
         # reading — the term must be absent from the result, not mapped to [].
-        conn = open_readonly(self._seed(tmp_path))
+        conn = open_dictionary(self._seed(tmp_path))
         try:
             found = terms_readings(conn, ["せん越", "ケガ人"])
             assert found == {}
@@ -1403,7 +1403,7 @@ class TestTermsReadings:
             conn.close()
 
     def test_empty_input(self, tmp_path: Path):
-        conn = open_readonly(self._seed(tmp_path))
+        conn = open_dictionary(self._seed(tmp_path))
         try:
             assert terms_readings(conn, []) == {}
         finally:
@@ -1444,7 +1444,7 @@ class TestHomographScoping:
     def test_rule_a_drops_reading_only_homograph(self, tmp_path: Path):
         db_path = tmp_path / "raid.sqlite"
         self._seed_raid(db_path)
-        conn = open_readonly(db_path)
+        conn = open_dictionary(db_path)
         try:
             scoped = lookup(conn, "レイド")
             assert scoped == [
@@ -1461,7 +1461,7 @@ class TestHomographScoping:
         term-match first)."""
         db_path = tmp_path / "raid.sqlite"
         self._seed_raid(db_path)
-        conn = open_readonly(db_path)
+        conn = open_dictionary(db_path)
         try:
             unscoped = lookup_many(conn, [("レイド", None)], scope_homographs=False)["レイド"]
             assert unscoped == [
@@ -1482,7 +1482,7 @@ class TestHomographScoping:
                 DictRow(term="シャベル", reading="しゃべる", content="<div>shovel</div>", sequence=2),
             ],
         )
-        conn = open_readonly(db_path)
+        conn = open_dictionary(db_path)
         try:
             # No term=="しゃべる" row; kana query keeps only the kanji-term row.
             assert lookup(conn, "しゃべる") == [("<div>to chat</div>", "", 1)]
@@ -1499,7 +1499,7 @@ class TestHomographScoping:
                 DictRow(term="キレイ", reading="きれい", content="<div>kana pretty</div>", sequence=2),
             ],
         )
-        conn = open_readonly(db_path)
+        conn = open_dictionary(db_path)
         try:
             assert lookup(conn, "きれい") == [("<div>pretty</div>", "", 1)]
         finally:
@@ -1517,7 +1517,7 @@ class TestHomographScoping:
                 DictRow(term="怪我", reading="けが", content="<div>injury kanji</div>", sequence=2),
             ],
         )
-        conn = open_readonly(db_path)
+        conn = open_dictionary(db_path)
         try:
             scoped = lookup(conn, "ケガ")
             assert scoped == [("<div>injury kana</div>", "", 1)]
@@ -1541,7 +1541,7 @@ class TestHomographScoping:
                 DictRow(term="怪我", reading="けが", content="<div>injury kanji</div>", sequence=7),
             ],
         )
-        conn = open_readonly(db_path)
+        conn = open_dictionary(db_path)
         try:
             for word in ("レイド", "零度", "しゃべる", "ケガ", "怪我"):
                 assert lookup_many(conn, [(word, None)])[word] == lookup(conn, word), word
@@ -1559,7 +1559,7 @@ class TestHomographScoping:
                 DictRow(term="打つ", reading="ぶつ", content="<div>bump</div>", sequence=2),
             ],
         )
-        conn = open_readonly(db_path)
+        conn = open_dictionary(db_path)
         try:
             # Both rows are term-exact (kept). Boost うつ leads its reading first.
             boosted = lookup(conn, "打つ", "うつ")
@@ -1586,7 +1586,7 @@ class TestHomographScoping:
                 DictRow(term="二本後", reading="にほんご", content="<div>after two sticks</div>", sequence=3),
             ],
         )
-        conn = open_readonly(db_path)
+        conn = open_dictionary(db_path)
         try:
             scoped = lookup(conn, "にほんご")
             contents = [c for c, _, _ in scoped]
@@ -1608,7 +1608,7 @@ class TestHomographScoping:
             db_path,
             [DictRow(term="シャベル", reading="しゃべる", content="<div>shovel</div>", sequence=1)],
         )
-        conn = open_readonly(db_path)
+        conn = open_dictionary(db_path)
         try:
             # Scoped render path drops the kana-only match (Rule B, no kanji term).
             assert lookup(conn, "しゃべる") == []
@@ -1652,7 +1652,7 @@ class TestLemmaScoping:
     def test_lemma_scopes_kana_query_to_lemma_rows(self, tmp_path: Path):
         db_path = tmp_path / "yuu.sqlite"
         self._seed_yuu(db_path)
-        conn = open_readonly(db_path)
+        conn = open_dictionary(db_path)
         try:
             scoped = lookup(conn, "ゆう", "ゆう", lemma="言う")
             assert scoped == [("<div>to say</div>", "", 4)]
@@ -1665,7 +1665,7 @@ class TestLemmaScoping:
         kanji-term homograph and score ranking leads with 有."""
         db_path = tmp_path / "yuu.sqlite"
         self._seed_yuu(db_path)
-        conn = open_readonly(db_path)
+        conn = open_dictionary(db_path)
         try:
             unscoped = lookup(conn, "ゆう", "ゆう")
             assert [c for c, _, _ in unscoped] == [
@@ -1692,7 +1692,7 @@ class TestLemmaScoping:
                 DictRow(term="勝つ", reading="かつ", content="<div>to win</div>", score=1999800, sequence=3),
             ],
         )
-        conn = open_readonly(db_path)
+        conn = open_dictionary(db_path)
         try:
             scoped = lookup(conn, "かつ", "かつ", lemma="且つ")
             assert scoped == [("<div>and; moreover</div>", "", 2)]
@@ -1715,7 +1715,7 @@ class TestLemmaScoping:
                 DictRow(term="こう", reading="こう", content="<div>stork</div>", sequence=2),
             ],
         )
-        conn = open_readonly(db_path)
+        conn = open_dictionary(db_path)
         try:
             scoped = lookup(conn, "こう", "こう", lemma="斯う")
             assert scoped == [("<div>in this way</div>", "common", 1), ("<div>in this way</div>", "rare", 1)]
@@ -1735,7 +1735,7 @@ class TestLemmaScoping:
                 DictRow(term="柴胡", reading="さいこ", content="<div>Bupleurum root</div>", sequence=2),
             ],
         )
-        conn = open_readonly(db_path)
+        conn = open_dictionary(db_path)
         try:
             scoped = lookup(conn, "サイコ", "さいこ", lemma="柴胡")
             assert scoped == [("<div>psycho</div>", "", 1)]
@@ -1757,7 +1757,7 @@ class TestLemmaScoping:
                 DictRow(term="夕", reading="ゆう", content="<div>evening</div>", sequence=3),
             ],
         )
-        conn = open_readonly(db_path)
+        conn = open_dictionary(db_path)
         try:
             scoped = lookup(conn, "ゆう", "ゆう", lemma="言う")
             contents = [c for c, _, _ in scoped]
@@ -1779,7 +1779,7 @@ class TestLemmaScoping:
                 DictRow(term="イエル", reading="いえる", content="<div>kana noise</div>", sequence=2),
             ],
         )
-        conn = open_readonly(db_path)
+        conn = open_dictionary(db_path)
         try:
             with_lemma = lookup(conn, "いえる", "いえる", lemma="言う")
             assert with_lemma == lookup(conn, "いえる", "いえる")
@@ -1793,7 +1793,7 @@ class TestLemmaScoping:
         identical to pre-A' behavior even when a lemma is supplied."""
         db_path = tmp_path / "probe.sqlite"
         self._seed_yuu(db_path)
-        conn = open_readonly(db_path)
+        conn = open_dictionary(db_path)
         try:
             unscoped = lookup_many(conn, [("ゆう", "ゆう")], scope_homographs=False, lemmas={"ゆう": "言う"})["ゆう"]
             assert len(unscoped) == 4
@@ -1870,7 +1870,7 @@ class TestAttestDetail:
     def test_term_exact_only_when_readings_off(self, tmp_path: Path):
         db = tmp_path / "t.sqlite"
         self._seed(db)
-        conn = open_readonly(db)
+        conn = open_dictionary(db)
         try:
             # あく is only a READING here (term is 開く); readings off → no attest.
             res = attest_detail(conn, ["有る", "あく"], include_readings=False)
@@ -1882,7 +1882,7 @@ class TestAttestDetail:
     def test_reading_arm_attests_kana_query(self, tmp_path: Path):
         db = tmp_path / "t.sqlite"
         self._seed(db)
-        conn = open_readonly(db)
+        conn = open_dictionary(db)
         try:
             res = attest_detail(conn, ["あく"], include_readings=True)
         finally:
@@ -1894,7 +1894,7 @@ class TestAttestDetail:
         lookup_many's reading arm."""
         db = tmp_path / "t.sqlite"
         self._seed(db)
-        conn = open_readonly(db)
+        conn = open_dictionary(db)
         try:
             res = attest_detail(conn, ["アク"], include_readings=True)
         finally:
@@ -1910,7 +1910,7 @@ class TestAttestDetail:
             db,
             [DictRow(term="にほん", reading="にほん", content="<div>x</div>", tags="", rules="", sequence=1)],
         )
-        conn = open_readonly(db)
+        conn = open_dictionary(db)
         try:
             res = attest_detail(conn, ["にほん"], include_readings=True)
         finally:
@@ -1920,7 +1920,7 @@ class TestAttestDetail:
     def test_empty_rules_and_tags_preserved(self, tmp_path: Path):
         db = tmp_path / "t.sqlite"
         self._seed(db)
-        conn = open_readonly(db)
+        conn = open_dictionary(db)
         try:
             res = attest_detail(conn, ["日本"], include_readings=False)
         finally:
@@ -1931,7 +1931,7 @@ class TestAttestDetail:
     def test_every_word_present_and_deduped(self, tmp_path: Path):
         db = tmp_path / "t.sqlite"
         self._seed(db)
-        conn = open_readonly(db)
+        conn = open_dictionary(db)
         try:
             res = attest_detail(conn, ["有る", "無い語", "有る"], include_readings=False)
         finally:
@@ -1942,7 +1942,7 @@ class TestAttestDetail:
     def test_empty_word_list(self, tmp_path: Path):
         db = tmp_path / "t.sqlite"
         self._seed(db)
-        conn = open_readonly(db)
+        conn = open_dictionary(db)
         try:
             assert attest_detail(conn, [], include_readings=True) == {}
         finally:
@@ -1960,7 +1960,7 @@ class TestAttestDetail:
                 for i in range(n)
             ],
         )
-        conn = open_readonly(db)
+        conn = open_dictionary(db)
         try:
             words = [f"w{i}" for i in range(n)]
             res = attest_detail(conn, words, include_readings=True)
@@ -1982,7 +1982,7 @@ class TestAttestDetail:
                 for i in range(n)
             ],
         )
-        conn = open_readonly(db)
+        conn = open_dictionary(db)
         try:
             spy = _ExecSpy(conn)
             words = [f"w{i}" for i in range(n)]
@@ -2030,7 +2030,7 @@ class TestRedirectRows:
     def test_lookup_resolves_redirect_to_canonical_rows(self, tmp_path: Path):
         db = tmp_path / "d.sqlite"
         self._seed(db)
-        conn = open_readonly(db)
+        conn = open_dictionary(db)
         try:
             assert lookup(conn, "お互いさま") == [("<li>mutual</li>", "n", 1270320)]
         finally:
@@ -2039,7 +2039,7 @@ class TestRedirectRows:
     def test_lookup_many_matches_lookup(self, tmp_path: Path):
         db = tmp_path / "d.sqlite"
         self._seed(db)
-        conn = open_readonly(db)
+        conn = open_dictionary(db)
         try:
             single = lookup(conn, "お互いさま")
             batch = lookup_many(conn, [("お互いさま", None), ("お互い様", "おたがいさま")])
@@ -2062,7 +2062,7 @@ class TestRedirectRows:
                 ),
             ],
         )
-        conn = open_readonly(db)
+        conn = open_dictionary(db)
         try:
             results = lookup(conn, "かり")
             assert results[0] == ("<li>debt</li>", "", 5)
@@ -2075,7 +2075,7 @@ class TestRedirectRows:
         db = tmp_path / "d.sqlite"
         create_index(db)
         bulk_insert(db, [DictRow(term="変", reading="へん", content="<li>strange</li>", sequence=-42)])
-        conn = open_readonly(db)
+        conn = open_dictionary(db)
         try:
             assert lookup(conn, "変") == [("<li>strange</li>", "", -42)]
         finally:
@@ -2088,7 +2088,7 @@ class TestRedirectRows:
             db,
             [DictRow(term="孤児", reading=None, content='<li class="gloss-item">⟶親</li>', score=-101, sequence=-999)],
         )
-        conn = open_readonly(db)
+        conn = open_dictionary(db)
         try:
             assert lookup(conn, "孤児") == []
             assert lookup_many(conn, [("孤児", None)])["孤児"] == []
@@ -2110,7 +2110,7 @@ class TestRedirectRows:
                 ),
             ],
         )
-        conn = open_readonly(db)
+        conn = open_dictionary(db)
         try:
             assert lookup(conn, "まとい") == [("<li>target</li>", "", 7)]
         finally:
@@ -2128,7 +2128,7 @@ class TestRedirectRows:
                 ),
             ],
         )
-        conn = open_readonly(db)
+        conn = open_dictionary(db)
         try:
             assert lookup_with_rules(conn, "うなづく") == [("<li>nod</li>", "", 8, "v5")]
         finally:
@@ -2139,7 +2139,7 @@ class TestRedirectRows:
         db = tmp_path / "d.sqlite"
         create_index(db)
         bulk_insert(db, [DictRow(term="猫", reading="ねこ", content="<li>cat</li>", sequence=1)])
-        conn = open_readonly(db)
+        conn = open_dictionary(db)
         try:
             spy = _ExecSpy(conn)
             lookup_many(spy, [("猫", None), ("犬", None)])
@@ -2164,7 +2164,7 @@ class TestRedirectRows:
                 ),
             ],
         )
-        conn = open_readonly(db)
+        conn = open_dictionary(db)
         try:
             found = exact_term_sequences(conn, [("あかーん", "あかーん"), ("あかん", "あかん")])
             assert found == {
@@ -2186,7 +2186,7 @@ class TestRedirectRows:
                 DictRow(term="遣る", reading="やる", content='["⟶ 遣る"]', score=-101, sequence=-100),
             ],
         )
-        conn = open_readonly(db)
+        conn = open_dictionary(db)
         try:
             rows = lookup(conn, "遣る")
             contents = [content for content, _tags, _seq in rows]
@@ -2206,7 +2206,7 @@ class TestRedirectRows:
                 DictRow(term="語", reading="ご", content='["sense B (foreign negative)"]', sequence=-7),
             ],
         )
-        conn = open_readonly(db)
+        conn = open_dictionary(db)
         try:
             found = exact_term_sequences(conn, [("語", "ご")])
             assert found[("語", "ご")] == {7, -7}
@@ -2296,7 +2296,7 @@ class TestSenseRankDemotion:
         db = tmp_path / "d.sqlite"
         create_index(db)
         bulk_insert(db, list(order))
-        conn = open_readonly(db)
+        conn = open_dictionary(db)
         try:
             contents = [c for c, _tags, _seq in lookup(conn, "干", "gān", keys=_RankingKeys())]
         finally:
@@ -2308,7 +2308,7 @@ class TestSenseRankDemotion:
         db = tmp_path / "d.sqlite"
         create_index(db)
         bulk_insert(db, [_SENSE, _SURNAME, _VARIANT])
-        conn = open_readonly(db)
+        conn = open_dictionary(db)
         try:
             plain = [c for c, _tags, _seq in lookup(conn, "干", "gān")]
             no_rank = [c for c, _tags, _seq in lookup(conn, "干", "gān", keys=_PlainKeys())]
@@ -2327,7 +2327,7 @@ class TestSenseRankDemotion:
         db = tmp_path / "d.sqlite"
         create_index(db)
         bulk_insert(db, [_JA_ARCHAIC, _JA_SENSE, _JA_OTHER_READING])
-        conn = open_readonly(db)
+        conn = open_dictionary(db)
         try:
             ja = [c for c, _tags, _seq in lookup(conn, "辛い", "カライ", keys=get_profile("ja").dict_keys)]
             unfolded = [c for c, _tags, _seq in lookup(conn, "辛い", "からい")]
@@ -2346,7 +2346,7 @@ class TestSenseRankDemotion:
             DictRow(term="干", reading="gān", content="<div>sense: b</div>", sequence=4),
         ]
         bulk_insert(db, rows)
-        conn = open_readonly(db)
+        conn = open_dictionary(db)
         try:
             contents = [c for c, _tags, _seq in lookup(conn, "干", "gān", keys=_RankingKeys())]
         finally:
@@ -2371,7 +2371,7 @@ class TestSenseRankDemotion:
                 DictRow(term="干", reading="gān", content="<div>pointer: surname</div>", sequence=4428),
             ],
         )
-        conn = open_readonly(db)
+        conn = open_dictionary(db)
         try:
             contents = [c for c, _tags, _seq in lookup(conn, "干", "gān", keys=_RankingKeys())]
         finally:
@@ -2382,7 +2382,7 @@ class TestSenseRankDemotion:
         db = tmp_path / "d.sqlite"
         create_index(db)
         bulk_insert(db, [_SURNAME, _SENSE, _VARIANT])
-        conn = open_readonly(db)
+        conn = open_dictionary(db)
         try:
             keys = _RankingKeys()
             batch = lookup_many(conn, [("干", "gān"), ("干", None)], keys=keys)
@@ -2397,7 +2397,7 @@ class TestSenseRankDemotion:
         db = tmp_path / "d.sqlite"
         create_index(db)
         bulk_insert(db, [_SURNAME, _SENSE, _VARIANT])
-        conn = open_readonly(db)
+        conn = open_dictionary(db)
         try:
             contents = [c for c, _tags, _seq, _rules in lookup_with_rules(conn, "干", keys=_RankingKeys())]
         finally:
@@ -2422,7 +2422,7 @@ class TestSenseRankSeesTagsAndPos:
         db = tmp_path / "d.sqlite"
         create_index(db)
         bulk_insert(db, [_PICK_NAME, _PICK_NOUN, _PICK_VERB])
-        conn = open_readonly(db)
+        conn = open_dictionary(db)
         yield conn
         conn.close()
 
@@ -2459,7 +2459,7 @@ class TestSenseRankSeesTagsAndPos:
                 DictRow(term="watch", reading=None, content="<div>To look at.</div>", tags="v"),
             ],
         )
-        conn = open_readonly(db)
+        conn = open_dictionary(db)
         try:
             keys = _TagPosKeys()
             batch = lookup_many(conn, [("pick", None), ("watch", None)], pos={"watch": "v"}, keys=keys)
@@ -2476,7 +2476,7 @@ class TestSenseRankSeesTagsAndPos:
         db = tmp_path / "d.sqlite"
         create_index(db)
         bulk_insert(db, [_JA_ARCHAIC, _JA_SENSE, _JA_OTHER_READING])
-        conn = open_readonly(db)
+        conn = open_dictionary(db)
         try:
             keys = get_profile("ja").dict_keys
             with_pos = lookup(conn, "辛い", "からい", pos="形容詞", keys=keys)
@@ -2532,7 +2532,7 @@ class TestFormOfRows:
         db = tmp_path / "d.sqlite"
         create_index(db)
         bulk_insert(db, rows, keys=keys)
-        return open_readonly(db)
+        return open_dictionary(db)
 
     @staticmethod
     def _contents(rows) -> list[str]:
@@ -2780,7 +2780,7 @@ class TestTermRowsReadingMatch:
         db = tmp_path / "d.sqlite"
         create_index(db)
         bulk_insert(db, rows, keys=keys)
-        return open_readonly(db)
+        return open_dictionary(db)
 
     def test_the_default_read_ignores_the_reading_column(self, tmp_path: Path):
         conn = self._open(tmp_path, [self._LASA, self._LASA_LEMMA], _PlainKeys())
@@ -2835,3 +2835,86 @@ class TestTermRowsReadingMatch:
             conn.close()
         assert set(found) == {f"r{i}" for i in range(2 * _BIND_CHUNK)}
         assert found["r0"] == [(rows[0].content, "non-lemma")]
+
+
+class TestCompressedContent:
+    def test_codec_round_trips_and_scrubs_lone_surrogates(self):
+        from anki_miner.services.dictionary.storage import ContentCodec, build_content_dict
+
+        codec = ContentCodec(build_content_dict(['<li class="gloss-item">to eat</li>'] * 50))
+        for text in ("", "<li>食べる</li>", "a\nb", "x" * 100_000):
+            assert codec.decode(codec.encode(text)) == text
+        assert codec.decode(codec.encode("danger\ud867ous")) == "danger�ous"
+
+    def test_the_preset_dictionary_spans_the_samples_within_the_window(self):
+        from anki_miner.services.dictionary.storage import build_content_dict
+
+        samples = [f"<li>{i:05d}{'x' * 1000}</li>" for i in range(2000)]
+        content_dict = build_content_dict(samples)
+        assert 30_000 < len(content_dict) <= 32 * 1024
+        assert b"<li>00000" not in content_dict and b"<li>01" in content_dict
+        assert build_content_dict([]) == b"" and build_content_dict(["", ""]) == b""
+
+    def test_rows_are_stored_deflated_against_the_index_preset_dictionary(self, tmp_path: Path):
+        db = tmp_path / "d.sqlite"
+        create_index(db)
+        rows = [
+            DictRow(term=f"t{i}", reading=None, content=f'<li class="gloss-item">sense {i}</li>') for i in range(50)
+        ]
+        bulk_insert(db, rows)
+
+        raw = sqlite3.connect(db)
+        try:
+            [(stored,)] = raw.execute("SELECT content FROM entries WHERE term = 't7'").fetchall()
+            [(content_dict,)] = raw.execute("SELECT data FROM content_dict").fetchall()
+        finally:
+            raw.close()
+        assert isinstance(stored, bytes) and len(stored) < len(rows[7].content)
+        assert b"gloss-item" in content_dict
+
+        conn = open_dictionary(db)
+        try:
+            assert conn.execute("SELECT gloss(content) FROM entries WHERE term = 't7'").fetchone()[0] == rows[7].content
+        finally:
+            conn.close()
+
+    def test_a_second_insert_reuses_the_preset_dictionary(self, tmp_path: Path):
+        db = tmp_path / "d.sqlite"
+        create_index(db)
+        bulk_insert(db, [DictRow(term="a", reading=None, content="<li>first</li>")])
+        bulk_insert(db, [DictRow(term="b", reading=None, content="<li>second</li>")])
+        with pytest.raises(ValueError, match="another preset dictionary"):
+            bulk_insert(db, [DictRow(term="c", reading=None, content=b"\x00")], content_dict=b"other")
+
+        conn = open_dictionary(db)
+        try:
+            assert conn.execute("SELECT COUNT(*) FROM content_dict").fetchone()[0] == 1
+            assert [c for (c,) in conn.execute("SELECT gloss(content) FROM entries ORDER BY id")] == [
+                "<li>first</li>",
+                "<li>second</li>",
+            ]
+        finally:
+            conn.close()
+
+    def test_a_plain_read_only_connection_cannot_read_content(self, tmp_path: Path):
+        from anki_miner.services.dictionary.storage import open_readonly
+
+        db = tmp_path / "d.sqlite"
+        create_index(db)
+        bulk_insert(db, [DictRow(term="a", reading=None, content="<li>x</li>")])
+        conn = open_readonly(db)
+        try:
+            with pytest.raises(sqlite3.OperationalError, match="no such function: gloss"):
+                lookup(conn, "a")
+        finally:
+            conn.close()
+
+    def test_a_v6_index_is_refused_until_reimported(self, tmp_path: Path):
+        from anki_miner.services.dictionary.providers.indexed_provider import IndexedDictProvider
+
+        db = tmp_path / "old" / "index.sqlite"
+        create_index(db)
+        bulk_insert(db, [DictRow(term="a", reading=None, content="<li>x</li>")])
+        write_meta(db, {"schema_version": "6", "source_name": "Old", "format": "yomitan", "entry_count": "1"})
+
+        assert IndexedDictProvider("old", db, display_name="Old").load() is False

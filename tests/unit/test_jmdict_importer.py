@@ -15,7 +15,7 @@ from anki_miner.services.dictionary.importers.jmdict_importer import (
     import_jmdict_xml,
 )
 from anki_miner.services.dictionary.providers.indexed_provider import IndexedDictProvider
-from anki_miner.services.dictionary.storage import SCHEMA_VERSION, open_readonly, read_meta
+from anki_miner.services.dictionary.storage import SCHEMA_VERSION, open_dictionary, read_meta
 
 MINI_JMDICT_XML = """<?xml version="1.0" encoding="UTF-8"?>
 <JMdict>
@@ -47,13 +47,13 @@ class TestImportJmdictXml:
 
         db = tmp_path / "dicts" / JMDICT_DICT_ID / "index.sqlite"
         assert read_ownership_marker(db.parent) == ("dictionary", JMDICT_DICT_ID)
-        conn = open_readonly(db)
+        conn = open_dictionary(db)
         try:
             # Two entries, two readings each (kanji + kana) = 4 rows
             count = conn.execute("SELECT COUNT(*) FROM entries").fetchone()[0]
             assert count == 4
 
-            content = conn.execute("SELECT content FROM entries WHERE term = ?", ("食べる",)).fetchone()[0]
+            content = conn.execute("SELECT gloss(content) FROM entries WHERE term = ?", ("食べる",)).fetchone()[0]
             assert "to eat" in content
             assert "<ol>" in content
         finally:
@@ -115,11 +115,11 @@ class TestImportJmdictXmlEdgeCases:
         import_jmdict_xml(xml, tmp_path / "dicts")
 
         db = tmp_path / "dicts" / JMDICT_DICT_ID / "index.sqlite"
-        conn = open_readonly(db)
+        conn = open_dictionary(db)
         try:
             count = conn.execute("SELECT COUNT(*) FROM entries").fetchone()[0]
             assert count == 1
-            row = conn.execute("SELECT term, reading, content FROM entries").fetchone()
+            row = conn.execute("SELECT term, reading, gloss(content) FROM entries").fetchone()
             assert row[0] == "すごい"
             assert row[1] == "すごい"
             assert "amazing" in row[2]
@@ -133,9 +133,9 @@ class TestImportJmdictXmlEdgeCases:
         import_jmdict_xml(xml, tmp_path / "dicts")
 
         db = tmp_path / "dicts" / JMDICT_DICT_ID / "index.sqlite"
-        conn = open_readonly(db)
+        conn = open_dictionary(db)
         try:
-            content = conn.execute("SELECT content FROM entries WHERE term = ?", ("例",)).fetchone()[0]
+            content = conn.execute("SELECT gloss(content) FROM entries WHERE term = ?", ("例",)).fetchone()[0]
             # Original raw text should be entity-escaped; '<text>' must not appear as a tag
             assert "&lt;text&gt;" in content
             assert "<text>" not in content
@@ -151,9 +151,9 @@ class TestImportJmdictXmlEdgeCases:
         import_jmdict_xml(xml, tmp_path / "dicts")
 
         db = tmp_path / "dicts" / JMDICT_DICT_ID / "index.sqlite"
-        conn = open_readonly(db)
+        conn = open_dictionary(db)
         try:
-            content = conn.execute("SELECT content FROM entries WHERE term = ?", ("多義",)).fetchone()[0]
+            content = conn.execute("SELECT gloss(content) FROM entries WHERE term = ?", ("多義",)).fetchone()[0]
             # Exactly MAX_SENSES <li> tags
             assert content.count("<li>") == MAX_SENSES
             assert f"def{MAX_SENSES}" in content
@@ -187,22 +187,22 @@ class TestImportJmdictXmlEdgeCases:
         import_jmdict_xml(xml, tmp_path / "dicts")
 
         db = tmp_path / "dicts" / JMDICT_DICT_ID / "index.sqlite"
-        conn = open_readonly(db)
+        conn = open_dictionary(db)
         try:
             opened = conn.execute(
-                "SELECT content FROM entries WHERE term = ? AND reading = ?",
+                "SELECT gloss(content) FROM entries WHERE term = ? AND reading = ?",
                 ("開く", "ひらく"),
             ).fetchone()[0]
             emptied = conn.execute(
-                "SELECT content FROM entries WHERE term = ? AND reading = ?",
+                "SELECT gloss(content) FROM entries WHERE term = ? AND reading = ?",
                 ("空く", "あく"),
             ).fetchone()[0]
             opened_as_aku = conn.execute(
-                "SELECT content FROM entries WHERE term = ? AND reading = ?",
+                "SELECT gloss(content) FROM entries WHERE term = ? AND reading = ?",
                 ("開く", "あく"),
             ).fetchone()[0]
             emptied_as_hiraku = conn.execute(
-                "SELECT content FROM entries WHERE term = ? AND reading = ?",
+                "SELECT gloss(content) FROM entries WHERE term = ? AND reading = ?",
                 ("空く", "ひらく"),
             ).fetchone()[0]
         finally:
@@ -235,9 +235,9 @@ class TestImportJmdictXmlEdgeCases:
         result = import_jmdict_xml(xml, dest_root)
 
         db_path = dest_root / JMDICT_DICT_ID / "index.sqlite"
-        conn = open_readonly(db_path)
+        conn = open_dictionary(db_path)
         try:
-            rows = conn.execute("SELECT term, reading, content FROM entries ORDER BY term").fetchall()
+            rows = conn.execute("SELECT term, reading, gloss(content) FROM entries ORDER BY term").fetchall()
         finally:
             conn.close()
 
@@ -284,7 +284,7 @@ class TestImportJmdictXmlEdgeCases:
         import_jmdict_xml(xml, tmp_path / "dicts")
 
         db = tmp_path / "dicts" / JMDICT_DICT_ID / "index.sqlite"
-        conn = open_readonly(db)
+        conn = open_dictionary(db)
         try:
             readings = {r[0] for r in conn.execute("SELECT reading FROM entries WHERE term = ?", ("行く",)).fetchall()}
             assert readings == {"いく", "ゆく"}
@@ -311,7 +311,7 @@ class TestImportJmdictXmlEdgeCases:
         import_jmdict_xml(xml, tmp_path / "dicts")
 
         db = tmp_path / "dicts" / JMDICT_DICT_ID / "index.sqlite"
-        conn = open_readonly(db)
+        conn = open_dictionary(db)
         try:
             kou = {r[0] for r in conn.execute("SELECT reading FROM entries WHERE term = ?", ("甲",)).fetchall()}
             otsu = {r[0] for r in conn.execute("SELECT reading FROM entries WHERE term = ?", ("乙",)).fetchall()}
@@ -333,7 +333,7 @@ class TestImportJmdictXmlEdgeCases:
         import_jmdict_xml(xml2, dest)
 
         db = dest / JMDICT_DICT_ID / "index.sqlite"
-        conn = open_readonly(db)
+        conn = open_dictionary(db)
         try:
             # Only the second import's row should be present (1 kana-only entry)
             count = conn.execute("SELECT COUNT(*) FROM entries").fetchone()[0]
@@ -355,7 +355,7 @@ class TestImportJmdictXmlEdgeCases:
             import_jmdict_xml(xml2, dest, overwrite=False)
 
         db = dest / JMDICT_DICT_ID / "index.sqlite"
-        conn = open_readonly(db)
+        conn = open_dictionary(db)
         try:
             assert conn.execute("SELECT COUNT(*) FROM entries").fetchone()[0] == 4
         finally:

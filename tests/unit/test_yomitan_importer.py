@@ -20,7 +20,7 @@ from anki_miner.services.dictionary.importers.yomitan_importer import (
     read_yomitan_title,
 )
 from anki_miner.services.dictionary.providers.indexed_provider import IndexedDictProvider
-from anki_miner.services.dictionary.storage import SCHEMA_VERSION, open_readonly, read_meta
+from anki_miner.services.dictionary.storage import SCHEMA_VERSION, open_dictionary, read_meta
 from tests.fixtures.dictionary.build_yomitan_fixture import build_yomitan_zip
 
 
@@ -39,11 +39,11 @@ class TestImportYomitanZip:
         assert db_path.exists()
         assert read_ownership_marker(db_path.parent) == ("dictionary", result.dict_id)
 
-        conn = open_readonly(db_path)
+        conn = open_dictionary(db_path)
         try:
             count = conn.execute("SELECT COUNT(*) FROM entries").fetchone()[0]
             assert count == 2
-            content = conn.execute("SELECT content FROM entries WHERE term = ?", ("食べる",)).fetchone()[0]
+            content = conn.execute("SELECT gloss(content) FROM entries WHERE term = ?", ("食べる",)).fetchone()[0]
             assert "to eat" in content
             # Tag badges moved to provider-side composition (Task 4); content
             # is now glossary-only items. Task 3 will populate DictRow.tags.
@@ -73,9 +73,9 @@ class TestImportYomitanZip:
         assert result.entry_count == 1
 
         db_path = dest_root / result.dict_id / "index.sqlite"
-        conn = open_readonly(db_path)
+        conn = open_dictionary(db_path)
         try:
-            content = conn.execute("SELECT content FROM entries WHERE term = ?", ("危険",)).fetchone()[0]
+            content = conn.execute("SELECT gloss(content) FROM entries WHERE term = ?", ("危険",)).fetchone()[0]
             assert "danger�ous" in content
             assert "\ud867" not in content
         finally:
@@ -100,7 +100,7 @@ class TestImportYomitanZip:
         assert result.entry_count == 2
         assert result.skipped_malformed == 1
         db_path = dest_root / result.dict_id / "index.sqlite"
-        conn = open_readonly(db_path)
+        conn = open_dictionary(db_path)
         try:
             terms = {r[0] for r in conn.execute("SELECT term FROM entries").fetchall()}
             assert terms == {"食べる", "犬"}
@@ -135,7 +135,7 @@ class TestImportYomitanZip:
         result = import_yomitan_zip(zip_path, dest_root)
 
         db_path = dest_root / result.dict_id / "index.sqlite"
-        conn = open_readonly(db_path)
+        conn = open_dictionary(db_path)
         try:
             stored_count = conn.execute("SELECT COUNT(*) FROM entries").fetchone()[0]
         finally:
@@ -174,7 +174,7 @@ class TestImportYomitanZip:
             promoted = final_db.exists()
             committed_count: int | None = None
             if promoted:
-                conn = open_readonly(final_db)
+                conn = open_dictionary(final_db)
                 try:
                     committed_count = conn.execute("SELECT COUNT(*) FROM entries").fetchone()[0]
                 finally:
@@ -774,9 +774,9 @@ class TestImportYomitanZip:
         # Stored HTML references the namespaced flat filename — not the
         # original zip-relative path.
         db_path = dest_root / result.dict_id / "index.sqlite"
-        conn = open_readonly(db_path)
+        conn = open_dictionary(db_path)
         try:
-            content = conn.execute("SELECT content FROM entries WHERE term = ?", ("走る",)).fetchone()[0]
+            content = conn.execute("SELECT gloss(content) FROM entries WHERE term = ?", ("走る",)).fetchone()[0]
         finally:
             conn.close()
 
@@ -823,9 +823,9 @@ class TestImportYomitanZip:
         result = import_yomitan_zip(zip_path, tmp_path / "dicts")
 
         db_path = tmp_path / "dicts" / result.dict_id / "index.sqlite"
-        conn = open_readonly(db_path)
+        conn = open_dictionary(db_path)
         try:
-            content = conn.execute("SELECT content FROM entries WHERE term = ?", ("走る",)).fetchone()[0]
+            content = conn.execute("SELECT gloss(content) FROM entries WHERE term = ?", ("走る",)).fetchone()[0]
             assert '<li class="gloss-item">' in content
             assert "to run" in content
             # Renderer no longer emits tag badges or tag-list wrapper.
@@ -842,9 +842,9 @@ class TestImportYomitanZip:
         )
         result = import_yomitan_zip(zip_path, tmp_path / "dicts")
 
-        conn = open_readonly(tmp_path / "dicts" / result.dict_id / "index.sqlite")
+        conn = open_dictionary(tmp_path / "dicts" / result.dict_id / "index.sqlite")
         try:
-            content = conn.execute("SELECT content FROM entries WHERE term = ?", ("語",)).fetchone()[0]
+            content = conn.execute("SELECT gloss(content) FROM entries WHERE term = ?", ("語",)).fetchone()[0]
         finally:
             conn.close()
 
@@ -864,9 +864,9 @@ class TestImportYomitanZip:
         )
         result = import_yomitan_zip(zip_path, tmp_path / "dicts")
 
-        conn = open_readonly(tmp_path / "dicts" / result.dict_id / "index.sqlite")
+        conn = open_dictionary(tmp_path / "dicts" / result.dict_id / "index.sqlite")
         try:
-            rows = conn.execute("SELECT content FROM entries WHERE term = ? ORDER BY id", ("語",)).fetchall()
+            rows = conn.execute("SELECT gloss(content) FROM entries WHERE term = ? ORDER BY id", ("語",)).fetchall()
         finally:
             conn.close()
 
@@ -893,9 +893,9 @@ class TestImportYomitanZip:
         )
         result = import_yomitan_zip(zip_path, tmp_path / "dicts")
 
-        conn = open_readonly(tmp_path / "dicts" / result.dict_id / "index.sqlite")
+        conn = open_dictionary(tmp_path / "dicts" / result.dict_id / "index.sqlite")
         try:
-            content = conn.execute("SELECT content FROM entries WHERE term = ?", ("呪言",)).fetchone()[0]
+            content = conn.execute("SELECT gloss(content) FROM entries WHERE term = ?", ("呪言",)).fetchone()[0]
         finally:
             conn.close()
 
@@ -919,7 +919,7 @@ class TestImportYomitanZip:
         result = import_yomitan_zip(zip_path, tmp_path / "dicts")
 
         db_path = tmp_path / "dicts" / result.dict_id / "index.sqlite"
-        conn = open_readonly(db_path)
+        conn = open_dictionary(db_path)
         try:
             tags = conn.execute("SELECT tags FROM entries WHERE term = ?", ("走る",)).fetchone()[0]
         finally:
@@ -942,7 +942,7 @@ class TestImportYomitanZip:
         result = import_yomitan_zip(zip_path, tmp_path / "dicts")
 
         db_path = tmp_path / "dicts" / result.dict_id / "index.sqlite"
-        conn = open_readonly(db_path)
+        conn = open_dictionary(db_path)
         try:
             tags = conn.execute("SELECT tags FROM entries WHERE term = ?", ("走る",)).fetchone()[0]
         finally:
@@ -1128,7 +1128,7 @@ class TestTagBankImport:
         dest_root = tmp_path / "dicts"
         result = import_yomitan_zip(zip_path, dest_root)
 
-        conn = open_readonly(dest_root / result.dict_id / "index.sqlite")
+        conn = open_dictionary(dest_root / result.dict_id / "index.sqlite")
         try:
             rows = conn.execute("SELECT name, category, ord, notes, score FROM tags").fetchall()
         finally:
@@ -1143,7 +1143,7 @@ class TestTagBankImport:
         zip_path = build_yomitan_zip(tmp_path / "src" / "uk.zip", tag_banks=tag_banks)
         dest_root = tmp_path / "dicts"
         result = import_yomitan_zip(zip_path, dest_root)
-        conn = open_readonly(dest_root / result.dict_id / "index.sqlite")
+        conn = open_dictionary(dest_root / result.dict_id / "index.sqlite")
         try:
             row = conn.execute("SELECT category, ord, notes, score FROM tags WHERE name = ?", ("uk",)).fetchone()
         finally:
@@ -1179,7 +1179,7 @@ class TestTagBankImport:
 
         # 1. Stored entries.tags preserves the nbsp *within* each name; the
         #    ASCII-space-shattered artifact must be absent.
-        conn = open_readonly(db)
+        conn = open_dictionary(db)
         try:
             tags = conn.execute("SELECT tags FROM entries WHERE term = ?", ("語",)).fetchone()[0]
         finally:
@@ -1212,7 +1212,7 @@ class TestTagBankImport:
         )
         dest_root = tmp_path / "dicts"
         result = import_yomitan_zip(zip_path, dest_root)
-        conn = open_readonly(dest_root / result.dict_id / "index.sqlite")
+        conn = open_dictionary(dest_root / result.dict_id / "index.sqlite")
         try:
             rows = {r[0]: r for r in conn.execute("SELECT name, category, ord, notes FROM tags")}
         finally:
@@ -1228,7 +1228,7 @@ class TestTagBankImport:
         )
         dest_root = tmp_path / "dicts"
         result = import_yomitan_zip(zip_path, dest_root)
-        conn = open_readonly(dest_root / result.dict_id / "index.sqlite")
+        conn = open_dictionary(dest_root / result.dict_id / "index.sqlite")
         try:
             row = conn.execute("SELECT category, notes FROM tags WHERE name = ?", ("n",)).fetchone()
         finally:
@@ -1239,7 +1239,7 @@ class TestTagBankImport:
         zip_path = build_yomitan_zip(tmp_path / "src" / "notags.zip", tag_banks=[])
         dest_root = tmp_path / "dicts"
         result = import_yomitan_zip(zip_path, dest_root)
-        conn = open_readonly(dest_root / result.dict_id / "index.sqlite")
+        conn = open_dictionary(dest_root / result.dict_id / "index.sqlite")
         try:
             assert conn.execute("SELECT COUNT(*) FROM tags").fetchone()[0] == 0
         finally:
@@ -1251,7 +1251,7 @@ class TestTagBankImport:
         zip_path = build_yomitan_zip(tmp_path / "src" / "rules.zip", term_banks=term_banks)
         dest_root = tmp_path / "dicts"
         result = import_yomitan_zip(zip_path, dest_root)
-        conn = open_readonly(dest_root / result.dict_id / "index.sqlite")
+        conn = open_dictionary(dest_root / result.dict_id / "index.sqlite")
         try:
             rules = conn.execute("SELECT rules FROM entries WHERE term = ?", ("食べる",)).fetchone()[0]
         finally:
@@ -1264,7 +1264,7 @@ class TestTagBankImport:
         zip_path = build_yomitan_zip(tmp_path / "src" / "kana.zip", term_banks=term_banks)
         dest_root = tmp_path / "dicts"
         result = import_yomitan_zip(zip_path, dest_root)
-        conn = open_readonly(dest_root / result.dict_id / "index.sqlite")
+        conn = open_dictionary(dest_root / result.dict_id / "index.sqlite")
         try:
             reading = conn.execute("SELECT reading FROM entries WHERE term = ?", ("硝子",)).fetchone()[0]
         finally:
@@ -1447,9 +1447,9 @@ class TestDictIdOverride:
         import_yomitan_zip(zip_path, dest_root, dict_id="jitendex")
 
         assert (dest_root / "jitendex" / "media" / "svg_accent.svg").exists()
-        conn = open_readonly(dest_root / "jitendex" / "index.sqlite")
+        conn = open_dictionary(dest_root / "jitendex" / "index.sqlite")
         try:
-            content = conn.execute("SELECT content FROM entries WHERE term = ?", ("走る",)).fetchone()[0]
+            content = conn.execute("SELECT gloss(content) FROM entries WHERE term = ?", ("走る",)).fetchone()[0]
         finally:
             conn.close()
         assert 'src="jitendex__svg_accent.svg"' in content
@@ -1670,7 +1670,7 @@ def _multi_bank_zip(path: Path) -> Path:
 
 class TestParallelBanks:
     def _dump(self, db_path: Path) -> tuple[list[tuple], list[tuple]]:
-        conn = open_readonly(db_path)
+        conn = open_dictionary(db_path)
         try:
             entries = conn.execute(
                 "SELECT id, term, reading, content, tags, rules, score, sequence FROM entries ORDER BY id"
@@ -1738,3 +1738,32 @@ class TestParallelBanks:
             zf.writestr("term_bank_2.json", '{"oops": "object not array"}')
         with pytest.raises(SetupError, match="term_bank_2.json"):
             import_yomitan_zip(zip_path, tmp_path / "dicts", workers=2)
+
+
+@pytest.mark.parametrize(
+    ("banks", "picked"),
+    [(1, [0]), (2, [0, 1]), (3, [0, 1, 2]), (5, [0, 1, 3, 4]), (219, [0, 73, 145, 218])],
+)
+def test_the_preset_dictionary_samples_banks_from_first_to_last(banks: int, picked: list[int]) -> None:
+    from anki_miner.services.dictionary.importers.yomitan_importer import _sample_files
+
+    files = [Path(f"term_bank_{i + 1}.json") for i in range(banks)]
+    assert _sample_files(files) == [files[i] for i in picked]
+
+
+def test_imported_glossaries_are_stored_deflated(tmp_path: Path) -> None:
+    zip_path = _multi_bank_zip(tmp_path / "src" / "multi.zip")
+    result = import_yomitan_zip(zip_path, tmp_path / "dicts")
+    db = tmp_path / "dicts" / result.dict_id / "index.sqlite"
+    raw = sqlite3.connect(db)
+    try:
+        blobs = [content for (content,) in raw.execute("SELECT content FROM entries")]
+        [(content_dict,)] = raw.execute("SELECT data FROM content_dict").fetchall()
+    finally:
+        raw.close()
+    assert all(isinstance(blob, bytes) for blob in blobs) and b"gloss-item" in content_dict
+    conn = open_dictionary(db)
+    try:
+        assert "sense 3-7" in conn.execute("SELECT gloss(content) FROM entries WHERE term = '語3-7'").fetchone()[0]
+    finally:
+        conn.close()

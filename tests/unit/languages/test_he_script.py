@@ -26,7 +26,7 @@ from anki_miner.languages.he.script import (
     is_he_letter,
     is_he_mark,
 )
-from anki_miner.services.dictionary.storage import DictRow, bulk_insert, create_index, lookup, open_readonly
+from anki_miner.services.dictionary.storage import DictRow, bulk_insert, create_index, lookup, open_dictionary
 
 FIXTURES = Path(__file__).resolve().parents[2] / "fixtures" / "he"
 ENCODINGS = json.loads((FIXTURES / "encodings.json").read_text(encoding="utf-8"))
@@ -175,7 +175,7 @@ def test_a_verb_token_opens_on_the_verb_row_and_nothing_is_dropped(tmp_path, pos
         ],
         keys=keys,
     )
-    conn = open_readonly(db)
+    conn = open_dictionary(db)
     try:
         rows = lookup(conn, ZAKHAR, None, keys=keys, pos=pos)
     finally:

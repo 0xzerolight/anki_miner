@@ -13,9 +13,12 @@ block directory deletion).
 
 from __future__ import annotations
 
+import itertools
 import re
 import sqlite3
 import unicodedata
+import zlib
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Callable, Iterable, NamedTuple, TypeVar, cast
@@ -32,9 +35,12 @@ if TYPE_CHECKING:
 
 # v6: no table change — bumped to force a one-time reimport with NFC-normalized
 # term and reading keys.
+# v7: ``entries.content`` holds the glossary HTML deflated against the slot's
+# own preset dictionary (``content_dict``); readers select ``gloss(content)``
+# on a connection from :func:`open_dictionary`. About a tenth of the bytes.
 # Stale (< SCHEMA_VERSION) indexes are dropped and the startup Reimport-All
 # prompt + pre-run gate act on schema_ok; reimport is the migration.
-SCHEMA_VERSION = 6
+SCHEMA_VERSION = 7
 
 # Lone UTF-16 surrogates (U+D800–U+DFFF) have no valid UTF-8 encoding, so sqlite3
 # raises ``UnicodeEncodeError: surrogates not allowed`` the moment such text is
@@ -59,12 +65,76 @@ def _scrub_surrogates(value: str | None) -> str | None:
         return _SURROGATE_RE.sub("�", value)
 
 
+# Deflate reaches back 32 KiB at most, so a longer preset dictionary is dead
+# weight. Rows in one dictionary share most of their markup (class names, list
+# wrappers, tag spans), which is what the preset dictionary carries: with it a
+# row shrinks about tenfold, without it about threefold.
+_CONTENT_DICT_BYTES = 32 * 1024
+# Rows bulk_insert reads ahead to build a preset dictionary for importers that
+# do not bring one.
+_CONTENT_DICT_SAMPLE_ROWS = 2000
+_CONTENT_LEVEL = 6
+# Raw deflate: no zlib header, dictionary id or checksum on every row.
+_CONTENT_WBITS = -15
+
+
+def build_content_dict(samples: Sequence[str]) -> bytes:
+    """A preset dictionary from sample rows: evenly spaced rows, about 32 KiB of them."""
+    encoded = [(_scrub_surrogates(sample) or "").encode("utf-8") for sample in samples if sample]
+    if not encoded:
+        return b""
+    average = sum(map(len, encoded)) / len(encoded)
+    wanted = max(1, int(_CONTENT_DICT_BYTES / max(average, 1.0)))
+    return b"".join(encoded[:: max(1, len(encoded) // wanted)])[-_CONTENT_DICT_BYTES:]
+
+
+class ContentCodec:
+    """Deflates ``entries.content`` against one dictionary's preset dictionary."""
+
+    def __init__(self, content_dict: bytes) -> None:
+        self._content_dict = content_dict
+        # Priming a compressor with the dictionary costs more than the row it
+        # compresses; copying a primed one does not.
+        self._primed = zlib.compressobj(
+            _CONTENT_LEVEL, zlib.DEFLATED, _CONTENT_WBITS, zlib.DEF_MEM_LEVEL, zlib.Z_DEFAULT_STRATEGY, content_dict
+        )
+
+    def encode(self, content: str) -> bytes:
+        compressor = self._primed.copy()
+        data = (_scrub_surrogates(content) or "").encode("utf-8")
+        return compressor.compress(data) + compressor.flush()
+
+    def decode(self, blob: bytes) -> str:
+        decompressor = zlib.decompressobj(_CONTENT_WBITS, self._content_dict)
+        return (decompressor.decompress(blob) + decompressor.flush()).decode("utf-8")
+
+
+def open_dictionary(db_path: Path) -> sqlite3.Connection:
+    """:func:`open_readonly` for a dictionary index, with its ``gloss(content)`` decoder registered.
+
+    Every read of ``entries.content`` selects ``gloss(content)``; a connection
+    opened any other way fails that query with "no such function: gloss"
+    rather than handing compressed bytes to a card. An index with no preset
+    dictionary row has no rows either: :func:`bulk_insert` writes it with the
+    first batch.
+    """
+    conn = open_readonly(db_path)
+    try:
+        stored = conn.execute("SELECT data FROM content_dict").fetchone()
+        codec = ContentCodec(stored[0] if stored is not None else b"")
+        conn.create_function("gloss", 1, codec.decode, deterministic=True)
+    except BaseException:
+        conn.close()
+        raise
+    return conn
+
+
 _TABLES_SQL = """
 CREATE TABLE IF NOT EXISTS entries (
     id        INTEGER PRIMARY KEY,
     term      TEXT NOT NULL,
     reading   TEXT,
-    content   TEXT NOT NULL,
+    content   BLOB NOT NULL,
     tags      TEXT NOT NULL DEFAULT '',
     rules     TEXT NOT NULL DEFAULT '',
     score     INTEGER DEFAULT 0,
@@ -82,6 +152,10 @@ CREATE TABLE IF NOT EXISTS tags (
 CREATE TABLE IF NOT EXISTS meta (
     key   TEXT PRIMARY KEY,
     value TEXT
+);
+
+CREATE TABLE IF NOT EXISTS content_dict (
+    data BLOB NOT NULL
 );
 """
 
@@ -147,7 +221,7 @@ _LOOKUP_LIMIT = 20
 # _sense_rank_fn) can rebuild this ORDER BY's two leading keys in Python and
 # reorder only INSIDE one of their groups.
 _LOOKUP_SQL = (
-    "SELECT content, tags, sequence, term, reading FROM entries "
+    "SELECT gloss(content), tags, sequence, term, reading FROM entries "
     "WHERE term = ? OR reading = ? "
     "ORDER BY (term = ?) DESC, COALESCE(reading = ?, 0) DESC, score DESC, sequence, id"
 )
@@ -158,7 +232,7 @@ _LOOKUP_SQL = (
 # check before rendering, so this is the schema-v3 ``rules`` column's first reader.
 # ``term`` trails ``rules`` for the same U2 homograph-scope classification.
 _LOOKUP_RULES_SQL = (
-    "SELECT content, tags, sequence, rules, term FROM entries "
+    "SELECT gloss(content), tags, sequence, rules, term FROM entries "
     "WHERE term = ? OR reading = ? "
     "ORDER BY (term = ?) DESC, score DESC, sequence, id"
 )
@@ -170,7 +244,9 @@ class DictRow:
 
     term: str
     reading: str | None
-    content: str
+    #: Glossary HTML, or bytes a :class:`ContentCodec` built on the same
+    #: preset dictionary already encoded (the Yomitan importer's workers).
+    content: str | bytes
     tags: str = ""
     # Yomitan term-bank ``ruleIdentifiers`` (entry[3]): space-separated
     # deinflection condition flags (e.g. "v5 vs"). Stored for the schema-v3
@@ -474,6 +550,7 @@ def bulk_insert(
     progress: Callable[[int], None] | None = None,
     cancel_check: Callable[[], bool] | None = None,
     keys: DictKeyFolding | None = None,
+    content_dict: bytes | None = None,
 ) -> int:
     """Insert rows in batched transactions. Returns total inserted.
 
@@ -486,6 +563,12 @@ def bulk_insert(
     Whatever writes an index MUST be queried with the same folding — see
     :func:`_folders`.
 
+    ``content`` is stored deflated against the index's one preset dictionary
+    (``content_dict``), fixed by the first insert: ``content_dict`` when the
+    caller built it, else one sampled from the first
+    ``_CONTENT_DICT_SAMPLE_ROWS`` rows. A row whose content is already bytes
+    was encoded against ``content_dict`` and is stored as it is.
+
     The sqlite3 `with` context manager commits/rolls back but does NOT close
     the connection — we close explicitly so the db file is not held open
     across the importer's staging-dir cleanup (matters on Windows).
@@ -494,6 +577,19 @@ def bulk_insert(
     total = 0
     conn = _connect_for_bulk_write(db_path)
     try:
+        stored = conn.execute("SELECT data FROM content_dict").fetchone()
+        if stored is not None:
+            if content_dict is not None and content_dict != stored[0]:
+                raise ValueError(f"{db_path} already holds rows deflated against another preset dictionary")
+            content_dict = cast(bytes, stored[0])
+        else:
+            if content_dict is None:
+                rows = iter(rows)
+                head = list(itertools.islice(rows, _CONTENT_DICT_SAMPLE_ROWS))
+                content_dict = build_content_dict([row.content for row in head if isinstance(row.content, str)])
+                rows = itertools.chain(head, rows)
+            conn.execute("INSERT INTO content_dict (data) VALUES (?)", (content_dict,))
+        codec = ContentCodec(content_dict)
         batch: list[tuple] = []
 
         def flush_batch() -> None:
@@ -519,7 +615,7 @@ def bulk_insert(
                 (
                     _scrub_surrogates(fold_t(row.term)),
                     _scrub_surrogates(fold_r(row.reading)),
-                    _scrub_surrogates(row.content),
+                    row.content if isinstance(row.content, bytes) else codec.encode(row.content),
                     _scrub_surrogates(row.tags),
                     _scrub_surrogates(row.rules),
                     row.score,
@@ -645,7 +741,7 @@ def _fetch_rows_for_sequences(
         chunk = sequences[start : start + _EXIST_CHUNK]
         placeholders = ", ".join("?" for _ in chunk)
         rows = conn.execute(
-            f"SELECT id, content, tags, rules, score, sequence FROM entries WHERE sequence IN ({placeholders})",
+            f"SELECT id, gloss(content), tags, rules, score, sequence FROM entries WHERE sequence IN ({placeholders})",
             chunk,
         ).fetchall()
         for row_id, content, tags, rules, score, sequence in rows:
@@ -775,7 +871,7 @@ def _fetch_lemma_rows_for_terms(
         chunk = terms[start : start + _EXIST_CHUNK]
         placeholders = ", ".join("?" for _ in chunk)
         rows = conn.execute(
-            f"SELECT term, content, tags, sequence, rules FROM entries WHERE term IN ({placeholders}) "
+            f"SELECT term, gloss(content), tags, sequence, rules FROM entries WHERE term IN ({placeholders}) "
             "ORDER BY score DESC, sequence, id",
             chunk,
         ).fetchall()
@@ -1061,7 +1157,7 @@ def lookup_many(
             # matches.
             folded_term = fold_r(normalized)
             subqueries.append(
-                "SELECT ? AS req_idx, id, term, reading, content, tags, score, sequence FROM entries "
+                "SELECT ? AS req_idx, id, term, reading, gloss(content), tags, score, sequence FROM entries "
                 "WHERE term = ? OR reading = ?"
             )
             params.extend([idx, normalized, folded_term])
@@ -1228,7 +1324,7 @@ def term_rows(
         chunk = canonical_terms[start : start + _EXIST_CHUNK]
         placeholders = ", ".join("?" for _ in chunk)
         rows = conn.execute(
-            f"SELECT term, content, tags FROM entries WHERE term IN ({placeholders}) "
+            f"SELECT term, gloss(content), tags FROM entries WHERE term IN ({placeholders}) "
             "ORDER BY score DESC, sequence, id",
             chunk,
         ).fetchall()
@@ -1257,7 +1353,7 @@ def _term_or_reading_rows(
                 requested_by_reading.setdefault(reading, []).extend(requested_by_term[term])
         placeholders = ", ".join("?" for _ in chunk)
         rows = conn.execute(
-            f"SELECT term, reading, content, tags FROM entries "
+            f"SELECT term, reading, gloss(content), tags FROM entries "
             f"WHERE term IN ({placeholders}) OR reading IN ({placeholders}) ORDER BY score DESC, sequence, id",
             (*chunk, *readings),
         ).fetchall()
@@ -1351,7 +1447,7 @@ def exact_term_sequences(
         chunk = terms[start : start + _EXIST_CHUNK]
         placeholders = ", ".join("?" for _ in chunk)
         rows = conn.execute(
-            "SELECT DISTINCT term, reading, sequence, content FROM entries "
+            "SELECT DISTINCT term, reading, sequence, gloss(content) FROM entries "
             f"WHERE term IN ({placeholders}) AND reading IS NOT NULL "
             "AND reading != '' AND sequence IS NOT NULL",
             chunk,

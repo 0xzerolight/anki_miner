@@ -181,7 +181,7 @@ def conn(tmp_path_factory):
     db = tmp_path_factory.mktemp("wty_ro") / "index.sqlite"
     storage.create_index(db)
     storage.bulk_insert(db, WTY_RO, keys=KEYS)
-    opened = storage.open_readonly(db)
+    opened = storage.open_dictionary(db)
     yield opened
     opened.close()
 

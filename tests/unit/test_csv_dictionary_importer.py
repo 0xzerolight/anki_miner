@@ -15,7 +15,7 @@ from anki_miner.services.dictionary.importers.csv_importer import (
 )
 from anki_miner.services.dictionary.importers.plain_index import SOURCE_DIR
 from anki_miner.services.dictionary.providers.indexed_provider import IndexedDictProvider
-from anki_miner.services.dictionary.storage import open_readonly, read_meta
+from anki_miner.services.dictionary.storage import open_dictionary, read_meta
 
 
 def _lookup(dest_root: Path, dict_id: str, language: str, word: str) -> str | None:
@@ -28,9 +28,9 @@ def _lookup(dest_root: Path, dict_id: str, language: str, word: str) -> str | No
 
 
 def _rows(db: Path) -> list[tuple[str, str | None, str]]:
-    conn = open_readonly(db)
+    conn = open_dictionary(db)
     try:
-        return list(conn.execute("SELECT term, reading, content FROM entries ORDER BY id"))
+        return list(conn.execute("SELECT term, reading, gloss(content) FROM entries ORDER BY id"))
     finally:
         conn.close()
 
