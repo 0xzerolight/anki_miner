@@ -12,7 +12,8 @@ at the very start of teardown — before ``_drain_qt_deletes`` destroys the
 deleted widget — so no worker thread is alive when Qt tears the objects down.
 
 Without that reaper this test aborts the worker; with it, the worker is joined
-and the test passes.
+and the test passes. A worker a widget starts itself, outside ``run_off_thread``,
+is joined by ``_pin_qtbot_widgets`` instead (the last test here).
 """
 
 from __future__ import annotations
@@ -23,6 +24,7 @@ import time
 from PyQt6.QtWidgets import QVBoxLayout, QWidget
 
 from anki_miner.gui.utils.run_off_thread import run_off_thread
+from anki_miner.gui.workers.base_worker import SingleCallWorker
 
 
 def test_running_offthread_worker_reaped_before_delete_drain(qtbot):
@@ -81,3 +83,28 @@ def test_running_offthread_worker_survives_the_test_frame_dying(qtbot):
     run_off_thread(panel, work, lambda _r: None, pass_cancel_check=True)
     assert started.wait(2.0), "worker never started"
     # No deleteLater, no explicit join: returning here is the whole test.
+
+
+def test_a_worker_a_widget_starts_itself_is_joined_before_the_drain(qtbot):
+    """The setup wizard's shape: a page starts ``SingleCallWorker(parent=page)``.
+
+    No ``run_off_thread``, so the off-thread reaper never sees it. The test ends
+    with it running, ``qtbot``'s close pass schedules the tree for deletion, and
+    ``_drain_qt_deletes`` destroys it. Without the thread join in
+    ``_pin_qtbot_widgets`` this aborts the whole xdist worker, as it did on CI in
+    ``test_resources_page_reports_imported_but_not_active``.
+    """
+    started = threading.Event()
+
+    def work(is_cancelled) -> None:
+        started.set()
+        while not is_cancelled():
+            time.sleep(0.01)
+
+    top = QWidget()
+    qtbot.addWidget(top)
+    page = QWidget()
+    QVBoxLayout(top).addWidget(page)
+
+    SingleCallWorker(work, pass_cancel_check=True, parent=page).start()
+    assert started.wait(2.0), "worker never started"
