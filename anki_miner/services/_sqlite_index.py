@@ -855,7 +855,7 @@ def write_meta_sidecar(
         logger.debug("Failed to write meta sidecar %s: %s", sidecar, e)
 
 
-def open_readonly(db_path: Path) -> sqlite3.Connection:
+def open_readonly(db_path: Path, *, factory: type[sqlite3.Connection] = sqlite3.Connection) -> sqlite3.Connection:
     """Open a read-only connection. Safe to share across threads.
 
     ``check_same_thread=False`` is required because providers/fetchers are
@@ -863,7 +863,7 @@ def open_readonly(db_path: Path) -> sqlite3.Connection:
     threads. The connection is read-only (``PRAGMA query_only=ON``) so concurrent
     reads are safe under sqlite3's serialized access mode.
     """
-    conn = sqlite3.connect(readonly_sqlite_uri(db_path), uri=True, check_same_thread=False)
+    conn = sqlite3.connect(readonly_sqlite_uri(db_path), uri=True, check_same_thread=False, factory=factory)
     try:
         conn.execute("PRAGMA query_only=ON")
     except Exception:

@@ -22,6 +22,7 @@ from anki_miner.services.dictionary.importers.yomitan_importer import (
 from anki_miner.services.dictionary.providers.indexed_provider import IndexedDictProvider
 from anki_miner.services.dictionary.storage import SCHEMA_VERSION, open_dictionary, read_meta
 from tests.fixtures.dictionary.build_yomitan_fixture import build_yomitan_zip
+from tests.fixtures.dictionary.content_rows import content_row, content_rows
 
 
 class TestImportYomitanZip:
@@ -43,7 +44,7 @@ class TestImportYomitanZip:
         try:
             count = conn.execute("SELECT COUNT(*) FROM entries").fetchone()[0]
             assert count == 2
-            content = conn.execute("SELECT gloss(content) FROM entries WHERE term = ?", ("食べる",)).fetchone()[0]
+            content = content_row(conn, "SELECT content FROM entries WHERE term = ?", ("食べる",))[0]
             assert "to eat" in content
             # Tag badges moved to provider-side composition (Task 4); content
             # is now glossary-only items. Task 3 will populate DictRow.tags.
@@ -75,7 +76,7 @@ class TestImportYomitanZip:
         db_path = dest_root / result.dict_id / "index.sqlite"
         conn = open_dictionary(db_path)
         try:
-            content = conn.execute("SELECT gloss(content) FROM entries WHERE term = ?", ("危険",)).fetchone()[0]
+            content = content_row(conn, "SELECT content FROM entries WHERE term = ?", ("危険",))[0]
             assert "danger�ous" in content
             assert "\ud867" not in content
         finally:
@@ -776,7 +777,7 @@ class TestImportYomitanZip:
         db_path = dest_root / result.dict_id / "index.sqlite"
         conn = open_dictionary(db_path)
         try:
-            content = conn.execute("SELECT gloss(content) FROM entries WHERE term = ?", ("走る",)).fetchone()[0]
+            content = content_row(conn, "SELECT content FROM entries WHERE term = ?", ("走る",))[0]
         finally:
             conn.close()
 
@@ -825,7 +826,7 @@ class TestImportYomitanZip:
         db_path = tmp_path / "dicts" / result.dict_id / "index.sqlite"
         conn = open_dictionary(db_path)
         try:
-            content = conn.execute("SELECT gloss(content) FROM entries WHERE term = ?", ("走る",)).fetchone()[0]
+            content = content_row(conn, "SELECT content FROM entries WHERE term = ?", ("走る",))[0]
             assert '<li class="gloss-item">' in content
             assert "to run" in content
             # Renderer no longer emits tag badges or tag-list wrapper.
@@ -844,7 +845,7 @@ class TestImportYomitanZip:
 
         conn = open_dictionary(tmp_path / "dicts" / result.dict_id / "index.sqlite")
         try:
-            content = conn.execute("SELECT gloss(content) FROM entries WHERE term = ?", ("語",)).fetchone()[0]
+            content = content_row(conn, "SELECT content FROM entries WHERE term = ?", ("語",))[0]
         finally:
             conn.close()
 
@@ -866,7 +867,7 @@ class TestImportYomitanZip:
 
         conn = open_dictionary(tmp_path / "dicts" / result.dict_id / "index.sqlite")
         try:
-            rows = conn.execute("SELECT gloss(content) FROM entries WHERE term = ? ORDER BY id", ("語",)).fetchall()
+            rows = content_rows(conn, "SELECT content FROM entries WHERE term = ? ORDER BY id", ("語",))
         finally:
             conn.close()
 
@@ -895,7 +896,7 @@ class TestImportYomitanZip:
 
         conn = open_dictionary(tmp_path / "dicts" / result.dict_id / "index.sqlite")
         try:
-            content = conn.execute("SELECT gloss(content) FROM entries WHERE term = ?", ("呪言",)).fetchone()[0]
+            content = content_row(conn, "SELECT content FROM entries WHERE term = ?", ("呪言",))[0]
         finally:
             conn.close()
 
@@ -1449,7 +1450,7 @@ class TestDictIdOverride:
         assert (dest_root / "jitendex" / "media" / "svg_accent.svg").exists()
         conn = open_dictionary(dest_root / "jitendex" / "index.sqlite")
         try:
-            content = conn.execute("SELECT gloss(content) FROM entries WHERE term = ?", ("走る",)).fetchone()[0]
+            content = content_row(conn, "SELECT content FROM entries WHERE term = ?", ("走る",))[0]
         finally:
             conn.close()
         assert 'src="jitendex__svg_accent.svg"' in content
@@ -1764,6 +1765,6 @@ def test_imported_glossaries_are_stored_deflated(tmp_path: Path) -> None:
     assert all(isinstance(blob, bytes) for blob in blobs) and b"gloss-item" in content_dict
     conn = open_dictionary(db)
     try:
-        assert "sense 3-7" in conn.execute("SELECT gloss(content) FROM entries WHERE term = '語3-7'").fetchone()[0]
+        assert "sense 3-7" in content_row(conn, "SELECT content FROM entries WHERE term = '語3-7'")[0]
     finally:
         conn.close()

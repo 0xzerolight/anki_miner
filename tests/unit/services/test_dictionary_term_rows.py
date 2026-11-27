@@ -22,6 +22,7 @@ from anki_miner.services.dictionary import storage
 from anki_miner.services.dictionary.importers.yomitan_importer import render_glossary_entry
 from anki_miner.services.dictionary.providers.indexed_provider import IndexedDictProvider
 from anki_miner.services.dictionary.storage import DictRow
+from tests.fixtures.dictionary.content_rows import content_rows
 
 FIXTURES = Path(__file__).resolve().parents[1].parent / "fixtures" / "he"
 WTY = json.loads((FIXTURES / "wty_rows.json").read_text(encoding="utf-8"))
@@ -175,8 +176,9 @@ def test_the_rows_come_back_in_storage_order(provider):
     try:
         expected = [
             (content, tags or "")
-            for content, tags in conn.execute(
-                "SELECT gloss(content), tags FROM entries WHERE term = ? ORDER BY score DESC, sequence, id",
+            for content, tags in content_rows(
+                conn,
+                "SELECT content, tags FROM entries WHERE term = ? ORDER BY score DESC, sequence, id",
                 (HE_KEYS.fold_term(word),),
             )
         ]

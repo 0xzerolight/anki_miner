@@ -41,6 +41,7 @@ from anki_miner.services.dictionary.storage import (
     write_tags,
 )
 from anki_miner.services.dictionary.yomitan_renderer import render_glossary_entry
+from tests.fixtures.dictionary.content_rows import content_row, content_rows
 
 
 class _ExecSpy:
@@ -51,6 +52,7 @@ class _ExecSpy:
 
     def __init__(self, conn):
         self._conn = conn
+        self.codec = conn.codec
         self.calls = 0
 
     def execute(self, *args, **kwargs):
@@ -2874,7 +2876,7 @@ class TestCompressedContent:
 
         conn = open_dictionary(db)
         try:
-            assert conn.execute("SELECT gloss(content) FROM entries WHERE term = 't7'").fetchone()[0] == rows[7].content
+            assert content_row(conn, "SELECT content FROM entries WHERE term = 't7'")[0] == rows[7].content
         finally:
             conn.close()
 
@@ -2889,7 +2891,7 @@ class TestCompressedContent:
         conn = open_dictionary(db)
         try:
             assert conn.execute("SELECT COUNT(*) FROM content_dict").fetchone()[0] == 1
-            assert [c for (c,) in conn.execute("SELECT gloss(content) FROM entries ORDER BY id")] == [
+            assert [c for (c,) in content_rows(conn, "SELECT content FROM entries ORDER BY id")] == [
                 "<li>first</li>",
                 "<li>second</li>",
             ]
@@ -2904,8 +2906,43 @@ class TestCompressedContent:
         bulk_insert(db, [DictRow(term="a", reading=None, content="<li>x</li>")])
         conn = open_readonly(db)
         try:
-            with pytest.raises(sqlite3.OperationalError, match="no such function: gloss"):
+            with pytest.raises(AttributeError, match="codec"):
                 lookup(conn, "a")
+        finally:
+            conn.close()
+
+    def test_threads_sharing_one_connection_keep_making_progress(self, tmp_path: Path):
+        """Providers share one connection across worker threads. A Python
+        function called from inside SQLite deadlocked two of them; decoding
+        after the fetch cannot."""
+        import threading
+        import time
+
+        db = tmp_path / "d.sqlite"
+        create_index(db)
+        bulk_insert(db, [DictRow(term=f"t{i}", reading=f"r{i}", content=f"<li>sense {i}</li>") for i in range(200)])
+        conn = open_dictionary(db)
+        stop = time.monotonic() + 1.0
+        counts = [0, 0]
+
+        def looks_up() -> None:
+            while time.monotonic() < stop:
+                lookup(conn, "t7")
+                counts[0] += 1
+
+        def probes() -> None:
+            while time.monotonic() < stop:
+                terms_exist(conn, ["t1", "t2", "t3"])
+                counts[1] += 1
+
+        threads = [threading.Thread(target=looks_up, daemon=True), threading.Thread(target=probes, daemon=True)]
+        try:
+            for thread in threads:
+                thread.start()
+            for thread in threads:
+                thread.join(10)
+            assert not any(thread.is_alive() for thread in threads)
+            assert min(counts) > 0
         finally:
             conn.close()
 

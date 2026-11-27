@@ -21,7 +21,7 @@ import zlib
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable, Iterable, NamedTuple, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Callable, Iterable, NamedTuple, TypeVar, cast
 
 import anki_miner.services._sqlite_index as _sqlite_index
 from anki_miner.exceptions import OperationCancelled
@@ -36,8 +36,8 @@ if TYPE_CHECKING:
 # v6: no table change — bumped to force a one-time reimport with NFC-normalized
 # term and reading keys.
 # v7: ``entries.content`` holds the glossary HTML deflated against the slot's
-# own preset dictionary (``content_dict``); readers select ``gloss(content)``
-# on a connection from :func:`open_dictionary`. About a tenth of the bytes.
+# own preset dictionary (``content_dict``); readers decode it with the codec
+# of a connection from :func:`open_dictionary`. About a tenth of the bytes.
 # Stale (< SCHEMA_VERSION) indexes are dropped and the startup Reimport-All
 # prompt + pre-run gate act on schema_ok; reimport is the migration.
 SCHEMA_VERSION = 7
@@ -109,24 +109,39 @@ class ContentCodec:
         return (decompressor.decompress(blob) + decompressor.flush()).decode("utf-8")
 
 
-def open_dictionary(db_path: Path) -> sqlite3.Connection:
-    """:func:`open_readonly` for a dictionary index, with its ``gloss(content)`` decoder registered.
+class DictionaryConnection(sqlite3.Connection):
+    """A read-only dictionary connection that carries its index's :class:`ContentCodec`."""
 
-    Every read of ``entries.content`` selects ``gloss(content)``; a connection
-    opened any other way fails that query with "no such function: gloss"
-    rather than handing compressed bytes to a card. An index with no preset
-    dictionary row has no rows either: :func:`bulk_insert` writes it with the
-    first batch.
+    codec: ContentCodec
+
+
+def open_dictionary(db_path: Path) -> DictionaryConnection:
+    """:func:`open_readonly` for a dictionary index, carrying the codec its content is read with.
+
+    An index with no preset dictionary row has no rows either:
+    :func:`bulk_insert` writes it with the first batch.
     """
-    conn = open_readonly(db_path)
+    conn = cast(DictionaryConnection, open_readonly(db_path, factory=DictionaryConnection))
     try:
         stored = conn.execute("SELECT data FROM content_dict").fetchone()
-        codec = ContentCodec(stored[0] if stored is not None else b"")
-        conn.create_function("gloss", 1, codec.decode, deterministic=True)
+        conn.codec = ContentCodec(stored[0] if stored is not None else b"")
     except BaseException:
         conn.close()
         raise
     return conn
+
+
+def _glossed(conn: sqlite3.Connection, rows: list[Any], column: int) -> list[tuple[Any, ...]]:
+    """``rows`` with their ``content`` column (at ``column``) decoded.
+
+    Decoded here, after the fetch, never through a Python function registered
+    in SQLite: one called mid-query deadlocks two threads sharing the
+    connection (each holds what the other waits for, the connection mutex and
+    the GIL), and providers share one connection across worker threads. A
+    connection not from :func:`open_dictionary` has no codec and fails here.
+    """
+    decode = cast(DictionaryConnection, conn).codec.decode
+    return [(*row[:column], decode(row[column]), *row[column + 1 :]) for row in rows]
 
 
 _TABLES_SQL = """
@@ -221,7 +236,7 @@ _LOOKUP_LIMIT = 20
 # _sense_rank_fn) can rebuild this ORDER BY's two leading keys in Python and
 # reorder only INSIDE one of their groups.
 _LOOKUP_SQL = (
-    "SELECT gloss(content), tags, sequence, term, reading FROM entries "
+    "SELECT content, tags, sequence, term, reading FROM entries "
     "WHERE term = ? OR reading = ? "
     "ORDER BY (term = ?) DESC, COALESCE(reading = ?, 0) DESC, score DESC, sequence, id"
 )
@@ -232,7 +247,7 @@ _LOOKUP_SQL = (
 # check before rendering, so this is the schema-v3 ``rules`` column's first reader.
 # ``term`` trails ``rules`` for the same U2 homograph-scope classification.
 _LOOKUP_RULES_SQL = (
-    "SELECT gloss(content), tags, sequence, rules, term FROM entries "
+    "SELECT content, tags, sequence, rules, term FROM entries "
     "WHERE term = ? OR reading = ? "
     "ORDER BY (term = ?) DESC, score DESC, sequence, id"
 )
@@ -740,10 +755,14 @@ def _fetch_rows_for_sequences(
     for start in range(0, len(sequences), _EXIST_CHUNK):
         chunk = sequences[start : start + _EXIST_CHUNK]
         placeholders = ", ".join("?" for _ in chunk)
-        rows = conn.execute(
-            f"SELECT id, gloss(content), tags, rules, score, sequence FROM entries WHERE sequence IN ({placeholders})",
-            chunk,
-        ).fetchall()
+        rows = _glossed(
+            conn,
+            conn.execute(
+                f"SELECT id, content, tags, rules, score, sequence FROM entries WHERE sequence IN ({placeholders})",
+                chunk,
+            ).fetchall(),
+            1,
+        )
         for row_id, content, tags, rules, score, sequence in rows:
             grouped.setdefault(sequence, []).append(
                 (
@@ -870,11 +889,15 @@ def _fetch_lemma_rows_for_terms(
     for start in range(0, len(terms), _EXIST_CHUNK):
         chunk = terms[start : start + _EXIST_CHUNK]
         placeholders = ", ".join("?" for _ in chunk)
-        rows = conn.execute(
-            f"SELECT term, gloss(content), tags, sequence, rules FROM entries WHERE term IN ({placeholders}) "
-            "ORDER BY score DESC, sequence, id",
-            chunk,
-        ).fetchall()
+        rows = _glossed(
+            conn,
+            conn.execute(
+                f"SELECT term, content, tags, sequence, rules FROM entries WHERE term IN ({placeholders}) "
+                "ORDER BY score DESC, sequence, id",
+                chunk,
+            ).fetchall(),
+            1,
+        )
         for term, content, tags, sequence, rules in rows:
             tags_val = tags if tags is not None else ""
             if is_lemma_row(tags_val):
@@ -970,7 +993,7 @@ def lookup(
     folded_word = fold_r(word)
     folded_boost = fold_r(reading)
     normalized_lemma = fold_t(lemma) if lemma else None
-    rows = conn.execute(_LOOKUP_SQL, (word, folded_word, word, folded_boost)).fetchall()
+    rows = _glossed(conn, conn.execute(_LOOKUP_SQL, (word, folded_word, word, folded_boost)).fetchall(), 0)
     # rows: (content, tags, sequence, term, reading). Scope homographs (Rule
     # A/A′/B) over the ORDER BY-sorted candidate set, THEN apply the pool cap —
     # matching the filter-before-cap order ``lookup_many`` uses. Row-for-row
@@ -1023,7 +1046,7 @@ def lookup_with_rules(
     fold_t, fold_r = _folders(keys)
     word = fold_t(word)
     folded_word = fold_r(word)
-    rows = conn.execute(_LOOKUP_RULES_SQL, (word, folded_word, word)).fetchall()
+    rows = _glossed(conn, conn.execute(_LOOKUP_RULES_SQL, (word, folded_word, word)).fetchall(), 0)
     # rows: (content, tags, sequence, rules, term). Render-side, so scope
     # homographs (Rule A/B) then apply the pool cap, mirroring ``lookup``.
     keep = _keep_mask_fn(keys)(word, [(row[4], row[0]) for row in rows], None)
@@ -1157,12 +1180,12 @@ def lookup_many(
             # matches.
             folded_term = fold_r(normalized)
             subqueries.append(
-                "SELECT ? AS req_idx, id, term, reading, gloss(content), tags, score, sequence FROM entries "
+                "SELECT ? AS req_idx, id, term, reading, content, tags, score, sequence FROM entries "
                 "WHERE term = ? OR reading = ?"
             )
             params.extend([idx, normalized, folded_term])
         sql = " UNION ALL ".join(subqueries)
-        rows = conn.execute(sql, params).fetchall()
+        rows = _glossed(conn, conn.execute(sql, params).fetchall(), 4)
 
         # Bucket each fetched row under its own req_idx-tagged word. Each entry
         # carries the sort keys that reproduce _LOOKUP_SQL's
@@ -1323,11 +1346,15 @@ def term_rows(
     for start in range(0, len(canonical_terms), _EXIST_CHUNK):
         chunk = canonical_terms[start : start + _EXIST_CHUNK]
         placeholders = ", ".join("?" for _ in chunk)
-        rows = conn.execute(
-            f"SELECT term, gloss(content), tags FROM entries WHERE term IN ({placeholders}) "
-            "ORDER BY score DESC, sequence, id",
-            chunk,
-        ).fetchall()
+        rows = _glossed(
+            conn,
+            conn.execute(
+                f"SELECT term, content, tags FROM entries WHERE term IN ({placeholders}) "
+                "ORDER BY score DESC, sequence, id",
+                chunk,
+            ).fetchall(),
+            1,
+        )
         for term, content, tags in rows:
             for requested in requested_by_term.get(term, ()):
                 found.setdefault(requested, []).append((content, tags or ""))
@@ -1352,11 +1379,15 @@ def _term_or_reading_rows(
             if reading is not None:
                 requested_by_reading.setdefault(reading, []).extend(requested_by_term[term])
         placeholders = ", ".join("?" for _ in chunk)
-        rows = conn.execute(
-            f"SELECT term, reading, gloss(content), tags FROM entries "
-            f"WHERE term IN ({placeholders}) OR reading IN ({placeholders}) ORDER BY score DESC, sequence, id",
-            (*chunk, *readings),
-        ).fetchall()
+        rows = _glossed(
+            conn,
+            conn.execute(
+                f"SELECT term, reading, content, tags FROM entries "
+                f"WHERE term IN ({placeholders}) OR reading IN ({placeholders}) ORDER BY score DESC, sequence, id",
+                (*chunk, *readings),
+            ).fetchall(),
+            2,
+        )
         in_chunk = set(chunk)
         for term, reading, content, tags in rows:
             row = (content, tags or "")
@@ -1446,12 +1477,16 @@ def exact_term_sequences(
     for start in range(0, len(terms), _EXIST_CHUNK):
         chunk = terms[start : start + _EXIST_CHUNK]
         placeholders = ", ".join("?" for _ in chunk)
-        rows = conn.execute(
-            "SELECT DISTINCT term, reading, sequence, gloss(content) FROM entries "
-            f"WHERE term IN ({placeholders}) AND reading IS NOT NULL "
-            "AND reading != '' AND sequence IS NOT NULL",
-            chunk,
-        ).fetchall()
+        rows = _glossed(
+            conn,
+            conn.execute(
+                "SELECT DISTINCT term, reading, sequence, content FROM entries "
+                f"WHERE term IN ({placeholders}) AND reading IS NOT NULL "
+                "AND reading != '' AND sequence IS NOT NULL",
+                chunk,
+            ).fetchall(),
+            3,
+        )
         for term, reading, sequence, content in rows:
             folded_reading = fold_r(reading)
             if folded_reading is None:
