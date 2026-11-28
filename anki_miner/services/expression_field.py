@@ -2,14 +2,14 @@
 
 The known-words scan (``AnkiService._collect_first_field_forms``) walks every
 note type in the collection. Anki's convention makes the first field the
-expression, and Anki Miner's own note type is held to it
-(``anki_note_builder.field_mapping_error``), but shared decks break it both
-ways: Migaku's Japanese note type opens with ``Sentence`` (every subtitle line
-became a known "word" and ``Target Word`` was never read), the Core 2k/6k
-Optimized deck with ``Optimized-Voc-Index`` (no target script, so the deck
-contributed nothing).
+expression, but shared decks break it both ways: Migaku's Japanese note type
+opens with ``Sentence`` (every subtitle line became a known "word" and
+``Target Word`` was never read), the Core 2k/6k Optimized deck with
+``Optimized-Voc-Index`` (no target script, so the deck contributed nothing).
 
-Nothing here is configured. Per note type, a sample of its notes decides:
+The note type cards go into answers by its mapping: a word mapped to a field
+other than the first is read there, with no sampling (rule 0). Nothing else is
+configured. Per note type, a sample of its notes decides:
 
 1. the first field stays while nearly all of its values look like words —
    every note type that already worked is untouched;
@@ -180,13 +180,17 @@ def choose_expression_field(
     *,
     script: ScriptSupport,
     sentence_rules: SentenceRules,
+    mapped: str = "",
 ) -> str:
-    """The field of a note type to read as the expression (module docstring, rules 1-3).
+    """The field of a note type to read as the expression (module docstring, rules 0-3).
 
     Args:
         field_names: The note type's fields in order; the first is Anki's default.
         samples: notesInfo ``fields`` dicts of that note type (any number, may be empty).
+        mapped: The word's mapped field when cards go into this note type, else "".
     """
+    if mapped in field_names[1:]:
+        return mapped
     first = field_names[0]
     if _holds_words(_field_values(samples, first), script=script, sentence_rules=sentence_rules):
         return first
@@ -214,10 +218,13 @@ class ExpressionFieldResolver:
         script: ScriptSupport,
         sentence_rules: SentenceRules,
         sample_notes: int = SAMPLE_NOTES,
+        mapped: Mapping[str, str] | None = None,
     ) -> None:
         self._script = script
         self._sentence_rules = sentence_rules
         self._sample_notes = sample_notes
+        #: note type -> the field the word is mapped to (rule 0).
+        self._mapped: Mapping[str, str] = mapped or {}
         self._pending: dict[str, list[Mapping[str, object]]] = {}
         self._first_fields: dict[str, str] = {}
         #: note type -> the field read as its expression, once decided.
@@ -256,7 +263,13 @@ class ExpressionFieldResolver:
         # notesInfo preserves field order and every note of a note type has the
         # same fields, so the first row is representative (deck_filter.inspect_deck).
         field_names = list(buffer[0])
-        chosen = choose_expression_field(field_names, buffer, script=self._script, sentence_rules=self._sentence_rules)
+        chosen = choose_expression_field(
+            field_names,
+            buffer,
+            script=self._script,
+            sentence_rules=self._sentence_rules,
+            mapped=self._mapped.get(model, ""),
+        )
         self._first_fields[model] = field_names[0]
         self.chosen[model] = chosen
         return [pair for fields in buffer for pair in self._resolve(fields, chosen)]

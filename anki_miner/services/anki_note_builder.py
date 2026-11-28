@@ -10,7 +10,7 @@ import html
 import logging
 import re
 import unicodedata
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Collection, Mapping
 from dataclasses import dataclass
 
 from anki_miner.config import AnkiMinerConfig
@@ -64,6 +64,17 @@ def configured_target_field_names(config: AnkiMinerConfig) -> set[str]:
         if marker_field:
             field_names.add(marker_field)
     return field_names
+
+
+def always_filled_targets(config: AnkiMinerConfig) -> frozenset[str]:
+    """The fields every mined card fills: the word's and the sentence's, when mapped.
+
+    Anki refuses a note whose first field is empty, so the note type's first
+    field has to be one of these. The word may sit in any field: when it is not
+    the first one, card creation checks duplicates on it itself
+    (``AnkiService._checks_word_itself``).
+    """
+    return frozenset(target for target in (config.anki_fields["word"], config.anki_fields["sentence"]) if target)
 
 
 def no_note_type_message() -> str:
@@ -121,18 +132,24 @@ def field_mapping_error(
     note_type: str,
     ordered_actual: list[str],
     required: set[str],
-    word_target: str,
+    always_filled: Collection[str] | None = None,
 ) -> str | None:
-    """Return the shared missing/first-field mapping error, if any."""
+    """Return the shared missing-field / first-field mapping error, if any.
+
+    The checks before adding cards pass ``always_filled``
+    (:func:`always_filled_targets`): the note type's first field must be one of
+    them. Card Backfill adds no notes and leaves it out.
+    """
     actual = set(ordered_actual)
     missing = required - actual
     if missing:
         return missing_fields_message(note_type, missing, actual)
-    if not ordered_actual or word_target != ordered_actual[0]:
+    if always_filled is not None and (not ordered_actual or ordered_actual[0] not in always_filled):
         first_field = ordered_actual[0] if ordered_actual else "(none)"
+        logger.warning("Anki first field unfilled: note_type=%s first=%s", note_type, first_field)
         return (
-            f"Word field '{word_target}' must map to the first field '{first_field}' "
-            f"on note type '{note_type}'. Check Settings → Cards & Anki."
+            f"The first field of note type '{note_type}', '{first_field}', must hold the word or the sentence: "
+            "Anki refuses a card whose first field is empty. Check Settings → Cards & Anki."
         )
     return None
 

@@ -302,8 +302,9 @@ FreeDict is a StarDict file, not a Yomitan zip. Export Resources does not carry 
 
 Anki Miner does not ship a note type. Use any note type you like: it works once its fields are mapped.
 
-- The word goes in the note type's **first field**. Name it **Word** (or Expression, Vocab) and Anki Miner maps it by itself.
+- The word can go in any field. Name it **Word** (or Expression, Vocab) and Anki Miner maps it by itself.
 - It needs a field for the **example sentence**. Name it **Sentence** (or Context, Example) and Anki Miner maps it by itself.
+- The note type's **first field** must hold the word or the sentence: Anki refuses a card whose first field is empty.
 - Anki Miner fills the other fields it recognises by name, such as Reading, Definition, Glossary, Picture, SentenceAudio, WordAudio, Frequency, SentenceTranslation and Source. The whole field name has to match, spaces and underscores aside: "Sentence" is recognised, "Example sentence" is not.
 - Fields named anything else: finish the Setup Wizard, then choose the fields yourself in Settings -> Cards & Anki.
 

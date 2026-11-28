@@ -405,6 +405,14 @@ class TestScanPreflight:
             scan_backfill(anki, backfill_config, _services(), _options({"frequency"}))
         assert anki.queries == []
 
+    def test_a_word_field_after_the_first_is_backfilled(self, backfill_config):
+        """Backfill reads the word by name and adds no notes, so the field order does not matter."""
+        anki = FakeAnkiService({1: _note(1, word="猫", FrequencySort="")})
+        anki.note_fields = ["Sentence", *anki.note_fields]
+        freq = FakeFrequencyService({("猫", "ねこ"): [("JPDB", 42, None)]})
+        plan = scan_backfill(anki, backfill_config, _services(freq=freq), _options({"frequency_sort"}))
+        assert _changes_by_key(plan, 1) == {"frequency_sort": "42"}
+
     def test_absent_selected_field_reported_and_dropped(self, backfill_config):
         # Frequency mapped to a name the note type doesn't have; FrequencySort
         # is fine. The group must not silently propose nothing at all.

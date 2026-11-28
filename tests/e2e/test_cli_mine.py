@@ -9,6 +9,7 @@ from __future__ import annotations
 import dataclasses
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -87,3 +88,44 @@ def test_pairs_mines_video_episode(home) -> None:
     assert events[-1]["cards_created"] == fake.note_count(DECK) > 0
     stages = [e for e in events if e["event"] == "stage"]
     assert stages and all(e["item"] == 0 for e in stages)
+
+
+_SENTENCE_FIRST = "AnkiMiner E2E Sentence First"
+
+
+@pytest.fixture
+def sentence_first_home(isolated_home: Path, fake_anki):
+    """A seeded home mining into a note type whose first field is the sentence."""
+    pytest.importorskip("fugashi")
+    seed_offline_dict(isolated_home / "dicts")
+    fake_anki.seed_model(_SENTENCE_FIRST, ["Sentence", "Back", "Front"])
+    config = build_app_config(
+        E2EConfig(test_home=isolated_home, ankiconnect_url=fake_anki.url), isolated_home, bypass_known_words=True
+    )
+    fields = dict(config.anki_fields) | {"sentence": "Sentence"}
+    GUIConfigManager.save_config(
+        dataclasses.replace(config, anki_note_type=_SENTENCE_FIRST, anki_fields=fields, reading_min_occurrence=1)
+    )
+    return isolated_home, fake_anki
+
+
+def test_reading_mines_into_a_sentence_first_note_type(sentence_first_home) -> None:
+    """The word lands in its mapped later field, words sharing a line each get a
+    card, and a second run finds them all carded. ``bypass_known_words`` keeps
+    phase 2 away from Anki and sets ``allow_duplicate_cards``, so the second
+    run's zero is the word-field duplicate check, scoped to the deck."""
+    test_home, fake = sentence_first_home
+    code, events = _run(test_home, "mine", "reading", str(get_test_srt()))
+    assert code == 0, events[-1]
+    created = events[-1]["cards_created"]
+    notes = fake.notes(DECK)
+    assert created == len(notes) > 0
+    assert all(note["Front"] and note["Sentence"] for note in notes)
+    # Anki compares first fields with the markup stripped, the bolded word included.
+    sentences = [re.sub(r"<[^>]+>", "", note["Sentence"]) for note in notes]
+    assert len(set(sentences)) < len(sentences), "no two words came from one line"
+
+    code, events = _run(test_home, "mine", "reading", str(get_test_srt()))
+    assert code == 0, events[-1]
+    assert events[-1]["cards_created"] == 0
+    assert fake.note_count(DECK) == created

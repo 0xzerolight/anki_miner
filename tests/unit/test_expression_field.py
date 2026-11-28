@@ -293,6 +293,29 @@ class TestExpressionFieldResolver:
         odd = _fields(("Sentence", "走る"))
         assert resolver.feed("M", odd) == []
 
+    def test_the_mined_into_note_type_reads_its_mapped_later_field(self):
+        """Rule 0: "Japanese" names no word field, but the mapping says the word lives there."""
+        resolver = ExpressionFieldResolver(
+            script=_JA.script,
+            sentence_rules=_JA.sentence_rules,
+            sample_notes=1,
+            mapped={"Mine": "Japanese"},
+        )
+        mine = _fields(("Sentence", "彼は毎日走る。"), ("Japanese", "走る"))
+        other = _fields(("Sentence", "彼は毎日走る。"), ("Japanese", "走る"))
+        assert resolver.feed("Mine", mine) == [(mine, "Japanese")]
+        # Any other note type is sampled: no field named for words, so the first stays.
+        assert resolver.feed("Other", other) == [(other, "Sentence")]
+
+    def test_a_mapped_first_field_keeps_the_sampled_rules(self):
+        """A word mapped to the first field changes nothing: rules 1-3 still decide."""
+        names = ["Sentence", "Word"]
+        samples = [_fields(("Sentence", "彼は毎日走る。"), ("Word", "走る"))]
+        chosen = choose_expression_field(
+            names, samples, script=_JA.script, sentence_rules=_JA.sentence_rules, mapped="Sentence"
+        )
+        assert chosen == "Word"
+
     def test_overrides_list_only_note_types_read_off_their_first_field(self):
         resolver = self._resolver(sample_notes=1)
         resolver.feed("Sentence First", _fields(("Sentence", "彼は毎日走る。"), ("Word", "走る")))

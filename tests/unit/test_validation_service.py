@@ -892,6 +892,34 @@ class TestValidationService:
             assert success is False
             assert "IsClickCard" in message
 
+        def test_a_sentence_first_note_type_passes(self, test_config):
+            """The word may sit in any field while the sentence fills the first one."""
+            service = ValidationService(test_config)
+            fields = [value for value in test_config.anki_fields.values() if value]
+            fields.remove(test_config.anki_fields["sentence"])
+            mock_response = MagicMock()
+            mock_response.json.return_value = {"result": [test_config.anki_fields["sentence"], *fields], "error": None}
+
+            with patch("anki_miner.services._ankiconnect.requests.post", return_value=mock_response):
+                success, message = service._check_field_names_exist()
+
+            assert success is True, message
+
+        def test_a_first_field_neither_word_nor_sentence_fails(self, test_config):
+            """Anki refuses a card whose first field is empty."""
+            service = ValidationService(test_config)
+            mock_response = MagicMock()
+            mock_response.json.return_value = {
+                "result": ["Index", *(value for value in test_config.anki_fields.values() if value)],
+                "error": None,
+            }
+
+            with patch("anki_miner.services._ankiconnect.requests.post", return_value=mock_response):
+                success, message = service._check_field_names_exist()
+
+            assert success is False
+            assert "'Index', must hold the word or the sentence" in message
+
         def test_an_unset_note_type_never_reaches_anki(self, test_config):
             """modelFieldNames("") answers with an error that reads as a fault."""
             from dataclasses import replace

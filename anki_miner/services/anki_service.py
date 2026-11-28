@@ -22,6 +22,7 @@ from anki_miner.services.anki_note_builder import (
     _RAW_HTML_FIELD_KEYS,
     BuiltNote,
     _strip_for_dedup,
+    always_filled_targets,
     build_note,
     configured_target_field_names,
     field_mapping_error,
@@ -308,6 +309,12 @@ class AnkiService:
         # It only scores text (Readability, i+1); the set above stays the
         # mining exclusion and the Deck Filter duplicate gate.
         self._reviewed_vocab_cache: set[str] | None = None
+        # Per card-creation run (_start_duplicate_run): the note type's first
+        # field, the one Anki keys duplicates on, read fresh each run; None
+        # until a run reads it. And the word-field forms already carded, read
+        # once per run and only when the word is not that first field.
+        self._first_field: str | None = None
+        self._carded_word_forms: set[str] | None = None
 
         # Validate required field keys upfront
         missing = self.REQUIRED_FIELD_KEYS - set(config.anki_fields.keys())
@@ -526,12 +533,11 @@ class AnkiService:
         ordered_actual = self.ordered_note_type_field_names(self.config.anki_note_type)
         actual = set(ordered_actual)
         required = configured_target_field_names(self.config)
-        word_target = self.config.anki_fields["word"]
         mapping_error = field_mapping_error(
             self.config.anki_note_type,
             ordered_actual,
             required,
-            word_target,
+            always_filled_targets(self.config),
         )
         if mapping_error:
             raise SetupError(mapping_error)
@@ -592,6 +598,29 @@ class AnkiService:
         return bool(
             (self.config.excluded_decks or self.config.ignore_suspended_cards) and not self.config.allow_duplicate_cards
         )
+
+    def _note_type_first_field(self) -> str:
+        """The first field of the note type cards go into: the one Anki keys duplicates on."""
+        names = self.ordered_note_type_field_names(self.config.anki_note_type)
+        return names[0] if names else ""
+
+    def _start_duplicate_run(self) -> None:
+        """Read the note type's field order for this run and drop the last run's word-field scan."""
+        self._first_field = self._note_type_first_field()
+        self._carded_word_forms = None
+
+    def _checks_word_itself(self) -> bool:
+        """Whether this run judges duplicates by the word field, with Anki's own check off.
+
+        Anki keys duplicates on a note type's first field only. With the word
+        mapped to a later field (a sentence-first note type), Anki would
+        compare sentences: the second word mined from one subtitle line would
+        be refused, and a word already carded would pass. Such a run asks Anki
+        only whether each note is valid (:meth:`_validate_notes_addible`),
+        judges duplicates in :meth:`_word_field_duplicates`, and adds every
+        note with ``allowDuplicate``.
+        """
+        return self._first_field is not None and self._first_field != self.config.anki_fields["word"]
 
     def _build_reviewed_query(self) -> str:
         """The vocab query narrowed to notes with a card reviewed at least once (F-01).
@@ -859,6 +888,70 @@ class AnkiService:
         key = _strip_for_dedup(value)
         return self._dedup_fold(key) if key and self._dedup_fold is not None else key
 
+    def _find_note_ids(self, query: str) -> list[int]:
+        """AnkiConnect ``findNotes`` for ``query``."""
+        return _expect_list(
+            post_action(
+                self.config.ankiconnect_url,
+                "findNotes",
+                params={"query": query},
+                timeout=30,
+            )
+            or [],
+            "findNotes",
+            elem_type=int,
+        )
+
+    def _notes_fields(self, note_ids: list[int]) -> Iterator[tuple[object, dict]]:
+        """``(modelName, fields)`` of each note, read with ``notesInfo`` 1000 at a time.
+
+        Batched to avoid timeouts on large collections. A deleted note comes
+        back as ``{}`` and a malformed row may carry a non-dict ``fields``;
+        both are skipped.
+        """
+        batch_size = 1000
+        for i in range(0, len(note_ids), batch_size):
+            notes = _expect_list(
+                post_action(
+                    self.config.ankiconnect_url,
+                    "notesInfo",
+                    params={"notes": note_ids[i : i + batch_size]},
+                    timeout=30,
+                )
+                or [],
+                "notesInfo",
+                elem_type=dict,
+            )
+            for note in notes:
+                fields = note.get("fields")
+                if isinstance(fields, dict) and fields:
+                    yield note.get("modelName"), fields
+
+    def _word_field_forms(self) -> set[str]:
+        """The word field of every note of the note type cards go into, dedup-normalized.
+
+        Anki's duplicate rule, moved off the first field: the same note type
+        across the collection, or only the deck cards go into when
+        ``allow_duplicate_cards`` scopes duplicates to it (Deck Builder),
+        children excluded as AnkiConnect's deck scope does. Unlike the
+        known-words scan, every value counts, in the mining script or not.
+        Raises ``AnkiConnectionError``: a duplicate check that cannot read the
+        collection must not pass every word.
+        """
+        query = f'note:"{escape_anki_search(self.config.anki_note_type)}"'
+        if self.config.allow_duplicate_cards:
+            deck = escape_anki_search(self.config.anki_deck_name)
+            query += f' deck:"{deck}" -deck:"{deck}::*"'
+        word_field = self.config.anki_fields["word"]
+        forms: set[str] = set()
+        note_ids = self._find_note_ids(query)
+        for _model, fields in self._notes_fields(note_ids):
+            field_info = fields.get(word_field)
+            if isinstance(field_info, dict) and (key := self._dedup_key(str(field_info.get("value", "")))):
+                forms.add(key)
+        log_summary(logger, "Anki word field scan", notes=len(note_ids), forms=len(forms), field=word_field)
+        return forms
+
     def _collect_first_field_forms(self, query: str, *, warn_empty: bool = True) -> set[str]:
         """Run ``query`` and return the dedup-normalized in-script expressions.
 
@@ -872,17 +965,7 @@ class AnkiService:
         the empty-collection warning: a collection with no reviewed card is not
         an empty one.
         """
-        note_ids = _expect_list(
-            post_action(
-                self.config.ankiconnect_url,
-                "findNotes",
-                params={"query": query},
-                timeout=30,
-            )
-            or [],
-            "findNotes",
-            elem_type=int,
-        )
+        note_ids = self._find_note_ids(query)
 
         if not note_ids:
             if warn_empty:
@@ -892,14 +975,17 @@ class AnkiService:
                 )
             return set()
 
-        # Get note info in batches to avoid timeouts on large collections.
         existing_words: set[str] = set()
-        batch_size = 1000
         # Which field is the expression is decided per note type from the
         # notes themselves — the first field by Anki convention, unless it
         # does not hold words (a sentence-first or index-first shared deck).
-        # See services/expression_field.py; nothing is configured.
-        resolver = ExpressionFieldResolver(script=self._script, sentence_rules=self._sentence_rules)
+        # See services/expression_field.py. The note type cards go into is the
+        # exception: a word mapped to a later field is read as mapped.
+        resolver = ExpressionFieldResolver(
+            script=self._script,
+            sentence_rules=self._sentence_rules,
+            mapped={self.config.anki_note_type: self.config.anki_fields["word"]},
+        )
 
         def collect(ready: list[tuple[Mapping[str, object], str]]) -> None:
             for note_fields, field_name in ready:
@@ -916,27 +1002,8 @@ class AnkiService:
                 if word and self._is_target_script(word):
                     existing_words.add(word)
 
-        for i in range(0, len(note_ids), batch_size):
-            batch = note_ids[i : i + batch_size]
-            notes = _expect_list(
-                post_action(
-                    self.config.ankiconnect_url,
-                    "notesInfo",
-                    params={"notes": batch},
-                    timeout=30,
-                )
-                or [],
-                "notesInfo",
-                elem_type=dict,
-            )
-
-            for note in notes:
-                # A deleted note comes back as `{}`, and a malformed row may
-                # carry a non-dict `fields`; both are treated as absent.
-                fields = note.get("fields")
-                if not isinstance(fields, dict) or not fields:
-                    continue
-                collect(resolver.feed(note.get("modelName"), fields))
+        for model, fields in self._notes_fields(note_ids):
+            collect(resolver.feed(model, fields))
         collect(resolver.flush())
 
         log_summary(
@@ -1062,6 +1129,9 @@ class AnkiService:
                 len(word_data_list),
                 QCoreApplication.translate("AnkiService", "Creating Anki cards"),
             )
+
+        self._start_duplicate_run()
+        own_check = self._checks_word_itself()
 
         not_created: dict[str, str] = {}
         if self._scan_is_narrowed():
@@ -1205,7 +1275,9 @@ class AnkiService:
                     if built.used_bold_fallback:
                         bold_fallback += 1
                     note = built.note
-                    if allow_duplicate:
+                    # Scan-admitted, or judged on the word field: Anki's own
+                    # check would compare the wrong field (_checks_word_itself).
+                    if allow_duplicate or own_check:
                         note["options"] = {"allowDuplicate": True}
                     notes.append(note)
 
@@ -1328,9 +1400,11 @@ class AnkiService:
         The ``--api`` dry run's duplicate check, the branch create_cards_batch
         takes: scanned-vocabulary admission when it applies (those notes are then
         added with duplicates allowed, never probed), else the per-note probe,
-        whose note options keep ``allow_duplicate_cards``' deck scope. Raises
+        whose note options keep ``allow_duplicate_cards``' deck scope, judged on
+        the word field when the word is not the note type's first field. Raises
         ``AnkiConnectionError`` when Anki does not answer.
         """
+        self._start_duplicate_run()
         if self._scan_is_narrowed():
             candidates, refused, scan_admitted = self._admit_against_scanned_vocabulary(word_data_list)
         else:
@@ -1485,33 +1559,33 @@ class AnkiService:
         return results
 
     @staticmethod
-    def _strip_note_to_first_field(note: dict) -> dict:
-        """Return a shallow clone of ``note`` keeping only its first field.
+    def _strip_note_for_probe(note: dict, first_field: str | None) -> dict:
+        """Return a shallow clone of ``note`` keeping its word and the note type's first field.
 
         Ported from Yomitan ``Backend._stripNotesArray``
         (``ext/js/background/backend.js``, upstream e2ed450). Anki dedups on the
         first field only, so shipping the rest — definition/glossary fields can
         carry megabytes of rendered HTML — just to ask "is this a duplicate?"
-        wastes bandwidth and AnkiConnect time. ``verify_card_target`` requires
-        the word mapping to target the model's first field and rejects mapping
-        collisions; ``build_note`` emits that word field first.
+        wastes bandwidth and AnkiConnect time. ``build_note`` emits the word
+        field first and it stays first here, so :meth:`_word_value` names the
+        word. ``first_field`` is the note type's own first field
+        (:meth:`_start_duplicate_run`); when the word is mapped elsewhere it is
+        kept too, or Anki would call every probe empty. ``None`` (no run read
+        it) or the word's own field keeps the word alone.
         """
         stripped = dict(note)
         fields = note.get("fields") or {}
-        if fields:
-            first_key = next(iter(fields))
-            stripped["fields"] = {first_key: fields[first_key]}
-        else:
-            stripped["fields"] = {}
+        kept = dict.fromkeys(name for name in (next(iter(fields), None), first_field) if name)
+        stripped["fields"] = {name: fields.get(name, "") for name in kept}
         return stripped
 
     @staticmethod
-    def _first_field_value(note: dict) -> str:
-        """The card front of a probe note — the word every rejection must name.
+    def _word_value(note: dict) -> str:
+        """The card front of a built or probe note — the word every rejection must name.
 
-        ``verify_card_target`` requires the word mapping to target the model's
-        first field and ``build_note`` emits that word field first, so the
-        first field of a probed note is the spelling the user sees on the card.
+        ``build_note`` emits the word field first and :meth:`_strip_note_for_probe`
+        keeps it first, so a note's first field value is the spelling the user
+        sees on the card, wherever the note type puts that field.
         """
         fields = note.get("fields") or {}
         return str(next(iter(fields.values()), ""))
@@ -1621,6 +1695,12 @@ class AnkiService:
         forms can share a front: ko sends 學校 with the hangul front 학교 beside
         a mined 학교.
 
+        A run whose word is not the note type's first field
+        (:meth:`_checks_word_itself`) judges duplicates on the word field
+        instead (:meth:`_word_field_duplicates`) and asks Anki only whether the
+        rest are valid, so a real refusal still surfaces before any media
+        upload.
+
         Raises:
             AnkiConnectionError: connection/transport failure, a malformed
                 response, or a per-note non-duplicate rejection.
@@ -1630,7 +1710,13 @@ class AnkiService:
             logger.debug("Anki duplicate probe done: duplicates=%d", 0)
             return []
 
-        stripped = [self._strip_note_to_first_field(note) for note in notes]
+        if self._checks_word_itself():
+            flags = self._word_field_duplicates(notes)
+            self._validate_notes_addible([note for note, duplicate in zip(notes, flags, strict=True) if not duplicate])
+            logger.debug("Anki duplicate probe done: duplicates=%d word_field=true", sum(flags))
+            return flags
+
+        stripped = [self._strip_note_for_probe(note, self._first_field) for note in notes]
         # Flip allowDuplicate off (Yomitan notesNoDuplicatesAllowed) so a
         # duplicate reports canAdd=false with the duplicate error; keep the note's
         # own options otherwise. Normal-path notes carry no options, so this is
@@ -1679,7 +1765,7 @@ class AnkiService:
                     item.get("canAdd"),
                     error,
                 )
-                raise AnkiConnectionError(f"Anki refused the card for '{self._first_field_value(no_dup[i])}': {error}")
+                raise AnkiConnectionError(f"Anki refused the card for '{self._word_value(no_dup[i])}': {error}")
         is_duplicate = self._mark_repeated_fronts(stripped, is_duplicate)
         logger.debug("Anki duplicate probe done: duplicates=%d", sum(is_duplicate))
         return is_duplicate
@@ -1700,19 +1786,38 @@ class AnkiService:
         seen: set[str] = set()
         marked: list[bool] = []
         for note, duplicate in zip(notes, is_duplicate, strict=True):
-            front = self._dedup_key(self._first_field_value(note))
+            front = self._dedup_key(self._word_value(note))
             allowed = bool((note.get("options") or {}).get("allowDuplicate"))
             marked.append(duplicate or (front in seen and not allowed))
             if front:
                 seen.add(front)
         return marked
 
+    def _word_field_duplicates(self, notes: list[dict]) -> list[bool]:
+        """Per note, whether its word is already carded: Anki's duplicate rule on the word field.
+
+        Against :meth:`_word_field_forms`, read once per run, keyed by
+        ``_dedup_key`` like every other dedup site, then with
+        :meth:`_mark_repeated_fronts` for repeats inside ``notes``. A word let
+        through counts as carded for the rest of the run unless its note allows
+        duplicates, as Anki would have seen it land before the next batch.
+        """
+        if self._carded_word_forms is None:
+            self._carded_word_forms = self._word_field_forms()
+        carded = self._carded_word_forms
+        keys = [self._dedup_key(self._word_value(note)) for note in notes]
+        flags = self._mark_repeated_fronts(notes, [bool(key) and key in carded for key in keys])
+        for note, key, duplicate in zip(notes, keys, flags, strict=True):
+            if key and not duplicate and not (note.get("options") or {}).get("allowDuplicate"):
+                carded.add(key)
+        return flags
+
     def _validate_notes_addible(self, notes: list[dict]) -> None:
         """Raise if any first-field-only note is invalid with duplicates allowed."""
         if not notes:
             return
 
-        stripped = [self._strip_note_to_first_field(note) for note in notes]
+        stripped = [self._strip_note_for_probe(note, self._first_field) for note in notes]
         dup_allowed = [{**note, "options": {**note.get("options", {}), "allowDuplicate": True}} for note in stripped]
         try:
             result = _expect_list(
@@ -1741,7 +1846,7 @@ class AnkiService:
             for index, can_add in enumerate(addible):
                 if not can_add:
                     raise AnkiConnectionError(
-                        f"Anki refused the card for '{self._first_field_value(dup_allowed[index])}'."
+                        f"Anki refused the card for '{self._word_value(dup_allowed[index])}'."
                     ) from None
             return
 
@@ -1750,7 +1855,7 @@ class AnkiService:
             if error is not None or item.get("canAdd") is not True:
                 detail = error if isinstance(error, str) and error else "note is not addable"
                 raise AnkiConnectionError(
-                    f"Anki refused the card for '{self._first_field_value(dup_allowed[index])}': {detail}"
+                    f"Anki refused the card for '{self._word_value(dup_allowed[index])}': {detail}"
                 )
 
     def _probe_duplicates_fallback(self, stripped: list[dict], no_dup: list[dict]) -> list[bool]:

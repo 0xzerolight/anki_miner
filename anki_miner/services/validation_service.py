@@ -16,6 +16,7 @@ from anki_miner.exceptions import AnkiConnectionError
 from anki_miner.models import ValidationIssue, ValidationResult
 from anki_miner.services._ankiconnect import post_action, redact_ankiconnect_url
 from anki_miner.services.anki_note_builder import (
+    always_filled_targets,
     configured_target_field_names,
     field_mapping_error,
     field_target_collision_message,
@@ -1227,12 +1228,11 @@ class ValidationService:
             )
 
         configured_fields = configured_target_field_names(self.config)
-        word_target = self.config.anki_fields["word"]
         mapping_error = field_mapping_error(
             self.config.anki_note_type,
             actual_fields_list,
             configured_fields,
-            word_target,
+            always_filled_targets(self.config),
         )
         if mapping_error:
             return _record(

@@ -762,7 +762,6 @@ def _preflight(
     - the Expression field absent from the note type → ``SetupError``, since no
       note can then carry the identity every lookup and the apply-time
       staleness recheck key on;
-    - the Expression field is not the note type's first field → ``SetupError``;
     - any other selected field absent → returned by name, its key dropped by
       the caller. The remaining groups still run.
 
@@ -785,12 +784,7 @@ def _preflight(
 
     ordered_actual = anki_service.ordered_note_type_field_names(config.anki_note_type)
     actual = set(ordered_actual)
-    mapping_error = field_mapping_error(
-        config.anki_note_type,
-        ordered_actual,
-        {word_field},
-        word_field,
-    )
+    mapping_error = field_mapping_error(config.anki_note_type, ordered_actual, {word_field})
     if mapping_error:
         logger.warning(
             "Backfill preflight failed: note_type=%s field=%s fields=%d",

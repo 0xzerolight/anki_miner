@@ -394,10 +394,14 @@ _CUSTOM_ZH_FIELDS = ["word", "pinyin", "meaning", "sentence", "SentencePinyin", 
 
 
 def _mapping_error(config) -> str | None:
-    from anki_miner.services.anki_note_builder import configured_target_field_names, field_mapping_error
+    from anki_miner.services.anki_note_builder import (
+        always_filled_targets,
+        configured_target_field_names,
+        field_mapping_error,
+    )
 
     return field_mapping_error(
-        config.anki_note_type, _CUSTOM_ZH_FIELDS, configured_target_field_names(config), config.anki_fields["word"]
+        config.anki_note_type, _CUSTOM_ZH_FIELDS, configured_target_field_names(config), always_filled_targets(config)
     )
 
 

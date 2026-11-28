@@ -73,21 +73,26 @@ def _mining_preflight_error(config, ordered_fields, monkeypatch) -> str:
     return str(caught.value)
 
 
-def test_non_first_word_mapping_fails_validation_and_backfill_before_scan(test_config, monkeypatch):
+def test_an_unfilled_first_field_fails_mining_and_validation_alike(test_config, monkeypatch):
+    """Anki refuses a card whose first field is empty: "Front" holds neither word nor sentence."""
     config = _config(test_config, word="Expression", frequency="Frequency")
     ordered_fields = ["Front", "Expression", "Frequency"]
     mining_error = _mining_preflight_error(config, ordered_fields, monkeypatch)
 
     monkeypatch.setattr(validation_service, "post_action", lambda *_args, **_kwargs: ordered_fields)
     assert ValidationService(config).check_field_names() == (False, mining_error)
+    assert "'Front', must hold the word or the sentence" in mining_error
 
-    anki = _BackfillAnki(config.anki_note_type, ordered_fields)
+
+def test_backfill_reads_a_word_field_after_the_first(test_config, monkeypatch):
+    """Backfill reads the word by name and adds no notes, so the first field is not its concern."""
+    config = _config(test_config, word="Expression", frequency="Frequency")
+    anki = _BackfillAnki(config.anki_note_type, ["Front", "Expression", "Frequency"])
     monkeypatch.setattr(card_backfiller, "get_shared_tagger", lambda: object())
-    with pytest.raises(SetupError) as caught:
-        scan_backfill(anki, config, _services(), BackfillOptions(frozenset({"frequency"})))
 
-    assert str(caught.value) == mining_error
-    assert (anki.scans, anki.reads, anki.writes) == (0, 0, 0)
+    scan_backfill(anki, config, _services(), BackfillOptions(frozenset({"frequency"})))
+
+    assert anki.scans == 1
 
 
 @pytest.mark.parametrize(

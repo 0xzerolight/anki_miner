@@ -454,6 +454,7 @@ markers = [
     "youtube: requires network and yt-dlp real extractor",
     "real_ytdlp: exercises the real ytdlp_supports_js_runtimes / ytdlp_supports_remote_components probes (no autouse stub)",
     "real_probe: exercises the real AnkiService._probe_duplicates (no autouse stub)",
+    "real_field_order: reads the note type's real field order in card creation (no autouse stub)",
     "e2e: real-service end-to-end GUI tests (require running Anki; excluded by default)",
     "soak: multi-session soak tests",
     "asr: requires faster-whisper and a downloaded ASR model",

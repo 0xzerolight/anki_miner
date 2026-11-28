@@ -4007,8 +4007,23 @@ class TestVerifyCardTarget:
             "word not found on note type 'test_note_type' — remap in Settings → Cards & Anki."
         )
 
-    def test_word_mapping_must_target_first_model_field(self, test_config):
-        """The mined word must map to the note type's ordered first field."""
+    def test_a_sentence_first_note_type_passes(self, test_config):
+        """The word may sit in any field while the sentence fills the first one."""
+        from dataclasses import replace
+
+        mappings = dict.fromkeys(test_config.anki_fields, "")
+        mappings.update(word="Back", sentence="Front")
+        config = replace(test_config, anki_fields=mappings)
+        service = AnkiService(config)
+
+        with patch(
+            "anki_miner.services.anki_service.post_action",
+            side_effect=[self._MODELS, ["Front", "Back"], [config.anki_deck_name]],
+        ):
+            service.verify_card_target()
+
+    def test_a_first_field_neither_word_nor_sentence_is_refused(self, test_config):
+        """Anki refuses a card whose first field is empty: an index-first note type cannot take cards."""
         from dataclasses import replace
 
         mappings = dict.fromkeys(test_config.anki_fields, "")
@@ -4019,11 +4034,16 @@ class TestVerifyCardTarget:
         with (
             patch(
                 "anki_miner.services.anki_service.post_action",
-                side_effect=[self._MODELS, ["Front", "Back"], [config.anki_deck_name]],
+                side_effect=[self._MODELS, ["Index", "Front", "Back"], [config.anki_deck_name]],
             ),
-            pytest.raises(SetupError, match="first field.*Front"),
+            pytest.raises(SetupError) as exc_info,
         ):
             service.verify_card_target()
+
+        assert str(exc_info.value) == (
+            "The first field of note type 'test_note_type', 'Index', must hold the word or the sentence: "
+            "Anki refuses a card whose first field is empty. Check Settings → Cards & Anki."
+        )
 
     def test_duplicate_nonempty_field_targets_raise_setup_error(self, test_config):
         """Two miner fields cannot target the same Anki note field."""
@@ -4341,7 +4361,7 @@ class TestProbeDuplicates:
             assert service._probe_duplicates([]) == []
         mock_post.assert_not_called()
 
-    def test_strip_note_to_first_field_keeps_only_first(self):
+    def test_strip_note_for_probe_keeps_only_first(self):
         """First-field-only clone (Yomitan _stripNotesArray); original untouched."""
         note = {
             "deckName": "D",
@@ -4350,7 +4370,7 @@ class TestProbeDuplicates:
             "fields": {"Expression": "食べる", "Meaning": "eat", "Sentence": "彼は食べる"},
             "options": {"allowDuplicate": True},
         }
-        stripped = AnkiService._strip_note_to_first_field(note)
+        stripped = AnkiService._strip_note_for_probe(note, None)
         assert stripped["fields"] == {"Expression": "食べる"}
         assert stripped["deckName"] == "D"
         assert stripped["options"] == {"allowDuplicate": True}

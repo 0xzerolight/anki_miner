@@ -44,6 +44,22 @@ def _restore_signal_handlers():
             signal.signal(signum, handler)
 
 
+@pytest.fixture(autouse=True)
+def _word_is_the_first_field(request, monkeypatch):
+    """Card creation reads the note type's field order once per run (``modelFieldNames``).
+
+    Every card-creation test that feeds AnkiConnect a fixed reply list was
+    written for a note type whose first field is the word, so that answer is
+    stubbed here, with no request. Tests marked ``real_field_order`` (a
+    sentence-first note type, or a pinned request sequence) make the request.
+    """
+    if "real_field_order" in request.keywords:
+        return
+    from anki_miner.services.anki_service import AnkiService
+
+    monkeypatch.setattr(AnkiService, "_note_type_first_field", lambda self: self.config.anki_fields["word"])
+
+
 @pytest.fixture
 def patch_heavy_init(monkeypatch):
     """Return ``apply(config, *, stub_run_validation=True, stub_first_run_setup=True)``.

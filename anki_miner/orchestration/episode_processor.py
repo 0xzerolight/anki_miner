@@ -2684,7 +2684,7 @@ class EpisodeProcessor:
         """
         # Add newly mined words to known word DB.
         # Store mined_form so the local DB matches what Anki stores in the
-        # Expression first field (POS-aware via mined_form); Issue #5.
+        # word field (POS-aware via mined_form); Issue #5.
         #
         # The cards already exist in Anki at this point. A locked DB (Anki or a
         # parallel run holding known_words.db) raises OperationalError here; do
