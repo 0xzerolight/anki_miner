@@ -53,7 +53,7 @@ from anki_miner.gui.workers.fetch_workers import (
 )
 from anki_miner.languages.registry import config_language
 from anki_miner.languages.switching import LANGUAGE_SCOPED_FIELDS, switch_language
-from anki_miner.services.anki_note_builder import configured_target_field_names
+from anki_miner.services.anki_note_builder import always_filled_targets, configured_target_field_names
 from anki_miner.services.language_pack_installer import ensure_language_packs_on_syspath, language_pack_root
 from anki_miner.services.note_presets import (
     ANKI_MINER_NOTE,
@@ -952,9 +952,9 @@ class NoteTypePage(_WizardSection):
         return (
             bool(word_field)
             and word_field in actual_fields
-            # Anki keys duplicates on a note type's first field, so the card
-            # builder refuses a word mapped anywhere else (anki_note_builder).
-            and self._field_names[0] == word_field
+            # Anki refuses a card whose first field is empty, so it must hold
+            # the word or the sentence (anki_note_builder.field_mapping_error).
+            and self._field_names[0] in always_filled_targets(config)
             and not (configured_target_field_names(config) - actual_fields)
         )
 
@@ -1167,9 +1167,8 @@ class NoteTypePage(_WizardSection):
         The wizard has no field-mapping table: it maps only by name, through
         the keyword pass (`FIELD_KEYWORDS`, whole normalised name), and the
         word falls back to the first field (`_apply_keyword_fill`). So the text
-        says the word goes in the first field, names field names that pass
-        recognises ("Word", "Sentence", ...) and points to Settings for the
-        rest after setup. It never says Skip Setup, which reverts the picked
+        names field names that pass recognises ("Word", "Sentence", ...) and
+        points to Settings for the rest after setup. It never says Skip Setup, which reverts the picked
         language and cancels the dictionary download (WB I1). It never tells the user to build or rename a note type
         (the owner's D10 note: the user picks a note type they like). A fresh
         Anki holds only Basic (Front/Back), the common case in every language
@@ -1182,9 +1181,8 @@ class NoteTypePage(_WizardSection):
             tr_format(
                 self.tr(
                     "Any note type works once its fields are mapped. Pick one of your note types: Anki Miner "
-                    "puts the word in its first field and fills the fields it recognises by name, such as Word, "
-                    "Sentence, Reading, Definition, Picture and audio. You can change which field gets what "
-                    "in Settings → Cards & Anki after setup. "
+                    "fills the fields it recognises by name, such as Word, Sentence, Reading, Definition, Picture "
+                    "and audio. You can change which field gets what in Settings → Cards & Anki after setup. "
                     "Don't have one for mining yet? "
                     '<a href="%2">Get Anki Miner Note</a> (free, works for every language), then in Anki '
                     "choose File → Import and pick the file. This page updates when you come back. "
@@ -1335,25 +1333,24 @@ class NoteTypePage(_WizardSection):
         )
 
     def _show_field_problem(self) -> None:
-        """Say why Next is off when the word is not in the note type's first field.
+        """Say why Next is off when the note type's first field holds neither word nor sentence.
 
         Checked from the field list already fetched, with no AnkiConnect round
         trip. An empty word mapping says nothing here (B01): the page's guidance
         already explains what to pick, and the Ready page re-checks everything.
         """
-        word = self._wizard.working_config().anki_fields.get("word", "")
+        config = self._wizard.working_config()
         names = self._field_names
-        if not word or not names or names[0] == word:
+        if not config.anki_fields.get("word", "") or not names or names[0] in always_filled_targets(config):
             self.warning_label.setText("")
             return
         self.warning_label.setText(
             tr_format(
                 self.tr(
-                    "The word goes in the note type's first field, “%1”, but it is mapped to “%2”. "
+                    "The first field, “%1”, must hold the word or the sentence: Anki refuses cards with it empty. "
                     "Change the order of the fields in Anki, or pick another note type."
                 ),
                 names[0],
-                word,
             )
         )
 

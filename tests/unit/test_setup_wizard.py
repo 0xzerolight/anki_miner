@@ -1221,7 +1221,25 @@ def test_picking_a_note_type_fills_its_fields_without_a_button(qtbot, wiz_config
     assert page.warning_label.text() == ""
 
 
-def test_a_word_field_that_is_not_first_blocks_next_and_says_why(qtbot, wiz_config):
+def test_a_sentence_first_note_type_completes(qtbot, wiz_config):
+    """The word may sit in any field while the sentence fills the first one."""
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+
+    wiz = SetupWizard(replace(wiz_config, anki_note_type="Mining"))
+    qtbot.addWidget(wiz)
+    page = wiz.notetype_page
+    page.select_note_type("Mining")
+    page._fetched_note_types = ["Mining"]
+
+    page._on_fields_fetched("Mining", ["Sentence", "Picture", "Word"])
+
+    assert wiz.working_config().anki_fields["word"] == "Word"
+    assert wiz.working_config().anki_fields["sentence"] == "Sentence"
+    assert page.isComplete() is True
+    assert page.warning_label.text() == ""
+
+
+def test_a_first_field_neither_word_nor_sentence_blocks_next_and_says_why(qtbot, wiz_config):
     from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
 
     wiz = SetupWizard(replace(wiz_config, anki_note_type="Mining"))
@@ -1236,7 +1254,7 @@ def test_a_word_field_that_is_not_first_blocks_next_and_says_why(qtbot, wiz_conf
     assert wiz.working_config().anki_fields["word"] == "Word"
     assert page.isComplete() is False
     assert page.warning_label.text() == (
-        "The word goes in the note type's first field, “Notes”, but it is mapped to “Word”. "
+        "The first field, “Notes”, must hold the word or the sentence: Anki refuses cards with it empty. "
         "Change the order of the fields in Anki, or pick another note type."
     )
 
@@ -1252,7 +1270,7 @@ def test_an_empty_word_mapping_shows_no_field_warning(qtbot, wiz_config):
 
     page._on_fields_fetched("Basic", ["Front", "Back"])
 
-    # WB I1: the word now goes in the first field, as the guidance says.
+    # WB I1: with no field named for it, the word goes in the first field.
     assert wiz.working_config().anki_fields["word"] == "Front"
     assert page.warning_label.text() == ""
     assert page.mapping_summary.text() == "Fields filled automatically: 1."
@@ -1734,7 +1752,7 @@ def test_other_languages_get_the_any_note_type_guidance(qtbot, wiz_config):
     # The keyword pass is the wizard's only mapper: say what it recognises and
     # the manual route for any other naming, without telling the user to build
     # or rename a note type (owner's D10 note).
-    assert "puts the word in its first field" in text
+    assert "first field" not in text
     assert "Word, Sentence" in text
     assert "name its" not in text
     assert "add a field" not in text
