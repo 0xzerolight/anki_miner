@@ -10,14 +10,16 @@ children reach it over TCP like any other AnkiConnect endpoint).
 
 Deliberately minimal semantics, matched to what the app actually issues:
 
-- ``findNotes`` understands the two query shapes the codebase produces: the
-  gateway's ``deck:"Name"`` and ``AnkiService._build_vocab_query``'s
-  ``deck:*`` whole-collection form (``-deck:"..."`` negations are tolerated
-  and ignored — the harness never excludes decks).
-- Duplicate detection mirrors Anki's: same model + same first-field value,
+- ``findNotes`` understands the query terms the codebase produces: the
+  gateway's ``deck:"Name"``, ``AnkiService._build_vocab_query``'s ``deck:*``
+  whole-collection form, and ``note:"Type"``. Negations (``-deck:"..."``) and
+  ``is:`` terms are tolerated and ignored — the harness never excludes decks.
+- Duplicate detection mirrors Anki's: same model + same value in the MODEL's
+  first field (its ``inOrderFields`` order, not the payload's key order),
   overridable per note via ``options.allowDuplicate``. The rejection string
   contains AnkiConnect's exact duplicate literal so
-  ``AnkiService._probe_duplicates`` classifies it correctly.
+  ``AnkiService._probe_duplicates`` classifies it correctly. An empty first
+  field is refused even with duplicates allowed, as AnkiConnect does.
 - ``ThreadingHTTPServer``: the cross-process soak has children mining while
   the parent snapshots deck counts, so requests must not serialize on one
   socket.
@@ -27,6 +29,7 @@ from __future__ import annotations
 
 import base64
 import json
+import re
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
@@ -36,6 +39,10 @@ __all__ = ["FakeAnkiConnect"]
 #: The exact literal AnkiConnect embeds in a duplicate rejection; must match
 #: ``anki_service._DUPLICATE_ERROR_SUBSTRING`` for the probe to classify it.
 _DUPLICATE_ERROR = "cannot create note because it is a duplicate"
+#: AnkiConnect's refusal for a note whose first field is empty.
+_EMPTY_ERROR = "cannot create note because it is empty"
+#: One ``findNotes`` term: optional ``-``, a key, then a quoted or bare value.
+_QUERY_TERM = re.compile(r'(-?)(\w+):(?:"([^"]*)"|(\S+))')
 
 
 class FakeAnkiConnect:
@@ -221,37 +228,57 @@ class FakeAnkiConnect:
     # ----- semantics ------------------------------------------------------
 
     def _find_notes(self, query: str) -> list[int]:
-        """Answer the two query shapes the app issues (see module docstring)."""
-        query = query.strip()
-        if query.startswith("deck:*") or not query.startswith("deck:"):
-            # Whole-collection vocab query; ``-deck:"..."`` negations ignored.
-            return sorted(self._notes)
-        deck = query[len("deck:") :].strip().strip('"')
-        return sorted(nid for nid, n in self._notes.items() if n["deckName"] == deck)
+        """Answer the query terms the app issues (see module docstring)."""
+        deck: str | None = None
+        model: str | None = None
+        for negated, key, quoted, bare in _QUERY_TERM.findall(query):
+            value = quoted or bare
+            if negated:
+                continue
+            if key == "deck" and value != "*":
+                deck = value
+            elif key == "note":
+                model = value
+        return sorted(
+            nid
+            for nid, n in self._notes.items()
+            if (deck is None or n["deckName"] == deck) and (model is None or n["modelName"] == model)
+        )
 
     def _note_info(self, nid: int) -> dict:
         note = self._notes.get(nid)
         if note is None:
             return {}  # AnkiConnect's deleted-note shape
+        # Anki lists every field of the model, in the model's order; a model
+        # never seeded or created keeps the payload's order.
+        names = self._models.get(note["modelName"]) or list(note["fields"])
         return {
             "noteId": nid,
             "modelName": note["modelName"],
             "tags": list(note.get("tags") or []),
-            "fields": {name: {"value": value, "order": i} for i, (name, value) in enumerate(note["fields"].items())},
+            "fields": {name: {"value": note["fields"].get(name, ""), "order": i} for i, name in enumerate(names)},
         }
 
     def _first_field_value(self, note: dict) -> str:
+        """The value of the note's MODEL's first field, as Anki keys duplicates on it.
+
+        A model never seeded or created falls back to the payload's first key.
+        """
         fields = note.get("fields") or {}
+        order = self._models.get(note.get("modelName") or "")
+        if order:
+            return str(fields.get(order[0], ""))
         if not fields:
             return ""
-        first = next(iter(fields))
-        return str(fields[first])
+        return str(fields[next(iter(fields))])
 
     def _addability_error(self, note: dict) -> str | None:
-        """None if addable; the duplicate error string if it would be rejected."""
+        """None if addable; the empty or duplicate error string if it would be rejected."""
+        first = self._first_field_value(note)
+        if not first.strip():
+            return _EMPTY_ERROR
         if note.get("options", {}).get("allowDuplicate"):
             return None
-        first = self._first_field_value(note)
         model = note.get("modelName")
         for existing in self._notes.values():
             if existing["modelName"] == model and self._first_field_value(existing) == first:

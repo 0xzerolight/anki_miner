@@ -131,6 +131,38 @@ class TestDuplicates:
         assert ids[0] is None
         assert isinstance(ids[1], int)
 
+    def test_duplicate_keys_on_the_models_first_field(self, fake_anki):
+        """Anki keys duplicates on the model's first field, whatever order the payload lists."""
+        post_action(fake_anki.url, "createModel", {"modelName": "M", "inOrderFields": ["Back", "Front"]})
+        post_action(fake_anki.url, "addNotes", {"notes": [_note("M", "犬")]})
+        # Back is the first field, and both notes hold "back" there.
+        assert post_action(fake_anki.url, "canAddNotes", {"notes": [_note("M", "猫")]}) == [False]
+
+    def test_empty_first_field_refused_even_with_duplicates_allowed(self, fake_anki):
+        post_action(fake_anki.url, "createModel", {"modelName": "M", "inOrderFields": ["Sentence", "Front"]})
+        detail = post_action(
+            fake_anki.url, "canAddNotesWithErrorDetail", {"notes": [_note("M", "犬", allowDuplicate=True)]}
+        )
+        assert detail == [{"canAdd": False, "error": "cannot create note because it is empty"}]
+
+    def test_notes_info_lists_every_model_field_in_model_order(self, fake_anki):
+        post_action(fake_anki.url, "createModel", {"modelName": "M", "inOrderFields": ["Back", "Extra", "Front"]})
+        ids = post_action(fake_anki.url, "addNotes", {"notes": [_note("M", "犬")]})
+        (info,) = post_action(fake_anki.url, "notesInfo", {"notes": ids})
+        assert list(info["fields"]) == ["Back", "Extra", "Front"]
+        assert info["fields"]["Extra"] == {"value": "", "order": 1}
+
+    def test_find_notes_by_note_type_and_deck(self, fake_anki):
+        post_action(fake_anki.url, "createModel", {"modelName": "M1", "inOrderFields": ["Front"]})
+        post_action(fake_anki.url, "createModel", {"modelName": "M2", "inOrderFields": ["Front"]})
+        ids = post_action(
+            fake_anki.url,
+            "addNotes",
+            {"notes": [_note("M1", "犬", deck="A"), _note("M1", "猫", deck="B"), _note("M2", "鳥", deck="A")]},
+        )
+        assert post_action(fake_anki.url, "findNotes", {"query": 'note:"M1"'}) == ids[:2]
+        assert post_action(fake_anki.url, "findNotes", {"query": 'note:"M1" deck:"A" -deck:"A::*"'}) == ids[:1]
+
     def test_duplicate_is_per_model(self, fake_anki):
         post_action(fake_anki.url, "createModel", {"modelName": "M1", "inOrderFields": ["Front"]})
         post_action(fake_anki.url, "createModel", {"modelName": "M2", "inOrderFields": ["Front"]})
