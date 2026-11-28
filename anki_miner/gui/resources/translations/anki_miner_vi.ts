@@ -8189,8 +8189,8 @@ Số từ sẽ thêm: %3. Tiếp tục?</translation>
         <translation>Không tìm thấy trường nào. Đảm bảo Anki đang chạy và tên loại ghi chú được viết đúng chính xác như trong Anki.</translation>
     </message>
     <message>
-        <source>Any note type works once its fields are mapped. Pick one of your note types: Anki Miner puts the word in its first field and fills the fields it recognises by name, such as Word, Sentence, Reading, Definition, Picture and audio. You can change which field gets what in Settings → Cards &amp; Anki after setup. Don't have one for mining yet? &lt;a href="%2"&gt;Get Anki Miner Note&lt;/a&gt; (free, works for every language), then in Anki choose File → Import and pick the file. This page updates when you come back. &lt;a href="%1"&gt;Which fields can Anki Miner fill?&lt;/a&gt;</source>
-        <translation>Loại ghi chú nào cũng dùng được khi đã ánh xạ các trường. Hãy chọn một loại ghi chú của bạn: Anki Miner đặt từ vào trường đầu tiên và điền các trường nó nhận ra theo tên, như Word, Sentence, Reading, Definition, Picture và âm thanh. Sau khi cài đặt, bạn có thể đổi nội dung của từng trường trong Cài đặt → Thẻ &amp; Anki. Chưa có loại ghi chú để khai thác? &lt;a href="%2"&gt;Tải Anki Miner Note&lt;/a&gt; (miễn phí, dùng được cho mọi ngôn ngữ), rồi trong Anki chọn Tập tin → Nhập và chọn tệp đó. Trang này sẽ cập nhật khi bạn quay lại. &lt;a href="%1"&gt;Anki Miner điền được những trường nào?&lt;/a&gt;</translation>
+        <source>Any note type works once its fields are mapped. Pick one of your note types: Anki Miner fills the fields it recognises by name, such as Word, Sentence, Reading, Definition, Picture and audio. You can change which field gets what in Settings → Cards &amp; Anki after setup. Don't have one for mining yet? &lt;a href="%2"&gt;Get Anki Miner Note&lt;/a&gt; (free, works for every language), then in Anki choose File → Import and pick the file. This page updates when you come back. &lt;a href="%1"&gt;Which fields can Anki Miner fill?&lt;/a&gt;</source>
+        <translation>Loại ghi chú nào cũng dùng được khi đã ánh xạ các trường. Hãy chọn một loại ghi chú của bạn: Anki Miner điền các trường nó nhận ra theo tên, như Word, Sentence, Reading, Definition, Picture và âm thanh. Sau khi cài đặt, bạn có thể đổi nội dung của từng trường trong Cài đặt → Thẻ &amp; Anki. Chưa có loại ghi chú để khai thác? &lt;a href="%2"&gt;Tải Anki Miner Note&lt;/a&gt; (miễn phí, dùng được cho mọi ngôn ngữ), rồi trong Anki chọn Tập tin → Nhập và chọn tệp đó. Trang này sẽ cập nhật khi bạn quay lại. &lt;a href="%1"&gt;Anki Miner điền được những trường nào?&lt;/a&gt;</translation>
     </message>
     <message>
         <source>%1 recognised: %2 fields filled.</source>
@@ -8205,8 +8205,8 @@ Số từ sẽ thêm: %3. Tiếp tục?</translation>
         <translation>Không trường nào được tự động điền.</translation>
     </message>
     <message>
-        <source>The word goes in the note type's first field, “%1”, but it is mapped to “%2”. Change the order of the fields in Anki, or pick another note type.</source>
-        <translation>Từ được đặt vào trường đầu tiên của loại ghi chú, “%1”, nhưng từ đang được ánh xạ tới “%2”. Hãy đổi thứ tự các trường trong Anki, hoặc chọn loại ghi chú khác.</translation>
+        <source>The first field, “%1”, must hold the word or the sentence: Anki refuses cards with it empty. Change the order of the fields in Anki, or pick another note type.</source>
+        <translation>Trường đầu tiên, “%1”, phải chứa từ hoặc câu: Anki từ chối thẻ có trường này để trống. Hãy đổi thứ tự các trường trong Anki, hoặc chọn loại ghi chú khác.</translation>
     </message>
 </context><context>
     <name>OcrRegionDialog</name>

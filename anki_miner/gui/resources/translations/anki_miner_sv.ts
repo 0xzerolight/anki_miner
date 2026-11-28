@@ -8227,8 +8227,8 @@ Ord att lägga till: %3. Vill du fortsätta?</translation>
         <translation>Inga fält hittades. Kontrollera att Anki körs och att anteckningstypens namn är stavat exakt som i Anki.</translation>
     </message>
     <message>
-        <source>Any note type works once its fields are mapped. Pick one of your note types: Anki Miner puts the word in its first field and fills the fields it recognises by name, such as Word, Sentence, Reading, Definition, Picture and audio. You can change which field gets what in Settings → Cards &amp; Anki after setup. Don't have one for mining yet? &lt;a href="%2"&gt;Get Anki Miner Note&lt;/a&gt; (free, works for every language), then in Anki choose File → Import and pick the file. This page updates when you come back. &lt;a href="%1"&gt;Which fields can Anki Miner fill?&lt;/a&gt;</source>
-        <translation>Alla anteckningstyper fungerar när fälten har mappats. Välj en av dina anteckningstyper: Anki Miner lägger ordet i det första fältet och fyller i de fält som den känner igen på namnet, till exempel Word, Sentence, Reading, Definition, Picture och ljud. Du kan ändra vilket fält som får vad i Inställningar → Kort och Anki efter installationen. Har du ingen för insamling än? &lt;a href="%2"&gt;Hämta Anki Miner Note&lt;/a&gt; (gratis, fungerar för alla språk), välj sedan Arkiv → Importera i Anki och välj filen. Sidan uppdateras när du kommer tillbaka. &lt;a href="%1"&gt;Vilka fält kan Anki Miner fylla i?&lt;/a&gt;</translation>
+        <source>Any note type works once its fields are mapped. Pick one of your note types: Anki Miner fills the fields it recognises by name, such as Word, Sentence, Reading, Definition, Picture and audio. You can change which field gets what in Settings → Cards &amp; Anki after setup. Don't have one for mining yet? &lt;a href="%2"&gt;Get Anki Miner Note&lt;/a&gt; (free, works for every language), then in Anki choose File → Import and pick the file. This page updates when you come back. &lt;a href="%1"&gt;Which fields can Anki Miner fill?&lt;/a&gt;</source>
+        <translation>Alla anteckningstyper fungerar när fälten har mappats. Välj en av dina anteckningstyper: Anki Miner fyller i de fält som den känner igen på namnet, till exempel Word, Sentence, Reading, Definition, Picture och ljud. Du kan ändra vilket fält som får vad i Inställningar → Kort och Anki efter installationen. Har du ingen för insamling än? &lt;a href="%2"&gt;Hämta Anki Miner Note&lt;/a&gt; (gratis, fungerar för alla språk), välj sedan Arkiv → Importera i Anki och välj filen. Sidan uppdateras när du kommer tillbaka. &lt;a href="%1"&gt;Vilka fält kan Anki Miner fylla i?&lt;/a&gt;</translation>
     </message>
     <message>
         <source>%1 recognised: %2 fields filled.</source>
@@ -8243,8 +8243,8 @@ Ord att lägga till: %3. Vill du fortsätta?</translation>
         <translation>Inga fält kunde fyllas i automatiskt.</translation>
     </message>
     <message>
-        <source>The word goes in the note type's first field, “%1”, but it is mapped to “%2”. Change the order of the fields in Anki, or pick another note type.</source>
-        <translation>Ordet hamnar i anteckningstypens första fält, ”%1”, men det är mappat till ”%2”. Ändra fältordningen i Anki eller välj en annan anteckningstyp.</translation>
+        <source>The first field, “%1”, must hold the word or the sentence: Anki refuses cards with it empty. Change the order of the fields in Anki, or pick another note type.</source>
+        <translation>Det första fältet, ”%1”, måste innehålla ordet eller meningen: Anki avvisar kort där det är tomt. Ändra fältordningen i Anki eller välj en annan anteckningstyp.</translation>
     </message>
 </context><context>
     <name>OcrRegionDialog</name>

@@ -8265,8 +8265,8 @@ Słowa do dodania: %3. Kontynuować?</translation>
         <translation>Nie znaleziono pól. Upewnij się, że Anki jest uruchomione, a nazwa typu notatki jest zapisana dokładnie tak jak w Anki.</translation>
     </message>
     <message>
-        <source>Any note type works once its fields are mapped. Pick one of your note types: Anki Miner puts the word in its first field and fills the fields it recognises by name, such as Word, Sentence, Reading, Definition, Picture and audio. You can change which field gets what in Settings → Cards &amp; Anki after setup. Don't have one for mining yet? &lt;a href="%2"&gt;Get Anki Miner Note&lt;/a&gt; (free, works for every language), then in Anki choose File → Import and pick the file. This page updates when you come back. &lt;a href="%1"&gt;Which fields can Anki Miner fill?&lt;/a&gt;</source>
-        <translation>Działa każdy typ notatki, którego pola są zmapowane. Wybierz jeden ze swoich typów notatek: Anki Miner wstawia słowo do pierwszego pola i wypełnia pola rozpoznane po nazwie, np. Word, Sentence, Reading, Definition, Picture i audio. Po zakończeniu konfiguracji możesz zmienić przypisanie pól w zakładce Ustawienia → Karty i Anki. Nie masz jeszcze typu notatki do zbierania? &lt;a href="%2"&gt;Pobierz Anki Miner Note&lt;/a&gt; (darmowy, działa dla każdego języka), a potem w Anki wybierz Plik → Importuj i wskaż plik. Ta strona odświeży się po powrocie. &lt;a href="%1"&gt;Które pola może wypełnić Anki Miner?&lt;/a&gt;</translation>
+        <source>Any note type works once its fields are mapped. Pick one of your note types: Anki Miner fills the fields it recognises by name, such as Word, Sentence, Reading, Definition, Picture and audio. You can change which field gets what in Settings → Cards &amp; Anki after setup. Don't have one for mining yet? &lt;a href="%2"&gt;Get Anki Miner Note&lt;/a&gt; (free, works for every language), then in Anki choose File → Import and pick the file. This page updates when you come back. &lt;a href="%1"&gt;Which fields can Anki Miner fill?&lt;/a&gt;</source>
+        <translation>Działa każdy typ notatki, którego pola są zmapowane. Wybierz jeden ze swoich typów notatek: Anki Miner wypełnia pola rozpoznane po nazwie, np. Word, Sentence, Reading, Definition, Picture i audio. Po zakończeniu konfiguracji możesz zmienić przypisanie pól w zakładce Ustawienia → Karty i Anki. Nie masz jeszcze typu notatki do zbierania? &lt;a href="%2"&gt;Pobierz Anki Miner Note&lt;/a&gt; (darmowy, działa dla każdego języka), a potem w Anki wybierz Plik → Importuj i wskaż plik. Ta strona odświeży się po powrocie. &lt;a href="%1"&gt;Które pola może wypełnić Anki Miner?&lt;/a&gt;</translation>
     </message>
     <message>
         <source>%1 recognised: %2 fields filled.</source>
@@ -8281,8 +8281,8 @@ Słowa do dodania: %3. Kontynuować?</translation>
         <translation>Żadnego pola nie można wypełnić automatycznie.</translation>
     </message>
     <message>
-        <source>The word goes in the note type's first field, “%1”, but it is mapped to “%2”. Change the order of the fields in Anki, or pick another note type.</source>
-        <translation>Słowo trafia do pierwszego pola typu notatki („%1”), ale jest ono zmapowane na „%2”. Zmień kolejność pól w Anki lub wybierz inny typ notatki.</translation>
+        <source>The first field, “%1”, must hold the word or the sentence: Anki refuses cards with it empty. Change the order of the fields in Anki, or pick another note type.</source>
+        <translation>Pierwsze pole („%1”) musi zawierać słowo lub zdanie: Anki odrzuca karty, w których jest ono puste. Zmień kolejność pól w Anki lub wybierz inny typ notatki.</translation>
     </message>
 </context><context>
     <name>OcrRegionDialog</name>

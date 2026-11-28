@@ -8189,8 +8189,8 @@ Kata yang akan ditambahkan: %3. Lanjutkan?</translation>
         <translation>Tidak ada bidang ditemukan. Pastikan Anki berjalan dan nama tipe catatan dieja persis seperti di Anki.</translation>
     </message>
     <message>
-        <source>Any note type works once its fields are mapped. Pick one of your note types: Anki Miner puts the word in its first field and fills the fields it recognises by name, such as Word, Sentence, Reading, Definition, Picture and audio. You can change which field gets what in Settings → Cards &amp; Anki after setup. Don't have one for mining yet? &lt;a href="%2"&gt;Get Anki Miner Note&lt;/a&gt; (free, works for every language), then in Anki choose File → Import and pick the file. This page updates when you come back. &lt;a href="%1"&gt;Which fields can Anki Miner fill?&lt;/a&gt;</source>
-        <translation>Tipe catatan apa pun bisa dipakai setelah bidangnya dipetakan. Pilih salah satu tipe catatan Anda: Anki Miner menaruh kata di bidang pertamanya dan mengisi bidang yang dikenalinya dari nama, seperti Word, Sentence, Reading, Definition, Picture, dan audio. Setelah penyiapan, Anda dapat mengubah isi tiap bidang di Pengaturan → Kartu &amp; Anki. Belum punya tipe catatan untuk mining? &lt;a href="%2"&gt;Dapatkan Anki Miner Note&lt;/a&gt; (gratis, berfungsi untuk semua bahasa), lalu di Anki pilih Berkas → Impor (File → Import) dan pilih berkasnya. Halaman ini diperbarui saat Anda kembali. &lt;a href="%1"&gt;Bidang apa saja yang dapat diisi Anki Miner?&lt;/a&gt;</translation>
+        <source>Any note type works once its fields are mapped. Pick one of your note types: Anki Miner fills the fields it recognises by name, such as Word, Sentence, Reading, Definition, Picture and audio. You can change which field gets what in Settings → Cards &amp; Anki after setup. Don't have one for mining yet? &lt;a href="%2"&gt;Get Anki Miner Note&lt;/a&gt; (free, works for every language), then in Anki choose File → Import and pick the file. This page updates when you come back. &lt;a href="%1"&gt;Which fields can Anki Miner fill?&lt;/a&gt;</source>
+        <translation>Tipe catatan apa pun bisa dipakai setelah bidangnya dipetakan. Pilih salah satu tipe catatan Anda: Anki Miner mengisi bidang yang dikenalinya dari nama, seperti Word, Sentence, Reading, Definition, Picture, dan audio. Setelah penyiapan, Anda dapat mengubah isi tiap bidang di Pengaturan → Kartu &amp; Anki. Belum punya tipe catatan untuk mining? &lt;a href="%2"&gt;Dapatkan Anki Miner Note&lt;/a&gt; (gratis, berfungsi untuk semua bahasa), lalu di Anki pilih Berkas → Impor (File → Import) dan pilih berkasnya. Halaman ini diperbarui saat Anda kembali. &lt;a href="%1"&gt;Bidang apa saja yang dapat diisi Anki Miner?&lt;/a&gt;</translation>
     </message>
     <message>
         <source>%1 recognised: %2 fields filled.</source>
@@ -8205,8 +8205,8 @@ Kata yang akan ditambahkan: %3. Lanjutkan?</translation>
         <translation>Tidak ada bidang yang dapat diisi otomatis.</translation>
     </message>
     <message>
-        <source>The word goes in the note type's first field, “%1”, but it is mapped to “%2”. Change the order of the fields in Anki, or pick another note type.</source>
-        <translation>Kata masuk ke bidang pertama tipe catatan, “%1”, tetapi kata dipetakan ke “%2”. Ubah urutan bidang di Anki, atau pilih tipe catatan lain.</translation>
+        <source>The first field, “%1”, must hold the word or the sentence: Anki refuses cards with it empty. Change the order of the fields in Anki, or pick another note type.</source>
+        <translation>Bidang pertama, “%1”, harus berisi kata atau kalimat: Anki menolak kartu jika bidang ini kosong. Ubah urutan bidang di Anki, atau pilih tipe catatan lain.</translation>
     </message>
 </context><context>
     <name>OcrRegionDialog</name>

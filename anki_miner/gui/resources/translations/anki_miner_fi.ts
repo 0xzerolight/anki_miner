@@ -8227,8 +8227,8 @@ Lisättäviä sanoja: %3. Jatketaanko?</translation>
         <translation>Kenttiä ei löytynyt. Varmista, että Anki on käynnissä ja että muistiinpanotyypin nimi on kirjoitettu täsmälleen kuten Ankissa.</translation>
     </message>
     <message>
-        <source>Any note type works once its fields are mapped. Pick one of your note types: Anki Miner puts the word in its first field and fills the fields it recognises by name, such as Word, Sentence, Reading, Definition, Picture and audio. You can change which field gets what in Settings → Cards &amp; Anki after setup. Don't have one for mining yet? &lt;a href="%2"&gt;Get Anki Miner Note&lt;/a&gt; (free, works for every language), then in Anki choose File → Import and pick the file. This page updates when you come back. &lt;a href="%1"&gt;Which fields can Anki Miner fill?&lt;/a&gt;</source>
-        <translation>Mikä tahansa muistiinpanotyyppi toimii, kun sen kentät on yhdistetty. Valitse jokin muistiinpanotyypeistäsi: Anki Miner sijoittaa sanan sen ensimmäiseen kenttään ja täyttää kentät, jotka se tunnistaa nimestä, kuten Word, Sentence, Reading, Definition, Picture ja äänikentät. Voit muuttaa käyttöönoton jälkeen, mikä kenttä saa mitäkin, kohdassa Asetukset → Kortit ja Anki. Eikö sinulla vielä ole louhintaan sopivaa? &lt;a href="%2"&gt;Hae Anki Miner Note&lt;/a&gt; (ilmainen, toimii kaikilla kielillä) ja valitse sitten Ankissa Tiedosto → Tuo ja valitse tiedosto. Tämä sivu päivittyy, kun palaat. &lt;a href="%1"&gt;Mitä kenttiä Anki Miner voi täyttää?&lt;/a&gt;</translation>
+        <source>Any note type works once its fields are mapped. Pick one of your note types: Anki Miner fills the fields it recognises by name, such as Word, Sentence, Reading, Definition, Picture and audio. You can change which field gets what in Settings → Cards &amp; Anki after setup. Don't have one for mining yet? &lt;a href="%2"&gt;Get Anki Miner Note&lt;/a&gt; (free, works for every language), then in Anki choose File → Import and pick the file. This page updates when you come back. &lt;a href="%1"&gt;Which fields can Anki Miner fill?&lt;/a&gt;</source>
+        <translation>Mikä tahansa muistiinpanotyyppi toimii, kun sen kentät on yhdistetty. Valitse jokin muistiinpanotyypeistäsi: Anki Miner täyttää kentät, jotka se tunnistaa nimestä, kuten Word, Sentence, Reading, Definition, Picture ja äänikentät. Voit muuttaa käyttöönoton jälkeen, mikä kenttä saa mitäkin, kohdassa Asetukset → Kortit ja Anki. Eikö sinulla vielä ole louhintaan sopivaa? &lt;a href="%2"&gt;Hae Anki Miner Note&lt;/a&gt; (ilmainen, toimii kaikilla kielillä) ja valitse sitten Ankissa Tiedosto → Tuo ja valitse tiedosto. Tämä sivu päivittyy, kun palaat. &lt;a href="%1"&gt;Mitä kenttiä Anki Miner voi täyttää?&lt;/a&gt;</translation>
     </message>
     <message>
         <source>%1 recognised: %2 fields filled.</source>
@@ -8243,8 +8243,8 @@ Lisättäviä sanoja: %3. Jatketaanko?</translation>
         <translation>Yhtään kenttää ei voitu täyttää automaattisesti.</translation>
     </message>
     <message>
-        <source>The word goes in the note type's first field, “%1”, but it is mapped to “%2”. Change the order of the fields in Anki, or pick another note type.</source>
-        <translation>Sana sijoitetaan muistiinpanotyypin ensimmäiseen kenttään ”%1”, mutta se on yhdistetty kenttään ”%2”. Muuta kenttien järjestystä Ankissa tai valitse toinen muistiinpanotyyppi.</translation>
+        <source>The first field, “%1”, must hold the word or the sentence: Anki refuses cards with it empty. Change the order of the fields in Anki, or pick another note type.</source>
+        <translation>Ensimmäisessä kentässä ”%1” on oltava sana tai lause: Anki hylkää kortit, joissa se on tyhjä. Muuta kenttien järjestystä Ankissa tai valitse toinen muistiinpanotyyppi.</translation>
     </message>
 </context><context>
     <name>OcrRegionDialog</name>

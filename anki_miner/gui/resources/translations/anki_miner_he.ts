@@ -8227,8 +8227,8 @@ Words to add: %3. Continue?</source>
         <translation>לא נמצאו שדות. יש לוודא ש-Anki פועל ושם סוג הפתק מאוית בדיוק כמו ב-Anki.</translation>
     </message>
     <message>
-        <source>Any note type works once its fields are mapped. Pick one of your note types: Anki Miner puts the word in its first field and fills the fields it recognises by name, such as Word, Sentence, Reading, Definition, Picture and audio. You can change which field gets what in Settings → Cards &amp; Anki after setup. Don't have one for mining yet? &lt;a href="%2"&gt;Get Anki Miner Note&lt;/a&gt; (free, works for every language), then in Anki choose File → Import and pick the file. This page updates when you come back. &lt;a href="%1"&gt;Which fields can Anki Miner fill?&lt;/a&gt;</source>
-        <translation>כל סוג פתק מתאים ברגע שהשדות שלו ממופים. יש לבחור אחד מסוגי הפתקים שלך: Anki Miner מכניס את המילה לשדה הראשון וממלא את השדות שהוא מזהה לפי שם, כגון Word, Sentence, Reading, Definition, Picture ושמע. אפשר לשנות איזה שדה מקבל מה בהגדרות ← כרטיסים ו-Anki לאחר ההגדרה. אין עדיין סוג פתק לכרייה? &lt;a href="%2"&gt;להוריד את Anki Miner Note&lt;/a&gt; (חינמי, מתאים לכל שפה), ואז ב-Anki לבחור קובץ ← ייבוא ולבחור את הקובץ. הדף הזה מתעדכן כשחוזרים אליו. &lt;a href="%1"&gt;אילו שדות Anki Miner יכול למלא?&lt;/a&gt;</translation>
+        <source>Any note type works once its fields are mapped. Pick one of your note types: Anki Miner fills the fields it recognises by name, such as Word, Sentence, Reading, Definition, Picture and audio. You can change which field gets what in Settings → Cards &amp; Anki after setup. Don't have one for mining yet? &lt;a href="%2"&gt;Get Anki Miner Note&lt;/a&gt; (free, works for every language), then in Anki choose File → Import and pick the file. This page updates when you come back. &lt;a href="%1"&gt;Which fields can Anki Miner fill?&lt;/a&gt;</source>
+        <translation>כל סוג פתק מתאים ברגע שהשדות שלו ממופים. יש לבחור אחד מסוגי הפתקים שלך: Anki Miner ממלא את השדות שהוא מזהה לפי שם, כגון Word, Sentence, Reading, Definition, Picture ושמע. אפשר לשנות איזה שדה מקבל מה בהגדרות ← כרטיסים ו-Anki לאחר ההגדרה. אין עדיין סוג פתק לכרייה? &lt;a href="%2"&gt;להוריד את Anki Miner Note&lt;/a&gt; (חינמי, מתאים לכל שפה), ואז ב-Anki לבחור קובץ ← ייבוא ולבחור את הקובץ. הדף הזה מתעדכן כשחוזרים אליו. &lt;a href="%1"&gt;אילו שדות Anki Miner יכול למלא?&lt;/a&gt;</translation>
     </message>
     <message>
         <source>%1 recognised: %2 fields filled.</source>
@@ -8243,8 +8243,8 @@ Words to add: %3. Continue?</source>
         <translation>לא ניתן היה למלא אף שדה אוטומטית.</translation>
     </message>
     <message>
-        <source>The word goes in the note type's first field, “%1”, but it is mapped to “%2”. Change the order of the fields in Anki, or pick another note type.</source>
-        <translation>המילה נכנסת לשדה הראשון של סוג הפתק, "⁨%1⁩", אך הוא ממופה אל "⁨%2⁩". יש לשנות את סדר השדות ב-Anki, או לבחור סוג פתק אחר.</translation>
+        <source>The first field, “%1”, must hold the word or the sentence: Anki refuses cards with it empty. Change the order of the fields in Anki, or pick another note type.</source>
+        <translation>השדה הראשון, "⁨%1⁩", חייב להכיל את המילה או את המשפט: Anki דוחה כרטיסים שבהם הוא ריק. יש לשנות את סדר השדות ב-Anki, או לבחור סוג פתק אחר.</translation>
     </message>
 </context><context>
     <name>OcrRegionDialog</name>

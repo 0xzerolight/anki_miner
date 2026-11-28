@@ -8189,8 +8189,8 @@ Eklenecek kelimeler: %3. Devam edilsin mi?</translation>
         <translation>Alan bulunamadı. Anki'nin çalıştığından ve not türü adının Anki'dekiyle tam olarak aynı yazıldığından emin olun.</translation>
     </message>
     <message>
-        <source>Any note type works once its fields are mapped. Pick one of your note types: Anki Miner puts the word in its first field and fills the fields it recognises by name, such as Word, Sentence, Reading, Definition, Picture and audio. You can change which field gets what in Settings → Cards &amp; Anki after setup. Don't have one for mining yet? &lt;a href="%2"&gt;Get Anki Miner Note&lt;/a&gt; (free, works for every language), then in Anki choose File → Import and pick the file. This page updates when you come back. &lt;a href="%1"&gt;Which fields can Anki Miner fill?&lt;/a&gt;</source>
-        <translation>Alanları eşlendikten sonra her not türü çalışır. Not türlerinizden birini seçin: Anki Miner kelimeyi ilk alana yazar ve Word, Sentence, Reading, Definition, Picture ve ses gibi adından tanıdığı alanları doldurur. Hangi alana ne yazılacağını kurulumdan sonra Ayarlar → Kartlar ve Anki bölümünden değiştirebilirsiniz. Toplama için henüz bir not türünüz yok mu? &lt;a href="%2"&gt;Anki Miner Note'u edinin&lt;/a&gt; (ücretsiz, her dilde çalışır), ardından Anki'de Dosya → İçe Aktar öğesini seçip dosyayı seçin. Geri döndüğünüzde bu sayfa güncellenir. &lt;a href="%1"&gt;Anki Miner hangi alanları doldurabilir?&lt;/a&gt;</translation>
+        <source>Any note type works once its fields are mapped. Pick one of your note types: Anki Miner fills the fields it recognises by name, such as Word, Sentence, Reading, Definition, Picture and audio. You can change which field gets what in Settings → Cards &amp; Anki after setup. Don't have one for mining yet? &lt;a href="%2"&gt;Get Anki Miner Note&lt;/a&gt; (free, works for every language), then in Anki choose File → Import and pick the file. This page updates when you come back. &lt;a href="%1"&gt;Which fields can Anki Miner fill?&lt;/a&gt;</source>
+        <translation>Alanları eşlendikten sonra her not türü çalışır. Not türlerinizden birini seçin: Anki Miner, Word, Sentence, Reading, Definition, Picture ve ses gibi adından tanıdığı alanları doldurur. Hangi alana ne yazılacağını kurulumdan sonra Ayarlar → Kartlar ve Anki bölümünden değiştirebilirsiniz. Toplama için henüz bir not türünüz yok mu? &lt;a href="%2"&gt;Anki Miner Note'u edinin&lt;/a&gt; (ücretsiz, her dilde çalışır), ardından Anki'de Dosya → İçe Aktar öğesini seçip dosyayı seçin. Geri döndüğünüzde bu sayfa güncellenir. &lt;a href="%1"&gt;Anki Miner hangi alanları doldurabilir?&lt;/a&gt;</translation>
     </message>
     <message>
         <source>%1 recognised: %2 fields filled.</source>
@@ -8205,8 +8205,8 @@ Eklenecek kelimeler: %3. Devam edilsin mi?</translation>
         <translation>Hiçbir alan otomatik doldurulamadı.</translation>
     </message>
     <message>
-        <source>The word goes in the note type's first field, “%1”, but it is mapped to “%2”. Change the order of the fields in Anki, or pick another note type.</source>
-        <translation>Kelime, not türünün ilk alanına (“%1”) yazılır, ancak bu alan “%2” ile eşlenmiş. Anki'de alanların sırasını değiştirin veya başka bir not türü seçin.</translation>
+        <source>The first field, “%1”, must hold the word or the sentence: Anki refuses cards with it empty. Change the order of the fields in Anki, or pick another note type.</source>
+        <translation>İlk alan (“%1”) kelimeyi veya cümleyi içermelidir: Anki, bu alanı boş olan kartları kabul etmez. Anki'de alanların sırasını değiştirin veya başka bir not türü seçin.</translation>
     </message>
 </context><context>
     <name>OcrRegionDialog</name>

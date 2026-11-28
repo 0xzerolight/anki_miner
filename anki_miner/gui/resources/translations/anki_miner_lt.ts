@@ -8265,8 +8265,8 @@ Pridedamų žodžių: %3. Tęsti?</translation>
         <translation>Laukų nerasta. Įsitikinkite, kad Anki paleista ir užrašo tipo pavadinimas parašytas tiksliai kaip Anki programoje.</translation>
     </message>
     <message>
-        <source>Any note type works once its fields are mapped. Pick one of your note types: Anki Miner puts the word in its first field and fills the fields it recognises by name, such as Word, Sentence, Reading, Definition, Picture and audio. You can change which field gets what in Settings → Cards &amp; Anki after setup. Don't have one for mining yet? &lt;a href="%2"&gt;Get Anki Miner Note&lt;/a&gt; (free, works for every language), then in Anki choose File → Import and pick the file. This page updates when you come back. &lt;a href="%1"&gt;Which fields can Anki Miner fill?&lt;/a&gt;</source>
-        <translation>Tinka bet kuris užrašo tipas, kai jo laukai susieti. Pasirinkite vieną iš savo užrašo tipų: Anki Miner įrašo žodį į pirmąjį jo lauką ir užpildo laukus, kuriuos atpažįsta pagal pavadinimą, pvz., Word, Sentence, Reading, Definition, Picture ir garsą. Kuris laukas ką gauna, galėsite pakeisti po sąrankos skiltyje Nustatymai → Kortelės ir Anki. Dar neturite užrašo tipo rinkimui? &lt;a href="%2"&gt;Gaukite Anki Miner Note&lt;/a&gt; (nemokamas, tinka visoms kalboms), tada programoje Anki pasirinkite meniu Failas → Importuoti ir nurodykite failą. Grįžus šis puslapis atsinaujins. &lt;a href="%1"&gt;Kuriuos laukus Anki Miner gali užpildyti?&lt;/a&gt;</translation>
+        <source>Any note type works once its fields are mapped. Pick one of your note types: Anki Miner fills the fields it recognises by name, such as Word, Sentence, Reading, Definition, Picture and audio. You can change which field gets what in Settings → Cards &amp; Anki after setup. Don't have one for mining yet? &lt;a href="%2"&gt;Get Anki Miner Note&lt;/a&gt; (free, works for every language), then in Anki choose File → Import and pick the file. This page updates when you come back. &lt;a href="%1"&gt;Which fields can Anki Miner fill?&lt;/a&gt;</source>
+        <translation>Tinka bet kuris užrašo tipas, kai jo laukai susieti. Pasirinkite vieną iš savo užrašo tipų: Anki Miner užpildo laukus, kuriuos atpažįsta pagal pavadinimą, pvz., Word, Sentence, Reading, Definition, Picture ir garsą. Kuris laukas ką gauna, galėsite pakeisti po sąrankos skiltyje Nustatymai → Kortelės ir Anki. Dar neturite užrašo tipo rinkimui? &lt;a href="%2"&gt;Gaukite Anki Miner Note&lt;/a&gt; (nemokamas, tinka visoms kalboms), tada programoje Anki pasirinkite meniu Failas → Importuoti ir nurodykite failą. Grįžus šis puslapis atsinaujins. &lt;a href="%1"&gt;Kuriuos laukus Anki Miner gali užpildyti?&lt;/a&gt;</translation>
     </message>
     <message>
         <source>%1 recognised: %2 fields filled.</source>
@@ -8281,8 +8281,8 @@ Pridedamų žodžių: %3. Tęsti?</translation>
         <translation>Automatiškai užpildyti nepavyko nė vieno lauko.</translation>
     </message>
     <message>
-        <source>The word goes in the note type's first field, “%1”, but it is mapped to “%2”. Change the order of the fields in Anki, or pick another note type.</source>
-        <translation>Žodis įrašomas į pirmąjį užrašo tipo lauką „%1“, bet jis susietas su „%2“. Pakeiskite laukų tvarką Anki arba pasirinkite kitą užrašo tipą.</translation>
+        <source>The first field, “%1”, must hold the word or the sentence: Anki refuses cards with it empty. Change the order of the fields in Anki, or pick another note type.</source>
+        <translation>Pirmajame lauke „%1“ turi būti žodis arba sakinys: Anki atmeta korteles, kuriose jis tuščias. Pakeiskite laukų tvarką Anki arba pasirinkite kitą užrašo tipą.</translation>
     </message>
 </context><context>
     <name>OcrRegionDialog</name>

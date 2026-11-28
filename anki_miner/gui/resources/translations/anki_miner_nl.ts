@@ -8227,8 +8227,8 @@ Woorden om toe te voegen: %3. Doorgaan?</translation>
         <translation>Geen velden gevonden. Zorg dat Anki is gestart en dat de naam van het notitietype precies zo is gespeld als in Anki.</translation>
     </message>
     <message>
-        <source>Any note type works once its fields are mapped. Pick one of your note types: Anki Miner puts the word in its first field and fills the fields it recognises by name, such as Word, Sentence, Reading, Definition, Picture and audio. You can change which field gets what in Settings → Cards &amp; Anki after setup. Don't have one for mining yet? &lt;a href="%2"&gt;Get Anki Miner Note&lt;/a&gt; (free, works for every language), then in Anki choose File → Import and pick the file. This page updates when you come back. &lt;a href="%1"&gt;Which fields can Anki Miner fill?&lt;/a&gt;</source>
-        <translation>Elk notitietype werkt zodra de velden zijn toegewezen. Kies een van je notitietypen: Anki Miner zet het woord in het eerste veld en vult de velden die het aan de naam herkent, zoals Word, Sentence, Reading, Definition, Picture en audio. Na de configuratie kun je in Instellingen → Kaarten &amp; Anki wijzigen welk veld wat krijgt. Heb je er nog geen voor mining? &lt;a href="%2"&gt;Download Anki Miner Note&lt;/a&gt; (gratis, werkt voor elke taal) en kies dan in Anki Bestand → Importeren en selecteer het bestand. Deze pagina wordt bijgewerkt als je terugkomt. &lt;a href="%1"&gt;Welke velden kan Anki Miner vullen?&lt;/a&gt;</translation>
+        <source>Any note type works once its fields are mapped. Pick one of your note types: Anki Miner fills the fields it recognises by name, such as Word, Sentence, Reading, Definition, Picture and audio. You can change which field gets what in Settings → Cards &amp; Anki after setup. Don't have one for mining yet? &lt;a href="%2"&gt;Get Anki Miner Note&lt;/a&gt; (free, works for every language), then in Anki choose File → Import and pick the file. This page updates when you come back. &lt;a href="%1"&gt;Which fields can Anki Miner fill?&lt;/a&gt;</source>
+        <translation>Elk notitietype werkt zodra de velden zijn toegewezen. Kies een van je notitietypen: Anki Miner vult de velden die het aan de naam herkent, zoals Word, Sentence, Reading, Definition, Picture en audio. Na de configuratie kun je in Instellingen → Kaarten &amp; Anki wijzigen welk veld wat krijgt. Heb je er nog geen voor mining? &lt;a href="%2"&gt;Download Anki Miner Note&lt;/a&gt; (gratis, werkt voor elke taal) en kies dan in Anki Bestand → Importeren en selecteer het bestand. Deze pagina wordt bijgewerkt als je terugkomt. &lt;a href="%1"&gt;Welke velden kan Anki Miner vullen?&lt;/a&gt;</translation>
     </message>
     <message>
         <source>%1 recognised: %2 fields filled.</source>
@@ -8243,8 +8243,8 @@ Woorden om toe te voegen: %3. Doorgaan?</translation>
         <translation>Er konden geen velden automatisch worden ingevuld.</translation>
     </message>
     <message>
-        <source>The word goes in the note type's first field, “%1”, but it is mapped to “%2”. Change the order of the fields in Anki, or pick another note type.</source>
-        <translation>Het woord komt in het eerste veld van het notitietype, “%1”, maar dat is toegewezen aan “%2”. Wijzig de volgorde van de velden in Anki of kies een ander notitietype.</translation>
+        <source>The first field, “%1”, must hold the word or the sentence: Anki refuses cards with it empty. Change the order of the fields in Anki, or pick another note type.</source>
+        <translation>Het eerste veld, “%1”, moet het woord of de zin bevatten: Anki weigert kaarten waarin het leeg is. Wijzig de volgorde van de velden in Anki of kies een ander notitietype.</translation>
     </message>
 </context><context>
     <name>OcrRegionDialog</name>

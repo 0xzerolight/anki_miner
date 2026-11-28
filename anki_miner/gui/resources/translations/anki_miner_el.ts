@@ -8227,8 +8227,8 @@ Words to add: %3. Continue?</source>
         <translation>Δεν βρέθηκαν πεδία. Βεβαιωθείτε ότι το Anki εκτελείται και ότι το όνομα του τύπου σημείωσης είναι γραμμένο ακριβώς όπως στο Anki.</translation>
     </message>
     <message>
-        <source>Any note type works once its fields are mapped. Pick one of your note types: Anki Miner puts the word in its first field and fills the fields it recognises by name, such as Word, Sentence, Reading, Definition, Picture and audio. You can change which field gets what in Settings → Cards &amp; Anki after setup. Don't have one for mining yet? &lt;a href="%2"&gt;Get Anki Miner Note&lt;/a&gt; (free, works for every language), then in Anki choose File → Import and pick the file. This page updates when you come back. &lt;a href="%1"&gt;Which fields can Anki Miner fill?&lt;/a&gt;</source>
-        <translation>Οποιοσδήποτε τύπος σημείωσης λειτουργεί μόλις αντιστοιχιστούν τα πεδία του. Επιλέξτε έναν από τους τύπους σημείωσής σας: το Anki Miner βάζει τη λέξη στο πρώτο πεδίο και συμπληρώνει τα πεδία που αναγνωρίζει από το όνομά τους, όπως Word, Sentence, Reading, Definition, Picture και ήχο. Μπορείτε να αλλάξετε ποιο πεδίο παίρνει τι στις Ρυθμίσεις → Κάρτες &amp; Anki μετά τη ρύθμιση. Δεν έχετε ακόμη τύπο για εξόρυξη; &lt;a href="%2"&gt;Κατεβάστε το Anki Miner Note&lt;/a&gt; (δωρεάν, λειτουργεί για κάθε γλώσσα) και στο Anki επιλέξτε Αρχείο → Εισαγωγή και διαλέξτε το αρχείο. Αυτή η σελίδα ενημερώνεται όταν επιστρέψετε. &lt;a href="%1"&gt;Ποια πεδία μπορεί να συμπληρώσει το Anki Miner;&lt;/a&gt;</translation>
+        <source>Any note type works once its fields are mapped. Pick one of your note types: Anki Miner fills the fields it recognises by name, such as Word, Sentence, Reading, Definition, Picture and audio. You can change which field gets what in Settings → Cards &amp; Anki after setup. Don't have one for mining yet? &lt;a href="%2"&gt;Get Anki Miner Note&lt;/a&gt; (free, works for every language), then in Anki choose File → Import and pick the file. This page updates when you come back. &lt;a href="%1"&gt;Which fields can Anki Miner fill?&lt;/a&gt;</source>
+        <translation>Οποιοσδήποτε τύπος σημείωσης λειτουργεί μόλις αντιστοιχιστούν τα πεδία του. Επιλέξτε έναν από τους τύπους σημείωσής σας: το Anki Miner συμπληρώνει τα πεδία που αναγνωρίζει από το όνομά τους, όπως Word, Sentence, Reading, Definition, Picture και ήχο. Μπορείτε να αλλάξετε ποιο πεδίο παίρνει τι στις Ρυθμίσεις → Κάρτες &amp; Anki μετά τη ρύθμιση. Δεν έχετε ακόμη τύπο για εξόρυξη; &lt;a href="%2"&gt;Κατεβάστε το Anki Miner Note&lt;/a&gt; (δωρεάν, λειτουργεί για κάθε γλώσσα) και στο Anki επιλέξτε Αρχείο → Εισαγωγή και διαλέξτε το αρχείο. Αυτή η σελίδα ενημερώνεται όταν επιστρέψετε. &lt;a href="%1"&gt;Ποια πεδία μπορεί να συμπληρώσει το Anki Miner;&lt;/a&gt;</translation>
     </message>
     <message>
         <source>%1 recognised: %2 fields filled.</source>
@@ -8243,8 +8243,8 @@ Words to add: %3. Continue?</source>
         <translation>Δεν ήταν δυνατή η αυτόματη συμπλήρωση κανενός πεδίου.</translation>
     </message>
     <message>
-        <source>The word goes in the note type's first field, “%1”, but it is mapped to “%2”. Change the order of the fields in Anki, or pick another note type.</source>
-        <translation>Η λέξη μπαίνει στο πρώτο πεδίο του τύπου σημείωσης, «%1», αλλά αυτό είναι αντιστοιχισμένο στο «%2». Αλλάξτε τη σειρά των πεδίων στο Anki ή επιλέξτε άλλο τύπο σημείωσης.</translation>
+        <source>The first field, “%1”, must hold the word or the sentence: Anki refuses cards with it empty. Change the order of the fields in Anki, or pick another note type.</source>
+        <translation>Το πρώτο πεδίο, «%1», πρέπει να περιέχει τη λέξη ή την πρόταση: το Anki απορρίπτει κάρτες στις οποίες είναι κενό. Αλλάξτε τη σειρά των πεδίων στο Anki ή επιλέξτε άλλο τύπο σημείωσης.</translation>
     </message>
 </context><context>
     <name>OcrRegionDialog</name>

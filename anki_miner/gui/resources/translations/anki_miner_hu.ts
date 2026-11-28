@@ -8189,8 +8189,8 @@ Hozzáadandó szavak: %3. Folytatja?</translation>
         <translation>Nem található mező. Ellenőrizze, hogy fut-e az Anki, és hogy a jegyzettípus neve pontosan úgy van-e írva, mint az Ankiban.</translation>
     </message>
     <message>
-        <source>Any note type works once its fields are mapped. Pick one of your note types: Anki Miner puts the word in its first field and fills the fields it recognises by name, such as Word, Sentence, Reading, Definition, Picture and audio. You can change which field gets what in Settings → Cards &amp; Anki after setup. Don't have one for mining yet? &lt;a href="%2"&gt;Get Anki Miner Note&lt;/a&gt; (free, works for every language), then in Anki choose File → Import and pick the file. This page updates when you come back. &lt;a href="%1"&gt;Which fields can Anki Miner fill?&lt;/a&gt;</source>
-        <translation>Bármely jegyzettípus működik, ha a mezői hozzá vannak rendelve. Válassza ki egyik jegyzettípusát: az Anki Miner a szót az első mezőbe teszi, és kitölti a név alapján felismert mezőket, például Word, Sentence, Reading, Definition, Picture és a hangmezők. A beállítás után a Beállítások → Kártyák és Anki oldalon módosíthatja, melyik mező mit kapjon. Még nincs jegyzettípusa a gyűjtéshez? &lt;a href="%2"&gt;Töltse le az Anki Miner Note-ot&lt;/a&gt; (ingyenes, minden nyelvhez használható), majd az Ankiban válassza a Fájl → Importálás menüpontot, és válassza ki a fájlt. Ez az oldal frissül, amikor visszatér. &lt;a href="%1"&gt;Mely mezőket tudja kitölteni az Anki Miner?&lt;/a&gt;</translation>
+        <source>Any note type works once its fields are mapped. Pick one of your note types: Anki Miner fills the fields it recognises by name, such as Word, Sentence, Reading, Definition, Picture and audio. You can change which field gets what in Settings → Cards &amp; Anki after setup. Don't have one for mining yet? &lt;a href="%2"&gt;Get Anki Miner Note&lt;/a&gt; (free, works for every language), then in Anki choose File → Import and pick the file. This page updates when you come back. &lt;a href="%1"&gt;Which fields can Anki Miner fill?&lt;/a&gt;</source>
+        <translation>Bármely jegyzettípus működik, ha a mezői hozzá vannak rendelve. Válassza ki egyik jegyzettípusát: az Anki Miner kitölti a név alapján felismert mezőket, például Word, Sentence, Reading, Definition, Picture és a hangmezők. A beállítás után a Beállítások → Kártyák és Anki oldalon módosíthatja, melyik mező mit kapjon. Még nincs jegyzettípusa a gyűjtéshez? &lt;a href="%2"&gt;Töltse le az Anki Miner Note-ot&lt;/a&gt; (ingyenes, minden nyelvhez használható), majd az Ankiban válassza a Fájl → Importálás menüpontot, és válassza ki a fájlt. Ez az oldal frissül, amikor visszatér. &lt;a href="%1"&gt;Mely mezőket tudja kitölteni az Anki Miner?&lt;/a&gt;</translation>
     </message>
     <message>
         <source>%1 recognised: %2 fields filled.</source>
@@ -8205,8 +8205,8 @@ Hozzáadandó szavak: %3. Folytatja?</translation>
         <translation>Egyetlen mezőt sem sikerült automatikusan kitölteni.</translation>
     </message>
     <message>
-        <source>The word goes in the note type's first field, “%1”, but it is mapped to “%2”. Change the order of the fields in Anki, or pick another note type.</source>
-        <translation>A szó a jegyzettípus első mezőjébe („%1”) kerül, de ez a(z) „%2” mezőhöz van rendelve. Módosítsa a mezők sorrendjét az Ankiban, vagy válasszon másik jegyzettípust.</translation>
+        <source>The first field, “%1”, must hold the word or the sentence: Anki refuses cards with it empty. Change the order of the fields in Anki, or pick another note type.</source>
+        <translation>Az első mezőnek („%1”) a szót vagy a mondatot kell tartalmaznia: az Anki elutasítja azokat a kártyákat, amelyeknél ez üres. Módosítsa a mezők sorrendjét az Ankiban, vagy válasszon másik jegyzettípust.</translation>
     </message>
 </context><context>
     <name>OcrRegionDialog</name>

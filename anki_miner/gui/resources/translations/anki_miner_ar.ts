@@ -8384,8 +8384,8 @@ Words to add: %3. Continue?</source>
         <translation>لم يُعثر على حقول. تأكّد من أن Anki قيد التشغيل وأن اسم نوع الملاحظة مكتوب تمامًا كما في Anki.</translation>
     </message>
     <message>
-        <source>Any note type works once its fields are mapped. Pick one of your note types: Anki Miner puts the word in its first field and fills the fields it recognises by name, such as Word, Sentence, Reading, Definition, Picture and audio. You can change which field gets what in Settings → Cards &amp; Anki after setup. Don't have one for mining yet? &lt;a href="%2"&gt;Get Anki Miner Note&lt;/a&gt; (free, works for every language), then in Anki choose File → Import and pick the file. This page updates when you come back. &lt;a href="%1"&gt;Which fields can Anki Miner fill?&lt;/a&gt;</source>
-        <translation>يصلح أي نوع ملاحظة بعد ربط حقوله. اختر أحد أنواع ملاحظاتك: يضع Anki Miner الكلمة في حقله الأول ويملأ الحقول التي يتعرّف عليها بالاسم، مثل Word وSentence وReading وDefinition وPicture والصوت. يمكنك تغيير ما يذهب إلى كل حقل من إعدادات ← البطاقات وAnki بعد الإعداد. ليس لديك نوع للاستخراج بعد؟ &lt;a href="%2"&gt;احصل على Anki Miner Note&lt;/a&gt; (مجاني، ويعمل مع كل اللغات)، ثم اختر في Anki ملف ← استيراد واختر الملف. تتحدّث هذه الصفحة عند عودتك. &lt;a href="%1"&gt;ما الحقول التي يمكن لـ Anki Miner ملؤها؟&lt;/a&gt;</translation>
+        <source>Any note type works once its fields are mapped. Pick one of your note types: Anki Miner fills the fields it recognises by name, such as Word, Sentence, Reading, Definition, Picture and audio. You can change which field gets what in Settings → Cards &amp; Anki after setup. Don't have one for mining yet? &lt;a href="%2"&gt;Get Anki Miner Note&lt;/a&gt; (free, works for every language), then in Anki choose File → Import and pick the file. This page updates when you come back. &lt;a href="%1"&gt;Which fields can Anki Miner fill?&lt;/a&gt;</source>
+        <translation>يصلح أي نوع ملاحظة بعد ربط حقوله. اختر أحد أنواع ملاحظاتك: يملأ Anki Miner الحقول التي يتعرّف عليها بالاسم، مثل Word وSentence وReading وDefinition وPicture والصوت. يمكنك تغيير ما يذهب إلى كل حقل من إعدادات ← البطاقات وAnki بعد الإعداد. ليس لديك نوع للاستخراج بعد؟ &lt;a href="%2"&gt;احصل على Anki Miner Note&lt;/a&gt; (مجاني، ويعمل مع كل اللغات)، ثم اختر في Anki ملف ← استيراد واختر الملف. تتحدّث هذه الصفحة عند عودتك. &lt;a href="%1"&gt;ما الحقول التي يمكن لـ Anki Miner ملؤها؟&lt;/a&gt;</translation>
     </message>
     <message>
         <source>%1 recognised: %2 fields filled.</source>
@@ -8400,8 +8400,8 @@ Words to add: %3. Continue?</source>
         <translation>تعذّر ملء أي حقل تلقائيًا.</translation>
     </message>
     <message>
-        <source>The word goes in the note type's first field, “%1”, but it is mapped to “%2”. Change the order of the fields in Anki, or pick another note type.</source>
-        <translation>توضع الكلمة في الحقل الأول لنوع الملاحظة، «⁨%1⁩»، لكنه مربوط بـ «⁨%2⁩». غيّر ترتيب الحقول في Anki، أو اختر نوع ملاحظة آخر.</translation>
+        <source>The first field, “%1”, must hold the word or the sentence: Anki refuses cards with it empty. Change the order of the fields in Anki, or pick another note type.</source>
+        <translation>يجب أن يحتوي الحقل الأول، «⁨%1⁩»، على الكلمة أو الجملة: يرفض Anki البطاقات التي يكون فيها فارغًا. غيّر ترتيب الحقول في Anki، أو اختر نوع ملاحظة آخر.</translation>
     </message>
 </context><context>
     <name>OcrRegionDialog</name>

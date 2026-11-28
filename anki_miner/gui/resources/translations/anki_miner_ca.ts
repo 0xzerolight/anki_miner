@@ -8227,8 +8227,8 @@ Paraules que s'afegiran: %3. Voleu continuar?</translation>
         <translation>No s'ha trobat cap camp. Assegureu-vos que l'Anki s'està executant i que el nom del tipus de nota està escrit exactament com a l'Anki.</translation>
     </message>
     <message>
-        <source>Any note type works once its fields are mapped. Pick one of your note types: Anki Miner puts the word in its first field and fills the fields it recognises by name, such as Word, Sentence, Reading, Definition, Picture and audio. You can change which field gets what in Settings → Cards &amp; Anki after setup. Don't have one for mining yet? &lt;a href="%2"&gt;Get Anki Miner Note&lt;/a&gt; (free, works for every language), then in Anki choose File → Import and pick the file. This page updates when you come back. &lt;a href="%1"&gt;Which fields can Anki Miner fill?&lt;/a&gt;</source>
-        <translation>Qualsevol tipus de nota funciona un cop se n'assignen els camps. Trieu un dels vostres tipus de nota: l'Anki Miner posa la paraula al primer camp i omple els camps que reconeix pel nom, com ara Word, Sentence, Reading, Definition, Picture i els d'àudio. Després de la configuració podeu canviar què va a cada camp a Paràmetres → Targetes i Anki. Encara no en teniu cap per a l'extracció? &lt;a href="%2"&gt;Obteniu l'Anki Miner Note&lt;/a&gt; (gratuït, funciona per a totes les llengües) i després, a l'Anki, trieu Fitxer → Importa i seleccioneu el fitxer. Aquesta pàgina s'actualitza quan torneu. &lt;a href="%1"&gt;Quins camps pot omplir l'Anki Miner?&lt;/a&gt;</translation>
+        <source>Any note type works once its fields are mapped. Pick one of your note types: Anki Miner fills the fields it recognises by name, such as Word, Sentence, Reading, Definition, Picture and audio. You can change which field gets what in Settings → Cards &amp; Anki after setup. Don't have one for mining yet? &lt;a href="%2"&gt;Get Anki Miner Note&lt;/a&gt; (free, works for every language), then in Anki choose File → Import and pick the file. This page updates when you come back. &lt;a href="%1"&gt;Which fields can Anki Miner fill?&lt;/a&gt;</source>
+        <translation>Qualsevol tipus de nota funciona un cop se n'assignen els camps. Trieu un dels vostres tipus de nota: l'Anki Miner omple els camps que reconeix pel nom, com ara Word, Sentence, Reading, Definition, Picture i els d'àudio. Després de la configuració podeu canviar què va a cada camp a Paràmetres → Targetes i Anki. Encara no en teniu cap per a l'extracció? &lt;a href="%2"&gt;Obteniu l'Anki Miner Note&lt;/a&gt; (gratuït, funciona per a totes les llengües) i després, a l'Anki, trieu Fitxer → Importa i seleccioneu el fitxer. Aquesta pàgina s'actualitza quan torneu. &lt;a href="%1"&gt;Quins camps pot omplir l'Anki Miner?&lt;/a&gt;</translation>
     </message>
     <message>
         <source>%1 recognised: %2 fields filled.</source>
@@ -8243,8 +8243,8 @@ Paraules que s'afegiran: %3. Voleu continuar?</translation>
         <translation>No s'ha pogut omplir cap camp automàticament.</translation>
     </message>
     <message>
-        <source>The word goes in the note type's first field, “%1”, but it is mapped to “%2”. Change the order of the fields in Anki, or pick another note type.</source>
-        <translation>La paraula va al primer camp del tipus de nota, «%1», però està assignada a «%2». Canvieu l'ordre dels camps a l'Anki o trieu un altre tipus de nota.</translation>
+        <source>The first field, “%1”, must hold the word or the sentence: Anki refuses cards with it empty. Change the order of the fields in Anki, or pick another note type.</source>
+        <translation>El primer camp, «%1», ha de contenir la paraula o la frase: l'Anki rebutja les targetes que el tenen buit. Canvieu l'ordre dels camps a l'Anki o trieu un altre tipus de nota.</translation>
     </message>
 </context><context>
     <name>OcrRegionDialog</name>

@@ -8265,8 +8265,8 @@ Riječi za dodavanje: %3. Nastaviti?</translation>
         <translation>Nisu pronađena polja. Provjerite je li Anki pokrenut i je li naziv vrste bilješke napisan točno kao u Ankiju.</translation>
     </message>
     <message>
-        <source>Any note type works once its fields are mapped. Pick one of your note types: Anki Miner puts the word in its first field and fills the fields it recognises by name, such as Word, Sentence, Reading, Definition, Picture and audio. You can change which field gets what in Settings → Cards &amp; Anki after setup. Don't have one for mining yet? &lt;a href="%2"&gt;Get Anki Miner Note&lt;/a&gt; (free, works for every language), then in Anki choose File → Import and pick the file. This page updates when you come back. &lt;a href="%1"&gt;Which fields can Anki Miner fill?&lt;/a&gt;</source>
-        <translation>Svaka vrsta bilješke radi nakon što se mapiraju njezina polja. Odaberite jednu od svojih vrsta bilježaka: Anki Miner stavlja riječ u njezino prvo polje i ispunjava polja koja prepozna po nazivu, kao što su Word, Sentence, Reading, Definition, Picture i zvuk. Što ide u koje polje možete promijeniti u odjeljku Postavke → Kartice i Anki nakon postavljanja. Još nemate vrstu bilješke za prikupljanje? &lt;a href="%2"&gt;Preuzmite Anki Miner Note&lt;/a&gt; (besplatno, radi za svaki jezik), zatim u Ankiju odaberite Datoteka → Uvezi i odaberite datoteku. Ova se stranica ažurira kad se vratite. &lt;a href="%1"&gt;Koja polja Anki Miner može ispuniti?&lt;/a&gt;</translation>
+        <source>Any note type works once its fields are mapped. Pick one of your note types: Anki Miner fills the fields it recognises by name, such as Word, Sentence, Reading, Definition, Picture and audio. You can change which field gets what in Settings → Cards &amp; Anki after setup. Don't have one for mining yet? &lt;a href="%2"&gt;Get Anki Miner Note&lt;/a&gt; (free, works for every language), then in Anki choose File → Import and pick the file. This page updates when you come back. &lt;a href="%1"&gt;Which fields can Anki Miner fill?&lt;/a&gt;</source>
+        <translation>Svaka vrsta bilješke radi nakon što se mapiraju njezina polja. Odaberite jednu od svojih vrsta bilježaka: Anki Miner ispunjava polja koja prepozna po nazivu, kao što su Word, Sentence, Reading, Definition, Picture i zvuk. Što ide u koje polje možete promijeniti u odjeljku Postavke → Kartice i Anki nakon postavljanja. Još nemate vrstu bilješke za prikupljanje? &lt;a href="%2"&gt;Preuzmite Anki Miner Note&lt;/a&gt; (besplatno, radi za svaki jezik), zatim u Ankiju odaberite Datoteka → Uvezi i odaberite datoteku. Ova se stranica ažurira kad se vratite. &lt;a href="%1"&gt;Koja polja Anki Miner može ispuniti?&lt;/a&gt;</translation>
     </message>
     <message>
         <source>%1 recognised: %2 fields filled.</source>
@@ -8281,8 +8281,8 @@ Riječi za dodavanje: %3. Nastaviti?</translation>
         <translation>Nijedno polje nije bilo moguće ispuniti automatski.</translation>
     </message>
     <message>
-        <source>The word goes in the note type's first field, “%1”, but it is mapped to “%2”. Change the order of the fields in Anki, or pick another note type.</source>
-        <translation>Riječ ide u prvo polje vrste bilješke, „%1”, ali ono je mapirano na „%2”. Promijenite redoslijed polja u Ankiju ili odaberite drugu vrstu bilješke.</translation>
+        <source>The first field, “%1”, must hold the word or the sentence: Anki refuses cards with it empty. Change the order of the fields in Anki, or pick another note type.</source>
+        <translation>Prvo polje, „%1”, mora sadržavati riječ ili rečenicu: Anki odbija kartice u kojima je ono prazno. Promijenite redoslijed polja u Ankiju ili odaberite drugu vrstu bilješke.</translation>
     </message>
 </context><context>
     <name>OcrRegionDialog</name>

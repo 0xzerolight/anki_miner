@@ -8189,8 +8189,8 @@ Words to add: %3. Continue?</source>
         <translation>找不到欄位。請確認 Anki 正在執行，且筆記類型名稱與 Anki 中的完全一致。</translation>
     </message>
     <message>
-        <source>Any note type works once its fields are mapped. Pick one of your note types: Anki Miner puts the word in its first field and fills the fields it recognises by name, such as Word, Sentence, Reading, Definition, Picture and audio. You can change which field gets what in Settings → Cards &amp; Anki after setup. Don't have one for mining yet? &lt;a href="%2"&gt;Get Anki Miner Note&lt;/a&gt; (free, works for every language), then in Anki choose File → Import and pick the file. This page updates when you come back. &lt;a href="%1"&gt;Which fields can Anki Miner fill?&lt;/a&gt;</source>
-        <translation>只要對應好欄位，任何筆記類型都能使用。請選擇您的一個筆記類型：Anki Miner 會將單字放入第一個欄位，並依名稱填入它能辨識的欄位，例如 Word、Sentence、Reading、Definition、Picture 與音訊。設定完成後，可在「設定 → 卡片與 Anki」中變更各欄位填入的內容。還沒有用於採集的筆記類型？&lt;a href="%2"&gt;取得 Anki Miner Note&lt;/a&gt;（免費，適用於所有語言），然後在 Anki 中選擇「檔案 → 匯入」並選取該檔案。回到此處時，本頁面會自動更新。&lt;a href="%1"&gt;Anki Miner 能填入哪些欄位？&lt;/a&gt;</translation>
+        <source>Any note type works once its fields are mapped. Pick one of your note types: Anki Miner fills the fields it recognises by name, such as Word, Sentence, Reading, Definition, Picture and audio. You can change which field gets what in Settings → Cards &amp; Anki after setup. Don't have one for mining yet? &lt;a href="%2"&gt;Get Anki Miner Note&lt;/a&gt; (free, works for every language), then in Anki choose File → Import and pick the file. This page updates when you come back. &lt;a href="%1"&gt;Which fields can Anki Miner fill?&lt;/a&gt;</source>
+        <translation>只要對應好欄位，任何筆記類型都能使用。請選擇您的一個筆記類型：Anki Miner 會依名稱填入它能辨識的欄位，例如 Word、Sentence、Reading、Definition、Picture 與音訊。設定完成後，可在「設定 → 卡片與 Anki」中變更各欄位填入的內容。還沒有用於採集的筆記類型？&lt;a href="%2"&gt;取得 Anki Miner Note&lt;/a&gt;（免費，適用於所有語言），然後在 Anki 中選擇「檔案 → 匯入」並選取該檔案。回到此處時，本頁面會自動更新。&lt;a href="%1"&gt;Anki Miner 能填入哪些欄位？&lt;/a&gt;</translation>
     </message>
     <message>
         <source>%1 recognised: %2 fields filled.</source>
@@ -8205,8 +8205,8 @@ Words to add: %3. Continue?</source>
         <translation>沒有可自動填入的欄位。</translation>
     </message>
     <message>
-        <source>The word goes in the note type's first field, “%1”, but it is mapped to “%2”. Change the order of the fields in Anki, or pick another note type.</source>
-        <translation>單字會放入筆記類型的第一個欄位「%1」，但它被對應到「%2」。請在 Anki 中調整欄位順序，或選擇其他筆記類型。</translation>
+        <source>The first field, “%1”, must hold the word or the sentence: Anki refuses cards with it empty. Change the order of the fields in Anki, or pick another note type.</source>
+        <translation>第一個欄位「%1」必須包含單字或例句：Anki 不接受此欄位為空的卡片。請在 Anki 中調整欄位順序，或選擇其他筆記類型。</translation>
     </message>
 </context><context>
     <name>OcrRegionDialog</name>

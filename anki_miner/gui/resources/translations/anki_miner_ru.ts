@@ -8265,8 +8265,8 @@ Words to add: %3. Continue?</source>
         <translation>Поля не найдены. Убедитесь, что Anki запущен, а имя типа заметки написано точно так же, как в Anki.</translation>
     </message>
     <message>
-        <source>Any note type works once its fields are mapped. Pick one of your note types: Anki Miner puts the word in its first field and fills the fields it recognises by name, such as Word, Sentence, Reading, Definition, Picture and audio. You can change which field gets what in Settings → Cards &amp; Anki after setup. Don't have one for mining yet? &lt;a href="%2"&gt;Get Anki Miner Note&lt;/a&gt; (free, works for every language), then in Anki choose File → Import and pick the file. This page updates when you come back. &lt;a href="%1"&gt;Which fields can Anki Miner fill?&lt;/a&gt;</source>
-        <translation>Подойдёт любой тип заметки, если сопоставить его поля. Выберите один из своих типов заметок: Anki Miner помещает слово в его первое поле и заполняет поля, которые распознаёт по названию, например Word, Sentence, Reading, Definition, Picture и аудио. После настройки можно изменить, что попадает в каждое поле, в Настройки → Карточки и Anki. Ещё нет типа заметки для майнинга? &lt;a href="%2"&gt;Скачайте Anki Miner Note&lt;/a&gt; (бесплатно, подходит для любого языка), затем в Anki выберите Файл → Импортировать и укажите файл. Эта страница обновится, когда вы вернётесь. &lt;a href="%1"&gt;Какие поля может заполнять Anki Miner?&lt;/a&gt;</translation>
+        <source>Any note type works once its fields are mapped. Pick one of your note types: Anki Miner fills the fields it recognises by name, such as Word, Sentence, Reading, Definition, Picture and audio. You can change which field gets what in Settings → Cards &amp; Anki after setup. Don't have one for mining yet? &lt;a href="%2"&gt;Get Anki Miner Note&lt;/a&gt; (free, works for every language), then in Anki choose File → Import and pick the file. This page updates when you come back. &lt;a href="%1"&gt;Which fields can Anki Miner fill?&lt;/a&gt;</source>
+        <translation>Подойдёт любой тип заметки, если сопоставить его поля. Выберите один из своих типов заметок: Anki Miner заполняет поля, которые распознаёт по названию, например Word, Sentence, Reading, Definition, Picture и аудио. После настройки можно изменить, что попадает в каждое поле, в Настройки → Карточки и Anki. Ещё нет типа заметки для майнинга? &lt;a href="%2"&gt;Скачайте Anki Miner Note&lt;/a&gt; (бесплатно, подходит для любого языка), затем в Anki выберите Файл → Импортировать и укажите файл. Эта страница обновится, когда вы вернётесь. &lt;a href="%1"&gt;Какие поля может заполнять Anki Miner?&lt;/a&gt;</translation>
     </message>
     <message>
         <source>%1 recognised: %2 fields filled.</source>
@@ -8281,8 +8281,8 @@ Words to add: %3. Continue?</source>
         <translation>Не удалось автоматически заполнить ни одного поля.</translation>
     </message>
     <message>
-        <source>The word goes in the note type's first field, “%1”, but it is mapped to “%2”. Change the order of the fields in Anki, or pick another note type.</source>
-        <translation>Слово попадает в первое поле типа заметки, «%1», но оно сопоставлено с «%2». Измените порядок полей в Anki или выберите другой тип заметки.</translation>
+        <source>The first field, “%1”, must hold the word or the sentence: Anki refuses cards with it empty. Change the order of the fields in Anki, or pick another note type.</source>
+        <translation>Первое поле, «%1», должно содержать слово или предложение: Anki не принимает карточки, в которых оно пустое. Измените порядок полей в Anki или выберите другой тип заметки.</translation>
     </message>
 </context><context>
     <name>OcrRegionDialog</name>

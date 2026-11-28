@@ -8189,8 +8189,8 @@ Words to add: %3. Continue?</source>
         <translation>필드를 찾을 수 없습니다. Anki가 실행 중이고 노트 유형 이름이 Anki와 정확히 같은지 확인하세요.</translation>
     </message>
     <message>
-        <source>Any note type works once its fields are mapped. Pick one of your note types: Anki Miner puts the word in its first field and fills the fields it recognises by name, such as Word, Sentence, Reading, Definition, Picture and audio. You can change which field gets what in Settings → Cards &amp; Anki after setup. Don't have one for mining yet? &lt;a href="%2"&gt;Get Anki Miner Note&lt;/a&gt; (free, works for every language), then in Anki choose File → Import and pick the file. This page updates when you come back. &lt;a href="%1"&gt;Which fields can Anki Miner fill?&lt;/a&gt;</source>
-        <translation>필드를 매핑하면 어떤 노트 유형이든 사용할 수 있습니다. 노트 유형 중 하나를 선택하세요. Anki Miner는 첫 번째 필드에 단어를 넣고 Word, Sentence, Reading, Definition, Picture, 오디오 등 이름으로 인식되는 필드를 채웁니다. 설정을 마친 후 설정 → 카드 및 Anki에서 각 필드에 들어갈 내용을 바꿀 수 있습니다. 아직 마이닝용 노트 유형이 없습니까? &lt;a href="%2"&gt;Anki Miner Note 받기&lt;/a&gt;(무료, 모든 언어 지원) 후 Anki에서 파일 → 가져오기를 선택하고 해당 파일을 고르세요. 돌아오면 이 페이지가 업데이트됩니다. &lt;a href="%1"&gt;Anki Miner가 채울 수 있는 필드&lt;/a&gt;</translation>
+        <source>Any note type works once its fields are mapped. Pick one of your note types: Anki Miner fills the fields it recognises by name, such as Word, Sentence, Reading, Definition, Picture and audio. You can change which field gets what in Settings → Cards &amp; Anki after setup. Don't have one for mining yet? &lt;a href="%2"&gt;Get Anki Miner Note&lt;/a&gt; (free, works for every language), then in Anki choose File → Import and pick the file. This page updates when you come back. &lt;a href="%1"&gt;Which fields can Anki Miner fill?&lt;/a&gt;</source>
+        <translation>필드를 매핑하면 어떤 노트 유형이든 사용할 수 있습니다. 노트 유형 중 하나를 선택하세요. Anki Miner는 Word, Sentence, Reading, Definition, Picture, 오디오 등 이름으로 인식되는 필드를 채웁니다. 설정을 마친 후 설정 → 카드 및 Anki에서 각 필드에 들어갈 내용을 바꿀 수 있습니다. 아직 마이닝용 노트 유형이 없습니까? &lt;a href="%2"&gt;Anki Miner Note 받기&lt;/a&gt;(무료, 모든 언어 지원) 후 Anki에서 파일 → 가져오기를 선택하고 해당 파일을 고르세요. 돌아오면 이 페이지가 업데이트됩니다. &lt;a href="%1"&gt;Anki Miner가 채울 수 있는 필드&lt;/a&gt;</translation>
     </message>
     <message>
         <source>%1 recognised: %2 fields filled.</source>
@@ -8205,8 +8205,8 @@ Words to add: %3. Continue?</source>
         <translation>자동으로 채울 수 있는 필드가 없습니다.</translation>
     </message>
     <message>
-        <source>The word goes in the note type's first field, “%1”, but it is mapped to “%2”. Change the order of the fields in Anki, or pick another note type.</source>
-        <translation>단어는 노트 유형의 첫 번째 필드 “%1”에 들어가지만, 이 필드는 “%2”에 매핑되어 있습니다. Anki에서 필드 순서를 바꾸거나 다른 노트 유형을 선택하세요.</translation>
+        <source>The first field, “%1”, must hold the word or the sentence: Anki refuses cards with it empty. Change the order of the fields in Anki, or pick another note type.</source>
+        <translation>첫 번째 필드 “%1”에는 단어나 문장이 들어가야 합니다. Anki는 이 필드가 비어 있는 카드를 거부합니다. Anki에서 필드 순서를 바꾸거나 다른 노트 유형을 선택하세요.</translation>
     </message>
 </context><context>
     <name>OcrRegionDialog</name>

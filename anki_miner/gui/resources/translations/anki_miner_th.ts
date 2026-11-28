@@ -8189,8 +8189,8 @@ Words to add: %3. Continue?</source>
         <translation>ไม่พบฟิลด์ ตรวจสอบว่า Anki เปิดอยู่และชื่อประเภทโน้ตสะกดตรงกับใน Anki ทุกตัวอักษร</translation>
     </message>
     <message>
-        <source>Any note type works once its fields are mapped. Pick one of your note types: Anki Miner puts the word in its first field and fills the fields it recognises by name, such as Word, Sentence, Reading, Definition, Picture and audio. You can change which field gets what in Settings → Cards &amp; Anki after setup. Don't have one for mining yet? &lt;a href="%2"&gt;Get Anki Miner Note&lt;/a&gt; (free, works for every language), then in Anki choose File → Import and pick the file. This page updates when you come back. &lt;a href="%1"&gt;Which fields can Anki Miner fill?&lt;/a&gt;</source>
-        <translation>ประเภทโน้ตใดก็ใช้ได้เมื่อจับคู่ฟิลด์แล้ว เลือกประเภทโน้ตหนึ่งของคุณ: Anki Miner จะใส่คำลงในฟิลด์แรกและกรอกฟิลด์ที่รู้จักจากชื่อ เช่น Word, Sentence, Reading, Definition, Picture และเสียง คุณเปลี่ยนได้ว่าฟิลด์ใดได้รับข้อมูลใดใน การตั้งค่า → การ์ดและ Anki หลังตั้งค่าเสร็จ ยังไม่มีประเภทโน้ตสำหรับการขุดคำใช่ไหม? &lt;a href="%2"&gt;รับ Anki Miner Note&lt;/a&gt; (ฟรี ใช้ได้กับทุกภาษา) แล้วใน Anki เลือก ไฟล์ → นำเข้า และเลือกไฟล์ หน้านี้จะอัปเดตเมื่อคุณกลับมา &lt;a href="%1"&gt;Anki Miner กรอกฟิลด์ใดได้บ้าง?&lt;/a&gt;</translation>
+        <source>Any note type works once its fields are mapped. Pick one of your note types: Anki Miner fills the fields it recognises by name, such as Word, Sentence, Reading, Definition, Picture and audio. You can change which field gets what in Settings → Cards &amp; Anki after setup. Don't have one for mining yet? &lt;a href="%2"&gt;Get Anki Miner Note&lt;/a&gt; (free, works for every language), then in Anki choose File → Import and pick the file. This page updates when you come back. &lt;a href="%1"&gt;Which fields can Anki Miner fill?&lt;/a&gt;</source>
+        <translation>ประเภทโน้ตใดก็ใช้ได้เมื่อจับคู่ฟิลด์แล้ว เลือกประเภทโน้ตหนึ่งของคุณ: Anki Miner จะกรอกฟิลด์ที่รู้จักจากชื่อ เช่น Word, Sentence, Reading, Definition, Picture และเสียง คุณเปลี่ยนได้ว่าฟิลด์ใดได้รับข้อมูลใดใน การตั้งค่า → การ์ดและ Anki หลังตั้งค่าเสร็จ ยังไม่มีประเภทโน้ตสำหรับการขุดคำใช่ไหม? &lt;a href="%2"&gt;รับ Anki Miner Note&lt;/a&gt; (ฟรี ใช้ได้กับทุกภาษา) แล้วใน Anki เลือก ไฟล์ → นำเข้า และเลือกไฟล์ หน้านี้จะอัปเดตเมื่อคุณกลับมา &lt;a href="%1"&gt;Anki Miner กรอกฟิลด์ใดได้บ้าง?&lt;/a&gt;</translation>
     </message>
     <message>
         <source>%1 recognised: %2 fields filled.</source>
@@ -8205,8 +8205,8 @@ Words to add: %3. Continue?</source>
         <translation>ไม่มีฟิลด์ใดที่กรอกอัตโนมัติได้</translation>
     </message>
     <message>
-        <source>The word goes in the note type's first field, “%1”, but it is mapped to “%2”. Change the order of the fields in Anki, or pick another note type.</source>
-        <translation>คำจะอยู่ในฟิลด์แรกของประเภทโน้ต “%1” แต่ฟิลด์นั้นถูกจับคู่กับ “%2” เปลี่ยนลำดับฟิลด์ใน Anki หรือเลือกประเภทโน้ตอื่น</translation>
+        <source>The first field, “%1”, must hold the word or the sentence: Anki refuses cards with it empty. Change the order of the fields in Anki, or pick another note type.</source>
+        <translation>ฟิลด์แรก “%1” ต้องมีคำหรือประโยค: Anki จะไม่รับการ์ดที่ฟิลด์นี้ว่าง เปลี่ยนลำดับฟิลด์ใน Anki หรือเลือกประเภทโน้ตอื่น</translation>
     </message>
 </context><context>
     <name>OcrRegionDialog</name>

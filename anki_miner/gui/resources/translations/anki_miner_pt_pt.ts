@@ -8227,8 +8227,8 @@ Palavras a adicionar: %3. Continuar?</translation>
         <translation>Não foram encontrados campos. Certifique-se de que o Anki está em execução e de que o nome do tipo de nota está escrito exatamente como no Anki.</translation>
     </message>
     <message>
-        <source>Any note type works once its fields are mapped. Pick one of your note types: Anki Miner puts the word in its first field and fills the fields it recognises by name, such as Word, Sentence, Reading, Definition, Picture and audio. You can change which field gets what in Settings → Cards &amp; Anki after setup. Don't have one for mining yet? &lt;a href="%2"&gt;Get Anki Miner Note&lt;/a&gt; (free, works for every language), then in Anki choose File → Import and pick the file. This page updates when you come back. &lt;a href="%1"&gt;Which fields can Anki Miner fill?&lt;/a&gt;</source>
-        <translation>Qualquer tipo de nota funciona depois de mapear os respetivos campos. Escolha um dos seus tipos de nota: o Anki Miner coloca a palavra no primeiro campo e preenche os campos que reconhece pelo nome, como Word, Sentence, Reading, Definition, Picture e áudio. Pode alterar o que vai para cada campo em Definições → Cartões e Anki depois da configuração. Ainda não tem um para mineração? &lt;a href="%2"&gt;Obtenha o Anki Miner Note&lt;/a&gt; (gratuito, funciona para todos os idiomas) e, no Anki, escolha Ficheiro → Importar e selecione o ficheiro. Esta página é atualizada quando regressar. &lt;a href="%1"&gt;Que campos pode o Anki Miner preencher?&lt;/a&gt;</translation>
+        <source>Any note type works once its fields are mapped. Pick one of your note types: Anki Miner fills the fields it recognises by name, such as Word, Sentence, Reading, Definition, Picture and audio. You can change which field gets what in Settings → Cards &amp; Anki after setup. Don't have one for mining yet? &lt;a href="%2"&gt;Get Anki Miner Note&lt;/a&gt; (free, works for every language), then in Anki choose File → Import and pick the file. This page updates when you come back. &lt;a href="%1"&gt;Which fields can Anki Miner fill?&lt;/a&gt;</source>
+        <translation>Qualquer tipo de nota funciona depois de mapear os respetivos campos. Escolha um dos seus tipos de nota: o Anki Miner preenche os campos que reconhece pelo nome, como Word, Sentence, Reading, Definition, Picture e áudio. Pode alterar o que vai para cada campo em Definições → Cartões e Anki depois da configuração. Ainda não tem um para mineração? &lt;a href="%2"&gt;Obtenha o Anki Miner Note&lt;/a&gt; (gratuito, funciona para todos os idiomas) e, no Anki, escolha Ficheiro → Importar e selecione o ficheiro. Esta página é atualizada quando regressar. &lt;a href="%1"&gt;Que campos pode o Anki Miner preencher?&lt;/a&gt;</translation>
     </message>
     <message>
         <source>%1 recognised: %2 fields filled.</source>
@@ -8243,8 +8243,8 @@ Palavras a adicionar: %3. Continuar?</translation>
         <translation>Não foi possível preencher nenhum campo automaticamente.</translation>
     </message>
     <message>
-        <source>The word goes in the note type's first field, “%1”, but it is mapped to “%2”. Change the order of the fields in Anki, or pick another note type.</source>
-        <translation>A palavra vai para o primeiro campo do tipo de nota, “%1”, mas está mapeada para “%2”. Altere a ordem dos campos no Anki ou escolha outro tipo de nota.</translation>
+        <source>The first field, “%1”, must hold the word or the sentence: Anki refuses cards with it empty. Change the order of the fields in Anki, or pick another note type.</source>
+        <translation>O primeiro campo, “%1”, tem de conter a palavra ou a frase: o Anki recusa cartões com esse campo vazio. Altere a ordem dos campos no Anki ou escolha outro tipo de nota.</translation>
     </message>
 </context><context>
     <name>OcrRegionDialog</name>

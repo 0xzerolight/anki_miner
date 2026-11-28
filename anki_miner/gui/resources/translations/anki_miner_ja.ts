@@ -8189,8 +8189,8 @@ Words to add: %3. Continue?</source>
         <translation>フィールドが見つかりません。Anki が起動しているか、ノートタイプ名が Anki と完全に一致しているか確認してください。</translation>
     </message>
     <message>
-        <source>Any note type works once its fields are mapped. Pick one of your note types: Anki Miner puts the word in its first field and fills the fields it recognises by name, such as Word, Sentence, Reading, Definition, Picture and audio. You can change which field gets what in Settings → Cards &amp; Anki after setup. Don't have one for mining yet? &lt;a href="%2"&gt;Get Anki Miner Note&lt;/a&gt; (free, works for every language), then in Anki choose File → Import and pick the file. This page updates when you come back. &lt;a href="%1"&gt;Which fields can Anki Miner fill?&lt;/a&gt;</source>
-        <translation>フィールドを対応付ければ、どのノートタイプでも使えます。ノートタイプを 1 つ選んでください: Anki Miner は単語を最初のフィールドに入れ、Word、Sentence、Reading、Definition、Picture、音声など、名前で認識できるフィールドを入力します。各フィールドに何を入れるかは、セットアップ後に「設定 → カードと Anki」で変更できます。マイニング用のノートタイプがまだない場合は、&lt;a href="%2"&gt;Anki Miner Note を入手&lt;/a&gt;（無料、すべての言語に対応）し、Anki で［ファイル］→［読み込む］を選んでそのファイルを選択してください。戻ってくるとこのページは更新されます。&lt;a href="%1"&gt;Anki Miner が入力できるフィールドは？&lt;/a&gt;</translation>
+        <source>Any note type works once its fields are mapped. Pick one of your note types: Anki Miner fills the fields it recognises by name, such as Word, Sentence, Reading, Definition, Picture and audio. You can change which field gets what in Settings → Cards &amp; Anki after setup. Don't have one for mining yet? &lt;a href="%2"&gt;Get Anki Miner Note&lt;/a&gt; (free, works for every language), then in Anki choose File → Import and pick the file. This page updates when you come back. &lt;a href="%1"&gt;Which fields can Anki Miner fill?&lt;/a&gt;</source>
+        <translation>フィールドを対応付ければ、どのノートタイプでも使えます。ノートタイプを 1 つ選んでください: Anki Miner は Word、Sentence、Reading、Definition、Picture、音声など、名前で認識できるフィールドを入力します。各フィールドに何を入れるかは、セットアップ後に「設定 → カードと Anki」で変更できます。マイニング用のノートタイプがまだない場合は、&lt;a href="%2"&gt;Anki Miner Note を入手&lt;/a&gt;（無料、すべての言語に対応）し、Anki で［ファイル］→［読み込む］を選んでそのファイルを選択してください。戻ってくるとこのページは更新されます。&lt;a href="%1"&gt;Anki Miner が入力できるフィールドは？&lt;/a&gt;</translation>
     </message>
     <message>
         <source>%1 recognised: %2 fields filled.</source>
@@ -8205,8 +8205,8 @@ Words to add: %3. Continue?</source>
         <translation>自動で入力できるフィールドはありませんでした。</translation>
     </message>
     <message>
-        <source>The word goes in the note type's first field, “%1”, but it is mapped to “%2”. Change the order of the fields in Anki, or pick another note type.</source>
-        <translation>単語はノートタイプの最初のフィールド「%1」に入りますが、そのフィールドは「%2」に対応付けられています。Anki でフィールドの順序を変えるか、別のノートタイプを選んでください。</translation>
+        <source>The first field, “%1”, must hold the word or the sentence: Anki refuses cards with it empty. Change the order of the fields in Anki, or pick another note type.</source>
+        <translation>最初のフィールド「%1」には単語か例文が入っている必要があります: Anki はこのフィールドが空のカードを受け付けません。Anki でフィールドの順序を変えるか、別のノートタイプを選んでください。</translation>
     </message>
 </context><context>
     <name>OcrRegionDialog</name>
